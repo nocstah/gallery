@@ -80,6 +80,14 @@
 
   let width = $derived(thumbnailSize || thumbnailWidth || 235);
   let height = $derived(thumbnailSize || thumbnailHeight || 235);
+  // Local Omarchy layer: a tile zoomed past what the thumbnail holds (the server thumbnail size, set to
+  // 640px here) at this screen's pixel ratio loads the preview rendition instead of upscaling a thumbnail.
+  const THUMBNAIL_PX = 640;
+  const tileMediaSize = $derived(
+    Math.max(Number(width) || 0, Number(height) || 0) * (globalThis.devicePixelRatio ?? 1) > THUMBNAIL_PX * 1.15
+      ? AssetMediaSize.Preview
+      : AssetMediaSize.Thumbnail,
+  );
 
   let assetOwner = $derived(albumUsers?.find((user) => user.id === asset.ownerId) ?? null);
 
@@ -240,7 +248,7 @@
       <ImageThumbnail
         class={['absolute group-focus-visible:rounded-lg', imageClass]}
         brokenAssetClass={['z-1 absolute group-focus-visible:rounded-lg', brokenAssetClass]}
-        url={getAssetMediaUrl({ id: asset.id, size: AssetMediaSize.Thumbnail, cacheKey: asset.thumbhash })}
+        url={getAssetMediaUrl({ id: asset.id, size: tileMediaSize, cacheKey: asset.thumbhash })}
         altText={$getAltText(asset)}
         widthStyle="{width}px"
         heightStyle="{height}px"

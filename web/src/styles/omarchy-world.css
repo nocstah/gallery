@@ -322,3 +322,9 @@ div.absolute.font-mono {
   order: -1;
   margin-inline-end: auto;
 }
+/* touch screens have no hover: the naming prompt stays visible there */
+@media (hover: none) {
+  .ws-person-name::placeholder {
+    opacity: 1;
+  }
+}
