@@ -53,6 +53,13 @@ describe('AlbumStory', () => {
     expect(screen.queryByText(story.text)).not.toBeInTheDocument();
   });
 
+  it('stays out when the description is the story Curator wrote there', async () => {
+    vi.mocked(curator.story).mockResolvedValue({ story });
+    render(AlbumStory, { albumId: 'a1', description: `${story.text} (AI)` });
+    await waitFor(() => expect(curator.story).toHaveBeenCalled());
+    expect(screen.queryByText(story.text)).not.toBeInTheDocument();
+  });
+
   it('stays out when Curator does not answer', async () => {
     vi.mocked(curator.story).mockRejectedValue(new Error('offline'));
     const { container } = render(AlbumStory, { albumId: 'a1', description: '' });

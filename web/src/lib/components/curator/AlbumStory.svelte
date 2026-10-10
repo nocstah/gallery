@@ -27,7 +27,9 @@
       .catch(() => undefined);
   });
 
-  const shown = $derived(story && story.text.trim() !== (description ?? '').trim() ? story : null);
+  // a description Curator wrote from the story ends in its "(AI)" mark
+  const plain = (text: string | null | undefined) => (text ?? '').trim().replace(/\s*\(AI\)$/, '');
+  const shown = $derived(story && plain(story.text) !== plain(description) ? story : null);
 </script>
 
 {#if shown}
