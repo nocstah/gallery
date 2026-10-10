@@ -393,3 +393,108 @@ div.absolute.font-mono {
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
+
+/* ---- map: controls are small windows floating on the map, photo markers are tiles, clusters are
+   ink chips with mono counts. Scoped under .maplibregl-map to outrank maplibre's lazily loaded CSS ---- */
+.maplibregl-map .maplibregl-ctrl-group {
+  overflow: hidden;
+  background: var(--immich-ui-light);
+  border: 1px solid var(--ws-hairline);
+  border-radius: calc(var(--ws-radius) + 6px);
+  box-shadow: 0 8px 20px -10px rgb(0 0 0 / 0.35);
+}
+.maplibregl-map .maplibregl-ctrl-group button + button {
+  border-top-color: var(--ws-hairline);
+}
+/* our own control icons (settings, theme, show photos in area) take the ink, not black/80 */
+.maplibregl-map .maplibregl-ctrl-group svg {
+  color: var(--immich-ui-dark);
+}
+/* maplibre's own icons are dark data-URI images: on the dark face, flip their lightness and keep hue
+   (the compass's red north stays red) */
+:root.dark .maplibregl-map .maplibregl-ctrl-icon {
+  filter: invert(1) hue-rotate(180deg);
+}
+@media (hover: hover) {
+  .maplibregl-map .maplibregl-ctrl button:not(:disabled):hover {
+    background-color: color-mix(in oklab, var(--immich-ui-dark) 7%, transparent);
+  }
+}
+.maplibregl-map .maplibregl-ctrl-group button:focus:focus-visible {
+  box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+}
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-scale {
+  background: color-mix(in oklab, var(--immich-ui-light) 80%, transparent);
+  border-color: var(--immich-ui-dark);
+  color: var(--immich-ui-dark);
+  font-family: var(--ws-font-data);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib {
+  background: color-mix(in oklab, var(--immich-ui-light) 75%, transparent);
+  color: var(--immich-ui-muted);
+  font-size: 11px;
+}
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib a {
+  color: var(--immich-ui-muted);
+}
+.maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib a:hover {
+  color: var(--immich-ui-dark);
+}
+
+/* popups float like Hyprland popups: surface, hairline, popup shadow */
+.maplibregl-map .maplibregl-popup .maplibregl-popup-content {
+  background: var(--immich-ui-light);
+  color: var(--immich-ui-dark);
+  border: 1px solid var(--ws-hairline);
+  border-radius: calc(var(--ws-radius) + 6px);
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
+}
+.maplibregl-map .maplibregl-popup .maplibregl-popup-tip {
+  border-top-color: var(--immich-ui-light) !important;
+}
+.maplibregl-map .maplibregl-popup-close-button {
+  color: var(--immich-ui-muted);
+  border-radius: calc(var(--ws-radius) + 4px);
+}
+
+/* markers float over the map, so they carry a shadow */
+.maplibregl-map [data-testid='map-marker'] {
+  border: 2px solid var(--immich-ui-light);
+  border-radius: calc(var(--ws-radius) + 4px);
+  background: var(--immich-ui-light);
+  box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.5);
+}
+.maplibregl-map [data-testid='map-marker']:hover {
+  border-color: var(--ws-accent);
+}
+.ws-map-cluster,
+.ws-map-cluster:hover {
+  opacity: 1;
+  background: var(--immich-ui-dark);
+  color: var(--immich-ui-light);
+  border: 2px solid var(--immich-ui-light);
+  font-family: var(--ws-font-data);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.5);
+}
+.ws-map-cluster:hover {
+  border-color: var(--ws-accent);
+}
+
+/* the no-results note and the mobile filter drawer: surface, hairline, popup shadow */
+.ws-map-note {
+  background: var(--immich-ui-light);
+  color: var(--immich-ui-muted);
+  border: 1px solid var(--ws-hairline);
+  border-radius: calc(var(--ws-radius) + 6px);
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
+  font-weight: 500;
+}
+[data-testid='map-mobile-filter-overlay'] > div {
+  background: var(--immich-ui-light);
+  border-inline-end: 1px solid var(--ws-hairline);
+}

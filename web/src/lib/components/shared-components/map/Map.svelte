@@ -110,6 +110,29 @@
 
   let map: Map | undefined = $state();
   let marker: Marker | null = null;
+
+  // Local Omarchy layer: the map page (a `hash` map) receives its markers after it mounts, so the
+  // initial bounds above never apply and it opened on the whole world. Fit it once to the photos
+  // when they first arrive, unless the URL already carried a position (read before maplibre
+  // writes its own hash on the first move).
+  const hadSavedPosition = typeof location !== 'undefined' && /^#\d+(\.\d+)?\/-?\d/.test(location.hash);
+  let fittedToMarkers = false;
+  $effect(() => {
+    const markers = mapMarkers;
+    if (!map || fittedToMarkers || !hash || hadSavedPosition || initialBounds || center || zoom !== undefined) {
+      return;
+    }
+    if (!markers || markers.length === 0) {
+      return;
+    }
+
+    fittedToMarkers = true;
+    const bounds = new LngLatBounds();
+    for (const { lon, lat } of markers) {
+      bounds.extend([lon, lat]);
+    }
+    untrack(() => map?.fitBounds(bounds, { padding: 50, maxZoom: 15, animate: false }));
+  });
   let abortController: AbortController;
 
   const mapTheme = $derived($mapSettings.allowDarkMode ? themeManager.value : Theme.Light);
@@ -465,8 +488,9 @@
           onclick={(event) => handlePromiseError(handleClusterClick(event.feature.properties?.cluster_id, map))}
         >
           {#snippet children({ feature })}
+            <!-- Local Omarchy layer: ws-map-cluster restyles the cluster count as an ink chip -->
             <div
-              class="flex size-10 items-center justify-center rounded-full bg-immich-primary font-mono font-bold text-white opacity-90 shadow-lg transition-all duration-200 hover:bg-immich-dark-primary hover:text-immich-dark-bg"
+              class="ws-map-cluster flex size-10 items-center justify-center rounded-full bg-immich-primary font-mono font-bold text-white opacity-90 shadow-lg transition-all duration-200 hover:bg-immich-dark-primary hover:text-immich-dark-bg"
             >
               {feature.properties?.point_count?.toLocaleString()}
             </div>

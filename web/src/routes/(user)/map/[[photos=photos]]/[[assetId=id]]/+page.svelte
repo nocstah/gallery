@@ -518,10 +518,11 @@
           {/if}
           {#if noResults}
             <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <!-- Local Omarchy layer: a floating note in the world's popup material, translated -->
               <div
-                class="pointer-events-auto rounded-lg bg-white/90 px-4 py-3 text-sm text-gray-600 shadow-sm dark:bg-gray-800/90 dark:text-gray-300"
+                class="ws-map-note pointer-events-auto rounded-lg bg-white/90 px-4 py-3 text-sm text-gray-600 shadow-sm dark:bg-gray-800/90 dark:text-gray-300"
               >
-                No matching photos
+                {$t('map_no_matching_photos')}
               </div>
             </div>
           {/if}

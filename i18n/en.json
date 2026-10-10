@@ -2287,6 +2287,7 @@
   "map_marker_with_image": "Map marker with image",
   "map_no_location_permission_content": "Noodle Gallery uses your precise current location to center the map and show photos and videos from your current area. Your precise device location is not stored or shared. Do you want to allow location access now?",
   "map_no_location_permission_title": "Location Permission denied",
+  "map_no_matching_photos": "No matching photos",
   "map_settings": "Map settings",
   "map_settings_dark_mode": "Dark mode",
   "map_settings_date_range_option_day": "Past 24 hours",
