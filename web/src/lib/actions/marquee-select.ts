@@ -4,7 +4,13 @@
 // box only starts after the pointer travels a few pixels, and the click that ends a drag is swallowed.
 // Dragging near the top or bottom edge scrolls the timeline. Only rendered tiles can be hit, so tiles that
 // scroll out of view keep whatever state the box gave them.
+//
+// Drag to stack: a drag that starts on a *selected* tile moves the selection instead of drawing a box
+// (hold a photo ~0.35s and Immich's long-press selects it, so hold-then-drag works for a single photo).
+// Dropping on another tile stacks everything onto it: the drop target becomes the cover, and when it or
+// any dragged photo already heads a stack the server folds those stacks in. Esc or an empty drop cancels.
 import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
+import { handleStack } from '$lib/services/stack.service';
 import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 
 type Options = { timelineManager: TimelineManager; assetInteraction: AssetMultiSelectManager; enabled: boolean };
@@ -15,6 +21,10 @@ const EDGE = 56;
 export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
   let options = initial;
   let start: { x: number; y: number } | undefined; // in scroller content coordinates
+  let startTile: string | undefined;
+  let dragIds: string[] = [];
+  let ghost: HTMLDivElement | undefined;
+  let dropTarget: HTMLElement | undefined;
   let pointer = { x: 0, y: 0 }; // client coordinates
   let active = false;
   let additive = false;
@@ -86,6 +96,7 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
     }
     start = toContent(event.clientX, event.clientY);
     pointer = { x: event.clientX, y: event.clientY };
+    startTile = target?.closest<HTMLElement>('[data-thumbnail-focus-container][data-asset]')?.dataset.asset;
     additive = event.shiftKey || event.ctrlKey || event.metaKey;
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp, { once: true });
@@ -110,8 +121,109 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
     if (!active && start) {
       const here = toContent(event.clientX, event.clientY);
       if (Math.hypot(here.x - start.x, here.y - start.y) > THRESHOLD) {
-        begin();
+        if (startTile && options.assetInteraction.hasSelectedAsset(startTile)) {
+          beginDrag();
+        } else {
+          begin();
+        }
       }
+    } else if (dragging) {
+      moveGhost();
+    }
+  };
+
+  // ---- drag to stack ----
+  let dragging = false;
+
+  const beginDrag = () => {
+    dragging = true;
+    active = true;
+    dragIds = options.assetInteraction.assets.map((asset) => asset.id);
+    const source = scroller.querySelector<HTMLImageElement>(
+      `[data-thumbnail-focus-container][data-asset="${CSS.escape(startTile!)}"] img`,
+    );
+    ghost = document.createElement('div');
+    ghost.className = 'ws-drag-ghost';
+    if (source?.currentSrc) {
+      const img = document.createElement('img');
+      img.src = source.currentSrc;
+      ghost.append(img);
+    }
+    const count = document.createElement('span');
+    count.textContent = String(dragIds.length);
+    ghost.append(count);
+    document.body.append(ghost);
+    document.body.classList.add('ws-dragging');
+    for (const id of dragIds) {
+      scroller
+        .querySelector(`[data-thumbnail-focus-container][data-asset="${CSS.escape(id)}"]`)
+        ?.setAttribute('data-dragging', '');
+    }
+    window.addEventListener('keydown', onDragKey, true);
+    moveGhost();
+    frame = requestAnimationFrame(dragFrame);
+  };
+
+  const setDropTarget = (tile: HTMLElement | undefined) => {
+    if (dropTarget === tile) {
+      return;
+    }
+    dropTarget?.removeAttribute('data-drop-target');
+    dropTarget = tile;
+    dropTarget?.setAttribute('data-drop-target', '');
+  };
+
+  const moveGhost = () => {
+    if (!ghost) {
+      return;
+    }
+    ghost.style.transform = `translate(${pointer.x + 14}px, ${pointer.y + 14}px)`;
+    const tile = document
+      .elementsFromPoint(pointer.x, pointer.y)
+      .map((element) => element.closest<HTMLElement>('[data-thumbnail-focus-container][data-asset]'))
+      .find(Boolean);
+    setDropTarget(tile && !dragIds.includes(tile.dataset.asset!) ? tile : undefined);
+  };
+
+  const dragFrame = () => {
+    const rect = scroller.getBoundingClientRect();
+    if (pointer.y < rect.top + EDGE) {
+      scroller.scrollBy(0, -Math.ceil((rect.top + EDGE - pointer.y) / 3));
+      moveGhost();
+    } else if (pointer.y > rect.bottom - EDGE) {
+      scroller.scrollBy(0, Math.ceil((pointer.y - (rect.bottom - EDGE)) / 3));
+      moveGhost();
+    }
+    frame = requestAnimationFrame(dragFrame);
+  };
+
+  const endDrag = (drop: boolean) => {
+    const target = dropTarget?.dataset.asset;
+    window.removeEventListener('keydown', onDragKey, true);
+    for (const tile of scroller.querySelectorAll('[data-dragging]')) {
+      tile.removeAttribute('data-dragging');
+    }
+    setDropTarget(undefined);
+    ghost?.remove();
+    ghost = undefined;
+    document.body.classList.remove('ws-dragging');
+    dragging = false;
+    if (drop && target && dragIds.length > 0) {
+      // the drop target leads, so it becomes the cover; existing stacks it or the dragged photos head merge in
+      void handleStack([target, ...dragIds]);
+    }
+    dragIds = [];
+  };
+
+  const onDragKey = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && dragging) {
+      event.preventDefault();
+      event.stopPropagation();
+      cancelAnimationFrame(frame);
+      endDrag(false);
+      active = false;
+      start = undefined;
+      window.removeEventListener('pointermove', onPointerMove);
     }
   };
 
@@ -123,6 +235,9 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
   const onPointerUp = () => {
     window.removeEventListener('pointermove', onPointerMove);
     cancelAnimationFrame(frame);
+    if (dragging) {
+      endDrag(true);
+    }
     if (active) {
       // the click that ends a drag must not open the photo under the pointer
       window.addEventListener('click', swallowClick, { capture: true, once: true });
@@ -133,6 +248,7 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
     document.body.classList.remove('ws-marquee-active');
     active = false;
     start = undefined;
+    startTile = undefined;
   };
 
   // native image dragging would hijack the gesture

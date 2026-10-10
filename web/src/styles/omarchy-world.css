@@ -723,3 +723,52 @@ div.z-70[style*='max-height: 0px']:has(> ul[role='menu']) {
   border: 0;
   box-shadow: none;
 }
+
+/* ---- drag to stack (lib/actions/marquee-select.ts) ---- */
+.ws-drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 80;
+  pointer-events: none;
+  width: 84px;
+  height: 84px;
+  border-radius: calc(var(--ws-radius) + 8px);
+  box-shadow:
+    0 14px 30px -8px rgb(0 0 0 / 0.45),
+    6px 6px 0 -2px var(--immich-ui-light),
+    6px 6px 0 -1px var(--ws-hairline);
+}
+.ws-drag-ghost img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  border: 2px solid var(--immich-ui-light);
+}
+.ws-drag-ghost span {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ws-accent);
+  color: #fff;
+  font: 600 12px/24px var(--ws-font-data);
+  text-align: center;
+}
+body.ws-dragging,
+body.ws-dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+[data-thumbnail-focus-container][data-dragging] {
+  opacity: 0.45;
+}
+[data-thumbnail-focus-container][data-drop-target]::after {
+  box-shadow:
+    inset 0 0 0 3px var(--ws-accent),
+    inset 0 0 0 9999px color-mix(in oklab, var(--ws-accent) 18%, transparent);
+}
