@@ -22,7 +22,7 @@
 
   const thumbnail = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
   // one photo can open several batches' strips, and a strip may repeat it
-  const unique = (ids: string[] | null) => [...new Set(ids ?? [])];
+  const unique = (ids: string[] | null) => [...new Set(ids)];
 </script>
 
 {#if groups && groups.length === 0}

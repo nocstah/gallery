@@ -84,6 +84,9 @@
         </div>
       </div>
     {:else if health}
+      {#each health.notices as notice (notice)}
+        <p class="ws-inbox-row-body inbox-notice" role="note">{notice}</p>
+      {/each}
       {#if tab === 'inbox'}
         {#if groupKey}
           {#key groupKey}
@@ -102,3 +105,11 @@
     {/if}
   </div>
 </UserPageLayout>
+
+<style>
+  .inbox-notice {
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--ws-hairline);
+    color: var(--immich-ui-dark);
+  }
+</style>

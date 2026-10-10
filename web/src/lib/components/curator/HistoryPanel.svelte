@@ -56,7 +56,7 @@
       <li>
         <div class="ws-inbox-row history-row" data-undone={entry.undone_at ? true : undefined}>
           <div class="ws-strip">
-            {#each [...new Set(entry.asset_ids ?? [])].slice(0, 3) as id (id)}
+            {#each [...new Set(entry.asset_ids)].slice(0, 3) as id (id)}
               <img
                 class="ws-strip-tile"
                 src={getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail })}

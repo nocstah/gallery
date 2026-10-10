@@ -59,6 +59,8 @@ export type Health = {
   paused: boolean;
   disk: { free_gb: number; total_gb: number };
   last_backup: { file: string; at: number } | null;
+  /** plain sentences from Curator: what waits on something other than review */
+  notices: string[];
 };
 
 export type HistoryEntry = {
