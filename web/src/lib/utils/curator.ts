@@ -79,6 +79,13 @@ export type LabelBatch = { set: string; items: LabelItem[]; labelled: number; ta
 
 export type DecideResult = { applied?: number[]; failed?: number[]; rejected?: number; job?: number };
 
+/** Undo refuses where the photo changed again since (conflicts) and reports what Gallery refused (failed). */
+export type UndoResult = {
+  undone: number[];
+  conflicts: { id: number; reason: string }[];
+  failed?: { id: number; reason: string }[];
+};
+
 export class CuratorError extends Error {
   constructor(
     message: string,
@@ -119,8 +126,7 @@ export const curator = {
     ),
   decide: (ids: number[], decision: 'accept' | 'reject') =>
     post<DecideResult>('/suggestions/decide', { ids, decision }),
-  undo: (ids: number[]) =>
-    post<{ undone: number[]; conflicts: { id: number; reason: string }[] }>('/suggestions/undo', { ids }),
+  undo: (ids: number[]) => post<UndoResult>('/suggestions/undo', { ids }),
   history: (limit = 100) => call<HistoryEntry[]>(`/history?limit=${limit}`),
   kinds: () => call<JobKind[]>('/kinds'),
   jobs: (limit = 30) => call<JobRow[]>(`/jobs?limit=${limit}`),

@@ -26,8 +26,9 @@
     }
     message = undefined;
     const result = await curator.undo([entry.suggestion_id]);
-    if (result.conflicts.length > 0) {
-      message = $t('ai_inbox_conflict', { values: { reason: result.conflicts[0].reason } });
+    const problem = result.conflicts[0] ?? result.failed?.[0];
+    if (problem) {
+      message = $t('ai_inbox_conflict', { values: { reason: problem.reason } });
     }
     await load();
     onChange();

@@ -103,10 +103,11 @@
     message = undefined;
     try {
       const result = await curator.undo([item.id]);
+      const problem = result.conflicts[0] ?? result.failed?.[0];
       if (result.undone.includes(item.id)) {
         item.status = 'undone';
-      } else if (result.conflicts.length > 0) {
-        message = $t('ai_inbox_conflict', { values: { reason: result.conflicts[0].reason } });
+      } else if (problem) {
+        message = $t('ai_inbox_conflict', { values: { reason: problem.reason } });
       }
     } finally {
       busy = false;
