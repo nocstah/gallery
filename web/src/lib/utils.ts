@@ -249,9 +249,14 @@ export const getAssetMediaUrl = (options: AssetUrlOptions) => {
   });
 };
 
+// Local Omarchy layer: bump to orphan browser-cached playback responses. The cache key (c) does not change
+// when a video is transcoded later, so a clip opened before its H.264 encode existed kept replaying the
+// cached HEVC original (sound, frozen picture) for up to 30 days of stale-while-revalidate.
+const PLAYBACK_CACHE_EPOCH = '2';
+
 export const getAssetPlaybackUrl = (options: AssetUrlOptions) => {
   const { id, cacheKey: c } = options;
-  return createUrl(getAssetPlaybackPath(id), { ...authManager.params, c });
+  return createUrl(getAssetPlaybackPath(id), { ...authManager.params, c, pe: PLAYBACK_CACHE_EPOCH });
 };
 
 export const getAssetHlsUrl = (id: string) => {
