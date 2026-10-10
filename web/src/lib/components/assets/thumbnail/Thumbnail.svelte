@@ -392,30 +392,6 @@
           </div>
         {/if}
 
-        <!-- Stacked asset. Local Omarchy layer: the badge is a button that expands the stack in place
-             (stack-expand-manager) instead of opening the photo; click again to collapse. -->
-        {#if asset.stack && showStackedIcon}
-          {@const stackId = asset.stack.id}
-          {@const expanded = stackExpandManager.isExpanded(stackId)}
-          <button
-            type="button"
-            class={[
-              'ws-stack-badge absolute z-3 flex place-items-center gap-1 text-xs font-medium text-white',
-              asset.isImage && !asset.livePhotoVideoId ? 'inset-e-0 top-0' : 'inset-e-1 top-7',
-            ]}
-            aria-expanded={expanded}
-            aria-label={expanded ? $t('collapse_stack') : $t('expand_stack')}
-            title={expanded ? $t('collapse_stack') : $t('expand_stack')}
-            onclick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              void stackExpandManager.toggle(stackId, asset.id);
-            }}
-          >
-            <p>{asset.stack.assetCount.toLocaleString($locale)}</p>
-            <Icon icon={expanded ? mdiArrowCollapseHorizontal : mdiCameraBurst} size="24" />
-          </button>
-        {/if}
       </div>
 
       <!-- lazy show the url on mouse over-->
@@ -429,6 +405,31 @@
           aria-label="Thumbnail URL"
         >
         </a>
+      {/if}
+      <!-- Stacked asset. Local Omarchy layer: the badge is a button that expands the stack in place.
+           It sits after the hover link (same z-2 layer, later wins) so real clicks reach it;
+           (stack-expand-manager) instead of opening the photo; click again to collapse. -->
+      {#if asset.stack && showStackedIcon}
+        {@const stackId = asset.stack.id}
+        {@const expanded = stackExpandManager.isExpanded(stackId)}
+        <button
+          type="button"
+          class={[
+            'ws-stack-badge absolute z-3 flex place-items-center gap-1 text-xs font-medium text-white',
+            asset.isImage && !asset.livePhotoVideoId ? 'inset-e-0 top-0' : 'inset-e-1 top-7',
+          ]}
+          aria-expanded={expanded}
+          aria-label={expanded ? $t('collapse_stack') : $t('expand_stack')}
+          title={expanded ? $t('collapse_stack') : $t('expand_stack')}
+          onclick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void stackExpandManager.toggle(stackId, asset.id);
+          }}
+        >
+          <p>{asset.stack.assetCount.toLocaleString($locale)}</p>
+          <Icon icon={expanded ? mdiArrowCollapseHorizontal : mdiCameraBurst} size="24" />
+        </button>
       {/if}
     </div>
 

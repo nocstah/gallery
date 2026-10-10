@@ -717,3 +717,9 @@ body.ws-marquee-active * {
   user-select: none;
   cursor: crosshair !important;
 }
+/* stock menus stay mounted at max-height 0 when closed; the frame must not draw a sliver then */
+div.z-70[style*='max-height: 0px']:has(> ul[role='menu']) {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
