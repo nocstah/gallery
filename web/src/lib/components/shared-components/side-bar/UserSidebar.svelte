@@ -30,6 +30,8 @@
     mdiImageAlbum,
     mdiImageMultiple,
     mdiImageMultipleOutline,
+    mdiInbox,
+    mdiInboxOutline,
     mdiLink,
     mdiLock,
     mdiLockOutline,
@@ -133,6 +135,9 @@
   {#if authManager.preferences.folders.enabled && authManager.preferences.folders.sidebarWeb}
     <SidebarNavItem title={$t('folders')} href={Route.folders()} icon={{ icon: mdiFolderOutline, flipped: true }} />
   {/if}
+
+  <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
+  <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
 
   <SidebarNavItem title={$t('utilities')} href={Route.utilities()} icon={mdiToolboxOutline} activeIcon={mdiToolbox} />
 

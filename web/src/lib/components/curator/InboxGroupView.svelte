@@ -1,0 +1,311 @@
+<script lang="ts">
+  // Local Omarchy layer: reviewing one batch of Curator's suggestions. Reject the few that are wrong, then accept
+  // the rest in one go; every accepted change stays undoable here and in History. Keys: j/k move, a accepts,
+  // r rejects, u undoes. Accepting more than 20 at once runs Curator's database backup first, shown as progress.
+  import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
+  import { curator, waitForJob, type GroupPage, type Suggestion, type SuggestionStatus } from '$lib/utils/curator';
+  import { Icon } from '@immich/ui';
+  import { mdiArrowLeft } from '@mdi/js';
+  import { onMount } from 'svelte';
+  import { t, type Translations } from 'svelte-i18n';
+
+  interface Props {
+    key: string;
+    onChange: () => void;
+  }
+
+  let { key, onChange }: Props = $props();
+
+  const FILTERS = ['pending', 'applied', 'rejected'] as const;
+  type Filter = (typeof FILTERS)[number];
+  const STATUS_LABEL: Record<SuggestionStatus, Translations> = {
+    pending: 'waiting',
+    applied: 'ai_inbox_applied',
+    rejected: 'ai_inbox_rejected',
+    failed: 'failed',
+    undone: 'ai_inbox_undone',
+    superseded: 'ai_inbox_replaced',
+  };
+
+  let filter = $state<Filter>('pending');
+  let page = $state<GroupPage>();
+  let items = $state<Suggestion[]>([]);
+  let busy = $state(false);
+  let working = $state<{ note: string; done: number; total: number }>();
+  let message = $state<string>();
+  let rows: HTMLElement[] = $state([]);
+
+  const waiting = $derived(filter === 'pending' ? items.filter((item) => item.status === 'pending').length : 0);
+  const remaining = $derived(page ? page.total - (items.length - waiting) : 0);
+
+  const load = async (append = false) => {
+    const next = await curator.group(key, filter, 100, append ? items.length : 0);
+    page = next;
+    items = append ? [...items, ...next.items] : next.items;
+  };
+
+  const setStatus = (ids: number[], status: SuggestionStatus) => {
+    const set = new Set(ids);
+    for (const item of items) {
+      if (set.has(item.id)) {
+        item.status = status;
+      }
+    }
+  };
+
+  const decide = async (ids: number[], decision: 'accept' | 'reject') => {
+    if (ids.length === 0) {
+      return;
+    }
+    busy = true;
+    message = undefined;
+    try {
+      const result = await curator.decide(ids, decision);
+      if (result.job) {
+        working = { note: $t('ai_inbox_applying', { values: { count: ids.length } }), done: 0, total: ids.length };
+        const job = await waitForJob(result.job, (row) => {
+          if (working && row.progress.total) {
+            working = { ...working, done: row.progress.done ?? 0, total: row.progress.total };
+          }
+        });
+        working = undefined;
+        if (job?.status === 'failed') {
+          message = job.error?.split('\n', 1)[0] ?? $t('failed');
+        }
+        await load();
+      } else if (decision === 'reject') {
+        setStatus(ids, 'rejected');
+      } else {
+        setStatus(result.applied ?? [], 'applied');
+        setStatus(result.failed ?? [], 'failed');
+        if (result.failed?.length) {
+          message = $t('ai_inbox_some_failed', { values: { count: result.failed.length } });
+        }
+      }
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    } finally {
+      busy = false;
+      onChange();
+    }
+  };
+
+  const decideAll = async (decision: 'accept' | 'reject') => {
+    const all = await curator.group(key, 'pending', 5000, 0);
+    await decide(
+      all.items.map((item) => item.id),
+      decision,
+    );
+  };
+
+  const undo = async (item: Suggestion) => {
+    busy = true;
+    message = undefined;
+    try {
+      const result = await curator.undo([item.id]);
+      if (result.undone.includes(item.id)) {
+        item.status = 'undone';
+      } else if (result.conflicts.length > 0) {
+        message = $t('ai_inbox_conflict', { values: { reason: result.conflicts[0].reason } });
+      }
+    } finally {
+      busy = false;
+      onChange();
+    }
+  };
+
+  const setFilter = async (next: Filter) => {
+    filter = next;
+    await load();
+  };
+
+  const onKeydown = (event: KeyboardEvent) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+    const index = rows.indexOf(document.activeElement as HTMLElement);
+    const item = items[index];
+    const move = (to: number) => rows[Math.max(0, Math.min(rows.length - 1, to))]?.focus();
+    if (event.key === 'j' || event.key === 'ArrowDown') {
+      move(index + 1);
+    } else if (event.key === 'k' || event.key === 'ArrowUp') {
+      move(index - 1);
+    } else if (item && event.key === 'a' && item.status === 'pending') {
+      void decide([item.id], 'accept');
+      move(index + 1);
+    } else if (item && (event.key === 'r' || event.key === 'x') && item.status === 'pending') {
+      void decide([item.id], 'reject');
+      move(index + 1);
+    } else if (item && event.key === 'u' && item.status === 'applied') {
+      void undo(item);
+    } else {
+      return;
+    }
+    event.preventDefault();
+  };
+
+  const confidence = (value: number | null) => (value === null ? '' : `${Math.round(value * 100)}%`);
+
+  onMount(() => {
+    void load();
+  });
+</script>
+
+<div class="group-head">
+  <a class="ws-inbox-link back" href="?"><Icon icon={mdiArrowLeft} size="16" />{$t('back')}</a>
+  {#if page}
+    <h2 class="group-title">{page.group.title}</h2>
+    {#if page.group.description}
+      <p class="ws-inbox-row-body">{page.group.description}</p>
+    {/if}
+  {/if}
+  <div class="group-bar">
+    <div class="ws-seg" role="group" aria-label={page?.group.title}>
+      {#each FILTERS as name (name)}
+        <button type="button" aria-pressed={filter === name} onclick={() => setFilter(name)}>
+          {$t(STATUS_LABEL[name])}
+        </button>
+      {/each}
+    </div>
+    {#if filter === 'pending' && remaining > 0}
+      <button type="button" class="ws-btn" disabled={busy} onclick={() => decideAll('accept')}>
+        {$t('ai_inbox_accept_all', { values: { count: remaining } })}
+      </button>
+      <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => decideAll('reject')}>
+        {$t('ai_inbox_reject_all')}
+      </button>
+    {/if}
+  </div>
+  {#if working}
+    <div class="group-working" role="status">
+      <span class="ws-inbox-meta">{working.note}</span>
+      <div class="ws-meter"><span style:width="{(working.done / Math.max(1, working.total)) * 100}%"></span></div>
+    </div>
+  {/if}
+  {#if message}
+    <p class="group-message" role="status">{message}</p>
+  {/if}
+</div>
+
+{#if page && items.length === 0}
+  <p class="ws-inbox-row-body group-empty">{$t('ai_inbox_group_empty')}</p>
+{/if}
+
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<ul class="ws-inbox-rows" onkeydown={onKeydown}>
+  {#each items as item, index (item.id)}
+    <li>
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+      <div class="ws-inbox-row item-row" tabindex="0" data-status={item.status} bind:this={rows[index]}>
+        <SuggestionVisual suggestion={item} />
+        <div class="item-text">
+          <span class="ws-inbox-row-title">{item.title}</span>
+          {#if item.detail}
+            <p class="ws-inbox-row-body">{item.detail}</p>
+          {/if}
+          {#if item.confidence !== null || item.error}
+            <span class="ws-inbox-meta">{item.error ?? confidence(item.confidence)}</span>
+          {/if}
+        </div>
+        <div class="item-actions">
+          {#if item.status === 'pending'}
+            <button type="button" class="ws-btn" disabled={busy} onclick={() => decide([item.id], 'accept')}>
+              {$t('accept')}
+            </button>
+            <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => decide([item.id], 'reject')}>
+              {$t('ai_inbox_reject')}
+            </button>
+          {:else}
+            <span class="ws-inbox-meta">{$t(STATUS_LABEL[item.status])}</span>
+            {#if item.status === 'applied'}
+              <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => undo(item)}>
+                {$t('undo')}
+              </button>
+            {/if}
+          {/if}
+        </div>
+      </div>
+    </li>
+  {/each}
+</ul>
+
+{#if page && items.length < page.total}
+  <button type="button" class="ws-btn-quiet more" onclick={() => load(true)}>{$t('show_more')}</button>
+{/if}
+
+<style>
+  .group-head {
+    display: grid;
+    gap: 0.6rem;
+    padding: 1.25rem 0 1rem;
+    border-bottom: 1px solid var(--ws-hairline);
+  }
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    justify-self: start;
+    color: var(--immich-ui-muted);
+  }
+  .group-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);
+    font-weight: 750;
+    font-variation-settings:
+      'wdth' 80,
+      'opsz' 72;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+  .group-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.4rem;
+  }
+  .group-bar :global(.ws-seg) {
+    margin-inline-start: 0;
+    margin-inline-end: auto;
+  }
+  .group-working {
+    display: grid;
+    gap: 0.4rem;
+    max-width: 36rem;
+  }
+  .group-message {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .group-empty {
+    padding: 2rem 0;
+  }
+  .item-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+  }
+  .item-row[data-status='rejected'],
+  .item-row[data-status='undone'],
+  .item-row[data-status='superseded'] {
+    opacity: 0.55;
+  }
+  .item-text {
+    display: grid;
+    gap: 0.3rem;
+    align-content: start;
+  }
+  .item-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .more {
+    margin-top: 1rem;
+  }
+  @media (max-width: 767px) {
+    .item-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

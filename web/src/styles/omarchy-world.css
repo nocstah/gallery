@@ -813,3 +813,203 @@ body.ws-dragging * {
     inset 0 0 0 3px var(--ws-accent),
     inset 0 0 0 9999px color-mix(in oklab, var(--ws-accent) 18%, transparent);
 }
+
+/* ---- AI inbox (routes/(user)/inbox, Curator) ----
+   An operate surface on the same ground: a poster heading with its count in data type, rows split by hairlines,
+   photos as small tiles on the window radius, inverted segmented tabs, one ink action per row of decisions. */
+.ws-inbox {
+  padding: calc(var(--ws-gap) * 0.6) clamp(1rem, 3vw, 2.5rem) 4rem;
+  color: var(--immich-ui-dark);
+}
+.ws-inbox-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem calc(var(--ws-gap) * 2.4);
+  padding-bottom: calc(var(--ws-gap) * 0.8);
+  border-bottom: 1px solid var(--ws-hairline);
+}
+.ws-inbox-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 0.9rem + 4.6vw, 6rem);
+  font-weight: 800;
+  font-variation-settings:
+    'wdth' 75,
+    'opsz' 96;
+  letter-spacing: -0.035em;
+  line-height: 0.85;
+}
+.ws-inbox-count {
+  font-family: var(--ws-font-data);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--immich-ui-muted);
+  padding-bottom: 0.35rem;
+}
+.ws-seg {
+  display: inline-flex;
+  gap: 2px;
+  margin-inline-start: auto;
+  padding: 3px;
+  border: 1px solid var(--ws-hairline);
+  border-radius: calc(var(--ws-radius) + 8px);
+}
+.ws-seg > button {
+  padding: 0.3rem 0.75rem;
+  border-radius: calc(var(--ws-radius) + 5px);
+  color: var(--immich-ui-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.ws-seg > button:hover {
+  color: var(--immich-ui-dark);
+  background: color-mix(in oklab, var(--immich-ui-dark) 7%, transparent);
+}
+.ws-seg > button[aria-pressed='true'] {
+  background: var(--immich-ui-dark);
+  color: var(--immich-ui-light);
+}
+.ws-seg > button:focus-visible,
+.ws-btn:focus-visible,
+.ws-btn-quiet:focus-visible,
+.ws-inbox-row:focus-visible,
+.ws-inbox-link:focus-visible,
+.ws-pick:focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: 3px;
+}
+.ws-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: calc(var(--ws-radius) + 6px);
+  background: var(--immich-ui-dark);
+  color: var(--immich-ui-light);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ws-btn:hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 85%, var(--ws-accent));
+}
+.ws-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.ws-btn-quiet {
+  padding: 0.5rem 0.6rem;
+  border-radius: calc(var(--ws-radius) + 6px);
+  color: var(--immich-ui-dark);
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ws-btn-quiet:hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 7%, transparent);
+}
+.ws-btn-quiet:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.ws-inbox-link {
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  text-decoration-color: var(--ws-hairline);
+}
+.ws-inbox-link:hover {
+  text-decoration-color: var(--ws-accent);
+}
+.ws-inbox-rows {
+  list-style: none;
+}
+.ws-inbox-rows > li + li {
+  border-top: 1px solid var(--ws-hairline);
+}
+.ws-inbox-row {
+  display: grid;
+  gap: 0.35rem 1.5rem;
+  padding: 1.1rem 0;
+  border-radius: 2px;
+}
+.ws-inbox-row-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+.ws-inbox-row-body {
+  max-width: 62ch;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--immich-ui-muted);
+}
+.ws-inbox-meta {
+  font-family: var(--ws-font-data);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--immich-ui-muted);
+}
+.ws-strip {
+  display: flex;
+  gap: calc(var(--ws-gap) * 0.5);
+  min-width: 0;
+  overflow: hidden;
+}
+.ws-strip-tile {
+  flex: none;
+  object-fit: cover;
+  border-radius: var(--ws-radius);
+  outline: 1px solid var(--ws-hairline);
+  outline-offset: -1px;
+  background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
+}
+.ws-inbox-row:hover .ws-strip-tile,
+.ws-inbox-row:focus-visible .ws-strip-tile {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: calc(var(--ws-border) * -1);
+}
+.ws-pick {
+  position: relative;
+  border-radius: var(--ws-radius);
+}
+.ws-pick img {
+  display: block;
+  border-radius: var(--ws-radius);
+  outline: 1px solid var(--ws-hairline);
+  outline-offset: -1px;
+}
+.ws-pick:hover img {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: calc(var(--ws-border) * -1);
+}
+.ws-pick-rank {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.45rem;
+  border-radius: calc(var(--ws-radius) + 5px);
+  background: var(--immich-ui-dark);
+  color: var(--immich-ui-light);
+  font: 600 12px/1.6rem var(--ws-font-data);
+  text-align: center;
+}
+.ws-meter {
+  height: 2px;
+  background: var(--ws-hairline);
+  overflow: hidden;
+}
+.ws-meter > span {
+  display: block;
+  height: 100%;
+  background: var(--immich-ui-dark);
+  transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-meter > span {
+    transition: none;
+  }
+}
