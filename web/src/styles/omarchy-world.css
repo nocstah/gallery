@@ -497,4 +497,91 @@ div.absolute.font-mono {
 [data-testid='map-mobile-filter-overlay'] > div {
   background: var(--immich-ui-light);
   border-inline-end: 1px solid var(--ws-hairline);
+/* ---- Years / Months: each period is a window tile with its cover photo; the period set in
+   display numerals on the caption scrim, the count as mono data. Hover is focus (accent border) ---- */
+[data-testid='timeline-bucket-card'] {
+  border: 0;
+  border-radius: var(--tile-radius, var(--ws-radius));
+  clip-path: inset(0 round var(--tile-radius, var(--ws-radius)));
+  background: color-mix(in oklab, var(--immich-ui-dark) 6%, var(--immich-ui-light));
+  box-shadow: none;
+  filter: none;
+}
+[data-testid='timeline-bucket-card']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--ws-hairline);
+  pointer-events: none;
+  transition: box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-testid='timeline-bucket-card']:hover:not(:disabled)::after,
+[data-testid='timeline-bucket-card']:focus-visible::after {
+  box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+}
+[data-testid='timeline-bucket-card']:focus-visible {
+  outline: none;
+}
+[data-testid='timeline-bucket-card-media'],
+[data-testid='timeline-bucket-card-loading'],
+[data-testid='timeline-bucket-card-fallback'] {
+  background: color-mix(in oklab, var(--immich-ui-dark) 6%, var(--immich-ui-light));
+}
+/* tiles do not balloon on hover; the border answers */
+[data-testid='timeline-bucket-card-image'] {
+  scale: none;
+}
+[data-testid='timeline-bucket-card-overlay'] {
+  padding: 2.5rem 1.1rem 1rem;
+  background: linear-gradient(to top, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0.2) 60%, transparent);
+  color: #fff;
+}
+[data-testid='timeline-bucket-card-title'] {
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 1.2rem + 4vw, 5.5rem);
+  font-weight: 800;
+  font-variation-settings: 'wdth' 75, 'opsz' 96;
+  letter-spacing: -0.035em;
+  /* the title truncates (overflow hidden): leave room for month descenders */
+  line-height: 1;
+}
+.ws-bucket-month {
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.ws-bucket-year {
+  font-variant-numeric: tabular-nums;
+}
+[data-testid='timeline-bucket-card-count'] {
+  margin-top: 0.55rem;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: rgb(255 255 255 / 0.85);
+  font-family: var(--ws-font-data);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+/* no cover yet (or none at all): the period sits on the ground in ink, no scrim */
+[data-testid='timeline-bucket-card']:is([data-state='loading'], [data-state='fallback'])
+  [data-testid='timeline-bucket-card-overlay'] {
+  background: none;
+  color: var(--immich-ui-dark);
+}
+[data-testid='timeline-bucket-card']:is([data-state='loading'], [data-state='fallback'])
+  [data-testid='timeline-bucket-card-count'] {
+  color: var(--immich-ui-muted);
+}
+/* the fallback already shows the period in the overlay; the centred copy would repeat it */
+[data-testid='timeline-bucket-card-fallback'] {
+  font-size: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-testid='timeline-bucket-card']::after {
+    transition: none;
+  }
 }

@@ -39,6 +39,20 @@
     return String(bucket.date.year);
   });
 
+  // Local Omarchy layer: the period split into month name and year, so the year carries the display
+  // weight and the month sits beside it lighter (as in the timeline header).
+  let titleParts = $derived.by(() => {
+    if (bucket.grouping !== 'month') {
+      return { month: undefined, year: title };
+    }
+
+    const date = new Date(bucket.timeBucket);
+    return {
+      month: new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' }).format(date),
+      year: new Intl.DateTimeFormat(locale, { year: 'numeric', timeZone: 'UTC' }).format(date),
+    };
+  });
+
   let countLabel = $derived($t('timeline_overview_photo_count', { values: { count: bucket.count } }));
 
   let actionLabel = $derived.by(() => {
@@ -155,7 +169,10 @@
       class="truncate text-2xl leading-none font-semibold tracking-normal sm:text-3xl"
       data-testid="timeline-bucket-card-title"
     >
-      {title}
+      <!-- Local Omarchy layer: month and year as separate display runs -->
+      {#if titleParts.month}<span class="ws-bucket-month">{titleParts.month}</span>{' '}{/if}<span
+        class="ws-bucket-year">{titleParts.year}</span
+      >
     </div>
     <div
       class="mt-2 inline-flex max-w-full rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-gray-900 shadow-sm"

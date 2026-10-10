@@ -108,7 +108,7 @@ describe('TimelineBucketCard component', () => {
     });
 
     const overlay = screen.getByTestId('timeline-bucket-card-overlay');
-    expect(within(overlay).getByTestId('timeline-bucket-card-title')).toHaveTextContent('Aug 2015');
+    expect(within(overlay).getByTestId('timeline-bucket-card-title')).toHaveTextContent('August 2015');
     expect(within(overlay).getByTestId('timeline-bucket-card-count')).toHaveTextContent(
       'timeline_overview_photo_count',
     );
