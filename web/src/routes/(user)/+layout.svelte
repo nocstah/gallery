@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onNavigate } from '$app/navigation';
   import { page } from '$app/state';
+  import { photoTransition } from '$lib/utils/photo-transition';
   import UploadCover from './DragAndDropUploadOverlay.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import type { Snippet } from 'svelte';
@@ -8,6 +10,9 @@
   }
 
   let { children }: Props = $props();
+
+  // Local Omarchy layer: grid <-> viewer morph (lib/utils/photo-transition.ts)
+  onNavigate((navigation) => photoTransition(navigation));
 
   // $page.data.asset is loaded by route specific +page.ts loaders if that
   // route contains the assetId path.

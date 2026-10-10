@@ -333,3 +333,19 @@ div.absolute.font-mono {
     opacity: 1;
   }
 }
+
+/* ---- grid <-> viewer morph (lib/utils/photo-transition.ts) ---- */
+::view-transition-group(ws-photo) {
+  animation-duration: 340ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-old(ws-photo),
+::view-transition-new(ws-photo) {
+  height: 100%;
+  object-fit: cover;
+  animation-duration: 340ms;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 240ms;
+}

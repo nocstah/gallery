@@ -222,8 +222,10 @@
 <div class="relative size-full overflow-hidden" bind:this={ref}>
   {@render backdrop?.()}
 
+  <!-- Local Omarchy layer: data-viewer-photo marks the on-screen photo box for the grid <-> viewer morph -->
   <div
     class="pointer-events-none absolute overflow-hidden"
+    data-viewer-photo={asset.id}
     style:inset-inline-start={insetInlineStart}
     style:top
     style:width={displayWidth}
