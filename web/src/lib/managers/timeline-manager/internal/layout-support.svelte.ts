@@ -22,9 +22,9 @@ export function updateGeometry(timelineManager: TimelineManager, month: Timeline
 
 // Local Omarchy layer ("Tiled Workspace"): rows of days fill the width edge to edge, the way tiled
 // windows fill a workspace. Days that fit on one line are pooled into rows and re-laid at one shared
-// height chosen so the row ends exactly at the viewport edge (shrinking photos by at most MIN_SCALE,
-// growing them by at most MAX_SCALE). Days that already span several lines keep their own layout and
-// take a row to themselves. Falls back to upstream's packing while any day's layout is deferred.
+// height chosen so the row ends exactly at the viewport edge (shrinking photos by at most MIN_SCALE;
+// growing them as far as needed, up to 70% of the viewport height). Days that span several lines take
+// a row to themselves with their lines balanced. Only a month's last row may stay short (MAX_SCALE). Falls back to upstream's packing while any day's layout is deferred.
 const MIN_SCALE = 0.72;
 const MAX_SCALE = 1.6;
 
@@ -50,6 +50,59 @@ const placeLine = (line: DayLine, height: number, spacing: number) => {
   }
   line.day.width = left - spacing;
   line.day.height = height;
+};
+
+const allRatios = (day: TimelineMonth['timelineDays'][number]): number[] | undefined => {
+  const positions = day.viewerAssets.map((viewerAsset) => viewerAsset.position);
+  if (positions.length === 0 || positions.some((position) => !position || position.height <= 0)) {
+    return undefined;
+  }
+  return positions.map((position) => position!.width / position!.height);
+};
+
+// A day too wide for one line: split its photos into lines of even weight and justify every line to
+// the full width, so no line (the last included) is left with an orphan tile and empty ground.
+const placeBalanced = (
+  day: TimelineMonth['timelineDays'][number],
+  ratios: number[],
+  width: number,
+  rowHeight: number,
+  spacing: number,
+) => {
+  const total = ratios.reduce((a, b) => a + b, 0);
+  const lineCount = Math.max(1, Math.round((total * rowHeight) / width));
+  const target = total / lineCount;
+  const lines: number[][] = [];
+  let line: number[] = [];
+  let sum = 0;
+  for (const [index, ratio] of ratios.entries()) {
+    const remainingLines = lineCount - lines.length;
+    const remainingTiles = ratios.length - index;
+    // close a line once it is past its share, but never strand fewer tiles than lines left
+    if (line.length > 0 && remainingLines > 1 && sum + ratio / 2 > target && remainingTiles >= remainingLines - 1) {
+      lines.push(line);
+      line = [];
+      sum = 0;
+    }
+    line.push(index);
+    sum += ratio;
+  }
+  lines.push(line);
+
+  let top = 0;
+  for (const indexes of lines) {
+    const ratioSum = indexes.reduce((acc, index) => acc + ratios[index], 0);
+    const height = Math.floor((width - (indexes.length - 1) * spacing) / ratioSum);
+    let left = 0;
+    for (const index of indexes) {
+      const tileWidth = ratios[index] * height;
+      day.viewerAssets[index].position = { top, left, width: tileWidth, height };
+      left += tileWidth + spacing;
+    }
+    top += height + spacing;
+  }
+  day.width = width;
+  day.height = top - spacing;
 };
 
 export function layoutTimelineMonth(timelineManager: TimelineManager, month: TimelineMonth, noDefer: boolean = false) {
@@ -81,7 +134,8 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
       pending.reduce((sum, line) => sum + (line.ratios.length - 1) * spacing, 0) + (pending.length - 1) * gap;
     const fill = (viewportWidth - fixed) / ratioSum;
     // the last row of a month may stay short rather than blow one photo up to the full width
-    const height = Math.max(rowHeight * MIN_SCALE, Math.min(fill, rowHeight * (isLast ? 1 : MAX_SCALE)));
+    const ceiling = isLast ? rowHeight * MAX_SCALE : Math.max(rowHeight * MAX_SCALE, timelineManager.viewportHeight * 0.7);
+    const height = Math.max(rowHeight * MIN_SCALE, Math.min(fill, ceiling));
     let start = 0;
     for (const [col, line] of pending.entries()) {
       placeLine(line, Math.floor(height), spacing);
@@ -100,12 +154,17 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
   for (const timelineDay of month.timelineDays) {
     const ratios = singleLineRatios(timelineDay);
     if (!ratios) {
-      // a multi-line day already fills the width: give it a row of its own
+      // a multi-line day takes a row of its own, its lines balanced and justified to the full width
       flush(false);
+      const tileRatios = allRatios(timelineDay);
+      if (tileRatios) {
+        placeBalanced(timelineDay, tileRatios, viewportWidth, rowHeight, spacing);
+      }
       timelineDay.row = row++;
       timelineDay.col = 0;
       timelineDay.start = 0;
       timelineDay.top = top;
+      timelineDay.updateAssetBoundaries();
       top += timelineDay.height + headerHeight;
       continue;
     }
