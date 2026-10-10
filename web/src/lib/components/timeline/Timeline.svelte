@@ -32,6 +32,7 @@
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { attachThumbnailZoom, thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
+  import { marqueeSelect } from '$lib/actions/marquee-select';
   import { lang } from '$lib/stores/preferences.store';
   import { isAssetViewerRoute, navigate } from '$lib/utils/navigation';
   import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
@@ -783,7 +784,9 @@
 {/if}
 
 <!-- Right margin MUST be equal to the width of scrubber -->
+<!-- Local Omarchy layer: use:marqueeSelect draws a drag-selection box over the grid (lib/actions/marquee-select.ts) -->
 <section
+  use:marqueeSelect={{ timelineManager, assetInteraction, enabled: !singleSelect && !assetViewerManager.isViewing }}
   id="asset-grid"
   class={['h-full scrollbar-hidden overflow-y-auto outline-none', { 'm-0': isEmpty }, { 'ms-0': !isEmpty }]}
   style:margin-inline-end={(usingMobileDevice ? 0 : scrubberWidth) + 'px'}

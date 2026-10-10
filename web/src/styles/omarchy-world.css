@@ -702,3 +702,18 @@ ul[role='menu'] > hr {
 [data-thumbnail-focus-container][data-stack-member]:hover::after {
   box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
 }
+
+/* ---- drag-selection box (lib/actions/marquee-select.ts) ---- */
+.ws-marquee {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  border: 1px solid var(--ws-accent);
+  background: color-mix(in oklab, var(--ws-accent) 16%, transparent);
+  border-radius: 3px;
+}
+body.ws-marquee-active,
+body.ws-marquee-active * {
+  user-select: none;
+  cursor: crosshair !important;
+}
