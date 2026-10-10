@@ -75,22 +75,36 @@
     active?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reducedMotion ? 'auto' : 'smooth' });
   });
 
-  // Switching workspaces jumps to the year and slides its photos in from the side of travel, like
-  // Hyprland's workspace slide. Only the inner timeline layer moves; the scroll container is left alone
-  // so the timeline's own scroll bookkeeping is undisturbed. Reduced motion cuts straight to it.
-  const switchTo = (year: number) => {
+  // Switching workspaces slides the current year out across the width and the new one in from the
+  // other side, like Hyprland's workspace slide: older years arrive from the right. Only the inner
+  // timeline layer moves; the scroll container is left alone. Reduced motion cuts straight to it.
+  let switching = false;
+  const switchTo = async (year: number) => {
     const month = timelineManager.months.find((m) => m.yearMonth.year === year);
-    if (!month || !current || year === current.year) {
+    if (!month || !current || year === current.year || switching) {
       return;
     }
     const sign = year < current.year ? 1 : -1;
-    timelineManager.scrollTo(month.top * timelineManager.maxScrollPercent);
     const layer = document.querySelector<HTMLElement>('#virtual-timeline');
-    if (layer && !reducedMotion) {
-      layer.animate([{ translate: `${sign * 8}% 0`, opacity: 0.2 }, { translate: '0 0', opacity: 1 }], {
-        duration: 300,
+    if (!layer || reducedMotion) {
+      timelineManager.scrollTo(month.top * timelineManager.maxScrollPercent);
+      return;
+    }
+    switching = true;
+    try {
+      await layer.animate([{ translate: '0 0' }, { translate: `${-sign * 100}% 0` }], {
+        duration: 170,
+        easing: 'cubic-bezier(0.55, 0, 1, 0.45)',
+        fill: 'forwards',
+      }).finished;
+      timelineManager.scrollTo(month.top * timelineManager.maxScrollPercent);
+      await layer.animate([{ translate: `${sign * 100}% 0` }, { translate: '0 0' }], {
+        duration: 240,
         easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-      });
+      }).finished;
+    } finally {
+      layer.getAnimations().forEach((animation) => animation.cancel());
+      switching = false;
     }
   };
 
@@ -109,7 +123,7 @@
     const next = years[index + (event.key === '[' ? 1 : -1)];
     if (next) {
       event.preventDefault();
-      switchTo(next.year);
+      void switchTo(next.year);
     }
   };
 
@@ -139,7 +153,7 @@
           data-year={year}
           aria-current={year === current.year ? 'true' : undefined}
           title={$t('items_count', { values: { count } })}
-          onclick={() => switchTo(year)}
+          onclick={() => void switchTo(year)}
         >
           {year}
         </button>

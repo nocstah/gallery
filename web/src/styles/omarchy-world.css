@@ -83,6 +83,7 @@ div:has(> [data-testid='admin-page-header']) {
    focus here, like focus-follows-mouse) takes the active border in the theme accent ---- */
 [data-thumbnail-focus-container] {
   border-radius: var(--ws-radius);
+  container-type: inline-size;
 }
 [data-thumbnail-focus-container] > div,
 [data-thumbnail-focus-container] img {
@@ -294,6 +295,15 @@ div.absolute.font-mono {
   opacity: 1;
 }
 
+/* touch screens have no hover: wide tiles carry their place permanently */
+@media (pointer: coarse) {
+  @container (min-width: 200px) {
+    .ws-place {
+      opacity: 1;
+    }
+  }
+}
+
 /* ---- day labels: short form on narrow screens so single-tile days don't truncate ---- */
 .ws-day-short {
   display: none;
@@ -305,4 +315,10 @@ div.absolute.font-mono {
   .ws-day-short {
     display: inline;
   }
+}
+
+/* ---- top bar: search leads, right after the logo (as the field already does at xl+) ---- */
+[data-testid='navbar-grid'] section > button[aria-label]:first-child.xl\:hidden {
+  order: -1;
+  margin-inline-end: auto;
 }

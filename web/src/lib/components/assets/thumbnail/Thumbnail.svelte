@@ -318,7 +318,7 @@
         {/if}
 
         <!-- Local Omarchy layer: the place, captioned on the photo while it has focus -->
-        {#if !usingMobileDevice && !disabled && (asset.city || asset.country)}
+        {#if !disabled && (asset.city || asset.country)}
           <p class={['ws-place', { 'ws-place-fav': asset.isFavorite }]}>
             {[asset.city, asset.country].filter(Boolean).join(', ')}
           </p>
