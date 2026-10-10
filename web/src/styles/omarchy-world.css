@@ -84,9 +84,12 @@ div:has(> [data-testid='admin-page-header']) {
 [data-thumbnail-focus-container] {
   border-radius: var(--tile-radius, var(--ws-radius));
   container-type: inline-size;
+  /* overflow + radius does not clip composited layers (the hover video preview); a clip-path does */
+  clip-path: inset(0 round var(--tile-radius, var(--ws-radius)));
 }
 [data-thumbnail-focus-container] > div,
-[data-thumbnail-focus-container] img {
+[data-thumbnail-focus-container] img,
+[data-thumbnail-focus-container] video {
   border-radius: var(--tile-radius, var(--ws-radius));
 }
 [data-thumbnail-focus-container]::after {
