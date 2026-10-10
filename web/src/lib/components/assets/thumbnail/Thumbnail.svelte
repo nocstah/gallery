@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
+  import { t } from 'svelte-i18n';
   import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { ProjectionType } from '$lib/constants';
   import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -13,6 +15,7 @@
   import { Icon } from '@immich/ui';
   import {
     mdiArchiveArrowDownOutline,
+    mdiArrowCollapseHorizontal,
     mdiCameraBurst,
     mdiCheckCircle,
     mdiFileGifBox,
@@ -252,6 +255,7 @@
   bind:this={element}
   data-asset={asset.id}
   data-thumbnail-focus-container
+  data-stack-member={stackExpandManager.isMember(asset.id) ? true : undefined}
   data-selected={selected ? true : undefined}
   data-readonly={readonly ? true : undefined}
   data-disabled={disabled ? true : undefined}
@@ -388,17 +392,29 @@
           </div>
         {/if}
 
-        <!-- Stacked asset -->
+        <!-- Stacked asset. Local Omarchy layer: the badge is a button that expands the stack in place
+             (stack-expand-manager) instead of opening the photo; click again to collapse. -->
         {#if asset.stack && showStackedIcon}
-          <div
+          {@const stackId = asset.stack.id}
+          {@const expanded = stackExpandManager.isExpanded(stackId)}
+          <button
+            type="button"
             class={[
-              'absolute z-2 flex place-items-center gap-1 pe-2 pt-2 text-xs font-medium text-white',
+              'ws-stack-badge absolute z-3 flex place-items-center gap-1 text-xs font-medium text-white',
               asset.isImage && !asset.livePhotoVideoId ? 'inset-e-0 top-0' : 'inset-e-1 top-7',
             ]}
+            aria-expanded={expanded}
+            aria-label={expanded ? $t('collapse_stack') : $t('expand_stack')}
+            title={expanded ? $t('collapse_stack') : $t('expand_stack')}
+            onclick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              void stackExpandManager.toggle(stackId, asset.id);
+            }}
           >
             <p>{asset.stack.assetCount.toLocaleString($locale)}</p>
-            <Icon icon={mdiCameraBurst} size="24" />
-          </div>
+            <Icon icon={expanded ? mdiArrowCollapseHorizontal : mdiCameraBurst} size="24" />
+          </button>
         {/if}
       </div>
 

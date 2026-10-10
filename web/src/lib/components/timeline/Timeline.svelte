@@ -31,6 +31,7 @@
   import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { attachThumbnailZoom, thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
+  import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
   import { lang } from '$lib/stores/preferences.store';
   import { isAssetViewerRoute, navigate } from '$lib/utils/navigation';
   import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
@@ -202,6 +203,15 @@
   $effect(() => {
     if (scrollableElement) {
       return attachThumbnailZoom(scrollableElement);
+    }
+  });
+
+  // Local Omarchy layer: stack badges expand in place against this timeline (stack-expand-manager)
+  $effect(() => {
+    const manager = timelineManager;
+    if (withStacked) {
+      // untracked: reset touches the manager's own reactive maps, which must not re-trigger this
+      untrack(() => stackExpandManager.reset(manager));
     }
   });
 

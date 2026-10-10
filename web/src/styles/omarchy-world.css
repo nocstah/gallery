@@ -674,3 +674,31 @@ ul[role='menu'] > hr {
   margin: 4px 6px;
   border-color: var(--ws-hairline);
 }
+
+/* ---- stacks expanded in place: the badge is a button; the inserted frames carry a quiet ink ring ---- */
+.ws-stack-badge {
+  padding: 4px 6px 4px 8px;
+  margin: 4px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.38);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: background-color 120ms;
+}
+.ws-stack-badge:hover,
+.ws-stack-badge[aria-expanded='true'] {
+  background: rgb(0 0 0 / 0.62);
+}
+.ws-stack-badge:focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: 1px;
+}
+[data-thumbnail-focus-container][data-stack-member]::after {
+  box-shadow:
+    inset 0 0 0 2px color-mix(in oklab, var(--immich-ui-dark) 55%, transparent),
+    inset 0 0 0 3px var(--immich-ui-light);
+}
+[data-thumbnail-focus-container][data-stack-member]:hover::after {
+  box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+}
