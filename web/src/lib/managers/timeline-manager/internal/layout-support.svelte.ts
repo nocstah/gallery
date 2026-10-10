@@ -116,10 +116,12 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
   }
 
   const viewportWidth = timelineManager.viewportWidth;
-  const gap = timelineManager.gap;
   const spacing = options.spacing;
   const rowHeight = timelineManager.rowHeight;
   const headerHeight = timelineManager.headerHeight;
+  // Without day labels the days merge into one grid: days and rows sit on the photo spacing.
+  const gap = headerHeight === 0 ? spacing : timelineManager.gap;
+  const rowGap = headerHeight === 0 ? spacing : 0;
 
   let top = 0;
   let row = 0;
@@ -146,7 +148,7 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
       line.day.updateAssetBoundaries();
       start += line.day.width + gap;
     }
-    top += Math.floor(height) + headerHeight;
+    top += Math.floor(height) + headerHeight + rowGap;
     row++;
     pending = [];
   };
@@ -165,7 +167,7 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
       timelineDay.start = 0;
       timelineDay.top = top;
       timelineDay.updateAssetBoundaries();
-      top += timelineDay.height + headerHeight;
+      top += timelineDay.height + headerHeight + rowGap;
       continue;
     }
     const candidate = [...pending, { day: timelineDay, ratios }];

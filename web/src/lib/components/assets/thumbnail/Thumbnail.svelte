@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { ProjectionType } from '$lib/constants';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
@@ -83,6 +84,20 @@
   // Local Omarchy layer: a tile zoomed past what the thumbnail holds (the server thumbnail size, set to
   // 640px here) at this screen's pixel ratio loads the preview rendition instead of upscaling a thumbnail.
   const THUMBNAIL_PX = 640;
+  // Without day labels the date travels on the photo itself, ahead of the place.
+  const tileCaption = $derived.by(() => {
+    const place = [asset.city, asset.country].filter(Boolean).join(', ');
+    if (thumbnailZoomManager.dayLabels || !asset.localDateTime) {
+      return place;
+    }
+    const { year, month, day } = asset.localDateTime;
+    const date = new Date(year, month - 1, day).toLocaleDateString(undefined, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+    return place ? `${date} · ${place}` : date;
+  });
   const tileMediaSize = $derived(
     Math.max(Number(width) || 0, Number(height) || 0) * (globalThis.devicePixelRatio ?? 1) > THUMBNAIL_PX * 1.15
       ? AssetMediaSize.Preview
@@ -326,10 +341,8 @@
         {/if}
 
         <!-- Local Omarchy layer: the place, captioned on the photo while it has focus -->
-        {#if !disabled && (asset.city || asset.country)}
-          <p class={['ws-place', { 'ws-place-fav': asset.isFavorite }]}>
-            {[asset.city, asset.country].filter(Boolean).join(', ')}
-          </p>
+        {#if !disabled && (tileCaption)}
+          <p class={['ws-place', { 'ws-place-fav': asset.isFavorite }]}>{tileCaption}</p>
         {/if}
 
         <!-- Favorite asset star -->

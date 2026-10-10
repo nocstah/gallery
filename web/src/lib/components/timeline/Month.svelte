@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import AssetLayout from '$lib/components/timeline/AssetLayout.svelte';
   import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { TimelineDay } from '$lib/managers/timeline-manager/timeline-day.svelte';
@@ -77,6 +78,7 @@
     onmouseenter={() => (hoveredTimelineDay = timelineDay.groupTitle)}
     onmouseleave={() => (hoveredTimelineDay = null)}
   >
+    {#if thumbnailZoomManager.dayLabels}
     <!-- Day title -->
     <div
       class="ws-day flex h-6 place-items-center pt-7 pb-5 text-immich-fg max-md:pt-5 max-md:pb-3 dark:text-immich-dark-fg"
@@ -103,6 +105,7 @@
         <span class="ws-day-short">{getTimelineDayShort(timelineDay)}</span>
       </span>
     </div>
+    {/if}
 
     <AssetLayout
       {manager}

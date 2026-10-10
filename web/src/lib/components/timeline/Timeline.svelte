@@ -170,14 +170,15 @@
   $effect(() => {
     thumbnailZoomManager.mode = maxMd ? 'narrow' : 'desktop';
     const zoom = thumbnailZoomManager.scale;
+    const dayLabels = thumbnailZoomManager.dayLabels;
     const layoutOptions = maxMd
       ? {
           rowHeight: Math.round(100 * zoom),
-          headerHeight: 32,
+          headerHeight: dayLabels ? 32 : 0,
         }
       : {
           rowHeight: Math.round(235 * zoom),
-          headerHeight: 48,
+          headerHeight: dayLabels ? 48 : 0,
         };
     const anchor = untrack(() =>
       lastZoom !== undefined && lastZoom !== zoom && viewportTopMonth && typeof viewportTopMonth === 'object'

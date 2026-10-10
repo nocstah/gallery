@@ -1,4 +1,4 @@
-// Local Omarchy layer: Mac-Photos-style thumbnail zoom for the timeline.
+// Local Omarchy layer: Mac-Photos-style thumbnail zoom for the timeline, and the day-label toggle.
 // One scale per form factor (desktop / narrow), multiplied onto the timeline's base row height and
 // remembered per browser. Ctrl+wheel and trackpad pinch (which browsers deliver as Ctrl+wheel) zoom
 // continuously; + / - step and 0 resets; TimelineWorkspaces renders a slider bound to `scale`.
@@ -28,9 +28,38 @@ const load = (): Stored => {
   return { desktop: 1, narrow: 1 };
 };
 
+const DAY_LABELS_KEY = 'omarchy-day-labels';
+const loadDayLabels = () => {
+  if (browser) {
+    try {
+      return localStorage.getItem(DAY_LABELS_KEY) === 'on';
+    } catch {
+      /* unavailable */
+    }
+  }
+  // off by default: one continuous grid like Mac Photos; the month header carries the date
+  return false;
+};
+
 class ThumbnailZoomManager {
   #scales = $state<Stored>(load());
+  #dayLabels = $state(loadDayLabels());
   mode = $state<Mode>('desktop');
+
+  get dayLabels() {
+    return this.#dayLabels;
+  }
+
+  set dayLabels(value: boolean) {
+    this.#dayLabels = value;
+    if (browser) {
+      try {
+        localStorage.setItem(DAY_LABELS_KEY, value ? 'on' : 'off');
+      } catch {
+        /* storage unavailable */
+      }
+    }
+  }
 
   get scale() {
     return this.#scales[this.mode];

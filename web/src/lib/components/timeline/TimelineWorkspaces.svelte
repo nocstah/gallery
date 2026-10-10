@@ -161,6 +161,20 @@
       {/each}
     </nav>
 
+    <button
+      type="button"
+      class="ws-labels"
+      aria-pressed={thumbnailZoomManager.dayLabels}
+      title={$t('day_labels')}
+      onclick={() => (thumbnailZoomManager.dayLabels = !thumbnailZoomManager.dayLabels)}
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M2 3.5h12M2 8h12M2 12.5h12" class="ws-labels-rule" />
+        <rect x="2" y="2" width="5" height="3" rx="0.8" class="ws-labels-tag" />
+      </svg>
+      <span>{$t('day_labels')}</span>
+    </button>
+
     <label class="ws-zoom" title={$t('thumbnail_size')}>
       <span class="sr-only">{$t('thumbnail_size')}</span>
       <svg viewBox="0 0 16 16" aria-hidden="true" class="ws-zoom-icon ws-zoom-small"><rect x="5" y="5" width="6" height="6" rx="1" /></svg>
@@ -262,12 +276,51 @@
   }
 
 
-  .ws-zoom {
+  .ws-labels {
     flex: none;
     display: flex;
     align-items: center;
     gap: 0.4rem;
     margin-inline-start: auto;
+    margin-bottom: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--ws-hairline);
+    border-radius: calc(var(--ws-radius) + 5px);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--immich-ui-muted);
+    transition:
+      background-color 120ms,
+      color 120ms;
+  }
+  .ws-labels svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+  }
+  .ws-labels-tag {
+    fill: currentColor;
+    stroke: none;
+  }
+  .ws-labels:hover {
+    color: var(--immich-ui-dark);
+  }
+  .ws-labels[aria-pressed='true'] {
+    background: var(--immich-ui-dark);
+    border-color: var(--immich-ui-dark);
+    color: var(--immich-ui-light);
+  }
+  .ws-labels:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: 2px;
+  }
+  .ws-zoom {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     padding-bottom: 0.45rem;
     color: var(--immich-ui-muted);
   }
