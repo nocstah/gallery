@@ -111,7 +111,7 @@
 
   // [ and ] step to the next older / newer year, the browser's stand-in for SUPER+<n>.
   const onKeydown = (event: KeyboardEvent) => {
-    const target = event.target as HTMLElement | null;
+    const target = event.target instanceof Element ? event.target : null;
     // The asset viewer's editor uses [ and ] to rotate; the timeline only listens while it is in front.
     const viewerOpen = document.querySelector('#immich-asset-viewer') !== null;
     if (viewerOpen || event.ctrlKey || event.metaKey || event.altKey || target?.closest('input, textarea, [contenteditable]')) {
@@ -161,19 +161,36 @@
       {/each}
     </nav>
 
-    <button
-      type="button"
-      class="ws-labels"
-      aria-pressed={thumbnailZoomManager.dayLabels}
-      title={$t('day_labels')}
-      onclick={() => (thumbnailZoomManager.dayLabels = !thumbnailZoomManager.dayLabels)}
-    >
-      <svg viewBox="0 0 16 16" aria-hidden="true">
-        <path d="M2 3.5h12M2 8h12M2 12.5h12" class="ws-labels-rule" />
-        <rect x="2" y="2" width="5" height="3" rx="0.8" class="ws-labels-tag" />
-      </svg>
-      <span>{$t('day_labels')}</span>
-    </button>
+    <div class="ws-tools">
+      <button
+        type="button"
+        class="ws-tool"
+        aria-pressed={thumbnailZoomManager.dayLabels}
+        aria-label={$t('day_labels')}
+        title={$t('day_labels')}
+        onclick={() => (thumbnailZoomManager.dayLabels = !thumbnailZoomManager.dayLabels)}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <rect x="2" y="2" width="5" height="2.5" rx="0.7" class="ws-fill" />
+          <rect x="2" y="6" width="12" height="8" rx="1" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="ws-tool"
+        aria-pressed={thumbnailZoomManager.compact}
+        aria-label={$t('compact_view')}
+        title={$t('compact_view')}
+        onclick={() => (thumbnailZoomManager.compact = !thumbnailZoomManager.compact)}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <rect x="2" y="2" width="5.5" height="5.5" class="ws-fill" />
+          <rect x="8.5" y="2" width="5.5" height="5.5" class="ws-fill" />
+          <rect x="2" y="8.5" width="5.5" height="5.5" class="ws-fill" />
+          <rect x="8.5" y="8.5" width="5.5" height="5.5" class="ws-fill" />
+        </svg>
+      </button>
+    </div>
 
     <label class="ws-zoom" title={$t('thumbnail_size')}>
       <span class="sr-only">{$t('thumbnail_size')}</span>
@@ -276,43 +293,46 @@
   }
 
 
-  .ws-labels {
+  .ws-tools {
     flex: none;
     display: flex;
-    align-items: center;
-    gap: 0.4rem;
+    gap: 2px;
     margin-inline-start: auto;
     margin-bottom: 0.3rem;
-    padding: 0.3rem 0.6rem;
+    padding: 2px;
     border: 1px solid var(--ws-hairline);
+    border-radius: calc(var(--ws-radius) + 7px);
+  }
+  .ws-tool {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 26px;
     border-radius: calc(var(--ws-radius) + 5px);
-    font-size: 12px;
-    font-weight: 600;
     color: var(--immich-ui-muted);
     transition:
       background-color 120ms,
       color 120ms;
   }
-  .ws-labels svg {
-    width: 14px;
-    height: 14px;
+  .ws-tool svg {
+    width: 15px;
+    height: 15px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 1.4;
+    stroke-width: 1.3;
   }
-  .ws-labels-tag {
+  .ws-tool .ws-fill {
     fill: currentColor;
     stroke: none;
   }
-  .ws-labels:hover {
+  .ws-tool:hover {
     color: var(--immich-ui-dark);
   }
-  .ws-labels[aria-pressed='true'] {
+  .ws-tool[aria-pressed='true'] {
     background: var(--immich-ui-dark);
-    border-color: var(--immich-ui-dark);
     color: var(--immich-ui-light);
   }
-  .ws-labels:focus-visible {
+  .ws-tool:focus-visible {
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: 2px;
   }

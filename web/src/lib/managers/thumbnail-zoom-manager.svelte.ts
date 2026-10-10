@@ -29,6 +29,8 @@ const load = (): Stored => {
 };
 
 const DAY_LABELS_KEY = 'omarchy-day-labels';
+const COMPACT_KEY = 'omarchy-compact';
+const COMPACT_SPACING = 2;
 const loadDayLabels = () => {
   if (browser) {
     try {
@@ -44,6 +46,13 @@ const loadDayLabels = () => {
 class ThumbnailZoomManager {
   #scales = $state<Stored>(load());
   #dayLabels = $state(loadDayLabels());
+  #compact = $state(browser ? (() => {
+    try {
+      return localStorage.getItem(COMPACT_KEY) === 'on';
+    } catch {
+      return false;
+    }
+  })() : false);
   mode = $state<Mode>('desktop');
 
   get dayLabels() {
@@ -74,6 +83,31 @@ class ThumbnailZoomManager {
         /* storage unavailable: the zoom still applies for this session */
       }
     }
+  }
+
+  get compact() {
+    return this.#compact;
+  }
+
+  set compact(value: boolean) {
+    this.#compact = value;
+    if (browser) {
+      try {
+        localStorage.setItem(COMPACT_KEY, value ? 'on' : 'off');
+      } catch {
+        /* storage unavailable */
+      }
+    }
+  }
+
+  /**
+   * Photo spacing for a desktop gap. Like Mac Photos, the seams tighten as thumbnails shrink: the full
+   * gap from the default size up, easing down to ~1px at the smallest size. Compact pins the tight seam.
+   */
+  spacingFor(gap: number) {
+    const shrink = Math.min(1, Math.max(0, (this.scale - ZOOM_MIN) / (1 - ZOOM_MIN)));
+    const auto = Math.max(1, Math.round(gap * (0.1 + 0.9 * shrink)));
+    return this.#compact ? Math.min(auto, COMPACT_SPACING) : auto;
   }
 
   step(direction: 1 | -1) {

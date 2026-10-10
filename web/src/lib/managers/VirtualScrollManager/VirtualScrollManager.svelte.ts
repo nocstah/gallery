@@ -1,3 +1,4 @@
+import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
 import { debounce } from 'lodash-es';
 
 // Largest *scrollable range* the engine will actually deliver. This is not the same as the
@@ -81,7 +82,7 @@ export abstract class VirtualScrollManager {
   #resetScrolling = debounce(() => (this.#scrolling = false), 1000);
   #resetSuspendTransitions = debounce(() => (this.suspendTransitions = false), 1000);
   #justifiedLayoutOptions = $derived({
-    spacing: workspaceGap(),
+    spacing: thumbnailZoomManager.spacingFor(workspaceGap()),
     heightTolerance: 0.5,
     rowHeight: this.#rowHeight,
     rowWidth: Math.floor(this.viewportWidth),

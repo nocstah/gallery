@@ -22,9 +22,9 @@ export function updateGeometry(timelineManager: TimelineManager, month: Timeline
 
 // Local Omarchy layer ("Tiled Workspace"): rows of days fill the width edge to edge, the way tiled
 // windows fill a workspace. Days that fit on one line are pooled into rows and re-laid at one shared
-// height chosen so the row ends exactly at the viewport edge (shrinking photos by at most MIN_SCALE;
-// growing them as far as needed, up to 70% of the viewport height). Days that span several lines take
-// a row to themselves with their lines balanced. Only a month's last row may stay short (MAX_SCALE). Falls back to upstream's packing while any day's layout is deferred.
+// height chosen so the row ends exactly at the viewport edge (photos shrink to MIN_SCALE or grow to
+// MAX_SCALE of the target height). A row that cannot fill within that joins the row above it; days that
+// span several lines take a row to themselves with their lines balanced. Falls back to upstream's packing while any day's layout is deferred.
 const MIN_SCALE = 0.72;
 const MAX_SCALE = 1.6;
 
@@ -123,65 +123,85 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
   const gap = headerHeight === 0 ? spacing : timelineManager.gap;
   const rowGap = headerHeight === 0 ? spacing : 0;
 
-  let top = 0;
-  let row = 0;
-  let pending: DayLine[] = [];
+  type Row = { kind: 'pool'; lines: DayLine[] } | { kind: 'multi'; day: TimelineMonth['timelineDays'][number] };
+  const fillHeight = (lines: DayLine[]) => {
+    const ratioSum = lines.reduce((sum, line) => sum + line.ratios.reduce((a, b) => a + b, 0), 0);
+    const fixed = lines.reduce((sum, line) => sum + (line.ratios.length - 1) * spacing, 0) + (lines.length - 1) * gap;
+    return (viewportWidth - fixed) / ratioSum;
+  };
 
-  const flush = (isLast: boolean) => {
-    if (pending.length === 0) {
-      return;
+  // 1. pool single-line days greedily into rows; multi-line days stand alone
+  const rows: Row[] = [];
+  let pending: DayLine[] = [];
+  for (const timelineDay of month.timelineDays) {
+    const ratios = singleLineRatios(timelineDay);
+    if (!ratios) {
+      if (pending.length > 0) {
+        rows.push({ kind: 'pool', lines: pending });
+        pending = [];
+      }
+      rows.push({ kind: 'multi', day: timelineDay });
+      continue;
     }
-    const ratioSum = pending.reduce((sum, line) => sum + line.ratios.reduce((a, b) => a + b, 0), 0);
-    const fixed =
-      pending.reduce((sum, line) => sum + (line.ratios.length - 1) * spacing, 0) + (pending.length - 1) * gap;
-    const fill = (viewportWidth - fixed) / ratioSum;
-    // the last row of a month may stay short rather than blow one photo up to the full width
-    const ceiling = isLast ? rowHeight * MAX_SCALE : Math.max(rowHeight * MAX_SCALE, timelineManager.viewportHeight * 0.7);
-    const height = Math.max(rowHeight * MIN_SCALE, Math.min(fill, ceiling));
+    const candidate = [...pending, { day: timelineDay, ratios }];
+    if (pending.length > 0 && fillHeight(candidate) < rowHeight * MIN_SCALE) {
+      rows.push({ kind: 'pool', lines: pending });
+      pending = [{ day: timelineDay, ratios }];
+    } else {
+      pending = candidate;
+    }
+  }
+  if (pending.length > 0) {
+    rows.push({ kind: 'pool', lines: pending });
+  }
+
+  // 2. a pooled row that could only fill by growing past MAX_SCALE joins the pooled row above it
+  //    when the two together still fill at MIN_SCALE or more, so stray days never balloon
+  for (let index = rows.length - 1; index > 0; index--) {
+    const current = rows[index];
+    const previous = rows[index - 1];
+    if (current.kind !== 'pool' || previous.kind !== 'pool') {
+      continue;
+    }
+    if (fillHeight(current.lines) > rowHeight * MAX_SCALE) {
+      const merged = [...previous.lines, ...current.lines];
+      if (fillHeight(merged) >= rowHeight * MIN_SCALE) {
+        rows.splice(index - 1, 2, { kind: 'pool', lines: merged });
+      }
+    }
+  }
+
+  // 3. place: pooled rows fill the width at one shared height (a row that still cannot fill stays short
+  //    at MAX_SCALE); multi-line days get balanced, full-width lines
+  let top = 0;
+  for (const [rowIndex, entry] of rows.entries()) {
+    if (entry.kind === 'multi') {
+      const day = entry.day;
+      const tileRatios = allRatios(day);
+      if (tileRatios) {
+        placeBalanced(day, tileRatios, viewportWidth, rowHeight, spacing);
+      }
+      day.row = rowIndex;
+      day.col = 0;
+      day.start = 0;
+      day.top = top;
+      day.updateAssetBoundaries();
+      top += day.height + headerHeight + rowGap;
+      continue;
+    }
+    const height = Math.floor(Math.max(rowHeight * MIN_SCALE, Math.min(fillHeight(entry.lines), rowHeight * MAX_SCALE)));
     let start = 0;
-    for (const [col, line] of pending.entries()) {
-      placeLine(line, Math.floor(height), spacing);
-      line.day.row = row;
+    for (const [col, line] of entry.lines.entries()) {
+      placeLine(line, height, spacing);
+      line.day.row = rowIndex;
       line.day.col = col;
       line.day.start = start;
       line.day.top = top;
       line.day.updateAssetBoundaries();
       start += line.day.width + gap;
     }
-    top += Math.floor(height) + headerHeight + rowGap;
-    row++;
-    pending = [];
-  };
-
-  for (const timelineDay of month.timelineDays) {
-    const ratios = singleLineRatios(timelineDay);
-    if (!ratios) {
-      // a multi-line day takes a row of its own, its lines balanced and justified to the full width
-      flush(false);
-      const tileRatios = allRatios(timelineDay);
-      if (tileRatios) {
-        placeBalanced(timelineDay, tileRatios, viewportWidth, rowHeight, spacing);
-      }
-      timelineDay.row = row++;
-      timelineDay.col = 0;
-      timelineDay.start = 0;
-      timelineDay.top = top;
-      timelineDay.updateAssetBoundaries();
-      top += timelineDay.height + headerHeight + rowGap;
-      continue;
-    }
-    const candidate = [...pending, { day: timelineDay, ratios }];
-    const ratioSum = candidate.reduce((sum, line) => sum + line.ratios.reduce((a, b) => a + b, 0), 0);
-    const fixed =
-      candidate.reduce((sum, line) => sum + (line.ratios.length - 1) * spacing, 0) + (candidate.length - 1) * gap;
-    if (pending.length > 0 && ratioSum * rowHeight * MIN_SCALE + fixed > viewportWidth) {
-      flush(false);
-      pending = [{ day: timelineDay, ratios }];
-    } else {
-      pending = candidate;
-    }
+    top += height + headerHeight + rowGap;
   }
-  flush(true);
 
   month.height = top;
   month.isHeightActual = true;
