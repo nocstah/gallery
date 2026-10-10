@@ -99,6 +99,9 @@ export class CuratorError extends Error {
 
 const base = () => `${location.protocol}//${location.hostname}:2290/api`;
 
+/** A pending highlight reel, streamed by Curator (byte ranges, so the player can seek). */
+export const reelUrl = (suggestionId: number) => `${base()}/reels/${suggestionId}.mp4`;
+
 const call = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
   let response: Response;
   try {

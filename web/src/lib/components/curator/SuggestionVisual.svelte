@@ -2,7 +2,7 @@
   // Local Omarchy layer: what a suggestion is about, shown with the photos themselves. A cover change shows the
   // current cover beside the proposed one, a name shows the face group beside photos it was found in, a merge shows
   // every face group being joined. Each photo opens in Gallery in a new tab, so the review keeps its place.
-  import type { Suggestion } from '$lib/utils/curator';
+  import { reelUrl, type Suggestion } from '$lib/utils/curator';
   import { getAssetMediaUrl } from '$lib/utils';
   import { AssetMediaSize } from '@immich/sdk';
   import { t } from 'svelte-i18n';
@@ -44,7 +44,17 @@
 {/snippet}
 
 <div class="ws-strip visual">
-  {#if suggestion.kind === 'stack.cover' && suggestion.asset_ids.length > 1}
+  {#if suggestion.kind === 'reel.publish' && suggestion.status === 'pending'}
+    <!-- the reel itself, watched before it goes into Gallery; its poster is the opening photo -->
+    <video
+      class="visual-reel"
+      src={reelUrl(suggestion.id)}
+      poster={photos[0] ? thumbnail(photos[0]) : undefined}
+      controls
+      preload="none"
+      playsinline
+    ></video>
+  {:else if suggestion.kind === 'stack.cover' && suggestion.asset_ids.length > 1}
     {@render photo(suggestion.asset_ids[1], 112, $t('ai_inbox_now'))}
     {@render photo(suggestion.asset_ids[0], 112, $t('ai_inbox_proposed'))}
   {:else if suggestion.kind === 'asset.rotate' && suggestion.asset_ids.length > 0}
@@ -91,6 +101,16 @@
   .visual-tile:hover :global(.ws-strip-tile) {
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: calc(var(--ws-border) * -1);
+  }
+  /* a fixed width: a percentage here would size the grid's auto column from the video's own 1920 px */
+  .visual-reel {
+    width: 26rem;
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--ws-radius);
+    outline: 1px solid var(--ws-hairline);
+    outline-offset: -1px;
+    background: #000;
   }
   /* faces are people, not photos: drawn round like everywhere else Gallery shows a person */
   .visual-face {
