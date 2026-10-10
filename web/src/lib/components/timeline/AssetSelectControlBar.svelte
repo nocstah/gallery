@@ -16,9 +16,10 @@
   const assets = $derived(assetMultiSelectManager.assets);
 </script>
 
-<ControlAppBar {onClose} backIcon={mdiClose}>
+<!-- Local Omarchy layer: ws- hooks for the flat selection bar and its display-face count -->
+<ControlAppBar {onClose} backIcon={mdiClose} class="ws-select-bar">
   {#snippet leading()}
-    <div class="font-medium text-primary">
+    <div class="ws-select-count font-medium text-primary">
       <p class="block sm:hidden">{assets.length}</p>
       <p class="hidden sm:block">{$t('selected_count', { values: { count: assets.length } })}</p>
     </div>

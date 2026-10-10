@@ -250,7 +250,8 @@
       <SelectAllAssets {timelineManager} {assetInteraction} {onSelectAll} />
     {/if}
     {#if caps.canAddToAlbum}
-      <ActionButton action={Actions.AddToAlbum} />
+      <!-- Local Omarchy layer: the primary selection action, ink-filled -->
+      <span class="ws-primary-action contents"><ActionButton action={Actions.AddToAlbum} /></span>
     {/if}
     {#if caps.canFavorite}
       <FavoriteAction removeFavorite={assetInteraction.isAllFavorite} {onFavorite} />

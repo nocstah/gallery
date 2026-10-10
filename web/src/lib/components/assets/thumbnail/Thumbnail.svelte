@@ -259,7 +259,13 @@
   role="link"
 >
   <div class="group absolute inset-y-0" style:width="inherit" style:height="inherit">
-    <div class={['absolute size-full bg-transparent transition-transform select-none', { 'scale-[0.85]': selected }]}>
+    <!-- Local Omarchy layer: ws-tile-media lets the selected state keep the photo full size -->
+    <div
+      class={[
+        'ws-tile-media absolute size-full bg-transparent transition-transform select-none',
+        { 'scale-[0.85]': selected },
+      ]}
+    >
       <ImageThumbnail
         class={['absolute group-focus-visible:rounded-lg', imageClass]}
         brokenAssetClass={['z-1 absolute group-focus-visible:rounded-lg', brokenAssetClass]}

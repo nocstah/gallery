@@ -585,3 +585,67 @@ div.absolute.font-mono {
     transition: none;
   }
 }
+
+/* ---- selection: a selected tile keeps its photo full size and carries an inset ink frame (a thin
+   surface line between frame and photo keeps it crisp on dark images) and an ink check badge.
+   Hovering a selected tile adds the accent border outside the ink frame ---- */
+[data-thumbnail-focus-container][data-selected] .ws-tile-media {
+  scale: none;
+}
+[data-thumbnail-focus-container][data-selected] [class~='rounded-xl'] {
+  border-radius: var(--tile-radius, var(--ws-radius));
+}
+[data-thumbnail-focus-container][data-selected]::after {
+  box-shadow:
+    inset 0 0 0 calc(var(--ws-border) + 2px) var(--immich-ui-dark),
+    inset 0 0 0 calc(var(--ws-border) + 3px) var(--immich-ui-light);
+}
+[data-thumbnail-focus-container][data-selected]:is(:hover, :focus-visible)::after {
+  box-shadow:
+    inset 0 0 0 var(--ws-border) var(--ws-accent),
+    inset 0 0 0 calc(var(--ws-border) + 2px) var(--immich-ui-dark),
+    inset 0 0 0 calc(var(--ws-border) + 3px) var(--immich-ui-light);
+}
+[data-thumbnail-focus-container] button[role='checkbox'][aria-checked='true'] > div {
+  background: var(--immich-ui-light);
+}
+[data-thumbnail-focus-container] button[role='checkbox'][aria-checked='true'] svg {
+  color: var(--immich-ui-dark);
+}
+
+/* ---- selection bar: the top bar turns into the action bar on the same flat ground, a hairline
+   below, the count in the display face, the primary action ink-filled ---- */
+#control-bar:has(> .ws-select-bar) {
+  padding: 0;
+}
+.ws-select-bar {
+  border-radius: 0;
+  background: var(--immich-ui-light);
+  border-bottom: 1px solid var(--ws-hairline);
+  box-shadow: none;
+  padding-inline: 0.5rem 0.75rem;
+}
+.ws-select-count {
+  color: var(--immich-ui-dark);
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 750;
+  font-variation-settings: 'wdth' 80, 'opsz' 72;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ws-select-bar button {
+  border-radius: calc(var(--ws-radius) + 6px);
+}
+.ws-primary-action button {
+  background: var(--immich-ui-dark);
+  color: var(--immich-ui-light);
+}
+.ws-primary-action button:hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 85%, var(--ws-accent));
+}
+.ws-select-bar button:focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: 2px;
+}

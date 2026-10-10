@@ -751,7 +751,8 @@
     {:else}
       <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
     {/if}
-    <ActionButton action={Actions.AddToAlbum} />
+    <!-- Local Omarchy layer: the primary selection action, ink-filled -->
+    <span class="ws-primary-action contents"><ActionButton action={Actions.AddToAlbum} /></span>
 
     <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
 
