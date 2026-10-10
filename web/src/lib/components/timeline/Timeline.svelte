@@ -30,13 +30,14 @@
   import { assetsSnapshot } from '$lib/managers/timeline-manager/utils.svelte';
   import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
+  import { attachThumbnailZoom, thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { lang } from '$lib/stores/preferences.store';
   import { isAssetViewerRoute, navigate } from '$lib/utils/navigation';
   import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
   import { getTimes, type ScrubberListener } from '$lib/utils/timeline-util';
   import { type AlbumResponseDto, type PersonResponseDto, type UserResponseDto } from '@immich/sdk';
   import { DateTime } from 'luxon';
-  import { onDestroy, onMount, tick, type Snippet } from 'svelte';
+  import { onDestroy, onMount, tick, untrack, type Snippet } from 'svelte';
   import type { UpdatePayload } from 'vite';
 
   interface Props {
@@ -163,17 +164,44 @@
       !assetViewerManager.isViewing,
   );
 
+  // Local Omarchy layer: the base row height is scaled by the thumbnail zoom (Ctrl+wheel / pinch,
+  // + - 0, the header slider). A zoom keeps the month in view, and the place within it, on screen.
+  let lastZoom: number | undefined;
   $effect(() => {
+    thumbnailZoomManager.mode = maxMd ? 'narrow' : 'desktop';
+    const zoom = thumbnailZoomManager.scale;
     const layoutOptions = maxMd
       ? {
-          rowHeight: 100,
+          rowHeight: Math.round(100 * zoom),
           headerHeight: 32,
         }
       : {
-          rowHeight: 235,
+          rowHeight: Math.round(235 * zoom),
           headerHeight: 48,
         };
+    const anchor = untrack(() =>
+      lastZoom !== undefined && lastZoom !== zoom && viewportTopMonth && typeof viewportTopMonth === 'object'
+        ? { month: viewportTopMonth, percent: viewportTopMonthScrollPercent }
+        : undefined,
+    );
+    lastZoom = zoom;
     timelineManager.setLayoutOptions(layoutOptions);
+    if (anchor) {
+      requestAnimationFrame(() => {
+        const month = timelineManager.months.find(
+          ({ yearMonth: { year, month } }) => year === anchor.month.year && month === anchor.month.month,
+        );
+        if (month) {
+          scrollToSegmentPercentage(month.top, month.height, anchor.percent);
+        }
+      });
+    }
+  });
+
+  $effect(() => {
+    if (scrollableElement) {
+      return attachThumbnailZoom(scrollableElement);
+    }
   });
 
   $effect(() => {

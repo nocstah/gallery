@@ -2,6 +2,7 @@
   // Local Omarchy layer ("Tiled Workspace"): the month in view set large, with the archive's years as a
   // strip of workspace numbers beside it. The year under the viewport is the active workspace; clicking
   // another switches to it, the way SUPER+<n> switches Hyprland workspaces.
+  import { thumbnailZoomManager, ZOOM_MAX, ZOOM_MIN } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { ViewportTopMonth } from '$lib/managers/timeline-manager/types';
   import { locale } from '$lib/stores/preferences.store';
@@ -159,6 +160,19 @@
         </button>
       {/each}
     </nav>
+
+    <label class="ws-zoom" title={$t('thumbnail_size')}>
+      <span class="sr-only">{$t('thumbnail_size')}</span>
+      <svg viewBox="0 0 16 16" aria-hidden="true" class="ws-zoom-icon ws-zoom-small"><rect x="5" y="5" width="6" height="6" rx="1" /></svg>
+      <input
+        type="range"
+        min={ZOOM_MIN}
+        max={ZOOM_MAX}
+        step="0.01"
+        bind:value={thumbnailZoomManager.scale}
+      />
+      <svg viewBox="0 0 16 16" aria-hidden="true" class="ws-zoom-icon"><rect x="2" y="2" width="12" height="12" rx="1.5" /></svg>
+    </label>
   </div>
 {/if}
 
@@ -247,7 +261,41 @@
     outline-offset: 2px;
   }
 
+
+  .ws-zoom {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-inline-start: auto;
+    padding-bottom: 0.45rem;
+    color: var(--immich-ui-muted);
+  }
+  .ws-zoom-icon {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+  }
+  .ws-zoom-small {
+    width: 11px;
+    height: 11px;
+  }
+  .ws-zoom input {
+    width: 7rem;
+    accent-color: var(--immich-ui-dark);
+    cursor: pointer;
+  }
+  .ws-zoom input:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: 4px;
+  }
+
   @media (max-width: 767px) {
+    .ws-zoom {
+      display: none;
+    }
     .ws-workspaces {
       flex-direction: column;
       align-items: stretch;
