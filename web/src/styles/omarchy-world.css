@@ -652,21 +652,25 @@ div.absolute.font-mono {
   outline-offset: 2px;
 }
 
-/* ---- right-click menu on photos: a floating popup in the world's grammar ---- */
-.ws-tile-menu ul[role='menu'] {
-  min-width: 13rem;
-  padding: 4px;
-  border-radius: calc(var(--ws-radius) + 10px);
+/* ---- every context menu (stock ones hard-code a light slate in both modes): theme surface,
+   items flat on it, the hovered/keyboard-active item a quiet ink wash ---- */
+div.z-70:has(> ul[role='menu']) {
   background: var(--immich-ui-light);
   border: 1px solid var(--ws-hairline);
+  border-radius: calc(var(--ws-radius) + 10px);
   box-shadow: 0 14px 36px -10px rgb(0 0 0 / 0.32);
+  padding: 4px;
 }
-.ws-tile-menu ul[role='menu'] li,
-.ws-tile-menu ul[role='menu'] button {
+ul[role='menu'] > li[role='menuitem'] {
+  background: transparent;
+  color: var(--immich-ui-dark);
   border-radius: calc(var(--ws-radius) + 6px);
-  font-size: 0.875rem;
+  padding-block: 0.65rem;
 }
-.ws-tile-menu hr {
+ul[role='menu'] > li[role='menuitem']:not(.bg-slate-100) {
+  background: color-mix(in oklab, var(--immich-ui-dark) 9%, transparent);
+}
+ul[role='menu'] > hr {
   margin: 4px 6px;
   border-color: var(--ws-hairline);
 }
