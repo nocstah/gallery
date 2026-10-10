@@ -133,6 +133,9 @@ const base = () => `${location.protocol}//${location.hostname}:2290/api`;
 
 /** A pending highlight reel, streamed by Curator (byte ranges, so the player can seek). */
 export const reelUrl = (suggestionId: number) => `${base()}/reels/${suggestionId}.mp4`;
+/** a restore suggestion's original ('before') or restored version ('after'): a photo `width` pixels across, or a clip */
+export const restoredUrl = (suggestionId: number, which: 'before' | 'after', media: 'jpg' | 'mp4', width?: number) =>
+  `${base()}/restored/${suggestionId}/${which}.${media}${width ? `?width=${width}` : ''}`;
 
 const call = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
   let response: Response;

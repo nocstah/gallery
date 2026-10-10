@@ -937,6 +937,8 @@
   "ai_inbox_calibrate_junk": "Da buttare o da tenere",
   "ai_inbox_calibrate_junk_body": "Una foto alla volta: J per buttare, K per tenere. La posta degli scarti potrà archiviare da sola solo quando sarà d'accordo con te su tutte.",
   "ai_inbox_cancelled": "Annullato",
+  "ai_inbox_clip_position": "Posizione nel clip",
+  "ai_inbox_compare": "Confronta la versione attuale e quella proposta",
   "ai_inbox_conflict": "Non annullato: {reason}",
   "ai_inbox_denied_title": "Curator lavora solo per il suo proprietario",
   "ai_inbox_disk_free": "{size} GB liberi",

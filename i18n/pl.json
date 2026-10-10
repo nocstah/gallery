@@ -937,6 +937,8 @@
   "ai_inbox_calibrate_junk": "Do usunięcia czy do zachowania",
   "ai_inbox_calibrate_junk_body": "Jedno zdjęcie naraz: J – do usunięcia, K – zachowaj. Skrzynka śmieci może sama archiwizować dopiero, gdy zgodzi się z tobą co do wszystkich.",
   "ai_inbox_cancelled": "Anulowano",
+  "ai_inbox_clip_position": "Pozycja w klipie",
+  "ai_inbox_compare": "Porównaj obecną i proponowaną wersję",
   "ai_inbox_conflict": "Nie cofnięto: {reason}",
   "ai_inbox_denied_title": "Curator działa tylko dla swojego właściciela",
   "ai_inbox_disk_free": "Wolne: {size} GB",

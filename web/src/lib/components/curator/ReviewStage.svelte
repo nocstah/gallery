@@ -1,7 +1,9 @@
 <script lang="ts">
   // Local Omarchy layer: one suggestion, large, for review mode. Each kind shows what the decision is about at the
   // size it needs: two covers side by side, a photo before and after its turn, a face beside the photos it was named
-  // from, copies next to each other, an album's spread of photos, the reel itself. Photos open in Gallery.
+  // from, copies next to each other, an album's spread of photos, the reel itself, a restored version over its
+  // original. Photos open in Gallery.
+  import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import { reelUrl, type Suggestion } from '$lib/utils/curator';
   import { AssetMediaSize } from '@immich/sdk';
@@ -54,6 +56,8 @@
   {#if suggestion.kind === 'reel.publish' && suggestion.status === 'pending'}
     <!-- svelte-ignore a11y_media_has_caption -->
     <video class="stage-reel" src={reelUrl(suggestion.id)} controls preload="metadata" playsinline></video>
+  {:else if suggestion.kind === 'restore.publish' && suggestion.status === 'pending'}
+    <RestoreCompare {suggestion} size="stage" />
   {:else if suggestion.kind === 'stack.cover' && photos.length > 1}
     <div class="stage-pair">
       {@render big(suggestion.asset_ids[1], $t('ai_inbox_now'))}

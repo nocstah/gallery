@@ -944,6 +944,8 @@
   "ai_inbox_calibrate_junk": "Junk or keep",
   "ai_inbox_calibrate_junk_body": "One photo at a time: J for junk, K for keep. The junk inbox may only archive on its own once it agrees with all of them.",
   "ai_inbox_cancelled": "Cancelled",
+  "ai_inbox_clip_position": "Position in the clip",
+  "ai_inbox_compare": "Compare the current and proposed versions",
   "ai_inbox_conflict": "Not undone: {reason}",
   "ai_inbox_denied_title": "Curator works for its owner only",
   "ai_inbox_disk_free": "{size} GB free",

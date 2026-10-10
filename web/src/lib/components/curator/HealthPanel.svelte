@@ -30,7 +30,9 @@
             {/if}
             <p class="ws-inbox-row-body">{item.detail}</p>
           </div>
-          <span class="health-value">{item.value ?? '–'}</span>
+          <span class="health-value">
+            {typeof item.value === 'number' ? item.value.toLocaleString($locale ?? undefined) : (item.value ?? '–')}
+          </span>
           {#if item.link}
             <a class="ws-inbox-link" href={item.link}>{$t('ai_inbox_health_open')}</a>
           {:else}

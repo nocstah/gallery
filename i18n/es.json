@@ -937,6 +937,8 @@
   "ai_inbox_calibrate_junk": "Descartar o conservar",
   "ai_inbox_calibrate_junk_body": "Una foto cada vez: J para descartar, K para conservar. La bandeja de descartes solo podrá archivar por su cuenta cuando coincida contigo en todas.",
   "ai_inbox_cancelled": "Cancelada",
+  "ai_inbox_clip_position": "Posición en el clip",
+  "ai_inbox_compare": "Compara la versión actual y la propuesta",
   "ai_inbox_conflict": "No deshecho: {reason}",
   "ai_inbox_denied_title": "Curator solo trabaja para su propietario",
   "ai_inbox_disk_free": "{size} GB libres",

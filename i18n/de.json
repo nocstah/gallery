@@ -937,6 +937,8 @@
   "ai_inbox_calibrate_junk": "Müll oder behalten",
   "ai_inbox_calibrate_junk_body": "Ein Foto nach dem anderen: J für Müll, K für behalten. Der Müll-Eingang darf erst selbstständig archivieren, wenn er bei allen mit dir übereinstimmt.",
   "ai_inbox_cancelled": "Abgebrochen",
+  "ai_inbox_clip_position": "Position im Clip",
+  "ai_inbox_compare": "Aktuelle und vorgeschlagene Version vergleichen",
   "ai_inbox_conflict": "Nicht rückgängig gemacht: {reason}",
   "ai_inbox_denied_title": "Curator arbeitet nur für seinen Besitzer",
   "ai_inbox_disk_free": "{size} GB frei",

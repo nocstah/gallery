@@ -935,6 +935,8 @@
   "ai_inbox_calibrate_junk": "丟棄還是保留",
   "ai_inbox_calibrate_junk_body": "一次一張：按 J 丟棄，按 K 保留。只有在與你的判斷全部一致後，雜物收件匣才能自行封存。",
   "ai_inbox_cancelled": "已取消",
+  "ai_inbox_clip_position": "片段中的位置",
+  "ai_inbox_compare": "比較目前版本和建議版本",
   "ai_inbox_conflict": "未還原：{reason}",
   "ai_inbox_denied_title": "Curator 只為其擁有者工作",
   "ai_inbox_disk_free": "可用 {size} GB",

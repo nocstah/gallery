@@ -937,6 +937,8 @@
   "ai_inbox_calibrate_junk": "Мусор или оставить",
   "ai_inbox_calibrate_junk_body": "По одной фотографии: J — мусор, K — оставить. Входящие мусора смогут архивировать сами только тогда, когда согласятся с вами по всем.",
   "ai_inbox_cancelled": "Отменено",
+  "ai_inbox_clip_position": "Позиция в клипе",
+  "ai_inbox_compare": "Сравнить текущую и предложенную версии",
   "ai_inbox_conflict": "Не отменено: {reason}",
   "ai_inbox_denied_title": "Curator работает только на своего владельца",
   "ai_inbox_disk_free": "Свободно {size} ГБ",

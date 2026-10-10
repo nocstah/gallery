@@ -1,7 +1,8 @@
 <script lang="ts">
   // Local Omarchy layer: review mode. One batch, one suggestion at a time, full screen and large, decided from the
   // keyboard: A or → accepts, R or ← rejects, S or Space skips, U takes back the last decision (an accepted change is
-  // undone, a rejection reopened), Esc closes. The next suggestion's photos load while this one is on screen.
+  // undone, a rejection reopened), Esc closes; the arrows belong to a slider while it has focus. The next
+  // suggestion's photos load while this one is on screen.
   import ReviewStage from '$lib/components/curator/ReviewStage.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import { curator, type Suggestion } from '$lib/utils/curator';
@@ -96,6 +97,9 @@
     }
     if (event.target instanceof HTMLElement && event.target.closest('video')) {
       return; // the reel player keeps its own keys
+    }
+    if (event.target instanceof HTMLInputElement && event.target.type === 'range' && event.key.startsWith('Arrow')) {
+      return; // so do the before/after divider and a clip's position
     }
     const key = event.key.toLowerCase();
     switch (key) {

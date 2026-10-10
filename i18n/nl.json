@@ -937,6 +937,8 @@
   "ai_inbox_calibrate_junk": "Weg of houden",
   "ai_inbox_calibrate_junk_body": "Eén foto tegelijk: J voor weg, K voor houden. De rommel-inbox mag pas zelf archiveren als hij het over allemaal met je eens is.",
   "ai_inbox_cancelled": "Geannuleerd",
+  "ai_inbox_clip_position": "Positie in de clip",
+  "ai_inbox_compare": "Huidige en voorgestelde versie vergelijken",
   "ai_inbox_conflict": "Niet ongedaan gemaakt: {reason}",
   "ai_inbox_denied_title": "Curator werkt alleen voor zijn eigenaar",
   "ai_inbox_disk_free": "{size} GB vrij",

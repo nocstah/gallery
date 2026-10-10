@@ -937,6 +937,8 @@
   "ai_inbox_calibrate_junk": "À jeter ou à garder",
   "ai_inbox_calibrate_junk_body": "Une photo à la fois : J pour jeter, K pour garder. La boîte des rebuts ne pourra archiver seule qu'une fois d'accord avec vous sur toutes.",
   "ai_inbox_cancelled": "Annulée",
+  "ai_inbox_clip_position": "Position dans le clip",
+  "ai_inbox_compare": "Comparer la version actuelle et la version proposée",
   "ai_inbox_conflict": "Non annulé : {reason}",
   "ai_inbox_denied_title": "Curator ne travaille que pour son propriétaire",
   "ai_inbox_disk_free": "{size} Go libres",

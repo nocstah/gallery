@@ -1,7 +1,9 @@
 <script lang="ts">
   // Local Omarchy layer: what a suggestion is about, shown with the photos themselves. A cover change shows the
   // current cover beside the proposed one, a name shows the face group beside photos it was found in, a merge shows
-  // every face group being joined. Each photo opens in Gallery in a new tab, so the review keeps its place.
+  // every face group being joined, a restored photo or clip shares one frame with its original. Each photo opens in
+  // Gallery in a new tab, so the review keeps its place.
+  import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
   import { reelUrl, type Suggestion } from '$lib/utils/curator';
   import { getAssetMediaUrl } from '$lib/utils';
   import { AssetMediaSize } from '@immich/sdk';
@@ -54,6 +56,9 @@
       preload="none"
       playsinline
     ></video>
+  {:else if suggestion.kind === 'restore.publish' && suggestion.status === 'pending'}
+    <!-- the original and the restored version in one frame, a divider between them -->
+    <RestoreCompare {suggestion} size="card" />
   {:else if suggestion.kind === 'stack.cover' && suggestion.asset_ids.length > 1}
     {@render photo(suggestion.asset_ids[1], 112, $t('ai_inbox_now'))}
     {@render photo(suggestion.asset_ids[0], 112, $t('ai_inbox_proposed'))}
