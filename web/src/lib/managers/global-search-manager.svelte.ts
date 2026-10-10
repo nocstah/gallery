@@ -378,6 +378,9 @@ export class GlobalSearchManager {
   private commandInFlight: Set<string> = new Set();
 
   private clearQueryOnNextModalOpen = false;
+  // Local Omarchy layer: Ask's language model takes ~20 s to load and under a second to answer, so it starts
+  // loading when Ask mode opens, while the question is still being typed (at most once a minute).
+  private askWarmedAt = 0;
   /**
    * Id of the row currently showing the 200 ms "pending" affordance (subtle spinner
    * on the row) while its activation handler is resolving. Null when no activation is
@@ -703,6 +706,7 @@ export class GlobalSearchManager {
   open(presentation: SearchPresentation = 'modal') {
     this.isOpen = true;
     this.presentation = presentation;
+    this.warmAsk();
     const currentPageSearchState = getSearchablePageState(page.url);
     const typedDisplayText = currentPageSearchState.isSearchable
       ? getTypedSearchDisplayText(page.url.pathname + page.url.search)
@@ -2155,11 +2159,20 @@ export class GlobalSearchManager {
     }
   }
 
+  private warmAsk() {
+    if (this.mode !== 'ask' || Date.now() - this.askWarmedAt < 60_000) {
+      return;
+    }
+    this.askWarmedAt = Date.now();
+    void curator.warmAsk().catch(() => undefined);
+  }
+
   setMode(newMode: SearchMode) {
     if (newMode === this.mode) {
       return;
     }
     this.mode = newMode;
+    this.warmAsk();
     if (browser) {
       try {
         localStorage.setItem('searchQueryType', newMode);

@@ -1053,6 +1053,7 @@
   "ask_by_rules": "gelezen met regels",
   "ask_every_year": "elk jaar {from} – {to}",
   "ask_found": "{count} gevonden",
+  "ask_mentions": "vermeldt ‘{text}’",
   "ask_not_known": "Nog niet in de bibliotheek: {names}",
   "ask_nothing": "Niets gevonden",
   "ask_nothing_hint": "Probeer minder woorden, of een jaar, een plaats of een naam.",

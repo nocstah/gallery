@@ -1053,6 +1053,7 @@
   "ask_by_rules": "lu par des règles",
   "ask_every_year": "chaque année du {from} au {to}",
   "ask_found": "{count} trouvés",
+  "ask_mentions": "mentionne « {text} »",
   "ask_not_known": "Pas encore dans la bibliothèque : {names}",
   "ask_nothing": "Rien trouvé",
   "ask_nothing_hint": "Essayez avec moins de mots, ou une année, un lieu ou un nom.",

@@ -1,13 +1,15 @@
 <script lang="ts">
   // Local Omarchy layer: Ask. A question about the library ("when were we last in Bali?", "Mamma at christmas"),
-  // answered by Curator (~/code/curator, curator/ask.py) with Gallery's own searches: a one-line answer when the
-  // question wants one, what was searched for, and the photos. Reached from the Ctrl+K palette's Ask mode.
+  // answered by Curator (~/code/curator, curator/ask.py) with Gallery's own searches and the local models' captions
+  // and transcripts: a one-line answer when the question wants one, what was searched for, and the photos. Reached
+  // from the Ctrl+K palette's Ask mode.
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import { curator, CuratorError, type AskResult } from '$lib/utils/curator';
   import { AssetMediaSize } from '@immich/sdk';
+  import { onMount } from 'svelte';
   import { locale, t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -44,6 +46,9 @@
       })
       .finally(() => (busy = false));
   });
+
+  // the language model loads while the question is typed (Curator skips this while the GPU is busy)
+  onMount(() => void curator.warmAsk().catch(() => undefined));
 
   const submit = (event: SubmitEvent) => {
     event.preventDefault();
@@ -94,7 +99,7 @@
       chips.push(`“${plan.visual as string}”`);
     }
     if (plan.text) {
-      chips.push(`OCR “${plan.text as string}”`);
+      chips.push($t('ask_mentions', { values: { text: plan.text as string } }));
     }
     return chips;
   });

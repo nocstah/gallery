@@ -1058,6 +1058,7 @@
   "ask_by_rules": "按规则解读",
   "ask_every_year": "每年 {from} – {to}",
   "ask_found": "找到 {count} 项",
+  "ask_mentions": "提到“{text}”",
   "ask_not_known": "资料库中还没有：{names}",
   "ask_nothing": "什么都没找到",
   "ask_nothing_hint": "试试更少的词，或加上年份、地点或名字。",

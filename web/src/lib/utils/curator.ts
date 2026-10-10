@@ -176,6 +176,8 @@ export const curator = {
   labelStats: (set: string) => call<{ labelled: number; target: number }>(`/labels/${set}`),
   ask: (question: string, size = 60, signal?: AbortSignal) =>
     call<AskResult>('/ask', { method: 'POST', body: JSON.stringify({ question, size }), signal }),
+  /** start loading Ask's language model before the question arrives */
+  warmAsk: () => post<{ warming: boolean }>('/ask/warm', {}),
   putLabel: (set: string, key: string, value: Record<string, unknown>) =>
     call<{ labelled: number; target: number }>(`/labels/${set}/${encodeURIComponent(key)}`, {
       method: 'PUT',

@@ -1053,6 +1053,7 @@
   "ask_by_rules": "прочитано по правилам",
   "ask_every_year": "каждый год {from} – {to}",
   "ask_found": "Найдено: {count}",
+  "ask_mentions": "упоминает «{text}»",
   "ask_not_known": "Пока нет в библиотеке: {names}",
   "ask_nothing": "Ничего не найдено",
   "ask_nothing_hint": "Попробуйте меньше слов или год, место или имя.",

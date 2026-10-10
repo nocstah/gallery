@@ -147,7 +147,7 @@ vi.mock('$app/navigation', () => ({
 
 // Local Omarchy layer: the palette's Ask mode puts questions to Curator
 vi.mock('$lib/utils/curator', () => ({
-  curator: { ask: vi.fn() },
+  curator: { ask: vi.fn(), warmAsk: vi.fn(() => Promise.resolve({ warming: true })) },
 }));
 
 const { mockPage } = vi.hoisted(() => ({

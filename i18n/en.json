@@ -1060,6 +1060,7 @@
   "ask_by_rules": "read by rules",
   "ask_every_year": "every year {from} – {to}",
   "ask_found": "{count} found",
+  "ask_mentions": "mentions “{text}”",
   "ask_not_known": "Not in the library yet: {names}",
   "ask_nothing": "Nothing found",
   "ask_nothing_hint": "Try fewer words, or a year, a place or a name.",

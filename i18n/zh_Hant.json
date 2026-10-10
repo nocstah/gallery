@@ -1050,6 +1050,7 @@
   "ask_by_rules": "依規則解讀",
   "ask_every_year": "每年 {from} – {to}",
   "ask_found": "找到 {count} 項",
+  "ask_mentions": "提到「{text}」",
   "ask_not_known": "資料庫中還沒有：{names}",
   "ask_nothing": "什麼都沒找到",
   "ask_nothing_hint": "試試更少的詞，或加上年份、地點或名字。",
