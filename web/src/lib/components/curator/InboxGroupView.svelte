@@ -3,6 +3,7 @@
   // the rest in one go; every accepted change stays undoable here and in History. Keys: j/k move, a accepts,
   // r rejects, u undoes. Accepting more than 20 at once runs Curator's database backup first, shown as progress.
   import ReviewMode from '$lib/components/curator/ReviewMode.svelte';
+  import StoryText from '$lib/components/curator/StoryText.svelte';
   import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
   import { curator, waitForJob, type GroupPage, type Suggestion, type SuggestionStatus } from '$lib/utils/curator';
   import { Icon } from '@immich/ui';
@@ -214,6 +215,9 @@
           <span class="ws-inbox-row-title">{item.title}</span>
           {#if item.detail}
             <p class="ws-inbox-row-body">{item.detail}</p>
+          {/if}
+          {#if item.story}
+            <StoryText story={item.story} kind={item.kind} clamp />
           {/if}
           {#if item.confidence !== null || item.error}
             <span class="ws-inbox-meta">{item.error ?? confidence(item.confidence)}</span>

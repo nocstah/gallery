@@ -31,7 +31,12 @@ export type Suggestion = {
   model: string | null;
   error: string | null;
   created_at: string;
+  /** a trip's album or an event's reel: the event's story, which accepting puts in the description */
+  story?: Story | null;
 };
+
+/** What stories.write told for an event, a trip or a memory (written by the text model from the captions). */
+export type Story = { text: string; model: string; written_at: string; event_id?: number };
 
 export type GroupPage = {
   group: { key: string; kind: string; title: string; description: string | null };
@@ -181,6 +186,11 @@ export const curator = {
     call<AskResult>('/ask', { method: 'POST', body: JSON.stringify({ question, size }), signal }),
   /** start loading Ask's language model before the question arrives */
   warmAsk: () => post<{ warming: boolean }>('/ask/warm', {}),
+  /** the story of a memory, of an album (by the event its photos come from) or of an event; null until written */
+  story: (subject: { memory: string } | { album: string } | { event: number }) =>
+    call<{ story: Story | null }>(
+      `/stories?${new URLSearchParams(Object.entries(subject).map(([k, v]) => [k, String(v)]))}`,
+    ),
   putLabel: (set: string, key: string, value: Record<string, unknown>) =>
     call<{ labelled: number; target: number }>(`/labels/${set}/${encodeURIComponent(key)}`, {
       method: 'PUT',

@@ -4,6 +4,7 @@
   // undone, a rejection reopened), Esc closes; the arrows belong to a slider while it has focus. The next
   // suggestion's photos load while this one is on screen.
   import ReviewStage from '$lib/components/curator/ReviewStage.svelte';
+  import StoryText from '$lib/components/curator/StoryText.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import { curator, type Suggestion } from '$lib/utils/curator';
   import { AssetMediaSize } from '@immich/sdk';
@@ -187,6 +188,9 @@
         <span class="ws-inbox-row-title">{current.title}</span>
         {#if current.detail}
           <p class="ws-inbox-row-body">{current.detail}</p>
+        {/if}
+        {#if current.story}
+          <StoryText story={current.story} kind={current.kind} />
         {/if}
         {#if message}
           <p class="review-message" role="status">{message}</p>

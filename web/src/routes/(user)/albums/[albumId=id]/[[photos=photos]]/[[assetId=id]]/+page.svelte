@@ -125,6 +125,7 @@
   import { SvelteMap } from 'svelte/reactivity';
   import type { PageData } from './$types';
   import AlbumDescription from '$lib/components/album-page/AlbumDescription.svelte';
+  import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
   import AlbumTitle from '$lib/components/album-page/AlbumTitle.svelte';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
 
@@ -995,6 +996,8 @@
                       {isEditor}
                       bind:description={() => album.description, (description) => (album = { ...album, description })}
                     />
+                    <!-- Local Omarchy layer: the story of the event or trip the album holds -->
+                    <AlbumStory albumId={album.id} description={album.description} />
                   </section>
                 {/if}
 

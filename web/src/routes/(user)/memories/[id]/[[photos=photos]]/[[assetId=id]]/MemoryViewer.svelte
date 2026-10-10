@@ -3,6 +3,7 @@
   import { scrollMemoryClearer } from '$lib/actions/scroll-memory';
   import { shortcuts } from '$lib/actions/shortcut';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
+  import MemoryStory from '$lib/components/curator/MemoryStory.svelte';
   import BirthdayConfetti from '$lib/components/memories/BirthdayConfetti.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
@@ -593,6 +594,9 @@
                 </p>
               {/if}
             </div>
+
+            <!-- Local Omarchy layer: Curator's story of this memory -->
+            <MemoryStory memoryId={current.memory.id} faded={galleryInView} />
           </div>
         </div>
 
