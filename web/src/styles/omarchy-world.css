@@ -497,6 +497,8 @@ div.absolute.font-mono {
 [data-testid='map-mobile-filter-overlay'] > div {
   background: var(--immich-ui-light);
   border-inline-end: 1px solid var(--ws-hairline);
+}
+
 /* ---- Years / Months: each period is a window tile with its cover photo; the period set in
    display numerals on the caption scrim, the count as mono data. Hover is focus (accent border) ---- */
 [data-testid='timeline-bucket-card'] {
