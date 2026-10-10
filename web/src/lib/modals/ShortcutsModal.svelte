@@ -40,7 +40,7 @@
       actions: [
         { key: ['f'], action: $t('favorite_or_unfavorite_photo') },
         { key: ['i'], action: $t('show_or_hide_info') },
-        { key: ['s'], action: $t('stack_selected_photos') },
+        { key: ['⇧', 's'], action: $t('stack_selected_photos') },
         { key: ['l'], action: $t('add_to_album') },
         { key: ['⇧', 'l'], action: $t('remove_from_album') },
         { key: ['t'], action: $t('tag_assets') },

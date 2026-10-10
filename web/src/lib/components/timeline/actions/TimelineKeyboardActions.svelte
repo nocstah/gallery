@@ -131,7 +131,8 @@
         { shortcut: { key: 'Delete' }, onShortcut: onDelete },
         { shortcut: { key: 'Delete', shift: true }, onShortcut: () => trashOrDelete(true) },
         { shortcut: { key: 'D', ctrl: true }, onShortcut: () => assetInteraction.clear() },
-        { shortcut: { key: 's' }, onShortcut: () => onStackAssets() },
+        // Local Omarchy layer: Shift+S, not plain s - with drag-select a stray keypress stacked big selections
+        { shortcut: { key: 'S', shift: true }, onShortcut: () => onStackAssets() },
         { shortcut: { key: 'a', shift: true }, onShortcut: toggleArchive },
       );
     } else {
