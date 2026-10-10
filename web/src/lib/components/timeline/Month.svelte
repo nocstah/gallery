@@ -46,6 +46,13 @@
 
   const transitionDuration = $derived(timelineMonth.timelineManager.suspendTransitions && !$isUploading ? 0 : 150);
 
+  // Local Omarchy layer: "Mon 31" for narrow screens, where the long title truncates on one-photo days.
+  const getTimelineDayShort = (timelineDay: TimelineDay): string => {
+    const { month, year } = timelineDay.timelineMonth.yearMonth;
+    const date = new Date(year, month - 1, timelineDay.day);
+    return `${date.toLocaleDateString(undefined, { weekday: 'short' })} ${timelineDay.day}`;
+  };
+
   const getTimelineDayFullDate = (timelineDay: TimelineDay): string => {
     const { month, year } = timelineDay.timelineMonth.yearMonth;
     const date = fromTimelinePlainDate({
@@ -92,7 +99,8 @@
       {/if}
 
       <span class="w-full truncate first-letter:capitalize" title={getTimelineDayFullDate(timelineDay)}>
-        {timelineDay.groupTitle}
+        <span class="ws-day-long">{timelineDay.groupTitle}</span>
+        <span class="ws-day-short">{getTimelineDayShort(timelineDay)}</span>
       </span>
     </div>
 

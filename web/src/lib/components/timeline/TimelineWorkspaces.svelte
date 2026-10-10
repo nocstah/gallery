@@ -58,14 +58,15 @@
       : '',
   );
 
-  // direction of travel for the label slide: older months slide in from the right, newer from the left
-  let previousKey = 0;
-  let direction = $state(1);
-  $effect(() => {
+  // Direction of travel: older months arrive from the right, newer from the left, like moving to a
+  // higher or lower workspace. Read at transition time so it never lags a switch behind.
+  let lastKey = 0;
+  const travel = () => {
     const key = current ? current.year * 12 + current.month : 0;
-    direction = key < previousKey ? 1 : -1;
-    previousKey = key;
-  });
+    const direction = key < lastKey ? 1 : -1;
+    lastKey = key;
+    return direction;
+  };
 
   let strip = $state<HTMLElement>();
   $effect(() => {
@@ -74,16 +75,49 @@
     active?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reducedMotion ? 'auto' : 'smooth' });
   });
 
+  // Switching workspaces jumps to the year and slides its photos in from the side of travel, like
+  // Hyprland's workspace slide. Only the inner timeline layer moves; the scroll container is left alone
+  // so the timeline's own scroll bookkeeping is undisturbed. Reduced motion cuts straight to it.
   const switchTo = (year: number) => {
     const month = timelineManager.months.find((m) => m.yearMonth.year === year);
-    if (month) {
-      timelineManager.scrollTo(month.top * timelineManager.maxScrollPercent);
+    if (!month || !current || year === current.year) {
+      return;
+    }
+    const sign = year < current.year ? 1 : -1;
+    timelineManager.scrollTo(month.top * timelineManager.maxScrollPercent);
+    const layer = document.querySelector<HTMLElement>('#virtual-timeline');
+    if (layer && !reducedMotion) {
+      layer.animate([{ translate: `${sign * 8}% 0`, opacity: 0.2 }, { translate: '0 0', opacity: 1 }], {
+        duration: 300,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      });
+    }
+  };
+
+  // [ and ] step to the next older / newer year, the browser's stand-in for SUPER+<n>.
+  const onKeydown = (event: KeyboardEvent) => {
+    const target = event.target as HTMLElement | null;
+    // The asset viewer's editor uses [ and ] to rotate; the timeline only listens while it is in front.
+    const viewerOpen = document.querySelector('#immich-asset-viewer') !== null;
+    if (viewerOpen || event.ctrlKey || event.metaKey || event.altKey || target?.closest('input, textarea, [contenteditable]')) {
+      return;
+    }
+    if ((event.key !== '[' && event.key !== ']') || !current) {
+      return;
+    }
+    const index = years.findIndex(({ year }) => year === current.year);
+    const next = years[index + (event.key === '[' ? 1 : -1)];
+    if (next) {
+      event.preventDefault();
+      switchTo(next.year);
     }
   };
 
   const slide = (node: Element) =>
-    fly(node, { x: reducedMotion ? 0 : direction * 28, duration: reducedMotion ? 0 : 260, easing: cubicOut });
+    fly(node, { x: reducedMotion ? 0 : travel() * 40, duration: reducedMotion ? 0 : 260, easing: cubicOut });
 </script>
+
+<svelte:window onkeydown={onKeydown} />
 
 {#if current && years.length > 0}
   <div class="ws-workspaces" data-testid="timeline-workspaces">
@@ -126,7 +160,7 @@
     position: relative;
     flex: none;
     display: grid;
-    min-width: 18ch;
+    min-width: 12ch;
     overflow: hidden;
   }
   .ws-now-label {
@@ -139,8 +173,8 @@
   .ws-month,
   .ws-year {
     font-family: var(--font-display);
-    font-size: clamp(2rem, 1.2rem + 2.2vw, 3.25rem);
-    line-height: 0.95;
+    font-size: clamp(2.5rem, 0.9rem + 4.6vw, 6rem);
+    line-height: 0.85;
     font-weight: 800;
     font-stretch: 75%;
     font-variation-settings: 'wdth' 75, 'opsz' 96;
@@ -150,9 +184,9 @@
   .ws-month::first-letter {
     text-transform: uppercase;
   }
-  .ws-year {
-    font-weight: 300;
-    color: var(--immich-ui-muted);
+  .ws-month {
+    font-weight: 500;
+    font-variation-settings: 'wdth' 75, 'opsz' 96;
   }
   .ws-count {
     align-self: flex-end;
@@ -169,7 +203,7 @@
     scrollbar-width: none;
     padding-bottom: 0.35rem;
     mask-image: linear-gradient(to right, transparent, black 2rem, black calc(100% - 2rem), transparent);
-    padding-inline: 2rem;
+    padding-inline: 2rem 3rem;
   }
   .ws-strip::-webkit-scrollbar {
     display: none;

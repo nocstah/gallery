@@ -317,6 +317,13 @@
           ></div>
         {/if}
 
+        <!-- Local Omarchy layer: the place, captioned on the photo while it has focus -->
+        {#if !usingMobileDevice && !disabled && (asset.city || asset.country)}
+          <p class={['ws-place', { 'ws-place-fav': asset.isFavorite }]}>
+            {[asset.city, asset.country].filter(Boolean).join(', ')}
+          </p>
+        {/if}
+
         <!-- Favorite asset star -->
         {#if !authManager.isSharedLink && asset.isFavorite}
           <div class="absolute inset-s-2 bottom-2 z-2">

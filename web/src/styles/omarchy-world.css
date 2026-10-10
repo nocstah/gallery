@@ -239,9 +239,15 @@ div.absolute.font-mono {
 }
 
 /* ---- segmented controls (Years / Months / All): workspace pills, active one inverted ---- */
-[data-testid='timeline-grouping-control'] {
+[data-testid='timeline-grouping-control'][data-variant='inline'] {
   background: transparent;
   box-shadow: none;
+}
+[data-testid='timeline-grouping-control'][data-variant='floating'] {
+  background: var(--immich-ui-light);
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
+}
+[data-testid='timeline-grouping-control'] {
   border: 1px solid var(--ws-hairline);
   border-radius: calc(var(--ws-radius) + 8px);
   padding: 3px;
@@ -259,4 +265,44 @@ div.absolute.font-mono {
   background: transparent;
   box-shadow: none;
   border: 1px solid var(--ws-hairline);
+}
+
+/* ---- place caption on the tile you're pointing at (people aren't in the timeline payload) ---- */
+.ws-place {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 1.5rem 0.6rem 0.45rem;
+  background: linear-gradient(to top, rgb(0 0 0 / 0.55), transparent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 140ms;
+  pointer-events: none;
+}
+.ws-place.ws-place-fav {
+  padding-inline-start: 2.25rem;
+}
+[data-thumbnail-focus-container]:hover .ws-place,
+[data-thumbnail-focus-container]:focus-visible .ws-place {
+  opacity: 1;
+}
+
+/* ---- day labels: short form on narrow screens so single-tile days don't truncate ---- */
+.ws-day-short {
+  display: none;
+}
+@media (max-width: 767px) {
+  .ws-day-long {
+    display: none;
+  }
+  .ws-day-short {
+    display: inline;
+  }
 }
