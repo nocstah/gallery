@@ -34,6 +34,7 @@
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineWorkspaces from '$lib/components/timeline/TimelineWorkspaces.svelte';
+  import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
   import type { ViewportTopMonth } from '$lib/managers/timeline-manager/types';
   import { AssetAction } from '$lib/constants';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
@@ -735,6 +736,22 @@
 </UserPageLayout>
 
 <OnEvents onSpaceAddAssets={handleSpaceAddAssets} />
+
+<!-- Local Omarchy layer: right-click menu on photos, acting on the selection like the bar below -->
+{#if timelineManager && !showSearchResults}
+  <TileContextMenu {timelineManager} assetInteraction={assetMultiSelectManager}>
+    {@const MenuActions = getAssetBulkActions($t)}
+    <FavoriteAction menuItem removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
+    <ActionMenuItem action={MenuActions.AddToAlbum} />
+    <ActionMenuItem action={MenuActions.CreateSharedLink} />
+    <DownloadAction menuItem />
+    {#if assetMultiSelectManager.isAllUserOwned}
+      <hr />
+      <ArchiveAction menuItem onArchive={handleArchive} />
+      <DeleteAssets menuItem onAssetDelete={handleAssetDelete} onUndoDelete={handleUndoDelete} />
+    {/if}
+  </TileContextMenu>
+{/if}
 
 {#if assetMultiSelectManager.selectionActive}
   <AssetSelectControlBar>
