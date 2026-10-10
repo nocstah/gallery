@@ -6,6 +6,7 @@
   import { page } from '$app/state';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import CalibratePanel from '$lib/components/curator/CalibratePanel.svelte';
+  import HealthPanel from '$lib/components/curator/HealthPanel.svelte';
   import HistoryPanel from '$lib/components/curator/HistoryPanel.svelte';
   import InboxGroupView from '$lib/components/curator/InboxGroupView.svelte';
   import InboxOverview from '$lib/components/curator/InboxOverview.svelte';
@@ -21,13 +22,14 @@
 
   let { data }: Props = $props();
 
-  const TABS = ['inbox', 'calibrate', 'history', 'jobs'] as const;
+  const TABS = ['inbox', 'calibrate', 'history', 'jobs', 'health'] as const;
   type Tab = (typeof TABS)[number];
   const TAB_LABEL: Record<Tab, Translations> = {
     inbox: 'ai_inbox_tab_inbox',
     calibrate: 'ai_inbox_tab_calibrate',
     history: 'ai_inbox_tab_history',
     jobs: 'jobs',
+    health: 'ai_inbox_tab_health',
   };
 
   const tab = $derived.by((): Tab => {
@@ -99,6 +101,8 @@
         <CalibratePanel />
       {:else if tab === 'history'}
         <HistoryPanel onChange={refresh} />
+      {:else if tab === 'health'}
+        <HealthPanel />
       {:else}
         <JobsPanel {health} onChange={refresh} />
       {/if}

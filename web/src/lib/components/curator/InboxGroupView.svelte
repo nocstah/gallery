@@ -2,6 +2,7 @@
   // Local Omarchy layer: reviewing one batch of Curator's suggestions. Reject the few that are wrong, then accept
   // the rest in one go; every accepted change stays undoable here and in History. Keys: j/k move, a accepts,
   // r rejects, u undoes. Accepting more than 20 at once runs Curator's database backup first, shown as progress.
+  import ReviewMode from '$lib/components/curator/ReviewMode.svelte';
   import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
   import { curator, waitForJob, type GroupPage, type Suggestion, type SuggestionStatus } from '$lib/utils/curator';
   import { Icon } from '@immich/ui';
@@ -34,6 +35,13 @@
   let working = $state<{ note: string; done: number; total: number }>();
   let message = $state<string>();
   let rows: HTMLElement[] = $state([]);
+  let reviewing = $state(false);
+
+  const closeReview = async () => {
+    reviewing = false;
+    await load();
+    onChange();
+  };
 
   const waiting = $derived(filter === 'pending' ? items.filter((item) => item.status === 'pending').length : 0);
   const remaining = $derived(page ? page.total - (items.length - waiting) : 0);
@@ -169,6 +177,9 @@
       {/each}
     </div>
     {#if filter === 'pending' && remaining > 0}
+      <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => (reviewing = true)}>
+        {$t('ai_inbox_review')}
+      </button>
       <button type="button" class="ws-btn" disabled={busy} onclick={() => decideAll('accept')}>
         {$t('ai_inbox_accept_all', { values: { count: remaining } })}
       </button>
@@ -229,6 +240,10 @@
     </li>
   {/each}
 </ul>
+
+{#if reviewing && page}
+  <ReviewMode groupKey={key} title={page.group.title} onClose={closeReview} />
+{/if}
 
 {#if page && items.length < page.total}
   <button type="button" class="ws-btn-quiet more" onclick={() => load(true)}>{$t('show_more')}</button>

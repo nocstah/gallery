@@ -81,6 +81,24 @@ export type HistoryEntry = {
 export type LabelItem = { key: string; asset_ids: string[]; cover: string | null };
 export type LabelBatch = { set: string; items: LabelItem[]; labelled: number; target: number };
 
+export type HealthItem = {
+  key: string;
+  title: string;
+  value: number | null;
+  attention: boolean;
+  detail: string;
+  link: string | null;
+};
+
+/** What needs attention in the library, from Curator's /api/library-health. */
+export type LibraryHealth = {
+  checked_at: string;
+  items: HealthItem[];
+  people_unnamed: { id: string; faces: number }[];
+  months: { month: string; items: number; bytes: number }[];
+  models: { loaded?: string[]; installed?: string[]; error?: string };
+};
+
 /** A question's answer: Gallery's own search results (the same asset objects Gallery returns). */
 export type AskResult = {
   question: string;
@@ -146,6 +164,9 @@ export const curator = {
   decide: (ids: number[], decision: 'accept' | 'reject') =>
     post<DecideResult>('/suggestions/decide', { ids, decision }),
   undo: (ids: number[]) => post<UndoResult>('/suggestions/undo', { ids }),
+  /** a rejection or a failed apply back to waiting */
+  reopen: (ids: number[]) => post<{ reopened: number[] }>('/suggestions/reopen', { ids }),
+  libraryHealth: () => call<LibraryHealth>('/library-health'),
   history: (limit = 100) => call<HistoryEntry[]>(`/history?limit=${limit}`),
   kinds: () => call<JobKind[]>('/kinds'),
   jobs: (limit = 30) => call<JobRow[]>(`/jobs?limit=${limit}`),
