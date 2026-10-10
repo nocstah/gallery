@@ -7,6 +7,8 @@
   import PreviousAssetAction from '$lib/components/asset-viewer/actions/PreviousAssetAction.svelte';
   import AssetViewerNavBar from '$lib/components/asset-viewer/AssetViewerNavBar.svelte';
   import { preloadManager } from '$lib/components/asset-viewer/PreloadManager.svelte';
+  import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
+  import RemoveObjects from '$lib/components/curator/RemoveObjects.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import { AssetAction, ProjectionType } from '$lib/constants';
   import { activityManager } from '$lib/managers/activity-manager.svelte';
@@ -115,6 +117,8 @@
   let previewStackedAsset: AssetResponseDto | undefined = $state();
   let stack: StackResponseDto | undefined = $state();
   const asset = $derived(previewStackedAsset ?? cursor.current);
+  // Local Omarchy layer: Curator's object-removal brush replaces the photo viewer and its controls while it is open
+  const brushing = $derived(removeObjects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
   const nextAsset = $derived(cursor.nextAsset);
   const previousAsset = $derived(cursor.previousAsset);
   // Slice 8 gap closure: the SAME rule DetailPanel.svelte's People row uses for `asset` — see
@@ -230,6 +234,7 @@
   });
 
   onDestroy(() => {
+    removeObjects.close();
     activityManager.reset();
     assetViewerManager.resetPanelState();
     syncAssetViewerOpenClass(false);
@@ -305,7 +310,7 @@
   };
 
   const navigateStack = (direction: 'previous' | 'next') => {
-    if (!stack || !withStacked || assetViewerManager.isShowEditor) {
+    if (!stack || !withStacked || assetViewerManager.isShowEditor || brushing) {
       return;
     }
     const assets = stack.assets;
@@ -448,6 +453,9 @@
   });
 
   const viewerKind = $derived.by(() => {
+    if (brushing) {
+      return 'RemoveObjects';
+    }
     if (previewStackedAsset) {
       return previewStackedAsset.type === AssetTypeEnum.Image ? 'PhotoViewer' : 'StackVideoViewer';
     }
@@ -483,6 +491,7 @@
     $slideshowState === SlideshowState.None &&
       asset.type === AssetTypeEnum.Image &&
       !assetViewerManager.isShowEditor &&
+      !brushing &&
       ocrManager.hasOcrData,
   );
 
@@ -491,7 +500,8 @@
     asset.hasMetadata &&
       $slideshowState === SlideshowState.None &&
       assetViewerManager.isShowDetailPanel &&
-      !assetViewerManager.isShowEditor,
+      !assetViewerManager.isShowEditor &&
+      !brushing,
   );
 
   const onSwipe = (event: SwipeCustomEvent) => {
@@ -536,7 +546,7 @@
   bind:this={assetViewerHtmlElement}
 >
   <!-- Top navigation bar -->
-  {#if $slideshowState === SlideshowState.None && !assetViewerManager.isShowEditor}
+  {#if $slideshowState === SlideshowState.None && !assetViewerManager.isShowEditor && !brushing}
     <div class="col-span-4 col-start-1 row-span-1 row-start-1 transition-transform">
       <AssetViewerNavBar
         {asset}
@@ -567,7 +577,7 @@
     </div>
   {/if}
 
-  {#if $slideshowState === SlideshowState.None && showNavigation && !assetViewerManager.isShowEditor && !assetViewerManager.isFaceEditMode && previousAsset}
+  {#if $slideshowState === SlideshowState.None && showNavigation && !assetViewerManager.isShowEditor && !assetViewerManager.isFaceEditMode && !brushing && previousAsset}
     <div class="col-span-1 col-start-1 row-span-full row-start-1 my-auto justify-self-start">
       <PreviousAssetAction onPreviousAsset={() => navigateAsset('previous')} />
     </div>
@@ -604,6 +614,8 @@
         spaceId={effectiveSpaceId}
         {canEditSpacePeople}
       />
+    {:else if viewerKind === 'RemoveObjects'}
+      <RemoveObjects {asset} onClose={() => removeObjects.close()} />
     {:else if viewerKind === 'ImagePanaramaViewer'}
       <ImagePanoramaViewer {asset} />
     {:else if viewerKind === 'TrimArea'}
@@ -659,7 +671,7 @@
     {/if}
   </div>
 
-  {#if $slideshowState === SlideshowState.None && showNavigation && !assetViewerManager.isShowEditor && !assetViewerManager.isFaceEditMode && nextAsset}
+  {#if $slideshowState === SlideshowState.None && showNavigation && !assetViewerManager.isShowEditor && !assetViewerManager.isFaceEditMode && !brushing && nextAsset}
     <div class="col-span-1 col-start-4 row-span-full row-start-1 my-auto justify-self-end">
       <NextAssetAction onNextAsset={() => navigateAsset('next')} />
     </div>
@@ -683,7 +695,7 @@
     </div>
   {/if}
 
-  {#if stack && withStacked && !assetViewerManager.isShowEditor && $slideshowState === SlideshowState.None}
+  {#if stack && withStacked && !assetViewerManager.isShowEditor && !brushing && $slideshowState === SlideshowState.None}
     {@const stackedAssets = stack.assets}
     <div id="stack-slideshow" class="absolute bottom-0 col-span-4 col-start-1 w-fit max-w-full">
       <div class="no-wrap horizontal-scrollbar relative flex flex-row overflow-x-auto overflow-y-hidden">

@@ -5,6 +5,7 @@
   import DeleteAction from '$lib/components/asset-viewer/actions/DeleteAction.svelte';
   import RestoreAction from '$lib/components/asset-viewer/actions/RestoreAction.svelte';
   import SetVisibilityAction from '$lib/components/asset-viewer/actions/SetVisibilityAction.svelte';
+  import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
   import LoadingDots from '$lib/components/LoadingDots.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
@@ -28,7 +29,7 @@
     type StackResponseDto,
   } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, Tooltip, type ActionItem } from '@immich/ui';
-  import { mdiArrowLeft, mdiArrowRight, mdiDotsVertical, mdiPencilOutline, mdiVideoOutline } from '@mdi/js';
+  import { mdiArrowLeft, mdiArrowRight, mdiDotsVertical, mdiEraser, mdiPencilOutline, mdiVideoOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -94,9 +95,31 @@
   );
   const StackActions = $derived(getStackActions($t, stack, asset));
   const sharedLink = getSharedLink();
+
+  // Local Omarchy layer: Curator's object-removal brush, for the owner's own photos when Curator offers it
+  const RemoveObjects: ActionItem = $derived({
+    title: $t('remove_objects'),
+    icon: mdiEraser,
+    $if: () =>
+      removeObjects.available &&
+      isOwner &&
+      !isLocked &&
+      !asset.isTrashed &&
+      !sharedLink &&
+      asset.type === AssetTypeEnum.Image,
+    onAction: () => removeObjects.open(asset.id),
+  });
+  $effect(() => {
+    if (isOwner && !sharedLink) {
+      removeObjects.check();
+    }
+  });
 </script>
 
-<CommandPaletteDefaultProvider name={$t('assets')} actions={withoutIcons([Close, Cast, ...Object.values(Actions)])} />
+<CommandPaletteDefaultProvider
+  name={$t('assets')}
+  actions={withoutIcons([Close, Cast, ...Object.values(Actions), RemoveObjects])}
+/>
 
 <div
   class="ws-viewer-bar flex h-16 place-items-center justify-between bg-linear-to-b from-black/40 px-3 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)] transition-transform duration-200"
@@ -134,6 +157,7 @@
     <ActionButton action={Actions.Unfavorite} />
 
     <ActionButton action={Actions.Edit} />
+    <ActionButton action={RemoveObjects} />
 
     {#if isOwner}
       <DeleteAction {asset} {onAction} {preAction} {onUndoDelete} />
