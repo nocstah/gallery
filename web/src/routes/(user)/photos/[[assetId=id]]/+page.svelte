@@ -35,6 +35,7 @@
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineWorkspaces from '$lib/components/timeline/TimelineWorkspaces.svelte';
   import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
+  import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import type { ViewportTopMonth } from '$lib/managers/timeline-manager/types';
   import { AssetAction } from '$lib/constants';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
@@ -147,6 +148,8 @@
   let timelineReloadToken = $state(0);
   const options = $derived({
     ...buildPhotosTimelineOptions(filters, authManager.user.id),
+    // Local Omarchy layer: the header's Expand stacks toggle shows every photo of a stack
+    withStacked: !thumbnailZoomManager.expandStacks,
     grouping: timelineGrouping,
   });
   $effect(() => {
@@ -691,7 +694,7 @@
             onViewportMonthChange={(month) => (viewportMonth = month)}
             grouping={timelineGrouping}
             onGroupingChange={handleTimelineGroupingChange}
-            withStacked
+            withStacked={!thumbnailZoomManager.expandStacks}
           >
             {#if authManager.preferences.memories.enabled && !hasActiveFilters}
               <!-- In month/year grouping the timeline renders large representative cards; add breathing

@@ -178,6 +178,19 @@
       <button
         type="button"
         class="ws-tool"
+        aria-pressed={thumbnailZoomManager.expandStacks}
+        aria-label={$t('expand_stacks')}
+        title={$t('expand_stacks')}
+        onclick={() => (thumbnailZoomManager.expandStacks = !thumbnailZoomManager.expandStacks)}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <rect x="4.5" y="1.8" width="9.7" height="9.7" rx="1.2" />
+          <rect x="1.8" y="4.5" width="9.7" height="9.7" rx="1.2" class="ws-fill" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="ws-tool"
         aria-pressed={thumbnailZoomManager.compact}
         aria-label={$t('compact_view')}
         title={$t('compact_view')}

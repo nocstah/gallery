@@ -1751,6 +1751,7 @@
   "exit_slideshow": "Exit Slideshow",
   "expand": "Expand",
   "expand_all": "Expand all",
+  "expand_stacks": "Expand stacks",
   "expire_after": "Expire after",
   "expired": "Expired",
   "expires_date": "Expires {date}",

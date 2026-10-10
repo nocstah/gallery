@@ -30,6 +30,7 @@ const load = (): Stored => {
 
 const DAY_LABELS_KEY = 'omarchy-day-labels';
 const COMPACT_KEY = 'omarchy-compact';
+const EXPAND_STACKS_KEY = 'omarchy-expand-stacks';
 const COMPACT_SPACING = 2;
 const loadDayLabels = () => {
   if (browser) {
@@ -46,6 +47,13 @@ const loadDayLabels = () => {
 class ThumbnailZoomManager {
   #scales = $state<Stored>(load());
   #dayLabels = $state(loadDayLabels());
+  #expandStacks = $state(browser ? (() => {
+    try {
+      return localStorage.getItem(EXPAND_STACKS_KEY) === 'on';
+    } catch {
+      return false;
+    }
+  })() : false);
   #compact = $state(browser ? (() => {
     try {
       return localStorage.getItem(COMPACT_KEY) === 'on';
@@ -81,6 +89,22 @@ class ThumbnailZoomManager {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.#scales));
       } catch {
         /* storage unavailable: the zoom still applies for this session */
+      }
+    }
+  }
+
+  /** Show every photo of a stack in the timeline instead of only its cover. */
+  get expandStacks() {
+    return this.#expandStacks;
+  }
+
+  set expandStacks(value: boolean) {
+    this.#expandStacks = value;
+    if (browser) {
+      try {
+        localStorage.setItem(EXPAND_STACKS_KEY, value ? 'on' : 'off');
+      } catch {
+        /* storage unavailable */
       }
     }
   }
