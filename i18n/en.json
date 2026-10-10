@@ -2262,6 +2262,7 @@
   "maintenance_task_rollback": "Restore failed, rolling back to restore point…",
   "maintenance_title": "Temporarily Unavailable",
   "make": "Make",
+  "make_stack_cover": "Make stack cover",
   "manage_geolocation": "Manage location",
   "manage_media_access_rationale": "This permission is required for proper handling of moving assets to the trash and restoring them from it.",
   "manage_media_access_settings": "Open settings",

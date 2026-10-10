@@ -1,19 +1,39 @@
 // Local Omarchy layer: expand a stack in place. Clicking a tile's stack badge inserts the stack's other
 // photos into the timeline beside its cover (they sort in by capture time); clicking again takes them
-// back out. Nothing is changed on the server: the stack stays a stack.
+// back out. Nothing is changed on the server: the stack stays a stack. Any expanded photo can be made
+// the cover (right-click > Make stack cover), which folds the stack back up around it.
+import { getStack, updateStack } from '@immich/sdk';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+import { eventManager } from '$lib/managers/event-manager.svelte';
 import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import { handleError } from '$lib/utils/handle-error';
+import { getFormatter } from '$lib/utils/i18n';
 import { toTimelineAsset } from '$lib/utils/timeline-util';
-import { getStack } from '@immich/sdk';
-import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 class StackExpandManager {
   /** stack id -> ids of the photos inserted for it (everything but the cover) */
   #expanded = new SvelteMap<string, string[]>();
-  /** every inserted member id, for the tile styling */
-  #members = new SvelteSet<string>();
+  /** inserted photo id -> its stack id, for the tile styling and the context menu */
+  #members = new SvelteMap<string, string>();
   #pending = new SvelteSet<string>();
   timelineManager: TimelineManager | undefined;
+
+  constructor() {
+    // a stack that changes anywhere (here, the viewer's menu, a drag onto it) is folded back up by the
+    // timeline, so its expansion is over; inserted ids must not be removed again on the next collapse
+    eventManager.on({
+      StackUpdate: (stack) => this.#forget(stack.id),
+      StackDelete: (stack) => this.#forget(stack.id),
+      StackCreate: (stack) => {
+        const ids = new Set(stack.assets.map((asset) => asset.id));
+        for (const [stackId, inserted] of this.#expanded) {
+          if (stackId === stack.id || inserted.some((id) => ids.has(id))) {
+            this.#forget(stackId);
+          }
+        }
+      },
+    });
+  }
 
   isExpanded(stackId: string) {
     return this.#expanded.has(stackId);
@@ -23,8 +43,20 @@ class StackExpandManager {
     return this.#members.has(assetId);
   }
 
+  /** The stack an expanded (non-cover) photo belongs to. */
+  stackOf(assetId: string) {
+    return this.#members.get(assetId);
+  }
+
   isPending(stackId: string) {
     return this.#pending.has(stackId);
+  }
+
+  #forget(stackId: string) {
+    for (const id of this.#expanded.get(stackId) ?? []) {
+      this.#members.delete(id);
+    }
+    this.#expanded.delete(stackId);
   }
 
   async toggle(stackId: string, coverId: string) {
@@ -35,10 +67,7 @@ class StackExpandManager {
     const inserted = this.#expanded.get(stackId);
     if (inserted) {
       manager.removeAssets(inserted);
-      for (const id of inserted) {
-        this.#members.delete(id);
-      }
-      this.#expanded.delete(stackId);
+      this.#forget(stackId);
       return;
     }
     this.#pending.add(stackId);
@@ -47,7 +76,7 @@ class StackExpandManager {
       const members = stack.assets.filter((asset) => asset.id !== coverId).map((asset) => toTimelineAsset(asset));
       manager.upsertAssets(members);
       for (const member of members) {
-        this.#members.add(member.id);
+        this.#members.set(member.id, stackId);
       }
       this.#expanded.set(
         stackId,
@@ -57,6 +86,17 @@ class StackExpandManager {
       handleError(error, 'Could not expand the stack');
     } finally {
       this.#pending.delete(stackId);
+    }
+  }
+
+  /** Make a photo its stack's cover. The timeline's StackUpdate handler collapses the stack onto it. */
+  async makeCover(stackId: string, assetId: string) {
+    try {
+      const stack = await updateStack({ id: stackId, stackUpdateDto: { primaryAssetId: assetId } });
+      eventManager.emit('StackUpdate', stack);
+    } catch (error) {
+      const translate = await getFormatter();
+      handleError(error, translate('errors.something_went_wrong'));
     }
   }
 

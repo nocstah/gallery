@@ -1,14 +1,22 @@
 <script lang="ts">
   // Local Omarchy layer: a right-click menu for photos, like Google Photos / Finder. Right-clicking a photo
   // selects it (unless it is already part of the selection) and opens this menu at the cursor; the items
-  // are the selection actions the page passes in, so they act on everything selected. Shift+right-click
-  // falls through to the browser's own menu.
+  // are the selection actions the page passes in, so they act on everything selected. A single photo that
+  // belongs to a stack also gets the stack's own items: its cover expands or collapses it, any other photo
+  // can become the cover. Shift+right-click falls through to the browser's own menu.
   import { contextMenuNavigation } from '$lib/actions/context-menu-navigation';
   import ContextMenu from '$lib/components/shared-components/context-menu/ContextMenu.svelte';
+  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
+  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
+  import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
+  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import { optionClickCallbackStore, selectedIdStore } from '$lib/stores/context-menu.store';
   import { generateId } from '$lib/utils/generate-id';
+  import { getAssetInfo } from '@immich/sdk';
+  import { mdiArrowCollapseHorizontal, mdiArrowExpandHorizontal, mdiImageCheckOutline } from '@mdi/js';
   import type { Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
 
@@ -25,7 +33,60 @@
   let menuContainer: HTMLUListElement | undefined = $state();
   const menuId = `tile-context-menu-${generateId()}`;
 
+  type StackMenu = { stackId: string; assetId: string; isCover: boolean };
+  let stackMenu = $state<StackMenu | undefined>();
+  let selectedByMenu = false;
+  let opening = 0;
+
+  const resolveStack = async (asset: TimelineAsset): Promise<StackMenu | undefined> => {
+    const user = authManager.authenticated ? authManager.user : undefined;
+    if (!user || asset.ownerId !== user.id) {
+      return;
+    }
+    if (asset.stack) {
+      return { stackId: asset.stack.id, assetId: asset.id, isCover: true };
+    }
+    const stackId = stackExpandManager.stackOf(asset.id);
+    if (stackId) {
+      return { stackId, assetId: asset.id, isCover: false };
+    }
+    if (!thumbnailZoomManager.expandStacks) {
+      return;
+    }
+    // with every stack spread out the timeline carries no stack data, so ask the server
+    try {
+      const { stack } = await getAssetInfo({ id: asset.id });
+      if (stack && stack.primaryAssetId !== asset.id) {
+        return { stackId: stack.id, assetId: asset.id, isCover: false };
+      }
+    } catch {
+      // no stack items then
+    }
+  };
+
+  const open = async (asset: TimelineAsset, x: number, y: number) => {
+    const token = ++opening;
+    // the stack items act on one photo
+    const next = assetInteraction.assets.length === 1 ? await resolveStack(asset) : undefined;
+    if (token !== opening) {
+      return;
+    }
+    stackMenu = next;
+    position = { x, y };
+    isOpen = true;
+    requestAnimationFrame(() => menuContainer?.focus());
+  };
+
+  const onStackAction = (action: () => Promise<void>) => {
+    if (selectedByMenu) {
+      assetInteraction.clear();
+    }
+    void action();
+  };
+
   const close = () => {
+    // also drops an open that is still waiting on the server
+    opening++;
     if (!isOpen) {
       return;
     }
@@ -47,13 +108,12 @@
       return;
     }
     event.preventDefault();
-    if (!assetInteraction.hasSelectedAsset(id)) {
+    selectedByMenu = !assetInteraction.hasSelectedAsset(id);
+    if (selectedByMenu) {
       assetInteraction.clear();
       assetInteraction.selectAsset(asset);
     }
-    position = { x: event.clientX, y: event.clientY };
-    isOpen = true;
-    requestAnimationFrame(() => menuContainer?.focus());
+    void open(asset, event.clientX, event.clientY);
   };
 
   const onDocumentClick = (event: MouseEvent) => {
@@ -107,6 +167,24 @@
       x={position.x}
       y={position.y}
     >
+      {#if stackMenu}
+        {@const menu = stackMenu}
+        {#if menu.isCover}
+          {@const expanded = stackExpandManager.isExpanded(menu.stackId)}
+          <MenuOption
+            icon={expanded ? mdiArrowCollapseHorizontal : mdiArrowExpandHorizontal}
+            text={expanded ? $t('collapse_stack') : $t('expand_stack')}
+            onClick={() => onStackAction(() => stackExpandManager.toggle(menu.stackId, menu.assetId))}
+          />
+        {:else}
+          <MenuOption
+            icon={mdiImageCheckOutline}
+            text={$t('make_stack_cover')}
+            onClick={() => onStackAction(() => stackExpandManager.makeCover(menu.stackId, menu.assetId))}
+          />
+        {/if}
+        <hr />
+      {/if}
       {@render children()}
     </ContextMenu>
   {/if}

@@ -175,6 +175,10 @@
       startX = evt.clientX;
       startY = evt.clientY;
       didPress = false;
+      // Local Omarchy layer: on the timeline grid a mouse/pen hold picks the photo up (actions/marquee-select.ts)
+      if (evt.pointerType !== 'touch' && element.closest('[data-ws-gestures]')) {
+        return;
+      }
       // 350ms for longpress. For reference: iOS uses 500ms for default long press, or 200ms for fast long press.
       timer = setTimeout(() => {
         onLongPress();
@@ -351,7 +355,7 @@
         {/if}
 
         <!-- Local Omarchy layer: the place, captioned on the photo while it has focus -->
-        {#if !disabled && (tileCaption)}
+        {#if !disabled && tileCaption}
           <p class={['ws-place', { 'ws-place-fav': asset.isFavorite }]}>{tileCaption}</p>
         {/if}
 
@@ -391,7 +395,6 @@
             </span>
           </div>
         {/if}
-
       </div>
 
       <!-- lazy show the url on mouse over-->

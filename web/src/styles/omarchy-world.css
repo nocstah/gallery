@@ -165,7 +165,9 @@ div.absolute.font-mono {
   font-family: var(--font-display);
   font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);
   font-weight: 750;
-  font-variation-settings: 'wdth' 80, 'opsz' 72;
+  font-variation-settings:
+    'wdth' 80,
+    'opsz' 72;
   letter-spacing: -0.03em;
   line-height: 1.05;
   text-wrap: balance;
@@ -544,7 +546,9 @@ div.absolute.font-mono {
   font-family: var(--font-display);
   font-size: clamp(2.75rem, 1.2rem + 4vw, 5.5rem);
   font-weight: 800;
-  font-variation-settings: 'wdth' 75, 'opsz' 96;
+  font-variation-settings:
+    'wdth' 75,
+    'opsz' 96;
   letter-spacing: -0.035em;
   /* the title truncates (overflow hidden): leave room for month descenders */
   line-height: 1;
@@ -632,7 +636,9 @@ div.absolute.font-mono {
   font-family: var(--font-display);
   font-size: 1.6rem;
   font-weight: 750;
-  font-variation-settings: 'wdth' 80, 'opsz' 72;
+  font-variation-settings:
+    'wdth' 80,
+    'opsz' 72;
   letter-spacing: -0.02em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -724,27 +730,52 @@ div.z-70[style*='max-height: 0px']:has(> ul[role='menu']) {
   box-shadow: none;
 }
 
-/* ---- drag to stack (lib/actions/marquee-select.ts) ---- */
+/* ---- hold to lift, drag to stack (lib/actions/marquee-select.ts) ----
+   A held photo lifts out of the grid in place (scale + shadow + accent ring), glides to the cursor once it
+   moves, and settles into the drop target or back home. Size and position are inline (translate/width/height). */
 .ws-drag-ghost {
   position: fixed;
   left: 0;
   top: 0;
   z-index: 80;
   pointer-events: none;
-  width: 84px;
-  height: 84px;
-  border-radius: calc(var(--ws-radius) + 8px);
+  background: var(--immich-ui-light);
+  transition:
+    translate 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    scale 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease;
+}
+.ws-drag-ghost.is-lifted {
+  scale: 1.04;
   box-shadow:
-    0 14px 30px -8px rgb(0 0 0 / 0.45),
-    6px 6px 0 -2px var(--immich-ui-light),
-    6px 6px 0 -1px var(--ws-hairline);
+    0 0 0 2px var(--ws-accent),
+    0 18px 36px -12px rgb(0 0 0 / 0.55);
+}
+/* more than one photo: a second print peeks out behind the first */
+.ws-drag-ghost.is-multi.is-lifted {
+  box-shadow:
+    0 0 0 2px var(--ws-accent),
+    7px 7px 0 -1px var(--immich-ui-light),
+    7px 7px 0 0 var(--ws-hairline),
+    0 18px 36px -12px rgb(0 0 0 / 0.55);
+}
+/* after the glide the photo sticks to the cursor */
+.ws-drag-ghost.is-following {
+  transition:
+    scale 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ws-drag-ghost.is-settling {
+  opacity: 0;
 }
 .ws-drag-ghost img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: inherit;
-  border: 2px solid var(--immich-ui-light);
 }
 .ws-drag-ghost span {
   position: absolute;
@@ -758,6 +789,16 @@ div.z-70[style*='max-height: 0px']:has(> ul[role='menu']) {
   color: #fff;
   font: 600 12px/24px var(--ws-font-data);
   text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-drag-ghost {
+    transition: none;
+  }
+}
+body.ws-lifted,
+body.ws-lifted * {
+  cursor: grab !important;
+  user-select: none;
 }
 body.ws-dragging,
 body.ws-dragging * {
