@@ -216,6 +216,19 @@
     }
   });
 
+  // Local Omarchy layer: the tile spacing can change without the row height changing (Compact), and
+  // setLayoutOptions only relayouts on row/header/gap changes - so relayout when the spacing moves.
+  let lastSpacing: number | undefined;
+  $effect(() => {
+    const spacing = timelineManager.justifiedLayoutOptions.spacing;
+    untrack(() => {
+      if (lastSpacing !== undefined && spacing !== lastSpacing) {
+        timelineManager.refreshLayout();
+      }
+      lastSpacing = spacing;
+    });
+  });
+
   // Tile corners follow the zoom (and Hyprland's rounding when that is larger).
   $effect(() => {
     const desktop = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ws-radius')) || 0;
