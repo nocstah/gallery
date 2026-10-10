@@ -15,7 +15,8 @@ describe('search-mode-control — rail variant', () => {
     render(SearchModeControl, { props: { variant: 'rail', mode: 'smart', onSelect: vi.fn() } });
 
     const values = (screen.getAllByRole('radio') as HTMLInputElement[]).map((radio) => radio.value);
-    expect(values).toEqual(['smart', 'metadata', 'description', 'ocr']);
+    // the local Omarchy layer adds 'ask' (questions for Curator)
+    expect(values).toEqual(['smart', 'metadata', 'description', 'ocr', 'ask']);
   });
 
   it('checks the radio matching the active mode', () => {
@@ -67,6 +68,7 @@ describe('search-mode-control — chip variant', () => {
       'Filename',
       'Description',
       'OCR',
+      'Ask',
     ]);
   });
 
@@ -192,7 +194,7 @@ describe('search-mode-control — chip menu dismissal', () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     await openMenu(user);
 
-    screen.getByRole('menuitemradio', { name: 'OCR' }).focus();
+    screen.getByRole('menuitemradio', { name: 'Ask' }).focus();
     await user.keyboard('{ArrowDown}');
 
     expect(document.activeElement).toBe(screen.getByRole('menuitemradio', { name: 'Smart' }));

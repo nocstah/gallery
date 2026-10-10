@@ -1,3 +1,5 @@
+import type { AssetResponseDto } from '@immich/sdk';
+
 // Local Omarchy layer: client for Curator (~/code/curator), the local AI service behind the AI inbox. Curator runs
 // beside Gallery on port 2290 of the same host and authenticates the browser's Gallery session cookie, so every call
 // goes out with credentials. Nothing here writes to Gallery directly: accepting a suggestion asks Curator to apply it.
@@ -79,6 +81,18 @@ export type HistoryEntry = {
 export type LabelItem = { key: string; asset_ids: string[]; cover: string | null };
 export type LabelBatch = { set: string; items: LabelItem[]; labelled: number; target: number };
 
+/** A question's answer: Gallery's own search results (the same asset objects Gallery returns). */
+export type AskResult = {
+  question: string;
+  source: 'rules' | 'llm';
+  answer: string | null;
+  total: number;
+  assets: AssetResponseDto[];
+  plan: Record<string, unknown>;
+  /** names in the question nobody in the library is called (yet) */
+  unused: string[];
+};
+
 export type DecideResult = { applied?: number[]; failed?: number[]; rejected?: number; job?: number };
 
 /** Undo refuses where the photo changed again since (conflicts) and reports what Gallery refused (failed). */
@@ -139,6 +153,8 @@ export const curator = {
   cancelJob: (id: number) => post<{ cancelled: boolean }>(`/jobs/${id}/cancel`, {}),
   nextLabels: (set: string, count = 10) => call<LabelBatch>(`/labels/${set}/next?count=${count}`),
   labelStats: (set: string) => call<{ labelled: number; target: number }>(`/labels/${set}`),
+  ask: (question: string, size = 60, signal?: AbortSignal) =>
+    call<AskResult>('/ask', { method: 'POST', body: JSON.stringify({ question, size }), signal }),
   putLabel: (set: string, key: string, value: Record<string, unknown>) =>
     call<{ labelled: number; target: number }>(`/labels/${set}/${encodeURIComponent(key)}`, {
       method: 'PUT',

@@ -1,7 +1,14 @@
 <script lang="ts">
   import type { SearchMode } from '$lib/managers/global-search-manager.svelte';
   import { Icon } from '@immich/ui';
-  import { mdiChevronDown, mdiCreation, mdiFormatTitle, mdiOcr, mdiTextBoxOutline } from '@mdi/js';
+  import {
+    mdiChatQuestionOutline,
+    mdiChevronDown,
+    mdiCreation,
+    mdiFormatTitle,
+    mdiOcr,
+    mdiTextBoxOutline,
+  } from '@mdi/js';
   import { t, type Translations } from 'svelte-i18n';
 
   interface Props {
@@ -26,6 +33,8 @@
     { value: 'metadata', labelKey: 'cmdk_mode_filename' as Translations, icon: mdiFormatTitle },
     { value: 'description', labelKey: 'cmdk_mode_description' as Translations, icon: mdiTextBoxOutline },
     { value: 'ocr', labelKey: 'cmdk_mode_ocr' as Translations, icon: mdiOcr },
+    // Local Omarchy layer: questions for Curator ("when were we last in Bali?")
+    { value: 'ask', labelKey: 'cmdk_mode_ask' as Translations, icon: mdiChatQuestionOutline },
   ];
 
   let open = $state(false);

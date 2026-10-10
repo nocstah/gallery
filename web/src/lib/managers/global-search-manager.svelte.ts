@@ -36,6 +36,7 @@ import { authManager } from '$lib/managers/auth-manager.svelte';
 import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
 import { Route } from '$lib/route';
 import { addEntry, getEntries, makePlaceId, removeEntry, type RecentEntry } from '$lib/stores/cmdk-recent';
+import { curator } from '$lib/utils/curator';
 import { getPhotosPersonFilterId, type PhotosPersonFilterReference } from '$lib/utils/photos-filter-options';
 import {
   buildSearchablePageUrl,
@@ -68,7 +69,9 @@ import { commandContextManager } from './command-context-manager.svelte';
 import { COMMAND_ITEMS, isAlmostExactCommandMatch, type CommandItem } from './command-items';
 import { isAlmostExactNavMatch, NAVIGATION_ITEMS, type NavigationItem } from './navigation-items';
 
-export type SearchMode = 'smart' | 'metadata' | 'description' | 'ocr';
+// Local Omarchy layer: 'ask' puts the question to Curator (lib/utils/curator.ts), which answers with Gallery's own
+// searches; Enter opens the answer page (routes/(user)/ask).
+export type SearchMode = 'smart' | 'metadata' | 'description' | 'ocr' | 'ask';
 export type SearchPresentation = 'modal' | 'dropdown';
 
 export type ProviderStatus<T = unknown> =
@@ -140,7 +143,7 @@ function selectedChoiceFromLiveChoice(
 
 type TopSearchMatch = { id: 'top-search'; query: string; rawQuery: string };
 
-const VALID_MODES: ReadonlySet<SearchMode> = new Set(['smart', 'metadata', 'description', 'ocr']);
+const VALID_MODES: ReadonlySet<SearchMode> = new Set(['smart', 'metadata', 'description', 'ocr', 'ask']);
 // Slice size for the albums section. Kept as a named constant so the buildProviders
 // `topN: 5` and the runAlbums slice cannot drift apart silently.
 const ALBUMS_TOP_N = 5;
@@ -1707,7 +1710,7 @@ export class GlobalSearchManager {
     if (!trimmed) {
       return;
     }
-    if (mode === 'smart') {
+    if (mode === 'smart' || mode === 'ask') {
       // Unreachable: navigateToFieldResults is only called for field modes.
       return;
     }
@@ -1848,6 +1851,14 @@ export class GlobalSearchManager {
         this.clearQueryOnNextModalOpen = false;
         void goto(searchablePageUrl);
       }
+      return;
+    }
+
+    // Local Omarchy layer: a question goes to the answer page, as written
+    if (this.mode === 'ask') {
+      addEntry({ kind: 'query', id: `query:${trimmed.toLowerCase()}`, text: trimmed, lastUsed: Date.now() });
+      this.clearQueryOnNextModalOpen = true;
+      void goto(`/ask?q=${encodeURIComponent(trimmed)}`);
       return;
     }
 
@@ -2840,6 +2851,11 @@ export class GlobalSearchManager {
       minQueryLength: 1,
       run: async (query, mode, signal) => {
         try {
+          if (mode === 'ask') {
+            const response = await curator.ask(query, 5, signal);
+            const items = response.assets;
+            return items.length === 0 ? { status: 'empty' } : { status: 'ok', items, total: response.total };
+          }
           if (mode === 'smart') {
             // withSharedSpaces:true mirrors Gallery's main search page so palette
             // results include shared-space content the user can access.

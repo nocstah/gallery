@@ -541,7 +541,7 @@
       // by default (the @immich/ui shortcut action skips events whose target is an
       // input), so it won't fire while the palette's Command.Input is focused. Handle
       // the cycle here instead — same behavior, different listener.
-      const order: SearchMode[] = ['smart', 'metadata', 'description', 'ocr'];
+      const order: SearchMode[] = ['smart', 'metadata', 'description', 'ocr', 'ask'];
       const next = order[(order.indexOf(manager.mode) + 1) % order.length];
       manager.setMode(next);
       e.preventDefault();
@@ -651,7 +651,7 @@
         <Command.Input
           bind:value={inputValue}
           aria-label={$t('cmdk_placeholder')}
-          placeholder={$t('cmdk_placeholder')}
+          placeholder={manager.mode === 'ask' ? $t('cmdk_ask_placeholder') : $t('cmdk_placeholder')}
           maxlength={256}
           onfocus={openDropdown}
           onpointerdown={openModalOnTouch}
@@ -1031,7 +1031,7 @@
             bind:ref={modalInput}
             bind:value={inputValue}
             autofocus
-            placeholder={$t('cmdk_placeholder')}
+            placeholder={manager.mode === 'ask' ? $t('cmdk_ask_placeholder') : $t('cmdk_placeholder')}
             maxlength={256}
             oninput={(event) => {
               inputEditRevision++;

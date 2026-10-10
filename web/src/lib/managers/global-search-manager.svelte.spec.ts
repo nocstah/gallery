@@ -22,6 +22,7 @@ import { goto } from '$app/navigation';
 import { createFilterState, type FilterState } from '$lib/components/filter-panel/filter-panel';
 import * as recentModule from '$lib/stores/cmdk-recent';
 import { addEntry, getEntries, __resetForTests as resetRecentStore, type RecentEntry } from '$lib/stores/cmdk-recent';
+import { curator, type AskResult } from '$lib/utils/curator';
 import { getTypedSearchDisplayText, storeTypedSearchNames } from '$lib/utils/typed-search/typed-search-name-cache';
 import type { TypedSearchResolveContext } from '$lib/utils/typed-search/typed-search-resolver';
 import { installFakeAbortTimeout, restoreAbortTimeout } from './__tests__/fake-abort-timeout';
@@ -142,6 +143,11 @@ vi.mock('@immich/sdk', async () => ({
 
 vi.mock('$app/navigation', () => ({
   goto: vi.fn(),
+}));
+
+// Local Omarchy layer: the palette's Ask mode puts questions to Curator
+vi.mock('$lib/utils/curator', () => ({
+  curator: { ask: vi.fn() },
 }));
 
 const { mockPage } = vi.hoisted(() => ({
@@ -618,6 +624,27 @@ describe('real providers', () => {
       }),
       expect.anything(),
     );
+  });
+
+  it('photos asks Curator in ask mode and shows how many it found', async () => {
+    localStorage.setItem('searchQueryType', 'ask');
+    vi.mocked(curator.ask).mockResolvedValue({
+      assets: [{ id: 'x' }, { id: 'y' }],
+      total: 17,
+    } as unknown as AskResult);
+    const m = new GlobalSearchManager();
+    m.setQuery('Mamma at christmas');
+    await vi.advanceTimersByTimeAsync(200);
+    expect(curator.ask).toHaveBeenCalledWith('Mamma at christmas', 5, expect.anything());
+    expect(searchSmart).not.toHaveBeenCalled();
+    expect(m.sections.photos).toMatchObject({ status: 'ok', total: 17 });
+  });
+
+  it('enter in ask mode opens the answer page', async () => {
+    localStorage.setItem('searchQueryType', 'ask');
+    const m = new GlobalSearchManager();
+    await m.activateSearch('when were we last in Bali?');
+    expect(goto).toHaveBeenCalledWith('/ask?q=when%20were%20we%20last%20in%20Bali%3F');
   });
 
   it('photos uses searchAssets with ocr field in ocr mode', async () => {
