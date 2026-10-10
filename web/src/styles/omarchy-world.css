@@ -82,19 +82,19 @@ div:has(> [data-testid='admin-page-header']) {
 /* ---- tiles: every photo is a window. Hairline inactive border; the focused one (hover is
    focus here, like focus-follows-mouse) takes the active border in the theme accent ---- */
 [data-thumbnail-focus-container] {
-  border-radius: var(--ws-radius);
+  border-radius: var(--tile-radius, var(--ws-radius));
   container-type: inline-size;
 }
 [data-thumbnail-focus-container] > div,
 [data-thumbnail-focus-container] img {
-  border-radius: var(--ws-radius);
+  border-radius: var(--tile-radius, var(--ws-radius));
 }
 [data-thumbnail-focus-container]::after {
   content: '';
   position: absolute;
   inset: 0;
   z-index: 2;
-  border-radius: var(--ws-radius);
+  border-radius: var(--tile-radius, var(--ws-radius));
   box-shadow: inset 0 0 0 1px var(--ws-hairline);
   pointer-events: none;
   transition: box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -270,6 +270,8 @@ div.absolute.font-mono {
 
 /* ---- place caption on the tile you're pointing at (people aren't in the timeline payload) ---- */
 .ws-place {
+  border-end-start-radius: var(--tile-radius, 0);
+  border-end-end-radius: var(--tile-radius, 0);
   position: absolute;
   inset-inline: 0;
   bottom: 0;

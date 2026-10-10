@@ -110,6 +110,13 @@ class ThumbnailZoomManager {
     return this.#compact ? Math.min(auto, COMPACT_SPACING) : auto;
   }
 
+  /** Tile corner radius: like Mac Photos, barely rounded when tiny, ~6px from the default size up. */
+  radiusFor(desktopRadius: number) {
+    const shrink = Math.min(1, Math.max(0, (this.scale - ZOOM_MIN) / (1 - ZOOM_MIN)));
+    const auto = Math.round((1 + 5 * shrink) * (this.#compact ? 0.5 : 1));
+    return Math.max(desktopRadius, auto);
+  }
+
   step(direction: 1 | -1) {
     const current = this.scale;
     const next =
