@@ -2,6 +2,7 @@
   import { scrollMemory } from '$lib/actions/scroll-memory';
   import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
+  import { authManager } from '$lib/managers/auth-manager.svelte';
   import { memoryManager } from '$lib/managers/memory-manager.svelte';
   import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
   import MemoryCard from '$lib/components/memories/MemoryCard.svelte';
@@ -89,6 +90,18 @@
   {:else if memoryManager.loading}
     <div class="flex items-center justify-center py-16">
       <LoadingSpinner size="giant" />
+    </div>
+  {:else}
+    <!-- Local Omarchy layer: an empty Memories page says why, and offers the next step. -->
+    <div class="ws-empty" data-testid="memories-empty">
+      <h2 class="ws-empty-title">{$t('memories_empty_title')}</h2>
+      <p class="ws-empty-body">{$t('memories_empty_body')}</p>
+      <div class="ws-empty-actions">
+        <button type="button" class="ws-empty-action" onclick={handleSettings}>{$t('memories_empty_settings')}</button>
+        {#if authManager.authenticated && authManager.user.isAdmin}
+          <a class="ws-empty-link" href={Route.queues()}>{$t('memories_empty_queues')}</a>
+        {/if}
+      </div>
     </div>
   {/if}
 </UserPageLayout>

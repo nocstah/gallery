@@ -71,6 +71,8 @@
     onGroupingChange?: (grouping: TimelineGrouping) => void;
     temporalAnchor?: TimelineTemporalAnchor;
     onTemporalAnchorResolved?: () => void;
+    /** Local Omarchy layer: reports the month at the top of the viewport (drives TimelineWorkspaces). */
+    onViewportMonthChange?: (month: ViewportTopMonth) => void;
     children?: Snippet;
     empty?: Snippet;
     customThumbnailLayout?: Snippet<[TimelineAsset]>;
@@ -111,6 +113,7 @@
     onGroupingChange,
     temporalAnchor,
     onTemporalAnchorResolved,
+    onViewportMonthChange,
     children,
     empty,
     customThumbnailLayout,
@@ -129,6 +132,7 @@
   let viewportTopMonthScrollPercent = $state(0);
   // The timeline month intersecting the top position of the viewport
   let viewportTopMonth: ViewportTopMonth = $state(undefined);
+  $effect(() => onViewportMonthChange?.(viewportTopMonth));
   // Overall scroll percentage through the entire timeline (0-1)
   let timelineScrollPercent: number = $state(0);
   let scrubberWidth = $state(0);

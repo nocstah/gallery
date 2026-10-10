@@ -33,6 +33,8 @@
   import OnEvents from '$lib/components/OnEvents.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
+  import TimelineWorkspaces from '$lib/components/timeline/TimelineWorkspaces.svelte';
+  import type { ViewportTopMonth } from '$lib/managers/timeline-manager/types';
   import { AssetAction } from '$lib/constants';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
@@ -121,6 +123,7 @@
     sortOrder: initialSearchState.sortOrder,
   };
   let timelineGrouping = $state<TimelineGrouping>('day');
+  let viewportMonth = $state<ViewportTopMonth>(undefined);
   let temporalAnchor = $state<TimelineTemporalAnchor | undefined>();
   let committedQuery = $state(initialSearchState.query);
   let lastHandledSearchState = $state(`${initialSearchState.query}:${initialSearchState.sortOrder}:${page.url.search}`);
@@ -640,6 +643,11 @@
           onAddAllToCollection={handleAddAllToCollection}
         />
       {/snippet}
+      {#if !showSearchResults && timelineGrouping === 'day' && timelineManager && !hasActiveFilters}
+        <div class="ps-2 pe-4 pointer-fine:pe-15">
+          <TimelineWorkspaces {timelineManager} {viewportMonth} />
+        </div>
+      {/if}
       <FilterToolbar
         class="mb-2"
         grouping={timelineGrouping}
@@ -679,6 +687,7 @@
             onTimelineBucketActivate={handleTimelineBucketActivate}
             {temporalAnchor}
             onTemporalAnchorResolved={() => (temporalAnchor = undefined)}
+            onViewportMonthChange={(month) => (viewportMonth = month)}
             grouping={timelineGrouping}
             onGroupingChange={handleTimelineGroupingChange}
             withStacked

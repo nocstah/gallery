@@ -18,7 +18,7 @@ export function loadFilterCollapsed(): boolean {
       /* corrupted — fall through */
     }
   }
-  return false;
+  return true; // local Omarchy layer: the timeline leads; filters open on demand
 }
 
 /** Persist the filter-panel collapsed preference. */

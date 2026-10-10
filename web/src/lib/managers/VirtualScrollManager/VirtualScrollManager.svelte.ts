@@ -47,6 +47,16 @@ type LayoutOptions = {
   rowHeight: number;
   gap: number;
 };
+// Local Omarchy layer: photo tiles sit on the desktop's tiling gap (--ws-gap, set from Hyprland by the
+// theme hook's Custom CSS; see styles/omarchy-world.css). Falls back to upstream's 2px.
+const workspaceGap = () => {
+  if (typeof document === 'undefined') {
+    return 2;
+  }
+  const value = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ws-gap'));
+  return Number.isFinite(value) && value >= 0 ? value : 2;
+};
+
 export abstract class VirtualScrollManager {
   topSectionHeight = $state(0);
   bodySectionHeight = $state(0);
@@ -71,7 +81,7 @@ export abstract class VirtualScrollManager {
   #resetScrolling = debounce(() => (this.#scrolling = false), 1000);
   #resetSuspendTransitions = debounce(() => (this.suspendTransitions = false), 1000);
   #justifiedLayoutOptions = $derived({
-    spacing: 2,
+    spacing: workspaceGap(),
     heightTolerance: 0.5,
     rowHeight: this.#rowHeight,
     rowWidth: Math.floor(this.viewportWidth),

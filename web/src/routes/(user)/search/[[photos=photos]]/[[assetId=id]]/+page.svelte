@@ -66,7 +66,19 @@
   type SearchTerms = MetadataSearchDto & Pick<SmartSearchDto, 'query' | 'queryAssetId'>;
   let searchQuery = $derived(page.url.searchParams.get(QueryParameter.QUERY));
   let smartSearchEnabled = $derived(featureFlagsManager.value.smartSearch);
-  let terms = $derived<SearchTerms>(searchQuery ? JSON.parse(searchQuery) : {});
+  // A hand-typed or shared /search?query=beach is plain text, not JSON; read it as a text query
+  // instead of throwing (which blanked the page).
+  const parseTerms = (raw: string): SearchTerms => {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? (parsed as SearchTerms) : { query: String(parsed) };
+    } catch {
+      return { query: raw };
+    }
+  };
+  let terms = $derived<SearchTerms>(searchQuery ? parseTerms(searchQuery) : {});
+  const searchHotkey =
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl+K';
   let searchTermKeys = $derived(getVisibleSearchKeys(terms));
 
   $effect(() => {
@@ -452,7 +464,7 @@
             <div
               class="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200/80 bg-white/90 px-4 py-2 text-sm text-gray-700 shadow-sm dark:border-gray-700 dark:bg-immich-dark-gray/90 dark:text-gray-200"
             >
-              <span>{$t('search_legacy_notice')}</span>
+              <span>{$t('search_legacy_notice', { values: { hotkey: searchHotkey } })}</span>
               <button
                 type="button"
                 class="font-medium text-primary hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-primary"

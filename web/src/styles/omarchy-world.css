@@ -1,0 +1,262 @@
+/* web/src/styles/omarchy-world.css
+ * Local "Tiled Workspace" layer: Gallery set in the Omarchy/Hyprland desktop's own grammar.
+ * Imported by app.css after gallery-theme.css. It owns type, geometry and material only.
+ * Colour comes at runtime from the admin Custom CSS that ~/.local/bin/immich-omarchy-theme
+ * generates from the active Omarchy theme. That file also sets the --ws-* geometry from
+ * Hyprland's gaps_in / rounding / border_size and names the desktop font, so the gallery
+ * moves when the desktop does. Everything here is a fallback for those values.
+ * Unlayered on purpose: it must beat Tailwind's @layer theme/base and gallery-theme.css. */
+
+/* Standard axis set (wght + wdth + opsz) so the display numerals can run condensed. */
+@import '@fontsource-variable/bricolage-grotesque/standard.css';
+
+@font-face {
+  font-family: 'Mona Sans';
+  src: url('../lib/assets/fonts/MonaSans/MonaSansVF.woff2') format('woff2-variations');
+  font-weight: 200 900;
+  font-stretch: 75% 125%;
+  font-display: swap;
+}
+
+:root {
+  /* Hyprland geometry: the gap between two tiled windows, the window radius, the border width. */
+  --ws-gap: 10px;
+  --ws-radius: 0px;
+  --ws-border: 2px;
+  --ws-hairline: color-mix(in oklab, var(--immich-ui-dark) 13%, transparent);
+  --ws-accent: var(--omarchy-accent, var(--immich-ui-primary-500));
+  --ws-font-data: var(--omarchy-font-mono, 'JetBrainsMono Nerd Font'), 'GoogleSansCode', ui-monospace, monospace;
+
+  --font-sans: 'Mona Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'Mona Sans', ui-sans-serif, sans-serif;
+  --font-mono: var(--ws-font-data);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: 'ss01', 'ss02';
+}
+
+/* ---- one ground: the theme surface, split by hairlines instead of two-tone slabs ---- */
+:root.dark,
+:root:not(.dark),
+body,
+#dashboard-navbar,
+#sidebar,
+#sidebar > div.absolute.overflow-y-auto,
+.bg-light.shrink-0.absolute {
+  background-color: var(--immich-ui-light);
+}
+#dashboard-navbar > div {
+  border-bottom: 1px solid var(--ws-hairline);
+}
+main:has(> div.absolute.overflow-y-auto),
+[data-sidebar-width='0'] main:has(> div.absolute.overflow-y-auto) {
+  border-radius: 0;
+  margin: 0;
+  border-inline-start: 1px solid var(--ws-hairline);
+}
+[data-sidebar-width='0'] main:has(> div.absolute.overflow-y-auto) {
+  border-inline-start: 0;
+}
+div:has(> [data-testid='admin-page-header']) {
+  border-radius: 0;
+  margin: 0;
+  height: 100%;
+  border-inline-start: 1px solid var(--ws-hairline);
+}
+
+/* ---- sidebar: workspace indicators, the active one inverted like the Omarchy bar ---- */
+#sidebar a[class~='rounded-e-full'] {
+  border-radius: calc(var(--ws-radius) + 6px);
+  font-weight: 500;
+}
+#sidebar a[class~='rounded-e-full'][data-active='true'] {
+  background-color: var(--immich-ui-dark);
+  color: var(--immich-ui-light);
+}
+#sidebar a[class~='rounded-e-full'][data-active='true'] svg {
+  color: inherit;
+}
+
+/* ---- tiles: every photo is a window. Hairline inactive border; the focused one (hover is
+   focus here, like focus-follows-mouse) takes the active border in the theme accent ---- */
+[data-thumbnail-focus-container] {
+  border-radius: var(--ws-radius);
+}
+[data-thumbnail-focus-container] > div,
+[data-thumbnail-focus-container] img {
+  border-radius: var(--ws-radius);
+}
+[data-thumbnail-focus-container]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: var(--ws-radius);
+  box-shadow: inset 0 0 0 1px var(--ws-hairline);
+  pointer-events: none;
+  transition: box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-thumbnail-focus-container]:hover::after,
+[data-thumbnail-focus-container]:focus-visible::after {
+  box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+}
+[data-thumbnail-focus-container]:focus-visible {
+  outline: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-thumbnail-focus-container]::after {
+    transition: none;
+  }
+}
+
+/* ---- day labels: the date as a label on the workspace, not a Material subhead ---- */
+.ws-day {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- data in the desktop's monospace: counts, dates, EXIF, workspace numbers ---- */
+.ws-data,
+.year-chip .tabular-nums,
+div.absolute.font-mono {
+  font-family: var(--ws-font-data);
+}
+
+/* ---- depth: none on the ground; menus and dialogs float like Hyprland popups ---- */
+.shadow-sm,
+.shadow-md,
+.shadow-lg {
+  box-shadow: none;
+}
+[role='menu'],
+[role='dialog'],
+[role='listbox'] {
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
+  border: 1px solid var(--ws-hairline);
+}
+
+/* ---- browser surfaces ---- */
+::selection {
+  background: color-mix(in oklab, var(--ws-accent) 26%, transparent);
+}
+:root {
+  accent-color: var(--ws-accent);
+}
+:focus-visible {
+  outline-color: var(--ws-accent);
+}
+
+/* ---- empty states: a sentence of why, one next step ---- */
+.ws-empty {
+  max-width: 34rem;
+  margin: clamp(3rem, 12vh, 8rem) auto 0;
+  padding-inline: 1.5rem;
+}
+.ws-empty-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem);
+  font-weight: 750;
+  font-variation-settings: 'wdth' 80, 'opsz' 72;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  text-wrap: balance;
+  color: var(--immich-ui-dark);
+}
+.ws-empty-body {
+  margin-top: 0.9rem;
+  font-size: 1rem;
+  line-height: 1.55;
+  max-width: 60ch;
+  color: var(--immich-ui-muted);
+}
+.ws-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+}
+.ws-empty-action {
+  padding: 0.55rem 1rem;
+  border-radius: calc(var(--ws-radius) + 6px);
+  background: var(--immich-ui-dark);
+  color: var(--immich-ui-light);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.ws-empty-action:hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 85%, var(--ws-accent));
+}
+.ws-empty-link {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--immich-ui-dark);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  text-decoration-color: var(--ws-hairline);
+}
+.ws-empty-link:hover {
+  text-decoration-color: var(--ws-accent);
+}
+.ws-empty-action:focus-visible,
+.ws-empty-link:focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: 3px;
+}
+
+/* ---- people: faces first; "Add a name" shows on the card you're pointing at, not 500 times ---- */
+.ws-person-name {
+  background: transparent;
+  border-color: transparent;
+  border-radius: calc(var(--ws-radius) + 6px);
+  color: var(--immich-ui-dark);
+  font-weight: 600;
+}
+.ws-person-name::placeholder {
+  opacity: 0;
+  transition: opacity 140ms;
+}
+:hover > * > .ws-person-name::placeholder,
+:hover > .ws-person-name::placeholder,
+.ws-person-name:hover::placeholder,
+.ws-person-name:focus::placeholder {
+  opacity: 1;
+}
+.ws-person-name:focus {
+  background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
+  outline: var(--ws-border) solid var(--ws-accent);
+}
+
+/* ---- filter rail: same ground, a hairline edge, collapsed until asked for ---- */
+[data-testid='filter-panel-shell'] {
+  background-color: var(--immich-ui-light);
+  border-color: var(--ws-hairline);
+}
+
+/* ---- segmented controls (Years / Months / All): workspace pills, active one inverted ---- */
+[data-testid='timeline-grouping-control'] {
+  background: transparent;
+  box-shadow: none;
+  border: 1px solid var(--ws-hairline);
+  border-radius: calc(var(--ws-radius) + 8px);
+  padding: 3px;
+}
+[data-testid='timeline-grouping-control'] > button {
+  border-radius: calc(var(--ws-radius) + 5px);
+  color: var(--immich-ui-muted);
+}
+[data-testid='timeline-grouping-control'] > button[aria-pressed='true'] {
+  background: var(--immich-ui-dark);
+  color: var(--immich-ui-light);
+}
+[data-testid='filter-toolbar-search'] button,
+[data-testid='filter-toolbar-reopen'] button {
+  background: transparent;
+  box-shadow: none;
+  border: 1px solid var(--ws-hairline);
+}
