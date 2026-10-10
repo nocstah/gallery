@@ -99,7 +99,7 @@
 <CommandPaletteDefaultProvider name={$t('assets')} actions={withoutIcons([Close, Cast, ...Object.values(Actions)])} />
 
 <div
-  class="flex h-16 place-items-center justify-between bg-linear-to-b from-black/40 px-3 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)] transition-transform duration-200"
+  class="ws-viewer-bar flex h-16 place-items-center justify-between bg-linear-to-b from-black/40 px-3 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)] transition-transform duration-200"
 >
   <div class="dark">
     <ActionButton action={Close} />
@@ -124,20 +124,15 @@
         {/snippet}
       </Tooltip>
     {/if}
-    <ActionButton action={Cast} />
     <ActionButton action={Actions.Share} />
     <ActionButton action={Actions.Offline} />
-    <ActionButton action={Actions.ZoomIn} />
-    <ActionButton action={Actions.ZoomOut} />
     <ActionButton action={Actions.PlayMotionPhoto} />
     <ActionButton action={Actions.StopMotionPhoto} />
-    <ActionButton action={Actions.Copy} />
     <ActionButton action={Actions.SharedLinkDownload} />
     <ActionButton action={Actions.Info} />
     <ActionButton action={Actions.Favorite} />
     <ActionButton action={Actions.Unfavorite} />
 
-    <ActionButton action={Actions.RotateRight} />
     <ActionButton action={Actions.Edit} />
 
     {#if isOwner}
@@ -147,6 +142,12 @@
     {#if !sharedLink}
       <ButtonContextMenu direction="left" align="top-right" color="secondary" title={$t('more')} icon={mdiDotsVertical}>
         <ActionMenuItem action={Actions.PlaySlideshow} />
+        <!-- Local Omarchy layer: the rarely used bar actions live here; the bar keeps the everyday ones -->
+        <ActionMenuItem action={Cast} />
+        <ActionMenuItem action={Actions.ZoomIn} />
+        <ActionMenuItem action={Actions.ZoomOut} />
+        <ActionMenuItem action={Actions.Copy} />
+        <ActionMenuItem action={Actions.RotateRight} />
 
         <ActionMenuItem action={Actions.Download} />
         <ActionMenuItem action={Actions.DownloadOriginal} />
