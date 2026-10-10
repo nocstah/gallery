@@ -68,17 +68,22 @@
   type SearchTerms = MetadataSearchDto & Pick<SmartSearchDto, 'query' | 'queryAssetId'>;
   let searchQuery = $derived(page.url.searchParams.get(QueryParameter.QUERY));
   let smartSearchEnabled = $derived(featureFlagsManager.value.smartSearch);
-  // A hand-typed or shared /search?query=beach is plain text, not JSON; read it as a text query
-  // instead of throwing (which blanked the page).
-  const parseTerms = (raw: string): SearchTerms => {
+  // `query` normally carries JSON-encoded search terms, but a hand-typed, bookmarked or shared
+  // `/search?query=beach` is plain text. JSON.parse throws on it (and on non-object JSON such as
+  // `42` it yields a non-object), which used to take the whole page down; read those as a text query.
+  const parseSearchTerms = (raw: string): SearchTerms => {
     try {
       const parsed: unknown = JSON.parse(raw);
-      return parsed && typeof parsed === 'object' ? (parsed as SearchTerms) : { query: String(parsed) };
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as SearchTerms;
+      }
     } catch {
-      return { query: raw };
+      // fall through: not JSON
     }
+    return { query: raw };
   };
-  let terms = $derived<SearchTerms>(searchQuery ? parseTerms(searchQuery) : {});
+
+  let terms = $derived<SearchTerms>(searchQuery ? parseSearchTerms(searchQuery) : {});
   const searchHotkey =
     typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl+K';
   let searchTermKeys = $derived(getVisibleSearchKeys(terms));
