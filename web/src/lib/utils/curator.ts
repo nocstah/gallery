@@ -38,6 +38,70 @@ export type Suggestion = {
 /** What stories.write told for an event, a trip or a memory (written by the text model from the captions). */
 export type Story = { text: string; model: string; written_at: string; event_id?: number };
 
+/** A conversation in the library chat (Curator's curator/chat.py), as the chat page lists it. */
+export type ChatSummary = { id: string; title: string | null; updated_at: string };
+
+/** What came of a tool the chat used: counts and flags, never the content (that went to the model). */
+export type ChatOutcome = {
+  error?: string;
+  found?: number;
+  best_matches?: number;
+  total?: number;
+  waiting?: number;
+  proposed?: boolean;
+  started?: boolean;
+  photos?: number;
+  story?: boolean;
+  events?: number;
+  people?: number;
+  changes?: number;
+  counts?: number;
+};
+
+/** A tool used while answering; `running` only while the answer streams. */
+export type ChatStep = { tool: string; args: Record<string, unknown>; outcome?: ChatOutcome; running?: boolean };
+/** The photos a step found or showed (`step` is the step's index). A visual search is `ranked`: its best matches. */
+export type ChatPhotos = {
+  step: number;
+  total: number;
+  ids: string[];
+  ranked: boolean;
+  search_id?: string;
+  event_id?: number;
+};
+/** A suggestion the chat made; it waits in the AI inbox's "Asked in chat" batch for a yes. */
+export type ChatProposal = { step: number; id: number; kind: string; title: string; photos: number };
+/** A Curator job the chat started (a highlight reel), which proposes its result in the AI inbox. */
+export type ChatJob = { step: number; id: number; kind: string; title: string };
+
+export type ChatUserTurn = { role: 'user'; text: string; at?: string };
+export type ChatAssistantTurn = {
+  role: 'assistant';
+  text: string;
+  steps: ChatStep[];
+  photos: ChatPhotos[];
+  proposals: ChatProposal[];
+  jobs: ChatJob[];
+  error?: string | null;
+  /** the person pressed Stop */
+  stopped?: boolean;
+};
+export type ChatTurn = ChatUserTurn | ChatAssistantTurn;
+export type ChatDetail = { id: string; title: string | null; turns: ChatTurn[]; updated_at: string };
+
+/** The events a reply streams, in the order they come (POST /api/chat answers with server-sent events). */
+export type ChatEvent =
+  | { type: 'chat'; data: { id: string } }
+  | { type: 'status'; data: { loading: string; making_way_for: string | null } }
+  | { type: 'step'; data: { index: number; tool: string; args: Record<string, unknown> } }
+  | { type: 'step_done'; data: { index: number; outcome: ChatOutcome } }
+  | { type: 'photos'; data: ChatPhotos }
+  | { type: 'proposal'; data: ChatProposal }
+  | { type: 'job'; data: ChatJob }
+  | { type: 'text'; data: { delta: string } }
+  | { type: 'error'; data: { message: string } }
+  | { type: 'done'; data: { id: string } };
+
 export type GroupPage = {
   group: { key: string; kind: string; title: string; description: string | null };
   total: number;
@@ -157,6 +221,9 @@ const call = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
     const body = await response.json().catch(() => ({}));
     throw new CuratorError(body.detail ?? response.statusText, response.status);
   }
+  if (response.status === 204) {
+    return undefined as T;
+  }
   return response.json() as Promise<T>;
 };
 
@@ -201,6 +268,106 @@ export const curator = {
    * job's result names the suggestion holding the new version */
   inpaint: (assetId: string, mask: string) =>
     post<{ job: number; mask: string }>('/inpaint', { asset_id: assetId, mask }),
+  /** the library chat's earlier conversations, newest first */
+  chats: () => call<ChatSummary[]>('/chats'),
+  chat: (id: string) => call<ChatDetail>(`/chats/${encodeURIComponent(id)}`),
+  forgetChat: (id: string) => call<void>(`/chats/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+};
+
+/**
+ * Server-sent events, fed in pieces as they arrive: each complete block ("event: name", "data: JSON", a blank line)
+ * becomes one ChatEvent. A block cut between two pieces waits for the rest; a malformed one is skipped.
+ */
+export const createChatEventParser = (onEvent: (event: ChatEvent) => void) => {
+  let buffer = '';
+  const emit = (block: string) => {
+    let type = 'message';
+    const data: string[] = [];
+    for (const line of block.split('\n')) {
+      if (line.startsWith('event:')) {
+        type = line.slice(6).trim();
+      } else if (line.startsWith('data:')) {
+        data.push(line.slice(5).replace(/^ /, ''));
+      }
+    }
+    if (data.length === 0) {
+      return;
+    }
+    try {
+      onEvent({ type, data: JSON.parse(data.join('\n')) } as ChatEvent);
+    } catch {
+      // a block that is not JSON is no event of ours
+    }
+  };
+  const push = (piece: string) => {
+    buffer += piece.replaceAll('\r\n', '\n');
+    let end = buffer.indexOf('\n\n');
+    while (end !== -1) {
+      emit(buffer.slice(0, end));
+      buffer = buffer.slice(end + 2);
+      end = buffer.indexOf('\n\n');
+    }
+  };
+  /** the stream ended: a last block without its blank line still counts */
+  const finish = () => {
+    if (buffer.trim()) {
+      emit(buffer);
+    }
+    buffer = '';
+  };
+  return { push, finish };
+};
+
+/**
+ * Ask the library chat one question (a new conversation when `chatId` is null) and hand each event to `onEvent` as
+ * it streams. Resolves 'ended' when the stream closes and 'aborted' when `signal` stopped it; throws a CuratorError
+ * when Curator does not answer or refuses (status 0: not reachable).
+ */
+export const chatStream = async (
+  chatId: string | null,
+  message: string,
+  onEvent: (event: ChatEvent) => void,
+  signal?: AbortSignal,
+): Promise<'ended' | 'aborted'> => {
+  let response: Response;
+  try {
+    response = await fetch(`${base()}/chat`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+      body: JSON.stringify({ chat_id: chatId, message }),
+      signal,
+    });
+  } catch {
+    if (signal?.aborted) {
+      return 'aborted';
+    }
+    throw new CuratorError('Curator is not answering', 0);
+  }
+  if (!response.ok || !response.body) {
+    const body = await response.json().catch(() => ({}));
+    throw new CuratorError(body.detail ?? response.statusText, response.status);
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const parser = createChatEventParser(onEvent);
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      parser.push(decoder.decode(value, { stream: true }));
+    }
+    parser.push(decoder.decode());
+    parser.finish();
+    return 'ended';
+  } catch {
+    if (signal?.aborted) {
+      return 'aborted';
+    }
+    throw new CuratorError('The answer was cut off', 0);
+  }
 };
 
 /** Poll a Curator job until it leaves the queue. */

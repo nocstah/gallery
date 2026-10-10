@@ -32,6 +32,8 @@
     mdiImageMultipleOutline,
     mdiInbox,
     mdiInboxOutline,
+    mdiChat,
+    mdiChatOutline,
     mdiLink,
     mdiLock,
     mdiLockOutline,
@@ -138,6 +140,9 @@
 
   <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
   <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
+
+  <!-- Local Omarchy layer: a conversation with Curator's local model about the library (routes/(user)/chat) -->
+  <SidebarNavItem title={$t('chat_title')} href="/chat" icon={mdiChatOutline} activeIcon={mdiChat} />
 
   <SidebarNavItem title={$t('utilities')} href={Route.utilities()} icon={mdiToolboxOutline} activeIcon={mdiToolbox} />
 
