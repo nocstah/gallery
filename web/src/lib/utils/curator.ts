@@ -186,6 +186,11 @@ export const curator = {
       method: 'PUT',
       body: JSON.stringify({ value }),
     }),
+  suggestion: (id: number) => call<Suggestion>(`/suggestions/${id}`),
+  /** the object-removal brush: a mask painted over a photo (a PNG data URL, white where it is to be filled in); the
+   * job's result names the suggestion holding the new version */
+  inpaint: (assetId: string, mask: string) =>
+    post<{ job: number; mask: string }>('/inpaint', { asset_id: assetId, mask }),
 };
 
 /** Poll a Curator job until it leaves the queue. */
