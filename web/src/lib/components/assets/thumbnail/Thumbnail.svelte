@@ -44,6 +44,8 @@
     readonly?: boolean;
     showArchiveIcon?: boolean;
     showStackedIcon?: boolean;
+    /** Local Omarchy layer: false where the grid cannot expand a stack in place (search results): a plain count */
+    stackBadgeExpands?: boolean;
     imageClass?: ClassValue;
     brokenAssetClass?: ClassValue;
     albumUsers?: UserResponseDto[];
@@ -66,6 +68,7 @@
     readonly = false,
     showArchiveIcon = false,
     showStackedIcon = true,
+    stackBadgeExpands = true,
     albumUsers = [],
     onClick = undefined,
     onPreview = undefined,
@@ -412,7 +415,17 @@
       <!-- Stacked asset. Local Omarchy layer: the badge is a button that expands the stack in place.
            It sits after the hover link (same z-2 layer, later wins) so real clicks reach it;
            (stack-expand-manager) instead of opening the photo; click again to collapse. -->
-      {#if asset.stack && showStackedIcon}
+      {#if asset.stack && showStackedIcon && !stackBadgeExpands}
+        <div
+          class={[
+            'ws-stack-badge pointer-events-none absolute z-3 flex place-items-center gap-1 text-xs font-medium text-white',
+            asset.isImage && !asset.livePhotoVideoId ? 'inset-e-0 top-0' : 'inset-e-1 top-7',
+          ]}
+        >
+          <p>{asset.stack.assetCount.toLocaleString($locale)}</p>
+          <Icon icon={mdiCameraBurst} size="24" />
+        </div>
+      {:else if asset.stack && showStackedIcon}
         {@const stackId = asset.stack.id}
         {@const expanded = stackExpandManager.isExpanded(stackId)}
         <button

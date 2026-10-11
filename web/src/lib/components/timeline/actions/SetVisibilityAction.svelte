@@ -3,7 +3,7 @@
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import type { OnSetVisibility } from '$lib/utils/actions';
   import { handleError } from '$lib/utils/handle-error';
-  import { AssetVisibility, updateAssets } from '@immich/sdk';
+  import { setLockedWithCompanions } from '$lib/utils/locked-companions';
   import { Button, modalManager } from '@immich/ui';
   import { mdiLockOpenVariantOutline, mdiLockOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -34,14 +34,8 @@
       loading = true;
       const assetIds = assetMultiSelectManager.assets.map(({ id }) => id);
 
-      await updateAssets({
-        assetBulkUpdateDto: {
-          ids: assetIds,
-          visibility: unlock ? AssetVisibility.Timeline : AssetVisibility.Locked,
-        },
-      });
-
-      onVisibilitySet(assetIds);
+      // Local Omarchy layer: the stack mates and Live Photo videos move with them
+      onVisibilitySet(await setLockedWithCompanions(assetIds, unlock));
     } catch (error) {
       handleError(error, $t('errors.unable_to_save_settings'));
     } finally {

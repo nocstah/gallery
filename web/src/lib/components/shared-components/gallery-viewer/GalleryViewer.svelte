@@ -592,6 +592,7 @@
               onPreview={assetInteraction.selectionActive ? () => openAsset(asset) : undefined}
               onMouseEvent={() => assetMouseEventHandler(currentAsset)}
               {showArchiveIcon}
+              stackBadgeExpands={false}
               asset={currentAsset}
               selected={assetInteraction.hasSelectedAsset(currentAsset.id)}
               selectionCandidate={assetInteraction.hasSelectionCandidate(currentAsset.id)}

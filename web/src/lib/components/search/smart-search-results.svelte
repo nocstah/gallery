@@ -3,6 +3,7 @@
   import type { FilterState } from '$lib/components/filter-panel/filter-panel';
   import { dedupeAppend } from '$lib/utils/search-dedup';
   import { buildSmartSearchParams, SEARCH_FILTER_DEBOUNCE_MS } from '$lib/utils/space-search';
+  import { groupStacks } from '$lib/utils/search-stacks';
   import { searchSmart, type AssetResponseDto } from '@immich/sdk';
 
   interface Props {
@@ -65,6 +66,7 @@
   let hasMoreResults = $state(false);
   let searchPage = $state(1);
   let searchAbortController: AbortController | undefined;
+  let stacksShown = new Set<string>();
 
   /**
    * Identity of the search whose assets are currently in `searchResults`, so a genuinely new search
@@ -97,6 +99,14 @@
       if (controller.signal.aborted) {
         return;
       }
+      // Local Omarchy layer: one tile per stack, the best match, with the stack's count (own library only)
+      if (!append) {
+        stacksShown = new Set();
+      }
+      const items = spaceId ? assets.items : await groupStacks(assets.items, stacksShown);
+      if (controller.signal.aborted) {
+        return;
+      }
 
       // On append, dedupe by id — primary guard against duplicate rows across
       // paginated searchSmart responses. The server's ORDER BY is single-key
@@ -104,7 +114,7 @@
       // be used; identical embeddings (byte-identical image content) can then
       // yield the same asset.id on adjacent pages. See
       // specs/2026-04-21-search-tiebreaker-design.md.
-      searchResults = append ? dedupeAppend(searchResults, assets.items) : assets.items;
+      searchResults = append ? dedupeAppend(searchResults, items) : items;
       searchPage = page;
       hasMoreResults = assets.nextPage !== null;
     } catch {

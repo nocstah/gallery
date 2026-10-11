@@ -3,7 +3,8 @@
   import { AssetAction } from '$lib/constants';
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import { handleError } from '$lib/utils/handle-error';
-  import { AssetVisibility, updateAssets } from '@immich/sdk';
+  import { setLockedWithCompanions } from '$lib/utils/locked-companions';
+  import { AssetVisibility } from '@immich/sdk';
   import { modalManager } from '@immich/ui';
   import { mdiLockOpenVariantOutline, mdiLockOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -37,12 +38,8 @@
         asset,
       });
 
-      await updateAssets({
-        assetBulkUpdateDto: {
-          ids: [asset.id],
-          visibility: isLocked ? AssetVisibility.Timeline : AssetVisibility.Locked,
-        },
-      });
+      // Local Omarchy layer: the stack mates and Live Photo video move with it
+      await setLockedWithCompanions([asset.id], isLocked);
 
       onAction({
         type: isLocked ? AssetAction.SET_VISIBILITY_TIMELINE : AssetAction.SET_VISIBILITY_LOCKED,
