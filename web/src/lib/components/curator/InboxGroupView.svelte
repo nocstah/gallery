@@ -3,10 +3,13 @@
   // the rest in one go; every accepted change stays undoable here and in History. Keys: j/k move, a accepts,
   // r rejects, u undoes. Accepting more than 20 at once runs Curator's database backup first, shown as progress.
   // A decided row sinks to the bottom of the list at once, so the next one to decide is always where the last was.
+  // A card about one photo also has Delete (key d): the photo goes to Gallery's Trash and the card is set aside;
+  // its Undo restores the photo and puts the card back.
   import ReviewMode from '$lib/components/curator/ReviewMode.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
   import { curator, waitForJob, type GroupPage, type Suggestion, type SuggestionStatus } from '$lib/utils/curator';
+  import { deleteAssets, restoreAssets } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiArrowLeft } from '@mdi/js';
   import { onMount, tick } from 'svelte';
@@ -42,6 +45,8 @@
   let reviewing = $state(false);
   /** rows whose accept or reject is on its way to Curator */
   const deciding = new SvelteSet<number>();
+  /** cards whose photo was sent to the Trash from here */
+  const trashed = new SvelteSet<number>();
 
   const closeReview = async () => {
     reviewing = false;
@@ -125,6 +130,44 @@
     }
   };
 
+  const deletable = (item: Suggestion) => item.kind.startsWith('asset.') && new Set(item.asset_ids).size === 1;
+
+  const trash = async (item: Suggestion) => {
+    if (deciding.has(item.id) || item.status !== 'pending' || !deletable(item)) {
+      return;
+    }
+    deciding.add(item.id);
+    sink([item.id]);
+    message = undefined;
+    try {
+      await deleteAssets({ assetBulkDeleteDto: { ids: [item.asset_ids[0]] } });
+      await curator.decide([item.id], 'reject');
+      item.status = 'rejected';
+      trashed.add(item.id);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    } finally {
+      deciding.delete(item.id);
+      onChange();
+    }
+  };
+
+  const untrash = async (item: Suggestion) => {
+    busy = true;
+    message = undefined;
+    try {
+      await restoreAssets({ bulkIdsDto: { ids: [item.asset_ids[0]] } });
+      await curator.reopen([item.id]);
+      item.status = 'pending';
+      trashed.delete(item.id);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    } finally {
+      busy = false;
+      onChange();
+    }
+  };
+
   const decideAll = async (decision: 'accept' | 'reject') => {
     const all = await curator.group(key, 'pending', 5000, 0);
     await decide(
@@ -172,6 +215,11 @@
     } else if (item && (event.key === 'r' || event.key === 'x') && item.status === 'pending' && !deciding.has(item.id)) {
       void decide([item.id], 'reject');
       void tick().then(() => move(index));
+    } else if (item && event.key === 'd' && item.status === 'pending' && deletable(item) && !deciding.has(item.id)) {
+      void trash(item);
+      void tick().then(() => move(index));
+    } else if (item && event.key === 'u' && trashed.has(item.id)) {
+      void untrash(item);
     } else if (item && event.key === 'u' && item.status === 'applied') {
       void undo(item);
     } else {
@@ -272,6 +320,21 @@
               onclick={() => decide([item.id], 'reject')}
             >
               {$t('ai_inbox_reject')}
+            </button>
+            {#if deletable(item)}
+              <button
+                type="button"
+                class="ws-btn-quiet"
+                disabled={busy || deciding.has(item.id)}
+                onclick={() => trash(item)}
+              >
+                {$t('delete')}
+              </button>
+            {/if}
+          {:else if trashed.has(item.id)}
+            <span class="ws-inbox-meta">{$t('moved_to_trash')}</span>
+            <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => untrash(item)}>
+              {$t('undo')}
             </button>
           {:else}
             <span class="ws-inbox-meta">{$t(STATUS_LABEL[item.status])}</span>

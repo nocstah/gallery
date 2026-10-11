@@ -2,7 +2,8 @@
   // Local Omarchy layer: what a suggestion is about, shown with the photos themselves. A cover change shows the
   // current cover beside the proposed one, a name shows the face group beside photos it was found in, a merge shows
   // every face group being joined, a restored photo or clip shares one frame with its original. Each photo opens in
-  // Gallery in a new tab, so the review keeps its place.
+  // Gallery in a new tab, so the review keeps its place. Resting the pointer on a photo shows it large, whole, in
+  // the middle of the screen, until the pointer moves off it.
   import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
   import { reelUrl, type Suggestion } from '$lib/utils/curator';
   import { getAssetMediaUrl } from '$lib/utils';
@@ -16,6 +17,18 @@
   let { suggestion }: Props = $props();
 
   const thumbnail = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
+  const preview = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Preview });
+
+  let peek = $state<{ id: string; turn: number }>();
+  let peekTimer: ReturnType<typeof setTimeout> | undefined;
+  const peekAt = (id: string, turn: number) => {
+    clearTimeout(peekTimer);
+    peekTimer = setTimeout(() => (peek = { id, turn }), 250);
+  };
+  const unpeek = () => {
+    clearTimeout(peekTimer);
+    peek = undefined;
+  };
   const face = (personId: string) => `/api/people/${personId}/thumbnail`;
 
   const payload = $derived(suggestion.payload as Record<string, unknown>);
@@ -29,7 +42,16 @@
 </script>
 
 {#snippet photo(id: string, size: number, label?: string, turn = 0)}
-  <a class="visual-tile" href="/photos/{id}" target="_blank" rel="noopener" style:width="{size}px">
+  <a
+    class="visual-tile"
+    href="/photos/{id}"
+    target="_blank"
+    rel="noopener"
+    style:width="{size}px"
+    onmouseenter={() => peekAt(id, turn)}
+    onmouseleave={unpeek}
+    onclick={unpeek}
+  >
     <img
       class="ws-strip-tile"
       src={thumbnail(id)}
@@ -44,6 +66,14 @@
     {/if}
   </a>
 {/snippet}
+
+<svelte:window onscroll={unpeek} onkeydown={unpeek} />
+
+{#if peek}
+  <div class="visual-peek" aria-hidden="true">
+    <img src={preview(peek.id)} alt="" style:rotate={peek.turn ? `${peek.turn}deg` : undefined} />
+  </div>
+{/if}
 
 <div class="ws-strip visual">
   {#if suggestion.kind === 'reel.publish' && suggestion.status === 'pending'}
@@ -116,6 +146,23 @@
     outline: 1px solid var(--ws-hairline);
     outline-offset: -1px;
     background: #000;
+  }
+  /* the photo large and whole, over the list; the pointer passes through it, so moving off the tile ends it */
+  .visual-peek {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+  }
+  .visual-peek img {
+    max-width: min(90vw, 1600px);
+    max-height: 88vh;
+    object-fit: contain;
+    border-radius: var(--ws-radius);
+    box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 45%);
+    background: var(--ws-surface, #000);
   }
   /* faces are people, not photos: drawn round like everywhere else Gallery shows a person */
   .visual-face {
