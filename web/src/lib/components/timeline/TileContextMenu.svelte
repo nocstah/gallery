@@ -3,7 +3,7 @@
   // selects it (unless it is already part of the selection) and opens this menu at the cursor; the items
   // are the selection actions the page passes in, so they act on everything selected. A single photo that
   // belongs to a stack also gets the stack's own items: its cover expands or collapses it, any other photo
-  // can become the cover (timeline only). Works on any photo grid: the page says where the grid is and how to
+  // can become the cover or collapse it (timeline only). Works on any photo grid: the page says where the grid is and how to
   // find a photo by id, so search results get it too. Shift+right-click falls through to the browser's own menu.
   import { contextMenuNavigation } from '$lib/actions/context-menu-navigation';
   import ContextMenu from '$lib/components/shared-components/context-menu/ContextMenu.svelte';
@@ -186,6 +186,14 @@
             text={$t('make_stack_cover')}
             onClick={() => onStackAction(() => stackExpandManager.makeCover(menu.stackId, menu.assetId))}
           />
+          {#if stackExpandManager.isExpanded(menu.stackId)}
+            <!-- folds the stack from any of its photos, so the cover need not be found first -->
+            <MenuOption
+              icon={mdiArrowCollapseHorizontal}
+              text={$t('collapse_stack')}
+              onClick={() => onStackAction(() => stackExpandManager.toggle(menu.stackId, menu.assetId))}
+            />
+          {/if}
         {/if}
         <hr />
       {/if}

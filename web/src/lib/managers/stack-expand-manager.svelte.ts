@@ -5,6 +5,7 @@
 import { getStack, updateStack } from '@immich/sdk';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { eventManager } from '$lib/managers/event-manager.svelte';
+import { updateGeometry } from '$lib/managers/timeline-manager/internal/layout-support.svelte';
 import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
@@ -68,6 +69,7 @@ class StackExpandManager {
     if (inserted) {
       manager.removeAssets(inserted);
       this.#forget(stackId);
+      this.#relayout(manager, coverId);
       return;
     }
     this.#pending.add(stackId);
@@ -75,6 +77,7 @@ class StackExpandManager {
       const stack = await getStack({ id: stackId });
       const members = stack.assets.filter((asset) => asset.id !== coverId).map((asset) => toTimelineAsset(asset));
       manager.upsertAssets(members);
+      this.#relayout(manager, coverId);
       for (const member of members) {
         this.#members.set(member.id, stackId);
       }
@@ -86,6 +89,17 @@ class StackExpandManager {
       handleError(error, 'Could not expand the stack');
     } finally {
       this.#pending.delete(stackId);
+    }
+  }
+
+  // The timeline defers the layout of days it thinks are off screen, and an expanded stack often reaches
+  // past the screen: the day then kept its old size while the new tiles kept no or stale positions, drawn
+  // on top of their neighbours. Lay the cover's month out now, whole.
+  #relayout(manager: TimelineManager, coverId: string) {
+    const month = manager.getTimelineMonthByAssetId(coverId);
+    if (month) {
+      updateGeometry(manager, month, { invalidateHeight: true, noDefer: true });
+      manager.updateViewportProximities();
     }
   }
 

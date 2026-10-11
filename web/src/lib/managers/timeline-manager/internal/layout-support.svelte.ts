@@ -110,7 +110,8 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
   for (const timelineDay of month.timelineDays) {
     timelineDay.layout(options, noDefer);
   }
-  if (month.timelineDays.some((day) => day.viewerAssets.length > 0 && !day.viewerAssets[0].position)) {
+  // any tile without a position (a deferred day, or photos added to it since): upstream's packing
+  if (month.timelineDays.some((day) => day.viewerAssets.some((viewerAsset) => !viewerAsset.position))) {
     layoutTimelineMonthPacked(timelineManager, month);
     return;
   }
