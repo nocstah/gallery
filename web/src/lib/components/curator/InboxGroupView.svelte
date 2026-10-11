@@ -2,13 +2,16 @@
   // Local Omarchy layer: reviewing one batch of Curator's suggestions. Reject the few that are wrong, then accept
   // the rest in one go; every accepted change stays undoable here and in History. Keys: j/k move, a accepts,
   // r rejects, u undoes. Accepting more than 20 at once runs Curator's database backup first, shown as progress.
+  // A decided row sinks to the bottom of the list at once, so the next one to decide is always where the last was.
   import ReviewMode from '$lib/components/curator/ReviewMode.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
   import { curator, waitForJob, type GroupPage, type Suggestion, type SuggestionStatus } from '$lib/utils/curator';
   import { Icon } from '@immich/ui';
   import { mdiArrowLeft } from '@mdi/js';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
+  import { flip } from 'svelte/animate';
+  import { SvelteSet } from 'svelte/reactivity';
   import { t, type Translations } from 'svelte-i18n';
 
   interface Props {
@@ -37,6 +40,8 @@
   let message = $state<string>();
   let rows: HTMLElement[] = $state([]);
   let reviewing = $state(false);
+  /** rows whose accept or reject is on its way to Curator */
+  const deciding = new SvelteSet<number>();
 
   const closeReview = async () => {
     reviewing = false;
@@ -62,11 +67,25 @@
     }
   };
 
+  // the decided rows go to the bottom, keeping their order
+  const sink = (ids: number[]) => {
+    const set = new Set(ids);
+    items = [...items.filter((item) => !set.has(item.id)), ...items.filter((item) => set.has(item.id))];
+  };
+
   const decide = async (ids: number[], decision: 'accept' | 'reject') => {
+    ids = ids.filter((id) => !deciding.has(id));
     if (ids.length === 0) {
       return;
     }
-    busy = true;
+    // one row at a time stays quick: the rest of the list stays usable while it is applied
+    const single = ids.length === 1;
+    if (single) {
+      deciding.add(ids[0]);
+      sink(ids);
+    } else {
+      busy = true;
+    }
     message = undefined;
     try {
       const result = await curator.decide(ids, decision);
@@ -84,17 +103,24 @@
         await load();
       } else if (decision === 'reject') {
         setStatus(ids, 'rejected');
+        sink(ids);
       } else {
         setStatus(result.applied ?? [], 'applied');
         setStatus(result.failed ?? [], 'failed');
         if (result.failed?.length) {
           message = $t('ai_inbox_some_failed', { values: { count: result.failed.length } });
         }
+        sink(ids);
       }
     } catch (error) {
       message = error instanceof Error ? error.message : String(error);
     } finally {
-      busy = false;
+      for (const id of ids) {
+        deciding.delete(id);
+      }
+      if (!single) {
+        busy = false;
+      }
       onChange();
     }
   };
@@ -140,12 +166,12 @@
       move(index + 1);
     } else if (event.key === 'k' || event.key === 'ArrowUp') {
       move(index - 1);
-    } else if (item && event.key === 'a' && item.status === 'pending') {
+    } else if (item && event.key === 'a' && item.status === 'pending' && !deciding.has(item.id)) {
       void decide([item.id], 'accept');
-      move(index + 1);
-    } else if (item && (event.key === 'r' || event.key === 'x') && item.status === 'pending') {
+      void tick().then(() => move(index)); // the next row has moved up into this place
+    } else if (item && (event.key === 'r' || event.key === 'x') && item.status === 'pending' && !deciding.has(item.id)) {
       void decide([item.id], 'reject');
-      move(index + 1);
+      void tick().then(() => move(index));
     } else if (item && event.key === 'u' && item.status === 'applied') {
       void undo(item);
     } else {
@@ -207,9 +233,15 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <ul class="ws-inbox-rows" onkeydown={onKeydown}>
   {#each items as item, index (item.id)}
-    <li>
+    <li animate:flip={{ duration: 180 }}>
       <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-      <div class="ws-inbox-row item-row" tabindex="0" data-status={item.status} bind:this={rows[index]}>
+      <div
+        class="ws-inbox-row item-row"
+        tabindex="0"
+        data-status={item.status}
+        data-deciding={deciding.has(item.id) || undefined}
+        bind:this={rows[index]}
+      >
         <SuggestionVisual suggestion={item} />
         <div class="item-text">
           <span class="ws-inbox-row-title">{item.title}</span>
@@ -225,10 +257,20 @@
         </div>
         <div class="item-actions">
           {#if item.status === 'pending'}
-            <button type="button" class="ws-btn" disabled={busy} onclick={() => decide([item.id], 'accept')}>
+            <button
+              type="button"
+              class="ws-btn"
+              disabled={busy || deciding.has(item.id)}
+              onclick={() => decide([item.id], 'accept')}
+            >
               {$t('accept')}
             </button>
-            <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => decide([item.id], 'reject')}>
+            <button
+              type="button"
+              class="ws-btn-quiet"
+              disabled={busy || deciding.has(item.id)}
+              onclick={() => decide([item.id], 'reject')}
+            >
               {$t('ai_inbox_reject')}
             </button>
           {:else}
@@ -305,6 +347,7 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: start;
   }
+  .item-row[data-deciding],
   .item-row[data-status='rejected'],
   .item-row[data-status='undone'],
   .item-row[data-status='superseded'] {
