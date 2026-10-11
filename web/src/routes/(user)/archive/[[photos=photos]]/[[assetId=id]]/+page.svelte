@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ArchiveCategories from '$lib/components/archive/ArchiveCategories.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
@@ -47,9 +48,12 @@
   let timelineGrouping = $state<TimelineGrouping>('day');
   let temporalAnchor = $state<TimelineTemporalAnchor | undefined>();
   const baseTimelineOptions = { visibility: AssetVisibility.Archive };
+  // Local Omarchy layer: the category picked above the archive (an Auto/ tag), or all of it
+  let categoryTagId = $state<string>();
   const options = $derived({
     ...baseTimelineOptions,
     grouping: timelineGrouping,
+    ...(categoryTagId && { tagId: categoryTagId }),
   });
   const hideGroupingControls = $derived(
     assetMultiSelectManager.selectionActive || (timelineManager?.isInitialized && timelineManager.assetCount === 0),
@@ -109,6 +113,7 @@
     onGroupingChange={handleTimelineGroupingChange}
     onAddAllToCollection={handleAddAllToCollection}
   />
+  <ArchiveCategories bind:tagId={categoryTagId} />
   <Timeline
     enableRouting={true}
     bind:timelineManager
