@@ -749,8 +749,18 @@
     <ActionMenuItem action={MenuActions.CreateSharedLink} />
     <DownloadAction menuItem />
     {#if assetMultiSelectManager.isAllUserOwned}
+      {@const MenuStackActions = getStackBulkActions($t)}
+      <hr />
+      <RotateAction />
+      <ActionMenuItem action={MenuStackActions.Stack} />
+      <ActionMenuItem action={MenuStackActions.Unstack} />
+      <ActionMenuItem action={MenuActions.Tag} />
+      <ChangeDate menuItem />
+      <ChangeLocation menuItem />
+      <ChangeDescription menuItem />
       <hr />
       <ArchiveAction menuItem onArchive={handleArchive} />
+      <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
       <DeleteAssets menuItem onAssetDelete={handleAssetDelete} onUndoDelete={handleUndoDelete} />
     {/if}
   </TileContextMenu>
