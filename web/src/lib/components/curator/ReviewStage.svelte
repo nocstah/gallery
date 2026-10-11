@@ -85,7 +85,7 @@
         {@render grid(photos.slice(0, 8))}
       {/if}
     </div>
-  {:else if ['asset.archive', 'asset.describe', 'asset.tag'].includes(suggestion.kind) && photos.length > 0}
+  {:else if ['asset.archive', 'asset.describe', 'asset.tag', 'asset.lock'].includes(suggestion.kind) && photos.length > 0}
     <div class="stage-single">{@render big(photos[0])}</div>
   {:else}
     {@render grid(spread)}

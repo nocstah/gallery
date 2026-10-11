@@ -74,7 +74,7 @@
         {@render photo(id, 72)}
       {/each}
     {/if}
-  {:else if (suggestion.kind === 'asset.archive' || suggestion.kind === 'asset.tag') && suggestion.asset_ids.length > 0}
+  {:else if ['asset.archive', 'asset.tag', 'asset.lock'].includes(suggestion.kind) && suggestion.asset_ids.length > 0}
     {@render photo(suggestion.asset_ids[0], 112)}
   {:else}
     {#each photos.slice(0, 6) as id (id)}
