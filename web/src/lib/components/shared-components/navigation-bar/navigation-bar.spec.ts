@@ -8,9 +8,10 @@ import NavigationBar from '$lib/components/shared-components/navigation-bar/Navi
 
 const mocks = vi.hoisted(() => ({
   sidebarModeStore: {
-    layout: 'expanded' as 'overlay' | 'rail' | 'expanded',
+    layout: 'expanded' as 'overlay' | 'rail' | 'expanded' | 'hidden',
     railOverlayOpen: false,
     toggleRailOverlay: vi.fn(),
+    toggleHidden: vi.fn(),
   },
   sidebarStore: { isOpen: false, toggle: vi.fn() },
   // Real default: `false` under jsdom/happy-dom's static `matchMedia` mock in test-data/setup.ts.
@@ -81,7 +82,8 @@ const renderNavigationBar = (props: NavigationBarProps = {}) =>
     componentProps: props,
   });
 
-const menuButton = () => screen.getByRole('button', { name: /main_menu/i });
+// Local Omarchy layer: where it hides and shows the sidebar by hand the button is named collapse / expand
+const menuButton = () => screen.getByRole('button', { name: /^(main_menu|collapse|expand)$/i });
 
 // Cross-checks the real Logo component's own rendered class, not just the wrapper span's
 // test-facing `data-variant` - a mutation that changes only Logo's `variant` prop while
@@ -103,10 +105,11 @@ describe('NavigationBar sidebar integration', () => {
     mocks.mediaQueryManager.isFullSidebar = false;
   });
 
-  // Spec coverage 25.
+  // Spec coverage 25. Local Omarchy layer: the expanded layout keeps the button too - it hides the sidebar by hand.
   it.each`
     layout        | hidden
-    ${'expanded'} | ${true}
+    ${'expanded'} | ${false}
+    ${'hidden'}   | ${false}
     ${'rail'}     | ${false}
     ${'overlay'}  | ${false}
   `('menu button hidden=$hidden for $layout', ({ layout, hidden }) => {
@@ -121,6 +124,23 @@ describe('NavigationBar sidebar integration', () => {
     // `menuButtonHidden` - assert the real class too, or a mutation that decouples them
     // would pass silently.
     expect(button.classList.contains('hidden')).toBe(hidden);
+  });
+
+  // Local Omarchy layer: from the expanded and the hidden layout the button puts the sidebar away and back by hand
+  it.each`
+    layout
+    ${'expanded'}
+    ${'hidden'}
+  `('hides and shows the sidebar by hand from $layout', ({ layout }) => {
+    mocks.sidebarModeStore.layout = layout;
+
+    renderNavigationBar({ railAware: true });
+    expect(menuButton()).toHaveAccessibleName(layout === 'hidden' ? 'expand' : 'collapse');
+    menuButton().click();
+
+    expect(mocks.sidebarModeStore.toggleHidden).toHaveBeenCalledOnce();
+    expect(mocks.sidebarModeStore.toggleRailOverlay).not.toHaveBeenCalled();
+    expect(mocks.sidebarStore.toggle).not.toHaveBeenCalled();
   });
 
   // Spec coverage 26: rail must route to the real toggle, not upstream's open-only one.

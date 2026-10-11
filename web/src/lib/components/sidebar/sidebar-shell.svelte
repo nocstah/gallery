@@ -27,7 +27,8 @@
       (isOverlay && sidebarStore.isOpen),
   );
 
-  const isHidden = $derived(isOverlay && !sidebarStore.isOpen);
+  // Local Omarchy layer: `hidden` is the sidebar put away by hand (sidebar-mode.svelte.ts)
+  const isHidden = $derived((isOverlay && !sidebarStore.isOpen) || layout === 'hidden');
 
   // Returning to rail after a stint at another width must not resurface a stale
   // hover state, so clear both flags whenever the layout leaves rail.

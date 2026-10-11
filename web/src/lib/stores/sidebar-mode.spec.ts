@@ -1,5 +1,6 @@
 import {
   parseSidebarMode,
+  sidebarHidden,
   sidebarMode,
   sidebarModeStore,
   type SidebarLayout,
@@ -18,6 +19,7 @@ describe('sidebarModeStore', () => {
   beforeEach(() => {
     localStorage.clear();
     sidebarMode.set('auto');
+    sidebarHidden.set(false);
     sidebarModeStore.resetTransient();
     setViewport('phone');
   });
@@ -123,5 +125,28 @@ describe('sidebarModeStore', () => {
 
     expect(sidebarModeStore.mode).toBe('rail');
     expect(localStorage.getItem('sidebar-mode')).toContain('rail');
+  });
+  // Local Omarchy layer: the sidebar hidden by hand wins over every mode from 850px up
+  it.each`
+    mode          | viewport    | expected
+    ${'auto'}     | ${'phone'}  | ${'overlay'}
+    ${'auto'}     | ${'medium'} | ${'hidden'}
+    ${'auto'}     | ${'wide'}   | ${'hidden'}
+    ${'expanded'} | ${'wide'}   | ${'hidden'}
+    ${'rail'}     | ${'medium'} | ${'hidden'}
+  `('hidden by hand, resolves $mode at $viewport to $expected', ({ mode, viewport, expected }) => {
+    sidebarMode.set(mode as SidebarMode);
+    sidebarModeStore.hidden = true;
+    setViewport(viewport as 'phone' | 'medium' | 'wide');
+    expect(sidebarModeStore.layout).toBe(expected as SidebarLayout);
+  });
+
+  it('toggles the hidden sidebar and keeps it across reloads', () => {
+    setViewport('wide');
+    sidebarModeStore.toggleHidden();
+    expect(sidebarModeStore.layout).toBe('hidden');
+    expect(localStorage.getItem('omarchy-sidebar-hidden')).toBe('true');
+    sidebarModeStore.toggleHidden();
+    expect(sidebarModeStore.layout).toBe('expanded');
   });
 });

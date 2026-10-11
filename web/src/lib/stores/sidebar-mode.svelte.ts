@@ -3,7 +3,7 @@ import { sidebarMedia } from '$lib/stores/sidebar-media.svelte';
 
 export const SIDEBAR_MODES = ['auto', 'expanded', 'rail'] as const;
 export type SidebarMode = (typeof SIDEBAR_MODES)[number];
-export type SidebarLayout = 'overlay' | 'rail' | 'expanded';
+export type SidebarLayout = 'overlay' | 'rail' | 'expanded' | 'hidden';
 
 const isSidebarMode = (value: unknown): value is SidebarMode =>
   typeof value === 'string' && (SIDEBAR_MODES as readonly string[]).includes(value);
@@ -28,6 +28,13 @@ export const sidebarMode = persisted<SidebarMode>('sidebar-mode', 'auto', {
     stringify: JSON.stringify,
   },
 });
+
+/**
+ * Local Omarchy layer: the sidebar hidden by hand (the navbar's menu button or Ctrl+B), kept across reloads, so the
+ * photos get the whole width at any window size. It wins over every mode from 850px up; below that the overlay works
+ * as before.
+ */
+export const sidebarHidden = persisted<boolean>('omarchy-sidebar-hidden', false);
 
 class SidebarModeStore {
   #mode = $state<SidebarMode>('auto');
@@ -65,10 +72,27 @@ class SidebarModeStore {
    */
   railOverlayOpen = $state(false);
 
+  #hidden = $state(false);
+
   constructor() {
     sidebarMode.subscribe((value) => {
       this.#mode = isSidebarMode(value) ? value : 'auto';
     });
+    sidebarHidden.subscribe((value) => {
+      this.#hidden = value;
+    });
+  }
+
+  get hidden(): boolean {
+    return this.#hidden;
+  }
+
+  set hidden(value: boolean) {
+    sidebarHidden.set(value);
+  }
+
+  toggleHidden() {
+    this.hidden = !this.#hidden;
   }
 
   get mode(): SidebarMode {
@@ -93,6 +117,10 @@ class SidebarModeStore {
     // today's hidden-plus-overlay behaviour.
     if (!sidebarMedia.isFullSidebar) {
       return 'overlay';
+    }
+
+    if (this.#hidden) {
+      return 'hidden';
     }
 
     switch (this.#mode) {

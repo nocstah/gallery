@@ -25,6 +25,7 @@
   import { showDeleteModal } from '$lib/stores/preferences.store';
   import { handlePromiseError } from '$lib/utils';
   import { deleteAssets } from '$lib/utils/actions';
+  import { holdQuickTrash, quickTrash } from '$lib/utils/quick-trash';
   import { archiveAssets, getNextAsset, getPreviousAsset, navigateToAsset } from '$lib/utils/asset-utils';
   import { moveFocus } from '$lib/utils/focus-util';
   import { buildGalleryViewerBuckets, getGalleryViewerAssetDate } from '$lib/utils/gallery-viewer-grouping';
@@ -35,7 +36,7 @@
   import { isTimelineAsset, toTimelineAsset } from '$lib/utils/timeline-util';
   import { TUNABLES } from '$lib/utils/tunables';
   import { AssetVisibility, type AssetResponseDto } from '@immich/sdk';
-  import { modalManager } from '@immich/ui';
+  import { isModalOpen, modalManager } from '@immich/ui';
   import { debounce } from 'lodash-es';
   import { t } from 'svelte-i18n';
 
@@ -252,6 +253,27 @@
   const onDelete = () => {
     const hasTrashedAsset = assetInteraction.assets.some((asset) => asset.isTrashed);
     handlePromiseError(trashOrDelete(hasTrashedAsset));
+  };
+
+  // Local Omarchy layer: Shift + middle-click trashes the tile under the pointer (lib/utils/quick-trash.ts)
+  const onQuickTrash = (event: MouseEvent) => {
+    if (assetViewerManager.isViewing || isModalOpen()) {
+      return;
+    }
+    quickTrash(
+      event,
+      (id) => {
+        const found = assets.find((asset) => asset.id === id);
+        return found ? toTimelineAsset(found) : undefined;
+      },
+      (assetIds) => {
+        assets = assets.filter((asset) => !assetIds.includes(asset.id));
+        for (const id of assetIds) {
+          assetInteraction.removeAssetFromMultiselectGroup(id);
+        }
+      },
+      onReload,
+    );
   };
 
   const trashOrDelete = async (force: boolean = false) => {
@@ -502,7 +524,13 @@
   const LazyAssetViewer = lazyComponent(() => import('$lib/components/asset-viewer/AssetViewer.svelte'));
 </script>
 
-<svelte:document onselectstart={onSelectStart} use:shortcuts={shortcutList} onscroll={() => updateSlidingWindow()} />
+<svelte:document
+  onselectstart={onSelectStart}
+  use:shortcuts={shortcutList}
+  onscroll={() => updateSlidingWindow()}
+  onmousedowncapture={holdQuickTrash}
+  onauxclickcapture={onQuickTrash}
+/>
 
 <div bind:this={galleryViewerElement} data-testid="gallery-viewer">
   {#if enableGrouping && assets.length > 0}

@@ -6,6 +6,8 @@
   import { useActions, type ActionArray } from '$lib/actions/use-actions';
   import NavigationBar from '$lib/components/shared-components/navigation-bar/NavigationBar.svelte';
   import UserSidebar from '$lib/components/shared-components/side-bar/UserSidebar.svelte';
+  import { shortcuts } from '$lib/actions/shortcut';
+  import { sidebarMedia } from '$lib/stores/sidebar-media.svelte';
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
   import type { HeaderButtonActionItem } from '$lib/types';
   import { openFileUploadDialog } from '$lib/utils/file-uploader';
@@ -58,13 +60,24 @@
     if (sidebar) {
       return sidebarModeStore.layout === 'overlay' ? '0' : 'expanded';
     }
-    return sidebarModeStore.layout === 'overlay' ? '0' : sidebarModeStore.layout;
+    const layout = sidebarModeStore.layout;
+    return layout === 'overlay' || layout === 'hidden' ? '0' : layout;
   });
+
+  // Local Omarchy layer: Ctrl+B hides and shows the sidebar, like the navbar's menu button (not on the tag and folder
+  // pages, whose tree is their navigation, nor below 850px, where the sidebar is an overlay anyway)
+  const sidebarShortcuts = $derived(
+    !sidebar && sidebarMedia.isFullSidebar
+      ? [{ shortcut: { key: 'b', ctrl: true }, onShortcut: () => sidebarModeStore.toggleHidden() }]
+      : [],
+  );
 
   const sidebarWidthValue = $derived(
     { '0': '0px', rail: 'calc(var(--spacing) * 20)', expanded: 'calc(var(--spacing) * 64)' }[sidebarWidth],
   );
 </script>
+
+<svelte:document use:shortcuts={sidebarShortcuts} />
 
 <header>
   {#if !hideNavbar}

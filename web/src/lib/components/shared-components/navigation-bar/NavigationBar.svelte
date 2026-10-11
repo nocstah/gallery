@@ -95,7 +95,11 @@
   const menuSlotClass = $derived({ rail: 'flex w-20 shrink-0 justify-center', inline: 'contents' }[menuSlot]);
   const menuRowClass = $derived({ rail: '', inline: 'mx-4 gap-1' }[menuSlot]);
 
-  const menuButtonHidden = $derived(isExpandedLayout);
+  // Local Omarchy layer: on the pages with the rail-aware sidebar the menu button also hides and shows the sidebar by
+  // hand from 850px up (Ctrl+B does the same), so it stays in the expanded layout too
+  const isHiddenLayout = $derived(railAware && sidebarModeStore.layout === 'hidden');
+  const togglesHidden = $derived(railAware && (isExpandedLayout || isHiddenLayout));
+  const menuButtonHidden = $derived(isExpandedLayout && !railAware);
   const logoVariant = $derived(isExpandedLayout ? 'inline' : 'icon');
 </script>
 
@@ -116,9 +120,14 @@
           color="secondary"
           variant="ghost"
           size="medium"
-          aria-label={$t('main_menu')}
+          aria-label={isHiddenLayout ? $t('expand') : togglesHidden ? $t('collapse') : $t('main_menu')}
+          title={isHiddenLayout ? $t('expand') : togglesHidden ? $t('collapse') : undefined}
           icon={mdiMenu}
           onclick={() => {
+            if (togglesHidden) {
+              sidebarModeStore.toggleHidden();
+              return;
+            }
             if (isRail) {
               sidebarModeStore.toggleRailOverlay();
               return;

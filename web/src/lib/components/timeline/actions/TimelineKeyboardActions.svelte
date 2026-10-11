@@ -19,6 +19,7 @@
   import { searchStore } from '$lib/stores/search.svelte';
   import { handlePromiseError } from '$lib/utils';
   import { deleteAssets } from '$lib/utils/actions';
+  import { holdQuickTrash, quickTrash } from '$lib/utils/quick-trash';
   import { archiveAssets, selectAllAssets } from '$lib/utils/asset-utils';
   import { AssetVisibility } from '@immich/sdk';
   import { isModalOpen, modalManager } from '@immich/ui';
@@ -55,6 +56,24 @@
   const onDelete = () => {
     const hasTrashedAsset = assetInteraction.assets.some((asset) => asset.isTrashed);
     handlePromiseError(trashOrDelete(hasTrashedAsset));
+  };
+
+  // Local Omarchy layer: Shift + middle-click trashes the tile under the pointer (lib/utils/quick-trash.ts)
+  const onQuickTrash = (event: MouseEvent) => {
+    if (assetViewerManager.isViewing || isModalOpen()) {
+      return;
+    }
+    quickTrash(
+      event,
+      (id) => timelineManager.getTimelineMonthByAssetId(id)?.findAssetById({ id }),
+      (assetIds) => {
+        timelineManager.removeAssets(assetIds);
+        for (const id of assetIds) {
+          assetInteraction.removeAssetFromMultiselectGroup(id);
+        }
+      },
+      (assets) => timelineManager.upsertAssets(assets),
+    );
   };
 
   const onStackAssets = async () => {
@@ -144,4 +163,9 @@
   });
 </script>
 
-<svelte:document onselectstart={onSelectStart} use:shortcuts={shortcutList} />
+<svelte:document
+  onselectstart={onSelectStart}
+  use:shortcuts={shortcutList}
+  onmousedowncapture={holdQuickTrash}
+  onauxclickcapture={onQuickTrash}
+/>
