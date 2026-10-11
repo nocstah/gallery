@@ -134,6 +134,14 @@
   // Loaded smart search results. The timeline (and its TimelineManager) is unmounted while
   // these are showing, so the multi-select toolbar acts on this array instead (#908).
   let searchResults = $state<AssetResponseDto[]>([]);
+  // Local Omarchy layer: the right-click menu's lookup, in the search results or the timeline
+  const findMenuAsset = (id: string) => {
+    if (showSearchResults) {
+      const found = searchResults.find((asset) => asset.id === id);
+      return found ? toTimelineAsset(found) : undefined;
+    }
+    return timelineManager?.getTimelineMonthByAssetId(id)?.findAssetById({ id });
+  };
   // Bumped to force a re-run of the search (undo-delete restores the removed assets).
   let searchReloadToken = $state(0);
   // #1041: same trick for the timeline. Adding photos to a space the caller has hidden from their
@@ -740,9 +748,14 @@
 
 <OnEvents onSpaceAddAssets={handleSpaceAddAssets} />
 
-<!-- Local Omarchy layer: right-click menu on photos, acting on the selection like the bar below -->
-{#if timelineManager && !showSearchResults}
-  <TileContextMenu {timelineManager} assetInteraction={assetMultiSelectManager}>
+<!-- Local Omarchy layer: right-click menu on photos and on search results, acting on the selection like the bar below -->
+{#if showSearchResults || timelineManager}
+  <TileContextMenu
+    grid={showSearchResults ? '[data-testid="gallery-viewer"]' : '#asset-grid'}
+    findAsset={findMenuAsset}
+    withStackItems={!showSearchResults}
+    assetInteraction={assetMultiSelectManager}
+  >
     {@const MenuActions = getAssetBulkActions($t)}
     <FavoriteAction menuItem removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
     <ActionMenuItem action={MenuActions.AddToAlbum} />
@@ -752,8 +765,10 @@
       {@const MenuStackActions = getStackBulkActions($t)}
       <hr />
       <RotateAction />
-      <ActionMenuItem action={MenuStackActions.Stack} />
-      <ActionMenuItem action={MenuStackActions.Unstack} />
+      {#if !showSearchResults}
+        <ActionMenuItem action={MenuStackActions.Stack} />
+        <ActionMenuItem action={MenuStackActions.Unstack} />
+      {/if}
       <ActionMenuItem action={MenuActions.Tag} />
       <ChangeDate menuItem />
       <ChangeLocation menuItem />

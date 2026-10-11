@@ -3,7 +3,8 @@
   // selects it (unless it is already part of the selection) and opens this menu at the cursor; the items
   // are the selection actions the page passes in, so they act on everything selected. A single photo that
   // belongs to a stack also gets the stack's own items: its cover expands or collapses it, any other photo
-  // can become the cover. Shift+right-click falls through to the browser's own menu.
+  // can become the cover (timeline only). Works on any photo grid: the page says where the grid is and how to
+  // find a photo by id, so search results get it too. Shift+right-click falls through to the browser's own menu.
   import { contextMenuNavigation } from '$lib/actions/context-menu-navigation';
   import ContextMenu from '$lib/components/shared-components/context-menu/ContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
@@ -11,7 +12,6 @@
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
   import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
-  import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import { optionClickCallbackStore, selectedIdStore } from '$lib/stores/context-menu.store';
   import { generateId } from '$lib/utils/generate-id';
@@ -21,12 +21,16 @@
   import { t } from 'svelte-i18n';
 
   interface Props {
-    timelineManager: TimelineManager;
+    /** the photo grid the menu serves, as a selector */
+    grid: string;
+    findAsset: (id: string) => TimelineAsset | undefined;
+    /** the stack items (expand, collapse, make cover), which only the timeline can show the result of */
+    withStackItems?: boolean;
     assetInteraction: AssetMultiSelectManager;
     children: Snippet;
   }
 
-  let { timelineManager, assetInteraction, children }: Props = $props();
+  let { grid, findAsset, withStackItems = true, assetInteraction, children }: Props = $props();
 
   let isOpen = $state(false);
   let position = $state({ x: 0, y: 0 });
@@ -67,7 +71,7 @@
   const open = async (asset: TimelineAsset, x: number, y: number) => {
     const token = ++opening;
     // the stack items act on one photo
-    const next = assetInteraction.assets.length === 1 ? await resolveStack(asset) : undefined;
+    const next = withStackItems && assetInteraction.assets.length === 1 ? await resolveStack(asset) : undefined;
     if (token !== opening) {
       return;
     }
@@ -100,10 +104,10 @@
     }
     const tile = event.target.closest<HTMLElement>('[data-thumbnail-focus-container][data-asset]');
     const id = tile?.dataset.asset;
-    if (!tile || !id || !document.querySelector('#asset-grid')?.contains(tile)) {
+    if (!tile || !id || !document.querySelector(grid)?.contains(tile)) {
       return;
     }
-    const asset = timelineManager.getTimelineMonthByAssetId(id)?.findAssetById({ id });
+    const asset = findAsset(id);
     if (!asset) {
       return;
     }
