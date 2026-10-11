@@ -622,7 +622,7 @@
   memoryManager.setFilters({ $for: DateTime.now().toISODate() });
 </script>
 
-<UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} scrollbar={false}>
+<UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} barFitsNavbar scrollbar={false}>
   <div class="flex h-full">
     {#key showSearchResults ? `photos-search-${committedQuery.trim()}:${$lang}` : 'photos-browse'}
       <FilterPanel
@@ -660,11 +660,13 @@
           <TimelineWorkspaces {timelineManager} {viewportMonth} />
         </div>
       {/if}
+      <!-- Local Omarchy layer: min-h holds the bar at its idle 52px while selecting hides its 36px button -->
       <FilterToolbar
-        class="mb-2"
+        class="mb-2 min-h-13"
         grouping={timelineGrouping}
         onGroupingChange={handleTimelineGroupingChange}
-        showGrouping={!showSearchResults && !assetMultiSelectManager.selectionActive}
+        showGrouping={!showSearchResults}
+        groupingDisabled={assetMultiSelectManager.selectionActive}
         showFilters={hasActiveFilters}
         filters={photoFiltersBar}
         showFilterButton={filterCollapsed && !isTimelineEmpty && !assetMultiSelectManager.selectionActive}

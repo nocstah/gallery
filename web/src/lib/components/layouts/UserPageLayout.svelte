@@ -17,6 +17,8 @@
 
   interface Props {
     hideNavbar?: boolean;
+    /** Local Omarchy layer: the page's selection bar fits the navbar's 4rem, so swapping them moves nothing */
+    barFitsNavbar?: boolean;
     title?: string | undefined;
     description?: string | undefined;
     scrollbar?: boolean;
@@ -31,6 +33,7 @@
 
   let {
     hideNavbar = false,
+    barFitsNavbar = false,
     title = undefined,
     description = undefined,
     scrollbar = true,
@@ -103,8 +106,9 @@
   style:--sidebar-width={sidebarWidthValue}
   class="relative z-0 grid grid-cols-[var(--sidebar-width)_auto] overflow-hidden
     {hideNavbar ? 'h-dvh' : 'h-[calc(100dvh-var(--navbar-height))] max-md:h-[calc(100dvh-var(--navbar-height-md))]'}
-    {hideNavbar ? 'pt-[calc(var(--control-bar-height)+8px)]' : ''}
-    {hideNavbar ? 'max-md:pt-[calc(var(--control-bar-height-md)+8px)]' : ''}"
+    {hideNavbar && barFitsNavbar ? 'pt-(--navbar-height) max-md:pt-(--navbar-height-md)' : ''}
+    {hideNavbar && !barFitsNavbar ? 'pt-[calc(var(--control-bar-height)+8px)]' : ''}
+    {hideNavbar && !barFitsNavbar ? 'max-md:pt-[calc(var(--control-bar-height-md)+8px)]' : ''}"
 >
   {#if sidebar}
     {@render sidebar()}

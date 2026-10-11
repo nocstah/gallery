@@ -68,6 +68,7 @@
     position.needScrollBar ? 'overflow-auto' : 'overflow-hidden',
   ]}
   style:left="{position.left}px"
+  style:visibility={menuScrollView && menuElement ? undefined : 'hidden'}
   style:top="{position.top}px"
   style:max-height={isVisible ? `${position.maxHeight}px` : '0px'}
   style:transition-property="max-height"

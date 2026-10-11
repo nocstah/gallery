@@ -193,3 +193,22 @@
     </ContextMenu>
   {/if}
 </div>
+
+<style>
+  /* compact: smaller type and rows than Gallery's dropdowns, and no grow-in, so it is simply there at the cursor */
+  .ws-tile-menu :global(> div) {
+    transition: none !important;
+  }
+  .ws-tile-menu :global([role='menuitem']) {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
+    gap: 0.625rem;
+  }
+  .ws-tile-menu :global([role='menuitem'] svg) {
+    width: 16px;
+    height: 16px;
+  }
+  .ws-tile-menu :global(hr) {
+    margin-block: 0.125rem;
+  }
+</style>
