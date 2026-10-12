@@ -1224,7 +1224,6 @@
   "chat_delete_confirm": "Diesen Chat löschen?",
   "chat_earlier": "Frühere Chats",
   "chat_empty_body": "Das lokale Modell antwortet aus deinen Fotos: Daten, Orte, Personen, Ereignisse und was auf den Bildern zu sehen ist. Alles, was es vorschlägt, wartet auf dein Ja, hier oder im KI-Eingang.",
-  "chat_empty_title": "Frag deine Bibliothek",
   "chat_error": "Die Antwort brach ab: {message}",
   "chat_example_beach": "Wann waren wir zuletzt am Strand?",
   "chat_example_inbox": "Was wartet in meinem KI-Eingang?",

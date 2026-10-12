@@ -190,10 +190,10 @@ body {
 }
 
 /* The rounded content panel. Scoped to the user-page-layout <main> via its
- * direct-child scroll container (absolute + overflow-y-auto) so it does NOT hit
+ * direct-child scroll container (ws-page-scroll) so it does NOT hit
  * the app's other <main> elements (asset viewer, shared-link pages, workflow
  * editor), which are full-bleed and must not be clipped/rounded/gutter'd. */
-main:has(> div.absolute.overflow-y-auto) {
+main:has(> div.ws-page-scroll) {
   background-color: var(--immich-ui-light);
   border-radius: 16px;
   overflow: clip;
@@ -219,7 +219,7 @@ main:has(> div.absolute.overflow-y-auto) {
  * '0' means "no sidebar column", which is the condition that actually matters here. The
  * rail and expanded layouts are untouched, so the chrome band stays the width of the
  * sidebar itself and the rail's icons stay centred. */
-[data-sidebar-width='0'] main:has(> div.absolute.overflow-y-auto) {
+[data-sidebar-width='0'] main:has(> div.ws-page-scroll) {
   margin-inline-start: 8px;
 }
 /* Inset ONLY the page header row (title + actions: Albums, Settings, …) so it

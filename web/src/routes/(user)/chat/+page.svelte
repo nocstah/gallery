@@ -314,51 +314,47 @@
   });
 </script>
 
-<UserPageLayout>
-  <div class="ws-inbox chat">
-    <header class="ws-inbox-head chat-head">
-      <h1 class="ws-inbox-title">{data.meta.title}</h1>
-      {#if chatTitle}
-        <span class="ws-inbox-count chat-current">{chatTitle}</span>
+<UserPageLayout title={data.meta.title} description={chatTitle || undefined}>
+  {#snippet buttons()}
+    <div class="chat-head-actions">
+      {#if recent.length > 0}
+        <ButtonContextMenu icon={mdiHistory} title={$t('chat_earlier')} align="bottom-right" direction="left">
+          {#each recent as summary (summary.id)}
+            <MenuOption
+              text={summary.title ?? $t('chat_untitled')}
+              subtitle={when(summary.updated_at)}
+              onClick={() => open(summary.id)}
+            />
+          {/each}
+        </ButtonContextMenu>
       {/if}
-      <div class="chat-head-actions">
-        {#if recent.length > 0}
-          <ButtonContextMenu icon={mdiHistory} title={$t('chat_earlier')} align="bottom-right" direction="left">
-            {#each recent as summary (summary.id)}
-              <MenuOption
-                text={summary.title ?? $t('chat_untitled')}
-                subtitle={when(summary.updated_at)}
-                onClick={() => open(summary.id)}
-              />
-            {/each}
-          </ButtonContextMenu>
-        {/if}
-        {#if chatId}
-          {#if confirmDelete}
-            <span class="chat-confirm">{$t('chat_delete_confirm')}</span>
-            <button type="button" class="ws-btn" onclick={forget}>{$t('delete')}</button>
-            <button type="button" class="ws-btn-quiet" onclick={() => (confirmDelete = false)}>{$t('cancel')}</button>
-          {:else}
-            <button
-              type="button"
-              class="ws-btn-quiet chat-icon-button"
-              aria-label={$t('chat_delete')}
-              title={$t('chat_delete')}
-              disabled={streaming}
-              onclick={() => (confirmDelete = true)}
-            >
-              <Icon icon={mdiDeleteOutline} size="18" />
-            </button>
-          {/if}
-        {/if}
-        {#if turns.length > 0}
-          <button type="button" class="ws-btn-quiet chat-new" onclick={startNew}>
-            <Icon icon={mdiPlus} size="18" />
-            {$t('chat_new')}
+      {#if chatId}
+        {#if confirmDelete}
+          <span class="chat-confirm">{$t('chat_delete_confirm')}</span>
+          <button type="button" class="ws-btn" onclick={forget}>{$t('delete')}</button>
+          <button type="button" class="ws-btn-quiet" onclick={() => (confirmDelete = false)}>{$t('cancel')}</button>
+        {:else}
+          <button
+            type="button"
+            class="ws-btn-quiet chat-icon-button"
+            aria-label={$t('chat_delete')}
+            title={$t('chat_delete')}
+            disabled={streaming}
+            onclick={() => (confirmDelete = true)}
+          >
+            <Icon icon={mdiDeleteOutline} size="18" />
           </button>
         {/if}
-      </div>
-    </header>
+      {/if}
+      {#if turns.length > 0}
+        <button type="button" class="ws-btn-quiet chat-new" onclick={startNew}>
+          <Icon icon={mdiPlus} size="18" />
+          {$t('chat_new')}
+        </button>
+      {/if}
+    </div>
+  {/snippet}
+  <div class="ws-inbox chat">
 
     <section class="chat-thread" aria-busy={loadingChat || streaming}>
       {#if offline}
@@ -368,7 +364,6 @@
         </div>
       {:else if turns.length === 0 && !loadingChat}
         <div class="chat-empty">
-          <h2 class="ws-empty-title">{$t('chat_empty_title')}</h2>
           <p class="ws-empty-body">{$t('chat_empty_body')}</p>
           <ul class="chat-examples">
             {#each EXAMPLES as example (example)}
@@ -435,23 +430,11 @@
     min-height: 100%;
     padding-bottom: 0;
   }
-  .chat-head {
-    align-items: center;
-  }
-  .chat-current {
-    min-width: 0;
-    max-width: min(36rem, 100%);
-    padding-bottom: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
   .chat-head-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.25rem 0.5rem;
-    margin-inline-start: auto;
   }
   .chat-confirm {
     font-size: 0.9rem;

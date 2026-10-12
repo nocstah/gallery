@@ -1224,7 +1224,6 @@
   "chat_delete_confirm": "Usunąć ten czat?",
   "chat_earlier": "Wcześniejsze czaty",
   "chat_empty_body": "Lokalny model odpowiada na podstawie twoich zdjęć: dat, miejsc, osób, wydarzeń i tego, co widać na zdjęciach. Wszystko, co zaproponuje, czeka na twoją zgodę, tutaj lub w skrzynce AI.",
-  "chat_empty_title": "Zapytaj swoją bibliotekę",
   "chat_error": "Odpowiedź się urwała: {message}",
   "chat_example_beach": "Kiedy ostatnio byliśmy na plaży?",
   "chat_example_inbox": "Co czeka w mojej skrzynce AI?",

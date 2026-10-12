@@ -118,12 +118,8 @@
     job.progress?.total ? Math.min(1, (job.progress.done ?? 0) / job.progress.total) : job.status === 'running' ? 0.05 : 0;
 </script>
 
-<UserPageLayout title={data.meta.title} hideNavbar={false} scrollbar>
+<UserPageLayout title={$t('command_title')} description={DateTime.now().toLocaleString(DateTime.DATE_HUGE)}>
   <div class="ws-inbox command">
-    <header class="ws-inbox-head">
-      <h1 class="ws-inbox-title">{$t('command_title')}</h1>
-      <span class="ws-inbox-count">{DateTime.now().toLocaleString(DateTime.DATE_HUGE)}</span>
-    </header>
 
     {#if offline}
       <p class="command-note">{$t('command_curator_offline')}</p>

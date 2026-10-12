@@ -1224,7 +1224,6 @@
   "chat_delete_confirm": "Deze chat verwijderen?",
   "chat_earlier": "Eerdere chats",
   "chat_empty_body": "Het lokale model antwoordt vanuit je foto's: datums, plaatsen, mensen, gebeurtenissen en wat er op de foto's staat. Alles wat het voorstelt wacht op jouw ja, hier of in de AI-inbox.",
-  "chat_empty_title": "Vraag het je bibliotheek",
   "chat_error": "Het antwoord stopte: {message}",
   "chat_example_beach": "Wanneer waren we voor het laatst op het strand?",
   "chat_example_inbox": "Wat wacht er in mijn AI-inbox?",
