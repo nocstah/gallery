@@ -53,6 +53,7 @@
           $t('assets_removed_partial_count', {
             values: { removedCount: removedIds.length, totalCount: ids.length },
           }),
+          'info',
         );
       } else {
         toastManager.warning($t('assets_remove_failed_count', { values: { count: ids.length } }));

@@ -25,10 +25,10 @@ import { eventManager } from '$lib/managers/event-manager.svelte';
 import { undoManager } from '$lib/managers/undo-manager.svelte';
 import { refreshAssets } from '$lib/utils/asset-refresh';
 
-/** The toast of a done action, with an Undo that takes back its history entry. */
-export const toastUndoable = (description: string, entry: number) => {
+/** The toast of a done action, with an Undo that takes back its history entry (`info` for a partly done one). */
+export const toastUndoable = (description: string, entry: number, tone: 'primary' | 'info' = 'primary') => {
   const $t = get(t);
-  toastManager.primary({
+  toastManager[tone]({
     description,
     button: (close) => ({
       label: $t('undo'),
@@ -211,7 +211,12 @@ export const addedToAlbumDone = (albumId: string, addedIds: string[]) => {
 };
 
 /** Photos removed from an album: taken back by adding them again. */
-export const removedFromAlbumDone = (albumId: string, removedIds: string[], description: string) => {
+export const removedFromAlbumDone = (
+  albumId: string,
+  removedIds: string[],
+  description: string,
+  tone: 'primary' | 'info' = 'primary',
+) => {
   if (removedIds.length === 0) {
     return;
   }
@@ -226,7 +231,7 @@ export const removedFromAlbumDone = (albumId: string, removedIds: string[], desc
     },
     $t('errors.error_adding_assets_to_album'),
   );
-  toastUndoable(description, entry);
+  toastUndoable(description, entry, tone);
 };
 
 // ---- dates and places: read just before the change, put back by the undo ----
