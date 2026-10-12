@@ -1,33 +1,28 @@
 <script lang="ts">
-  // Local Omarchy layer ("Tiled Workspace"): the timeline's place in time, set into the middle of the one bar
-  // (components/omarchy/OmarchyBar.svelte, via lib/managers/bar-slot). The month in view as the bar's heading (its
-  // month name opens the Months overview, its year the Years overview), and beside it a fisheye ruler of the whole
-  // archive: every decade is one label (1990s, 2000s...), the decade in view also lays out its years after its label
-  // and the year in view its months, so fifty years fit on one line. Clicking a year switches to it the way
-  // SUPER+<n> switches Hyprland workspaces; clicking a decade opens its map, every month of its years as a square
-  // shaded by how many photos it holds, so any month of the archive is two clicks away.
+  // Local Omarchy layer ("Tiled Workspace"): the timeline's place in time, in the middle of the one bar
+  // (components/omarchy/OmarchyBar.svelte, via lib/managers/bar-slot). One calm line that never rearranges itself:
+  // the month in view as the heading (its month name opens the Months overview, its year the Years overview), the
+  // twelve months of its year, and every year of the archive on a strip that scrolls (wheel, drag, the arrows at its
+  // ends, the keyboard). Clicking a year switches to it the way SUPER+<n> switches Hyprland workspaces. A narrower
+  // bar shows fewer years and a shorter month name; nothing folds, moves or opens over the photos.
   import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineGrouping, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
   import { locale } from '$lib/stores/preferences.store';
   import { Icon } from '@immich/ui';
-  import { mdiChevronLeft, mdiChevronRight, mdiTune } from '@mdi/js';
-  import { tick, untrack } from 'svelte';
+  import { mdiChevronLeft, mdiChevronRight } from '@mdi/js';
+  import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
-  import { flip } from 'svelte/animate';
   import { cubicOut } from 'svelte/easing';
-  import { fade, fly } from 'svelte/transition';
+  import { fly } from 'svelte/transition';
 
   interface Props {
     timelineManager: TimelineManager;
     viewportMonth: ViewportTopMonth;
-    /** the page's filter panel, when it is folded away (its reopen button lives here, at the end of the ruler) */
-    onFilters?: () => void;
-    filterActive?: boolean;
     /** the month name opens the Months overview, the year the Years overview */
     onGrouping?: (grouping: TimelineGrouping) => void;
   }
 
-  let { timelineManager, viewportMonth, onFilters, filterActive = false, onGrouping }: Props = $props();
+  let { timelineManager, viewportMonth, onGrouping }: Props = $props();
 
   const reducedMotion =
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -58,42 +53,9 @@
     return first ? { year: first.year, month: first.month } : undefined;
   });
 
-  const monthCount = $derived(
-    current
-      ? (timelineManager.scrubberMonths.find((m) => m.year === current.year && m.month === current.month)
-          ?.assetCount ?? 0)
-      : 0,
-  );
-
+  const itemsLabel = (count: number) => $t('items_count', { values: { count } });
   const monthLabel = (year: number, month: number, style: 'long' | 'short' = 'long') =>
     new Intl.DateTimeFormat($locale, { month: style }).format(new Date(year, month - 1, 1));
-  const monthName = $derived(current ? monthLabel(current.year, current.month) : '');
-
-  // The fisheye: every decade is a label (which opens its map), and the decade in view opens into its years after
-  // it, the year in view into its months
-  const decadeOf = (year: number) => Math.floor(year / 10) * 10;
-  type Decade = { kind: 'decade'; key: string; decade: number; count: number };
-  type Rule = Decade | { kind: 'year'; key: string; year: number; count: number };
-  const ruler = $derived.by(() => {
-    if (!current) {
-      return [];
-    }
-    const focus = decadeOf(current.year);
-    const out: Rule[] = [];
-    let label: Decade | undefined;
-    for (const { year, count } of years) {
-      const decade = decadeOf(year);
-      if (label?.decade !== decade) {
-        label = { kind: 'decade', key: `d${decade}`, decade, count: 0 };
-        out.push(label);
-      }
-      label.count += count;
-      if (decade === focus) {
-        out.push({ kind: 'year', key: `y${year}`, year, count });
-      }
-    }
-    return out;
-  });
 
   const monthsOfYear = $derived.by(() => {
     if (!current) {
@@ -105,6 +67,15 @@
     return Array.from({ length: 12 }, (_, index) => ({ month: index + 1, count: counts.get(index + 1) ?? 0 }));
   });
 
+  // the heading holds the width of its longest month name (all twelve laid invisibly in the same cell), so the
+  // months beside it stay put as the photos scroll from May to September
+  const ghosts = $derived(
+    Array.from({ length: 12 }, (_, index) => ({
+      long: monthLabel(2000, index + 1),
+      short: monthLabel(2000, index + 1, 'short'),
+    })),
+  );
+
   // Direction of travel: older months arrive from the right, newer from the left, like moving to a
   // higher or lower workspace. Read at transition time so it never lags a switch behind.
   let lastKey = 0;
@@ -115,49 +86,7 @@
     return direction;
   };
   const slide = (node: Element) =>
-    fly(node, { x: reducedMotion ? 0 : travel() * 24, duration: reducedMotion ? 0 : 240, easing: cubicOut });
-
-  // The whole ruler always fits the bar: when it is too wide it tightens a step at a time until it does. 1 drops the
-  // count, 2 shortens the decade's other years to '25, 3 folds them away (their decade's label, whose map holds them,
-  // stands in for them), 4 puts the other decades away (the decade map steps to them with its arrows), and only 5
-  // puts the month tray away (the month name still opens the Months overview, the decade's map still reaches every
-  // month). Re-fitted when the bar or the ruler changes.
-  const TIGHTEST = 5;
-  let fit = $state(0);
-  // plain, not state: the effect below must not re-run because a fit is in progress (it would loop forever)
-  let fitting = false;
-  let rulerBox = $state<HTMLElement>();
-  let timeBox = $state<HTMLElement>();
-  const refit = async () => {
-    if (!rulerBox || fitting) {
-      return;
-    }
-    fitting = true;
-    try {
-      fit = 0;
-      await tick();
-      while (fit < TIGHTEST && rulerBox && rulerBox.scrollWidth > rulerBox.clientWidth + 1) {
-        fit++;
-        await tick();
-      }
-    } finally {
-      fitting = false;
-    }
-  };
-  $effect(() => {
-    void current?.year;
-    void ruler.length;
-    if (!timeBox) {
-      return;
-    }
-    const observer = new ResizeObserver(() => void untrack(refit));
-    observer.observe(timeBox);
-    void untrack(refit);
-    return () => observer.disconnect();
-  });
-  const shortYear = (year: number) => `’${String(year).slice(2)}`;
-  // cells jump into place while the ruler is being fitted, and glide when the year changes
-  const flipDuration = () => (reducedMotion || fitting ? 0 : 260);
+    fly(node, { x: reducedMotion ? 0 : travel() * 16, duration: reducedMotion ? 0 : 220, easing: cubicOut });
 
   // Where a month's top must go so it starts just below the chrome: the month's own position (logical, not the
   // scrubber's percentage scale), less whatever floats over the top of the grid (the glass bar; nothing when solid)
@@ -178,8 +107,7 @@
   // Switching workspaces slides the current year out across the width and the new one in from the
   // other side, like Hyprland's workspace slide: older years arrive from the right. Only the inner
   // timeline layer moves; the scroll container is left alone. Reduced motion cuts straight to it.
-  // A year opens at its first month in timeline order, or at the month asked for; within the year in view there is
-  // nothing to slide, it goes straight to the month.
+  // A year opens at its first month in timeline order; within the year in view there is nothing to slide.
   let switching = false;
   const switchTo = async (year: number, month?: number) => {
     const target = timelineManager.months.find(
@@ -224,243 +152,150 @@
     }
   };
 
-  // A decade's map: a sheet hanging from its label with the decade's years (timeline order) by their twelve months,
-  // each month a square shaded in four steps by how full it is among the decade's months (quartiles). A square jumps
-  // to its month, a year to the year. Arrow keys walk the squares; the line on top reads the decade, or the month
-  // under the pointer or the keys.
-  const mapId = 'ws-decade-map';
-  let mapFor = $state<number>();
-  let mapAt = $state({ x: 0, y: 0 });
-  let mapBox = $state<HTMLElement>();
-  let mapOpener: HTMLElement | undefined;
-  // the square that holds the map's one tab stop, and the one the readout describes (`year-month`, 0 for the year)
-  let mapStop = $state<string>();
-  let mapPeek = $state<string>();
+  // ---- the year strip: it scrolls under the wheel, a drag, its arrows and the keys; the year in view is brought to
+  // its middle as the photos scroll, unless the pointer is on the strip or it was just moved by hand ----
+  let track = $state<HTMLElement>();
+  let atStart = $state(true);
+  let atEnd = $state(true);
+  let hovering = false;
+  let touched = 0;
+  const HANDS_OFF = 2000; // ms after a hand on the strip before it follows the photos again
 
-  const itemsLabel = (count: number) => $t('items_count', { values: { count } });
-  const initials = $derived(
-    Array.from({ length: 12 }, (_, index) =>
-      new Intl.DateTimeFormat($locale, { month: 'narrow' }).format(new Date(2000, index, 1)),
-    ),
-  );
+  const edges = () => {
+    if (track) {
+      atStart = track.scrollLeft <= 1;
+      atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+    }
+  };
 
-  const decadeMap = $derived.by(() => {
-    if (mapFor === undefined) {
+  const page = (direction: -1 | 1) => {
+    touched = Date.now();
+    track?.scrollBy({ left: direction * track.clientWidth * 0.8, behavior: reducedMotion ? 'auto' : 'smooth' });
+  };
+
+  let centred = false;
+  $effect(() => {
+    const year = current?.year;
+    if (!track || year === undefined) {
       return;
     }
-    const rows: { year: number; count: number; months: number[] }[] = [];
-    for (const { year, month, assetCount } of timelineManager.scrubberMonths) {
-      if (decadeOf(year) !== mapFor) {
-        continue;
+    untrack(() => {
+      if (centred && (hovering || Date.now() - touched < HANDS_OFF)) {
+        return;
       }
-      let row = rows.at(-1);
-      if (row?.year !== year) {
-        row = { year, count: 0, months: Array.from({ length: 12 }, () => 0) };
-        rows.push(row);
+      const item = track?.querySelector<HTMLElement>(`[data-year="${year}"]`);
+      if (!track || !item) {
+        return;
       }
-      row.count += assetCount;
-      row.months[month - 1] += assetCount;
-    }
-    // shaded by quartile among the decade's months that hold anything: one outsized month (a holiday, an import)
-    // would flatten any scale measured against the fullest
-    const busy = rows.flatMap((row) => row.months.filter((count) => count > 0)).sort((a, b) => a - b);
-    const cuts = [0.25, 0.5, 0.75].map((share) => busy[Math.floor(share * (busy.length - 1))] ?? 0);
-    const level = (count: number) => (count === 0 ? 0 : 1 + cuts.filter((cut) => count > cut).length);
-    return {
-      decade: mapFor,
-      count: rows.reduce((sum, row) => sum + row.count, 0),
-      rows: rows.map((row) => ({
-        ...row,
-        months: row.months.map((count, index) => ({ month: index + 1, count, level: level(count) })),
-      })),
-    };
-  });
-  const firstStop = $derived(decadeMap?.rows[0] ? `${decadeMap.rows[0].year}-0` : undefined);
-
-  const peekText = $derived.by(() => {
-    if (!decadeMap) {
-      return '';
-    }
-    const [year, month] = (mapPeek ?? '').split('-').map(Number);
-    const row = decadeMap.rows.find((candidate) => candidate.year === year);
-    if (!row) {
-      return `${decadeMap.decade}s · ${itemsLabel(decadeMap.count)}`;
-    }
-    return month
-      ? `${monthLabel(year, month)} ${year} · ${itemsLabel(row.months[month - 1].count)}`
-      : `${year} · ${itemsLabel(row.count)}`;
+      const left = item.offsetLeft - (track.clientWidth - item.offsetWidth) / 2;
+      track.scrollTo({ left, behavior: centred && !reducedMotion ? 'smooth' : 'auto' });
+      centred = true;
+      edges();
+    });
   });
 
-  const closeMap = (refocus = false) => {
-    mapFor = undefined;
-    mapPeek = undefined;
-    if (refocus && mapOpener?.isConnected) {
-      mapOpener.focus();
-    }
-  };
-
-  const openMap = async (decade: number, opener: HTMLElement) => {
-    if (mapFor === decade) {
-      closeMap();
+  $effect(() => {
+    if (!track) {
       return;
     }
-    if (!timeBox) {
-      return;
-    }
-    const frame = timeBox.getBoundingClientRect();
-    const anchor = opener.getBoundingClientRect();
-    mapOpener = opener;
-    mapPeek = undefined;
-    mapStop = current && decadeOf(current.year) === decade ? `${current.year}-${current.month}` : undefined;
-    mapAt = { x: anchor.left - frame.left, y: anchor.bottom - frame.top + 8 };
-    mapFor = decade;
-    await tick();
-    if (!mapBox) {
-      return;
-    }
-    // hangs from its label, kept 8px inside the window
-    const width = mapBox.offsetWidth;
-    mapAt.x = Math.max(8 - frame.left, Math.min(mapAt.x, window.innerWidth - 8 - width - frame.left));
-    mapBox.querySelector<HTMLElement>('[data-cell][tabindex="0"]')?.focus();
-  };
+    const resized = new ResizeObserver(() => edges());
+    resized.observe(track);
+    edges();
+    return () => resized.disconnect();
+  });
 
-  // the map's arrows (and PageUp / PageDown) step to the decade beside it in the ruler, so every decade stays a click
-  // away once the ruler has put the other decades away
-  const decades = $derived([...new Set(years.map(({ year }) => decadeOf(year)))]);
-  const besideMap = (direction: -1 | 1) =>
-    mapFor === undefined ? undefined : decades[decades.indexOf(mapFor) + direction];
-  const stepMap = async (direction: -1 | 1, focusGrid = false) => {
-    const next = besideMap(direction);
-    if (next === undefined) {
-      return;
-    }
-    mapFor = next;
-    mapPeek = undefined;
-    mapStop = current && decadeOf(current.year) === next ? `${current.year}-${current.month}` : undefined;
-    if (focusGrid) {
-      await tick();
-      mapBox?.querySelector<HTMLElement>('[data-cell][tabindex="0"]')?.focus();
-    }
-  };
-
-  const pick = (year: number, month?: number) => {
-    closeMap(true);
-    void switchTo(year, month);
-  };
-
-  // the cells run row by row, the year first (column 0), then January to December (1-12)
-  const onMapKeydown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
+  // an upright wheel turns the strip sideways (the bar has nothing else to scroll)
+  const sideways = (node: HTMLElement) => {
+    const onWheel = (event: WheelEvent) => {
+      const delta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : 0;
+      if (!delta || node.scrollWidth <= node.clientWidth) {
+        return;
+      }
       event.preventDefault();
-      event.stopPropagation();
-      closeMap(true);
+      touched = Date.now();
+      node.scrollLeft += event.deltaMode === WheelEvent.DOM_DELTA_LINE ? delta * 16 : delta;
+    };
+    node.addEventListener('wheel', onWheel, { passive: false });
+    return { destroy: () => node.removeEventListener('wheel', onWheel) };
+  };
+
+  // a mouse drag along the strip moves it; the click that ends a drag picks no year
+  let drag: { x: number; left: number; moved: boolean } | undefined;
+  const swallowClick = (event: Event) => {
+    event.stopPropagation();
+    event.preventDefault();
+  };
+  const dragMove = (event: PointerEvent) => {
+    if (!drag || !track) {
       return;
     }
-    const from = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>('[data-cell]') : null;
-    if (!from || !mapBox) {
+    const dx = event.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) < 5) {
       return;
     }
-    const cells = [...mapBox.querySelectorAll<HTMLElement>('[data-cell]:not(:disabled)')];
-    const rowOf = (cell: HTMLElement) => Number(cell.dataset.row);
-    const colOf = (cell: HTMLElement) => Number(cell.dataset.col);
-    const row = rowOf(from);
-    const col = colOf(from);
-    const nearestIn = (target: number) =>
-      cells
-        .filter((cell) => rowOf(cell) === target)
-        .reduce<HTMLElement | undefined>(
-          (best, cell) => (!best || Math.abs(colOf(cell) - col) < Math.abs(colOf(best) - col) ? cell : best),
-          undefined,
-        );
-    let next: HTMLElement | undefined;
+    drag.moved = true;
+    touched = Date.now();
+    track.scrollLeft = drag.left - dx;
+  };
+  const dragEnd = () => {
+    window.removeEventListener('pointermove', dragMove);
+    if (drag?.moved && track) {
+      const strip = track;
+      strip.addEventListener('click', swallowClick, { capture: true, once: true });
+      requestAnimationFrame(() => strip.removeEventListener('click', swallowClick, { capture: true }));
+    }
+    drag = undefined;
+  };
+  const dragStart = (event: PointerEvent) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0 || !track) {
+      return;
+    }
+    drag = { x: event.clientX, left: track.scrollLeft, moved: false };
+    window.addEventListener('pointermove', dragMove);
+    window.addEventListener('pointerup', dragEnd, { once: true });
+  };
+
+  // the months and the years are toolbars: one tab stop each, arrow keys (and Home, End) move along them
+  const roving = (event: KeyboardEvent) => {
+    const group = event.currentTarget as HTMLElement;
+    const items = [...group.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    if (at === -1) {
+      return;
+    }
+    let next: number;
     switch (event.key) {
       case 'ArrowLeft': {
-        next = cells.findLast((cell) => rowOf(cell) === row && colOf(cell) < col);
+        next = at - 1;
         break;
       }
       case 'ArrowRight': {
-        next = cells.find((cell) => rowOf(cell) === row && colOf(cell) > col);
-        break;
-      }
-      case 'ArrowUp': {
-        next = nearestIn(row - 1);
-        break;
-      }
-      case 'ArrowDown': {
-        next = nearestIn(row + 1);
+        next = at + 1;
         break;
       }
       case 'Home': {
-        next = cells.find((cell) => rowOf(cell) === row);
+        next = 0;
         break;
       }
       case 'End': {
-        next = cells.findLast((cell) => rowOf(cell) === row);
+        next = items.length - 1;
         break;
-      }
-      case 'PageUp':
-      case 'PageDown': {
-        event.preventDefault();
-        event.stopPropagation();
-        void stepMap(event.key === 'PageUp' ? -1 : 1, true);
-        return;
       }
       default: {
         return;
       }
     }
-    // the timeline's own arrow keys (focus the next photo) must not fire as well
+    // the timeline's own arrow keys (move the photo focus) must not fire as well
     event.preventDefault();
     event.stopPropagation();
-    if (next) {
-      next.focus();
-      mapPeek = next.dataset.key;
+    const target = items[Math.max(0, Math.min(items.length - 1, next))];
+    for (const item of items) {
+      item.tabIndex = item === target ? 0 : -1;
     }
+    touched = Date.now();
+    target.focus();
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   };
-
-  const onMapFocusIn = (event: FocusEvent) => {
-    const cell = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>('[data-cell]') : null;
-    if (cell?.dataset.key) {
-      mapStop = cell.dataset.key;
-    }
-  };
-
-  // Tab out of the map closes it (back to its label keeps it, the label toggles it)
-  const onMapFocusOut = (event: FocusEvent) => {
-    const next = event.relatedTarget as Node | null;
-    if (next && !mapBox?.contains(next) && !mapOpener?.contains(next)) {
-      closeMap();
-    }
-  };
-
-  const onMapHover = (event: PointerEvent) => {
-    const cell = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>('[data-cell]') : null;
-    if (cell?.dataset.key) {
-      mapPeek = cell.dataset.key;
-    }
-  };
-
-  const onPointerDown = (event: PointerEvent) => {
-    const target = event.target as Node;
-    if (mapFor !== undefined && !mapBox?.contains(target) && !mapOpener?.contains(target)) {
-      closeMap();
-    }
-  };
-
-  // the map belongs to the bar where it was opened: any scroll of the page (the bar may slide away) closes it
-  $effect(() => {
-    if (mapFor === undefined) {
-      return;
-    }
-    const onScroll = (event: Event) => {
-      const target = event.target as Node;
-      if (!mapBox?.contains(target) && !rulerBox?.contains(target)) {
-        closeMap();
-      }
-    };
-    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
-    return () => document.removeEventListener('scroll', onScroll, { capture: true });
-  });
 
   // [ and ] step to the next older / newer year, the browser's stand-in for SUPER+<n>.
   const onKeydown = (event: KeyboardEvent) => {
@@ -482,11 +317,19 @@
   };
 </script>
 
-<svelte:window onkeydown={onKeydown} onpointerdown={onPointerDown} />
+<svelte:window onkeydown={onKeydown} />
 
 {#if current && years.length > 0}
-  <div class="ws-time" data-testid="timeline-workspaces" data-fit={fit} bind:this={timeBox}>
+  <div class="ws-time" data-testid="timeline-workspaces">
     <div class="ws-now" aria-live="polite">
+      {#each ghosts as ghost (ghost.long)}
+        <span class="ws-now-label ws-ghost" aria-hidden="true">
+          <span class="ws-now-link ws-month"
+            ><span class="ws-long">{ghost.long}</span><span class="ws-short">{ghost.short}</span></span
+          >
+          <span class="ws-now-link ws-year">{current.year}</span>
+        </span>
+      {/each}
       {#key `${current.year}-${current.month}`}
         <div class="ws-now-label" in:slide>
           <button
@@ -494,7 +337,10 @@
             class="ws-month ws-now-link"
             title={$t('timeline_grouping_months')}
             disabled={!onGrouping}
-            onclick={() => onGrouping?.('month')}>{monthName}</button
+            onclick={() => onGrouping?.('month')}
+            ><span class="ws-long">{monthLabel(current.year, current.month)}</span><span class="ws-short"
+              >{monthLabel(current.year, current.month, 'short')}</span
+            ></button
           >
           <button
             type="button"
@@ -503,183 +349,98 @@
             disabled={!onGrouping}
             onclick={() => onGrouping?.('year')}>{current.year}</button
           >
-          <span class="ws-count">{$t('items_count', { values: { count: monthCount } })}</span>
         </div>
       {/key}
     </div>
 
-    <nav class="ws-ruler" bind:this={rulerBox} aria-label={$t('year')}>
-      {#each ruler as rule (rule.key)}
-        <span
-          class="ws-rule-cell"
-          data-other={rule.kind === 'year' && rule.year !== current.year ? '' : undefined}
-          data-far={rule.kind === 'decade' && rule.decade !== decadeOf(current.year) ? '' : undefined}
-          animate:flip={{ duration: flipDuration(), easing: cubicOut }}
+    <div class="ws-months" role="toolbar" aria-label={$t('month')} tabindex="-1" onkeydown={roving}>
+      {#each monthsOfYear as { month, count } (month)}
+        <button
+          type="button"
+          class="ws-cell"
+          aria-current={month === current.month ? 'true' : undefined}
+          aria-label={`${monthLabel(current.year, month)} ${current.year}`}
+          title={count > 0
+            ? `${monthLabel(current.year, month)} · ${itemsLabel(count)}`
+            : monthLabel(current.year, month)}
+          disabled={count === 0}
+          tabindex={month === current.month ? 0 : -1}
+          onclick={() => goToMonth(month)}
         >
-          {#if rule.kind === 'decade'}
-            <button
-              type="button"
-              class="ws-rule ws-rule-decade"
-              title={itemsLabel(rule.count)}
-              aria-haspopup="dialog"
-              aria-expanded={mapFor === rule.decade}
-              aria-controls={mapFor === rule.decade ? mapId : undefined}
-              onclick={(event) => void openMap(rule.decade, event.currentTarget)}
-            >
-              {rule.decade}s
-            </button>
-          {:else}
-            <button
-              type="button"
-              class="ws-rule ws-rule-year"
-              data-year={rule.year}
-              aria-current={rule.year === current.year ? 'true' : undefined}
-              title={itemsLabel(rule.count)}
-              aria-label={String(rule.year)}
-              onclick={() => void switchTo(rule.year)}
-            >
-              {fit >= 2 && rule.year !== current.year ? shortYear(rule.year) : rule.year}
-            </button>
-            {#if rule.year === current.year}
-              <span class="ws-rule-months" role="group" aria-label={$t('month')} in:fade={{ duration: 160 }}>
-                {#each monthsOfYear as { month, count } (month)}
-                  <button
-                    type="button"
-                    class="ws-rule ws-rule-month"
-                    aria-current={month === current.month ? 'true' : undefined}
-                    aria-label={`${monthLabel(current.year, month)} ${current.year}`}
-                    title={count > 0
-                      ? `${monthLabel(current.year, month)} · ${$t('items_count', { values: { count } })}`
-                      : monthLabel(current.year, month)}
-                    disabled={count === 0}
-                    onclick={() => goToMonth(month)}
-                  >
-                    {month}
-                  </button>
-                {/each}
-              </span>
-            {/if}
-          {/if}
-        </span>
+          {month}
+        </button>
       {/each}
-    </nav>
+    </div>
 
-    {#if decadeMap}
-      <div
-        id={mapId}
-        class="ws-map"
-        role="dialog"
-        tabindex="-1"
-        aria-label="{decadeMap.decade}s"
-        style:left="{mapAt.x}px"
-        style:top="{mapAt.y}px"
-        bind:this={mapBox}
-        onkeydown={onMapKeydown}
-        onfocusin={onMapFocusIn}
-        onfocusout={onMapFocusOut}
-      >
-        <div class="ws-map-head">
-          <button
-            type="button"
-            class="ws-map-step"
-            aria-label={besideMap(-1) === undefined ? undefined : `${besideMap(-1)}s`}
-            title={besideMap(-1) === undefined ? undefined : `${besideMap(-1)}s`}
-            disabled={besideMap(-1) === undefined}
-            onclick={() => void stepMap(-1)}
-          >
-            <Icon icon={mdiChevronLeft} size="16" />
-          </button>
-          <p class="ws-map-peek">{peekText}</p>
-          <button
-            type="button"
-            class="ws-map-step"
-            aria-label={besideMap(1) === undefined ? undefined : `${besideMap(1)}s`}
-            title={besideMap(1) === undefined ? undefined : `${besideMap(1)}s`}
-            disabled={besideMap(1) === undefined}
-            onclick={() => void stepMap(1)}
-          >
-            <Icon icon={mdiChevronRight} size="16" />
-          </button>
-        </div>
-        <div class="ws-map-grid" role="presentation" onpointerover={onMapHover} onpointerleave={() => (mapPeek = undefined)}>
-          <span></span>
-          {#each initials as initial, index (index)}
-            <span class="ws-map-initial" aria-hidden="true">{initial}</span>
-          {/each}
-          {#each decadeMap.rows as row, rowIndex (row.year)}
-            <button
-              type="button"
-              class="ws-map-year"
-              data-cell
-              data-key="{row.year}-0"
-              data-row={rowIndex}
-              data-col="0"
-              tabindex={`${row.year}-0` === (mapStop ?? firstStop) ? 0 : -1}
-              aria-current={row.year === current.year ? 'true' : undefined}
-              aria-label="{row.year} · {itemsLabel(row.count)}"
-              onclick={() => pick(row.year)}
-            >
-              {row.year}
-            </button>
-            {#each row.months as { month, count, level } (month)}
-              <button
-                type="button"
-                class="ws-map-month"
-                data-cell
-                data-key="{row.year}-{month}"
-                data-row={rowIndex}
-                data-col={month}
-                data-level={level}
-                tabindex={`${row.year}-${month}` === (mapStop ?? firstStop) ? 0 : -1}
-                aria-current={row.year === current.year && month === current.month ? 'true' : undefined}
-                aria-label="{monthLabel(row.year, month)} {row.year} · {itemsLabel(count)}"
-                disabled={count === 0}
-                onclick={() => pick(row.year, month)}
-              ></button>
-            {/each}
-          {/each}
-        </div>
-      </div>
-    {/if}
+    <span class="ws-split" aria-hidden="true"></span>
 
-    {#if onFilters}
-      <button
-        type="button"
-        class="ws-bar-icon"
-        aria-label={$t('filters')}
-        title={$t('filters')}
-        data-testid="filter-toggle-btn"
-        onclick={onFilters}
-      >
-        <Icon icon={mdiTune} size="20" />
-        {#if filterActive}<span class="ws-bar-dot" aria-hidden="true"></span>{/if}
+    <div class="ws-years" data-start={atStart ? '' : undefined} data-end={atEnd ? '' : undefined}>
+      <button type="button" class="ws-step" tabindex="-1" aria-hidden="true" title={$t('previous')} onclick={() => page(-1)}>
+        <Icon icon={mdiChevronLeft} size="16" />
       </button>
-    {/if}
+      <div
+        class="ws-track"
+        role="toolbar"
+        aria-label={$t('year')}
+        tabindex="-1"
+        bind:this={track}
+        use:sideways
+        onscroll={edges}
+        onkeydown={roving}
+        onpointerdown={dragStart}
+        onpointerenter={() => (hovering = true)}
+        onpointerleave={() => (hovering = false)}
+      >
+        {#each years as { year, count } (year)}
+          <button
+            type="button"
+            class="ws-cell ws-cell-year"
+            data-year={year}
+            data-decade={year % 10 === 0 ? '' : undefined}
+            aria-current={year === current.year ? 'true' : undefined}
+            title={itemsLabel(count)}
+            tabindex={year === current.year ? 0 : -1}
+            onclick={() => void switchTo(year)}
+          >
+            {year}
+          </button>
+        {/each}
+      </div>
+      <button type="button" class="ws-step" tabindex="-1" aria-hidden="true" title={$t('next')} onclick={() => page(1)}>
+        <Icon icon={mdiChevronRight} size="16" />
+      </button>
+    </div>
   </div>
 {/if}
 
 <style>
   .ws-time {
     container-type: inline-size;
-    position: relative;
     display: flex;
     flex: 1;
-    gap: 1.25rem;
+    gap: 0.75rem;
     align-items: center;
     min-width: 0;
     height: 100%;
   }
 
-  /* the heading: the month in view in the display face, condensed, the month at 500 against the year at 800 */
+  /* the heading: the month in view in the display face, condensed, the month at 500 against the year at 750; the
+     title role's size, so it reads as the bar's label and not a headline over the photos */
   .ws-now {
     display: grid;
     flex: none;
     overflow: hidden;
   }
-  .ws-now-label {
+  .ws-now > * {
     grid-area: 1 / 1;
+  }
+  .ws-ghost {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .ws-now-label {
     display: flex;
-    gap: 0.3em;
+    gap: 0.28em;
     align-items: baseline;
     white-space: nowrap;
   }
@@ -691,12 +452,14 @@
     font-stretch: 75%;
     font-variation-settings:
       'wdth' 75,
-      'opsz' 48;
+      'opsz' 32;
     line-height: 1;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.015em;
     color: var(--immich-ui-dark);
-    cursor: pointer;
     transition: color 120ms;
+  }
+  button.ws-now-link {
+    cursor: pointer;
   }
   .ws-month {
     font-weight: 500;
@@ -705,259 +468,156 @@
     text-transform: uppercase;
   }
   .ws-year {
-    font-weight: 800;
+    font-weight: 750;
     font-variant-numeric: tabular-nums;
   }
-  .ws-now-link:not(:disabled):hover {
+  .ws-short {
+    display: none;
+  }
+  button.ws-now-link:not(:disabled):hover {
     color: var(--ws-accent);
   }
-  .ws-now-link:disabled {
+  button.ws-now-link:disabled {
     cursor: default;
   }
   .ws-now-link:focus-visible {
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: 2px;
   }
-  .ws-count {
-    padding-inline-start: 0.25rem;
+
+  /* months and years: one row of mono numerals; the one in view inverted, like the Omarchy bar's active workspace */
+  .ws-months,
+  .ws-track {
+    display: flex;
+    gap: 1px;
+    align-items: center;
+  }
+  .ws-months {
+    flex: none;
+  }
+  .ws-cell {
+    flex: none;
+    min-width: 1.4rem;
+    height: 1.5rem;
+    padding: 0 0.3rem;
+    border-radius: var(--ws-radius);
     font-family: var(--ws-font-data);
     font-size: var(--ws-text-data);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: var(--immich-ui-muted);
-  }
-
-  /* the ruler: one line of mono numerals; the year in view marked by the accent, its months in a quiet tray */
-  .ws-ruler {
-    display: flex;
-    flex: 1 1 auto;
-    align-items: center;
-    min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding-inline: 0.75rem;
-    mask-image: linear-gradient(to right, transparent, black 0.75rem, black calc(100% - 0.75rem), transparent);
-  }
-  .ws-ruler::-webkit-scrollbar {
-    display: none;
-  }
-  .ws-rule-cell {
-    display: flex;
-    flex: none;
-    align-items: center;
-  }
-  .ws-rule {
-    flex: none;
-    padding: 0.3rem 0.35rem;
-    border-radius: var(--ws-radius);
-    font-family: var(--ws-font-data);
-    font-size: var(--ws-text-data);
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
+    line-height: 1.5rem;
     color: var(--immich-ui-muted);
     transition:
       background-color 120ms,
       color 120ms;
   }
-  .ws-rule:not(:disabled):hover {
+  .ws-cell:not(:disabled):hover {
     color: var(--immich-ui-dark);
     background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
   }
-  .ws-rule:focus-visible {
+  .ws-cell[aria-current='true'],
+  .ws-cell[aria-current='true']:hover {
+    background: var(--immich-ui-dark);
+    color: var(--immich-ui-light);
+  }
+  .ws-cell:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+  .ws-cell:focus-visible,
+  .ws-step:focus-visible {
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: -2px;
   }
-  .ws-rule-decade {
-    margin-inline: 0.15rem;
-    color: color-mix(in oklab, var(--immich-ui-muted) 85%, transparent);
-  }
-  .ws-rule[aria-current='true'] {
-    color: var(--immich-ui-dark);
-    font-weight: 700;
-    box-shadow: inset 0 -2px 0 var(--ws-accent);
-  }
-  .ws-rule-months {
-    display: flex;
-    gap: 1px;
-    margin-inline: 0.15rem 0.5rem;
-    padding: 2px;
-    border-radius: var(--ws-radius);
-    background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
-  }
-  .ws-rule-month {
-    min-width: 1.35rem;
-    padding: 0.2rem 0.25rem;
-    font-size: var(--ws-text-micro);
-    font-weight: 600;
-  }
-  .ws-rule-month:disabled {
-    opacity: 0.3;
-    cursor: default;
+  /* each decade's first year in ink, so the strip reads in tens at a glance */
+  .ws-cell-year[data-decade]:not([aria-current='true']) {
+    color: color-mix(in oklab, var(--immich-ui-dark) 82%, var(--immich-ui-muted));
   }
 
-  /* a decade's map: a sheet hanging from its label, one frame, the theme's corners, the readout's rule edge to edge */
-  .ws-map {
-    --cell: 1rem;
-    position: absolute;
-    z-index: 60;
-    display: grid;
-    gap: 10px;
-    padding: 0 12px 12px;
-    border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);
-    border-radius: var(--ws-radius);
-    background: var(--immich-ui-light);
-    box-shadow:
-      0 4px 12px -4px rgb(0 0 0 / 0.25),
-      0 24px 48px -12px rgb(0 0 0 / 0.45);
-    transition:
-      opacity 140ms,
-      translate 200ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  @starting-style {
-    .ws-map {
-      opacity: 0;
-      translate: 0 -4px;
-    }
-  }
-  @media (pointer: coarse) {
-    .ws-map {
-      --cell: 1.375rem;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .ws-map {
-      transition: none;
-    }
-  }
-  .ws-map-head {
-    display: flex;
-    gap: 2px;
-    align-items: center;
-    margin-inline: -12px;
-    padding: 4px;
-    border-bottom: 1px solid var(--ws-hairline);
-  }
-  .ws-map-step {
-    display: grid;
+  /* a hairline from the bar's top edge to its bottom between this year's months and the other years */
+  .ws-split {
     flex: none;
-    place-items: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: var(--ws-radius);
-    color: var(--immich-ui-muted);
+    align-self: stretch;
+    width: 1px;
+    background: var(--ws-hairline);
   }
-  .ws-map-step:not(:disabled):hover {
-    color: var(--immich-ui-dark);
-    background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
+
+  /* the strip: scrolls sideways; its arrows lie over its faded edges, and both show only where there is more to see,
+     so the years never shift when one appears */
+  .ws-years {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 5.5rem;
   }
-  .ws-map-step:disabled {
-    opacity: 0.3;
-    cursor: default;
-  }
-  .ws-map-step:focus-visible {
-    outline: var(--ws-border) solid var(--ws-accent);
-    outline-offset: -2px;
-  }
-  .ws-map-peek {
+  .ws-track {
+    position: relative;
     flex: 1;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: center;
-    font-family: var(--ws-font-data);
-    font-size: var(--ws-text-data);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    user-select: none;
+    --fade: 1.25rem;
+    mask-image: linear-gradient(to right, transparent, black var(--fade), black calc(100% - var(--fade)), transparent);
+  }
+  .ws-track::-webkit-scrollbar {
+    display: none;
+  }
+  .ws-years[data-start] .ws-track {
+    mask-image: linear-gradient(to right, black calc(100% - var(--fade)), transparent);
+  }
+  .ws-years[data-end] .ws-track {
+    mask-image: linear-gradient(to right, transparent, black var(--fade));
+  }
+  .ws-years[data-start][data-end] .ws-track {
+    mask-image: none;
+  }
+  .ws-step {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.5rem;
+    translate: 0 -50%;
+    border-radius: var(--ws-radius);
     color: var(--immich-ui-dark);
   }
-  .ws-map-grid {
-    display: grid;
-    grid-template-columns: auto repeat(12, var(--cell));
-    gap: 3px;
-    align-items: center;
+  .ws-step:first-child {
+    left: 0;
   }
-  .ws-map-initial {
-    font-family: var(--ws-font-data);
-    font-size: var(--ws-text-micro);
-    text-align: center;
-    color: var(--immich-ui-muted);
+  .ws-step:last-child {
+    right: 0;
   }
-  .ws-map-year {
-    margin-inline-end: 6px;
-    padding: 0.1rem 0.3rem;
-    border-radius: var(--ws-radius);
-    font-family: var(--ws-font-data);
-    font-size: var(--ws-text-data);
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-    text-align: start;
-    color: var(--immich-ui-muted);
-  }
-  .ws-map-year:hover {
+  .ws-step:hover {
     color: var(--immich-ui-dark);
     background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
   }
-  .ws-map-year[aria-current='true'] {
-    font-weight: 700;
-    color: var(--immich-ui-dark);
-  }
-  /* a month: a square in the accent, four steps from faint to full; an empty month is only its outline */
-  .ws-map-month {
-    width: var(--cell);
-    height: var(--cell);
-    padding: 0;
-    border-radius: var(--ws-radius);
-    background: color-mix(in oklab, var(--ws-accent) var(--heat, 0%), transparent);
-  }
-  .ws-map-month[data-level='0'] {
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);
-  }
-  .ws-map-month[data-level='1'] {
-    --heat: 30%;
-  }
-  .ws-map-month[data-level='2'] {
-    --heat: 52%;
-  }
-  .ws-map-month[data-level='3'] {
-    --heat: 76%;
-  }
-  .ws-map-month[data-level='4'] {
-    --heat: 100%;
-  }
-  .ws-map-month:not(:disabled):hover {
-    outline: 1px solid color-mix(in oklab, var(--immich-ui-dark) 70%, transparent);
-    outline-offset: 1px;
-  }
-  .ws-map-month[aria-current='true'] {
-    outline: 2px solid var(--immich-ui-dark);
-    outline-offset: 1px;
-  }
-  .ws-map-month:disabled {
-    cursor: default;
-  }
-  .ws-map-year:focus-visible,
-  .ws-map-month:focus-visible {
-    outline: var(--ws-border) solid var(--ws-accent);
-    outline-offset: 1px;
+  .ws-years[data-start] .ws-step:first-child,
+  .ws-years[data-end] .ws-step:last-child {
+    visibility: hidden;
   }
 
-  /* tightening steps (see refit) */
-  .ws-time[data-fit]:not([data-fit='0']) .ws-count {
-    display: none;
+  /* narrower bars keep the same line: a short month name first, then no strip, then the heading alone */
+  @container (max-width: 620px) {
+    .ws-long {
+      display: none;
+    }
+    .ws-short {
+      display: inline;
+    }
   }
-  .ws-time:is([data-fit='3'], [data-fit='4'], [data-fit='5']) .ws-rule-cell[data-other] {
-    display: none;
+  @container (max-width: 480px) {
+    .ws-split,
+    .ws-years {
+      display: none;
+    }
   }
-  .ws-time:is([data-fit='4'], [data-fit='5']) .ws-rule-cell[data-far] {
-    display: none;
-  }
-  .ws-time[data-fit='5'] .ws-rule-months {
-    display: none;
-  }
-  /* a phone-wide bar keeps just the heading */
-  @container (max-width: 460px) {
-    .ws-ruler {
+  @container (max-width: 340px) {
+    .ws-months {
       display: none;
     }
   }

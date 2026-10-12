@@ -91,14 +91,14 @@
     SearchSuggestionType,
     type SmartSearchFacetsResponseDto,
   } from '@immich/sdk';
-  import { ActionButton, CommandPaletteDefaultProvider, ImageCarousel, modalManager } from '@immich/ui';
+  import { ActionButton, CommandPaletteDefaultProvider, Icon, ImageCarousel, modalManager } from '@immich/ui';
   import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
   import SmartAlbumModal from '$lib/components/curator/SmartAlbumModal.svelte';
   import { curator, type SmartAlbum } from '$lib/utils/curator';
   import { resolveFilterNames } from '$lib/utils/filter-name-resolution';
   import { filterStateToSearchTerms } from '$lib/utils/filter-search-terms';
   import type { SearchTerms } from '$lib/services/search.service';
-  import { mdiDotsVertical } from '@mdi/js';
+  import { mdiDotsVertical, mdiTune } from '@mdi/js';
   import { DateTime } from 'luxon';
   import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -679,9 +679,13 @@
       return;
     }
     barSlot.content = timeBar;
+    barSlot.tools = timeTools;
     return () => {
       if (barSlot.content === timeBar) {
         barSlot.content = undefined;
+      }
+      if (barSlot.tools === timeTools) {
+        barSlot.tools = undefined;
       }
     };
   });
@@ -692,12 +696,25 @@
     <TimelineWorkspaces
       {timelineManager}
       {viewportMonth}
-      onFilters={filterCollapsed && !isTimelineEmpty && !assetMultiSelectManager.selectionActive
-        ? () => (filterCollapsed = false)
-        : undefined}
-      filterActive={getActiveFilterCount(filters) > 0}
       onGrouping={assetMultiSelectManager.selectionActive ? undefined : handleTimelineGroupingChange}
     />
+  {/if}
+{/snippet}
+
+<!-- the filter panel's reopen button, first among the bar's icons while the panel is folded away -->
+{#snippet timeTools()}
+  {#if timelineManager && filterCollapsed && !isTimelineEmpty && !assetMultiSelectManager.selectionActive}
+    <button
+      type="button"
+      class="ws-bar-icon"
+      aria-label={$t('filters')}
+      title={$t('filters')}
+      data-testid="filter-toggle-btn"
+      onclick={() => (filterCollapsed = false)}
+    >
+      <Icon icon={mdiTune} size="20" />
+      {#if getActiveFilterCount(filters) > 0}<span class="ws-bar-dot" aria-hidden="true"></span>{/if}
+    </button>
   {/if}
 {/snippet}
 

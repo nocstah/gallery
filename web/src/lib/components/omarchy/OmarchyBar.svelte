@@ -96,6 +96,7 @@
   </div>
 
   <div class="ws-bar-end">
+    {@render barSlot.tools?.()}
     <BarSearch />
     <BarUndo />
     <BarViewMenu />
@@ -144,7 +145,7 @@
         aria-expanded={showAccount}
       >
         {#key authManager.user}
-          <UserAvatar user={authManager.user} size="md" noTitle interactive />
+          <UserAvatar user={authManager.user} size="sm" noTitle interactive />
         {/key}
       </button>
       {#if showAccount}
@@ -196,7 +197,7 @@
   }
   .ws-bar-avatar {
     display: flex;
-    margin-inline-start: 0.375rem;
+    margin-inline-start: 0.5rem;
   }
   @media (max-width: 767px) {
     .ws-bar {

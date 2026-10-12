@@ -1,7 +1,8 @@
 <script lang="ts">
   // Local Omarchy layer: the one bar's undo. Everything that can still be taken back (managers/undo-manager), newest
   // first, in a sheet under the icon: a row takes its action back. Ctrl+Z takes back the newest from anywhere but a
-  // text field, a dialog or the editor. The icon stays put, greyed out, while there is nothing to undo.
+  // text field, a dialog or the editor. The icon shows only while there is something to undo (one less icon in the
+  // bar the rest of the time); Ctrl+Z works either way.
   import { shortcuts } from '$lib/actions/shortcut';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { undoManager } from '$lib/managers/undo-manager.svelte';
@@ -10,6 +11,7 @@
   import { mdiUndoVariant } from '@mdi/js';
   import { tick } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { fade } from 'svelte/transition';
 
   let open = $state(false);
   let box = $state<HTMLElement>();
@@ -77,17 +79,19 @@
 />
 
 <div class="ws-undo" bind:this={box}>
-  <button
-    type="button"
-    class="ws-bar-icon"
-    aria-label={$t('undo')}
-    title={newest ? `${$t('undo')}: ${newest.label}` : $t('undo')}
-    aria-expanded={open}
-    disabled={!newest}
-    onclick={toggle}
-  >
-    <Icon icon={mdiUndoVariant} size="20" />
-  </button>
+  {#if newest}
+    <button
+      type="button"
+      class="ws-bar-icon"
+      aria-label={$t('undo')}
+      title={`${$t('undo')}: ${newest.label}`}
+      aria-expanded={open}
+      onclick={toggle}
+      in:fade={{ duration: 160 }}
+    >
+      <Icon icon={mdiUndoVariant} size="20" />
+    </button>
+  {/if}
 
   {#if open}
     <div class="ws-undo-sheet" role="group" aria-label={$t('undo')}>
@@ -111,10 +115,6 @@
 <style>
   .ws-undo {
     position: relative;
-  }
-  .ws-undo :global(.ws-bar-icon:disabled) {
-    opacity: 0.35;
-    cursor: default;
   }
   /* a sheet under the icon, like the view menu: one frame, the theme's corners, rows edge to edge */
   .ws-undo-sheet {
