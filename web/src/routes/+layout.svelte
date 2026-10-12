@@ -38,6 +38,7 @@
   import { t } from 'svelte-i18n';
   import { get } from 'svelte/store';
   import DownloadPanel from './DownloadPanel.svelte';
+  import ShareVideoPanel from '$lib/components/omarchy/ShareVideoPanel.svelte';
   import ErrorLayout from './ErrorLayout.svelte';
   import NavigationLoadingBar from './NavigationLoadingBar.svelte';
   import UploadPanel from './UploadPanel.svelte';
@@ -333,6 +334,7 @@
   {/if}
 
   <DownloadPanel />
+  <ShareVideoPanel />
   <UploadPanel />
   {#if globalSearchManager.isOpen && globalSearchManager.presentation === 'modal'}
     <GlobalSearch manager={globalSearchManager} />

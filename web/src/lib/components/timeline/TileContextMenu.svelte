@@ -21,12 +21,16 @@
   import { goto } from '$app/navigation';
   import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import { copySubject } from '$lib/utils/copy-subject';
+  import { lookUp } from '$lib/components/curator/look-up.svelte';
+  import { shareVideos } from '$lib/managers/share-video-manager.svelte';
   import {
     mdiArrowCollapseHorizontal,
     mdiArrowExpandHorizontal,
     mdiContentCut,
     mdiImageCheckOutline,
+    mdiSendOutline,
     mdiStarFourPointsOutline,
+    mdiWhatsapp,
   } from '@mdi/js';
   import type { Snippet } from 'svelte';
   import { locale, t } from 'svelte-i18n';
@@ -129,6 +133,23 @@
       assetInteraction.clear();
     }
     void action();
+  };
+
+  // Local Omarchy layer: the picked videos (and Live Photos' clips) made ready for a chat app by Curator and saved, when
+  // all of them are the owner's and there are few enough to wait for (managers/share-video-manager)
+  const SHARE_AT_MOST = 10;
+  lookUp.check(); // whether Curator answers, asked once for the whole page
+  const shareable = $derived.by(() => {
+    if (!lookUp.available || picked.length === 0 || picked.length > SHARE_AT_MOST || !authManager.authenticated) {
+      return [];
+    }
+    const me = authManager.user.id;
+    return picked.every((asset) => asset.ownerId === me && (asset.isVideo || !!asset.livePhotoVideoId)) ? picked : [];
+  });
+  const shareClips = (clips: TimelineAsset[], app: 'whatsapp' | 'telegram') => {
+    for (const clip of clips) {
+      shareVideos.start(clip.id, app, day(clip));
+    }
   };
 
   const close = () => {
@@ -266,6 +287,20 @@
             />
           {/if}
         {/if}
+        <hr />
+      {/if}
+      {#if shareable.length > 0}
+        {@const clips = shareable}
+        <MenuOption
+          icon={mdiWhatsapp}
+          text={$t('download_for_app', { values: { app: 'WhatsApp' } })}
+          onClick={() => onStackAction(async () => shareClips(clips, 'whatsapp'))}
+        />
+        <MenuOption
+          icon={mdiSendOutline}
+          text={$t('download_for_app', { values: { app: 'Telegram' } })}
+          onClick={() => onStackAction(async () => shareClips(clips, 'telegram'))}
+        />
         <hr />
       {/if}
       {#if liftAsset}

@@ -8,6 +8,7 @@
   import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
   import { liveEffects } from '$lib/components/curator/live-effects.svelte';
   import { lookUp } from '$lib/components/curator/look-up.svelte';
+  import { shareVideos } from '$lib/managers/share-video-manager.svelte';
   import { copySubject } from '$lib/utils/copy-subject';
   import LoadingDots from '$lib/components/LoadingDots.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
@@ -41,7 +42,9 @@
     mdiEraser,
     mdiMotionPlayOutline,
     mdiPencilOutline,
+    mdiSendOutline,
     mdiVideoOutline,
+    mdiWhatsapp,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
@@ -143,6 +146,27 @@
     $if: () => lookUp.available && isOwner && !sharedLink && !asset.isTrashed && asset.type === AssetTypeEnum.Image,
     onAction: () => lookUp.toggle(),
   });
+  // Local Omarchy layer: a video (or a Live Photo's clip) made ready by Curator for a chat app and saved: H.264 and AAC
+  // in an MP4 sized for the app (managers/share-video-manager); the download itself is the original
+  const shareable = $derived(
+    lookUp.available &&
+      isOwner &&
+      !sharedLink &&
+      !asset.isTrashed &&
+      (asset.type === AssetTypeEnum.Video || !!asset.livePhotoVideoId),
+  );
+  const ForWhatsApp: ActionItem = $derived({
+    title: $t('download_for_app', { values: { app: 'WhatsApp' } }),
+    icon: mdiWhatsapp,
+    $if: () => shareable,
+    onAction: () => shareVideos.start(asset.id, 'whatsapp', asset.originalFileName),
+  });
+  const ForTelegram: ActionItem = $derived({
+    title: $t('download_for_app', { values: { app: 'Telegram' } }),
+    icon: mdiSendOutline,
+    $if: () => shareable,
+    onAction: () => shareVideos.start(asset.id, 'telegram', asset.originalFileName),
+  });
   // Local Omarchy layer: Curator's effects: a Live Photo's loop, bounce, long exposure, key photo; cinematic for any
   const LiveEffects: ActionItem = $derived({
     title: $t('live_effects'),
@@ -220,6 +244,8 @@
 
         <ActionMenuItem action={Actions.Download} />
         <ActionMenuItem action={Actions.DownloadOriginal} />
+        <ActionMenuItem action={ForWhatsApp} />
+        <ActionMenuItem action={ForTelegram} />
         <ActionMenuItem action={Actions.RotateLeft} />
         <ActionMenuItem action={Actions.Rotate180} />
 

@@ -159,6 +159,24 @@ export type HealthItem = {
   link: string | null;
 };
 
+/** A chat app a video can be made ready for (curator/share.py). */
+export type ShareApp = 'whatsapp' | 'telegram';
+
+/** A video made ready for a chat app: H.264 and AAC in an MP4 sized for the app. */
+export type ShareResult = {
+  /** the file's name, e.g. "IMG_1234 (WhatsApp).mp4" */
+  name: string;
+  size: number;
+  width: number;
+  height: number;
+  fps: number;
+  duration: number;
+  /** under the app's size limit for a video; else the app sends it as a file, which does not play in the chat */
+  fits: boolean;
+  limit: number;
+  source: string;
+};
+
 /** What needs attention in the library, from Curator's /api/library-health. */
 export type LibraryHealth = {
   checked_at: string;
@@ -280,6 +298,8 @@ export const curatorSubject = async (assetId: string): Promise<Blob> => {
   return response.blob();
 };
 
+/** The file Curator made for a chat app, sent as an attachment under its own name, so the browser saves it. */
+export const shareVideoUrl = (assetId: string, app: ShareApp) => `${base()}/share/${assetId}/${app}.mp4`;
 /** A pending highlight reel, streamed by Curator (byte ranges, so the player can seek). */
 export const reelUrl = (suggestionId: number) => `${base()}/reels/${suggestionId}.mp4`;
 /** a restore suggestion's original ('before') or restored version ('after'): a photo `width` pixels across, or a clip */
@@ -365,6 +385,10 @@ export const curator = {
   duplicatesWithQr: () => call<{ groups: string[] }>('/duplicates/qr'),
   /** queue tonight's jobs now */
   runTonightNow: () => post<{ jobs: number[] }>('/schedule/run-now', {}),
+  /** a video (or a Live Photo's clip) made ready for WhatsApp or Telegram: the file when it is already made, else the
+   * job making it (its result is a ShareResult) */
+  shareVideo: (assetId: string, app: ShareApp) =>
+    post<{ ready?: ShareResult; job?: number }>('/share', { asset_id: assetId, preset: app }),
   /** pick a stack's best photo, carefully (a job of 10-60 seconds; its result is a StackPick) */
   pickBest: (stackId: string) => post<{ job: number }>(`/stacks/${stackId}/best`, {}),
   /** Look Up: what the photo shows that has a name (the kept answer unless `again`) */
