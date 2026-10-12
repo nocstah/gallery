@@ -189,6 +189,14 @@ export type UndoResult = {
   failed?: { id: number; reason: string }[];
 };
 
+export type LookUpSubject = {
+  kind: 'plant' | 'animal' | 'landmark' | 'art' | 'food' | 'nature' | 'object' | 'other';
+  name: string;
+  about: string;
+  sure: 'high' | 'medium' | 'low';
+};
+export type LookUpAnswer = { asset_id: string; model: string; subjects: LookUpSubject[] };
+
 export type SmartStrictness = 'loose' | 'normal' | 'strict';
 /** a smart album's saved search: Gallery's metadata-search filters, the typed words, and the Photos page URL it came
  * from (to open it there again for editing) */
@@ -296,6 +304,9 @@ export const curator = {
    * names the suggestion holding the new version */
   liveEffect: (assetId: string, effect: 'loop' | 'bounce' | 'long-exposure' | 'key-photo', seconds = 0) =>
     post<{ job: number }>('/live-effect', { asset_id: assetId, effect, seconds }),
+  /** Look Up: what the photo shows that has a name (the kept answer unless `again`) */
+  lookUp: (assetId: string, again = false, signal?: AbortSignal) =>
+    call<LookUpAnswer>('/lookup', { method: 'POST', body: JSON.stringify({ asset_id: assetId, again }), signal }),
   /** smart albums: saved searches that keep a Gallery album filled */
   smartPreview: (rule: SmartRule, signal?: AbortSignal) =>
     call<SmartPreview>('/smart-albums/preview', { method: 'POST', body: JSON.stringify(rule), signal }),

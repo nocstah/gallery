@@ -10,6 +10,8 @@
   import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
   import LiveEffects from '$lib/components/curator/LiveEffects.svelte';
   import { liveEffects } from '$lib/components/curator/live-effects.svelte';
+  import LookUpCard from '$lib/components/curator/LookUpCard.svelte';
+  import { lookUp } from '$lib/components/curator/look-up.svelte';
   import RemoveObjects from '$lib/components/curator/RemoveObjects.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import { AssetAction, ProjectionType } from '$lib/constants';
@@ -669,6 +671,11 @@
           onFavorite={handleFavorite}
         />
       </div>
+    {/if}
+
+    <!-- Local Omarchy layer: Curator's Look Up card, from photo to photo until closed -->
+    {#if lookUp.on && asset.type === AssetTypeEnum.Image && !inCuratorTool && $slideshowState === SlideshowState.None}
+      <LookUpCard assetId={asset.id} onClose={() => (lookUp.on = false)} />
     {/if}
 
     {#if showOcrButton}

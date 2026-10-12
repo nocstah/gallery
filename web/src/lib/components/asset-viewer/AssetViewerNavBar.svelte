@@ -7,6 +7,7 @@
   import SetVisibilityAction from '$lib/components/asset-viewer/actions/SetVisibilityAction.svelte';
   import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
   import { liveEffects } from '$lib/components/curator/live-effects.svelte';
+  import { lookUp } from '$lib/components/curator/look-up.svelte';
   import LoadingDots from '$lib/components/LoadingDots.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
@@ -33,6 +34,7 @@
   import {
     mdiArrowLeft,
     mdiArrowRight,
+    mdiCreationOutline,
     mdiDotsVertical,
     mdiEraser,
     mdiMotionPlayOutline,
@@ -122,7 +124,15 @@
     if (isOwner && !sharedLink) {
       removeObjects.check();
       liveEffects.check();
+      lookUp.check();
     }
+  });
+  // Local Omarchy layer: Curator's Look Up, what in the photo has a name
+  const LookUp: ActionItem = $derived({
+    title: $t('look_up'),
+    icon: mdiCreationOutline,
+    $if: () => lookUp.available && isOwner && !sharedLink && !asset.isTrashed && asset.type === AssetTypeEnum.Image,
+    onAction: () => lookUp.toggle(),
   });
   // Local Omarchy layer: Curator's Live Photo effects (loop, bounce, long exposure, key photo)
   const LiveEffects: ActionItem = $derived({
@@ -141,7 +151,7 @@
 
 <CommandPaletteDefaultProvider
   name={$t('assets')}
-  actions={withoutIcons([Close, Cast, ...Object.values(Actions), RemoveObjects, LiveEffects])}
+  actions={withoutIcons([Close, Cast, ...Object.values(Actions), RemoveObjects, LiveEffects, LookUp])}
 />
 
 <div
@@ -182,6 +192,7 @@
     <ActionButton action={Actions.Edit} />
     <ActionButton action={RemoveObjects} />
     <ActionButton action={LiveEffects} />
+    <ActionButton action={LookUp} />
 
     {#if isOwner}
       <DeleteAction {asset} {onAction} {preAction} {onUndoDelete} />
