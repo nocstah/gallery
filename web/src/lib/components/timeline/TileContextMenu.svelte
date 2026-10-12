@@ -213,6 +213,7 @@
       isVisible={isOpen}
       x={position.x}
       y={position.y}
+      portal
     >
       {#if headline}
         <li class="ws-menu-head" role="presentation">
@@ -282,12 +283,14 @@
 </div>
 
 <style>
-  /* compact: smaller type and rows than Gallery's dropdowns, and no grow-in, so it is simply there at the cursor */
-  .ws-tile-menu :global(> div) {
+  /* the menu itself lives at the end of <body> (ContextMenu portal): no grow-in, so it is simply there at the cursor,
+     and above everything else on the page */
+  :global(div[data-menu-portal]) {
+    z-index: 2147483000;
     transition: none !important;
   }
-  .ws-tile-menu :global(ul[role='menu']) {
-    min-width: 15rem;
+  :global(div[data-menu-portal] > ul[role='menu']) {
+    min-width: 14rem;
   }
   .ws-menu-head {
     display: flex;

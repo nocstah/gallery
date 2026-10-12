@@ -15,6 +15,8 @@
     menuScrollView?: HTMLDivElement | undefined;
     menuElement?: HTMLUListElement | undefined;
     onClose?: (() => void) | undefined;
+    /** Local Omarchy layer: render at the end of <body>, above everything (the photo grid's right-click menu) */
+    portal?: boolean;
     children?: Snippet;
   }
 
@@ -30,8 +32,27 @@
     menuScrollView = $bindable(),
     menuElement = $bindable(),
     onClose = undefined,
+    portal = false,
     children,
   }: Props = $props();
+
+  // Local Omarchy layer: the menu re-measures itself whenever it or its content changes size, so the placement below
+  // always uses its real height (a header image loading, a row added); and it can move to <body>
+  let measured = $state(0);
+  const watchSize = (node: HTMLElement) => {
+    const observer = new ResizeObserver(() => measured++);
+    observer.observe(node);
+    if (menuElement) {
+      observer.observe(menuElement);
+    }
+    return { destroy: () => observer.disconnect() };
+  };
+  const toBody = (node: HTMLElement, enabled: boolean) => {
+    if (enabled) {
+      document.body.append(node);
+    }
+    return { destroy: () => enabled && node.remove() };
+  };
 
   const swap = (direction: string) => (direction === 'left' ? 'right' : 'left');
 
@@ -41,16 +62,38 @@
       return { left: 0, top: 0 };
     }
 
+    void measured;
     const rect = menuScrollView.getBoundingClientRect();
-    const directionWidth = layoutDirection === 'left' ? rect.width : 0;
-
     const margin = 8;
 
-    const left = Math.max(margin, Math.min(windowInnerWidth - rect.width - margin, x - directionWidth));
-    const top = Math.max(margin, Math.min(windowInnerHeight - menuElement.clientHeight, y));
+    // Local Omarchy layer: the whole menu fits in the window. Its full height counts the frame (padding and border)
+    // around the list, not the list alone; where it does not fit after the cursor it opens before it (above, or to the
+    // other side), like a desktop menu, and only a menu taller than the window scrolls.
+    const style = getComputedStyle(menuScrollView);
+    const frame =
+      Number.parseFloat(style.paddingTop) +
+      Number.parseFloat(style.paddingBottom) +
+      Number.parseFloat(style.borderTopWidth) +
+      Number.parseFloat(style.borderBottomWidth);
+    const height = menuElement.scrollHeight + frame;
+    const width = rect.width;
+
+    let start = layoutDirection === 'left' ? x - width : x;
+    if (layoutDirection === 'right' && start + width > windowInnerWidth - margin && x - width >= margin) {
+      start = x - width;
+    } else if (layoutDirection === 'left' && start < margin && x + width <= windowInnerWidth - margin) {
+      start = x;
+    }
+    const left = Math.max(margin, Math.min(windowInnerWidth - width - margin, start));
+
+    let top = y;
+    if (top + height > windowInnerHeight - margin && y - height >= margin) {
+      top = y - height;
+    }
+    top = Math.max(margin, Math.min(windowInnerHeight - height - margin, top));
     const maxHeight = windowInnerHeight - top - margin;
 
-    const needScrollBar = menuElement.clientHeight > maxHeight;
+    const needScrollBar = height > maxHeight;
 
     return { left, top, maxHeight, needScrollBar };
   });
@@ -74,6 +117,9 @@
   style:transition-property="max-height"
   style:scrollbar-color="rgba(85, 86, 87, 0.408) transparent"
   use:clickOutside={{ onOutclick: onClose }}
+  use:watchSize
+  use:toBody={portal}
+  data-menu-portal={portal ? true : undefined}
   tabindex="-1"
 >
   <ul
