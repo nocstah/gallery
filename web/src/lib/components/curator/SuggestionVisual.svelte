@@ -95,11 +95,11 @@
   {:else if suggestion.kind === 'asset.rotate' && suggestion.asset_ids.length > 0}
     {@render photo(suggestion.asset_ids[0], 112, $t('ai_inbox_now'))}
     {@render photo(suggestion.asset_ids[0], 112, $t('ai_inbox_proposed'), rotation)}
-  {:else if suggestion.kind === 'person.name' || suggestion.kind === 'person.merge'}
+  {:else if ['person.name', 'person.merge', 'person.hide'].includes(suggestion.kind)}
     {#each [...new Set(faces)] as personId (personId)}
       <img class="ws-strip-tile visual-face" src={face(personId)} alt="" loading="lazy" width="72" height="72" />
     {/each}
-    {#if suggestion.kind === 'person.name'}
+    {#if suggestion.kind === 'person.name' || suggestion.kind === 'person.hide'}
       {#each photos.slice(0, 4) as id (id)}
         {@render photo(id, 72)}
       {/each}

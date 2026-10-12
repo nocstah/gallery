@@ -74,7 +74,7 @@
         {@render big(id)}
       {/each}
     </div>
-  {:else if suggestion.kind === 'person.name' || suggestion.kind === 'person.merge'}
+  {:else if ['person.name', 'person.merge', 'person.hide'].includes(suggestion.kind)}
     <div class="stage-people">
       <div class="stage-faces">
         {#each [...new Set(faces)] as personId (personId)}
