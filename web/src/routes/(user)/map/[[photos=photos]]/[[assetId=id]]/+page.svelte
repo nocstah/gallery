@@ -139,7 +139,7 @@
 
   // Desktop filter-panel collapse — driven from a header filter button so the collapsed panel doesn't
   // float over the map's own controls (mobile keeps its separate drawer toggle).
-  let filterCollapsed = $state(loadFilterCollapsed());
+  let filterCollapsed = $state(loadFilterCollapsed(true)); // local Omarchy layer: the timeline leads
   const noResults = $derived(mapMarkers.length === 0 && hasActiveFilters);
   const hasUnappliedSmartSearch = $derived(
     committedQuery.trim().length > 0 && !featureFlagsManager.value.smartSearchHasCutoff,

@@ -383,7 +383,7 @@
   const hasActiveFilters = $derived(getActiveFilterCount(filters) > 0 || showSearchResults);
 
   // Filter-panel collapse is driven here so a header filter button can reclaim the panel's space.
-  let filterCollapsed = $state(loadFilterCollapsed());
+  let filterCollapsed = $state(loadFilterCollapsed(true)); // local Omarchy layer: the timeline leads
   const totalAssetCount = $derived(timelineManager?.assetCount ?? 0);
 
   const handleAddAllToCollection = () => {
@@ -762,7 +762,10 @@
         groupingDisabled={assetMultiSelectManager.selectionActive}
         showFilters={hasActiveFilters}
         filters={photoFiltersBar}
-        showFilterButton={filterCollapsed && !isTimelineEmpty && !assetMultiSelectManager.selectionActive && !workspacesShown}
+        showFilterButton={filterCollapsed &&
+          !isTimelineEmpty &&
+          !assetMultiSelectManager.selectionActive &&
+          !workspacesShown}
         filterActive={getActiveFilterCount(filters) > 0}
         onExpandFilters={() => (filterCollapsed = false)}
         showSearchButton={false}

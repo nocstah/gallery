@@ -144,14 +144,17 @@
      button), the title in the bar's heading face, the description in mono, then the page's own buttons and actions
      at the end. In a tight bar the buttons drop their labels (icons keep their tooltips) and the wide-screen extras go -->
 {#snippet pageBar()}
-  <div class="ws-page-bar" data-testid="page-header-title-row" data-fit={pageFit} bind:this={pageBarBox}>
-    <div class="ws-page-bar-title">
+  <div class="ws-page-bar" data-fit={pageFit} bind:this={pageBarBox}>
+    <!-- upstream's title row (title, description, its trailing control) and its constraints, kept as they were -->
+    <div class="ws-page-bar-title min-w-0 overflow-hidden" data-testid="page-header-title-row">
       {@render leading?.()}
       {#if title}
-        <div class="ws-page-title" tabindex="-1" id={headerId} data-testid="page-header">{title}</div>
+        <div class="ws-page-title min-w-0 truncate" tabindex="-1" id={headerId} data-testid="page-header">{title}</div>
       {/if}
       {#if description}
-        <p class="ws-page-description" data-testid="page-header-description">{description}</p>
+        <p class="ws-page-description shrink-0 whitespace-nowrap" data-testid="page-header-description">
+          {description}
+        </p>
       {/if}
       {#if descriptionTrailing}
         <div class="shrink-0" data-testid="page-header-description-trailing">
@@ -226,7 +229,6 @@
     <div class="{scrollbarClass} absolute {hasTitleClass} w-full overflow-y-auto p-2" use:useActions={use}>
       {@render children?.()}
     </div>
-
   </main>
 </div>
 

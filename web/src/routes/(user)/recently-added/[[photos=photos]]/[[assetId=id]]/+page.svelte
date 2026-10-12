@@ -259,7 +259,7 @@
   const hasActiveFilters = $derived(getActiveFilterCount(filters) > 0 || showSearchResults);
 
   // Filter-panel collapse is driven here so a header filter button can reclaim the panel's space.
-  let filterCollapsed = $state(loadFilterCollapsed());
+  let filterCollapsed = $state(loadFilterCollapsed(true)); // local Omarchy layer: the timeline leads
 
   const count = $derived(showSearchResults ? (smartFacetTotal ?? 0) : (timelineManager?.assetCount ?? 0));
   const countLabel = $derived(

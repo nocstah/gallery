@@ -15,7 +15,6 @@
 // mouse and pen holds inside [data-ws-gestures]).
 import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
 import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import { handleStack } from '$lib/services/stack.service';
 
 type Options = { timelineManager: TimelineManager; assetInteraction: AssetMultiSelectManager; enabled: boolean };
 type Phase = 'idle' | 'pressed' | 'marquee' | 'lifted' | 'dragging';
@@ -332,7 +331,9 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
         if (target) {
           settleGhost(dropTarget);
           // the drop target leads, so it becomes the cover; stacks it or the carried photos head merge in
-          void handleStack([target, ...dragIds]);
+          // loaded on first use: the stack service pulls in the uploader and the album service, which the
+          // timeline has no other need of (and its unit test mocks around)
+          void import('$lib/services/stack.service').then(({ handleStack }) => handleStack([target, ...dragIds]));
         } else {
           settleGhost(tileFor(scroller, startTile?.dataset.asset ?? ''));
         }

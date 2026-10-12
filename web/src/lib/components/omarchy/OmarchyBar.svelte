@@ -10,7 +10,6 @@
   import BarViewMenu from '$lib/components/omarchy/BarViewMenu.svelte';
   import Logo from '$lib/components/shared-components/Logo.svelte';
   import AccountInfoPanel from '$lib/components/shared-components/navigation-bar/AccountInfoPanel.svelte';
-  import { menuButtonId } from '$lib/components/shared-components/navigation-bar/NavigationBar.svelte';
   import NotificationPanel from '$lib/components/shared-components/navigation-bar/NotificationPanel.svelte';
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import SkipLink from '$lib/elements/SkipLink.svelte';
@@ -33,6 +32,10 @@
   };
 
   let { onUploadClick, railAware = false }: Props = $props();
+
+  // the id upstream's NavigationBar gives its menu button (the sidebar returns focus to it), kept here rather than
+  // imported, so the bar does not depend on the component it replaces
+  const menuButtonId = 'top-menu-button';
 
   let showAccount = $state(false);
   let showNotifications = $state(false);
@@ -102,13 +105,7 @@
     <BarViewMenu />
 
     {#if !page.url.pathname.includes('/admin') && onUploadClick}
-      <button
-        type="button"
-        class="ws-bar-icon"
-        aria-label={$t('upload')}
-        title={$t('upload')}
-        onclick={onUploadClick}
-      >
+      <button type="button" class="ws-bar-icon" aria-label={$t('upload')} title={$t('upload')} onclick={onUploadClick}>
         <Icon icon={mdiTrayArrowUp} size="20" />
       </button>
     {/if}
@@ -133,25 +130,28 @@
       {/if}
     </div>
 
-    <div
-      class="ws-bar-anchor"
-      use:clickOutside={{ onOutclick: () => (showAccount = false), onEscape: () => (showAccount = false) }}
-    >
-      <button
-        type="button"
-        class="ws-bar-avatar"
-        onclick={() => (showAccount = !showAccount)}
-        title="{authManager.user.name} ({authManager.user.email})"
-        aria-expanded={showAccount}
+    <!-- the account, once someone is signed in (authManager.user throws before) -->
+    {#if authManager.authenticated}
+      <div
+        class="ws-bar-anchor"
+        use:clickOutside={{ onOutclick: () => (showAccount = false), onEscape: () => (showAccount = false) }}
       >
-        {#key authManager.user}
-          <UserAvatar user={authManager.user} size="sm" noTitle interactive />
-        {/key}
-      </button>
-      {#if showAccount}
-        <AccountInfoPanel onClose={() => (showAccount = false)} />
-      {/if}
-    </div>
+        <button
+          type="button"
+          class="ws-bar-avatar"
+          onclick={() => (showAccount = !showAccount)}
+          title="{authManager.user.name} ({authManager.user.email})"
+          aria-expanded={showAccount}
+        >
+          {#key authManager.user}
+            <UserAvatar user={authManager.user} size="sm" noTitle interactive />
+          {/key}
+        </button>
+        {#if showAccount}
+          <AccountInfoPanel onClose={() => (showAccount = false)} />
+        {/if}
+      </div>
+    {/if}
   </div>
 </nav>
 

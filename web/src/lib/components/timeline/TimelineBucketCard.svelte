@@ -169,10 +169,17 @@
       class="truncate text-2xl leading-none font-semibold tracking-normal sm:text-3xl"
       data-testid="timeline-bucket-card-title"
     >
-      <!-- Local Omarchy layer: month and year as separate display runs -->
-      {#if titleParts.month}<span class="ws-bucket-month">{titleParts.month}</span>{' '}{/if}<span
-        class="ws-bucket-year">{titleParts.year}</span
-      >
+      <!-- Local Omarchy layer: a month's card sets month and year as separate display runs; the period itself, as
+           upstream words it, is what is read out (and found). A year's card is the year alone. -->
+      {#if titleParts.month}
+        <span class="sr-only">{title}</span>
+        <span aria-hidden="true"
+          ><span class="ws-bucket-month">{titleParts.month}</span>
+          <span class="ws-bucket-year">{titleParts.year}</span></span
+        >
+      {:else}
+        <span class="ws-bucket-year">{title}</span>
+      {/if}
     </div>
     <div
       class="mt-2 inline-flex max-w-full rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-gray-900 shadow-sm"

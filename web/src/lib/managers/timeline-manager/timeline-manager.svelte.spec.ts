@@ -97,17 +97,20 @@ describe('TimelineManager', () => {
         height: month.height,
       }));
 
+      // Local Omarchy layer: the tiled layout (internal/layout-support) pools days into full-width rows and lets a
+      // short row grow to MAX_SCALE of the target height, so these differ from upstream's packing (283 / 7711 / 283)
       expect(plainMonths).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ year: 2024, month: 3, height: 283 }),
-          expect.objectContaining({ year: 2024, month: 2, height: 7711 }),
+          expect.objectContaining({ year: 2024, month: 3, height: 424 }),
+          expect.objectContaining({ year: 2024, month: 2, height: 7419 }),
           expect.objectContaining({ year: 2024, month: 1, height: 283 }),
         ]),
       );
     });
 
     it('calculates timeline height', () => {
-      expect(timelineManager.totalViewerHeight).toBe(8337);
+      // Local Omarchy layer: the tiled layout's total (upstream's packing gives 8337)
+      expect(timelineManager.totalViewerHeight).toBe(8186);
     });
   });
 

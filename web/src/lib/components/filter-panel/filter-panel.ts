@@ -6,8 +6,10 @@ const COLLAPSED_KEY = 'gallery-filter-collapsed';
 /**
  * Load the persisted filter-panel collapsed preference. Shared by the panel itself and the header
  * filter button (external toggle), so a page can initialise its bound `collapsed` state to match.
+ * `fallback` is the state before anything is stored (local Omarchy layer: the pages pass true, so the
+ * timeline leads and filters open on demand; the panel on its own keeps upstream's open default).
  */
-export function loadFilterCollapsed(): boolean {
+export function loadFilterCollapsed(fallback = false): boolean {
   if (browser) {
     try {
       const raw = localStorage.getItem(COLLAPSED_KEY);
@@ -18,7 +20,7 @@ export function loadFilterCollapsed(): boolean {
       /* corrupted — fall through */
     }
   }
-  return true; // local Omarchy layer: the timeline leads; filters open on demand
+  return fallback;
 }
 
 /** Persist the filter-panel collapsed preference. */

@@ -70,7 +70,9 @@
     <div class="flex justify-between">
       {text}
       {#if shortcutLabel}
-        <span class="ps-4 text-gray-500">
+        <!-- Local Omarchy layer: the hint is for the eye; the item's name stays its action ("Download", not
+             "Download ⇧D"), as screen readers and the tests read it -->
+        <span class="ps-4 text-gray-500" aria-hidden="true">
           {shortcutLabel}
         </span>
       {/if}

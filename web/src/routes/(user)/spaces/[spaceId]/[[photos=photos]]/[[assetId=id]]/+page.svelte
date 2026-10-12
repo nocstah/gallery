@@ -658,7 +658,7 @@
   );
 
   // Filter-panel collapse is driven here so a header filter button can reclaim the panel's space.
-  let filterCollapsed = $state(loadFilterCollapsed());
+  let filterCollapsed = $state(loadFilterCollapsed(true)); // local Omarchy layer: the timeline leads
   const isFilteredTimelineEmpty = $derived(
     timelineManager?.isInitialized && totalAssetCount === 0 && getActiveFilterCount(filters) > 0 && !showSearchResults,
   );

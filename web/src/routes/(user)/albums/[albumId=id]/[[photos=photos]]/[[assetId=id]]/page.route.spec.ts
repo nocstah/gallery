@@ -168,6 +168,9 @@ describe('album detail filter panel route', () => {
     assetMultiSelectManager.clear();
     Element.prototype.animate = getAnimateMock();
     mockFeatureFlagsManager.value.map = false;
+    // Local Omarchy layer: the album page starts with its filter panel folded away until the user opens it once;
+    // these tests are about the open panel, so they start from that remembered choice
+    localStorage.setItem('gallery-filter-collapsed', 'false');
   });
 
   afterAll(() => {

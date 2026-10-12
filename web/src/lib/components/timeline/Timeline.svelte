@@ -223,7 +223,7 @@
   // setLayoutOptions only relayouts on row/header/gap changes - so relayout when the spacing moves.
   let lastSpacing: number | undefined;
   $effect(() => {
-    const spacing = timelineManager.justifiedLayoutOptions.spacing;
+    const spacing = timelineManager.justifiedLayoutOptions?.spacing;
     untrack(() => {
       if (lastSpacing !== undefined && spacing !== lastSpacing) {
         timelineManager.suspendTransitions = true;

@@ -1048,7 +1048,9 @@ describe('Photos page search URL state', () => {
     expect(goto).not.toHaveBeenCalled();
   });
 
-  it('renders a desktop grouping control on the photos browse timeline', async () => {
+  // Local Omarchy layer: on the plain day timeline the bar's month heading and year strip (TimelineWorkspaces) stand
+  // in for the grouping row, which only shows in the overviews and under filters, so this upstream check is skipped
+  it.skip('renders a desktop grouping control on the photos browse timeline', async () => {
     mockPage.url = new URL('https://gallery.test/photos');
 
     renderPage();
@@ -1057,7 +1059,9 @@ describe('Photos page search URL state', () => {
     expect(screen.getByTestId('timeline-grouping-day')).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('keeps the photos grouping control separated from representative buckets without a colored strip', async () => {
+  // Local Omarchy layer: on the plain day timeline the bar's month heading and year strip (TimelineWorkspaces) stand
+  // in for the grouping row, which only shows in the overviews and under filters, so this upstream check is skipped
+  it.skip('keeps the photos grouping control separated from representative buckets without a colored strip', async () => {
     mockPage.url = new URL('https://gallery.test/photos');
 
     renderPage();
@@ -1104,7 +1108,9 @@ describe('Photos page search URL state', () => {
     expect(goto).not.toHaveBeenCalledWith(expect.stringContaining('selectedYear'), expect.anything());
   });
 
-  it('does not show the route empty state for representative year buckets', async () => {
+  // Local Omarchy layer: on the plain day timeline the bar's month heading and year strip (TimelineWorkspaces) stand
+  // in for the grouping row, which only shows in the overviews and under filters, so this upstream check is skipped
+  it.skip('does not show the route empty state for representative year buckets', async () => {
     mockPage.url = new URL('https://gallery.test/photos');
 
     renderPage();
@@ -1136,7 +1142,9 @@ describe('Photos page search URL state', () => {
   // #1051: same affordance as the album and space timelines — one rule, "the icon is wherever
   // scoped search works", rather than a per-page allowlist that drifts.
   describe('scoped search button', () => {
-    it('sits beside the grouping control on the photos timeline', async () => {
+    // Local Omarchy layer: the one bar's search (BarSearch) replaces the page's scoped search button, so the upstream
+    // checks that it shows are skipped
+    it.skip('sits beside the grouping control on the photos timeline', async () => {
       mockPage.url = new URL('https://gallery.test/photos');
 
       renderPage();
@@ -1144,7 +1152,7 @@ describe('Photos page search URL state', () => {
       expect(await screen.findByTestId('scoped-search-button')).toBeInTheDocument();
     });
 
-    it('opens the page-scoped search palette when clicked', async () => {
+    it.skip('opens the page-scoped search palette when clicked', async () => {
       mockPage.url = new URL('https://gallery.test/photos');
 
       renderPage();
@@ -1162,7 +1170,7 @@ describe('Photos page search URL state', () => {
       expect(screen.queryByTestId('scoped-search-button')).not.toBeInTheDocument();
     });
 
-    it('stays available while search results are showing, unlike the grouping pill', async () => {
+    it.skip('stays available while search results are showing, unlike the grouping pill', async () => {
       mockPage.url = new URL('https://gallery.test/photos?q=nature');
 
       renderPage();
@@ -1221,7 +1229,8 @@ describe('Photos page search URL state', () => {
   // Asserted on the rendered section rather than on the prop: the override only works because
   // the library merges the incoming class with twMerge, and a prop assertion would pass just as
   // well against a library that concatenated them and left `mt-3` winning.
-  it('drops the memories strip top margin the grouping bar now provides', () => {
+  // Local Omarchy layer: the memories strip is put away (showMemoryStrip in +page.svelte), so this check is skipped
+  it.skip('drops the memories strip top margin the grouping bar now provides', () => {
     mockPage.url = new URL('https://gallery.test/photos');
     mockAuthManager.preferences.memories.enabled = true;
     mockMemoryManager.memories = [{ id: 'memory-1', assets: [{ id: 'asset-1' }] }];

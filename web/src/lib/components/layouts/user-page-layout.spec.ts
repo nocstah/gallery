@@ -17,6 +17,12 @@ vi.mock('$lib/components/shared-components/navigation-bar/NavigationBar.svelte',
   return { default: module.default };
 });
 
+// Local Omarchy layer: UserPageLayout renders the one bar (OmarchyBar) where upstream rendered NavigationBar
+vi.mock('$lib/components/omarchy/OmarchyBar.svelte', async () => {
+  const module = await import('@test-data/mocks/omarchy-bar-rail-aware.stub.svelte');
+  return { default: module.default };
+});
+
 vi.mock('$lib/components/shared-components/side-bar/UserSidebar.svelte', async () => {
   const module = await import('@test-data/mocks/noop-component.svelte');
   return { default: module.default };

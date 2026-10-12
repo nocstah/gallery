@@ -99,14 +99,6 @@
       if (controller.signal.aborted) {
         return;
       }
-      // Local Omarchy layer: one tile per stack, the best match, with the stack's count (own library only)
-      if (!append) {
-        stacksShown = new Set();
-      }
-      const items = spaceId ? assets.items : await groupStacks(assets.items, stacksShown);
-      if (controller.signal.aborted) {
-        return;
-      }
 
       // On append, dedupe by id — primary guard against duplicate rows across
       // paginated searchSmart responses. The server's ORDER BY is single-key
@@ -114,9 +106,19 @@
       // be used; identical embeddings (byte-identical image content) can then
       // yield the same asset.id on adjacent pages. See
       // specs/2026-04-21-search-tiebreaker-design.md.
-      searchResults = append ? dedupeAppend(searchResults, items) : items;
+      searchResults = append ? dedupeAppend(searchResults, assets.items) : assets.items;
       searchPage = page;
       hasMoreResults = assets.nextPage !== null;
+
+      // Local Omarchy layer: then one tile per stack, the best match, with the stack's count (own library only).
+      // Smart search returns no stack data, so each result is looked up; the results show at once and fold
+      // together once the lookups answer, instead of waiting on a hundred of them.
+      if (!append) {
+        stacksShown = new Set();
+      }
+      if (!spaceId) {
+        void foldStacks(assets.items, controller);
+      }
     } catch {
       if (controller.signal.aborted) {
         return;
@@ -128,6 +130,19 @@
         isLoading = false;
       }
     }
+  };
+
+  // the page's results that share a stack with an earlier one go; the one kept carries the stack (its count badge)
+  const foldStacks = async (items: AssetResponseDto[], controller: AbortController) => {
+    const kept = await groupStacks(items, stacksShown);
+    if (controller.signal.aborted || (kept.length === items.length && kept.every((asset) => !asset.stack))) {
+      return;
+    }
+    const keptById = new Map(kept.map((asset) => [asset.id, asset]));
+    const pageIds = new Set(items.map(({ id }) => id));
+    searchResults = searchResults.flatMap((asset) =>
+      pageIds.has(asset.id) ? (keptById.has(asset.id) ? [keptById.get(asset.id)!] : []) : [asset],
+    );
   };
 
   const handleLoadMore = () => {
