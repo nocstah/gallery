@@ -44,11 +44,11 @@ import {
 } from '$lib/utils/timeline-util';
 import { isMismatched, updateObject } from './internal/utils.svelte';
 import {
-  REPRESENTATIVE_TIMELINE_BUCKET_GAP,
   TimelineBucket,
   aggregateDayBucketsByMonth,
   getTimeBucketSizeForGrouping,
   layoutTimelineBuckets,
+  timelineBucketsHeight,
 } from './timeline-bucket.svelte';
 import { TimelineDay } from './timeline-day.svelte';
 import { TimelineMonth } from './timeline-month.svelte';
@@ -80,10 +80,7 @@ export class TimelineManager extends VirtualScrollManager {
         return 0;
       }
 
-      return (
-        this.timelineBuckets.reduce((height, bucket) => height + bucket.height, 0) +
-        (this.timelineBuckets.length - 1) * REPRESENTATIVE_TIMELINE_BUCKET_GAP
-      );
+      return timelineBucketsHeight(this.timelineBuckets);
     }
 
     let height = 0;
@@ -359,7 +356,7 @@ export class TimelineManager extends VirtualScrollManager {
 
     this.#coverRequested.clear();
     this.timelineBuckets = mergedTimebuckets.map((timeBucket) => new TimelineBucket(this, grouping, timeBucket));
-    layoutTimelineBuckets(this.timelineBuckets);
+    layoutTimelineBuckets(this.timelineBuckets, this.viewportWidth);
     this.months = grouping === 'day' ? this.#createTimelineMonthsFromDayBuckets(mergedTimebuckets) : [];
     this.albumAssets.clear();
     this.updateViewportGeometry(false);
@@ -489,7 +486,7 @@ export class TimelineManager extends VirtualScrollManager {
       return;
     }
     if (this.grouping !== 'day') {
-      layoutTimelineBuckets(this.timelineBuckets);
+      layoutTimelineBuckets(this.timelineBuckets, this.viewportWidth);
       this.resyncScrollMapping();
       return;
     }
@@ -813,7 +810,7 @@ export class TimelineManager extends VirtualScrollManager {
 
   override refreshLayout() {
     if (!this.#isDetailedTimeline()) {
-      layoutTimelineBuckets(this.timelineBuckets);
+      layoutTimelineBuckets(this.timelineBuckets, this.viewportWidth);
       this.updateViewportProximities();
       return;
     }

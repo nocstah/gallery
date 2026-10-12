@@ -68,14 +68,25 @@
 {#if grouping !== 'day'}
   <div data-testid="timeline-representative-buckets" data-grouping={grouping}>
     {#each visibleBuckets as bucket (bucket.viewId)}
-      <div
-        style={`position: absolute; height: ${bucket.height}px; width: 100%; transform: translateY(${bucket.top + renderOffset}px);`}
-        data-testid={`timeline-bucket-shell-${bucket.timeBucket}`}
-      >
-        <div class="mx-auto h-full max-w-5xl px-4" data-testid="timeline-bucket-frame">
+      {#if bucket.size !== null && bucket.left !== null}
+        <!-- Local Omarchy layer: a square tile in the month grid -->
+        <div
+          style={`position: absolute; left: ${bucket.left}px; width: ${bucket.size}px; height: ${bucket.size}px; transform: translateY(${bucket.top + renderOffset}px);`}
+          data-testid={`timeline-bucket-shell-${bucket.timeBucket}`}
+          class="ws-month-tile"
+        >
           <TimelineBucketCard {bucket} {locale} loading={!bucket.isLoaded} {disabled} onActivate={activate} />
         </div>
-      </div>
+      {:else}
+        <div
+          style={`position: absolute; height: ${bucket.height}px; width: 100%; transform: translateY(${bucket.top + renderOffset}px);`}
+          data-testid={`timeline-bucket-shell-${bucket.timeBucket}`}
+        >
+          <div class="mx-auto h-full max-w-5xl px-4" data-testid="timeline-bucket-frame">
+            <TimelineBucketCard {bucket} {locale} loading={!bucket.isLoaded} {disabled} onActivate={activate} />
+          </div>
+        </div>
+      {/if}
     {/each}
   </div>
 {/if}

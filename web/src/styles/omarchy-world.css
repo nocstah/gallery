@@ -1289,3 +1289,21 @@ body.ws-dragging * {
   inset: 0;
   background: radial-gradient(ellipse at center, transparent 30%, rgb(0 0 0 / 0.75) 85%);
 }
+
+/* ---- Months as square tiles (TimelineRepresentativeBuckets .ws-month-tile): the caption scales with the tile ---- */
+.ws-month-tile {
+  container-type: inline-size;
+}
+.ws-month-tile [data-testid='timeline-bucket-card'] {
+  min-height: 0;
+}
+.ws-month-tile [data-testid='timeline-bucket-card-overlay'] {
+  padding: 2rem 0.8rem 0.7rem;
+}
+.ws-month-tile [data-testid='timeline-bucket-card-title'] {
+  font-size: clamp(1.1rem, 10.5cqi, 1.9rem);
+}
+.ws-month-tile [data-testid='timeline-bucket-card-count'] {
+  margin-top: 0.35rem;
+  font-size: 11px;
+}
