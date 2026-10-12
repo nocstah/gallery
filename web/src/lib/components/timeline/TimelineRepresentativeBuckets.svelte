@@ -15,6 +15,9 @@
     representativeAssetId: string | null;
     representativeThumbhash: string | null;
     representativeRatio: number | null;
+    /** Local Omarchy layer: in the month grid, the tile's left edge and side (null for a full-width banner) */
+    left?: number | null;
+    size?: number | null;
   };
 
   interface VisibleWindow {
@@ -68,7 +71,7 @@
 {#if grouping !== 'day'}
   <div data-testid="timeline-representative-buckets" data-grouping={grouping}>
     {#each visibleBuckets as bucket (bucket.viewId)}
-      {#if bucket.size !== null && bucket.left !== null}
+      {#if bucket.size != null && bucket.left != null}
         <!-- Local Omarchy layer: a square tile in the month grid -->
         <div
           style={`position: absolute; left: ${bucket.left}px; width: ${bucket.size}px; height: ${bucket.size}px; transform: translateY(${bucket.top + renderOffset}px);`}

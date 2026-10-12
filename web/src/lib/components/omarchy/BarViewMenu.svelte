@@ -113,9 +113,9 @@
         <button
           type="button"
           class="ws-view-row"
-          onclick={() => {
+          onclick={(event) => {
             open = false;
-            Cast.onAction?.(Cast);
+            Cast.onAction?.({ action: Cast, event });
           }}
         >
           <span>{$t('cast')}</span>

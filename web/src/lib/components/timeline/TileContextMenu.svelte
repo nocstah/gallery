@@ -103,7 +103,7 @@
   const day = (asset: TimelineAsset, withYear = true) =>
     fromTimelinePlainDateTime(asset.localDateTime).toLocaleString(
       { weekday: withYear ? 'short' : undefined, month: 'short', day: 'numeric', year: withYear ? 'numeric' : undefined },
-      { locale: $locale },
+      { locale: $locale ?? undefined },
     );
   const headline = $derived.by(() => {
     if (picked.length === 0) {
