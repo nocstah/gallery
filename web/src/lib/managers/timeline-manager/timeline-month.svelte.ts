@@ -205,13 +205,16 @@ export class TimelineMonth {
         ownerId: bucketAssets.ownerId[i],
         projectionType: bucketAssets.projectionType[i],
         ratio: bucketAssets.ratio[i],
-        stack: bucketAssets.stack?.at(i)
-          ? {
-              id: bucketAssets.stack[i]![0],
-              primaryAssetId: bucketAssets.id[i],
-              assetCount: Number.parseInt(bucketAssets.stack[i]![1]),
-            }
-          : null,
+        // Local Omarchy layer: a stack with one photo left out of the trash is no stack (the server counts only
+        // photos out of the trash, but keeps the stack for a restore)
+        stack:
+          bucketAssets.stack?.at(i) && Number.parseInt(bucketAssets.stack[i]![1]) > 1
+            ? {
+                id: bucketAssets.stack[i]![0],
+                primaryAssetId: bucketAssets.id[i],
+                assetCount: Number.parseInt(bucketAssets.stack[i]![1]),
+              }
+            : null,
         thumbhash: bucketAssets.thumbhash[i],
         people: null, // People are not included in the bucket assets
       };
