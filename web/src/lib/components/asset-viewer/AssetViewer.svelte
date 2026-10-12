@@ -28,7 +28,7 @@
   import { ocrManager } from '$lib/stores/ocr.svelte';
   import { alwaysLoadOriginalVideo } from '$lib/stores/preferences.store';
   import { SlideshowNavigation, SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
-  import { getSharedLink, handlePromiseError } from '$lib/utils';
+  import { getAssetMediaUrl, getSharedLink, handlePromiseError } from '$lib/utils';
   import type { OnUndoDelete } from '$lib/utils/actions';
   import { navigateToAsset } from '$lib/utils/asset-utils';
   import { handleError } from '$lib/utils/handle-error';
@@ -41,6 +41,7 @@
   import { SlideshowHistory } from '$lib/utils/slideshow-history';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import {
+    AssetMediaSize,
     AssetTypeEnum,
     getAssetInfo,
     getStack,
@@ -54,7 +55,7 @@
   import { onDestroy, onMount, untrack } from 'svelte';
   import type { SwipeCustomEvent } from 'svelte-gestures';
   import { t } from 'svelte-i18n';
-  import { fly } from 'svelte/transition';
+  import { fade, fly } from 'svelte/transition';
   import Thumbnail from '../assets/thumbnail/Thumbnail.svelte';
   import ActivityStatus from './ActivityStatus.svelte';
   import ActivityViewer from './ActivityViewer.svelte';
@@ -561,6 +562,20 @@
   use:focusTrap
   bind:this={assetViewerHtmlElement}
 >
+  <!-- Local Omarchy layer: the photo lights the room. Its thumbnail, blurred far past recognition and dimmed, fills the
+       space around it, and crossfades as you move on (omarchy-world.css .ws-ambient). -->
+  {#key asset.id}
+    <div
+      class="ws-ambient"
+      aria-hidden="true"
+      style:background-image="url({getAssetMediaUrl({
+        id: asset.id,
+        size: AssetMediaSize.Thumbnail,
+        cacheKey: asset.thumbhash,
+      })})"
+      transition:fade={{ duration: 450 }}
+    ></div>
+  {/key}
   <!-- Top navigation bar -->
   {#if $slideshowState === SlideshowState.None && !assetViewerManager.isShowEditor && !inCuratorTool}
     <div class="col-span-4 col-start-1 row-span-1 row-start-1 transition-transform">

@@ -368,9 +368,8 @@ div.absolute.font-mono {
 }
 .ws-viewer-bar > div:first-child,
 .ws-viewer-bar [data-testid='asset-viewer-navbar-actions'] {
-  background: var(--ws-glass);
-  -webkit-backdrop-filter: var(--ws-glass-blur);
-  backdrop-filter: var(--ws-glass-blur);
+  position: relative;
+  z-index: 0;
   border: 1px solid var(--ws-glass-edge);
   border-radius: 999px;
   padding: 3px;
@@ -378,6 +377,20 @@ div.absolute.font-mono {
 }
 .ws-viewer-bar [data-testid='asset-viewer-navbar-actions'] {
   gap: 2px;
+}
+/* the glass behind the pills is a layer of its own: on the pill, a backdrop-filter would trap the More menu (a fixed
+   popup) inside the pill's box and open it off screen */
+.ws-viewer-bar > div:first-child::before,
+.ws-viewer-bar [data-testid='asset-viewer-navbar-actions']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: var(--ws-glass);
+  -webkit-backdrop-filter: var(--ws-glass-blur);
+  backdrop-filter: var(--ws-glass-blur);
 }
 .ws-viewer-bar button {
   color: rgb(255 255 255 / 0.86);
@@ -1066,10 +1079,28 @@ body.ws-dragging * {
     position: relative;
     z-index: 40;
   }
-  #dashboard-navbar {
+  /* the material sits on a layer behind each bar, not on the bar: a backdrop-filter on the bar itself would make it
+     the box its fixed menus are placed in, and they would open in the wrong place */
+  #dashboard-navbar,
+  main > div.absolute.h-16,
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute) {
+    background: transparent;
+  }
+  #dashboard-navbar::before,
+  main > div.absolute.h-16::before,
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
     background: var(--ws-glass-ground);
     -webkit-backdrop-filter: var(--ws-glass-chrome-blur);
     backdrop-filter: var(--ws-glass-chrome-blur);
+  }
+  #dashboard-navbar {
+    position: relative;
+    z-index: 0;
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   [data-testid='user-page-grid'] {
@@ -1087,9 +1118,6 @@ body.ws-dragging * {
   main > div.absolute.h-16 {
     top: var(--navbar-height);
     z-index: 30;
-    background: var(--ws-glass-ground);
-    -webkit-backdrop-filter: var(--ws-glass-chrome-blur);
-    backdrop-filter: var(--ws-glass-chrome-blur);
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   main > div.absolute.top-16 {
@@ -1112,9 +1140,6 @@ body.ws-dragging * {
     position: relative;
     z-index: 20;
     grid-column: 1;
-    background: var(--ws-glass-ground);
-    -webkit-backdrop-filter: var(--ws-glass-chrome-blur);
-    backdrop-filter: var(--ws-glass-chrome-blur);
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   div:has(> #asset-grid) > :not(#asset-grid, .absolute):first-child {
@@ -1151,4 +1176,23 @@ body.ws-dragging * {
   :root[data-chrome^='glass'] body:has(#dashboard-navbar) :is(#dashboard-navbar, main > div.absolute.h-16, div:has(> #asset-grid) > *) {
     transition: none;
   }
+}
+
+/* ---- the viewer lit by its photo (AssetViewer.svelte): the photo's own colours glow in the dark around it ---- */
+#immich-asset-viewer > .ws-ambient {
+  position: absolute;
+  inset: -12%;
+  z-index: -1;
+  pointer-events: none;
+  background-position: center;
+  background-size: cover;
+  filter: blur(90px) saturate(1.6) brightness(0.55);
+  transform: translateZ(0);
+}
+/* the edges fall back to black, so the glow sits around the photo rather than flooding the screen */
+#immich-asset-viewer > .ws-ambient::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgb(0 0 0 / 0.75) 85%);
 }
