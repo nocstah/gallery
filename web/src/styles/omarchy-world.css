@@ -26,6 +26,11 @@
   --ws-hairline: color-mix(in oklab, var(--immich-ui-dark) 13%, transparent);
   --ws-accent: var(--omarchy-accent, var(--immich-ui-primary-500));
   --ws-font-data: var(--omarchy-font-mono, 'JetBrainsMono Nerd Font'), 'GoogleSansCode', ui-monospace, monospace;
+  /* smoked glass over a photo: bars and pills (thin), cards that hold text (strong) */
+  --ws-glass: rgb(10 10 12 / 0.42);
+  --ws-glass-strong: rgb(10 10 12 / 0.64);
+  --ws-glass-edge: rgb(255 255 255 / 0.08);
+  --ws-glass-blur: blur(18px) saturate(1.3);
 
   --font-sans: 'Mona Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Bricolage Grotesque Variable', 'Mona Sans', ui-sans-serif, sans-serif;
@@ -363,10 +368,10 @@ div.absolute.font-mono {
 }
 .ws-viewer-bar > div:first-child,
 .ws-viewer-bar [data-testid='asset-viewer-navbar-actions'] {
-  background: rgb(10 10 12 / 0.42);
-  backdrop-filter: blur(18px) saturate(1.3);
-  -webkit-backdrop-filter: blur(18px) saturate(1.3);
-  border: 1px solid rgb(255 255 255 / 0.08);
+  background: var(--ws-glass);
+  backdrop-filter: var(--ws-glass-blur);
+  -webkit-backdrop-filter: var(--ws-glass-blur);
+  border: 1px solid var(--ws-glass-edge);
   border-radius: 999px;
   padding: 3px;
   margin: 0;
@@ -391,7 +396,7 @@ div.absolute.font-mono {
 }
 .ws-viewer-nav:hover {
   color: #fff;
-  background: rgb(10 10 12 / 0.42);
+  background: var(--ws-glass);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }

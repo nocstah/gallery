@@ -174,11 +174,11 @@
     max-height: calc(100% - 13rem);
     overflow-y: auto;
     padding: 0.75rem 0.85rem;
-    border: 1px solid rgb(255 255 255 / 0.08);
+    border: 1px solid var(--ws-glass-edge);
     border-radius: 16px;
-    background: rgb(10 10 12 / 0.66);
-    backdrop-filter: blur(18px) saturate(1.3);
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    background: var(--ws-glass-strong);
+    backdrop-filter: var(--ws-glass-blur);
+    -webkit-backdrop-filter: var(--ws-glass-blur);
     color: rgb(255 255 255 / 0.92);
     font-size: 0.85rem;
   }

@@ -335,11 +335,11 @@
     align-items: center;
     gap: 2px;
     padding: 3px;
-    border: 1px solid rgb(255 255 255 / 0.08);
+    border: 1px solid var(--ws-glass-edge);
     border-radius: 999px;
-    background: rgb(10 10 12 / 0.42);
-    backdrop-filter: blur(18px) saturate(1.3);
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    background: var(--ws-glass);
+    backdrop-filter: var(--ws-glass-blur);
+    -webkit-backdrop-filter: var(--ws-glass-blur);
   }
   .live-title {
     gap: 0.45rem;
@@ -402,11 +402,11 @@
     gap: 0.6rem;
     align-items: center;
     padding: 0.6rem 1rem;
-    border: 1px solid rgb(255 255 255 / 0.08);
+    border: 1px solid var(--ws-glass-edge);
     border-radius: 14px;
-    background: rgb(10 10 12 / 0.62);
-    backdrop-filter: blur(18px) saturate(1.3);
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    background: var(--ws-glass-strong);
+    backdrop-filter: var(--ws-glass-blur);
+    -webkit-backdrop-filter: var(--ws-glass-blur);
     font-size: 0.9rem;
     font-weight: 600;
   }
