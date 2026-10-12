@@ -82,6 +82,18 @@
       }
     </style>
     <link rel="stylesheet" href="/custom.css" />
+    <!-- Local Omarchy layer: a theme chosen in Settings goes on before the first paint (lib/theme/theme-manager) -->
+    <script>
+      try {
+        const css = localStorage.getItem('gallery.theme.css');
+        if (css) {
+          const style = document.createElement('style');
+          style.id = 'ws-user-theme';
+          style.textContent = css;
+          document.head.append(style);
+        }
+      } catch {}
+    </script>
   </head>
 
   <noscript style="position: absolute; top: 0px; z-index: 1000; color: black; background-color: white">

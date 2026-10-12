@@ -92,8 +92,11 @@
     if (!pick) {
       return '';
     }
-    if (pick.agree) {
+    if (pick.decided_by === 'both') {
       return $t('stack_pick_agree');
+    }
+    if (pick.decided_by === 'vision') {
+      return $t('stack_pick_vision');
     }
     return pick.vlm_best ? $t('stack_pick_disagree') : $t('stack_pick_measured');
   });

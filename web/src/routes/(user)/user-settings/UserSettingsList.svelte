@@ -25,12 +25,14 @@
     mdiFormTextboxPassword,
     mdiKeyOutline,
     mdiLockSmart,
+    mdiPaletteOutline,
     mdiServerOutline,
     mdiTwoFactorAuthentication,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import SettingAccordion from '$lib/components/shared-components/settings/SettingAccordion.svelte';
   import AppSettings from './AppSettings.svelte';
+  import ThemePicker from './ThemePicker.svelte';
   import ChangePasswordSettings from './ChangePasswordSettings.svelte';
   import DeviceList from './DeviceList.svelte';
   import OauthSettings from './OauthSettings.svelte';
@@ -48,6 +50,11 @@
   let oauthOpen =
     oauth.isCallback(location) || $page.url.searchParams.get(QueryParameter.OPEN_SETTING) === OpenQueryParam.OAUTH;
 </script>
+
+<!-- Local Omarchy layer: Gallery's theme, following Omarchy or one of the installed themes -->
+<SettingAccordion icon={mdiPaletteOutline} key="theme" title={$t('theme')} subtitle={$t('theme_settings_description')}>
+  <ThemePicker />
+</SettingAccordion>
 
 <SettingAccordion
   icon={mdiCogOutline}

@@ -20,6 +20,7 @@
   import { copyToClipboard } from '$lib/utils';
   import { maintenanceShouldRedirect } from '$lib/utils/maintenance';
   import { searchShortcuts } from '$lib/utils/search-shortcut';
+  import { FOLLOW_OMARCHY, galleryThemes } from '$lib/theme/theme-manager.svelte';
   import { getServerConfig } from '@immich/sdk';
   import {
     modalManager,
@@ -168,6 +169,13 @@
   let showNavigationLoadingBar = $state(false);
 
   toastManager.setOptions({ class: 'top-16 fixed' });
+
+  // Local Omarchy layer: a chosen theme's CSS is made again on every load, so a newer theme engine reaches it
+  onMount(() => {
+    if (galleryThemes.current !== FOLLOW_OMARCHY) {
+      void galleryThemes.load().then(() => galleryThemes.choose(galleryThemes.current));
+    }
+  });
 
   onMount(() => {
     const element = document.querySelector('#stencil');

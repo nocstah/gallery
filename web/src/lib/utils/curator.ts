@@ -207,6 +207,7 @@ export type StackPick = {
   judge_best: string;
   vlm_best: string | null;
   agree: boolean;
+  decided_by: 'both' | 'vision' | 'measurements';
   why: string;
   measured: string[];
   note: string;
