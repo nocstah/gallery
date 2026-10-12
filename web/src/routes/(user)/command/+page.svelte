@@ -81,6 +81,8 @@
   );
   const attention = $derived((health?.items ?? []).filter((item) => item.attention));
   const calm = $derived((health?.items ?? []).filter((item) => !item.attention));
+  // disk and backups are in the machine panel; the inbox count is the first number above
+  const shown = (item: { key: string }) => !['disk', 'backup', 'inbox'].includes(item.key);
   const gpuShare = $derived(overview?.gpu ? overview.gpu.used_mib / overview.gpu.total_mib : 0);
   const nextNight = $derived(overview ? DateTime.fromISO(overview.schedule.next_night) : undefined);
   const item = (key: string): HealthItem | undefined => health?.items.find((i) => i.key === key);
@@ -204,18 +206,39 @@
       <!-- the library -->
       <section class="command-panel wide">
         <h2>{$t('command_library')}</h2>
-        <ul class="command-health">
-          <!-- disk and backups are in the machine panel; the inbox count is the first number above -->
-          {#each [...attention, ...calm].filter((i) => !['disk', 'backup', 'inbox'].includes(i.key)) as entry (entry.key)}
-            <li class:attention={entry.attention}>
-              <svelte:element this={entry.link ? 'a' : 'div'} href={entry.link ?? undefined} class="health-tile">
-                <span class="health-value">{entry.value === null ? '–' : number(entry.value)}</span>
-                <span class="health-title">{entry.title}</span>
-                <span class="health-detail">{entry.detail}</span>
-              </svelte:element>
-            </li>
-          {/each}
-        </ul>
+        <!-- what needs a look gets a row with room for its sentence; what is fine is one quiet line of counts -->
+        {#if attention.some(shown)}
+          <ul class="command-health">
+            {#each attention.filter(shown) as entry (entry.key)}
+              <li>
+                <svelte:element this={entry.link ? 'a' : 'div'} href={entry.link ?? undefined} class="health-row">
+                  <span class="health-value">{entry.value === null ? '–' : number(entry.value)}</span>
+                  <span class="health-text">
+                    <span class="health-title">{entry.title}</span>
+                    <span class="health-detail">{entry.detail}</span>
+                  </span>
+                </svelte:element>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+        {#if calm.some(shown)}
+          <ul class="command-calm">
+            {#each calm.filter(shown) as entry (entry.key)}
+              <li>
+                <svelte:element
+                  this={entry.link ? 'a' : 'span'}
+                  href={entry.link ?? undefined}
+                  title={entry.detail}
+                  class="calm-item"
+                >
+                  <span class="calm-value">{entry.value === null ? '–' : number(entry.value)}</span>
+                  {entry.title}
+                </svelte:element>
+              </li>
+            {/each}
+          </ul>
+        {/if}
       </section>
 
       <!-- the machine -->
@@ -435,38 +458,68 @@
   }
   .command-health {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-    gap: var(--ws-gap);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+    column-gap: calc(var(--ws-gap) * 2.4);
   }
-  .health-tile {
+  .command-health li {
+    border-bottom: 1px solid var(--ws-hairline);
+  }
+  .health-row {
     display: grid;
-    gap: 0.25rem;
+    grid-template-columns: 5.5rem 1fr;
+    gap: 1rem;
+    align-items: baseline;
     height: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--ws-hairline);
-    border-radius: var(--ws-radius);
+    padding: 0.8rem 0.25rem;
   }
-  a.health-tile:hover {
-    border-color: var(--ws-accent);
-  }
-  .attention .health-tile {
-    border-inline-start: var(--ws-border) solid var(--ws-accent);
+  a.health-row:hover .health-title {
+    text-decoration: underline;
+    text-decoration-color: var(--ws-accent);
+    text-underline-offset: 0.25em;
   }
   .health-value {
     font-family: var(--font-display);
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 800;
     font-variation-settings: 'wdth' 75;
     line-height: 1;
+    text-align: end;
+  }
+  .health-text {
+    display: grid;
+    gap: 0.2rem;
   }
   .health-title {
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
   }
   .health-detail {
-    font-size: 0.75rem;
-    line-height: 1.35;
+    max-width: 60ch;
+    font-size: 0.8rem;
+    line-height: 1.45;
     color: var(--immich-ui-muted);
+  }
+  .command-calm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.25rem;
+    padding-top: 0.8rem;
+    font-size: 0.82rem;
+    color: var(--immich-ui-muted);
+  }
+  .calm-item {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: baseline;
+  }
+  a.calm-item:hover {
+    color: var(--immich-ui-dark);
+  }
+  .calm-value {
+    font-family: var(--ws-font-data);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--immich-ui-dark);
   }
   .command-facts {
     display: grid;
