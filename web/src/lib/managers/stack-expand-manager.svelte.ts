@@ -2,7 +2,7 @@
 // photos into the timeline beside its cover (they sort in by capture time); clicking again takes them
 // back out. Nothing is changed on the server: the stack stays a stack. Any expanded photo can be made
 // the cover (right-click > Make stack cover), which folds the stack back up around it.
-import { getStack, updateStack } from '@immich/sdk';
+import { AssetOrder, getStack, updateStack } from '@immich/sdk';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { updateGeometry } from '$lib/managers/timeline-manager/internal/layout-support.svelte';
@@ -17,6 +17,12 @@ class StackExpandManager {
   /** inserted photo id -> its stack id, for the tile styling and the context menu */
   #members = new SvelteMap<string, string>();
   #pending = new SvelteSet<string>();
+  /** stack id -> every photo of the expanded stack, cover included, in timeline order: the tiles' "2 / 5" */
+  #order = new SvelteMap<string, string[]>();
+  /** cover id -> its stack id, while expanded */
+  #covers = new SvelteMap<string, string>();
+  /** the expanded stack under the pointer: the rest of the timeline dims so the stack's photos stand out */
+  spotlight = $state<string | undefined>();
   timelineManager: TimelineManager | undefined;
 
   constructor() {
@@ -49,6 +55,18 @@ class StackExpandManager {
     return this.#members.get(assetId);
   }
 
+  /** The expanded stack a tile belongs to, its cover included. */
+  groupOf(assetId: string) {
+    return this.#members.get(assetId) ?? this.#covers.get(assetId);
+  }
+
+  /** A tile's place in its expanded stack as laid out, counted from 1. */
+  position(assetId: string) {
+    const stackId = this.groupOf(assetId);
+    const order = stackId ? this.#order.get(stackId) : undefined;
+    return order ? { index: order.indexOf(assetId) + 1, total: order.length } : undefined;
+  }
+
   isPending(stackId: string) {
     return this.#pending.has(stackId);
   }
@@ -58,6 +76,15 @@ class StackExpandManager {
       this.#members.delete(id);
     }
     this.#expanded.delete(stackId);
+    this.#order.delete(stackId);
+    for (const [coverId, id] of this.#covers) {
+      if (id === stackId) {
+        this.#covers.delete(coverId);
+      }
+    }
+    if (this.spotlight === stackId) {
+      this.spotlight = undefined;
+    }
   }
 
   async toggle(stackId: string, coverId: string) {
@@ -85,6 +112,13 @@ class StackExpandManager {
         stackId,
         members.map((member) => member.id),
       );
+      this.#covers.set(coverId, stackId);
+      // numbered in the order the timeline lays them out (newest first, unless the timeline runs oldest first)
+      const ascending = manager.getAssetOrder() === AssetOrder.Asc;
+      const byTime = [...stack.assets]
+        .sort((a, b) => a.fileCreatedAt.localeCompare(b.fileCreatedAt) * (ascending ? 1 : -1))
+        .map((asset) => asset.id);
+      this.#order.set(stackId, byTime);
     } catch (error) {
       handleError(error, 'Could not expand the stack');
     } finally {
@@ -119,6 +153,9 @@ class StackExpandManager {
     this.timelineManager = manager;
     this.#expanded.clear();
     this.#members.clear();
+    this.#order.clear();
+    this.#covers.clear();
+    this.spotlight = undefined;
   }
 }
 

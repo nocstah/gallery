@@ -139,16 +139,26 @@
     callClickHandlers();
   };
 
+  // Local Omarchy layer: the expanded stack this tile belongs to (cover included), its place in it, and whether
+  // another expanded stack is under the pointer (stack-expand-manager)
+  const stackGroup = $derived(stackExpandManager.groupOf(asset.id));
+  const stackPlace = $derived(stackGroup ? stackExpandManager.position(asset.id) : undefined);
+  const stackDimmed = $derived(!!stackExpandManager.spotlight && stackExpandManager.spotlight !== stackGroup);
+
   const onMouseEnter = () => {
     if (usingMobileDevice) {
       return;
     }
     mouseOver = true;
+    stackExpandManager.spotlight = stackGroup;
     onMouseEvent?.({ isMouseOver: true, selectedGroupIndex: groupIndex });
   };
 
   const onMouseLeave = () => {
     mouseOver = false;
+    if (stackGroup && stackExpandManager.spotlight === stackGroup) {
+      stackExpandManager.spotlight = undefined;
+    }
     onMouseEvent?.({ isMouseOver: false, selectedGroupIndex: groupIndex });
   };
 
@@ -262,7 +272,8 @@
   bind:this={element}
   data-asset={asset.id}
   data-thumbnail-focus-container
-  data-stack-member={stackExpandManager.isMember(asset.id) ? true : undefined}
+  data-stack-member={stackGroup ? true : undefined}
+  data-stack-dimmed={stackDimmed ? true : undefined}
   data-selected={selected ? true : undefined}
   data-readonly={readonly ? true : undefined}
   data-disabled={disabled ? true : undefined}
@@ -446,6 +457,11 @@
           <p>{asset.stack.assetCount.toLocaleString($locale)}</p>
           <Icon icon={expanded ? mdiArrowCollapseHorizontal : mdiCameraBurst} size="24" />
         </button>
+      {/if}
+      {#if stackPlace}
+        <span class="ws-stack-place pointer-events-none absolute bottom-0 inset-s-0 z-3" aria-hidden="true">
+          {stackPlace.index.toLocaleString($locale)} / {stackPlace.total.toLocaleString($locale)}
+        </span>
       {/if}
     </div>
 
