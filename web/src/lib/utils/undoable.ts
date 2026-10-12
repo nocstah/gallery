@@ -1,32 +1,42 @@
 // Local Omarchy layer: the undo side of everyday actions (managers/undo-manager). Each is called right after its action
 // succeeded, records how to take it back, and shows the action's toast with an Undo; the undo puts the old state back
 // on the server and lets every live view catch up (utils/asset-refresh, or the stack and album events). Trash and
-// archive record theirs where they happen (utils/actions, utils/asset-utils).
+// archive record theirs where they happen (utils/actions, utils/asset-utils), and people theirs in services/person.
 import {
   addAssetsToAlbum,
+  bulkTagAssets,
   createStack,
   deleteStacks,
+  editAsset,
+  getAssetEdits,
   getAssetInfo,
   getStack,
+  removeAssetEdits,
   removeAssetFromAlbum,
   restoreAssets,
+  untagAssets,
   updateAsset,
   updateAssetFavorites,
   updateAssets,
   updateStack,
+  type AssetEditActionItemDto,
   type StackResponseDto,
 } from '@immich/sdk';
-import { DateTime } from 'luxon';
 import { toastManager } from '@immich/ui';
+import { DateTime } from 'luxon';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { undoManager } from '$lib/managers/undo-manager.svelte';
+import { waitForWebsocketEvent } from '$lib/stores/websocket';
 import { refreshAssets } from '$lib/utils/asset-refresh';
 
-/** The toast of a done action, with an Undo that takes back its history entry (`info` for a partly done one). */
-export const toastUndoable = (description: string, entry: number, tone: 'primary' | 'info' = 'primary') => {
+type Tone = 'primary' | 'info' | 'success' | 'warning';
+
+/** The toast of a done action, with an Undo that takes back its history entry (in the tone its own toast had: `info`
+ * or `warning` for a partly done one). */
+export const toastUndoable = (description: string, entry: number, tone: Tone = 'primary') => {
   const $t = get(t);
   toastManager[tone]({
     description,
@@ -106,7 +116,8 @@ export const stacksBefore = async (assetIds: string[]): Promise<StackShape[] | u
   try {
     const assets = await Promise.all(assetIds.map((id) => getAssetInfo({ ...authManager.params, id })));
     const stackIds = new Set(assets.flatMap(({ stack }) => (stack ? [stack.id] : [])));
-    return (await Promise.all([...stackIds].map((id) => getStack({ id })))).map((stack) => shapeOf(stack));
+    const stacks = await Promise.all([...stackIds].map((id) => getStack({ id })));
+    return stacks.map((stack) => shapeOf(stack));
   } catch {
     return undefined;
   }
@@ -215,7 +226,7 @@ export const removedFromAlbumDone = (
   albumId: string,
   removedIds: string[],
   description: string,
-  tone: 'primary' | 'info' = 'primary',
+  tone: Tone = 'primary',
 ) => {
   if (removedIds.length === 0) {
     return;
@@ -236,14 +247,20 @@ export const removedFromAlbumDone = (
 
 // ---- dates and places: read just before the change, put back by the undo ----
 
-/** A photo's date and place as Gallery holds them (null where it has none). */
-type Before = { date: string | null; timeZone: string | null; latitude: number | null; longitude: number | null };
+/** A photo's date, place and tags as Gallery holds them (null where it has none). */
+type Before = {
+  date: string | null;
+  timeZone: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  tags: string[];
+};
 
 /** The most photos read before a change so it can be undone (a bigger change records no undo). */
 const SNAPSHOT_AT_MOST = 200;
 const AT_ONCE = 8;
 
-/** Each photo's date and place before a change; undefined when there are too many to read. */
+/** Each photo's date, place and tags before a change; undefined when there are too many to read. */
 export const beforeChange = async (ids: string[]): Promise<Map<string, Before> | undefined> => {
   if (ids.length === 0 || ids.length > SNAPSHOT_AT_MOST) {
     return undefined;
@@ -261,6 +278,7 @@ export const beforeChange = async (ids: string[]): Promise<Map<string, Before> |
           timeZone: exif?.timeZone ?? null,
           latitude: exif?.latitude ?? null,
           longitude: exif?.longitude ?? null,
+          tags: (asset.tags ?? []).map(({ id }) => id),
         });
       }
     }
@@ -284,9 +302,9 @@ const groupBy = <T>(entries: [string, T][], key: (value: T) => string) => {
   return [...groups.values()];
 };
 
-/** What an undo of dates or places says: done, and how many had nothing to go back to (Gallery cannot take a date
- * or a place away from a photo, only change it). */
-const undone = (label: string, kept: number) => {
+/** What an undo says: done, and (for dates and places) how many had nothing to go back to (Gallery cannot take a
+ * date or a place away from a photo, only change it). */
+export const undone = (label: string, kept = 0) => {
   const $t = get(t);
   const done = $t('undone', { values: { action: label } });
   return kept > 0 ? `${done}. ${$t('undo_kept_new', { values: { count: kept } })}` : done;
@@ -317,7 +335,7 @@ export const datesDone = (ids: string[], before: Map<string, Before> | undefined
             ids: group,
             dateTimeOriginal,
             // a named zone keeps its name (an offset alone would come back as UTC+7)
-            ...(value.timeZone?.includes('/') ? { timeZone: value.timeZone } : {}),
+            ...(value.timeZone?.includes('/') && { timeZone: value.timeZone }),
           },
         });
       }
@@ -352,4 +370,128 @@ export const placesDone = (ids: string[], before: Map<string, Before> | undefine
     $t('errors.unable_to_update_location'),
   );
   toastUndoable(label, entry);
+};
+
+// ---- descriptions, tags and edits ----
+
+/** A description change: undone by putting the old words back. */
+export const descriptionDone = (asset: { id: string; originalFileName: string }, before: string) => {
+  const $t = get(t);
+  const label = `${$t('description')} · ${asset.originalFileName}`;
+  const entry = undoManager.record(
+    label,
+    async () => {
+      await updateAsset({ id: asset.id, updateAssetDto: { description: before } });
+      await refreshAssets([asset.id]);
+      return undone(label);
+    },
+    $t('cannot_update_the_description'),
+  );
+  toastUndoable($t('asset_description_updated'), entry);
+};
+
+/** Tagging: undone by taking each tag off just the photos that did not have it before (read by beforeChange), so a
+ * tag a photo already had stays on it. Too many photos to read beforehand: the plain toast, no undo. */
+export const taggedDone = (
+  assetIds: string[],
+  tagIds: string[],
+  before: Map<string, Before> | undefined,
+  description: string,
+) => {
+  const $t = get(t);
+  const added = before
+    ? tagIds
+        .map((tagId) => ({ tagId, ids: assetIds.filter((id) => before.get(id)?.tags.includes(tagId) === false) }))
+        .filter(({ ids }) => ids.length > 0)
+    : [];
+  if (added.length === 0) {
+    toastManager.primary(description);
+    return;
+  }
+  const entry = undoManager.record(
+    description,
+    async () => {
+      for (const { tagId, ids } of added) {
+        await untagAssets({ id: tagId, bulkIdsDto: { ids } });
+      }
+      const ids = [...new Set(added.flatMap(({ ids }) => ids))];
+      eventManager.emit('AssetsTag', ids);
+      await refreshAssets(ids);
+      return $t('removed_tagged_assets', { values: { count: ids.length } });
+    },
+    $t('errors.something_went_wrong'),
+  );
+  toastUndoable(description, entry);
+};
+
+/** A tag taken off a photo: undone by tagging it again. */
+export const untaggedDone = (assetId: string, tag: { id: string; value: string }) => {
+  const $t = get(t);
+  const label = `${$t('removed_tagged_assets', { values: { count: 1 } })} · ${tag.value}`;
+  const entry = undoManager.record(
+    label,
+    async () => {
+      await bulkTagAssets({ tagBulkAssetsDto: { assetIds: [assetId], tagIds: [tag.id] } });
+      eventManager.emit('AssetsTag', [assetId]);
+      await refreshAssets([assetId]);
+      return $t('tagged_assets', { values: { count: 1 } });
+    },
+    $t('errors.failed_to_tag_assets'),
+  );
+  toastUndoable(label, entry);
+};
+
+type Edits = AssetEditActionItemDto[];
+
+/** A photo's edits as the server holds them (crop, rotation, mirror, trim), in the shape it takes them back in. */
+export const editsOf = async (id: string): Promise<Edits> => {
+  const { edits } = await getAssetEdits({ id });
+  return edits.map(({ action, parameters }) => ({ action, parameters }));
+};
+
+/** Rotations and the editor's edits: undone by giving each photo its edits from before, then waiting until the server
+ * has drawn them again (a video takes longer). `toast` is the action's own toast, which gains the Undo; without one
+ * the undo is recorded quietly, as a quick rotate has no toast of its own. */
+export const editsDone = (
+  label: string,
+  before: { id: string; edits: Edits }[],
+  { video = false, toast, tone = 'primary' }: { video?: boolean; toast?: string; tone?: Tone } = {},
+) => {
+  if (before.length === 0) {
+    // nothing was changed (every one failed): the toast alone
+    if (toast) {
+      toastManager[tone](toast);
+    }
+    return;
+  }
+  const $t = get(t);
+  const entry = undoManager.record(
+    label,
+    async () => {
+      const drawn: Promise<unknown>[] = [];
+      for (const { id, edits } of before) {
+        const ready = waitForWebsocketEvent(
+          'AssetEditReadyV2',
+          (event) => event.asset.id === id,
+          video ? 30_000 : 10_000,
+        );
+        // a request that fails leaves nobody waiting for the redraw
+        ready.catch(() => {});
+        await (edits.length === 0 ? removeAssetEdits({ id }) : editAsset({ id, assetEditsCreateDto: { edits } }));
+        drawn.push(ready);
+      }
+      // a photo the server is slow to draw again has its edits back all the same; it shows once drawn
+      await Promise.allSettled(drawn);
+      const ids = before.map(({ id }) => id);
+      await refreshAssets(ids);
+      for (const id of ids) {
+        eventManager.emit('AssetEditsApplied', id);
+      }
+      return undone(label);
+    },
+    $t('editor_edits_applied_error'),
+  );
+  if (toast) {
+    toastUndoable(toast, entry, tone);
+  }
 };

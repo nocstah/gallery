@@ -6,8 +6,8 @@
   import { waitForWebsocketEvent } from '$lib/stores/websocket';
   import { getEditableAssetsWithWarning } from '$lib/utils/asset-utils';
   import { handleError } from '$lib/utils/handle-error';
-  import { editAsset, getAssetEdits, getAssetInfo, removeAssetEdits } from '@immich/sdk';
-  import { toastManager } from '@immich/ui';
+  import { editsDone } from '$lib/utils/undoable';
+  import { editAsset, getAssetEdits, getAssetInfo, removeAssetEdits, type AssetEditActionItemDto } from '@immich/sdk';
   import { mdiRotateLeft, mdiRotateRight } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
@@ -38,14 +38,14 @@
       let success = 0;
       let failed = 0;
       const pendingRefreshes: Promise<void>[] = [];
+      // Local Omarchy layer: each rotated photo's edits from before, for the toast's Undo (utils/undoable)
+      const before: { id: string; edits: AssetEditActionItemDto[] }[] = [];
 
       for (const asset of assets) {
         try {
           const existing = await getAssetEdits({ id: asset.id });
-          const edits = mergeRotation(
-            existing.edits.map(({ action, parameters }) => ({ action, parameters })),
-            angle,
-          );
+          const prior = existing.edits.map(({ action, parameters }) => ({ action, parameters }));
+          const edits = mergeRotation(prior, angle);
 
           const editCompleted = waitForWebsocketEvent(
             'AssetEditReadyV2',
@@ -56,6 +56,7 @@
           await (edits.length === 0
             ? removeAssetEdits({ id: asset.id })
             : editAsset({ id: asset.id, assetEditsCreateDto: { edits } }));
+          before.push({ id: asset.id, edits: prior });
 
           pendingRefreshes.push(
             editCompleted
@@ -69,11 +70,11 @@
         }
       }
 
-      if (failed > 0) {
-        toastManager.warning($t('rotated_count', { values: { count: success } }) + ` (${failed} ${$t('failed')})`);
-      } else {
-        toastManager.success($t('rotated_count', { values: { count: success } }));
-      }
+      const rotated = $t('rotated_count', { values: { count: success } });
+      editsDone(rotated, before, {
+        toast: failed > 0 ? `${rotated} (${failed} ${$t('failed')})` : rotated,
+        tone: failed > 0 ? 'warning' : 'success',
+      });
 
       assetMultiSelectManager.clear();
 

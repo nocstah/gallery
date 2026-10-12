@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import PeopleVisibilityModal from '$lib/components/people/people-visibility-modal.svelte';
   import type { VisibilityChange, VisibilityPerson, VisibilitySaveResult } from '$lib/components/people/people-types';
+  import { visibilitiesDone } from '$lib/services/person.service';
   import { getPeopleThumbnailUrl } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
   import { getAllPeople, updatePeople, type PersonResponseDto } from '@immich/sdk';
@@ -33,7 +34,14 @@
   const saveVisibilityChanges = async (changes: VisibilityChange[]): Promise<VisibilitySaveResult> => {
     const results = await updatePeople({ peopleUpdateDto: { people: changes } });
     const successCount = results.filter(({ success }) => success).length;
-    return { successCount, failCount: results.length - successCount };
+    // Local Omarchy layer: the changes that took can be taken back, from the toast or the bar's undo history
+    const done = new Set(results.filter(({ success }) => success).map(({ id }) => id));
+    const undo = visibilitiesDone(
+      $t,
+      changes.filter(({ id }) => done.has(id)),
+      people,
+    );
+    return { successCount, failCount: results.length - successCount, undo };
   };
 
   const handleUpdate = (updatedVisibilityPeople: VisibilityPerson[]) => {

@@ -2,6 +2,7 @@ import {
   getPersonFaces,
   getSpacePersonFaces,
   SharedSpaceRole,
+  updatePeople,
   updatePerson,
   updateRepresentativeFace,
   updateSpacePerson,
@@ -22,11 +23,13 @@ import {
 } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
 import { eventManager } from '$lib/managers/event-manager.svelte';
+import { undoManager } from '$lib/managers/undo-manager.svelte';
 import PersonEditBirthDateModal from '$lib/modals/PersonEditBirthDateModal.svelte';
 import { getSpaceProfile } from '$lib/utils/global-person-route';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
 import { getPersonFaceThumbnailUrl, getSpacePersonFaceThumbnailUrl } from '$lib/utils/people-utils';
+import { toastUndoable, undone } from '$lib/utils/undoable';
 
 // The role is the viewer's own row in the spaces list (`getAllSpaces` embeds `members`, see
 // loadSpaces). The server enforces the role on every write, so this fails open: while the list is
@@ -134,12 +137,81 @@ const updatePersonVisibility = async (person: PersonResponseDto, isHidden: boole
   return updatePerson({ id: person.id, personUpdateDto: { isHidden } });
 };
 
+// Local Omarchy layer: hiding, showing and renaming someone can be taken back, from its toast's Undo or from the bar's
+// undo history (managers/undo-manager), the way utils/undoable does it for photos; PersonUpdate tells the open pages
+
+/** Someone hidden or shown: undone by setting them the other way round. */
+const visibilityDone = ($t: MessageFormatter, person: PersonResponseDto) => {
+  const label = `${$t(person.isHidden ? 'hide_person' : 'unhide_person')} · ${person.name || $t('unknown')}`;
+  const entry = undoManager.record(
+    label,
+    async () => {
+      const response = await updatePersonVisibility(person, !person.isHidden);
+      eventManager.emit('PersonUpdate', response);
+      return undone(label);
+    },
+    $t(person.isHidden ? 'errors.something_went_wrong' : 'errors.unable_to_hide_person'),
+  );
+  toastUndoable($t('changed_visibility_successfully'), entry);
+};
+
+/** A new name (or none): undone by giving back the old one. Shows the rename's toast, with the Undo. */
+export const nameChangedDone = ($t: MessageFormatter, person: PersonResponseDto, before: string) => {
+  const label = `${$t('change_name')} · ${before || $t('unknown')} → ${person.name || $t('unknown')}`;
+  const entry = undoManager.record(
+    label,
+    async () => {
+      const response = await updatePersonName(person, before);
+      eventManager.emit('PersonUpdate', response);
+      return undone(label);
+    },
+    $t('errors.unable_to_save_name'),
+  );
+  toastUndoable($t('change_name_successfully'), entry);
+};
+
+/** Many hidden and shown at once (Show & hide people): undone by setting each the other way round. `people` are
+ * those the page held, for telling the open pages. Returns the entry, for the toast's Undo. */
+export const visibilitiesDone = (
+  $t: MessageFormatter,
+  changes: { id: string; isHidden: boolean }[],
+  people: PersonResponseDto[],
+) => {
+  if (changes.length === 0) {
+    return;
+  }
+  const count = changes.length;
+  const label = $t('visibility_changed', { values: { count } });
+  return undoManager.record(
+    label,
+    async () => {
+      const back = changes.map(({ id, isHidden }) => ({ id, isHidden: !isHidden }));
+      const results = await updatePeople({ peopleUpdateDto: { people: back } });
+      const done = new Set(results.filter(({ success }) => success).map(({ id }) => id));
+      const failed = results.length - done.size;
+      const byId = new Map(people.map((person) => [person.id, person]));
+      for (const { id, isHidden } of back) {
+        const person = byId.get(id);
+        if (person && done.has(id)) {
+          eventManager.emit('PersonUpdate', { ...person, isHidden });
+        }
+      }
+      // the entry stays, to try again: setting the rest once more changes nothing
+      if (failed > 0) {
+        throw new Error($t('errors.unable_to_change_visibility', { values: { count: failed } }));
+      }
+      return undone(label);
+    },
+    $t('errors.unable_to_change_visibility', { values: { count } }),
+  );
+};
+
 const handleHidePerson = async (person: PersonResponseDto) => {
   const $t = await getFormatter();
 
   try {
     const response = await updatePersonVisibility(person, true);
-    toastManager.primary($t('changed_visibility_successfully'));
+    visibilityDone($t, response);
     eventManager.emit('PersonUpdate', response);
   } catch (error) {
     handleError(error, $t('errors.unable_to_hide_person'));
@@ -151,7 +223,7 @@ const handleShowPerson = async (person: PersonResponseDto) => {
 
   try {
     const response = await updatePersonVisibility(person, false);
-    toastManager.primary($t('changed_visibility_successfully'));
+    visibilityDone($t, response);
     eventManager.emit('PersonUpdate', response);
   } catch (error) {
     handleError(error, $t('errors.something_went_wrong'));

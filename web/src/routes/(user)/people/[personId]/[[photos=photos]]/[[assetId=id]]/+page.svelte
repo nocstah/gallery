@@ -41,6 +41,7 @@
     getPersonFacesPage,
     getPersonFaceThumbnail,
     isSpaceEditor,
+    nameChangedDone,
     updatePersonName,
     updatePersonRepresentativeFace,
   } from '$lib/services/person.service';
@@ -337,6 +338,7 @@
   };
 
   const changeName = async () => {
+    const before = person.name;
     viewMode = PersonPageViewMode.VIEW_ASSETS;
     person.name = personName;
     isEditingName = false;
@@ -349,7 +351,8 @@
 
     try {
       person = await updatePersonName(person, personName);
-      toastManager.primary($t('change_name_successfully'));
+      // Local Omarchy layer: the toast gains an Undo, kept in the bar's undo history too (services/person)
+      nameChangedDone($t, person, before);
     } catch (error) {
       handleError(error, $t('errors.unable_to_save_name'));
     }

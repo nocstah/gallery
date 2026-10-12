@@ -1,9 +1,11 @@
 <script lang="ts">
   import { shortcut } from '$lib/actions/shortcut';
+  import { eventManager } from '$lib/managers/event-manager.svelte';
   import { applyContextualFilter } from '$lib/utils/filter-target';
   import { handleError } from '$lib/utils/handle-error';
+  import { descriptionDone } from '$lib/utils/undoable';
   import { updateAsset, type AssetResponseDto } from '@immich/sdk';
-  import { IconButton, Textarea, toastManager } from '@immich/ui';
+  import { IconButton, Textarea } from '@immich/ui';
   import { mdiFilterOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import { fromAction } from 'svelte/attachments';
@@ -40,7 +42,10 @@
     }
     try {
       await updateAsset({ id: asset.id, updateAssetDto: { description } });
-      toastManager.primary($t('asset_description_updated'));
+      // Local Omarchy layer: the toast gains an Undo, kept in the bar's undo history too (utils/undoable); the open
+      // photo learns its new words, so the next change (or its undo) starts from them rather than the first ones
+      descriptionDone(asset, currentDescription);
+      eventManager.emit('AssetUpdate', { ...asset, exifInfo: { ...asset.exifInfo, description } });
     } catch (error) {
       handleError(error, $t('cannot_update_the_description'));
     }

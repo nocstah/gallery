@@ -16,7 +16,7 @@
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import PersonMergeSuggestionModal from '$lib/modals/PersonMergeSuggestionModal.svelte';
   import { Route } from '$lib/route';
-  import { getPersonActions, isSpaceEditor, updatePersonName } from '$lib/services/person.service';
+  import { getPersonActions, isSpaceEditor, nameChangedDone, updatePersonName } from '$lib/services/person.service';
   import Dropdown from '$lib/elements/Dropdown.svelte';
   import { locale, PeopleFilterBy, PeopleSortBy, peopleViewSettings } from '$lib/stores/preferences.store';
   import { loadSpaces, userInteraction } from '$lib/stores/user.svelte';
@@ -406,6 +406,8 @@
     const updatedPerson = await updatePersonName(targetPerson, name);
     people = people.map((person: PersonResponseDto) => (person.id === targetPerson.id ? updatedPerson : person));
     newName = '';
+    // Local Omarchy layer: a toast with an Undo, kept in the bar's undo history too (services/person)
+    nameChangedDone($t, updatedPerson, targetPerson.name);
   };
 
   const findPeopleWithSimilarName = async (name: string, personId: string) => {

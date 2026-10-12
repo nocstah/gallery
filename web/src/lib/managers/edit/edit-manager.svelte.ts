@@ -16,6 +16,7 @@ import { trimManager } from '$lib/managers/edit/trim-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { waitForWebsocketEvent } from '$lib/stores/websocket';
 import { getFormatter } from '$lib/utils/i18n';
+import { editsDone, editsOf } from '$lib/utils/undoable';
 
 export type EditAction = AssetEditsCreateDto['edits'][number];
 export type EditActions = EditAction[];
@@ -139,9 +140,14 @@ export class EditManager {
     }
 
     const assetId = this.currentAsset.id;
+    const { originalFileName } = this.currentAsset;
+    const video = this.currentAsset.type === AssetTypeEnum.Video;
     const t = await getFormatter();
 
     try {
+      // Local Omarchy layer: the edits as they stand before these, for the toast's Undo (utils/undoable); one that
+      // cannot be read only costs the Undo
+      const before = await editsOf(assetId).catch(() => undefined);
       // Setup the websocket listener before sending the edit request
       const timeout = this.currentAsset?.type === AssetTypeEnum.Video ? 30_000 : 10_000;
       const editCompleted = waitForWebsocketEvent('AssetEditReadyV2', (event) => event.asset.id === assetId, timeout);
@@ -161,7 +167,10 @@ export class EditManager {
       eventManager.emit('AssetUpdate', refreshedAsset);
       eventManager.emit('AssetEditsApplied', assetId);
 
-      toastManager.primary(t('editor_edits_applied_success'));
+      editsDone(`${t('edit')} · ${originalFileName}`, before ? [{ id: assetId, edits: before }] : [], {
+        video,
+        toast: t('editor_edits_applied_success'),
+      });
       this.hasAppliedEdits = true;
 
       return true;

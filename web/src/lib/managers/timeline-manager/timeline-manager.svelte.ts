@@ -601,8 +601,15 @@ export class TimelineManager extends VirtualScrollManager {
     }
 
     const notUpdated = this.#updateAssets(assets);
-    const notExcluded = notUpdated.filter((asset) => !this.isExcluded(asset));
+    // Local Omarchy layer: nor a stack's other photos while stacks are folded (a change to one, made in the viewer or
+    // by an undo, would lay it out beside its own stack)
+    const notExcluded = notUpdated.filter((asset) => !this.isExcluded(asset) && !this.#folded(asset));
     this.addAssetsUpsertSegments([...notExcluded]);
+  }
+
+  /** One of a stack's other photos, kept under its cover while the timeline shows stacks folded. */
+  #folded(asset: TimelineAsset) {
+    return !!this.#options.withStacked && !!asset.stack && asset.stack.primaryAssetId !== asset.id;
   }
 
   // Local Omarchy layer: assets an undo changed (lib/utils/asset-refresh), fetched fresh: what no longer belongs here
@@ -612,6 +619,7 @@ export class TimelineManager extends VirtualScrollManager {
     if (!this.#isDetailedTimeline()) {
       return;
     }
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const leaving = new Set(
       assets
         .filter((asset) => this.isExcluded(asset) || (asset.isTrashed && !this.#options.isTrashed))
@@ -620,11 +628,7 @@ export class TimelineManager extends VirtualScrollManager {
     this.removeAssets([...leaving]);
     const notUpdated = this.#updateAssets(assets.filter(({ id }) => !leaving.has(id)));
     this.addAssetsUpsertSegments(
-      notUpdated.filter(
-        (asset) =>
-          this.canInsertAssetFromLiveEvent(asset) &&
-          !(this.#options.withStacked && asset.stack && asset.stack.primaryAssetId !== asset.id),
-      ),
+      notUpdated.filter((asset) => this.canInsertAssetFromLiveEvent(asset) && !this.#folded(asset)),
     );
   }
 

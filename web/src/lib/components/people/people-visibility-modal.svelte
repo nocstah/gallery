@@ -9,6 +9,7 @@
   import { locale } from '$lib/stores/preferences.store';
   import { handleError } from '$lib/utils/handle-error';
   import { getPetBadgeLabel } from '$lib/utils/pet-species';
+  import { toastUndoable } from '$lib/utils/undoable';
   import { Button, Icon, IconButton, toastManager } from '@immich/ui';
   import { mdiClose, mdiEye, mdiEyeOff, mdiEyeSettings, mdiPaw, mdiRestart } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -101,11 +102,17 @@
 
     try {
       if (changed.length > 0) {
-        const { successCount, failCount } = await saveVisibilityChanges(changed);
+        const { successCount, failCount, undo } = await saveVisibilityChanges(changed);
         if (failCount > 0) {
           toastManager.warning($t('errors.unable_to_change_visibility', { values: { count: failCount } }));
         }
-        toastManager.primary($t('visibility_changed', { values: { count: successCount } }));
+        // Local Omarchy layer: with an Undo where the page records one
+        const message = $t('visibility_changed', { values: { count: successCount } });
+        if (undo === undefined) {
+          toastManager.primary(message);
+        } else {
+          toastUndoable(message, undo);
+        }
       }
 
       const updatedPeople = people.map((person) => {

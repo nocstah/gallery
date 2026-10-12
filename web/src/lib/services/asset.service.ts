@@ -70,7 +70,14 @@ import { canEditAsset } from '$lib/utils/asset-editability';
 import { getEditableAssetsWithWarning } from '$lib/utils/asset-utils';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
-import { favoritesDone, ratingDone, removedFromAlbumDone } from '$lib/utils/undoable';
+import {
+  beforeChange,
+  editsDone,
+  favoritesDone,
+  ratingDone,
+  removedFromAlbumDone,
+  taggedDone,
+} from '$lib/utils/undoable';
 
 export const getAssetBulkActions = (
   $t: MessageFormatter,
@@ -636,8 +643,11 @@ export const handleTagAssets = async (assetIds: string[], tagIds: string[]) => {
   const $t = await getFormatter();
 
   try {
+    // Local Omarchy layer: the tags the photos already have, so the toast's Undo (kept in the bar's undo history too,
+    // utils/undoable) takes off only the ones this added
+    const before = await beforeChange(assetIds);
     const response = await bulkTagAssets({ tagBulkAssetsDto: { assetIds, tagIds } });
-    toastManager.primary($t('tagged_assets', { values: { count: response.count } }));
+    taggedDone(assetIds, tagIds, before, $t('tagged_assets', { values: { count: response.count } }));
     eventManager.emit('AssetsTag', assetIds);
     return true;
   } catch (error) {
@@ -725,10 +735,8 @@ const handleQuickRotate = async (asset: AssetResponseDto, angle: number) => {
 
   try {
     const existing = await getAssetEdits({ id: asset.id });
-    const edits = mergeRotation(
-      existing.edits.map(({ action, parameters }) => ({ action, parameters })),
-      angle,
-    );
+    const before = existing.edits.map(({ action, parameters }) => ({ action, parameters }));
+    const edits = mergeRotation(before, angle);
 
     const editCompleted = waitForWebsocketEvent('AssetEditReadyV2', (event) => event.asset.id === asset.id, 10_000);
 
@@ -741,6 +749,9 @@ const handleQuickRotate = async (asset: AssetResponseDto, angle: number) => {
     assetViewerManager.setAsset(refreshedAsset);
     eventManager.emit('AssetUpdate', refreshedAsset);
     eventManager.emit('AssetEditsApplied', asset.id);
+    // Local Omarchy layer: a quick rotate has no toast of its own, so its undo is recorded quietly (utils/undoable)
+    const turn = angle === 90 ? 'rotate_right' : angle === 180 ? 'rotate_180' : 'rotate_left';
+    editsDone(`${$t(turn)} · ${asset.originalFileName}`, [{ id: asset.id, edits: before }]);
   } catch (error) {
     handleError(error, $t('rotate_error'));
   }

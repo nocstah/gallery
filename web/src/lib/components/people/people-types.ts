@@ -26,4 +26,6 @@ export type VisibilityChange = {
 export type VisibilitySaveResult = {
   successCount: number;
   failCount: number;
+  /** Local Omarchy layer: the undo history entry that takes the changes back, for the toast's Undo */
+  undo?: number;
 };

@@ -7,6 +7,7 @@
   import { getAssetActions } from '$lib/services/asset.service';
   import { removeTag } from '$lib/utils/asset-utils';
   import { buildContextualFilterUrl } from '$lib/utils/filter-target';
+  import { untaggedDone } from '$lib/utils/undoable';
   import { getAssetInfo, type AssetResponseDto } from '@immich/sdk';
   import { Badge, IconButton, Link, Text } from '@immich/ui';
   import { mdiOpenInNew } from '@mdi/js';
@@ -42,8 +43,13 @@
   let tags = $derived(asset.tags || []);
 
   const handleRemove = async (tagId: string) => {
+    const tag = tags.find(({ id }) => id === tagId);
     const ids = await removeTag({ tagIds: [tagId], assetIds: [asset.id], showNotification: false });
     if (ids) {
+      // Local Omarchy layer: a toast with an Undo, kept in the bar's undo history too (utils/undoable)
+      if (tag) {
+        untaggedDone(asset.id, tag);
+      }
       asset = await getAssetInfo({ id: asset.id, spaceId: effectiveSpaceId });
     }
   };
