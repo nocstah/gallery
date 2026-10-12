@@ -59,6 +59,11 @@ const measure = () => {
   // from the first row's top to the last one's bottom: rows may keep a margin between them (offsets, so the slide of
   // glass-hide does not count)
   const update = () => {
+    // the timeline heading folded while scrolled (TimelineWorkspaces): keep the open height reserved, so the photos
+    // under it do not move
+    if ('headCompact' in document.documentElement.dataset) {
+      return;
+    }
     const first = rows[0];
     const last = rows.at(-1);
     const height = first && last ? last.offsetTop + last.offsetHeight - first.offsetTop : 0;

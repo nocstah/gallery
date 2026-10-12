@@ -35,6 +35,34 @@
   --font-sans: 'Mona Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Bricolage Grotesque Variable', 'Mona Sans', ui-sans-serif, sans-serif;
   --font-mono: var(--ws-font-data);
+
+  /* the type scale: one size per role. display is the timeline's month and the page headlines; title a page's
+     name in its title bar; heading a section or group; body running text; ui buttons, tabs, sidebar; meta details
+     and captions (muted); data counts, years and EXIF (mono); micro small chips only */
+  --ws-text-display: clamp(2.25rem, 1rem + 3vw, 4rem);
+  --ws-text-title: 20px;
+  --ws-text-heading: 17px;
+  --ws-text-body: 15px;
+  --ws-text-ui: 14px;
+  --ws-text-meta: 13px;
+  --ws-text-data: 12px;
+  --ws-text-micro: 11px;
+}
+
+/* page titles in the title bars: the display face at title size, not body text */
+main > div.absolute.h-16 [data-testid='page-header'] {
+  font-family: var(--font-display);
+  font-size: var(--ws-text-title);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+main > div.absolute.h-16 [data-testid='page-header-description'] {
+  font-family: var(--ws-font-data);
+  font-size: var(--ws-text-data);
+}
+/* the sidebar at ui size */
+#sidebar a[class~='rounded-e-full'] {
+  font-size: var(--ws-text-ui);
 }
 
 body {
@@ -123,7 +151,7 @@ div:has(> [data-testid='admin-page-header']) {
 /* ---- day labels: the date as a label on the workspace, not a Material subhead ---- */
 .ws-day {
   font-family: var(--font-display);
-  font-size: 15px;
+  font-size: var(--ws-text-body);
   font-weight: 650;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
@@ -225,7 +253,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
 }
 .ws-empty-body {
   margin-top: 0.9rem;
-  font-size: 1rem;
+  font-size: var(--ws-text-body);
   line-height: 1.55;
   max-width: 60ch;
   color: var(--immich-ui-muted);
@@ -243,13 +271,13 @@ div[role='dialog'] :is(.border-b, .border-t) {
   background: var(--immich-ui-dark);
   color: var(--immich-ui-light);
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--ws-text-ui);
 }
 .ws-empty-action:hover {
   background: color-mix(in oklab, var(--immich-ui-dark) 85%, var(--ws-accent));
 }
 .ws-empty-link {
-  font-size: 0.9rem;
+  font-size: var(--ws-text-ui);
   font-weight: 500;
   color: var(--immich-ui-dark);
   text-decoration: underline;
@@ -334,7 +362,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
   padding: 1.5rem 0.6rem 0.45rem;
   background: linear-gradient(to top, rgb(0 0 0 / 0.55), transparent);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--ws-text-data);
   font-weight: 600;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -607,7 +635,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
 }
 [data-testid='timeline-bucket-card-title'] {
   font-family: var(--font-display);
-  font-size: clamp(2.75rem, 1.2rem + 4vw, 5.5rem);
+  font-size: var(--ws-text-display);
   font-weight: 800;
   font-variation-settings:
     'wdth' 75,
@@ -631,7 +659,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
   box-shadow: none;
   color: rgb(255 255 255 / 0.85);
   font-family: var(--ws-font-data);
-  font-size: 12px;
+  font-size: var(--ws-text-data);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -832,7 +860,7 @@ ul[role='menu'] > hr {
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   color: #fff;
-  font-size: 11px;
+  font-size: var(--ws-text-micro);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 18px;
@@ -972,7 +1000,7 @@ body.ws-dragging * {
 }
 .ws-inbox-title {
   font-family: var(--font-display);
-  font-size: clamp(2.5rem, 0.9rem + 4.6vw, 6rem);
+  font-size: var(--ws-text-display);
   font-weight: 800;
   font-variation-settings:
     'wdth' 75,
@@ -982,7 +1010,7 @@ body.ws-dragging * {
 }
 .ws-inbox-count {
   font-family: var(--ws-font-data);
-  font-size: 12px;
+  font-size: var(--ws-text-data);
   font-weight: 600;
   color: var(--immich-ui-muted);
   padding-bottom: 0.35rem;
@@ -999,7 +1027,7 @@ body.ws-dragging * {
   padding: 0.3rem 0.75rem;
   border-radius: calc(var(--ws-radius) + 5px);
   color: var(--immich-ui-muted);
-  font-size: 0.9rem;
+  font-size: var(--ws-text-ui);
   font-weight: 600;
 }
 .ws-seg > button:hover {
@@ -1027,7 +1055,7 @@ body.ws-dragging * {
   border-radius: calc(var(--ws-radius) + 6px);
   background: var(--immich-ui-dark);
   color: var(--immich-ui-light);
-  font-size: 0.9rem;
+  font-size: var(--ws-text-ui);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1042,7 +1070,7 @@ body.ws-dragging * {
   padding: 0.5rem 0.6rem;
   border-radius: calc(var(--ws-radius) + 6px);
   color: var(--immich-ui-dark);
-  font-size: 0.9rem;
+  font-size: var(--ws-text-ui);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -1054,7 +1082,7 @@ body.ws-dragging * {
   pointer-events: none;
 }
 .ws-inbox-link {
-  font-size: 0.9rem;
+  font-size: var(--ws-text-ui);
   font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 0.25em;
@@ -1077,17 +1105,17 @@ body.ws-dragging * {
 }
 .ws-inbox-row-title {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: var(--ws-text-heading);
 }
 .ws-inbox-row-body {
   max-width: 62ch;
-  font-size: 0.9rem;
+  font-size: var(--ws-text-body);
   line-height: 1.5;
   color: var(--immich-ui-muted);
 }
 .ws-inbox-meta {
   font-family: var(--ws-font-data);
-  font-size: 12px;
+  font-size: var(--ws-text-data);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--immich-ui-muted);
@@ -1305,7 +1333,7 @@ body.ws-dragging * {
 }
 .ws-month-tile [data-testid='timeline-bucket-card-count'] {
   margin-top: 0.35rem;
-  font-size: 11px;
+  font-size: var(--ws-text-micro);
 }
 
 /* ---- photos fade into place as they scroll into view: the timeline creates a tile when it nears the screen, so the

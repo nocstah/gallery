@@ -329,7 +329,7 @@
   }
   .command-note {
     color: var(--immich-ui-muted);
-    font-size: 0.85rem;
+    font-size: var(--ws-text-meta);
   }
   .command-numbers {
     display: grid;
@@ -351,7 +351,7 @@
   }
   .command-number .value {
     font-family: var(--font-display);
-    font-size: clamp(2rem, 1rem + 2.6vw, 3.5rem);
+    font-size: var(--ws-text-display);
     font-weight: 800;
     font-variation-settings:
       'wdth' 75,
@@ -362,7 +362,7 @@
   }
   .command-number .label {
     font-family: var(--ws-font-data);
-    font-size: 12px;
+    font-size: var(--ws-text-data);
     color: var(--immich-ui-muted);
   }
   .command-grid {
@@ -378,7 +378,7 @@
     padding-bottom: 0.4rem;
     border-bottom: 1px solid var(--ws-hairline);
     font-family: var(--ws-font-data);
-    font-size: 12px;
+    font-size: var(--ws-text-data);
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -417,12 +417,12 @@
   }
   .batch-title {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--ws-text-ui);
     line-height: 1.25;
   }
   .batch-count {
     font-family: var(--ws-font-data);
-    font-size: 13px;
+    font-size: var(--ws-text-meta);
     font-weight: 700;
     color: var(--ws-accent);
   }
@@ -436,17 +436,17 @@
   }
   .job-kind {
     font-family: var(--ws-font-data);
-    font-size: 12px;
+    font-size: var(--ws-text-data);
     font-weight: 700;
   }
   .job-note {
-    font-size: 0.78rem;
+    font-size: var(--ws-text-meta);
     color: var(--immich-ui-muted);
   }
   .command-alert {
     display: block;
     margin-top: 0.75rem;
-    font-size: 0.85rem;
+    font-size: var(--ws-text-meta);
     font-weight: 600;
     color: var(--ws-accent);
   }
@@ -491,11 +491,11 @@
   }
   .health-title {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--ws-text-ui);
   }
   .health-detail {
     max-width: 60ch;
-    font-size: 0.8rem;
+    font-size: var(--ws-text-meta);
     line-height: 1.45;
     color: var(--immich-ui-muted);
   }
@@ -504,7 +504,7 @@
     flex-wrap: wrap;
     gap: 0.35rem 1.25rem;
     padding-top: 0.8rem;
-    font-size: 0.82rem;
+    font-size: var(--ws-text-meta);
     color: var(--immich-ui-muted);
   }
   .calm-item {
@@ -517,7 +517,7 @@
   }
   .calm-value {
     font-family: var(--ws-font-data);
-    font-size: 12px;
+    font-size: var(--ws-text-data);
     font-weight: 600;
     color: var(--immich-ui-dark);
   }
@@ -525,11 +525,11 @@
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 0.55rem 1rem;
-    font-size: 0.82rem;
+    font-size: var(--ws-text-meta);
   }
   .command-facts dt {
     font-family: var(--ws-font-data);
-    font-size: 12px;
+    font-size: var(--ws-text-data);
     color: var(--immich-ui-muted);
   }
   .command-facts dd {

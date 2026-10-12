@@ -172,6 +172,35 @@
     }
   };
 
+  // With the glass chrome, the heading folds into one slim glass row once the photos scroll (and opens again near the
+  // top): the month at title size, the month row put away. The space reserved above the photos stays at the open
+  // height (chrome.svelte.ts does not re-measure while folded), so nothing under it moves.
+  let compact = $state(false);
+  $effect(() => {
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || target.id !== 'asset-grid') {
+        return;
+      }
+      if (!compact && target.scrollTop > 140) {
+        compact = true;
+      } else if (compact && target.scrollTop < 60) {
+        compact = false;
+      }
+    };
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => document.removeEventListener('scroll', onScroll, { capture: true });
+  });
+  $effect(() => {
+    const root = document.documentElement;
+    if (compact) {
+      root.dataset.headCompact = '';
+    } else {
+      delete root.dataset.headCompact;
+    }
+    return () => delete root.dataset.headCompact;
+  });
+
   // Under the years, the months of the year in view as numbers 1-12: the ones with photos jump straight there, the
   // one in view is marked, empty ones stay in place but quiet so the row keeps its shape
   const monthsOfYear = $derived.by(() => {
@@ -381,7 +410,7 @@
   .ws-month,
   .ws-year {
     font-family: var(--font-display);
-    font-size: clamp(2.5rem, 0.9rem + 4.6vw, 6rem);
+    font-size: var(--ws-text-display);
     line-height: 0.85;
     font-weight: 800;
     font-stretch: 75%;
@@ -429,7 +458,7 @@
   .ws-count {
     align-self: flex-end;
     padding-bottom: 0.3em;
-    font-size: 12px;
+    font-size: var(--ws-text-data);
     color: var(--immich-ui-muted);
   }
 
@@ -510,7 +539,7 @@
   }
   .ws-pill {
     flex: none;
-    font-size: 12px;
+    font-size: var(--ws-text-data);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     padding: 0.3rem 0.55rem;
@@ -604,6 +633,35 @@
   .ws-zoom input:focus-visible {
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: 4px;
+  }
+
+  /* folded (glass chrome, scrolled): one slim row */
+  :global(:root[data-chrome^='glass'][data-head-compact]) .ws-workspaces {
+    align-items: center;
+    padding-block: calc(var(--ws-gap) * 0.35);
+  }
+  :global(:root[data-chrome^='glass'][data-head-compact]) :is(.ws-month, .ws-year) {
+    font-size: var(--ws-text-title);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  :global(:root[data-chrome^='glass'][data-head-compact]) .ws-count {
+    padding-bottom: 0;
+  }
+  :global(:root[data-chrome^='glass'][data-head-compact]) .ws-months {
+    display: none;
+  }
+  .ws-month,
+  .ws-year {
+    transition:
+      font-size 220ms cubic-bezier(0.22, 1, 0.36, 1),
+      color 120ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ws-month,
+    .ws-year {
+      transition: none;
+    }
   }
 
   @media (max-width: 767px) {
