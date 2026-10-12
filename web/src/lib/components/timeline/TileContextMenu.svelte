@@ -16,12 +16,15 @@
   import { optionClickCallbackStore, selectedIdStore } from '$lib/stores/context-menu.store';
   import { generateId } from '$lib/utils/generate-id';
   import { getAssetInfo } from '@immich/sdk';
+  import { goto } from '$app/navigation';
+  import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import { copySubject } from '$lib/utils/copy-subject';
   import {
     mdiArrowCollapseHorizontal,
     mdiArrowExpandHorizontal,
     mdiContentCut,
     mdiImageCheckOutline,
+    mdiStarFourPointsOutline,
   } from '@mdi/js';
   import type { Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -184,6 +187,16 @@
     >
       {#if stackMenu}
         {@const menu = stackMenu}
+        <!-- Local Omarchy layer: Curator picks the stack's best photo; the viewer opens on the stack with the card -->
+        <MenuOption
+          icon={mdiStarFourPointsOutline}
+          text={$t('stack_pick')}
+          onClick={() =>
+            onStackAction(async () => {
+              stackPick.open(menu.stackId);
+              await goto(`/photos/${menu.assetId}`);
+            })}
+        />
         {#if menu.isCover}
           {@const expanded = stackExpandManager.isExpanded(menu.stackId)}
           <MenuOption

@@ -197,6 +197,26 @@ export type LookUpSubject = {
 };
 export type LookUpAnswer = { asset_id: string; model: string; subjects: LookUpSubject[] };
 
+export type StackPickPlace = { asset_id: string; judge: number; vlm: number | null; flaw: string | null; score: number };
+/** what pick.best found: the pick, why (the vision model's words and the measured reasons), and every photo's place */
+export type StackPick = {
+  stack_id: string;
+  best: string;
+  cover: string;
+  is_cover: boolean;
+  judge_best: string;
+  vlm_best: string | null;
+  agree: boolean;
+  why: string;
+  measured: string[];
+  note: string;
+  sure: string;
+  shots: number;
+  places: StackPickPlace[];
+  suggestion_id: number | null;
+  model: string | null;
+};
+
 export type SmartStrictness = 'loose' | 'normal' | 'strict';
 /** a smart album's saved search: Gallery's metadata-search filters, the typed words, and the Photos page URL it came
  * from (to open it there again for editing) */
@@ -328,6 +348,8 @@ export const curator = {
     seconds = 0,
   ) =>
     post<{ job: number }>('/live-effect', { asset_id: assetId, effect, seconds }),
+  /** pick a stack's best photo, carefully (a job of 10-60 seconds; its result is a StackPick) */
+  pickBest: (stackId: string) => post<{ job: number }>(`/stacks/${stackId}/best`, {}),
   /** Look Up: what the photo shows that has a name (the kept answer unless `again`) */
   lookUp: (assetId: string, again = false, signal?: AbortSignal) =>
     call<LookUpAnswer>('/lookup', { method: 'POST', body: JSON.stringify({ asset_id: assetId, again }), signal }),

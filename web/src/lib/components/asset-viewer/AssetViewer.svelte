@@ -12,6 +12,8 @@
   import { liveEffects } from '$lib/components/curator/live-effects.svelte';
   import LookUpCard from '$lib/components/curator/LookUpCard.svelte';
   import { lookUp } from '$lib/components/curator/look-up.svelte';
+  import StackPick from '$lib/components/curator/StackPick.svelte';
+  import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import RemoveObjects from '$lib/components/curator/RemoveObjects.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import { AssetAction, ProjectionType } from '$lib/constants';
@@ -47,7 +49,8 @@
     type PersonResponseDto,
     type StackResponseDto,
   } from '@immich/sdk';
-  import { CommandPaletteDefaultProvider } from '@immich/ui';
+  import { CommandPaletteDefaultProvider, Icon } from '@immich/ui';
+  import { mdiStarFourPointsOutline } from '@mdi/js';
   import { onDestroy, onMount, untrack } from 'svelte';
   import type { SwipeCustomEvent } from 'svelte-gestures';
   import { t } from 'svelte-i18n';
@@ -126,6 +129,7 @@
   // Local Omarchy layer: Curator's effects panel (Live Photo effects, cinematic), which holds the viewer like the brush
   const livening = $derived(liveEffects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
   const inCuratorTool = $derived(brushing || livening);
+  const ownStack = $derived(authManager.authenticated && asset.ownerId === authManager.user.id);
   const nextAsset = $derived(cursor.nextAsset);
   const previousAsset = $derived(cursor.previousAsset);
   // Slice 8 gap closure: the SAME rule DetailPanel.svelte's People row uses for `asset` — see
@@ -243,6 +247,7 @@
   onDestroy(() => {
     removeObjects.close();
     liveEffects.close();
+    stackPick.close();
     activityManager.reset();
     assetViewerManager.resetPanelState();
     syncAssetViewerOpenClass(false);
@@ -673,8 +678,21 @@
       </div>
     {/if}
 
-    <!-- Local Omarchy layer: Curator's Look Up card, from photo to photo until closed -->
-    {#if lookUp.on && asset.type === AssetTypeEnum.Image && !inCuratorTool && $slideshowState === SlideshowState.None}
+    <!-- Local Omarchy layer: Curator's "Pick the best" for the stack in view -->
+    {#if stack && stackPick.stackId === stack.id && !inCuratorTool && $slideshowState === SlideshowState.None}
+      {@const pickedStack = stack}
+      <StackPick
+        stackId={pickedStack.id}
+        onClose={() => stackPick.close()}
+        onShow={(id) => {
+          const found = pickedStack.assets.find((a) => a.id === id);
+          if (found) {
+            cursor.current = found;
+            previewStackedAsset = undefined;
+          }
+        }}
+      />
+    {:else if lookUp.on && asset.type === AssetTypeEnum.Image && !inCuratorTool && $slideshowState === SlideshowState.None}
       <LookUpCard assetId={asset.id} onClose={() => (lookUp.on = false)} />
     {/if}
 
@@ -717,6 +735,20 @@
     {@const stackedAssets = stack.assets}
     <div id="stack-slideshow" class="absolute bottom-0 col-span-4 col-start-1 w-fit max-w-full">
       <div class="no-wrap horizontal-scrollbar relative flex flex-row overflow-x-auto overflow-y-hidden">
+        <!-- Local Omarchy layer: ask Curator for the stack's best photo -->
+        {#if ownStack && lookUp.available}
+          <div class="flex items-center px-1 pb-2">
+            <button
+              type="button"
+              class="grid size-12 place-items-center rounded-xl border border-white/10 bg-black/55 text-white backdrop-blur-md transition-colors hover:bg-black/75"
+              title={$t('stack_pick')}
+              aria-label={$t('stack_pick')}
+              onclick={() => stackPick.open(stack.id)}
+            >
+              <Icon icon={mdiStarFourPointsOutline} size="20" />
+            </button>
+          </div>
+        {/if}
         {#each stackedAssets as stackedAsset (stackedAsset.id)}
           <div
             class={['relative inline-block px-1 pb-2 transition-all']}
