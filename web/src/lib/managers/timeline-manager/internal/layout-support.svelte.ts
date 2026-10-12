@@ -24,21 +24,42 @@ export function updateGeometry(timelineManager: TimelineManager, month: Timeline
 // windows fill a workspace. Days that fit on one line are pooled into rows and re-laid at one shared
 // height chosen so the row ends exactly at the viewport edge (photos shrink to MIN_SCALE or grow to
 // MAX_SCALE of the target height). A row that cannot fill within that joins the row above it; days that
-// span several lines take a row to themselves with their lines balanced. Falls back to upstream's packing while any day's layout is deferred.
+// span several lines take a row to themselves with their lines balanced. Everything is worked out from the
+// photos' own ratios at the current width and zoom: a day whose upstream layout was deferred keeps
+// positions from an older width, and judging rows by those let a row run past the edge (a video's corner
+// icons and its stack badge were cut off) when the window narrowed or the zoom grew. No row is ever wider
+// than the viewport.
 const MIN_SCALE = 0.72;
 const MAX_SCALE = 1.6;
 
 type DayLine = { day: TimelineMonth['timelineDays'][number]; ratios: number[] };
 
-const singleLineRatios = (day: TimelineMonth['timelineDays'][number]): number[] | undefined => {
-  const positions = day.viewerAssets.map((viewerAsset) => viewerAsset.position);
-  if (positions.length === 0 || positions.some((position) => !position || position.height <= 0)) {
+/** Each photo's width over height: its own ratio (what upstream's justified layout uses too), else its last box. */
+const ratiosOf = (day: TimelineMonth['timelineDays'][number]): number[] | undefined => {
+  const ratios = day.viewerAssets.map((viewerAsset) => {
+    const ratio = viewerAsset.asset?.ratio;
+    if (ratio && Number.isFinite(ratio) && ratio > 0) {
+      return ratio;
+    }
+    const position = viewerAsset.position;
+    return position && position.height > 0 ? position.width / position.height : undefined;
+  });
+  return ratios.length > 0 && ratios.every((ratio) => ratio !== undefined) ? (ratios as number[]) : undefined;
+};
+
+/** A day's ratios when its photos fit on one line at the smallest allowed height (it can join a pooled row). */
+const singleLineRatios = (
+  day: TimelineMonth['timelineDays'][number],
+  width: number,
+  rowHeight: number,
+  spacing: number,
+): number[] | undefined => {
+  const ratios = ratiosOf(day);
+  if (!ratios) {
     return undefined;
   }
-  if (positions.some((position) => position!.top !== positions[0]!.top)) {
-    return undefined;
-  }
-  return positions.map((position) => position!.width / position!.height);
+  const total = ratios.reduce((sum, ratio) => sum + ratio, 0);
+  return total * rowHeight * MIN_SCALE + (ratios.length - 1) * spacing <= width ? ratios : undefined;
 };
 
 const placeLine = (line: DayLine, height: number, spacing: number) => {
@@ -52,13 +73,6 @@ const placeLine = (line: DayLine, height: number, spacing: number) => {
   line.day.height = height;
 };
 
-const allRatios = (day: TimelineMonth['timelineDays'][number]): number[] | undefined => {
-  const positions = day.viewerAssets.map((viewerAsset) => viewerAsset.position);
-  if (positions.length === 0 || positions.some((position) => !position || position.height <= 0)) {
-    return undefined;
-  }
-  return positions.map((position) => position!.width / position!.height);
-};
 
 // A day too wide for one line: split its photos into lines of even weight and justify every line to
 // the full width, so no line (the last included) is left with an orphan tile and empty ground.
@@ -110,8 +124,8 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
   for (const timelineDay of month.timelineDays) {
     timelineDay.layout(options, noDefer);
   }
-  // any tile without a position (a deferred day, or photos added to it since): upstream's packing
-  if (month.timelineDays.some((day) => day.viewerAssets.some((viewerAsset) => !viewerAsset.position))) {
+  // a tile with neither a ratio nor a box to take one from: upstream's packing
+  if (month.timelineDays.some((day) => !ratiosOf(day))) {
     layoutTimelineMonthPacked(timelineManager, month);
     return;
   }
@@ -135,7 +149,7 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
   const rows: Row[] = [];
   let pending: DayLine[] = [];
   for (const timelineDay of month.timelineDays) {
-    const ratios = singleLineRatios(timelineDay);
+    const ratios = singleLineRatios(timelineDay, viewportWidth, rowHeight, spacing);
     if (!ratios) {
       if (pending.length > 0) {
         rows.push({ kind: 'pool', lines: pending });
@@ -178,7 +192,7 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
   for (const [rowIndex, entry] of rows.entries()) {
     if (entry.kind === 'multi') {
       const day = entry.day;
-      const tileRatios = allRatios(day);
+      const tileRatios = ratiosOf(day);
       if (tileRatios) {
         placeBalanced(day, tileRatios, viewportWidth, rowHeight, spacing);
       }
@@ -190,7 +204,8 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
       top += day.height + headerHeight + rowGap;
       continue;
     }
-    const height = Math.floor(Math.max(rowHeight * MIN_SCALE, Math.min(fillHeight(entry.lines), rowHeight * MAX_SCALE)));
+    // the height that ends the row at the edge, capped at MAX_SCALE; never raised past it (that ran over the edge)
+    const height = Math.floor(Math.min(fillHeight(entry.lines), rowHeight * MAX_SCALE));
     let start = 0;
     for (const [col, line] of entry.lines.entries()) {
       placeLine(line, height, spacing);

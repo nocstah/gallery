@@ -188,6 +188,9 @@
         : undefined,
     );
     lastZoom = zoom;
+    // the day groups glide to their new places on a delay while the tiles in them resize at once, so mid-zoom
+    // rows drew over each other; a zoom moves them straight there, as a window resize does
+    untrack(() => (timelineManager.suspendTransitions = true));
     timelineManager.setLayoutOptions(layoutOptions);
     if (anchor) {
       requestAnimationFrame(() => {
@@ -223,6 +226,7 @@
     const spacing = timelineManager.justifiedLayoutOptions.spacing;
     untrack(() => {
       if (lastSpacing !== undefined && spacing !== lastSpacing) {
+        timelineManager.suspendTransitions = true;
         timelineManager.refreshLayout();
       }
       lastSpacing = spacing;
