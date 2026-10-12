@@ -82,7 +82,11 @@ const onScroll = (event: Event) => {
     return;
   }
   const top = target.scrollTop;
-  const before = lastTop.get(target) ?? top;
+  const before = lastTop.get(target);
+  if (before === undefined) {
+    lastTop.set(target, top);
+    return;
+  }
   if (Math.abs(top - before) < STEP) {
     return;
   }
