@@ -1224,6 +1224,7 @@
   "chat_delete_confirm": "¿Eliminar este chat?",
   "chat_earlier": "Chats anteriores",
   "chat_empty_body": "El modelo local responde a partir de tus fotos: fechas, lugares, personas, eventos y lo que se ve en las imágenes. Todo lo que propone espera tu sí, aquí o en la bandeja de IA.",
+  "chat_empty_title": "Pregunta a tu biblioteca",
   "chat_error": "La respuesta se cortó: {message}",
   "chat_example_beach": "¿Cuándo fuimos a la playa por última vez?",
   "chat_example_inbox": "¿Qué espera en mi bandeja de IA?",

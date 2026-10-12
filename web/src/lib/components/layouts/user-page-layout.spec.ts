@@ -32,10 +32,9 @@ describe('UserPageLayout header', () => {
     });
 
     expect(screen.getByTestId('page-header-description')).toHaveTextContent('(60) \u{B7} 2,901 faces');
-    // Local Omarchy layer: the masthead (omarchy-world.css) truncates title and count by these classes
-    expect(screen.getByTestId('page-header-title-row')).toHaveClass('ws-page-title-row');
-    expect(screen.getByTestId('page-header')).toHaveClass('ws-page-title');
-    expect(screen.getByTestId('page-header-description')).toHaveClass('ws-page-count');
+    expect(screen.getByTestId('page-header-title-row')).toHaveClass('min-w-0', 'overflow-hidden');
+    expect(screen.getByTestId('page-header')).toHaveClass('min-w-0', 'truncate');
+    expect(screen.getByTestId('page-header-description')).toHaveClass('shrink-0', 'whitespace-nowrap');
   });
 
   it('renders a non-collapsing description trailing action beside the description', () => {
@@ -48,9 +47,9 @@ describe('UserPageLayout header', () => {
     const button = screen.getByRole('button', { name: 'Info' });
 
     expect(trailing).toContainElement(button);
-    expect(titleRow).toHaveClass('ws-page-title-row');
-    expect(title).toHaveClass('ws-page-title');
-    expect(description).toHaveClass('ws-page-count');
+    expect(titleRow).toHaveClass('min-w-0', 'overflow-hidden');
+    expect(title).toHaveClass('min-w-0', 'truncate');
+    expect(description).toHaveClass('whitespace-nowrap');
     expect(trailing).toHaveClass('shrink-0');
     expect(titleRow).toContainElement(description);
     expect(titleRow).toContainElement(trailing);
@@ -124,7 +123,7 @@ describe('UserPageLayout chrome above the content panel', () => {
     // Comments stripped first: the theme documents each rule above it, and one of those
     // comments names `margin-block` while explaining why the top of it is zero.
     const css = readFileSync(themePath, 'utf8').replaceAll(/\/\*[\S\s]*?\*\//g, '');
-    const rule = /main:has\(> div\.ws-page-scroll\)\s*\{(?<body>[^{}]*)\}/.exec(css);
+    const rule = /main:has\(> div\.absolute\.overflow-y-auto\)\s*\{(?<body>[^{}]*)\}/.exec(css);
     return /margin-block:\s*(?<value>[^;]+);/.exec(rule!.groups!.body)!.groups!.value.trim();
   };
 

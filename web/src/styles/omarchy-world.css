@@ -55,13 +55,13 @@ body,
 #dashboard-navbar > div {
   border-bottom: 1px solid var(--ws-hairline);
 }
-main:has(> div.ws-page-scroll),
-[data-sidebar-width='0'] main:has(> div.ws-page-scroll) {
+main:has(> div.absolute.overflow-y-auto),
+[data-sidebar-width='0'] main:has(> div.absolute.overflow-y-auto) {
   border-radius: 0;
   margin: 0;
   border-inline-start: 1px solid var(--ws-hairline);
 }
-[data-sidebar-width='0'] main:has(> div.ws-page-scroll) {
+[data-sidebar-width='0'] main:has(> div.absolute.overflow-y-auto) {
   border-inline-start: 0;
 }
 div:has(> [data-testid='admin-page-header']) {
@@ -834,80 +834,9 @@ body.ws-dragging * {
   padding-bottom: calc(var(--ws-gap) * 0.8);
   border-bottom: 1px solid var(--ws-hairline);
 }
-/* ---- page masthead (UserPageLayout): every page titled like the AI inbox. The display title with its count in data
-   type, the page's tools beside it or, when the title leaves no room, on a row of their own; a hairline under. ---- */
-.ws-page-head {
-  display: flex;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-  align-items: flex-end;
-  gap: 0.9rem calc(var(--ws-gap) * 2.4);
-  padding: clamp(1rem, 3.5vh, 2.25rem) clamp(1rem, 3vw, 2.5rem) calc(var(--ws-gap) * 0.8);
-  border-bottom: 1px solid var(--ws-hairline);
-}
-main > div.ws-page-head {
-  padding-inline: clamp(1rem, 3vw, 2.5rem); /* over gallery-theme.css's inset for the old title bar */
-}
-.ws-page-title-row {
-  display: flex;
-  min-width: 0;
-  align-items: flex-end;
-  gap: 0.5rem calc(var(--ws-gap) * 2.4);
-}
-.ws-page-title {
-  flex-shrink: 0;
-  max-width: 100%;
-  overflow: hidden;
-  padding-bottom: 0.06em; /* the 0.85 line box clips descenders */
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ws-page-count {
-  min-width: 0;
-  max-width: 36rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--ws-font-data);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--immich-ui-muted);
-  padding-bottom: 0.35rem;
-}
-.ws-page-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  max-width: 100%; /* no min-width: 0, so tools too wide beside the title take a row of their own */
-  margin-inline-start: auto;
-}
-.ws-page-tools > div {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  max-width: 100%;
-}
-.ws-page-tools :is(button, a) {
-  white-space: nowrap;
-}
-.ws-page-head.is-slim {
-  min-height: 4rem;
-  align-items: center;
-  padding-block: 0.5rem;
-}
-.ws-page-head.is-slim .ws-page-title {
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  line-height: 1.5;
-  font-variation-settings: normal;
-}
-.ws-page-title,
 .ws-inbox-title {
   font-family: var(--font-display);
-  font-size: clamp(2.5rem, 1rem + 3.2vw, 4.5rem);
+  font-size: clamp(2.5rem, 0.9rem + 4.6vw, 6rem);
   font-weight: 800;
   font-variation-settings:
     'wdth' 75,

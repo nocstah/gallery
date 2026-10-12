@@ -1224,6 +1224,7 @@
   "chat_delete_confirm": "Eliminare questa chat?",
   "chat_earlier": "Chat precedenti",
   "chat_empty_body": "Il modello locale risponde a partire dalle tue foto: date, luoghi, persone, eventi e ciò che si vede nelle immagini. Tutto ciò che propone aspetta il tuo sì, qui o nella posta in arrivo IA.",
+  "chat_empty_title": "Chiedi alla tua libreria",
   "chat_error": "La risposta si è interrotta: {message}",
   "chat_example_beach": "Quando siamo stati al mare l'ultima volta?",
   "chat_example_inbox": "Cosa aspetta nella mia posta in arrivo IA?",

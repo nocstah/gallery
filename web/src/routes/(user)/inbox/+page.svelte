@@ -57,20 +57,21 @@
   });
 </script>
 
-<UserPageLayout
-  title={data.meta.title}
-  description={health ? $t('ai_inbox_waiting', { values: { count: health.pending } }) : undefined}
->
-  {#snippet buttons()}
-    <div class="ws-seg" role="group" aria-label={data.meta.title}>
-      {#each TABS as name (name)}
-        <button type="button" aria-pressed={tab === name} onclick={() => open(name === 'inbox' ? {} : { tab: name })}>
-          {$t(TAB_LABEL[name])}
-        </button>
-      {/each}
-    </div>
-  {/snippet}
+<UserPageLayout>
   <div class="ws-inbox">
+    <header class="ws-inbox-head">
+      <h1 class="ws-inbox-title">{data.meta.title}</h1>
+      {#if health}
+        <span class="ws-inbox-count">{$t('ai_inbox_waiting', { values: { count: health.pending } })}</span>
+      {/if}
+      <div class="ws-seg" role="group" aria-label={data.meta.title}>
+        {#each TABS as name (name)}
+          <button type="button" aria-pressed={tab === name} onclick={() => open(name === 'inbox' ? {} : { tab: name })}>
+            {$t(TAB_LABEL[name])}
+          </button>
+        {/each}
+      </div>
+    </header>
 
     {#if failure}
       <div class="ws-empty">

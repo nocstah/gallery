@@ -1228,6 +1228,7 @@
   "chat_delete_confirm": "删除此对话？",
   "chat_earlier": "以前的对话",
   "chat_empty_body": "本地模型根据你的照片回答：日期、地点、人物、事件以及照片里的内容。它提出的任何建议都会等你同意，在这里或在 AI 收件箱中。",
+  "chat_empty_title": "问问你的资源库",
   "chat_error": "回答中断：{message}",
   "chat_example_beach": "我们上次去海滩是什么时候？",
   "chat_example_inbox": "我的 AI 收件箱里有什么在等待？",

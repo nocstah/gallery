@@ -19,8 +19,6 @@
     hideNavbar?: boolean;
     /** Local Omarchy layer: the page's selection bar fits the navbar's 4rem, so swapping them moves nothing */
     barFitsNavbar?: boolean;
-    /** Local Omarchy layer: keep the slim 4rem title bar instead of the display masthead (the map fills the page) */
-    slimHeader?: boolean;
     title?: string | undefined;
     description?: string | undefined;
     scrollbar?: boolean;
@@ -36,7 +34,6 @@
   let {
     hideNavbar = false,
     barFitsNavbar = false,
-    slimHeader = false,
     title = undefined,
     description = undefined,
     scrollbar = true,
@@ -56,7 +53,8 @@
   );
 
   let scrollbarClass = $derived(scrollbar ? 'immich-scrollbar' : 'scrollbar-hidden');
-  let hasHeaderRow = $derived(!hideNavbar && !!(title || buttons));
+  let hasHeaderRow = $derived(!!(title || buttons));
+  let hasTitleClass = $derived(hasHeaderRow ? 'top-16 h-[calc(100%-(--spacing(16)))]' : 'top-0 h-full');
 
   // /tags and /folders supply a tree explorer wrapping upstream Sidebar.svelte, which is
   // always 16rem above 850px. Collapsing their grid column to the rail width would clip it,
@@ -118,21 +116,25 @@
     <UserSidebar />
   {/if}
 
-  <!-- Local Omarchy layer: the page head is the masthead (ws-page-head, omarchy-world.css), the AI inbox's display
-       title on every page, with the page's tools beside it or on a row of their own beneath. It sits above the
-       scroller in a column instead of floating over a fixed 4rem gap, so it can grow to the title and wrap. -->
-  <main class="relative flex min-h-0 min-w-0 flex-col">
-    {#if hasHeaderRow}
-      <div class="ws-page-head text-dark" class:is-slim={slimHeader}>
-        <div class="ws-page-title-row" data-testid="page-header-title-row">
+  <main class="relative">
+    <div class="{scrollbarClass} absolute {hasTitleClass} w-full overflow-y-auto p-2" use:useActions={use}>
+      {@render children?.()}
+    </div>
+
+    {#if !hideNavbar && (title || buttons)}
+      <div class="absolute flex h-16 w-full place-items-center justify-between border-b p-2 text-dark">
+        <div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden" data-testid="page-header-title-row">
           {@render leading?.()}
           {#if title}
-            <h1 class="ws-page-title outline-none" tabindex="-1" id={headerId} data-testid="page-header">
+            <div class="min-w-0 truncate pe-8 outline-none" tabindex="-1" id={headerId} data-testid="page-header">
               {title}
-            </h1>
+            </div>
           {/if}
           {#if description}
-            <p class="ws-page-count" data-testid="page-header-description">
+            <p
+              class="shrink-0 text-sm whitespace-nowrap text-gray-400 dark:text-gray-600"
+              data-testid="page-header-description"
+            >
               {description}
             </p>
           {/if}
@@ -143,37 +145,29 @@
           {/if}
         </div>
 
-        {#if buttons || enabledActions.length > 0}
-          <div class="ws-page-tools">
-            {@render buttons?.()}
+        {@render buttons?.()}
 
-            {#if enabledActions.length > 0}
-              <div class="hidden md:block">
-                <HStack gap={0}>
-                  {#each enabledActions as action, i (i)}
-                    <Button
-                      variant="ghost"
-                      size="small"
-                      color={action.color ?? 'secondary'}
-                      leadingIcon={action.icon}
-                      onclick={(event: MouseEvent) => action.onAction({ event, action })}
-                      title={action.data?.title}
-                    >
-                      {action.title}
-                    </Button>
-                  {/each}
-                </HStack>
-              </div>
-
-              <ContextMenuButton aria-label={$t('open')} items={actions} class="md:hidden" />
-            {/if}
+        {#if enabledActions.length > 0}
+          <div class="hidden md:block">
+            <HStack gap={0}>
+              {#each enabledActions as action, i (i)}
+                <Button
+                  variant="ghost"
+                  size="small"
+                  color={action.color ?? 'secondary'}
+                  leadingIcon={action.icon}
+                  onclick={(event: MouseEvent) => action.onAction({ event, action })}
+                  title={action.data?.title}
+                >
+                  {action.title}
+                </Button>
+              {/each}
+            </HStack>
           </div>
+
+          <ContextMenuButton aria-label={$t('open')} items={actions} class="md:hidden" />
         {/if}
       </div>
     {/if}
-
-    <div class="{scrollbarClass} ws-page-scroll relative min-h-0 w-full flex-1 overflow-y-auto p-2" use:useActions={use}>
-      {@render children?.()}
-    </div>
   </main>
 </div>

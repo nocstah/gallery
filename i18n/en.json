@@ -1231,6 +1231,7 @@
   "chat_delete_confirm": "Delete this chat?",
   "chat_earlier": "Earlier chats",
   "chat_empty_body": "The local model answers from your photos: dates, places, people, events and what is in the pictures. Anything it proposes waits for your yes, here or in the AI inbox.",
+  "chat_empty_title": "Ask your library",
   "chat_error": "The answer stopped: {message}",
   "chat_example_beach": "When were we last at the beach?",
   "chat_example_inbox": "What is waiting in my AI inbox?",

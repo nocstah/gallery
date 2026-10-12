@@ -86,7 +86,7 @@ describe('L3 typography', () => {
 describe('content panel chrome gutter', () => {
   const css = readFileSync(resolve(process.cwd(), 'src/styles/gallery-theme.css'), 'utf8');
   const panelRule = (prefix: string) =>
-    css.match(new RegExp(String.raw`${prefix}main:has\(> div\.ws-page-scroll\)\s*\{[\s\S]*?\n\}`));
+    css.match(new RegExp(String.raw`${prefix}main:has\(> div\.absolute\.overflow-y-auto\)\s*\{[\s\S]*?\n\}`));
 
   it('omits the inline-start gutter while a sidebar is rendered', () => {
     // Desktop intent: the chrome-tinted sidebar IS the panel's left boundary, so a gutter there

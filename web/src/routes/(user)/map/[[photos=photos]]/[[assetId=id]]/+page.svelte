@@ -370,7 +370,7 @@
 </script>
 
 {#if featureFlagsManager.value.map}
-  <UserPageLayout title={data.meta.title} slimHeader>
+  <UserPageLayout title={data.meta.title}>
     {#snippet leading()}
       {#if spaceId}
         <IconButton

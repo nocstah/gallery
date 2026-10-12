@@ -1224,6 +1224,7 @@
   "chat_delete_confirm": "Supprimer cette discussion ?",
   "chat_earlier": "Discussions précédentes",
   "chat_empty_body": "Le modèle local répond à partir de vos photos : dates, lieux, personnes, événements et ce que montrent les images. Tout ce qu’il propose attend votre accord, ici ou dans la boîte de réception IA.",
+  "chat_empty_title": "Interrogez votre bibliothèque",
   "chat_error": "La réponse s’est interrompue : {message}",
   "chat_example_beach": "Quand sommes-nous allés à la plage pour la dernière fois ?",
   "chat_example_inbox": "Qu’est-ce qui attend dans ma boîte de réception IA ?",
