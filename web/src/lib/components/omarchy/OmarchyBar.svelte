@@ -1,0 +1,207 @@
+<script lang="ts">
+  // Local Omarchy layer: the one bar. User pages get this in place of upstream's NavigationBar (which stays for the
+  // admin shell): the menu and the mark on the left; the page's own content in the middle (Photos: its month heading
+  // and time ruler, lib/managers/bar-slot); and on the right search (an icon that opens into the search field), the
+  // view menu, upload, notifications and the account. One 64px row, so the photos start right under it.
+  import { page } from '$app/state';
+  import { clickOutside } from '$lib/actions/click-outside';
+  import BarSearch from '$lib/components/omarchy/BarSearch.svelte';
+  import BarViewMenu from '$lib/components/omarchy/BarViewMenu.svelte';
+  import Logo from '$lib/components/shared-components/Logo.svelte';
+  import AccountInfoPanel from '$lib/components/shared-components/navigation-bar/AccountInfoPanel.svelte';
+  import { menuButtonId } from '$lib/components/shared-components/navigation-bar/NavigationBar.svelte';
+  import NotificationPanel from '$lib/components/shared-components/navigation-bar/NotificationPanel.svelte';
+  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
+  import SkipLink from '$lib/elements/SkipLink.svelte';
+  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { barSlot } from '$lib/managers/bar-slot.svelte';
+  import { Route } from '$lib/route';
+  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
+  import { notificationManager } from '$lib/stores/notification-manager.svelte';
+  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
+  import { sidebarStore } from '$lib/stores/sidebar.svelte';
+  import { Icon } from '@immich/ui';
+  import { mdiBellBadgeOutline, mdiBellOutline, mdiMenu, mdiTrayArrowUp } from '@mdi/js';
+  import { onMount } from 'svelte';
+  import { t } from 'svelte-i18n';
+
+  type Props = {
+    onUploadClick?: () => void;
+    /** as NavigationBar: the menu button and the first column follow the rail-aware sidebar */
+    railAware?: boolean;
+  };
+
+  let { onUploadClick, railAware = false }: Props = $props();
+
+  let showAccount = $state(false);
+  let showNotifications = $state(false);
+  const unread = $derived(notificationManager.notifications.length);
+
+  onMount(async () => {
+    try {
+      await notificationManager.refresh();
+    } catch (error) {
+      console.error('Failed to load notifications on mount', error);
+    }
+  });
+
+  // the menu button and the first column, exactly as NavigationBar sizes them, so the middle starts where the
+  // content panel starts below
+  const isRail = $derived(railAware && sidebarModeStore.layout === 'rail');
+  const isExpandedLayout = $derived(
+    railAware ? sidebarModeStore.layout === 'expanded' : mediaQueryManager.isFullSidebar,
+  );
+  const isHiddenLayout = $derived(railAware && sidebarModeStore.layout === 'hidden');
+  const togglesHidden = $derived(railAware && (isExpandedLayout || isHiddenLayout));
+  const column = $derived(isExpandedLayout ? 'wide' : isRail ? 'rail' : 'narrow');
+
+  const toggleMenu = () => {
+    if (togglesHidden) {
+      sidebarModeStore.toggleHidden();
+    } else if (isRail) {
+      sidebarModeStore.toggleRailOverlay();
+    } else {
+      sidebarStore.toggle();
+    }
+  };
+</script>
+
+<nav id="dashboard-navbar" class="ws-bar h-(--navbar-height) w-dvw max-md:h-(--navbar-height-md)" data-column={column}>
+  <SkipLink text={$t('skip_to_content')} />
+  <div class="ws-bar-start">
+    <button
+      type="button"
+      id={menuButtonId}
+      class="ws-bar-icon"
+      aria-label={isHiddenLayout ? $t('expand') : togglesHidden ? $t('collapse') : $t('main_menu')}
+      title={isHiddenLayout ? $t('expand') : togglesHidden ? $t('collapse') : undefined}
+      onclick={toggleMenu}
+      onmousedown={(event: MouseEvent) => {
+        if (sidebarStore.isOpen) {
+          // stops event from reaching the default handler when clicking outside of the sidebar
+          event.stopPropagation();
+        }
+      }}
+    >
+      <Icon icon={mdiMenu} size="20" />
+    </button>
+    <a class="ws-bar-mark" data-sveltekit-preload-data="hover" href={Route.photos()} aria-label={$t('photos')}>
+      <Logo variant={barSlot.content || !isExpandedLayout ? 'icon' : 'inline'} size="small" />
+    </a>
+  </div>
+
+  <div class="ws-bar-middle">
+    {@render barSlot.content?.()}
+  </div>
+
+  <div class="ws-bar-end">
+    <BarSearch />
+    <BarViewMenu />
+
+    {#if !page.url.pathname.includes('/admin') && onUploadClick}
+      <button
+        type="button"
+        class="ws-bar-icon"
+        aria-label={$t('upload')}
+        title={$t('upload')}
+        onclick={onUploadClick}
+      >
+        <Icon icon={mdiTrayArrowUp} size="20" />
+      </button>
+    {/if}
+
+    <div
+      class="ws-bar-anchor"
+      use:clickOutside={{ onOutclick: () => (showNotifications = false), onEscape: () => (showNotifications = false) }}
+    >
+      <button
+        type="button"
+        class="ws-bar-icon"
+        aria-label={$t('notifications')}
+        title={$t('notifications')}
+        aria-expanded={showNotifications}
+        onclick={() => (showNotifications = !showNotifications)}
+      >
+        <Icon icon={unread > 0 ? mdiBellBadgeOutline : mdiBellOutline} size="20" />
+        {#if unread > 0}<span class="ws-bar-dot" aria-hidden="true"></span>{/if}
+      </button>
+      {#if showNotifications}
+        <NotificationPanel />
+      {/if}
+    </div>
+
+    <div
+      class="ws-bar-anchor"
+      use:clickOutside={{ onOutclick: () => (showAccount = false), onEscape: () => (showAccount = false) }}
+    >
+      <button
+        type="button"
+        class="ws-bar-avatar"
+        onclick={() => (showAccount = !showAccount)}
+        title="{authManager.user.name} ({authManager.user.email})"
+        aria-expanded={showAccount}
+      >
+        {#key authManager.user}
+          <UserAvatar user={authManager.user} size="md" noTitle interactive />
+        {/key}
+      </button>
+      {#if showAccount}
+        <AccountInfoPanel onClose={() => (showAccount = false)} />
+      {/if}
+    </div>
+  </div>
+</nav>
+
+<style>
+  .ws-bar {
+    display: grid;
+    grid-template-columns: var(--ws-bar-start, 16rem) minmax(0, 1fr) auto;
+    align-items: center;
+    border-bottom: 1px solid var(--ws-hairline);
+  }
+  .ws-bar[data-column='rail'] {
+    --ws-bar-start: 9rem;
+  }
+  .ws-bar[data-column='narrow'] {
+    --ws-bar-start: 8rem;
+  }
+  .ws-bar-start {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+    padding-inline-start: 0.75rem;
+    min-width: 0;
+  }
+  .ws-bar-mark {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .ws-bar-middle {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 100%;
+  }
+  .ws-bar-end {
+    display: flex;
+    gap: 0.125rem;
+    align-items: center;
+    padding-inline: 0.75rem 1rem;
+  }
+  .ws-bar-anchor {
+    position: relative;
+  }
+  .ws-bar-avatar {
+    display: flex;
+    margin-inline-start: 0.375rem;
+  }
+  @media (max-width: 767px) {
+    .ws-bar {
+      --ws-bar-start: auto;
+    }
+    .ws-bar-end {
+      padding-inline: 0.25rem 0.5rem;
+    }
+  }
+</style>

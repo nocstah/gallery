@@ -4,7 +4,7 @@
 
 <script lang="ts">
   import { useActions, type ActionArray } from '$lib/actions/use-actions';
-  import NavigationBar from '$lib/components/shared-components/navigation-bar/NavigationBar.svelte';
+  import OmarchyBar from '$lib/components/omarchy/OmarchyBar.svelte';
   import UserSidebar from '$lib/components/shared-components/side-bar/UserSidebar.svelte';
   import { shortcuts } from '$lib/actions/shortcut';
   import { sidebarMedia } from '$lib/stores/sidebar-media.svelte';
@@ -84,7 +84,8 @@
 
 <header>
   {#if !hideNavbar}
-    <NavigationBar onUploadClick={() => openFileUploadDialog()} railAware={!sidebar} />
+    <!-- Local Omarchy layer: the one bar (upstream's NavigationBar stays for the admin shell) -->
+    <OmarchyBar onUploadClick={() => openFileUploadDialog()} railAware={!sidebar} />
   {/if}
 </header>
 <!-- The two height sources are not interchangeable: with a navbar the grid sits *below* a real

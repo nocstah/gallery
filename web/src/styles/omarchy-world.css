@@ -40,6 +40,8 @@
      name in its title bar; heading a section or group; body running text; ui buttons, tabs, sidebar; meta details
      and captions (muted); data counts, years and EXIF (mono); micro small chips only */
   --ws-text-display: clamp(2.25rem, 1rem + 3vw, 4rem);
+  /* the month heading set into the one bar: the timeline's where-am-I, sized to sit in the 64px bar */
+  --ws-text-bar: 28px;
   --ws-text-title: 20px;
   --ws-text-heading: 17px;
   --ws-text-body: 15px;
@@ -47,6 +49,39 @@
   --ws-text-meta: 13px;
   --ws-text-data: 12px;
   --ws-text-micro: 11px;
+}
+
+/* ---- the one bar (components/omarchy): its icons are square tools on the glass, muted until hovered, the accent
+   only for focus; a dot marks a state (filters on, unread notifications) ---- */
+.ws-bar-icon {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--ws-radius);
+  color: color-mix(in oklab, var(--immich-ui-dark) 72%, transparent);
+  transition:
+    background-color 120ms,
+    color 120ms;
+}
+.ws-bar-icon:hover,
+.ws-bar-icon[aria-expanded='true'] {
+  color: var(--immich-ui-dark);
+  background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
+}
+.ws-bar-icon:focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: -2px;
+}
+.ws-bar-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  background: var(--ws-accent);
 }
 
 /* page titles in the title bars: the display face at title size, not body text */

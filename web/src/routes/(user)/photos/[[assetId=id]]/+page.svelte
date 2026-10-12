@@ -33,6 +33,7 @@
   import OnEvents from '$lib/components/OnEvents.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
+  import { barSlot } from '$lib/managers/bar-slot.svelte';
   import TimelineWorkspaces from '$lib/components/timeline/TimelineWorkspaces.svelte';
   import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
   import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
@@ -666,7 +667,39 @@
   );
 
   memoryManager.setFilters({ $for: DateTime.now().toISODate() });
+
+  // Local Omarchy layer: the memories strip above the timeline is put away for now (2026-10-12); memories stay on the
+  // sidebar's Memories page and the desktop bar's On this day widget. true brings the strip back.
+  const showMemoryStrip = false;
+
+  // Local Omarchy layer: the month heading and the time ruler live in the middle of the one bar (OmarchyBar) while the
+  // plain timeline shows; the overviews and filtered results keep the grouping row instead
+  $effect(() => {
+    if (!workspacesShown) {
+      return;
+    }
+    barSlot.content = timeBar;
+    return () => {
+      if (barSlot.content === timeBar) {
+        barSlot.content = undefined;
+      }
+    };
+  });
 </script>
+
+{#snippet timeBar()}
+  {#if timelineManager}
+    <TimelineWorkspaces
+      {timelineManager}
+      {viewportMonth}
+      onFilters={filterCollapsed && !isTimelineEmpty && !assetMultiSelectManager.selectionActive
+        ? () => (filterCollapsed = false)
+        : undefined}
+      filterActive={getActiveFilterCount(filters) > 0}
+      onGrouping={assetMultiSelectManager.selectionActive ? undefined : handleTimelineGroupingChange}
+    />
+  {/if}
+{/snippet}
 
 <UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} barFitsNavbar scrollbar={false}>
   <div class="flex h-full">
@@ -703,22 +736,6 @@
           smartEditing={!!smartEditing}
         />
       {/snippet}
-      {#if workspacesShown}
-        <div class="ps-2 pe-4 pointer-fine:pe-15">
-          <!-- Local Omarchy layer: the workspaces row carries the filter and search buttons and opens the
-               Months / Years overviews, so the grouping row below is only drawn where it is needed -->
-          <TimelineWorkspaces
-            {timelineManager}
-            {viewportMonth}
-            onFilters={filterCollapsed && !isTimelineEmpty && !assetMultiSelectManager.selectionActive
-              ? () => (filterCollapsed = false)
-              : undefined}
-            filterActive={getActiveFilterCount(filters) > 0}
-            onSearch={assetMultiSelectManager.selectionActive ? undefined : () => globalSearchManager.open()}
-            onGrouping={assetMultiSelectManager.selectionActive ? undefined : handleTimelineGroupingChange}
-          />
-        </div>
-      {/if}
       <!-- Local Omarchy layer: min-h holds the bar at its idle 52px while selecting hides its 36px button -->
       <FilterToolbar
         class="mb-2 min-h-13"
@@ -731,7 +748,7 @@
         showFilterButton={filterCollapsed && !isTimelineEmpty && !assetMultiSelectManager.selectionActive && !workspacesShown}
         filterActive={getActiveFilterCount(filters) > 0}
         onExpandFilters={() => (filterCollapsed = false)}
-        showSearchButton={!assetMultiSelectManager.selectionActive && !workspacesShown}
+        showSearchButton={false}
         onSearch={() => globalSearchManager.open()}
       />
       {#if showSearchResults}
@@ -765,7 +782,7 @@
             onGroupingChange={handleTimelineGroupingChange}
             withStacked={!thumbnailZoomManager.expandStacks}
           >
-            {#if authManager.preferences.memories.enabled && !hasActiveFilters}
+            {#if showMemoryStrip && authManager.preferences.memories.enabled && !hasActiveFilters}
               <!-- In month/year grouping the timeline renders large representative cards; add breathing
                  room below the memories strip so those cards don't hug it. The wrapper's height feeds
                  the timeline's measured topSectionHeight, so this shifts the cards down cleanly. -->
