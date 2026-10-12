@@ -48,6 +48,7 @@ import { downloadArchive } from '$lib/utils/asset-utils';
 import { openFileUploadDialog } from '$lib/utils/file-uploader';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
+import { addedToAlbumDone } from '$lib/utils/undoable';
 
 export const isAlbumOwner = (album: AlbumResponseDto) => album.albumUsers[0].user.id === authManager.user.id;
 export const isAlbumEditor = (album: AlbumResponseDto) =>
@@ -197,9 +198,12 @@ export const addAssetsToAlbumWithOutcome = async (
       notifyAddToAlbum($t, albumId, assetIds, results);
     }
     eventManager.emit('AlbumAddAssets', { assetIds, albumIds: [albumId] });
+    const addedIds = results.filter(({ success }) => success).map(({ id }) => id);
+    // Local Omarchy layer: the photos this added (not those already there) can be taken out again from the bar's undo
+    addedToAlbumDone(albumId, addedIds);
     return {
       ok: true,
-      addedIds: results.filter(({ success }) => success).map(({ id }) => id),
+      addedIds,
       // An asset already in the album comes back `success:false, error:duplicate`. That is not a
       // refusal — the photo is already where the caller wanted it and there is nothing to retry —
       // so it must not be lumped in with a genuine permission denial.

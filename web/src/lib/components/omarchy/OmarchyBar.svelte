@@ -1,11 +1,12 @@
 <script lang="ts">
   // Local Omarchy layer: the one bar. User pages get this in place of upstream's NavigationBar (which stays for the
   // admin shell): the menu and the mark on the left; the page's own content in the middle (Photos: its month heading
-  // and time ruler, lib/managers/bar-slot); and on the right search (an icon that opens into the search field), the
-  // view menu, upload, notifications and the account. One 64px row, so the photos start right under it.
+  // and time ruler, lib/managers/bar-slot); and on the right search (an icon that opens into the search field), undo
+  // (the recent actions that can be taken back), the view menu, upload, notifications and the account. One 64px row, so the photos start right under it.
   import { page } from '$app/state';
   import { clickOutside } from '$lib/actions/click-outside';
   import BarSearch from '$lib/components/omarchy/BarSearch.svelte';
+  import BarUndo from '$lib/components/omarchy/BarUndo.svelte';
   import BarViewMenu from '$lib/components/omarchy/BarViewMenu.svelte';
   import Logo from '$lib/components/shared-components/Logo.svelte';
   import AccountInfoPanel from '$lib/components/shared-components/navigation-bar/AccountInfoPanel.svelte';
@@ -96,6 +97,7 @@
 
   <div class="ws-bar-end">
     <BarSearch />
+    <BarUndo />
     <BarViewMenu />
 
     {#if !page.url.pathname.includes('/admin') && onUploadClick}

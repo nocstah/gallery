@@ -164,6 +164,7 @@ export class TimelineManager extends VirtualScrollManager {
           }
         },
         AssetsUnarchive: (assets) => this.upsertAssets(assets),
+        AssetsChanged: (assets) => this.#reconcile(assets),
         AlbumRemoveAssets: ({ assetIds, albumIds }) => {
           if (this.#options.albumId && albumIds.includes(this.#options.albumId)) {
             this.removeAssets(assetIds);
@@ -602,6 +603,29 @@ export class TimelineManager extends VirtualScrollManager {
     const notUpdated = this.#updateAssets(assets);
     const notExcluded = notUpdated.filter((asset) => !this.isExcluded(asset));
     this.addAssetsUpsertSegments([...notExcluded]);
+  }
+
+  // Local Omarchy layer: assets an undo changed (lib/utils/asset-refresh), fetched fresh: what no longer belongs here
+  // leaves (archived again, unfavourited on Favorites, back out of the trash on the trash page), the rest is updated in
+  // place, and what now belongs comes in the way a live event would (a stack's other photos stay under its cover)
+  #reconcile(assets: TimelineAsset[]) {
+    if (!this.#isDetailedTimeline()) {
+      return;
+    }
+    const leaving = new Set(
+      assets
+        .filter((asset) => this.isExcluded(asset) || (asset.isTrashed && !this.#options.isTrashed))
+        .map(({ id }) => id),
+    );
+    this.removeAssets([...leaving]);
+    const notUpdated = this.#updateAssets(assets.filter(({ id }) => !leaving.has(id)));
+    this.addAssetsUpsertSegments(
+      notUpdated.filter(
+        (asset) =>
+          this.canInsertAssetFromLiveEvent(asset) &&
+          !(this.#options.withStacked && asset.stack && asset.stack.primaryAssetId !== asset.id),
+      ),
+    );
   }
 
   upsertAssetsFromLiveEvent(assets: TimelineAsset[]) {

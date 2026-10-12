@@ -151,6 +151,13 @@
         timelineManager.upsertAssets([action.asset]);
         break;
       }
+      // Local Omarchy layer: a photo trashed from inside a stack skips handlePreAction (the viewer stays in the
+      // stack), so it leaves the timeline here, once it is gone; for any other photo this is already done
+      case AssetAction.TRASH:
+      case AssetAction.DELETE: {
+        timelineManager.removeAssets([action.asset.id]);
+        break;
+      }
       // no default
     }
   };

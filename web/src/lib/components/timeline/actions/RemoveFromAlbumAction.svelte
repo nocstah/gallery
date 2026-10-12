@@ -2,6 +2,7 @@
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { handleError } from '$lib/utils/handle-error';
+  import { removedFromAlbumDone } from '$lib/utils/undoable';
   import { getAlbumInfo, removeAssetFromAlbum, type AlbumResponseDto } from '@immich/sdk';
   import { IconButton, modalManager, toastManager } from '@immich/ui';
   import { mdiDeleteOutline, mdiImageRemoveOutline } from '@mdi/js';
@@ -42,10 +43,13 @@
       const removedIds = results.filter(({ success }) => success).map(({ id }) => id);
       onRemove?.(removedIds);
 
+      // Local Omarchy layer: what was removed can be put back, from the toast or the bar's undo (utils/undoable)
       if (removedIds.length === ids.length) {
-        toastManager.primary($t('assets_removed_count', { values: { count: removedIds.length } }));
+        removedFromAlbumDone(album.id, removedIds, $t('assets_removed_count', { values: { count: removedIds.length } }));
       } else if (removedIds.length > 0) {
-        toastManager.info(
+        removedFromAlbumDone(
+          album.id,
+          removedIds,
           $t('assets_removed_partial_count', {
             values: { removedCount: removedIds.length, totalCount: ids.length },
           }),

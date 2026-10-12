@@ -26,6 +26,14 @@ import { openFileUploadDialog } from '$lib/utils/file-uploader';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
 import { navigate } from '$lib/utils/navigation';
+import {
+  coverDone,
+  keptThisDone,
+  stackedDone,
+  stacksBefore,
+  unstackedDone,
+  unstackedOneDone,
+} from '$lib/utils/undoable';
 
 export const getStackBulkActions = ($t: MessageFormatter) => {
   const Stack: ActionItem = {
@@ -127,7 +135,12 @@ const handleKeepThisDeleteOthers = async (stack: StackResponseDto, asset: AssetR
     await deleteAssets({ assetBulkDeleteDto: { ids: assetsToDeleteIds } });
     await deleteStacks({ bulkIdsDto: { ids: [stack.id] } });
 
-    toastManager.primary($t('kept_this_deleted_others', { values: { count: assetsToDeleteIds.length } }));
+    // Local Omarchy layer: with an Undo that restores the others and the whole stack (utils/undoable)
+    keptThisDone(
+      stack,
+      assetsToDeleteIds,
+      $t('kept_this_deleted_others', { values: { count: assetsToDeleteIds.length } }),
+    );
     eventManager.emit('StackDelete', { id: stack.id, assets: [asset] });
     eventManager.emit('AssetUpdate', { ...asset, stack: null });
   } catch (error) {
@@ -145,7 +158,8 @@ const handleRemoveFromStack = async (stack: StackResponseDto, asset: AssetRespon
       assets: stack.assets.filter((a) => a.id !== asset.id),
     };
 
-    toastManager.primary($t('removed_from_stack'));
+    // Local Omarchy layer: with an Undo that puts it back in the stack (utils/undoable)
+    unstackedOneDone(stack, asset.id);
     eventManager.emit('AssetUpdate', asset);
     eventManager.emit('StackUpdate', updatedStack);
   } catch (error) {
@@ -160,6 +174,8 @@ const handleSetPrimaryAsset = async (stack: StackResponseDto, asset: AssetRespon
     const updatedStack = await updateStack({ id: stack.id, stackUpdateDto: { primaryAssetId: asset.id } });
 
     eventManager.emit('StackUpdate', updatedStack);
+    // Local Omarchy layer: the old cover can be had back from the bar's undo (utils/undoable)
+    coverDone(stack.id, stack.primaryAssetId);
   } catch (error) {
     handleError(error, $t('errors.something_went_wrong'));
   }
@@ -169,7 +185,10 @@ export const handleStack = async (assetIds: string[]) => {
   const $t = await getFormatter();
 
   try {
+    // Local Omarchy layer: the photos' stacks as they were, so the stacking can be undone (utils/undoable)
+    const before = await stacksBefore(assetIds);
     const stack = await createStack({ stackCreateDto: { assetIds } });
+    stackedDone(stack, before);
 
     toastManager.primary({
       description: $t('stacked_assets_count', { values: { count: stack.assets.length } }),
@@ -193,7 +212,8 @@ export const handleDeleteStack = async (stack: StackResponseDto) => {
 
     const assetIds = stack.assets.map((asset) => asset.id);
 
-    toastManager.primary($t('unstacked_assets_count', { values: { count: assetIds.length } }));
+    // Local Omarchy layer: with an Undo that stacks them again, kept in the bar's undo history too (utils/undoable)
+    unstackedDone([stack], $t('unstacked_assets_count', { values: { count: assetIds.length } }));
     eventManager.emit('StackDelete', stack);
 
     return assetIds;
@@ -207,7 +227,13 @@ const handleDeleteStacks = async (assetStacks: AssetStackResponseDto[]) => {
 
   try {
     const stacks = await Promise.all(assetStacks.map((stack) => getStack(stack)));
-    await Promise.all(stacks.map((stack) => handleDeleteStack(stack)));
+    // Local Omarchy layer: one undo for them all (utils/undoable), not one per stack
+    await deleteStacks({ bulkIdsDto: { ids: stacks.map(({ id }) => id) } });
+    const count = stacks.reduce((sum, stack) => sum + stack.assets.length, 0);
+    unstackedDone(stacks, $t('unstacked_assets_count', { values: { count } }));
+    for (const stack of stacks) {
+      eventManager.emit('StackDelete', stack);
+    }
   } catch (error) {
     handleError(error, $t('errors.failed_to_unstack_assets'));
   }

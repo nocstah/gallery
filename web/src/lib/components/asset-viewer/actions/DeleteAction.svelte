@@ -6,6 +6,7 @@
   import { showDeleteModal } from '$lib/stores/preferences.store';
   import { deleteAssets as deleteAssetsUtil, type OnUndoDelete } from '$lib/utils/actions';
   import { handleError } from '$lib/utils/handle-error';
+  import { announceCovers, handOverCovers } from '$lib/utils/stack-covers';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import { deleteAssets, type AssetResponseDto } from '@immich/sdk';
   import { IconButton, modalManager, toastManager } from '@immich/ui';
@@ -38,8 +39,11 @@
 
       try {
         preAction({ type: AssetAction.DELETE, asset: timelineAsset });
+        // Local Omarchy layer: a stack losing its cover gets a new one first, so it stays in view (utils/stack-covers)
+        const covers = await handOverCovers([asset]);
         await deleteAssets({ assetBulkDeleteDto: { ids: [asset.id], force: true } });
         onAction({ type: AssetAction.DELETE, asset: timelineAsset });
+        announceCovers(covers, [asset.id]);
         toastManager.primary($t('permanently_deleted_asset'));
       } catch (error) {
         handleError(error, $t('errors.unable_to_delete_asset'));

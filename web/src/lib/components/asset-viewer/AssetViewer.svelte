@@ -385,7 +385,34 @@
     previewStackedAsset = isMouseOver ? stackedAsset : undefined;
   };
 
+  // Local Omarchy layer: a photo trashed (or deleted) from inside a stack leaves the viewer in the stack, on the photo
+  // beside it in the strip, instead of on the timeline's next photo (which made the whole stack look gone); only the
+  // stack's last photo still leaves as before. The timeline drops the photo once it is gone (TimelineAssetViewer's
+  // handleAction) and the stack's StackUpdate (utils/stack-covers) brings the strip and its cover up to date.
+  const stayInStack = (action: Action) => {
+    if ((action.type !== AssetAction.TRASH && action.type !== AssetAction.DELETE) || !stack || !withStacked) {
+      return false;
+    }
+    const index = stack.assets.findIndex(({ id }) => id === action.asset.id);
+    const next = index === -1 ? undefined : (stack.assets[index + 1] ?? stack.assets[index - 1]);
+    if (!next) {
+      return false;
+    }
+    previewStackedAsset = undefined;
+    stack = { ...stack, assets: stack.assets.filter(({ id }) => id !== action.asset.id) };
+    cursor.current = next;
+    // the open photo belongs to the page: the viewer's place is rebuilt from it whenever the timeline changes (as it
+    // does once the photo is gone), so it and the address move on to the next photo too, the trashed one's address
+    // replaced in the history
+    assetViewerManager.setAsset(next);
+    void navigate({ targetRoute: 'current', assetId: next.id }, { replaceState: true });
+    return true;
+  };
+
   const handlePreAction = (action: Action) => {
+    if (stayInStack(action)) {
+      return;
+    }
     preAction?.(action);
   };
 
@@ -393,7 +420,8 @@
     switch (action.type) {
       case AssetAction.DELETE:
       case AssetAction.TRASH: {
-        eventManager.emit('AssetsDelete', [asset.id]);
+        // the photo the action was for: by the time it is done the viewer may already show another one
+        eventManager.emit('AssetsDelete', [action.asset.id]);
         break;
       }
       case AssetAction.RATING: {
@@ -758,7 +786,7 @@
               class="grid size-12 place-items-center rounded-xl border border-white/10 bg-black/55 text-white backdrop-blur-md transition-colors hover:bg-black/75"
               title={$t('stack_pick')}
               aria-label={$t('stack_pick')}
-              onclick={() => stackPick.open(stack.id)}
+              onclick={() => stack && stackPick.open(stack.id)}
             >
               <Icon icon={mdiStarFourPointsOutline} size="20" />
             </button>

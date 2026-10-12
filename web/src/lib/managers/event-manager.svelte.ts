@@ -42,6 +42,8 @@ export type Events = {
   AssetsDelete: [string[]];
   AssetEditsApplied: [string];
   AssetsTag: [string[]];
+  // Local Omarchy layer: assets an undo changed, fetched fresh; each timeline takes them in, updates or drops them
+  AssetsChanged: [TimelineAsset[]];
 
   AlbumAddAssets: [{ assetIds: string[]; albumIds: string[] }];
   AlbumRemoveAssets: [{ assetIds: string[]; albumIds: string[] }];

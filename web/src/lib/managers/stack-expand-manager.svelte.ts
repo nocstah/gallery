@@ -10,6 +10,7 @@ import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-ma
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
 import { toTimelineAsset } from '$lib/utils/timeline-util';
+import { coverDone } from '$lib/utils/undoable';
 
 class StackExpandManager {
   /** stack id -> ids of the photos inserted for it (everything but the cover) */
@@ -187,8 +188,12 @@ class StackExpandManager {
   /** Make a photo its stack's cover. The timeline's StackUpdate handler collapses the stack onto it. */
   async makeCover(stackId: string, assetId: string) {
     try {
+      const before =
+        [...this.#covers].find(([, id]) => id === stackId)?.[0] ?? (await getStack({ id: stackId })).primaryAssetId;
       const stack = await updateStack({ id: stackId, stackUpdateDto: { primaryAssetId: assetId } });
       eventManager.emit('StackUpdate', stack);
+      // the old cover can be had back from the bar's undo (utils/undoable)
+      coverDone(stackId, before);
     } catch (error) {
       const translate = await getFormatter();
       handleError(error, translate('errors.something_went_wrong'));

@@ -4,6 +4,9 @@ import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+import { pageKey, undoManager } from '$lib/managers/undo-manager.svelte';
+import { refreshAssets } from '$lib/utils/asset-refresh';
+import { announceCovers, handOverCovers, restoreCovers, type CoverChange } from '$lib/utils/stack-covers';
 import { handleError } from './handle-error';
 
 export type OnDelete = (assetIds: string[]) => void;
@@ -24,18 +27,31 @@ export const deleteAssets = async (
   const $t = get(t);
   try {
     const ids = assets.map((a) => a.id);
+    // Local Omarchy layer: a stack losing its cover gets a new one first, so it stays in view (utils/stack-covers)
+    const here = pageKey();
+    const covers = await handOverCovers(assets);
     await deleteBulk({ assetBulkDeleteDto: { ids, force } });
     onAssetDelete(ids);
+    announceCovers(covers, ids);
 
+    const description = force
+      ? $t('assets_permanently_deleted_count', { values: { count: ids.length } })
+      : $t('assets_trashed_count', { values: { count: ids.length } });
+    // Local Omarchy layer: the undo stays in the bar's undo history once the toast is gone (managers/undo-manager)
+    const entry = force
+      ? undefined
+      : undoManager.record(
+          description,
+          () => undoDeleteAssets(onUndoDelete, assets, covers, here),
+          $t('errors.unable_to_restore_assets'),
+        );
     toastManager.primary(
       {
-        description: force
-          ? $t('assets_permanently_deleted_count', { values: { count: ids.length } })
-          : $t('assets_trashed_count', { values: { count: ids.length } }),
+        description,
         button:
-          onUndoDelete && !force
-            ? { label: $t('undo'), color: 'secondary', onclick: () => undoDeleteAssets(onUndoDelete, assets) }
-            : undefined,
+          entry === undefined
+            ? undefined
+            : { label: $t('undo'), color: 'secondary', onclick: () => void undoManager.undo(entry) },
       },
       { timeout: 5000 },
     );
@@ -44,15 +60,23 @@ export const deleteAssets = async (
   }
 };
 
-const undoDeleteAssets = async (onUndoDelete: OnUndoDelete, assets: TimelineAsset[]) => {
+/** Restores trashed assets, puts back the stack covers they had, and shows them again wherever the page is now (the
+ * page they were trashed on also gets its own callback, which may reopen the photo, while it is still open). */
+export const undoDeleteAssets = async (
+  onUndoDelete: OnUndoDelete | undefined,
+  assets: TimelineAsset[],
+  covers: CoverChange[] = [],
+  here = pageKey(),
+) => {
   const $t = get(t);
-  try {
-    const ids = assets.map((a) => a.id);
-    await restoreAssets({ bulkIdsDto: { ids } });
+  const ids = assets.map((a) => a.id);
+  await restoreAssets({ bulkIdsDto: { ids } });
+  await restoreCovers(covers);
+  if (pageKey() === here) {
     onUndoDelete?.(assets);
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_restore_assets'));
   }
+  await refreshAssets(ids);
+  return $t('assets_restored_count', { values: { count: ids.length } });
 };
 
 /**

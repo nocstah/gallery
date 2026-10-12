@@ -1,22 +1,19 @@
-import {
-  AssetVisibility,
-  deleteAssets as deleteBulk,
-  restoreAssets,
-  updateAssetFavorites,
-  updateAssets,
-} from '@immich/sdk';
+import { AssetVisibility, deleteAssets as deleteBulk, updateAssetFavorites, updateAssets } from '@immich/sdk';
 import { modalManager, toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
 import type { CommandContext, SelectionCommandContext } from '$lib/managers/command-context-manager.svelte';
 import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+import { pageKey, undoManager } from '$lib/managers/undo-manager.svelte';
 import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.svelte';
 import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte';
 import { showDeleteModal } from '$lib/stores/preferences.store';
-import type { OnUndoDelete } from '$lib/utils/actions';
+import { undoDeleteAssets } from '$lib/utils/actions';
+import { showUndoArchiveToast } from '$lib/utils/asset-utils';
 import { handleError } from '$lib/utils/handle-error';
+import { announceCovers, handOverCovers } from '$lib/utils/stack-covers';
+import { favoritesDone } from '$lib/utils/undoable';
 
 const getSelection = (ctx?: CommandContext): SelectionCommandContext | null => ctx?.selection ?? null;
 
@@ -109,7 +106,8 @@ export async function handleFavoriteSelected(ctx?: CommandContext) {
       asset.isFavorite = true;
     }
     selection.onFavorite(ids, true);
-    toastManager.primary($t('added_to_favorites_count', { values: { count: ids.length } }));
+    // Local Omarchy layer: with an Undo, kept in the bar's undo history too (utils/undoable)
+    favoritesDone(ids, true);
     selection.clearSelection();
   } catch (error) {
     handleError(error, $t('errors.unable_to_add_remove_favorites', { values: { favorite: true } }));
@@ -130,10 +128,12 @@ export async function handleArchiveSelected(ctx?: CommandContext) {
   }
 
   const $t = get(t);
+  const prior = assets.map((asset) => ({ id: asset.id, visibility: asset.visibility }));
   try {
     await updateAssets({ assetBulkUpdateDto: { ids, visibility } });
     selection.onArchive(ids, visibility);
-    toastManager.primary($t('archived_count', { values: { count: ids.length } }));
+    // Local Omarchy layer: with an undo, kept in the bar's undo history too (managers/undo-manager)
+    showUndoArchiveToast($t('archived_count', { values: { count: ids.length } }), prior, assets, true);
     selection.clearSelection();
   } catch (error) {
     handleError(error, $t('errors.unable_to_archive_unarchive', { values: { archived: true } }));
@@ -160,23 +160,32 @@ export async function handleDeleteSelected(ctx?: CommandContext) {
     }
   }
 
-  const onUndoDelete = force ? undefined : selection.onUndoDelete;
   const $t = get(t);
   try {
+    // Local Omarchy layer: a stack losing its cover gets a new one first, so it stays in view (utils/stack-covers)
+    const here = pageKey();
+    const covers = await handOverCovers(assets);
     await deleteBulk({ assetBulkDeleteDto: { ids, force } });
     selection.onDelete(ids);
+    announceCovers(covers, ids);
+    const description = force
+      ? $t('assets_permanently_deleted_count', { values: { count: ids.length } })
+      : $t('assets_trashed_count', { values: { count: ids.length } });
+    // Local Omarchy layer: the undo stays in the bar's undo history once the toast is gone (managers/undo-manager)
+    const entry = force
+      ? undefined
+      : undoManager.record(
+          description,
+          () => undoDeleteAssets(selection.onUndoDelete, assets, covers, here),
+          $t('errors.unable_to_restore_assets'),
+        );
     toastManager.primary(
       {
-        description: force
-          ? $t('assets_permanently_deleted_count', { values: { count: ids.length } })
-          : $t('assets_trashed_count', { values: { count: ids.length } }),
-        button: onUndoDelete
-          ? {
-              label: $t('undo'),
-              color: 'secondary' as const,
-              onclick: () => void undoDeleteAssets(onUndoDelete, assets),
-            }
-          : undefined,
+        description,
+        button:
+          entry === undefined
+            ? undefined
+            : { label: $t('undo'), color: 'secondary' as const, onclick: () => void undoManager.undo(entry) },
       },
       { timeout: 5000 },
     );
@@ -185,16 +194,5 @@ export async function handleDeleteSelected(ctx?: CommandContext) {
   } catch (error) {
     handleError(error, $t('errors.unable_to_delete_assets'));
     return false;
-  }
-}
-
-async function undoDeleteAssets(onUndoDelete: OnUndoDelete, assets: TimelineAsset[]) {
-  const ids = assets.map((asset) => asset.id);
-  const $t = get(t);
-  try {
-    await restoreAssets({ bulkIdsDto: { ids } });
-    onUndoDelete(assets);
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_restore_assets'));
   }
 }

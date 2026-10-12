@@ -21,8 +21,10 @@ import { downloadManager } from '$lib/managers/download-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+import { pageKey, undoManager } from '$lib/managers/undo-manager.svelte';
 import { locale } from '$lib/stores/preferences.store';
 import { downloadUrlPost, withError } from '$lib/utils';
+import { refreshAssets } from '$lib/utils/asset-refresh';
 import { getByteUnitString } from '$lib/utils/byte-units';
 import { getFormatter } from '$lib/utils/i18n';
 import { navigate } from '$lib/utils/navigation';
@@ -309,6 +311,7 @@ export const selectAllAssets = async (timelineManager: TimelineManager, assetInt
 
 export const toggleArchive = async (asset: AssetResponseDto) => {
   const $t = get(t);
+  const prior = [{ id: asset.id, visibility: asset.visibility }];
   try {
     const data = await updateAsset({
       id: asset.id,
@@ -319,12 +322,12 @@ export const toggleArchive = async (asset: AssetResponseDto) => {
 
     asset.isArchived = data.isArchived;
     asset.visibility = data.visibility;
-    if (asset.isArchived) {
-      const timelineAsset = toTimelineAsset(asset);
-      showUndoArchiveToast($t('added_to_archive'), [timelineAsset]);
-    } else {
-      toastManager.primary($t('removed_from_archive'));
-    }
+    showUndoArchiveToast(
+      asset.isArchived ? $t('added_to_archive') : $t('removed_from_archive'),
+      prior,
+      [toTimelineAsset(asset)],
+      asset.isArchived,
+    );
   } catch (error) {
     handleError(error, $t('errors.unable_to_add_remove_archive', { values: { archived: asset.isArchived } }));
   }
@@ -332,46 +335,66 @@ export const toggleArchive = async (asset: AssetResponseDto) => {
   return asset;
 };
 
-const showUndoArchiveToast = (description: string, assets: TimelineAsset[]) => {
+type PriorVisibility = { id: string; visibility: AssetVisibility };
+
+// Local Omarchy layer: archiving and unarchiving can both be taken back, from the toast or later from the bar's undo
+// (managers/undo-manager); either way each asset goes back to the visibility it had
+export const showUndoArchiveToast = (
+  description: string,
+  prior: PriorVisibility[],
+  assets: TimelineAsset[],
+  archived: boolean,
+) => {
   const $t = get(t);
+  const here = pageKey();
+  const entry = undoManager.record(
+    description,
+    () => undoArchiveAssets(prior, assets, here),
+    $t('errors.unable_to_archive_unarchive', { values: { archived: !archived } }),
+  );
   toastManager.primary({
     description,
     button: (close) => ({
       label: $t('undo'),
       onclick: () => {
         close();
-        void undoArchiveAssets(assets);
+        void undoManager.undo(entry);
       },
     }),
   });
 };
 
-const undoArchiveAssets = async (assets: TimelineAsset[]) => {
+const undoArchiveAssets = async (prior: PriorVisibility[], assets: TimelineAsset[], here: string) => {
   const $t = get(t);
-  try {
-    const ids = assets.map((a) => a.id);
-    if (ids.length > 0) {
-      await updateAssets({
-        assetBulkUpdateDto: {
-          ids,
-          visibility: AssetVisibility.Timeline,
-        },
-      });
-    }
-
-    for (const asset of assets) {
-      asset.visibility = AssetVisibility.Timeline;
-    }
-    eventManager.emit('AssetsUnarchive', assets);
-    eventManager.emit('AssetsUndoArchive', assets);
-    toastManager.success($t('unarchived_count', { values: { count: assets.length } }));
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_archive_unarchive', { values: { archived: false } }));
+  const groups = new Map<AssetVisibility, string[]>();
+  for (const { id, visibility } of prior) {
+    groups.set(visibility, [...(groups.get(visibility) ?? []), id]);
   }
+  for (const [visibility, ids] of groups) {
+    await updateAssets({ assetBulkUpdateDto: { ids, visibility } });
+  }
+
+  const before = new Map(prior.map(({ id, visibility }) => [id, visibility]));
+  for (const asset of assets) {
+    asset.visibility = before.get(asset.id) ?? asset.visibility;
+  }
+  const unarchived = assets.filter((asset) => asset.visibility === AssetVisibility.Timeline);
+  if (unarchived.length > 0) {
+    eventManager.emit('AssetsUnarchive', unarchived);
+    // the viewer that archived one goes back to it, but only while that page is still open
+    if (pageKey() === here) {
+      eventManager.emit('AssetsUndoArchive', unarchived);
+    }
+  }
+  await refreshAssets(prior.map(({ id }) => id));
+  return unarchived.length > 0
+    ? $t('unarchived_count', { values: { count: unarchived.length } })
+    : $t('archived_count', { values: { count: prior.length } });
 };
 
 export const archiveAssets = async (assets: TimelineAsset[], visibility: AssetVisibility) => {
   const ids = assets.map(({ id }) => id);
+  const prior = assets.map((asset) => ({ id: asset.id, visibility: asset.visibility }));
   const $t = get(t);
 
   try {
@@ -379,12 +402,15 @@ export const archiveAssets = async (assets: TimelineAsset[], visibility: AssetVi
       await updateAssets({
         assetBulkUpdateDto: { ids, visibility },
       });
-    }
-
-    if (visibility === AssetVisibility.Archive) {
-      showUndoArchiveToast($t('archived_count', { values: { count: ids.length } }), assets);
-    } else {
-      toastManager.primary($t('unarchived_count', { values: { count: ids.length } }));
+      const archived = visibility === AssetVisibility.Archive;
+      showUndoArchiveToast(
+        archived
+          ? $t('archived_count', { values: { count: ids.length } })
+          : $t('unarchived_count', { values: { count: ids.length } }),
+        prior,
+        assets,
+        archived,
+      );
     }
   } catch (error) {
     handleError(

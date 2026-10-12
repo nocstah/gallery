@@ -3,8 +3,9 @@
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import type { OnFavorite } from '$lib/utils/actions';
   import { handleError } from '$lib/utils/handle-error';
+  import { favoritesDone } from '$lib/utils/undoable';
   import { updateAssetFavorites } from '@immich/sdk';
-  import { IconButton, toastManager } from '@immich/ui';
+  import { IconButton } from '@immich/ui';
   import { mdiHeartMinusOutline, mdiHeartOutline, mdiTimerSand } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
@@ -40,11 +41,8 @@
 
       onFavorite?.(ids, isFavorite);
 
-      toastManager.primary(
-        isFavorite
-          ? $t('added_to_favorites_count', { values: { count: ids.length } })
-          : $t('removed_from_favorites_count', { values: { count: ids.length } }),
-      );
+      // Local Omarchy layer: the toast's Undo is kept in the bar's undo history too (utils/undoable)
+      favoritesDone(ids, isFavorite);
 
       assetMultiSelectManager.clear();
     } catch (error) {

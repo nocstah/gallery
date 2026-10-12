@@ -4,6 +4,7 @@
   import { handlePromiseError } from '$lib/utils';
   import { applyContextualFilter } from '$lib/utils/filter-target';
   import { handleError } from '$lib/utils/handle-error';
+  import { ratingDone } from '$lib/utils/undoable';
   import { updateAsset, type AssetResponseDto } from '@immich/sdk';
   import { IconButton } from '@immich/ui';
   import { mdiFilterOutline } from '@mdi/js';
@@ -20,9 +21,12 @@
 
   let rating = $derived(asset.exifInfo?.rating ?? null) as Rating;
 
-  const handleChangeRating = async (rating: Rating) => {
+  const handleChangeRating = async (next: Rating) => {
+    const before = rating;
     try {
-      await updateAsset({ id: asset.id, updateAssetDto: { rating } });
+      await updateAsset({ id: asset.id, updateAssetDto: { rating: next } });
+      // Local Omarchy layer: a rating can be taken back from the bar's undo (utils/undoable)
+      ratingDone(asset.id, before, next);
     } catch (error) {
       handleError(error, $t('errors.cant_apply_changes'));
     }

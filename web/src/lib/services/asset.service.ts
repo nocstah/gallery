@@ -70,6 +70,7 @@ import { canEditAsset } from '$lib/utils/asset-editability';
 import { getEditableAssetsWithWarning } from '$lib/utils/asset-utils';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
+import { favoritesDone, ratingDone, removedFromAlbumDone } from '$lib/utils/undoable';
 
 export const getAssetBulkActions = (
   $t: MessageFormatter,
@@ -588,7 +589,8 @@ const handleFavorite = async (asset: AssetResponseDto) => {
 
   try {
     await updateAssetFavorites({ assetFavoriteUpdateDto: { ids: [asset.id], isFavorite: true } });
-    toastManager.primary($t('added_to_favorites'));
+    // Local Omarchy layer: with an Undo, kept in the bar's undo history too (utils/undoable)
+    favoritesDone([asset.id], true, $t('added_to_favorites'));
     eventManager.emit('AssetUpdate', { ...asset, isFavorite: true });
   } catch (error) {
     handleError(error, $t('errors.unable_to_add_remove_favorites', { values: { favorite: asset.isFavorite } }));
@@ -600,7 +602,7 @@ const handleUnfavorite = async (asset: AssetResponseDto) => {
 
   try {
     await updateAssetFavorites({ assetFavoriteUpdateDto: { ids: [asset.id], isFavorite: false } });
-    toastManager.primary($t('removed_from_favorites'));
+    favoritesDone([asset.id], false, $t('removed_from_favorites'));
     eventManager.emit('AssetUpdate', { ...asset, isFavorite: false });
   } catch (error) {
     handleError(error, $t('errors.unable_to_add_remove_favorites', { values: { favorite: asset.isFavorite } }));
@@ -623,6 +625,8 @@ const handleRate = async (asset: AssetResponseDto, rating: number) => {
   try {
     const response = await updateAsset({ id: asset.id, updateAssetDto: { rating: newRating } });
     eventManager.emit('AssetUpdate', response);
+    // Local Omarchy layer: a rating can be taken back from the bar's undo (utils/undoable)
+    ratingDone(asset.id, asset.exifInfo?.rating, newRating);
   } catch (error) {
     handleError(error, $t('errors.unable_to_set_rating'));
   }
@@ -666,9 +670,10 @@ const handleRemoveAssetsFromAlbum = async (assetIds: string[], album: AlbumRespo
       bulkIdsDto: { ids: assetIds },
     });
 
-    const count = results.filter(({ success }) => success).length;
+    const removedIds = results.filter(({ success }) => success).map(({ id }) => id);
 
-    toastManager.primary($t('assets_removed_count', { values: { count } }));
+    // Local Omarchy layer: with an Undo, kept in the bar's undo history too (utils/undoable)
+    removedFromAlbumDone(album.id, removedIds, $t('assets_removed_count', { values: { count: removedIds.length } }));
     eventManager.emit('AlbumRemoveAssets', { assetIds, albumIds: [album.id] });
   } catch (error) {
     handleError(error, $t('errors.error_removing_assets_from_album'));
