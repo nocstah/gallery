@@ -19,8 +19,11 @@
   type Payload = { variant?: string; width?: number; height?: number; source?: { width?: number; height?: number } };
   const payload = $derived(suggestion.payload as Payload);
   const clip = $derived(payload.variant === 'video');
-  // Local Omarchy layer: a Live Photo effect (curator/live.py) is shown on its own, a loop or bounce playing on
-  const effect = $derived(['loop', 'bounce', 'long-exposure', 'key-photo'].includes(payload.variant ?? ''));
+  // Local Omarchy layer: a Live Photo effect (curator/live.py) or a straightened document is shown on its own, a loop
+  // or bounce playing on
+  const effect = $derived(
+    ['loop', 'bounce', 'long-exposure', 'key-photo', 'straightened'].includes(payload.variant ?? ''),
+  );
   const effectClip = $derived(payload.variant === 'loop' || payload.variant === 'bounce');
   // photos are asked for at about twice the width they are shown at, for sharp edges on HiDPI screens
   const across = $derived(size === 'stage' ? 2560 : 960);
