@@ -4,7 +4,9 @@
   // another switches to it, the way SUPER+<n> switches Hyprland workspaces.
   import { thumbnailZoomManager, ZOOM_MAX, ZOOM_MIN } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import type { ViewportTopMonth } from '$lib/managers/timeline-manager/types';
+  import type { TimelineGrouping, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
+  import { Icon } from '@immich/ui';
+  import { mdiChevronLeft, mdiChevronRight, mdiMagnify, mdiTune } from '@mdi/js';
   import { locale } from '$lib/stores/preferences.store';
   import { t } from 'svelte-i18n';
   import { cubicOut } from 'svelte/easing';
@@ -13,9 +15,28 @@
   interface Props {
     timelineManager: TimelineManager;
     viewportMonth: ViewportTopMonth;
+    /** the page's filter panel, when it is folded away (its reopen button lives here, beside the tools) */
+    onFilters?: () => void;
+    filterActive?: boolean;
+    onSearch?: () => void;
+    /** the month name opens the Months overview, the year the Years overview */
+    onGrouping?: (grouping: TimelineGrouping) => void;
   }
 
-  let { timelineManager, viewportMonth }: Props = $props();
+  let { timelineManager, viewportMonth, onFilters, filterActive = false, onSearch, onGrouping }: Props = $props();
+
+  // the year strip pages with arrows at its ends when it holds more years than fit
+  let canEarlier = $state(false);
+  let canLater = $state(false);
+  const updateEnds = () => {
+    if (!strip) {
+      return;
+    }
+    canLater = strip.scrollLeft > 2;
+    canEarlier = strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 2;
+  };
+  const page = (direction: 1 | -1) =>
+    strip?.scrollBy({ left: direction * strip.clientWidth * 0.8, behavior: reducedMotion ? 'auto' : 'smooth' });
 
   const reducedMotion =
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -74,6 +95,18 @@
     const year = current?.year;
     const active = strip?.querySelector<HTMLElement>(`[data-year="${year}"]`);
     active?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reducedMotion ? 'auto' : 'smooth' });
+    updateEnds();
+    setTimeout(updateEnds, 400); // after the smooth scroll settles
+  });
+
+  // the strip's ends change with the window's width too
+  $effect(() => {
+    if (!strip) {
+      return;
+    }
+    const observer = new ResizeObserver(updateEnds);
+    observer.observe(strip);
+    return () => observer.disconnect();
   });
 
   // Switching workspaces slides the current year out across the width and the new one in from the
@@ -173,28 +206,62 @@
     <div class="ws-now" aria-live="polite">
       {#key `${current.year}-${current.month}`}
         <div class="ws-now-label" in:slide>
-          <span class="ws-month">{monthName}</span>
-          <span class="ws-year">{current.year}</span>
+          <button
+            type="button"
+            class="ws-month ws-now-link"
+            title={$t('timeline_grouping_months')}
+            disabled={!onGrouping}
+            onclick={() => onGrouping?.('month')}>{monthName}</button
+          >
+          <button
+            type="button"
+            class="ws-year ws-now-link"
+            title={$t('timeline_grouping_years')}
+            disabled={!onGrouping}
+            onclick={() => onGrouping?.('year')}>{current.year}</button
+          >
           <span class="ws-data ws-count">{$t('items_count', { values: { count: monthCount } })}</span>
         </div>
       {/key}
     </div>
 
     <div class="ws-calendar">
-      <nav class="ws-strip" bind:this={strip} aria-label={$t('year')}>
-        {#each years as { year, count } (year)}
-          <button
-            type="button"
-            class="ws-data ws-pill"
-            data-year={year}
-            aria-current={year === current.year ? 'true' : undefined}
-            title={$t('items_count', { values: { count } })}
-            onclick={() => void switchTo(year)}
-          >
-            {year}
-          </button>
-        {/each}
-      </nav>
+      <div class="ws-years">
+        <button
+          type="button"
+          class="ws-page"
+          aria-label={$t('previous')}
+          title={$t('previous')}
+          disabled={!canLater}
+          onclick={() => page(-1)}
+        >
+          <Icon icon={mdiChevronLeft} size="16" />
+        </button>
+        <nav class="ws-strip" bind:this={strip} aria-label={$t('year')} onscroll={updateEnds}>
+          {#each years as { year, count } (year)}
+            <button
+              type="button"
+              class="ws-data ws-pill"
+              data-year={year}
+              aria-current={year === current.year ? 'true' : undefined}
+              title={$t('items_count', { values: { count } })}
+              onclick={() => void switchTo(year)}
+            >
+              {year}
+            </button>
+          {/each}
+        </nav>
+        <button
+          type="button"
+          class="ws-page"
+          aria-label={$t('next')}
+          title={$t('next')}
+          disabled={!canEarlier}
+          onclick={() => page(1)}
+        >
+          <Icon icon={mdiChevronRight} size="16" />
+        </button>
+      </div>
       <nav class="ws-months" aria-label={$t('month')}>
         {#each monthsOfYear as { month, count } (month)}
           <button
@@ -213,6 +280,24 @@
     </div>
 
     <div class="ws-tools">
+      {#if onFilters}
+        <button
+          type="button"
+          class="ws-tool ws-tool-icon"
+          aria-label={$t('filters')}
+          title={$t('filters')}
+          data-testid="filter-toggle-btn"
+          onclick={onFilters}
+        >
+          <Icon icon={mdiTune} size="17" />
+          {#if filterActive}<span class="ws-tool-dot" aria-hidden="true"></span>{/if}
+        </button>
+      {/if}
+      {#if onSearch}
+        <button type="button" class="ws-tool ws-tool-icon" aria-label={$t('search')} title={$t('search')} onclick={onSearch}>
+          <Icon icon={mdiMagnify} size="17" />
+        </button>
+      {/if}
       <button
         type="button"
         class="ws-tool"
@@ -304,6 +389,36 @@
     letter-spacing: -0.035em;
     color: var(--immich-ui-dark);
   }
+  /* the month and the year in the heading are the doors to the Months and Years overviews */
+  .ws-now-link {
+    padding: 0;
+    background: none;
+    text-align: inherit;
+    cursor: pointer;
+    transition: color 120ms;
+  }
+  .ws-now-link:not(:disabled):hover {
+    color: var(--ws-accent);
+  }
+  .ws-now-link:disabled {
+    cursor: default;
+  }
+  .ws-now-link:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: 2px;
+  }
+  .ws-tool-icon {
+    position: relative;
+  }
+  .ws-tool-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--ws-accent);
+  }
   .ws-month::first-letter {
     text-transform: uppercase;
   }
@@ -324,17 +439,39 @@
     gap: 0.2rem;
     min-width: 0;
   }
+  .ws-years {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .ws-page {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.75rem;
+    border-radius: var(--ws-radius);
+    color: var(--immich-ui-muted);
+  }
+  .ws-page:not(:disabled):hover {
+    color: var(--immich-ui-dark);
+    background: color-mix(in oklab, var(--immich-ui-dark) 7%, transparent);
+  }
+  .ws-page:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
   .ws-months {
     display: flex;
-    gap: 2px;
-    padding-inline: 2rem 3rem;
+    gap: 1px;
+    padding-inline: 1.5rem;
   }
   .ws-month-pill {
     flex: none;
-    min-width: 2.1rem;
-    padding: 0.2rem 0.35rem;
+    min-width: 1.75rem;
+    padding: 0.15rem 0.3rem;
     border-radius: var(--ws-radius);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--immich-ui-muted);
@@ -365,8 +502,8 @@
     overflow-x: auto;
     scrollbar-width: none;
     padding-bottom: 0.35rem;
-    mask-image: linear-gradient(to right, transparent, black 2rem, black calc(100% - 2rem), transparent);
-    padding-inline: 2rem 3rem;
+    mask-image: linear-gradient(to right, transparent, black 1rem, black calc(100% - 1rem), transparent);
+    padding-inline: 1rem;
   }
   .ws-strip::-webkit-scrollbar {
     display: none;

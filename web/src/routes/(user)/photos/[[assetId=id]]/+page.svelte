@@ -592,6 +592,12 @@
     temporalAnchor = result.anchor;
   }
 
+  // Local Omarchy layer: the month heading and year strip (TimelineWorkspaces) stand in for the grouping row on the
+  // plain timeline
+  const workspacesShown = $derived(
+    !showSearchResults && timelineGrouping === 'day' && !!timelineManager && !hasActiveFilters,
+  );
+
   function handleTimelineGroupingChange(grouping: TimelineGrouping) {
     const anchor = getTimelineTopVisibleAnchor(timelineManager);
     timelineGrouping = grouping;
@@ -697,9 +703,20 @@
           smartEditing={!!smartEditing}
         />
       {/snippet}
-      {#if !showSearchResults && timelineGrouping === 'day' && timelineManager && !hasActiveFilters}
+      {#if workspacesShown}
         <div class="ps-2 pe-4 pointer-fine:pe-15">
-          <TimelineWorkspaces {timelineManager} {viewportMonth} />
+          <!-- Local Omarchy layer: the workspaces row carries the filter and search buttons and opens the
+               Months / Years overviews, so the grouping row below is only drawn where it is needed -->
+          <TimelineWorkspaces
+            {timelineManager}
+            {viewportMonth}
+            onFilters={filterCollapsed && !isTimelineEmpty && !assetMultiSelectManager.selectionActive
+              ? () => (filterCollapsed = false)
+              : undefined}
+            filterActive={getActiveFilterCount(filters) > 0}
+            onSearch={assetMultiSelectManager.selectionActive ? undefined : () => globalSearchManager.open()}
+            onGrouping={assetMultiSelectManager.selectionActive ? undefined : handleTimelineGroupingChange}
+          />
         </div>
       {/if}
       <!-- Local Omarchy layer: min-h holds the bar at its idle 52px while selecting hides its 36px button -->
@@ -707,14 +724,14 @@
         class="mb-2 min-h-13"
         grouping={timelineGrouping}
         onGroupingChange={handleTimelineGroupingChange}
-        showGrouping={!showSearchResults}
+        showGrouping={!showSearchResults && !workspacesShown}
         groupingDisabled={assetMultiSelectManager.selectionActive}
         showFilters={hasActiveFilters}
         filters={photoFiltersBar}
-        showFilterButton={filterCollapsed && !isTimelineEmpty && !assetMultiSelectManager.selectionActive}
+        showFilterButton={filterCollapsed && !isTimelineEmpty && !assetMultiSelectManager.selectionActive && !workspacesShown}
         filterActive={getActiveFilterCount(filters) > 0}
         onExpandFilters={() => (filterCollapsed = false)}
-        showSearchButton={!assetMultiSelectManager.selectionActive}
+        showSearchButton={!assetMultiSelectManager.selectionActive && !workspacesShown}
         onSearch={() => globalSearchManager.open()}
       />
       {#if showSearchResults}
