@@ -1018,3 +1018,107 @@ body.ws-dragging * {
     transition: none;
   }
 }
+
+/* ---- glass chrome (Settings > Theme > Chrome, lib/theme/chrome.svelte.ts) ----
+   The top bar, a page's title bar and the timeline's header rows turn to smoked glass over the content, which now
+   runs to the top of the window and scrolls under them, as the desktop's glass themes do. The space they cover is
+   reserved at the top of the content (it scrolls away), so nothing starts hidden. glass-hide slides them up while you
+   scroll down and back on the way up; that moves paint only, the reserved space stays where it is. Only with the
+   navbar on screen: pages that swap it for their own bar (selection) keep the solid layout. */
+:root[data-chrome^='glass'] {
+  --ws-glass-ground: color-mix(in oklab, var(--immich-ui-light) 64%, transparent);
+  --ws-glass-chrome-blur: blur(22px) saturate(1.5);
+  /* how much of the top of the content the glass covers: the bar, and a page's title bar where it has one */
+  --ws-over: var(--navbar-height);
+}
+:root[data-chrome^='glass'] body:has(#dashboard-navbar) {
+  header:has(> #dashboard-navbar) {
+    position: relative;
+    z-index: 40;
+  }
+  #dashboard-navbar {
+    background: var(--ws-glass-ground);
+    backdrop-filter: var(--ws-glass-chrome-blur);
+    -webkit-backdrop-filter: var(--ws-glass-chrome-blur);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-testid='user-page-grid'] {
+    height: 100dvh;
+    margin-top: calc(-1 * var(--navbar-height));
+  }
+  /* the sidebar runs under the bar too; its first item starts below it */
+  #sidebar > div.absolute.overflow-y-auto {
+    padding-top: var(--navbar-height);
+  }
+  main:has(> div.absolute.h-16) {
+    --ws-over: calc(var(--navbar-height) + 4rem);
+  }
+  /* a page's title bar: glass, just under the top bar; its content scroller starts at the top */
+  main > div.absolute.h-16 {
+    top: var(--navbar-height);
+    z-index: 30;
+    background: var(--ws-glass-ground);
+    backdrop-filter: var(--ws-glass-chrome-blur);
+    -webkit-backdrop-filter: var(--ws-glass-chrome-blur);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  main > div.absolute.top-16 {
+    top: 0;
+    height: 100%;
+  }
+  /* pages without a timeline: their content starts below the glass */
+  main > div.absolute.overflow-y-auto:not(:has(#asset-grid)) {
+    padding-top: calc(var(--ws-over) + 0.5rem);
+  }
+  /* the timeline: its header rows (month and years, grouping and filters) float over the grid in one cell, the grid
+     fills the column, and its top section starts below the bar, the title bar and the header rows */
+  div:has(> #asset-grid) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-content: start;
+  }
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute) {
+    position: relative;
+    z-index: 20;
+    grid-column: 1;
+    background: var(--ws-glass-ground);
+    backdrop-filter: var(--ws-glass-chrome-blur);
+    -webkit-backdrop-filter: var(--ws-glass-chrome-blur);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute):first-child {
+    grid-row: 1;
+    margin-top: calc(var(--ws-over) - 0.5rem);
+  }
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute):nth-child(2) {
+    grid-row: 2;
+  }
+  #asset-grid {
+    grid-row: 1 / -1;
+    grid-column: 1;
+  }
+  [data-testid='timeline-top-section'] {
+    padding-top: calc(var(--ws-over) - 0.5rem + var(--ws-tl-head, 0px));
+  }
+  /* the filter rail beside the timeline starts below the glass too */
+  div:has(> div > #asset-grid) > :not(:has(#asset-grid)) {
+    padding-top: calc(var(--ws-over) - 0.5rem);
+  }
+}
+/* glass-hide: everything above the content slides up together, by the bar's height plus the title bar */
+:root[data-chrome='glass-hide'][data-bar-hidden] body:has(#dashboard-navbar) {
+  #dashboard-navbar,
+  main > div.absolute.h-16,
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute) {
+    transform: translateY(calc(-1 * (var(--ws-over) + var(--ws-tl-head, 0px))));
+  }
+  #dashboard-navbar {
+    transform: translateY(-100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-chrome^='glass'] body:has(#dashboard-navbar) :is(#dashboard-navbar, main > div.absolute.h-16, div:has(> #asset-grid) > *) {
+    transition: none;
+  }
+}

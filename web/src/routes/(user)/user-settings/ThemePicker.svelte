@@ -3,6 +3,7 @@
   // theme; any other card wears that theme in this browser, at once, whatever the desktop does. Themes can be
   // installed from a .json file or a URL (checked field by field: colours, numbers and names only) and downloaded
   // to share.
+  import { CHROME_MODES, chrome } from '$lib/theme/chrome.svelte';
   import { swatches, type GalleryTheme } from '$lib/theme/derive';
   import { FOLLOW_OMARCHY, galleryThemes } from '$lib/theme/theme-manager.svelte';
   import { Icon, toastManager } from '@immich/ui';
@@ -80,6 +81,17 @@
 </script>
 
 <section class="themes">
+  <div class="themes-chrome">
+    <span class="themes-chrome-label">{$t('chrome_material')}</span>
+    <div class="ws-seg" role="group" aria-label={$t('chrome_material')}>
+      {#each CHROME_MODES as mode (mode)}
+        <button type="button" aria-pressed={chrome.mode === mode} onclick={() => chrome.choose(mode)}>
+          {$t(`chrome_${mode.replace('-', '_')}`)}
+        </button>
+      {/each}
+    </div>
+  </div>
+
   <div class="themes-bar">
     <div class="ws-seg" role="group" aria-label={$t('theme')}>
       {#each filters as value (value)}
@@ -174,6 +186,22 @@
   .themes {
     display: grid;
     gap: 1rem;
+  }
+  .themes-chrome {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--ws-hairline);
+  }
+  .themes-chrome-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--immich-ui-dark);
+  }
+  .themes-chrome .ws-seg {
+    margin-inline-start: 0;
   }
   .themes-bar {
     display: flex;

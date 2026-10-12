@@ -20,6 +20,7 @@
   import { copyToClipboard } from '$lib/utils';
   import { maintenanceShouldRedirect } from '$lib/utils/maintenance';
   import { searchShortcuts } from '$lib/utils/search-shortcut';
+  import { startChrome } from '$lib/theme/chrome.svelte';
   import { FOLLOW_OMARCHY, galleryThemes } from '$lib/theme/theme-manager.svelte';
   import { getServerConfig } from '@immich/sdk';
   import {
@@ -176,6 +177,8 @@
       void galleryThemes.load().then(() => galleryThemes.choose(galleryThemes.current));
     }
   });
+
+  startChrome();
 
   onMount(() => {
     const element = document.querySelector('#stencil');
