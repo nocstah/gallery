@@ -126,6 +126,7 @@
   import type { PageData } from './$types';
   import AlbumDescription from '$lib/components/album-page/AlbumDescription.svelte';
   import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
+  import SmartAlbumBadge from '$lib/components/curator/SmartAlbumBadge.svelte';
   import AlbumTitle from '$lib/components/album-page/AlbumTitle.svelte';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
 
@@ -948,6 +949,9 @@
                     {#if album.assetCount > 0}
                       <AlbumSummary {album} />
                     {/if}
+
+                    <!-- Local Omarchy layer: a smart album says so, with Edit search and Stop updating -->
+                    <SmartAlbumBadge albumId={album.id} />
 
                     <!-- rbac-6: owner-only — the server populates album.sharedSpaceLinks only for
                          the album owner, so this self-hides for every other caller. -->

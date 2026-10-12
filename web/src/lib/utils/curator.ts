@@ -189,6 +189,26 @@ export type UndoResult = {
   failed?: { id: number; reason: string }[];
 };
 
+export type SmartStrictness = 'loose' | 'normal' | 'strict';
+/** a smart album's saved search: Gallery's metadata-search filters, the typed words, and the Photos page URL it came
+ * from (to open it there again for editing) */
+export type SmartRule = {
+  search: Record<string, unknown>;
+  query?: string | null;
+  strictness: SmartStrictness;
+  filters: { url?: string };
+};
+export type SmartAlbum = {
+  id: number;
+  album_id: string;
+  name: string;
+  rule: SmartRule;
+  count: number;
+  excluded: number;
+  synced_at: string | null;
+};
+export type SmartPreview = { count: number; newest: string[]; weakest: string[] };
+
 export class CuratorError extends Error {
   constructor(
     message: string,
@@ -272,6 +292,15 @@ export const curator = {
   chats: () => call<ChatSummary[]>('/chats'),
   chat: (id: string) => call<ChatDetail>(`/chats/${encodeURIComponent(id)}`),
   forgetChat: (id: string) => call<void>(`/chats/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  /** smart albums: saved searches that keep a Gallery album filled */
+  smartPreview: (rule: SmartRule, signal?: AbortSignal) =>
+    call<SmartPreview>('/smart-albums/preview', { method: 'POST', body: JSON.stringify(rule), signal }),
+  smartCreate: (name: string, rule: SmartRule) => post<SmartAlbum>('/smart-albums', { name, rule }),
+  smartUpdate: (id: number, rule: SmartRule) =>
+    call<SmartAlbum>(`/smart-albums/${id}`, { method: 'PUT', body: JSON.stringify(rule) }),
+  smartForAlbum: (albumId: string) => call<SmartAlbum | null>(`/smart-albums/by-album/${albumId}`),
+  smartGet: (id: number) => call<SmartAlbum[]>('/smart-albums').then((all) => all.find((s) => s.id === id)),
+  smartStop: (id: number) => call<void>(`/smart-albums/${id}`, { method: 'DELETE' }),
 };
 
 /**

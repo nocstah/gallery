@@ -92,6 +92,8 @@
   } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, ImageCarousel, modalManager } from '@immich/ui';
   import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
+  import SmartAlbumModal from '$lib/components/curator/SmartAlbumModal.svelte';
+  import { curator, type SmartAlbum } from '$lib/utils/curator';
   import { resolveFilterNames } from '$lib/utils/filter-name-resolution';
   import { filterStateToSearchTerms } from '$lib/utils/filter-search-terms';
   import type { SearchTerms } from '$lib/services/search.service';
@@ -401,6 +403,44 @@
       language: $lang,
     });
   };
+  // Local Omarchy layer: save the search as a smart album (Curator keeps the album filled), or, opened from a smart
+  // album's "Edit search" (?smart=<id>), change the search behind it
+  const smartEditingId = $derived(Number(page.url.searchParams.get('smart')) || undefined);
+  let smartEditing = $state<SmartAlbum>();
+  $effect(() => {
+    const id = smartEditingId;
+    smartEditing = undefined;
+    if (id) {
+      curator
+        .smartGet(id)
+        .then((found) => (smartEditing = found))
+        .catch(() => {});
+    }
+  });
+  const handleSaveSmart = async () => {
+    const query = committedQuery.trim();
+    const url = new URL(page.url);
+    url.searchParams.delete('smart');
+    const parts = [
+      query && query[0].toUpperCase() + query.slice(1),
+      ...filters.personIds.map((id) => personNames.get(id)),
+      ...filters.tagIds.map((id) => tagNames.get(id)),
+      filters.city ?? filters.country,
+      filters.selectedYear,
+    ].filter(Boolean);
+    const saved = await modalManager.show(SmartAlbumModal, {
+      rule: {
+        search: { ...filterStateToSearchTerms(filters) },
+        query: query || null,
+        filters: { url: url.pathname + url.search },
+      },
+      suggestedName: parts.join(' · ') || $t('smart_album'),
+      editing: smartEditing,
+    });
+    if (saved) {
+      await goto(`/albums/${saved.album_id}`);
+    }
+  };
   // Use the timeline's *loaded* result (for the current options) rather than a bare
   // `assetCount === 0`: clearing a filter that had 0 results would otherwise flip this true
   // for a tick (stale count, reload pending), unmounting the filter panel and dropping focus.
@@ -653,6 +693,8 @@
           onRemoveFilter={handleRemoveActiveFilter}
           onClearAll={handleClearAllFilters}
           onAddAllToCollection={handleAddAllToCollection}
+          onSaveSmart={handleSaveSmart}
+          smartEditing={!!smartEditing}
         />
       {/snippet}
       {#if !showSearchResults && timelineGrouping === 'day' && timelineManager && !hasActiveFilters}

@@ -3,6 +3,7 @@
   import {
     mdiAccount,
     mdiAccountOutline,
+    mdiAutoFix,
     mdiCalendar,
     mdiCalendarRange,
     mdiCamera,
@@ -53,6 +54,9 @@
      * album/space doesn't apply (tags, trash, locked, partners) simply pass no handler.
      */
     onAddAllToCollection?: () => void;
+    /** Local Omarchy layer: save the search as a smart album (Curator), or update the one being edited */
+    onSaveSmart?: () => void;
+    smartEditing?: boolean;
   }
 
   let {
@@ -68,6 +72,8 @@
     onClearSearch,
     embedded = false,
     onAddAllToCollection,
+    onSaveSmart,
+    smartEditing = false,
   }: Props = $props();
 
   interface Chip {
@@ -295,6 +301,18 @@
                the full label at every width, so what a screen reader announces still matches what
                is on screen (WCAG 2.5.3). -->
           <span class="truncate">{$t('add_all_search_results', { values: { count: resultCount ?? 0 } })}</span>
+        </button>
+      {/if}
+
+      {#if onSaveSmart && hasActiveFilters}
+        <button
+          type="button"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-immich-primary/10 py-1 ps-2.5 pe-3.5 text-xs font-semibold text-immich-primary transition-colors hover:bg-immich-primary/16 dark:bg-immich-dark-primary/10 dark:text-immich-dark-primary dark:hover:bg-immich-dark-primary/20"
+          onclick={() => onSaveSmart?.()}
+          data-testid="save-smart-album"
+        >
+          <Icon icon={mdiAutoFix} size="15" class="shrink-0" />
+          <span>{smartEditing ? $t('smart_album_update') : $t('smart_album_save')}</span>
         </button>
       {/if}
 
