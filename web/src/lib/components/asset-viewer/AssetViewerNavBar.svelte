@@ -8,6 +8,7 @@
   import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
   import { liveEffects } from '$lib/components/curator/live-effects.svelte';
   import { lookUp } from '$lib/components/curator/look-up.svelte';
+  import { copySubject } from '$lib/utils/copy-subject';
   import LoadingDots from '$lib/components/LoadingDots.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
@@ -34,6 +35,7 @@
   import {
     mdiArrowLeft,
     mdiArrowRight,
+    mdiContentCut,
     mdiCreationOutline,
     mdiDotsVertical,
     mdiEraser,
@@ -127,6 +129,13 @@
       lookUp.check();
     }
   });
+  // Local Omarchy layer: subject lift, the photo's main subject to the clipboard (Curator)
+  const CopySubject: ActionItem = $derived({
+    title: $t('copy_subject'),
+    icon: mdiContentCut,
+    $if: () => lookUp.available && isOwner && !sharedLink && !asset.isTrashed && asset.type === AssetTypeEnum.Image,
+    onAction: () => void copySubject(asset.id, asset.originalFileName),
+  });
   // Local Omarchy layer: Curator's Look Up, what in the photo has a name
   const LookUp: ActionItem = $derived({
     title: $t('look_up'),
@@ -151,7 +160,7 @@
 
 <CommandPaletteDefaultProvider
   name={$t('assets')}
-  actions={withoutIcons([Close, Cast, ...Object.values(Actions), RemoveObjects, LiveEffects, LookUp])}
+  actions={withoutIcons([Close, Cast, ...Object.values(Actions), RemoveObjects, LiveEffects, LookUp, CopySubject])}
 />
 
 <div
@@ -193,6 +202,7 @@
     <ActionButton action={RemoveObjects} />
     <ActionButton action={LiveEffects} />
     <ActionButton action={LookUp} />
+    <ActionButton action={CopySubject} />
 
     {#if isOwner}
       <DeleteAction {asset} {onAction} {preAction} {onUndoDelete} />

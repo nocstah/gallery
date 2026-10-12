@@ -228,6 +228,26 @@ export class CuratorError extends Error {
 
 const base = () => `${location.protocol}//${location.hostname}:2290/api`;
 
+/** subject lift: the photo's main subject on transparency, as a PNG (a few seconds) */
+export const curatorSubject = async (assetId: string): Promise<Blob> => {
+  const response = await fetch(`${base()}/subject`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ asset_id: assetId }),
+  });
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      detail = ((await response.json()) as { detail?: string }).detail ?? detail;
+    } catch {
+      // not JSON
+    }
+    throw new CuratorError(detail, response.status);
+  }
+  return response.blob();
+};
+
 /** A pending highlight reel, streamed by Curator (byte ranges, so the player can seek). */
 export const reelUrl = (suggestionId: number) => `${base()}/reels/${suggestionId}.mp4`;
 /** a restore suggestion's original ('before') or restored version ('after'): a photo `width` pixels across, or a clip */

@@ -16,7 +16,13 @@
   import { optionClickCallbackStore, selectedIdStore } from '$lib/stores/context-menu.store';
   import { generateId } from '$lib/utils/generate-id';
   import { getAssetInfo } from '@immich/sdk';
-  import { mdiArrowCollapseHorizontal, mdiArrowExpandHorizontal, mdiImageCheckOutline } from '@mdi/js';
+  import { copySubject } from '$lib/utils/copy-subject';
+  import {
+    mdiArrowCollapseHorizontal,
+    mdiArrowExpandHorizontal,
+    mdiContentCut,
+    mdiImageCheckOutline,
+  } from '@mdi/js';
   import type { Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
 
@@ -39,6 +45,8 @@
 
   type StackMenu = { stackId: string; assetId: string; isCover: boolean };
   let stackMenu = $state<StackMenu | undefined>();
+  // Local Omarchy layer: subject lift for one of the owner's own photos
+  let liftAsset = $state<TimelineAsset | undefined>();
   let selectedByMenu = false;
   let opening = 0;
 
@@ -76,6 +84,9 @@
       return;
     }
     stackMenu = next;
+    const user = authManager.authenticated ? authManager.user : undefined;
+    liftAsset =
+      assetInteraction.assets.length === 1 && asset.isImage && user && asset.ownerId === user.id ? asset : undefined;
     position = { x, y };
     isOpen = true;
     requestAnimationFrame(() => menuContainer?.focus());
@@ -195,6 +206,15 @@
             />
           {/if}
         {/if}
+        <hr />
+      {/if}
+      {#if liftAsset}
+        {@const lifted = liftAsset}
+        <MenuOption
+          icon={mdiContentCut}
+          text={$t('copy_subject')}
+          onClick={() => onStackAction(() => copySubject(lifted.id, 'photo'))}
+        />
         <hr />
       {/if}
       {@render children()}
