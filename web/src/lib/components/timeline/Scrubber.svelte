@@ -142,6 +142,42 @@
     hasDot: boolean;
   };
 
+  // Local Omarchy layer: every year gets a band tall enough to see, label and point at, however few its photos. The
+  // bar was strictly proportional, so decades of sparse old photos shrank to a sliver with no labels (2001, then
+  // 1978). Years under the floor are raised to it and the fuller years give up the room in proportion; months keep
+  // their share of their year. The marker and a drag both work by month, so they stay exact. The floor is at most
+  // MIN_YEAR_HEIGHT and never takes more than about 60% of the bar between all the years.
+  const MIN_YEAR_HEIGHT = 18;
+  const warpByYear = (heights: number[], years: number[]) => {
+    const natural = new Map<number, number>();
+    years.forEach((year, index) => natural.set(year, (natural.get(year) ?? 0) + heights[index]));
+    const total = heights.reduce((sum, value) => sum + value, 0);
+    if (natural.size < 2 || total <= 0) {
+      return heights;
+    }
+    const floor = Math.min(MIN_YEAR_HEIGHT, total / (natural.size * 1.6));
+    // years at the floor; the rest are scaled to fill what is left, which may push another under it: repeat
+    const raised = new Set<number>();
+    let scale = 1;
+    for (;;) {
+      const free = [...natural].filter(([year]) => !raised.has(year));
+      const freeTotal = free.reduce((sum, [, height]) => sum + height, 0);
+      scale = freeTotal > 0 ? (total - floor * raised.size) / freeTotal : 1;
+      const under = free.filter(([, height]) => height * scale < floor);
+      if (under.length === 0) {
+        break;
+      }
+      for (const [year] of under) {
+        raised.add(year);
+      }
+    }
+    return heights.map((height, index) => {
+      const year = years[index];
+      const yearHeight = natural.get(year)!;
+      return raised.has(year) ? (floor * height) / yearHeight : height * scale;
+    });
+  };
+
   const calculateSegments = (months: ScrubberMonth[]) => {
     let verticalSpanWithoutLabel = 0;
     let verticalSpanWithoutDot = 0;
@@ -153,14 +189,16 @@
 
     // Process months in reverse order to pick labels, then reverse for display
     const reversed = [...months].reverse();
+    const heights = warpByYear(
+      reversed.map((scrubMonth) => toScrollY(scrubMonth.height / timelineFullHeight)),
+      reversed.map((scrubMonth) => scrubMonth.year),
+    );
 
-    for (const scrubMonth of reversed) {
-      const scrollBarPercentage = scrubMonth.height / timelineFullHeight;
-
+    for (const [index, scrubMonth] of reversed.entries()) {
       const segment = {
         top,
         count: scrubMonth.assetCount,
-        height: toScrollY(scrollBarPercentage),
+        height: heights[index],
         dateFormatted: scrubMonth.title,
         year: scrubMonth.year,
         month: scrubMonth.month,
