@@ -292,6 +292,10 @@ export const curator = {
   chats: () => call<ChatSummary[]>('/chats'),
   chat: (id: string) => call<ChatDetail>(`/chats/${encodeURIComponent(id)}`),
   forgetChat: (id: string) => call<void>(`/chats/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  /** a Live Photo effect picked in the photo viewer (`seconds`: where in the clip, for a key photo); the job's result
+   * names the suggestion holding the new version */
+  liveEffect: (assetId: string, effect: 'loop' | 'bounce' | 'long-exposure' | 'key-photo', seconds = 0) =>
+    post<{ job: number }>('/live-effect', { asset_id: assetId, effect, seconds }),
   /** smart albums: saved searches that keep a Gallery album filled */
   smartPreview: (rule: SmartRule, signal?: AbortSignal) =>
     call<SmartPreview>('/smart-albums/preview', { method: 'POST', body: JSON.stringify(rule), signal }),

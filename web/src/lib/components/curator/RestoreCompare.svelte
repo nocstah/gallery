@@ -19,6 +19,9 @@
   type Payload = { variant?: string; width?: number; height?: number; source?: { width?: number; height?: number } };
   const payload = $derived(suggestion.payload as Payload);
   const clip = $derived(payload.variant === 'video');
+  // Local Omarchy layer: a Live Photo effect (curator/live.py) is shown on its own, a loop or bounce playing on
+  const effect = $derived(['loop', 'bounce', 'long-exposure', 'key-photo'].includes(payload.variant ?? ''));
+  const effectClip = $derived(payload.variant === 'loop' || payload.variant === 'bounce');
   // photos are asked for at about twice the width they are shown at, for sharp edges on HiDPI screens
   const across = $derived(size === 'stage' ? 2560 : 960);
 
@@ -86,79 +89,97 @@
 </script>
 
 <figure class="restore {size === 'stage' ? 'is-stage' : 'is-card'}" style:--ratio={ratio}>
-  <div class="restore-frame" style:--split="{split}%">
-    {#if clip}
-      <video
-        bind:this={before}
-        class="restore-media"
-        src={restoredUrl(suggestion.id, 'before', 'mp4')}
-        muted
-        playsinline
-        preload="metadata"
-      ></video>
-      <video
-        bind:this={after}
-        class="restore-media restore-after"
-        src={restoredUrl(suggestion.id, 'after', 'mp4')}
-        playsinline
-        preload="metadata"
-        onloadedmetadata={onMetadata}
-        ontimeupdate={() => {
-          time = after?.currentTime ?? 0;
-          align();
-        }}
-        onplay={() => (playing = true)}
-        onpause={onPause}
-        onended={onPause}
-      ></video>
-    {:else}
-      <img class="restore-media" src={restoredUrl(suggestion.id, 'before', 'jpg', across)} alt="" loading="lazy" />
-      <img
-        class="restore-media restore-after"
-        src={restoredUrl(suggestion.id, 'after', 'jpg', across)}
-        alt=""
-        loading="lazy"
-      />
-    {/if}
-    <span class="restore-line" aria-hidden="true">
-      <span class="restore-handle"><Icon icon={mdiArrowLeftRight} size="16" /></span>
-    </span>
-    <span class="restore-label">{$t('ai_inbox_now')}</span>
-    <span class="restore-label restore-label-after">{$t('ai_inbox_proposed')}</span>
-    <input
-      class="restore-range"
-      type="range"
-      min="0"
-      max="100"
-      step="0.5"
-      bind:value={split}
-      aria-label={$t('ai_inbox_compare')}
-    />
-  </div>
-  {#if clip}
-    <div class="restore-controls">
-      <button
-        type="button"
-        class="ws-btn-quiet restore-play"
-        onclick={toggle}
-        aria-label={playing ? $t('pause') : $t('play')}
-      >
-        <Icon icon={playing ? mdiPause : mdiPlay} size="18" />
-      </button>
+  {#if effect}
+    <div class="restore-frame">
+      {#if effectClip}
+        <!-- svelte-ignore a11y_media_has_caption -->
+        <video
+          class="restore-media"
+          src={restoredUrl(suggestion.id, 'after', 'mp4')}
+          autoplay
+          loop
+          muted
+          playsinline
+        ></video>
+      {:else}
+        <img class="restore-media" src={restoredUrl(suggestion.id, 'after', 'jpg', across)} alt="" loading="lazy" />
+      {/if}
+    </div>
+  {:else}
+    <div class="restore-frame" style:--split="{split}%">
+      {#if clip}
+        <video
+          bind:this={before}
+          class="restore-media"
+          src={restoredUrl(suggestion.id, 'before', 'mp4')}
+          muted
+          playsinline
+          preload="metadata"
+        ></video>
+        <video
+          bind:this={after}
+          class="restore-media restore-after"
+          src={restoredUrl(suggestion.id, 'after', 'mp4')}
+          playsinline
+          preload="metadata"
+          onloadedmetadata={onMetadata}
+          ontimeupdate={() => {
+            time = after?.currentTime ?? 0;
+            align();
+          }}
+          onplay={() => (playing = true)}
+          onpause={onPause}
+          onended={onPause}
+        ></video>
+      {:else}
+        <img class="restore-media" src={restoredUrl(suggestion.id, 'before', 'jpg', across)} alt="" loading="lazy" />
+        <img
+          class="restore-media restore-after"
+          src={restoredUrl(suggestion.id, 'after', 'jpg', across)}
+          alt=""
+          loading="lazy"
+        />
+      {/if}
+      <span class="restore-line" aria-hidden="true">
+        <span class="restore-handle"><Icon icon={mdiArrowLeftRight} size="16" /></span>
+      </span>
+      <span class="restore-label">{$t('ai_inbox_now')}</span>
+      <span class="restore-label restore-label-after">{$t('ai_inbox_proposed')}</span>
       <input
-        class="restore-seek"
+        class="restore-range"
         type="range"
         min="0"
-        max={duration || 0}
-        step="0.04"
-        value={time}
-        oninput={seek}
-        aria-label={$t('ai_inbox_clip_position')}
+        max="100"
+        step="0.5"
+        bind:value={split}
+        aria-label={$t('ai_inbox_compare')}
       />
-      <span class="ws-inbox-meta">{clock(time)} / {clock(duration)}</span>
     </div>
-  {:else if enlarged}
-    <figcaption class="ws-inbox-meta">{enlarged}</figcaption>
+    {#if clip}
+      <div class="restore-controls">
+        <button
+          type="button"
+          class="ws-btn-quiet restore-play"
+          onclick={toggle}
+          aria-label={playing ? $t('pause') : $t('play')}
+        >
+          <Icon icon={playing ? mdiPause : mdiPlay} size="18" />
+        </button>
+        <input
+          class="restore-seek"
+          type="range"
+          min="0"
+          max={duration || 0}
+          step="0.04"
+          value={time}
+          oninput={seek}
+          aria-label={$t('ai_inbox_clip_position')}
+        />
+        <span class="ws-inbox-meta">{clock(time)} / {clock(duration)}</span>
+      </div>
+    {:else if enlarged}
+      <figcaption class="ws-inbox-meta">{enlarged}</figcaption>
+    {/if}
   {/if}
 </figure>
 

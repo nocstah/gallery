@@ -6,6 +6,7 @@
   import RestoreAction from '$lib/components/asset-viewer/actions/RestoreAction.svelte';
   import SetVisibilityAction from '$lib/components/asset-viewer/actions/SetVisibilityAction.svelte';
   import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
+  import { liveEffects } from '$lib/components/curator/live-effects.svelte';
   import LoadingDots from '$lib/components/LoadingDots.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
@@ -29,7 +30,15 @@
     type StackResponseDto,
   } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, Tooltip, type ActionItem } from '@immich/ui';
-  import { mdiArrowLeft, mdiArrowRight, mdiDotsVertical, mdiEraser, mdiPencilOutline, mdiVideoOutline } from '@mdi/js';
+  import {
+    mdiArrowLeft,
+    mdiArrowRight,
+    mdiDotsVertical,
+    mdiEraser,
+    mdiMotionPlayOutline,
+    mdiPencilOutline,
+    mdiVideoOutline,
+  } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -112,13 +121,27 @@
   $effect(() => {
     if (isOwner && !sharedLink) {
       removeObjects.check();
+      liveEffects.check();
     }
+  });
+  // Local Omarchy layer: Curator's Live Photo effects (loop, bounce, long exposure, key photo)
+  const LiveEffects: ActionItem = $derived({
+    title: $t('live_effects'),
+    icon: mdiMotionPlayOutline,
+    $if: () =>
+      liveEffects.available &&
+      isOwner &&
+      !isLocked &&
+      !asset.isTrashed &&
+      !sharedLink &&
+      !!asset.livePhotoVideoId,
+    onAction: () => liveEffects.open(asset.id),
   });
 </script>
 
 <CommandPaletteDefaultProvider
   name={$t('assets')}
-  actions={withoutIcons([Close, Cast, ...Object.values(Actions), RemoveObjects])}
+  actions={withoutIcons([Close, Cast, ...Object.values(Actions), RemoveObjects, LiveEffects])}
 />
 
 <div
@@ -158,6 +181,7 @@
 
     <ActionButton action={Actions.Edit} />
     <ActionButton action={RemoveObjects} />
+    <ActionButton action={LiveEffects} />
 
     {#if isOwner}
       <DeleteAction {asset} {onAction} {preAction} {onUndoDelete} />
