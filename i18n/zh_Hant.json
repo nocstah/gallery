@@ -3747,6 +3747,8 @@
   "unassign_face": "取消臉孔指派",
   "unassigned": "未指派",
   "undo": "還原",
+  "undo_kept_new": "{count, plural, other {# 個項目保留新值：之前沒有可還原的值}}",
+  "undone": "已還原：{action}",
   "unfavorite": "取消收藏",
   "unfavorite_action_prompt": "{count} 個移除收藏",
   "unhide_person": "取消隱藏人物",

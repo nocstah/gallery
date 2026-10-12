@@ -3801,6 +3801,8 @@
   "unassign_face": "Annulla assegnazione viso",
   "unassigned": "Non assegnati",
   "undo": "Annulla",
+  "undo_kept_new": "{count, plural, one {# elemento mantiene il nuovo valore: prima non ne aveva} other {# elementi mantengono il nuovo valore: prima non ne avevano}}",
+  "undone": "Annullato: {action}",
   "unfavorite": "Rimuovi preferito",
   "unfavorite_action_prompt": "{count} rimossi dai Favoriti",
   "unhide_person": "Mostra persona",

@@ -6,6 +6,7 @@
   import { getPreferredTimeZone, getTimezones, toIsoDate, type ZoneOption } from '$lib/modals/timezone-utils';
   import { getEditableAssetsWithWarning } from '$lib/utils/asset-utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { beforeChange, datesDone } from '$lib/utils/undoable';
   import { updateAssets } from '@immich/sdk';
   import { Field, FormModal, Label, Switch } from '@immich/ui';
   import { mdiCalendarEdit } from '@mdi/js';
@@ -34,6 +35,8 @@
   const onSubmit = async () => {
     const ids = getEditableAssetsWithWarning(assets, editableAssetIds);
     try {
+      // Local Omarchy layer: each photo's date as it was, so the change can be undone (utils/undoable)
+      const before = await beforeChange(ids);
       if (showRelative && (selectedDuration || selectedOption)) {
         await updateAssets({
           assetBulkUpdateDto: {
@@ -42,11 +45,13 @@
             timeZone: selectedOption?.value,
           },
         });
+        datesDone(ids, before);
         onClose(true);
         return;
       }
       const isoDate = toIsoDate(selectedDate, selectedOption);
       await updateAssets({ assetBulkUpdateDto: { ids, dateTimeOriginal: isoDate } });
+      datesDone(ids, before);
       onClose(true);
     } catch (error) {
       handleError(error, $t('errors.unable_to_change_date'));

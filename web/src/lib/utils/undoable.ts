@@ -12,9 +12,11 @@ import {
   restoreAssets,
   updateAsset,
   updateAssetFavorites,
+  updateAssets,
   updateStack,
   type StackResponseDto,
 } from '@immich/sdk';
+import { DateTime } from 'luxon';
 import { toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
@@ -225,4 +227,124 @@ export const removedFromAlbumDone = (albumId: string, removedIds: string[], desc
     $t('errors.error_adding_assets_to_album'),
   );
   toastUndoable(description, entry);
+};
+
+// ---- dates and places: read just before the change, put back by the undo ----
+
+/** A photo's date and place as Gallery holds them (null where it has none). */
+type Before = { date: string | null; timeZone: string | null; latitude: number | null; longitude: number | null };
+
+/** The most photos read before a change so it can be undone (a bigger change records no undo). */
+const SNAPSHOT_AT_MOST = 200;
+const AT_ONCE = 8;
+
+/** Each photo's date and place before a change; undefined when there are too many to read. */
+export const beforeChange = async (ids: string[]): Promise<Map<string, Before> | undefined> => {
+  if (ids.length === 0 || ids.length > SNAPSHOT_AT_MOST) {
+    return undefined;
+  }
+  const before = new Map<string, Before>();
+  try {
+    for (let index = 0; index < ids.length; index += AT_ONCE) {
+      const assets = await Promise.all(
+        ids.slice(index, index + AT_ONCE).map((id) => getAssetInfo({ ...authManager.params, id })),
+      );
+      for (const asset of assets) {
+        const exif = asset.exifInfo;
+        before.set(asset.id, {
+          date: exif?.dateTimeOriginal ?? null,
+          timeZone: exif?.timeZone ?? null,
+          latitude: exif?.latitude ?? null,
+          longitude: exif?.longitude ?? null,
+        });
+      }
+    }
+  } catch {
+    return undefined;
+  }
+  return before;
+};
+
+/** Photos that share one old value go back in one call. */
+const groupBy = <T>(entries: [string, T][], key: (value: T) => string) => {
+  const groups = new Map<string, { value: T; ids: string[] }>();
+  for (const [id, value] of entries) {
+    const group = groups.get(key(value));
+    if (group) {
+      group.ids.push(id);
+    } else {
+      groups.set(key(value), { value, ids: [id] });
+    }
+  }
+  return [...groups.values()];
+};
+
+/** What an undo of dates or places says: done, and how many had nothing to go back to (Gallery cannot take a date
+ * or a place away from a photo, only change it). */
+const undone = (label: string, kept: number) => {
+  const $t = get(t);
+  const done = $t('undone', { values: { action: label } });
+  return kept > 0 ? `${done}. ${$t('undo_kept_new', { values: { count: kept } })}` : done;
+};
+
+/** A date change (one photo or many, to a date or by an offset): undone by giving each photo its old date and time
+ * zone back. The time goes back with its own offset; a named zone (Asia/Bangkok) goes back by name. */
+export const datesDone = (ids: string[], before: Map<string, Before> | undefined) => {
+  if (!before) {
+    return;
+  }
+  const $t = get(t);
+  const label = `${$t('change_date')} · ${$t('items_count', { values: { count: ids.length } })}`;
+  const entry = undoManager.record(
+    label,
+    async () => {
+      const dated = [...before].filter(([, value]) => value.date !== null);
+      const groups = groupBy(dated, (value) => `${value.date}|${value.timeZone}`);
+      for (const { value, ids: group } of groups) {
+        const zone = value.timeZone ?? 'UTC';
+        const at = DateTime.fromISO(value.date!, { zone: 'utc' }).setZone(zone);
+        const dateTimeOriginal = (at.isValid ? at : DateTime.fromISO(value.date!, { zone: 'utc' })).toISO();
+        if (!dateTimeOriginal) {
+          continue;
+        }
+        await updateAssets({
+          assetBulkUpdateDto: {
+            ids: group,
+            dateTimeOriginal,
+            // a named zone keeps its name (an offset alone would come back as UTC+7)
+            ...(value.timeZone?.includes('/') ? { timeZone: value.timeZone } : {}),
+          },
+        });
+      }
+      await refreshAssets(ids);
+      return undone(label, before.size - dated.length);
+    },
+    $t('errors.unable_to_change_date'),
+  );
+  toastUndoable(label, entry);
+};
+
+/** A place change: undone by moving each photo back to its old coordinates. */
+export const placesDone = (ids: string[], before: Map<string, Before> | undefined) => {
+  if (!before) {
+    return;
+  }
+  const $t = get(t);
+  const label = `${$t('change_location')} · ${$t('items_count', { values: { count: ids.length } })}`;
+  const entry = undoManager.record(
+    label,
+    async () => {
+      const placed = [...before].filter(([, value]) => value.latitude !== null && value.longitude !== null);
+      const groups = groupBy(placed, (value) => `${value.latitude},${value.longitude}`);
+      for (const { value, ids: group } of groups) {
+        await updateAssets({
+          assetBulkUpdateDto: { ids: group, latitude: value.latitude!, longitude: value.longitude! },
+        });
+      }
+      await refreshAssets(ids);
+      return undone(label, before.size - placed.length);
+    },
+    $t('errors.unable_to_update_location'),
+  );
+  toastUndoable(label, entry);
 };

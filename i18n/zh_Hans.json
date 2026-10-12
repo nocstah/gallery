@@ -3801,6 +3801,8 @@
   "unassign_face": "取消人脸分配",
   "unassigned": "未分配",
   "undo": "撤销",
+  "undo_kept_new": "{count, plural, other {# 个项目保留新值：之前没有可恢复的值}}",
+  "undone": "已撤销：{action}",
   "unfavorite": "取消收藏",
   "unfavorite_action_prompt": "已从收藏中移除 {count} 项",
   "unhide_person": "显示人物",

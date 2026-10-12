@@ -5,6 +5,7 @@
   import GeolocationPointPickerModal from '$lib/modals/GeolocationPointPickerModal.svelte';
   import { getEditableAssetsWithWarning, getOwnedAssetsWithWarning } from '$lib/utils/asset-utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { beforeChange, placesDone } from '$lib/utils/undoable';
   import { updateAssets } from '@immich/sdk';
   import { modalManager, toastManager } from '@immich/ui';
   import { mdiMapMarkerMultipleOutline } from '@mdi/js';
@@ -34,8 +35,15 @@
         : getEditableAssetsWithWarning(assetMultiSelectManager.assets, editableSelectedAssetIds);
 
     try {
+      // Local Omarchy layer: each photo's place as it was, so the change can be undone (utils/undoable); its toast
+      // carries the Undo
+      const before = await beforeChange(ids);
       await updateAssets({ assetBulkUpdateDto: { ids, latitude: point.lat, longitude: point.lng } });
-      toastManager.primary();
+      if (before) {
+        placesDone(ids, before);
+      } else {
+        toastManager.primary();
+      }
       assetMultiSelectManager.clear();
     } catch (error) {
       handleError(error, $t('errors.unable_to_update_location'));

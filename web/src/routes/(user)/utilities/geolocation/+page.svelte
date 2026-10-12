@@ -14,6 +14,7 @@
   import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
   import type { LatLng } from '$lib/types';
   import { setQueryValue } from '$lib/utils/navigation';
+  import { beforeChange, placesDone } from '$lib/utils/undoable';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import { AssetVisibility, getAssetInfo, updateAssets } from '@immich/sdk';
   import { Button, modalManager, Text } from '@immich/ui';
@@ -56,13 +57,17 @@
       return;
     }
 
+    const ids = assetMultiSelectManager.assets.filter((asset) => isOwnAsset(asset)).map((asset) => asset.id);
+    // Local Omarchy layer: each photo's place as it was, so the change can be undone (utils/undoable)
+    const before = await beforeChange(ids);
     await updateAssets({
       assetBulkUpdateDto: {
-        ids: assetMultiSelectManager.assets.filter((asset) => isOwnAsset(asset)).map((asset) => asset.id),
+        ids,
         latitude: point.lat,
         longitude: point.lng,
       },
     });
+    placesDone(ids, before);
 
     const updatedAssets = await Promise.all(
       assetMultiSelectManager.assets.map(async (asset) => {

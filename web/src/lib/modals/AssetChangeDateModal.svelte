@@ -4,6 +4,7 @@
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import { getPreferredTimeZone, getTimezones, toIsoDate } from '$lib/modals/timezone-utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { beforeChange, datesDone } from '$lib/utils/undoable';
   import { updateAsset } from '@immich/sdk';
   import { FormModal, Label } from '@immich/ui';
   import { mdiCalendarEdit } from '@mdi/js';
@@ -34,7 +35,10 @@
     // Get the local date/time components from the selected string using neutral timezone
     const isoDate = toIsoDate(selectedDate, selectedOption);
     try {
+      // Local Omarchy layer: the date as it was, so the change can be undone (utils/undoable)
+      const before = await beforeChange([asset.id]);
       await updateAsset({ id: asset.id, updateAssetDto: { dateTimeOriginal: isoDate } });
+      datesDone([asset.id], before);
       onClose(true);
     } catch (error) {
       handleError(error, $t('errors.unable_to_change_date'));

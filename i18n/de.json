@@ -3802,6 +3802,8 @@
   "unassign_face": "Gesichtszuordnung aufheben",
   "unassigned": "Nicht zugewiesen",
   "undo": "Rückgängig",
+  "undo_kept_new": "{count, plural, one {# Eintrag behält den neuen Wert: Er hatte vorher keinen} other {# Einträge behalten den neuen Wert: Sie hatten vorher keinen}}",
+  "undone": "Rückgängig gemacht: {action}",
   "unfavorite": "Favorit entfernen",
   "unfavorite_action_prompt": "{count} aus den Favoriten entfernt",
   "unhide_person": "Person einblenden",

@@ -3802,6 +3802,8 @@
   "unassign_face": "Dissocier le visage",
   "unassigned": "Non attribué",
   "undo": "Annuler",
+  "undo_kept_new": "{count, plural, one {# élément garde la nouvelle valeur : il n'en avait pas avant} other {# éléments gardent la nouvelle valeur : ils n'en avaient pas avant}}",
+  "undone": "Annulé : {action}",
   "unfavorite": "Enlever des favoris",
   "unfavorite_action_prompt": "{count} supprimé(s) des favoris",
   "unhide_person": "Afficher la personne",

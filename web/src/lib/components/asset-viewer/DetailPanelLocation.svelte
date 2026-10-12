@@ -3,6 +3,7 @@
   import GeolocationPointPickerModal from '$lib/modals/GeolocationPointPickerModal.svelte';
   import { applyContextualFilter, buildContextualMapUrl } from '$lib/utils/filter-target';
   import { handleError } from '$lib/utils/handle-error';
+  import { beforeChange, placesDone } from '$lib/utils/undoable';
   import { updateAsset, type AssetResponseDto } from '@immich/sdk';
   import { Icon, IconButton, modalManager } from '@immich/ui';
   import { mdiMapMarkerOutline, mdiMapOutline, mdiPencil } from '@mdi/js';
@@ -44,10 +45,13 @@
     }
 
     try {
+      // Local Omarchy layer: the place as it was, so the change can be undone (utils/undoable)
+      const before = await beforeChange([asset.id]);
       asset = await updateAsset({
         id: asset.id,
         updateAssetDto: { latitude: point.lat, longitude: point.lng },
       });
+      placesDone([asset.id], before);
     } catch (error) {
       handleError(error, $t('errors.unable_to_change_location'));
     }

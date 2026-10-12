@@ -3822,6 +3822,8 @@
   "unassign_face": "Unassign face",
   "unassigned": "Unassigned",
   "undo": "Undo",
+  "undo_kept_new": "{count, plural, one {# item keeps the new value: it had none before} other {# items keep the new value: they had none before}}",
+  "undone": "Undone: {action}",
   "unfavorite": "Unfavorite",
   "unfavorite_action_prompt": "{count} removed from Favorites",
   "unhide_person": "Unhide person",

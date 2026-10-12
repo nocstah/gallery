@@ -3801,6 +3801,8 @@
   "unassign_face": "Gezichtstoewijzing ongedaan maken",
   "unassigned": "Niet toegewezen",
   "undo": "Ongedaan maken",
+  "undo_kept_new": "{count, plural, one {# item houdt de nieuwe waarde: het had er eerder geen} other {# items houden de nieuwe waarde: ze hadden er eerder geen}}",
+  "undone": "Ongedaan gemaakt: {action}",
   "unfavorite": "Verwijderen uit favorieten",
   "unfavorite_action_prompt": "{count} verwijderd uit je favorieten",
   "unhide_person": "Persoon zichtbaar maken",

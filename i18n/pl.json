@@ -3819,6 +3819,8 @@
   "unassign_face": "Usuń przypisanie twarzy",
   "unassigned": "Nieprzypisane",
   "undo": "Cofnij",
+  "undo_kept_new": "{count, plural, one {# element zachowuje nową wartość: wcześniej jej nie miał} few {# elementy zachowują nową wartość: wcześniej jej nie miały} other {# elementów zachowuje nową wartość: wcześniej jej nie miały}}",
+  "undone": "Cofnięto: {action}",
   "unfavorite": "Usuń z ulubionych",
   "unfavorite_action_prompt": "{count} usunięto z ulubionych",
   "unhide_person": "Przywróć osobę",

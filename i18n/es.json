@@ -3802,6 +3802,8 @@
   "unassign_face": "Quitar asignación de cara",
   "unassigned": "Sin asignar",
   "undo": "Deshacer",
+  "undo_kept_new": "{count, plural, one {# elemento conserva el nuevo valor: antes no tenía ninguno} other {# elementos conservan el nuevo valor: antes no tenían ninguno}}",
+  "undone": "Deshecho: {action}",
   "unfavorite": "Retirar favorito",
   "unfavorite_action_prompt": "{count} eliminados de favoritos",
   "unhide_person": "Mostrar persona",
