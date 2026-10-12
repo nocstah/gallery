@@ -218,6 +218,17 @@ export type StackPick = {
   model: string | null;
 };
 
+/** the command center's view of Curator and the machine (/api/overview) */
+export type CuratorOverview = {
+  schedule: { enabled: boolean; next_night: string; last_night: string | null; jobs: { kind: string; title: string }[] };
+  gpu: { name: string; used_mib: number; total_mib: number; busy: number; at: number } | null;
+  models_loaded: { name: string; vram_gb: number }[];
+  offsite_backup: { configured: boolean; last_run: string | null; ok: boolean } | null;
+  paused: boolean;
+  pending: number;
+  decided_today: number;
+};
+
 export type SmartStrictness = 'loose' | 'normal' | 'strict';
 /** a smart album's saved search: Gallery's metadata-search filters, the typed words, and the Photos page URL it came
  * from (to open it there again for editing) */
@@ -349,6 +360,9 @@ export const curator = {
     seconds = 0,
   ) =>
     post<{ job: number }>('/live-effect', { asset_id: assetId, effect, seconds }),
+  overview: () => call<CuratorOverview>('/overview'),
+  /** queue tonight's jobs now */
+  runTonightNow: () => post<{ jobs: number[] }>('/schedule/run-now', {}),
   /** pick a stack's best photo, carefully (a job of 10-60 seconds; its result is a StackPick) */
   pickBest: (stackId: string) => post<{ job: number }>(`/stacks/${stackId}/best`, {}),
   /** Look Up: what the photo shows that has a name (the kept answer unless `again`) */

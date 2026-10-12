@@ -14,15 +14,17 @@
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
   import {
     mdiAccount,
-    mdiAccountMultiple,
     mdiAccountGroup,
     mdiAccountGroupOutline,
+    mdiAccountMultiple,
     mdiAccountMultipleOutline,
     mdiAccountOutline,
     mdiArchiveArrowDown,
     mdiArchiveArrowDownOutline,
     mdiCards,
     mdiCardsOutline,
+    mdiChat,
+    mdiChatOutline,
     mdiDatabaseImportOutline,
     mdiFolderOutline,
     mdiHeart,
@@ -32,8 +34,6 @@
     mdiImageMultipleOutline,
     mdiInbox,
     mdiInboxOutline,
-    mdiChat,
-    mdiChatOutline,
     mdiLink,
     mdiLock,
     mdiLockOutline,
@@ -46,6 +46,8 @@
     mdiTrashCan,
     mdiTrashCanOutline,
     mdiUploadOutline,
+    mdiViewDashboard,
+    mdiViewDashboardOutline,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import { fly } from 'svelte/transition';
@@ -54,6 +56,14 @@
 </script>
 
 <Sidebar ariaLabel={$t('primary')}>
+  <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
+  <SidebarNavItem
+    title={$t('command_title')}
+    href="/command"
+    icon={mdiViewDashboardOutline}
+    activeIcon={mdiViewDashboard}
+  />
+
   <SidebarNavItem
     title={$t('photos')}
     href={Route.photos()}
