@@ -12,14 +12,14 @@ colors:
 typography:
   display:
     fontFamily: "'Bricolage Grotesque Variable', 'Mona Sans', ui-sans-serif, sans-serif"
-    fontSize: "clamp(2.5rem, 0.9rem + 4.6vw, 6rem)"
+    fontSize: "clamp(2.25rem, 1rem + 3vw, 4rem)"
     fontWeight: 800
     lineHeight: 0.85
     letterSpacing: "-0.035em"
     fontVariation: "'wdth' 75, 'opsz' 96"
   display-month:
     fontFamily: "'Bricolage Grotesque Variable', 'Mona Sans', ui-sans-serif, sans-serif"
-    fontSize: "clamp(2.5rem, 0.9rem + 4.6vw, 6rem)"
+    fontSize: "clamp(2.25rem, 1rem + 3vw, 4rem)"
     fontWeight: 500
     lineHeight: 0.85
     letterSpacing: "-0.035em"
@@ -33,19 +33,19 @@ typography:
     fontVariation: "'wdth' 80, 'opsz' 72"
   title:
     fontFamily: "'Bricolage Grotesque Variable', 'Mona Sans', ui-sans-serif, sans-serif"
-    fontSize: "15px"
+    fontSize: "20px"
     fontWeight: 650
     letterSpacing: "-0.01em"
     fontFeature: "'tnum'"
   body:
     fontFamily: "'Mona Sans', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "1rem"
+    fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.55
     fontFeature: "'ss01', 'ss02'"
   label:
     fontFamily: "'Mona Sans', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "0.9rem"
+    fontSize: "14px"
     fontWeight: 600
   data:
     fontFamily: "var(--omarchy-font-mono, 'JetBrainsMono Nerd Font'), 'GoogleSansCode', ui-monospace, monospace"
@@ -53,10 +53,11 @@ typography:
     fontWeight: 600
     fontFeature: "'tnum'"
 rounded:
-  window: "0px"
-  pill: "5px"
-  control: "6px"
-  segmented: "8px"
+  # every corner is the theme's --ws-radius exactly (square on the owner's theme); never radius + Npx
+  window: "var(--ws-radius)"
+  pill: "var(--ws-radius)"
+  control: "var(--ws-radius)"
+  segmented: "var(--ws-radius)"
 spacing:
   gap: "10px"
   strip-step: "4px"
@@ -155,16 +156,21 @@ The palette is the active Omarchy theme, read at runtime; this system defines ro
 **Character:** Condensed, heavy grotesque numerals set the time like a poster; a neutral variable sans does the work; the desktop's own terminal font carries every number that is data.
 
 ### Hierarchy
-- **Display** (800, condensed `wdth 75`, `clamp(2.5rem, 0.9rem + 4.6vw, 6rem)`, line-height 0.85, -0.035em): the year in view in the timeline header.
+One size per role, as tokens in `omarchy-world.css` (`--ws-text-*`); components use the token, never a literal size:
+display `clamp(2.25rem, 1rem + 3vw, 4rem)` · title 20px · heading 17px · body 15px · ui 14px · meta 13px · data 12px · micro 11px.
+
+- **Display** (800, condensed `wdth 75`, `--ws-text-display`, line-height 0.85, -0.035em): the year in view in the timeline header, page headlines (AI inbox, Command center), Years banners. With the glass chrome the timeline heading folds to title size in one slim glass row once the photos scroll (the space reserved above them keeps the open height, so nothing moves).
 - **Display Month** (500, same size and width): the month name beside it, first letter capitalised. Weight contrast, not size, separates month from year.
 - **Headline** (750, `wdth 80`, `clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem)`, line-height 1.05, balanced wrap): empty-state titles.
-- **Title** (650, 15px, -0.01em, tabular numerals, display face): day labels in the timeline ("Mon, Dec 31, 2018"; "Mon 31" below 768px).
-- **Body** (400, 1rem, line-height 1.55, max 60ch): explanatory copy, empty-state bodies.
-- **Label** (600, 0.9rem): button and link text in the layer's own controls; place captions at 12px 600.
+- **Title** (650, 20px, -0.01em, display face): a page's name in its title bar.
+- **Heading** (650, 17px): section and group names, inbox row titles.
+- **Body** (400, 15px, line-height 1.55, max 60ch): explanatory copy, empty-state bodies, day labels in the timeline (display face, tabular).
+- **UI** (500-600, 14px): buttons, tabs, sidebar items, segmented options.
+- **Meta** (400, 13px, muted): details and captions. Menus run a step smaller (12.5px) on the owner's wish.
 - **Data** (600, 12px, tabular, monospace): counts ("59 items"), year pills, dates, EXIF, workspace numbers.
 
 ### Named Rules
-**The Scale Contrast Rule.** Hierarchy comes from the jump between 6rem condensed numerals and 12px data, not from a ladder of medium sizes.
+**The Scale Contrast Rule.** Hierarchy comes from the jump between display numerals and 12px data, with title/heading/body as the only steps between; no new in-between sizes.
 
 **The Data Is Mono Rule.** A number that is information (count, year, date, EXIF) is set in the desktop's monospace. A number that is a heading (the year in view, a day label) is set in the display face.
 
@@ -190,7 +196,7 @@ Flat on the ground; depth only for what floats above it, like a Hyprland popup. 
 
 ## Shapes
 
-Corners come from the desktop. Tiles (and their images and focus ring) use the window radius `--ws-radius` (Hyprland `decoration:rounding`; fallback 0px, square). Controls stay recognisable as controls even on a square desktop by adding a fixed offset to the same radius: year pills and segmented options +5px, sidebar items, empty-state buttons and name fields +6px, the segmented control shell +8px. Borders take the desktop's `--ws-border` (`general:border_size`, minimum 1px; fallback 2px) for focus, 1px for hairlines.
+Corners come from the desktop: everything (tiles, menus, modals, fields, buttons, pills) uses the window radius `--ws-radius` exactly (Hyprland `decoration:rounding`; fallback 0px, square). Never add an offset to it: the owner rejected rounded controls on the square desktop (2026-10-12). A panel has one frame; separators run edge to edge. Some older rules still add +5..8px and are to be brought back to the token when touched. Borders take the desktop's `--ws-border` (`general:border_size`, minimum 1px; fallback 2px) for focus, 1px for hairlines.
 
 Tile focus is drawn **inset** (an inset box-shadow on a pseudo-element), because day sections use layout/paint containment and an outset border would clip at section edges.
 
@@ -206,7 +212,7 @@ Every photo is a window.
 ### Year Workspace Strip (signature)
 The archive's years as workspace numbers, newest first.
 - **Pill:** monospace 12px 600, muted, transparent; hover tints ink 7% and raises to ink; active (the year under the viewport) inverts to ink fill and surface text; focus outline `--ws-border` accent, 2px offset.
-- **Behaviour:** horizontally scrolling, scrollbar hidden, 2rem edge masks; the active pill scrolls to centre. `[` and `]` step to the older/newer year (ignored in inputs and while the viewer is open).
+- **Behaviour:** horizontally scrolling, scrollbar hidden, 1rem edge masks, chevrons at both ends page it; the active pill scrolls to centre. Below it, the months of the year in view as 1-12 (10px mono; empty months faded, the one in view underlined in the accent); the heading's month name opens the Months overview, the year the Years overview, so the Years/Months/All row is only drawn in those overviews and with active filters. Filter and search sit with the header tools. `[` and `]` step to the older/newer year (ignored in inputs and while the viewer is open).
 - **Workspace slide:** switching years slides the timeline layer out across the full width (170ms, ease-in `cubic-bezier(0.55, 0, 1, 0.45)`), jumps, and slides the new year in from the other side (240ms, ease-out `cubic-bezier(0.22, 1, 0.36, 1)`); older years arrive from the right. The month heading flies 40px in the direction of travel (260ms cubic-out). Reduced motion cuts straight to the year.
 
 ### Segmented Control (Years / Months / All)
