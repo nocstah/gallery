@@ -24,16 +24,30 @@ const LIMIT = 30;
 
 /** The page an action was taken on (its route and params, not the photo open in it): an undo made from another page
  * leaves the first page's own callbacks alone (they would act on a page that is gone). */
-export const pageKey = () =>
-  `${page.route.id}?${Object.entries(page.params)
-    .filter(([key]) => key !== 'assetId' && key !== 'photos')
-    .map((entry) => entry.join('='))
-    .join('&')}`;
+export const pageKey = () => {
+  try {
+    const params = Object.entries(page.params ?? {})
+      .filter(([key]) => key !== 'assetId' && key !== 'photos')
+      .map((entry) => entry.join('='))
+      .join('&');
+    return `${page.route?.id ?? ''}?${params}`;
+  } catch {
+    return '';
+  }
+};
 
 class UndoManager {
   entries = $state<UndoEntry[]>([]);
-  busy = $state(false);
   #next = 1;
+  // undos run one after another, in the order asked: one on the same photos as another (archived, then trashed)
+  // must not overtake it, and a second Ctrl+Z while the first is still on its way waits instead of being dropped
+  #pending = $state(0);
+  #chain: Promise<void> = Promise.resolve();
+
+  /** an undo is on its way (the bar's rows wait) */
+  get busy() {
+    return this.#pending > 0;
+  }
 
   /** Records how to take an action back; the id is for its toast's own Undo button. */
   record(label: string, undo: UndoEntry['undo'], failed?: string) {
@@ -42,15 +56,20 @@ class UndoManager {
     return entry.id;
   }
 
-  /** Takes back the named entry, or the newest. */
-  async undo(id?: number) {
+  /** Takes back the named entry, or the newest; resolves once it (and any undo before it) has run. */
+  undo(id?: number): Promise<void> {
     const entry = id === undefined ? this.entries[0] : this.entries.find((candidate) => candidate.id === id);
-    if (!entry || this.busy) {
-      return;
+    if (!entry) {
+      return this.#chain;
     }
-    this.busy = true;
     // off the list before it runs, so a second press cannot run it again
     this.entries = this.entries.filter((candidate) => candidate !== entry);
+    this.#pending++;
+    this.#chain = this.#chain.then(() => this.#run(entry));
+    return this.#chain;
+  }
+
+  async #run(entry: UndoEntry) {
     try {
       const done = await entry.undo();
       if (done) {
@@ -60,7 +79,7 @@ class UndoManager {
       this.entries = [...this.entries, entry].sort((a, b) => b.id - a.id);
       handleError(error, entry.failed ?? get(t)('errors.something_went_wrong'));
     } finally {
-      this.busy = false;
+      this.#pending--;
     }
   }
 }
