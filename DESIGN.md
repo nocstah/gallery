@@ -180,7 +180,7 @@ display `clamp(2.25rem, 1rem + 3vw, 4rem)` · title 20px · heading 17px · body
 
 **Rows fill the width.** Days that fit on one line are pooled into a shared row and re-laid at one height so the row ends exactly at the viewport edge (photos shrink by at most 0.72x, grow up to 70% of viewport height). A day too wide for one line takes the row to itself, its photos split into balanced lines each justified to full width, so no line ends on an orphan tile. Only a month's last row may stay short (growth capped at 1.6x). While any day's layout is deferred, the upstream packing is the fallback.
 
-**Shell.** Top bar on the surface with a hairline below; search leads, right after the logo, at every width. Sidebar shares the ground with a hairline edge. The filter rail starts collapsed; the timeline leads. The timeline header carries the month in view at display size with its count, and the year workspace strip beside it (stacked under it below 768px, with its edge masks off).
+**Shell.** One bar (`components/omarchy/OmarchyBar.svelte`, 64px, the glass when chosen): menu and mark in a first column as wide as the sidebar; the page's own content in the middle (`lib/managers/bar-slot`; Photos puts its month heading and time ruler there); then search as an icon that opens into the field over the middle, the View menu (order, thumbnail size, day labels, expanded stacks, compact, theme, Cast), upload, notifications and the account. No second header row on the plain timeline. Sidebar shares the ground with a hairline edge. The filter rail starts collapsed; the timeline leads. The timeline header carries the month in view at display size with its count, and the year workspace strip beside it (stacked under it below 768px, with its edge masks off).
 
 **Responsive.** Below 768px: header stacks, day labels shorten to weekday + date, the grouping control floats at the bottom. On coarse pointers, tiles at least 200px wide show their place caption permanently.
 
@@ -209,7 +209,10 @@ Every photo is a window.
 - **Focus / Hover:** inset `--ws-border` in the theme accent (hover counts as focus, like focus-follows-mouse); default outline suppressed. 140ms `cubic-bezier(0.22, 1, 0.36, 1)`; reduced motion: no transition.
 - **Place caption:** city and country on a bottom black scrim, white 12px 600, fades in with focus (140ms); indented past the favourite star. Permanent on coarse pointers for tiles 200px and wider.
 
-### Year Workspace Strip (signature)
+### Time Ruler (signature)
+In the one bar beside the month heading (the bar heading role, `--ws-text-bar` 28px, display face condensed, month 500 / year 800; the month opens the Months overview, the year the Years overview). A fisheye of the whole archive on one line: the year in view shows its months 1-12 in a quiet tray (11px mono, empty months faded, the one in view underlined in the accent), the rest of its decade shows as years, every other decade as one label (2010s) entered at its first year. When the bar is too narrow it tightens step by step until it fits: the count goes, the decade's years shorten to '25, fold into their decade label, and only last the month tray goes. Below 460px only the heading stays.
+
+### Year Workspace Strip (superseded by the Time Ruler)
 The archive's years as workspace numbers, newest first.
 - **Pill:** monospace 12px 600, muted, transparent; hover tints ink 7% and raises to ink; active (the year under the viewport) inverts to ink fill and surface text; focus outline `--ws-border` accent, 2px offset.
 - **Behaviour:** horizontally scrolling, scrollbar hidden, 1rem edge masks, chevrons at both ends page it; the active pill scrolls to centre. Below it, the months of the year in view as 1-12 (10px mono; empty months faded, the one in view underlined in the accent); the heading's month name opens the Months overview, the year the Years overview, so the Years/Months/All row is only drawn in those overviews and with active filters. Filter and search sit with the header tools. `[` and `]` step to the older/newer year (ignored in inputs and while the viewer is open).
