@@ -35,7 +35,7 @@
 <svelte:document use:shortcut={{ shortcut: { key: 'd', shift: true }, onShortcut: handleDownloadFiles }} />
 
 {#if menuItem}
-  <MenuOption text={$t('download')} icon={mdiDownload} onClick={handleDownloadFiles} />
+  <MenuOption text={$t('download')} icon={mdiDownload} onClick={handleDownloadFiles} shortcutLabel="⇧D" />
 {:else}
   <IconButton
     shape="round"

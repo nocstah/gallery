@@ -14,6 +14,8 @@
     onClick: (event: KeyboardEvent | MouseEvent) => void;
     shortcut?: Shortcut | null;
     shortcutLabel?: string;
+    /** Local Omarchy layer: 'danger' marks a destructive item (the menus draw it red) */
+    tone?: 'danger';
   }
 
   let {
@@ -25,6 +27,7 @@
     onClick,
     shortcut = null,
     shortcutLabel = '',
+    tone,
   }: Props = $props();
 
   let id: string = generateId();
@@ -58,6 +61,7 @@
     ? activeColor
     : 'bg-slate-100'}"
   role="menuitem"
+  data-tone={tone}
 >
   {#if icon}
     <Icon {icon} aria-hidden size="18" />

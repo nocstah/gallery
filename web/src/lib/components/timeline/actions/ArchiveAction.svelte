@@ -35,7 +35,7 @@
 </script>
 
 {#if menuItem}
-  <MenuOption {text} {icon} onClick={handleArchive} />
+  <MenuOption {text} {icon} onClick={handleArchive} shortcutLabel="⇧A" />
 {/if}
 
 {#if !menuItem}

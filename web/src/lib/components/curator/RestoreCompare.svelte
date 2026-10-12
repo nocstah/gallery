@@ -19,10 +19,10 @@
   type Payload = { variant?: string; width?: number; height?: number; source?: { width?: number; height?: number } };
   const payload = $derived(suggestion.payload as Payload);
   const clip = $derived(payload.variant === 'video');
-  // Local Omarchy layer: a Live Photo effect (curator/live.py) or a straightened document is shown on its own, a loop
-  // or bounce playing on
+  // Local Omarchy layer: a Live Photo effect (curator/live.py), a straightened document or a collage is shown on its
+  // own, a loop or bounce playing on
   const effect = $derived(
-    ['loop', 'bounce', 'long-exposure', 'key-photo', 'cinematic', 'animation', 'straightened'].includes(
+    ['loop', 'bounce', 'long-exposure', 'key-photo', 'cinematic', 'animation', 'straightened', 'collage'].includes(
       payload.variant ?? '',
     ),
   );

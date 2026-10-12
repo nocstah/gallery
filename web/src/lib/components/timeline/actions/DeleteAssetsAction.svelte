@@ -40,7 +40,7 @@
 </script>
 
 {#if menuItem}
-  <MenuOption text={label} icon={mdiDeleteOutline} onClick={onAction} />
+  <MenuOption text={label} icon={mdiDeleteOutline} onClick={onAction} tone="danger" shortcutLabel="Del" />
 {:else if loading}
   <IconButton
     shape="round"

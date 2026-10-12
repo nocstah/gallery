@@ -15,7 +15,9 @@
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import { optionClickCallbackStore, selectedIdStore } from '$lib/stores/context-menu.store';
   import { generateId } from '$lib/utils/generate-id';
-  import { getAssetInfo } from '@immich/sdk';
+  import { getAssetMediaUrl } from '$lib/utils';
+  import { fromTimelinePlainDateTime } from '$lib/utils/timeline-util';
+  import { AssetMediaSize, getAssetInfo } from '@immich/sdk';
   import { goto } from '$app/navigation';
   import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import { copySubject } from '$lib/utils/copy-subject';
@@ -27,7 +29,7 @@
     mdiStarFourPointsOutline,
   } from '@mdi/js';
   import type { Snippet } from 'svelte';
-  import { t } from 'svelte-i18n';
+  import { locale, t } from 'svelte-i18n';
 
   interface Props {
     /** the photo grid the menu serves, as a selector */
@@ -94,6 +96,33 @@
     isOpen = true;
     requestAnimationFrame(() => menuContainer?.focus());
   };
+
+  // Local Omarchy layer: the menu's header says what it acts on: the photo (thumbnail, day, place) or the selection
+  // (up to three thumbnails fanned, the count, the days it spans)
+  const picked = $derived(isOpen ? assetInteraction.assets : []);
+  const day = (asset: TimelineAsset, withYear = true) =>
+    fromTimelinePlainDateTime(asset.localDateTime).toLocaleString(
+      { weekday: withYear ? 'short' : undefined, month: 'short', day: 'numeric', year: withYear ? 'numeric' : undefined },
+      { locale: $locale },
+    );
+  const headline = $derived.by(() => {
+    if (picked.length === 0) {
+      return undefined;
+    }
+    if (picked.length === 1) {
+      const [asset] = picked;
+      return { title: day(asset), detail: [asset.city, asset.country].filter(Boolean).join(', ') };
+    }
+    const times = picked.map((asset) => fromTimelinePlainDateTime(asset.localDateTime));
+    const first = picked[times.indexOf(times.reduce((a, b) => (b < a ? b : a)))];
+    const last = picked[times.indexOf(times.reduce((a, b) => (b > a ? b : a)))];
+    const from = day(first, false);
+    const to = day(last);
+    return {
+      title: $t('selected_count', { values: { count: picked.length } }),
+      detail: from === day(last, false) ? to : `${from} – ${to}`,
+    };
+  });
 
   const onStackAction = (action: () => Promise<void>) => {
     if (selectedByMenu) {
@@ -185,6 +214,23 @@
       x={position.x}
       y={position.y}
     >
+      {#if headline}
+        <li class="ws-menu-head" role="presentation">
+          <span class="ws-menu-thumbs" data-count={Math.min(picked.length, 3)} aria-hidden="true">
+            {#each picked.slice(0, 3) as item (item.id)}
+              <img
+                src={getAssetMediaUrl({ id: item.id, size: AssetMediaSize.Thumbnail, cacheKey: item.thumbhash })}
+                alt=""
+                draggable="false"
+              />
+            {/each}
+          </span>
+          <span class="ws-menu-title">
+            <strong>{headline.title}</strong>
+            {#if headline.detail}<small>{headline.detail}</small>{/if}
+          </span>
+        </li>
+      {/if}
       {#if stackMenu}
         {@const menu = stackMenu}
         <!-- Local Omarchy layer: Curator picks the stack's best photo; the viewer opens on the stack with the card -->
@@ -240,16 +286,62 @@
   .ws-tile-menu :global(> div) {
     transition: none !important;
   }
-  .ws-tile-menu :global([role='menuitem']) {
-    padding: 0.5rem 0.875rem;
+  .ws-tile-menu :global(ul[role='menu']) {
+    min-width: 15rem;
+  }
+  .ws-menu-head {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.375rem 0.5rem 0.625rem;
+    margin-bottom: 0.25rem;
+    border-bottom: 1px solid var(--ws-hairline);
+    list-style: none;
+  }
+  .ws-menu-thumbs {
+    position: relative;
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .ws-menu-thumbs img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: calc(var(--ws-radius, 0px) + 7px);
+    box-shadow:
+      0 0 0 1.5px var(--immich-ui-light),
+      0 2px 6px rgb(0 0 0 / 0.3);
+  }
+  /* a selection fans out behind the first photo */
+  .ws-menu-thumbs img:nth-child(1) {
+    z-index: 3;
+  }
+  .ws-menu-thumbs img:nth-child(2) {
+    z-index: 2;
+    transform: translateX(-3px) rotate(-9deg) scale(0.94);
+  }
+  .ws-menu-thumbs img:nth-child(3) {
+    z-index: 1;
+    transform: translateX(3px) rotate(9deg) scale(0.94);
+  }
+  .ws-menu-title {
+    display: grid;
+    min-width: 0;
+    line-height: 1.25;
+  }
+  .ws-menu-title strong {
     font-size: 0.8125rem;
-    gap: 0.625rem;
+    font-weight: 600;
+    color: var(--immich-ui-dark);
   }
-  .ws-tile-menu :global([role='menuitem'] svg) {
-    width: 16px;
-    height: 16px;
-  }
-  .ws-tile-menu :global(hr) {
-    margin-block: 0.125rem;
+  .ws-menu-title small {
+    overflow: hidden;
+    font-size: 0.72rem;
+    color: var(--immich-ui-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>
