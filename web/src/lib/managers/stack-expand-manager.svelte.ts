@@ -2,7 +2,7 @@
 // photos into the timeline beside its cover (they sort in by capture time); clicking again takes them
 // back out. Nothing is changed on the server: the stack stays a stack. Any expanded photo can be made
 // the cover (right-click > Make stack cover), which folds the stack back up around it.
-import { AssetOrder, getStack, updateStack } from '@immich/sdk';
+import { AssetOrder, getAssetInfo, getStack, updateStack } from '@immich/sdk';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { updateGeometry } from '$lib/managers/timeline-manager/internal/layout-support.svelte';
@@ -29,6 +29,7 @@ class StackExpandManager {
     // a stack that changes anywhere (here, the viewer's menu, a drag onto it) is folded back up by the
     // timeline, so its expansion is over; inserted ids must not be removed again on the next collapse
     eventManager.on({
+      AssetsDelete: (ids) => void this.#recount(ids),
       StackUpdate: (stack) => this.#forget(stack.id),
       StackDelete: (stack) => this.#forget(stack.id),
       StackCreate: (stack) => {
@@ -123,6 +124,52 @@ class StackExpandManager {
       handleError(error, 'Could not expand the stack');
     } finally {
       this.#pending.delete(stackId);
+    }
+  }
+
+  /** Photos went to the trash (here, the viewer, another tab): the stacks they were in count again, so a cover whose
+   * stack is down to itself loses its badge at once rather than at the next reload. Stacks that are expanded here are
+   * known; for a handful of other photos the server says which stack each was in (a big bulk delete skips those). */
+  async #recount(ids: string[]) {
+    const manager = this.timelineManager;
+    if (!manager || ids.length === 0) {
+      return;
+    }
+    const stackIds = new Set<string>();
+    const unknown: string[] = [];
+    for (const id of ids) {
+      const stackId = this.#members.get(id) ?? this.#covers.get(id);
+      if (stackId) {
+        stackIds.add(stackId);
+      } else {
+        unknown.push(id);
+      }
+    }
+    if (unknown.length <= 20) {
+      const infos = await Promise.allSettled(unknown.map((id) => getAssetInfo({ id })));
+      for (const info of infos) {
+        if (info.status === 'fulfilled' && info.value.stack) {
+          stackIds.add(info.value.stack.id);
+        }
+      }
+    }
+    for (const stackId of stackIds) {
+      try {
+        // the server lists only the stack's photos outside the trash
+        const stack = await getStack({ id: stackId });
+        const left = stack.assets.length;
+        const inserted = this.#expanded.get(stackId);
+        if (inserted) {
+          // fold it back up around its cover, as a collapse would
+          manager.removeAssets(inserted.filter((id) => id !== stack.primaryAssetId));
+          this.#forget(stackId);
+        }
+        manager.update([stack.primaryAssetId], (asset) => {
+          asset.stack = left > 1 ? { id: stackId, primaryAssetId: stack.primaryAssetId, assetCount: left } : null;
+        });
+      } catch {
+        // the stack is gone: the timeline's own stack events handle that
+      }
     }
   }
 
