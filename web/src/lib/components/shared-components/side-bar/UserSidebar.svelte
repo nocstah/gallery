@@ -16,8 +16,6 @@
     mdiAccount,
     mdiAccountGroup,
     mdiAccountGroupOutline,
-    mdiAccountMultiple,
-    mdiAccountMultipleOutline,
     mdiAccountOutline,
     mdiArchiveArrowDown,
     mdiArchiveArrowDownOutline,
@@ -25,6 +23,8 @@
     mdiCardsOutline,
     mdiChat,
     mdiChatOutline,
+    mdiCompass,
+    mdiCompassOutline,
     mdiDatabaseImportOutline,
     mdiFolderOutline,
     mdiHeart,
@@ -37,9 +37,10 @@
     mdiLink,
     mdiLock,
     mdiLockOutline,
-    mdiMagnify,
     mdiMap,
     mdiMapOutline,
+    mdiShareVariant,
+    mdiShareVariantOutline,
     mdiTagMultipleOutline,
     mdiToolbox,
     mdiToolboxOutline,
@@ -89,7 +90,8 @@
   </SidebarNavItem>
 
   {#if featureFlagsManager.value.search}
-    <SidebarNavItem title={$t('explore')} href={Route.explore()} icon={mdiMagnify} />
+    <!-- Local Omarchy layer: a compass, since the bar's Search button already uses the magnifier -->
+    <SidebarNavItem title={$t('explore')} href={Route.explore()} icon={mdiCompassOutline} activeIcon={mdiCompass} />
   {/if}
 
   {#if featureFlagsManager.value.map}
@@ -108,11 +110,12 @@
     <SidebarNavItem title={$t('shared_links')} href={Route.sharedLinks()} icon={mdiLink} />
   {/if}
 
+  <!-- Local Omarchy layer: the share arrow (as in Ctrl+K), so Sharing no longer looks like Spaces in the rail -->
   <SidebarNavItem
     title={$t('sharing')}
     href={Route.sharing()}
-    icon={mdiAccountMultipleOutline}
-    activeIcon={mdiAccountMultiple}
+    icon={mdiShareVariantOutline}
+    activeIcon={mdiShareVariant}
   />
 
   <SidebarNavGroup title={$t('library')} />

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Route } from '$lib/route';
 import { isAlmostExactNavMatch, NAVIGATION_ITEMS } from './navigation-items';
 
 // __dirname is not defined in ESM (vitest default). Derive it from import.meta.url.
@@ -86,8 +87,8 @@ function isOptionalParam(name: string): boolean {
 }
 
 describe('NAVIGATION_ITEMS schema', () => {
-  it('has exactly 38 items', () => {
-    expect(NAVIGATION_ITEMS).toHaveLength(38);
+  it('has exactly 52 items', () => {
+    expect(NAVIGATION_ITEMS).toHaveLength(52);
   });
 
   it('every item has non-empty required fields', () => {
@@ -156,7 +157,7 @@ describe('NAVIGATION_ITEMS schema', () => {
 
   it('user-pages items are not admin-only', () => {
     const items = NAVIGATION_ITEMS.filter((i) => i.category === 'userPages');
-    expect(items).toHaveLength(11);
+    expect(items).toHaveLength(25);
     for (const item of items) {
       expect(item.adminOnly).toBe(false);
     }
@@ -210,6 +211,26 @@ describe('NAVIGATION_ITEMS schema', () => {
 
     for (const key of sourceKeys) {
       expect(ourKeys.has(key)).toBe(true);
+    }
+  });
+
+  it('drift guard: every page in the sidebar can be opened from Ctrl+K', () => {
+    // Local Omarchy layer: the command center, AI inbox and chat were added to the sidebar without a palette entry,
+    // so typing "inbox" found nothing. Every href in the sidebar, a literal or a Route helper, must be in the list.
+    const source = readFileSync(
+      resolve(here, '..', 'components', 'shared-components', 'side-bar', 'UserSidebar.svelte'),
+      'utf8',
+    );
+    const routes = Route as unknown as Record<string, () => string>;
+    const hrefs = [
+      ...[...source.matchAll(/href="(\/[^"]*)"/g)].map((m) => m[1]),
+      ...[...source.matchAll(/href=\{Route\.(\w+)\(\)\}/g)].map((m) => routes[m[1]]()),
+    ];
+    const paths = new Set(NAVIGATION_ITEMS.map((i) => i.route.split(/[?#]/, 1)[0]));
+
+    expect(hrefs.length).toBeGreaterThan(15);
+    for (const href of hrefs) {
+      expect(paths.has(href.split(/[?#]/, 1)[0]), `${href} is in the sidebar but not in Ctrl+K`).toBe(true);
     }
   });
 });
