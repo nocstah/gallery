@@ -1,15 +1,16 @@
 <script lang="ts">
   // Local Omarchy layer: the one bar's view menu. What you set now and then, not every minute, lives here instead of
   // in the bar: the order (on a page that can be sorted), and for photo grids the thumbnail size, day labels,
-  // expanded stacks and the compact grid; then light/dark (when a theme is not just following the system) and Cast
-  // (when a cast target is around). Ctrl+wheel and + - 0 still resize the thumbnails directly.
+  // expanded stacks and the compact grid; then the theme (following Omarchy, the default, or held light or dark) and
+  // Cast (when a cast target is around). Ctrl+wheel and + - 0 still resize the thumbnails directly.
   import { page } from '$app/state';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
   import { thumbnailZoomManager, ZOOM_MAX, ZOOM_MIN } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { getGlobalActions } from '$lib/services/app.service';
+  import { FOLLOW_OMARCHY, galleryThemes } from '$lib/theme/theme-manager.svelte';
   import { getSearchablePageState } from '$lib/utils/searchable-page-search';
   import { Icon, ThemePreference, themeManager } from '@immich/ui';
-  import { mdiCast, mdiEyeSettingsOutline, mdiWeatherNight, mdiWeatherSunny } from '@mdi/js';
+  import { mdiCast, mdiEyeSettingsOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   let open = $state(false);
@@ -20,6 +21,10 @@
   const order = $derived(searchable.sortOrder === 'asc' ? 'asc' : 'desc');
   const { Cast } = $derived(getGlobalActions($t));
   const canCast = $derived(Cast.$if?.() ?? true);
+  // the default: Omarchy's palette in the desktop's light or dark; Light or Dark hold that face whatever the desktop does
+  const followsOmarchy = $derived(
+    galleryThemes.current === FOLLOW_OMARCHY && themeManager.preference === ThemePreference.System,
+  );
 
   const toggle = () => {
     hasGrid = document.querySelector('#asset-grid') !== null;
@@ -100,15 +105,33 @@
         {/each}
       {/if}
 
-      {#if themeManager.preference !== ThemePreference.System || canCast}
-        <hr />
-      {/if}
-      {#if themeManager.preference !== ThemePreference.System}
-        <button type="button" class="ws-view-row" onclick={() => themeManager.toggle()}>
-          <span>{themeManager.value === 'dark' ? $t('light_theme') : $t('dark_theme')}</span>
-          <Icon icon={themeManager.value === 'dark' ? mdiWeatherSunny : mdiWeatherNight} size="16" />
+      <hr />
+      <div class="ws-view-seg ws-view-theme" role="radiogroup" aria-label={$t('theme')}>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={followsOmarchy}
+          onclick={() => galleryThemes.choose(FOLLOW_OMARCHY)}
+        >
+          {$t('theme_follow_omarchy')}
         </button>
-      {/if}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={!followsOmarchy && themeManager.preference === ThemePreference.Light}
+          onclick={() => themeManager.setPreference(ThemePreference.Light)}
+        >
+          {$t('light')}
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={!followsOmarchy && themeManager.preference === ThemePreference.Dark}
+          onclick={() => themeManager.setPreference(ThemePreference.Dark)}
+        >
+          {$t('dark')}
+        </button>
+      </div>
       {#if canCast}
         <button
           type="button"
@@ -159,6 +182,14 @@
     padding: 2px;
     background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
     border-radius: var(--ws-radius);
+  }
+  /* the default's name keeps its one line; Light and Dark share the rest */
+  .ws-view-theme {
+    grid-template-columns: max-content 1fr 1fr;
+    margin-block: 2px 0;
+  }
+  .ws-view-theme button {
+    white-space: nowrap;
   }
   .ws-view-seg button {
     padding: 0.35rem 0.5rem;

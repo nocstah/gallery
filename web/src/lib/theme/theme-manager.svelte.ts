@@ -5,6 +5,7 @@
 // The built-in themes are files in /themes (static/themes, made from the Omarchy themes by
 // tools/export-omarchy-themes.py); installed ones, from a file or a URL, are kept in this browser with the choice.
 // The chosen theme's CSS is kept too, so app.html can put it in place before the first paint.
+import { ThemePreference, themeManager as colourMode } from '@immich/ui';
 import { parseTheme, themeCss, type GalleryTheme } from '$lib/theme/derive';
 
 export const FOLLOW_OMARCHY = 'omarchy';
@@ -97,6 +98,12 @@ class ThemeManager {
     const css = theme ? themeCss(theme) : null;
     write(CSS, css);
     apply(css);
+    // light or dark comes with the choice: following Omarchy, from the desktop (the page's prefers-color-scheme, which
+    // Omarchy flips with its theme); a chosen theme, from the theme. Without this a light/dark picked once (Shift+T,
+    // the View menu) outlived every later choice, and Omarchy's dark palette was drawn in its light face.
+    colourMode.setPreference(
+      theme ? (theme.mode === 'light' ? ThemePreference.Light : ThemePreference.Dark) : ThemePreference.System,
+    );
   }
 
   /** Add a theme from a file's text or a fetched URL; returns it. An installed theme with the same id is replaced. */
