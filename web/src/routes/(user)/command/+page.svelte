@@ -120,7 +120,7 @@
     job.progress?.total ? Math.min(1, (job.progress.done ?? 0) / job.progress.total) : job.status === 'running' ? 0.05 : 0;
 </script>
 
-<UserPageLayout title={data.meta.title} hideNavbar={false} scrollbar>
+<UserPageLayout hideNavbar={false} scrollbar>
   <div class="ws-inbox command">
     <header class="ws-inbox-head">
       <h1 class="ws-inbox-title">{$t('command_title')}</h1>

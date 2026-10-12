@@ -5,6 +5,7 @@
 <script lang="ts">
   import { useActions, type ActionArray } from '$lib/actions/use-actions';
   import OmarchyBar from '$lib/components/omarchy/OmarchyBar.svelte';
+  import { barSlot } from '$lib/managers/bar-slot.svelte';
   import UserSidebar from '$lib/components/shared-components/side-bar/UserSidebar.svelte';
   import { shortcuts } from '$lib/actions/shortcut';
   import { sidebarMedia } from '$lib/stores/sidebar-media.svelte';
@@ -12,7 +13,7 @@
   import type { HeaderButtonActionItem } from '$lib/types';
   import { openFileUploadDialog } from '$lib/utils/file-uploader';
   import { Button, ContextMenuButton, HStack, isMenuItemType, type MenuItemType } from '@immich/ui';
-  import type { Snippet } from 'svelte';
+  import { tick, untrack, type Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -54,7 +55,64 @@
 
   let scrollbarClass = $derived(scrollbar ? 'immich-scrollbar' : 'scrollbar-hidden');
   let hasHeaderRow = $derived(!!(title || buttons));
-  let hasTitleClass = $derived(hasHeaderRow ? 'top-16 h-[calc(100%-(--spacing(16)))]' : 'top-0 h-full');
+  // Local Omarchy layer: the page's title row lives in the one bar (OmarchyBar, through the bar slot), so the content
+  // starts at the top of the panel instead of under a second 64px bar
+  let hasTitleClass = 'top-0 h-full';
+
+  // The title row always fits the bar: the title keeps its width and the page's buttons tighten a step at a time until
+  // the row fits: 1 drops the description, 2 the button labels (icons keep their tooltips), 3 the wide-screen extras
+  // (an album search field, filter tabs). Re-fitted when the bar resizes or the page adds or removes a control, never
+  // by its own steps (they only flip an attribute), so fitting cannot feed itself.
+  const PAGE_TIGHTEST = 3;
+  let pageFit = $state(0);
+  let pageFitting = false;
+  let pageBarBox = $state<HTMLElement>();
+  let pageActionsBox = $state<HTMLElement>();
+  const refitPage = async () => {
+    if (!pageBarBox || pageFitting) {
+      return;
+    }
+    pageFitting = true;
+    try {
+      pageFit = 0;
+      await tick();
+      while (pageFit < PAGE_TIGHTEST && pageBarBox && pageBarBox.scrollWidth > pageBarBox.clientWidth + 1) {
+        pageFit++;
+        await tick();
+      }
+    } finally {
+      pageFitting = false;
+    }
+  };
+  $effect(() => {
+    void title;
+    void description;
+    if (!pageBarBox) {
+      return;
+    }
+    const resized = new ResizeObserver(() => void untrack(refitPage));
+    resized.observe(pageBarBox);
+    const changed = new MutationObserver(() => void untrack(refitPage));
+    if (pageActionsBox) {
+      changed.observe(pageActionsBox, { childList: true, subtree: true, characterData: true });
+    }
+    void untrack(refitPage);
+    return () => {
+      resized.disconnect();
+      changed.disconnect();
+    };
+  });
+  $effect(() => {
+    if (hideNavbar || !hasHeaderRow) {
+      return;
+    }
+    barSlot.content = pageBar;
+    return () => {
+      if (barSlot.content === pageBar) {
+        barSlot.content = undefined;
+      }
+    };
+  });
 
   // /tags and /folders supply a tree explorer wrapping upstream Sidebar.svelte, which is
   // always 16rem above 850px. Collapsing their grid column to the rail width would clip it,
@@ -81,6 +139,53 @@
 </script>
 
 <svelte:document use:shortcuts={sidebarShortcuts} />
+
+<!-- Local Omarchy layer: the page's title row, set into the middle of the one bar: its leading control (a back
+     button), the title in the bar's heading face, the description in mono, then the page's own buttons and actions
+     at the end. In a tight bar the buttons drop their labels (icons keep their tooltips) and the wide-screen extras go -->
+{#snippet pageBar()}
+  <div class="ws-page-bar" data-testid="page-header-title-row" data-fit={pageFit} bind:this={pageBarBox}>
+    <div class="ws-page-bar-title">
+      {@render leading?.()}
+      {#if title}
+        <div class="ws-page-title" tabindex="-1" id={headerId} data-testid="page-header">{title}</div>
+      {/if}
+      {#if description}
+        <p class="ws-page-description" data-testid="page-header-description">{description}</p>
+      {/if}
+      {#if descriptionTrailing}
+        <div class="shrink-0" data-testid="page-header-description-trailing">
+          {@render descriptionTrailing()}
+        </div>
+      {/if}
+    </div>
+
+    <div class="ws-page-actions" bind:this={pageActionsBox}>
+      {@render buttons?.()}
+
+      {#if enabledActions.length > 0}
+        <div class="hidden md:block">
+          <HStack gap={0}>
+            {#each enabledActions as action, i (i)}
+              <Button
+                variant="ghost"
+                size="small"
+                color={action.color ?? 'secondary'}
+                leadingIcon={action.icon}
+                onclick={(event: MouseEvent) => action.onAction({ event, action })}
+                title={action.data?.title ?? action.title}
+              >
+                <span class="ws-action-label">{action.title}</span>
+              </Button>
+            {/each}
+          </HStack>
+        </div>
+
+        <ContextMenuButton aria-label={$t('open')} items={actions} class="md:hidden" />
+      {/if}
+    </div>
+  </div>
+{/snippet}
 
 <header>
   {#if !hideNavbar}
@@ -122,53 +227,74 @@
       {@render children?.()}
     </div>
 
-    {#if !hideNavbar && (title || buttons)}
-      <div class="absolute flex h-16 w-full place-items-center justify-between border-b p-2 text-dark">
-        <div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden" data-testid="page-header-title-row">
-          {@render leading?.()}
-          {#if title}
-            <div class="min-w-0 truncate pe-8 outline-none" tabindex="-1" id={headerId} data-testid="page-header">
-              {title}
-            </div>
-          {/if}
-          {#if description}
-            <p
-              class="shrink-0 text-sm whitespace-nowrap text-gray-400 dark:text-gray-600"
-              data-testid="page-header-description"
-            >
-              {description}
-            </p>
-          {/if}
-          {#if descriptionTrailing}
-            <div class="shrink-0" data-testid="page-header-description-trailing">
-              {@render descriptionTrailing()}
-            </div>
-          {/if}
-        </div>
-
-        {@render buttons?.()}
-
-        {#if enabledActions.length > 0}
-          <div class="hidden md:block">
-            <HStack gap={0}>
-              {#each enabledActions as action, i (i)}
-                <Button
-                  variant="ghost"
-                  size="small"
-                  color={action.color ?? 'secondary'}
-                  leadingIcon={action.icon}
-                  onclick={(event: MouseEvent) => action.onAction({ event, action })}
-                  title={action.data?.title}
-                >
-                  {action.title}
-                </Button>
-              {/each}
-            </HStack>
-          </div>
-
-          <ContextMenuButton aria-label={$t('open')} items={actions} class="md:hidden" />
-        {/if}
-      </div>
-    {/if}
   </main>
 </div>
+
+<style>
+  .ws-page-bar {
+    display: flex;
+    flex: 1;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+    height: 100%;
+    padding-inline-end: 0.5rem;
+  }
+  .ws-page-bar-title {
+    display: flex;
+    flex: none;
+    max-width: 45%;
+    gap: 0.6rem;
+    align-items: baseline;
+    min-width: 0;
+  }
+  .ws-page-title {
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--font-display);
+    font-size: var(--ws-text-bar);
+    font-weight: 750;
+    font-stretch: 75%;
+    font-variation-settings:
+      'wdth' 75,
+      'opsz' 48;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: var(--immich-ui-dark);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    outline: none;
+  }
+  .ws-page-description {
+    flex: none;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--immich-ui-muted);
+    white-space: nowrap;
+  }
+  .ws-page-actions {
+    display: flex;
+    flex: none;
+    gap: 0.25rem;
+    align-items: center;
+  }
+  /* the page's own controls take the desktop's corners in the bar */
+  .ws-page-actions :global(:is(button, a, input, [class*='rounded'])) {
+    border-radius: var(--ws-radius);
+  }
+  /* tightening steps (see refitPage) */
+  .ws-page-bar:not([data-fit='0']) .ws-page-description {
+    display: none;
+  }
+  .ws-page-bar:is([data-fit='2'], [data-fit='3'])
+    .ws-page-actions
+    :global(:is(button, a) :is([class~='sm:block'], [class~='md:block'], [class~='lg:block'], .ws-action-label)) {
+    display: none;
+  }
+  .ws-page-bar[data-fit='3'] .ws-page-actions :global(:is([class~='xl:block'], [class~='xl:flex'])) {
+    display: none;
+  }
+</style>
