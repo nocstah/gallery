@@ -123,8 +123,8 @@
   const asset = $derived(previewStackedAsset ?? cursor.current);
   // Local Omarchy layer: Curator's object-removal brush replaces the photo viewer and its controls while it is open
   const brushing = $derived(removeObjects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
-  // Local Omarchy layer: Curator's Live Photo effects panel, which holds the viewer like the brush does
-  const livening = $derived(liveEffects.assetId === asset.id && !!asset.livePhotoVideoId);
+  // Local Omarchy layer: Curator's effects panel (Live Photo effects, cinematic), which holds the viewer like the brush
+  const livening = $derived(liveEffects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
   const inCuratorTool = $derived(brushing || livening);
   const nextAsset = $derived(cursor.nextAsset);
   const previousAsset = $derived(cursor.previousAsset);

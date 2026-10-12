@@ -322,7 +322,11 @@ export const curator = {
   forgetChat: (id: string) => call<void>(`/chats/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   /** a Live Photo effect picked in the photo viewer (`seconds`: where in the clip, for a key photo); the job's result
    * names the suggestion holding the new version */
-  liveEffect: (assetId: string, effect: 'loop' | 'bounce' | 'long-exposure' | 'key-photo', seconds = 0) =>
+  liveEffect: (
+    assetId: string,
+    effect: 'loop' | 'bounce' | 'long-exposure' | 'key-photo' | 'cinematic',
+    seconds = 0,
+  ) =>
     post<{ job: number }>('/live-effect', { asset_id: assetId, effect, seconds }),
   /** Look Up: what the photo shows that has a name (the kept answer unless `again`) */
   lookUp: (assetId: string, again = false, signal?: AbortSignal) =>

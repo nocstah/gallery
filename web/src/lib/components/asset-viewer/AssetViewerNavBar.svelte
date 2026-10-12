@@ -143,7 +143,7 @@
     $if: () => lookUp.available && isOwner && !sharedLink && !asset.isTrashed && asset.type === AssetTypeEnum.Image,
     onAction: () => lookUp.toggle(),
   });
-  // Local Omarchy layer: Curator's Live Photo effects (loop, bounce, long exposure, key photo)
+  // Local Omarchy layer: Curator's effects: a Live Photo's loop, bounce, long exposure, key photo; cinematic for any
   const LiveEffects: ActionItem = $derived({
     title: $t('live_effects'),
     icon: mdiMotionPlayOutline,
@@ -153,7 +153,7 @@
       !isLocked &&
       !asset.isTrashed &&
       !sharedLink &&
-      !!asset.livePhotoVideoId,
+      asset.type === AssetTypeEnum.Image,
     onAction: () => liveEffects.open(asset.id),
   });
 </script>

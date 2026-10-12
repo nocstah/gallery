@@ -1,9 +1,10 @@
 <script lang="ts">
-  // Local Omarchy layer: Live Photo effects (Curator's live.effect, ~/code/curator/curator/live.py), as in Apple
-  // Photos. Over the Live Photo playing on a loop the user picks Loop, Bounce or Long exposure, or scrubs to a frame
-  // for a new key photo; Curator renders it from the Live Photo's video in a few seconds. The result is a suggestion
-  // (a new version in the photo's stack when kept): Keep accepts it, Discard rejects it and goes back to the choice.
-  // Hold Original to see the photo as it was. Closed while Curator works, the result waits in the AI inbox.
+  // Local Omarchy layer: photo effects (Curator's live.effect, ~/code/curator/curator/live.py and cinematic.py): for
+  // a Live Photo, as in Apple Photos, over its clip playing on a loop the user picks Loop, Bounce or Long exposure, or
+  // scrubs to a frame for a new key photo; for any photo, Cinematic (Google Photos'), a slow move through its depth.
+  // Curator renders it in a few seconds. The result is a suggestion (a new version in the photo's stack when kept):
+  // Keep accepts it, Discard rejects it and goes back to the choice. Hold Original to see the photo as it was. Closed
+  // while Curator works, the result waits in the AI inbox.
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
   import { curator, restoredUrl, type JobRow, type Suggestion } from '$lib/utils/curator';
@@ -20,9 +21,13 @@
 
   let { asset, onClose }: Props = $props();
 
-  type Effect = 'loop' | 'bounce' | 'long-exposure' | 'key-photo';
+  type Effect = 'loop' | 'bounce' | 'long-exposure' | 'key-photo' | 'cinematic';
   type Phase = 'choose' | 'scrub' | 'working' | 'result';
-  const EFFECTS: Effect[] = ['loop', 'bounce', 'long-exposure', 'key-photo'];
+  // a Live Photo has its clip to make loops and long exposures of; any photo can be cinematic
+  const isLive = $derived(!!asset.livePhotoVideoId);
+  const EFFECTS = $derived<Effect[]>(
+    isLive ? ['loop', 'bounce', 'long-exposure', 'key-photo', 'cinematic'] : ['cinematic'],
+  );
   const POLL_MS = 700;
 
   let phase = $state<Phase>('choose');
@@ -37,12 +42,14 @@
   let at = $state(0);
   let gone = false;
 
-  const clipSrc = $derived(getAssetPlaybackUrl({ id: asset.livePhotoVideoId!, cacheKey: asset.thumbhash }));
+  const clipSrc = $derived(
+    asset.livePhotoVideoId ? getAssetPlaybackUrl({ id: asset.livePhotoVideoId, cacheKey: asset.thumbhash }) : '',
+  );
   const stillSrc = $derived(
     getAssetMediaUrl({ id: asset.id, size: AssetMediaSize.Preview, cacheKey: asset.thumbhash }),
   );
   const effectName = (chosen: Effect | undefined) => (chosen ? $t(`live_effect_${chosen.replace('-', '_')}`) : '');
-  const resultIsClip = $derived(effect === 'loop' || effect === 'bounce');
+  const resultIsClip = $derived(effect === 'loop' || effect === 'bounce' || effect === 'cinematic');
   const resultSrc = $derived.by(() => {
     if (!suggestion) {
       return '';
@@ -230,16 +237,20 @@
         <img src={resultSrc} alt="" draggable="false" />
       {/if}
     {:else}
-      <!-- svelte-ignore a11y_media_has_caption -->
-      <video
-        bind:this={video}
-        src={clipSrc}
-        autoplay={phase !== 'scrub'}
-        loop
-        muted
-        playsinline
-        onloadedmetadata={() => (duration = video?.duration ?? 0)}
-      ></video>
+      {#if !isLive}
+        <img src={stillSrc} alt="" draggable="false" />
+      {:else}
+        <!-- svelte-ignore a11y_media_has_caption -->
+        <video
+          bind:this={video}
+          src={clipSrc}
+          autoplay={phase !== 'scrub'}
+          loop
+          muted
+          playsinline
+          onloadedmetadata={() => (duration = video?.duration ?? 0)}
+        ></video>
+      {/if}
       {#if phase === 'working'}
         <div class="live-wait" role="status">
           <span class="live-spinner" aria-hidden="true"></span>
