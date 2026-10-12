@@ -1688,6 +1688,8 @@
   "duplicate_workflow": "Workflow duplizieren",
   "duplicates": "Duplikate",
   "duplicates_description": "Löse jede Gruppe auf, indem du angibst, welche, wenn überhaupt, Duplikate sind.",
+  "duplicates_qr_show": "Anzeigen",
+  "duplicates_qr_skipped": "{count, plural, one {# Gruppe von Zahlungsbelegen mit QR-Code ist} other {# Gruppen von Zahlungsbelegen mit QR-Code sind}} ausgeblendet: Sie sehen sich ähnlich, aber jeder ist eine eigene Buchung.",
   "duration": "Dauer",
   "edit": "Bearbeiten",
   "edit_album": "Album bearbeiten",

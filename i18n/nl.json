@@ -1688,6 +1688,8 @@
   "duplicate_workflow": "Kopieer werkstroom",
   "duplicates": "Duplicaten",
   "duplicates_description": "Kies voor iedere groep welke, indien aanwezig, duplicaten zijn.",
+  "duplicates_qr_show": "Toon ze",
+  "duplicates_qr_skipped": "{count, plural, one {# groep betaalbewijzen met een QR-code is} other {# groepen betaalbewijzen met een QR-code zijn}} weggelaten: ze lijken op elkaar, maar elk is een eigen transactie.",
   "duration": "Tijdsduur",
   "edit": "Bewerken",
   "edit_album": "Album bewerken",

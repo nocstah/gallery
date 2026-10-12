@@ -361,6 +361,8 @@ export const curator = {
   ) =>
     post<{ job: number }>('/live-effect', { asset_id: assetId, effect, seconds }),
   overview: () => call<CuratorOverview>('/overview'),
+  /** Gallery's duplicate groups that are QR-code slips (payment receipts), for the Duplicates page to leave out */
+  duplicatesWithQr: () => call<{ groups: string[] }>('/duplicates/qr'),
   /** queue tonight's jobs now */
   runTonightNow: () => post<{ jobs: number[] }>('/schedule/run-now', {}),
   /** pick a stack's best photo, carefully (a job of 10-60 seconds; its result is a StackPick) */

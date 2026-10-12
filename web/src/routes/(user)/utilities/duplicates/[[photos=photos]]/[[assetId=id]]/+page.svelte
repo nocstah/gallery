@@ -55,6 +55,11 @@
   };
 
   let duplicates = $state(data.duplicates);
+  let qrSlips = $state(data.qrSlips);
+  const showQrSlips = () => {
+    duplicates = [...duplicates, ...qrSlips];
+    qrSlips = [];
+  };
   let showMore = $state(false);
 
   const correctDuplicatesIndex = (index: number) => {
@@ -254,6 +259,12 @@
   {/snippet}
 
   <div>
+    {#if qrSlips.length > 0}
+      <p class="ws-dup-qr">
+        {$t('duplicates_qr_skipped', { values: { count: qrSlips.length } })}
+        <button type="button" class="ws-empty-link" onclick={showQrSlips}>{$t('duplicates_qr_show')}</button>
+      </p>
+    {/if}
     {#if duplicates && duplicates.length > 0}
       <Text size="small" color="muted" class="mb-4">
         {$t('duplicates_description')}
@@ -324,3 +335,14 @@
     {/if}
   </div>
 </UserPageLayout>
+
+<style>
+  .ws-dup-qr {
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: var(--immich-ui-muted);
+  }
+  .ws-dup-qr button {
+    margin-inline-start: 0.35rem;
+  }
+</style>

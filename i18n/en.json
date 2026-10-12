@@ -1699,6 +1699,8 @@
   "duplicate_workflow": "Duplicate workflow",
   "duplicates": "Duplicates",
   "duplicates_description": "Resolve each group by indicating which, if any, are duplicates.",
+  "duplicates_qr_show": "Show them",
+  "duplicates_qr_skipped": "{count, plural, one {# group of payment slips with a QR code is} other {# groups of payment slips with a QR code are}} left out: they look alike, but each is its own transaction.",
   "duration": "Duration",
   "edit": "Edit",
   "edit_album": "Edit album",

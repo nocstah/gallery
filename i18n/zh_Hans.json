@@ -1692,6 +1692,8 @@
   "duplicate_workflow": "复制工作流",
   "duplicates": "重复项",
   "duplicates_description": "请逐一标记每组中的重复文件。",
+  "duplicates_qr_show": "显示",
+  "duplicates_qr_skipped": "已略过 {count} 组带二维码的付款凭证：它们看起来相似，但每张都是一笔单独的交易。",
   "duration": "时长",
   "edit": "编辑",
   "edit_album": "编辑相册",
