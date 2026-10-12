@@ -177,8 +177,8 @@
     border: 1px solid var(--ws-glass-edge);
     border-radius: 16px;
     background: var(--ws-glass-strong);
-    backdrop-filter: var(--ws-glass-blur);
     -webkit-backdrop-filter: var(--ws-glass-blur);
+    backdrop-filter: var(--ws-glass-blur);
     color: rgb(255 255 255 / 0.92);
     font-size: 0.85rem;
   }

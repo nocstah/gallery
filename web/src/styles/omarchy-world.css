@@ -369,8 +369,8 @@ div.absolute.font-mono {
 .ws-viewer-bar > div:first-child,
 .ws-viewer-bar [data-testid='asset-viewer-navbar-actions'] {
   background: var(--ws-glass);
-  backdrop-filter: var(--ws-glass-blur);
   -webkit-backdrop-filter: var(--ws-glass-blur);
+  backdrop-filter: var(--ws-glass-blur);
   border: 1px solid var(--ws-glass-edge);
   border-radius: 999px;
   padding: 3px;
@@ -397,8 +397,8 @@ div.absolute.font-mono {
 .ws-viewer-nav:hover {
   color: #fff;
   background: var(--ws-glass);
-  backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
 }
 
 /* ---- map: controls are small windows floating on the map, photo markers are tiles, clusters are
@@ -692,8 +692,8 @@ ul[role='menu'] > hr {
   margin: 4px;
   border-radius: 999px;
   background: rgb(0 0 0 / 0.38);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   cursor: pointer;
   transition: background-color 120ms;
 }
@@ -723,8 +723,8 @@ ul[role='menu'] > hr {
   padding: 2px 8px;
   border-radius: 999px;
   background: rgb(0 0 0 / 0.55);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   color: #fff;
   font-size: 11px;
   font-weight: 600;
@@ -1057,7 +1057,7 @@ body.ws-dragging * {
    navbar on screen: pages that swap it for their own bar (selection) keep the solid layout. */
 :root[data-chrome^='glass'] {
   --ws-glass-ground: color-mix(in oklab, var(--immich-ui-light) 64%, transparent);
-  --ws-glass-chrome-blur: blur(22px) saturate(1.5);
+  --ws-glass-chrome-blur: blur(28px) saturate(1.4);
   /* how much of the top of the content the glass covers: the bar, and a page's title bar where it has one */
   --ws-over: var(--navbar-height);
 }
@@ -1068,8 +1068,8 @@ body.ws-dragging * {
   }
   #dashboard-navbar {
     background: var(--ws-glass-ground);
-    backdrop-filter: var(--ws-glass-chrome-blur);
     -webkit-backdrop-filter: var(--ws-glass-chrome-blur);
+    backdrop-filter: var(--ws-glass-chrome-blur);
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   [data-testid='user-page-grid'] {
@@ -1088,8 +1088,8 @@ body.ws-dragging * {
     top: var(--navbar-height);
     z-index: 30;
     background: var(--ws-glass-ground);
-    backdrop-filter: var(--ws-glass-chrome-blur);
     -webkit-backdrop-filter: var(--ws-glass-chrome-blur);
+    backdrop-filter: var(--ws-glass-chrome-blur);
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   main > div.absolute.top-16 {
@@ -1113,8 +1113,8 @@ body.ws-dragging * {
     z-index: 20;
     grid-column: 1;
     background: var(--ws-glass-ground);
-    backdrop-filter: var(--ws-glass-chrome-blur);
     -webkit-backdrop-filter: var(--ws-glass-chrome-blur);
+    backdrop-filter: var(--ws-glass-chrome-blur);
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   div:has(> #asset-grid) > :not(#asset-grid, .absolute):first-child {

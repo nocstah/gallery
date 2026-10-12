@@ -338,8 +338,8 @@
     border: 1px solid var(--ws-glass-edge);
     border-radius: 999px;
     background: var(--ws-glass);
-    backdrop-filter: var(--ws-glass-blur);
     -webkit-backdrop-filter: var(--ws-glass-blur);
+    backdrop-filter: var(--ws-glass-blur);
   }
   .live-title {
     gap: 0.45rem;
@@ -405,8 +405,8 @@
     border: 1px solid var(--ws-glass-edge);
     border-radius: 14px;
     background: var(--ws-glass-strong);
-    backdrop-filter: var(--ws-glass-blur);
     -webkit-backdrop-filter: var(--ws-glass-blur);
+    backdrop-filter: var(--ws-glass-blur);
     font-size: 0.9rem;
     font-weight: 600;
   }
