@@ -685,17 +685,22 @@ div.z-70:has(> ul[role='menu']) {
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   backdrop-filter: blur(24px) saturate(1.4);
   border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);
-  border-radius: calc(var(--ws-radius) + 12px);
+  border-radius: var(--ws-radius);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.06),
     0 4px 12px -4px rgb(0 0 0 / 0.25),
     0 24px 48px -12px rgb(0 0 0 / 0.45);
   padding: 6px;
 }
+/* the list inside the sheet is no second frame (the general [role='menu'] rule would draw one) */
+div.z-70 > ul[role='menu'] {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
 ul[role='menu'] > li[role='menuitem'] {
   gap: 0.7rem;
   padding: 0.45rem 0.6rem;
-  border-radius: calc(var(--ws-radius) + 7px);
+  border-radius: var(--ws-radius);
   background: transparent;
   color: var(--immich-ui-dark);
   font-size: 0.8125rem;
@@ -736,8 +741,9 @@ ul[role='menu'] > li[role='menuitem'][data-tone='danger'] svg {
 ul[role='menu'] > li[role='menuitem'][data-tone='danger']:not(.bg-slate-100) {
   background: oklch(0.66 0.19 25 / 0.16);
 }
+/* separators run edge to edge of the sheet (through its 6px padding) */
 ul[role='menu'] > hr {
-  margin: 5px 8px;
+  margin: 6px -6px;
   border-color: var(--ws-hairline);
 }
 

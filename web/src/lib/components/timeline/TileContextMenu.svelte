@@ -293,8 +293,8 @@
     display: flex;
     gap: 0.75rem;
     align-items: center;
-    padding: 0.375rem 0.5rem 0.625rem;
-    margin-bottom: 0.25rem;
+    padding: 0.375rem calc(0.5rem + 6px) 0.625rem;
+    margin: 0 -6px 0;
     border-bottom: 1px solid var(--ws-hairline);
     list-style: none;
   }
@@ -310,7 +310,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: calc(var(--ws-radius, 0px) + 7px);
+    border-radius: var(--ws-radius, 0px);
     box-shadow:
       0 0 0 1.5px var(--immich-ui-light),
       0 2px 6px rgb(0 0 0 / 0.3);
