@@ -54,35 +54,37 @@
   });
 </script>
 
+<!-- Local Omarchy layer: the ws-setting* hooks let omarchy-world.css draw sections as rows split by hairlines -->
 <div
-  class="mt-4 rounded-2xl border-2 border-primary/20 px-6 py-4 transition-all {isOpen
+  class="ws-setting mt-4 rounded-2xl border-2 border-primary/20 px-6 py-4 transition-all {isOpen
     ? 'border-primary/60 shadow-md'
     : ''}"
+  data-open={isOpen || undefined}
   bind:this={accordionElement}
 >
   <button
     type="button"
     aria-expanded={isOpen}
     onclick={toggleOpen}
-    class="flex w-full place-items-center justify-between text-start"
+    class="ws-setting-head flex w-full place-items-center justify-between text-start"
   >
-    <div>
+    <div class="ws-setting-text">
       <div class="flex place-items-center gap-2">
         {#if icon}
-          <Icon {icon} class="text-primary" size="24" aria-hidden />
+          <Icon {icon} class="ws-setting-icon text-primary" size="24" aria-hidden />
         {/if}
-        <h2 class="font-medium text-primary">
+        <h2 class="ws-setting-title font-medium text-primary">
           {title}
         </h2>
       </div>
 
       {#if subtitleSnippet}{@render subtitleSnippet()}{:else}
-        <p class="mt-1 text-sm dark:text-immich-dark-fg">{subtitle}</p>
+        <p class="ws-setting-subtitle mt-1 text-sm dark:text-immich-dark-fg">{subtitle}</p>
       {/if}
     </div>
 
     <div
-      class="immich-circle-icon-button flex place-content-center place-items-center rounded-full p-3 transition-all hover:bg-immich-primary/10 dark:text-immich-dark-fg hover:dark:bg-immich-dark-primary/20"
+      class="ws-setting-chevron immich-circle-icon-button flex place-content-center place-items-center rounded-full p-3 transition-all hover:bg-immich-primary/10 dark:text-immich-dark-fg hover:dark:bg-immich-dark-primary/20"
     >
       <svg
         style="tran"
@@ -101,7 +103,7 @@
   </button>
 
   {#if isOpen}
-    <ul transition:slide={{ duration: 150 }} class="ms-4 mb-2">
+    <ul transition:slide={{ duration: 150 }} class="ws-setting-body ms-4 mb-2">
       {@render children?.()}
     </ul>
   {/if}

@@ -280,7 +280,7 @@
   .chat-chip {
     padding: 0.05rem 0.4rem;
     border: 1px solid var(--ws-hairline);
-    border-radius: calc(var(--ws-radius) + 5px);
+    border-radius: var(--ws-radius);
     font-weight: 600;
     overflow-wrap: anywhere;
   }

@@ -2,7 +2,6 @@
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import UserSettingsList from './UserSettingsList.svelte';
   import { getKeyboardActions } from '$lib/services/keyboard.service';
-  import { Container } from '@immich/ui';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -16,7 +15,8 @@
 </script>
 
 <UserPageLayout title={data.meta.title} actions={[KeyboardShortcuts]}>
-  <Container size="medium" center>
+  <!-- Local Omarchy layer: one column on the page's own gutter, not a box in the middle (omarchy-world.css) -->
+  <div class="ws-page-column">
     <UserSettingsList keys={data.keys} sessions={data.sessions} />
-  </Container>
+  </div>
 </UserPageLayout>

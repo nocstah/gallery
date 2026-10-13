@@ -190,7 +190,7 @@
     min-width: 0;
     padding: 0.65rem 0.9rem;
     border: 1px solid var(--ws-hairline);
-    border-radius: calc(var(--ws-radius) + 6px);
+    border-radius: var(--ws-radius);
     background: transparent;
     color: var(--immich-ui-dark);
     font-size: 1.05rem;
@@ -225,7 +225,7 @@
   .ask-chips li {
     padding: 0.25rem 0.55rem;
     border: 1px solid var(--ws-hairline);
-    border-radius: calc(var(--ws-radius) + 5px);
+    border-radius: var(--ws-radius);
     font-family: var(--ws-font-data);
     font-size: 12px;
     font-weight: 600;

@@ -1,8 +1,6 @@
 <script lang="ts">
-  import empty2Url from '$lib/assets/empty-2.svg';
   import Albums from '$lib/components/album-page/AlbumsList.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import { Route } from '$lib/route';
   import { getAlbumsActions } from '$lib/services/album.service';
@@ -39,50 +37,49 @@
 </script>
 
 <UserPageLayout title={data.meta.title} actions={[CreateAlbum, ViewSharedLinks]}>
-  <div class="flex flex-col">
+  <!-- Local Omarchy layer: sections headed like the AI inbox's groups (name, count in data type), partners as rows,
+       and no shared albums as an empty state with the next step instead of upstream's illustration -->
+  <div class="ws-sharing">
     {#if data.partners.length > 0}
-      <div class="mt-2 mb-6">
-        <div>
-          <p class="mb-4 font-medium dark:text-immich-dark-fg">{$t('partners')}</p>
-        </div>
-
-        <div class="flex flex-row flex-wrap gap-4">
+      <section class="ws-sharing-section">
+        <h2 class="ws-sharing-heading">
+          {$t('partners')} <span class="ws-inbox-meta">{data.partners.length}</span>
+        </h2>
+        <ul class="ws-sharing-partners">
           {#each data.partners as partner (partner.id)}
-            <a
-              href={Route.viewPartner(partner)}
-              class="flex gap-4 rounded-lg px-5 py-4 transition-all hover:bg-gray-200 dark:hover:bg-gray-700"
-            >
-              <UserAvatar user={partner} size="lg" />
-              <div class="text-start">
-                <p class="text-immich-fg dark:text-immich-dark-fg">
-                  {partner.name}
-                </p>
-                <p class="text-sm text-immich-fg/75 dark:text-immich-dark-fg/75">
-                  {partner.email}
-                </p>
-              </div>
-            </a>
+            <li>
+              <a href={Route.viewPartner(partner)} class="ws-sharing-partner">
+                <UserAvatar user={partner} size="lg" />
+                <span class="ws-sharing-partner-text">
+                  <span class="ws-sharing-partner-name">{partner.name}</span>
+                  <span class="ws-inbox-meta">{partner.email}</span>
+                </span>
+              </a>
+            </li>
           {/each}
-        </div>
-      </div>
-
-      <hr class="mb-4 dark:border-immich-dark-gray" />
+        </ul>
+      </section>
     {/if}
 
-    <div class="mt-2 mb-6">
-      <div>
-        <p class="mb-4 font-medium dark:text-immich-dark-fg">{$t('albums')}</p>
-      </div>
-
-      <div>
+    {#if data.sharedAlbums.length > 0}
+      <section class="ws-sharing-section">
+        <h2 class="ws-sharing-heading">
+          {$t('albums')} <span class="ws-inbox-meta">{data.sharedAlbums.length}</span>
+        </h2>
         <!-- Shared Album List -->
-        <Albums sharedAlbums={data.sharedAlbums} userSettings={settings} showOwner>
-          <!-- Empty List -->
-          {#snippet empty()}
-            <EmptyPlaceholder text={$t('no_shared_albums_message')} src={empty2Url} class="mx-auto mt-10" />
-          {/snippet}
-        </Albums>
+        <Albums sharedAlbums={data.sharedAlbums} userSettings={settings} showOwner />
+      </section>
+    {:else}
+      <div class="ws-empty">
+        <h2 class="ws-empty-title">{$t('sharing_empty_title')}</h2>
+        <p class="ws-empty-body">{$t('no_shared_albums_message')}</p>
+        <div class="ws-empty-actions">
+          <button type="button" class="ws-empty-action" onclick={() => CreateAlbum.onAction(CreateAlbum)}>
+            {CreateAlbum.title}
+          </button>
+          <a class="ws-empty-link" href={Route.sharedLinks()}>{$t('shared_links')}</a>
+        </div>
       </div>
-    </div>
+    {/if}
   </div>
 </UserPageLayout>

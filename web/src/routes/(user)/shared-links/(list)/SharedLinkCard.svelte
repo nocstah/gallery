@@ -56,7 +56,7 @@
 </script>
 
 <div
-  class="flex w-full border-b border-gray-200 transition-all hover:border-immich-primary dark:border-gray-600 dark:text-immich-gray dark:hover:border-immich-dark-primary"
+  class="ws-shared-link flex w-full border-b border-gray-200 transition-all hover:border-immich-primary dark:border-gray-600 dark:text-immich-gray dark:hover:border-immich-dark-primary"
 >
   <svelte:element
     this={isExpired ? 'div' : 'a'}

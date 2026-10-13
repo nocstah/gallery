@@ -130,7 +130,7 @@ div:has(> [data-testid='admin-page-header']) {
 
 /* ---- sidebar: workspace indicators, the active one inverted like the Omarchy bar ---- */
 #sidebar a[class~='rounded-e-full'] {
-  border-radius: calc(var(--ws-radius) + 6px);
+  border-radius: var(--ws-radius);
   font-weight: 500;
 }
 #sidebar a[class~='rounded-e-full'][data-active='true'] {
@@ -222,7 +222,8 @@ div[role='dialog'] > div > div.overflow-hidden {
     0 4px 12px -4px rgb(0 0 0 / 0.3),
     0 28px 64px -16px rgb(0 0 0 / 0.55) !important;
 }
-div[role='dialog'] :is(input, select, textarea, button, [role='switch'], [role='switch'] > span, ul, li, [class*='rounded']):not(
+div[role='dialog']
+  :is(input, select, textarea, button, [role='switch'], [role='switch'] > span, ul, li, [class*='rounded']):not(
     img,
     [class*='rounded'] img
   ) {
@@ -296,7 +297,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
 }
 .ws-empty-action {
   padding: 0.55rem 1rem;
-  border-radius: calc(var(--ws-radius) + 6px);
+  border-radius: var(--ws-radius);
   background: var(--immich-ui-dark);
   color: var(--immich-ui-light);
   font-weight: 600;
@@ -326,7 +327,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
 .ws-person-name {
   background: transparent;
   border-color: transparent;
-  border-radius: calc(var(--ws-radius) + 6px);
+  border-radius: var(--ws-radius);
   color: var(--immich-ui-dark);
   font-weight: 600;
 }
@@ -362,11 +363,11 @@ div[role='dialog'] :is(.border-b, .border-t) {
 }
 [data-testid='timeline-grouping-control'] {
   border: 1px solid var(--ws-hairline);
-  border-radius: calc(var(--ws-radius) + 8px);
+  border-radius: var(--ws-radius);
   padding: 3px;
 }
 [data-testid='timeline-grouping-control'] > button {
-  border-radius: calc(var(--ws-radius) + 5px);
+  border-radius: var(--ws-radius);
   color: var(--immich-ui-muted);
 }
 [data-testid='timeline-grouping-control'] > button[aria-pressed='true'] {
@@ -522,7 +523,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
   overflow: hidden;
   background: var(--immich-ui-light);
   border: 1px solid var(--ws-hairline);
-  border-radius: calc(var(--ws-radius) + 6px);
+  border-radius: var(--ws-radius);
   box-shadow: 0 8px 20px -10px rgb(0 0 0 / 0.35);
 }
 .maplibregl-map .maplibregl-ctrl-group button + button {
@@ -570,7 +571,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
   background: var(--immich-ui-light);
   color: var(--immich-ui-dark);
   border: 1px solid var(--ws-hairline);
-  border-radius: calc(var(--ws-radius) + 6px);
+  border-radius: var(--ws-radius);
   box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
 }
 .maplibregl-map .maplibregl-popup .maplibregl-popup-tip {
@@ -578,13 +579,13 @@ div[role='dialog'] :is(.border-b, .border-t) {
 }
 .maplibregl-map .maplibregl-popup-close-button {
   color: var(--immich-ui-muted);
-  border-radius: calc(var(--ws-radius) + 4px);
+  border-radius: var(--ws-radius);
 }
 
 /* markers float over the map, so they carry a shadow */
 .maplibregl-map [data-testid='map-marker'] {
   border: 2px solid var(--immich-ui-light);
-  border-radius: calc(var(--ws-radius) + 4px);
+  border-radius: var(--ws-radius);
   background: var(--immich-ui-light);
   box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.5);
 }
@@ -612,7 +613,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
   background: var(--immich-ui-light);
   color: var(--immich-ui-muted);
   border: 1px solid var(--ws-hairline);
-  border-radius: calc(var(--ws-radius) + 6px);
+  border-radius: var(--ws-radius);
   box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
   font-weight: 500;
 }
@@ -764,7 +765,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
   font-variant-numeric: tabular-nums;
 }
 .ws-select-bar button {
-  border-radius: calc(var(--ws-radius) + 6px);
+  border-radius: var(--ws-radius);
 }
 .ws-primary-action button {
   background: var(--immich-ui-dark);
@@ -1050,11 +1051,11 @@ body.ws-dragging * {
   margin-inline-start: auto;
   padding: 3px;
   border: 1px solid var(--ws-hairline);
-  border-radius: calc(var(--ws-radius) + 8px);
+  border-radius: var(--ws-radius);
 }
 .ws-seg > button {
   padding: 0.3rem 0.75rem;
-  border-radius: calc(var(--ws-radius) + 5px);
+  border-radius: var(--ws-radius);
   color: var(--immich-ui-muted);
   font-size: var(--ws-text-ui);
   font-weight: 600;
@@ -1081,7 +1082,7 @@ body.ws-dragging * {
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 0.95rem;
-  border-radius: calc(var(--ws-radius) + 6px);
+  border-radius: var(--ws-radius);
   background: var(--immich-ui-dark);
   color: var(--immich-ui-light);
   font-size: var(--ws-text-ui);
@@ -1097,7 +1098,7 @@ body.ws-dragging * {
 }
 .ws-btn-quiet {
   padding: 0.5rem 0.6rem;
-  border-radius: calc(var(--ws-radius) + 6px);
+  border-radius: var(--ws-radius);
   color: var(--immich-ui-dark);
   font-size: var(--ws-text-ui);
   font-weight: 500;
@@ -1130,7 +1131,7 @@ body.ws-dragging * {
   display: grid;
   gap: 0.35rem 1.5rem;
   padding: 1.1rem 0;
-  border-radius: 2px;
+  border-radius: var(--ws-radius);
 }
 .ws-inbox-row-title {
   font-weight: 600;
@@ -1189,7 +1190,7 @@ body.ws-dragging * {
   min-width: 1.6rem;
   height: 1.6rem;
   padding: 0 0.45rem;
-  border-radius: calc(var(--ws-radius) + 5px);
+  border-radius: var(--ws-radius);
   background: var(--immich-ui-dark);
   color: var(--immich-ui-light);
   font: 600 12px/1.6rem var(--ws-font-data);
@@ -1208,6 +1209,230 @@ body.ws-dragging * {
 }
 @media (prefers-reduced-motion: reduce) {
   .ws-meter > span {
+    transition: none;
+  }
+}
+
+/* ---- settings (SettingAccordion: Settings, and Administration > Settings): a section is a row on the ground like the
+   AI inbox's, split by hairlines, not a card. Its title is ink in the heading role with the description in muted meta
+   below; the icon is muted until the section is open. An open section keeps its row and lays its controls under the
+   title, a hairline closing it. Labels are ink (upstream paints them in the accent, which here marks focus only), a
+   switch that is on is inverted like every active thing, and every control takes the theme's corner. A section inside
+   a section (Features > Albums) is a smaller row in the same grammar. ---- */
+/* one column on the page's own gutter (Settings, Shared links), where upstream centres a box */
+.ws-page-column {
+  max-width: 60rem;
+  padding: calc(var(--ws-gap) * 0.6) clamp(1rem, 3vw, 2.5rem) 4rem;
+}
+.ws-setting {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--ws-hairline) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.ws-setting-head {
+  gap: 1rem;
+  padding: 0.95rem 0.75rem 0.95rem 0.5rem;
+  border-radius: var(--ws-radius);
+  transition: background-color 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ws-setting-head:hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 4%, transparent);
+}
+.ws-setting-head:focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: calc(var(--ws-border) * -1);
+}
+.ws-setting-head .ws-setting-text > div {
+  gap: 0.75rem;
+}
+.ws-setting-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--immich-ui-muted) !important;
+  transition: color 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ws-setting[data-open] > .ws-setting-head .ws-setting-icon,
+.ws-setting-head:hover .ws-setting-icon {
+  color: var(--immich-ui-dark) !important;
+}
+.ws-setting-title {
+  font-size: var(--ws-text-heading);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--immich-ui-dark) !important;
+}
+.ws-setting-subtitle {
+  margin-top: 0.2rem !important;
+  font-size: var(--ws-text-meta) !important;
+  line-height: 1.45;
+  color: var(--immich-ui-muted) !important;
+}
+/* the description sits under the title, past the icon (20px + the 0.75rem between them) */
+.ws-setting-head:has(.ws-setting-icon) .ws-setting-subtitle {
+  margin-inline-start: calc(20px + 0.75rem);
+}
+.ws-setting-chevron {
+  flex: none;
+  padding: 0.35rem !important;
+  border-radius: var(--ws-radius) !important;
+  background: transparent !important;
+  color: var(--immich-ui-muted);
+}
+.ws-setting-head:hover .ws-setting-chevron {
+  color: var(--immich-ui-dark);
+}
+.ws-setting-body {
+  margin: 0.25rem 0 0 !important;
+  padding: 0 0.75rem 1.5rem calc(0.5rem + 20px + 0.75rem);
+  color: var(--immich-ui-dark);
+}
+.ws-setting-body .ws-setting-body {
+  padding-inline-start: 0.5rem;
+}
+.ws-setting-body .ws-setting-head {
+  padding-block: 0.7rem;
+}
+.ws-setting-body .ws-setting-title {
+  font-size: var(--ws-text-ui);
+}
+.ws-setting-body .ws-setting:last-child {
+  border-bottom: 0 !important;
+}
+.ws-setting-body :is(.text-primary, .text-immich-primary, .dark\:text-immich-dark-primary) {
+  color: var(--immich-ui-dark) !important;
+}
+.ws-setting-body :is(.immich-form-label, p.text-sm) {
+  color: var(--immich-ui-muted);
+}
+.ws-setting-body
+  :is(input, select, textarea, button, [role='switch'], [role='switch'] > span, [class*='rounded']):not(
+    img,
+    [class*='rounded'] img
+  ) {
+  border-radius: var(--ws-radius) !important;
+}
+.ws-setting-body :is(input:not([type='checkbox'], [type='radio']), select, textarea) {
+  border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 16%, transparent);
+  background: color-mix(in oklab, var(--immich-ui-dark) 4%, transparent);
+}
+.ws-setting-body :is(input, select, textarea):focus-visible {
+  outline: 1px solid var(--ws-accent);
+  outline-offset: -1px;
+  border-color: var(--ws-accent);
+}
+/* a switch: an outlined track with a muted thumb when off, inverted (ink track, surface thumb) when on */
+.ws-setting-body [role='switch'] {
+  border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 28%, transparent) !important;
+  background: transparent !important;
+}
+.ws-setting-body [role='switch'] > span {
+  background: var(--immich-ui-muted) !important;
+  scale: 1 !important;
+}
+.ws-setting-body [role='switch'][data-state='checked'] {
+  border-color: var(--immich-ui-dark) !important;
+  background: var(--immich-ui-dark) !important;
+}
+.ws-setting-body [role='switch'][data-state='checked'] > span {
+  background: var(--immich-ui-light) !important;
+}
+.ws-setting-body [role='switch']:focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: 2px;
+}
+/* the section's own action (Save, Create API key): ink, like every primary action on the ground */
+.ws-setting-body button.bg-primary {
+  background: var(--immich-ui-dark) !important;
+  color: var(--immich-ui-light) !important;
+}
+.ws-setting-body button.bg-primary:not(:disabled):hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 85%, var(--ws-accent)) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-setting-head,
+  .ws-setting-icon {
+    transition: none;
+  }
+}
+
+/* ---- Sharing (routes/(user)/sharing): sections on the page's gutter, each headed by its name with the count in data
+   type; partners are rows of avatar, name and address on the ground, a hairline between them ---- */
+.ws-sharing {
+  padding: calc(var(--ws-gap) * 0.6) clamp(1rem, 3vw, 2.5rem) 4rem;
+  color: var(--immich-ui-dark);
+}
+.ws-sharing-section + .ws-sharing-section,
+.ws-sharing-section + .ws-empty {
+  margin-top: 2.5rem;
+}
+.ws-sharing-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding-bottom: calc(var(--ws-gap) * 0.8);
+  margin-bottom: calc(var(--ws-gap) * 1.2);
+  border-bottom: 1px solid var(--ws-hairline);
+  font-size: var(--ws-text-heading);
+  font-weight: 600;
+}
+.ws-sharing-partners {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 0 calc(var(--ws-gap) * 2.4);
+  list-style: none;
+}
+.ws-sharing-partner {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.65rem 0.5rem;
+  border-radius: var(--ws-radius);
+  transition: background-color 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ws-sharing-partner:hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 5%, transparent);
+}
+.ws-sharing-partner:focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: calc(var(--ws-border) * -1);
+}
+.ws-sharing-partner-text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.ws-sharing-partner-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ws-text-ui);
+  font-weight: 600;
+}
+.ws-sharing .ws-inbox-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* a shared link is a row on the ground: a hairline below, its title in ink, the row tinted while pointed at */
+.ws-shared-link {
+  border-color: var(--ws-hairline) !important;
+  color: var(--immich-ui-dark) !important;
+}
+.ws-shared-link:hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 4%, transparent);
+}
+.ws-shared-link :is(.text-primary, [class*='text-primary']) {
+  color: var(--immich-ui-dark) !important;
+}
+.ws-shared-link :is(img, button, [class*='rounded']) {
+  border-radius: var(--ws-radius) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-sharing-partner {
     transition: none;
   }
 }

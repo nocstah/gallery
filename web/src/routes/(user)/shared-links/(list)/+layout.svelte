@@ -8,7 +8,6 @@
   import GroupTab from '$lib/elements/GroupTab.svelte';
   import { Route } from '$lib/route';
   import { getAllSharedLinks, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
-  import { Container } from '@immich/ui';
   import { onMount, type Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
   import type { LayoutData } from './$types';
@@ -82,15 +81,18 @@
     </div>
   {/snippet}
 
-  <Container center size="medium">
+  <!-- Local Omarchy layer: one column on the page's gutter; no links yet is an empty state with where links come from -->
+  <div class="ws-page-column">
     {#if sharedLinks.length === 0}
-      <div
-        class="flex place-content-center place-items-center rounded-lg bg-gray-100 p-12 dark:bg-immich-dark-gray dark:text-immich-gray"
-      >
-        <p>{$t('you_dont_have_any_shared_links')}</p>
+      <div class="ws-empty">
+        <h2 class="ws-empty-title">{$t('you_dont_have_any_shared_links')}</h2>
+        <p class="ws-empty-body">{$t('shared_links_empty_body')}</p>
+        <div class="ws-empty-actions">
+          <a class="ws-empty-link" href={Route.albums()}>{$t('albums')}</a>
+        </div>
       </div>
     {:else}
-      <div class="flex flex-col gap-2">
+      <div class="flex flex-col">
         {#each filteredSharedLinks as sharedLink (sharedLink.id)}
           <SharedLinkCard {sharedLink} />
         {/each}
@@ -98,5 +100,5 @@
     {/if}
 
     {@render children?.()}
-  </Container>
+  </div>
 </UserPageLayout>

@@ -98,13 +98,7 @@
     <div class="restore-frame">
       {#if effectClip}
         <!-- svelte-ignore a11y_media_has_caption -->
-        <video
-          class="restore-media"
-          src={restoredUrl(suggestion.id, 'after', 'mp4')}
-          autoplay
-          loop
-          muted
-          playsinline
+        <video class="restore-media" src={restoredUrl(suggestion.id, 'after', 'mp4')} autoplay loop muted playsinline
         ></video>
       {:else}
         <img class="restore-media" src={restoredUrl(suggestion.id, 'after', 'jpg', across)} alt="" loading="lazy" />
@@ -262,7 +256,7 @@
     top: 0.5rem;
     left: 0.5rem;
     padding: 0.1rem 0.45rem;
-    border-radius: calc(var(--ws-radius) + 5px);
+    border-radius: var(--ws-radius);
     background: color-mix(in oklab, var(--immich-ui-dark) 78%, transparent);
     color: var(--immich-ui-light);
     font-family: var(--ws-font-data);

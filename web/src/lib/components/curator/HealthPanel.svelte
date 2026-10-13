@@ -99,7 +99,7 @@
   /* attention is inversion, like an active workspace: the accent stays for focus */
   .health-flag {
     padding: 0.1rem 0.45rem;
-    border-radius: calc(var(--ws-radius) + 5px);
+    border-radius: var(--ws-radius);
     background: var(--immich-ui-dark);
     color: var(--immich-ui-light);
     font-family: var(--ws-font-data);

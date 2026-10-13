@@ -196,7 +196,7 @@ Flat on the ground; depth only for what floats above it, like a Hyprland popup. 
 
 ## Shapes
 
-Corners come from the desktop: everything (tiles, menus, modals, fields, buttons, pills) uses the window radius `--ws-radius` exactly (Hyprland `decoration:rounding`; fallback 0px, square). Never add an offset to it: the owner rejected rounded controls on the square desktop (2026-10-12). A panel has one frame; separators run edge to edge. Some older rules still add +5..8px and are to be brought back to the token when touched. Borders take the desktop's `--ws-border` (`general:border_size`, minimum 1px; fallback 2px) for focus, 1px for hairlines.
+Corners come from the desktop: everything (tiles, menus, modals, fields, buttons, pills) uses the window radius `--ws-radius` exactly (Hyprland `decoration:rounding`; fallback 0px, square). Never add an offset to it: the owner rejected rounded controls on the square desktop (2026-10-12). A panel has one frame; separators run edge to edge. The last rules that added +4..10px were brought back to the token on 2026-10-13. Borders take the desktop's `--ws-border` (`general:border_size`, minimum 1px; fallback 2px) for focus, 1px for hairlines.
 
 Tile focus is drawn **inset** (an inset box-shadow on a pseudo-element), because day sections use layout/paint containment and an outset border would clip at section edges.
 
@@ -223,14 +223,14 @@ The archive's years as workspace numbers, newest first.
 - **Workspace slide:** switching years slides the timeline layer out across the full width (170ms, ease-in `cubic-bezier(0.55, 0, 1, 0.45)`), jumps, and slides the new year in from the other side (240ms, ease-out `cubic-bezier(0.22, 1, 0.36, 1)`); older years arrive from the right. The month heading flies 40px in the direction of travel (260ms cubic-out). Reduced motion cuts straight to the year.
 
 ### Segmented Control (Years / Months / All)
-- **Shell:** transparent, 1px hairline, radius +8px, 3px inner padding; floating variant takes the surface and the popup shadow.
-- **Options:** muted text, radius +5px; pressed option inverts (ink fill, surface text).
+- **Shell:** transparent, 1px hairline, the window radius, 3px inner padding; floating variant takes the surface and the popup shadow.
+- **Options:** muted text, the window radius; pressed option inverts (ink fill, surface text).
 
 ### Sidebar Navigation
-Compact icons on the shared ground. Items weight 500, radius +6px; the active item inverts like the Omarchy bar's active workspace, icon inheriting the surface colour.
+Compact icons on the shared ground. Items weight 500, the window radius; the active item inverts like the Omarchy bar's active workspace, icon inheriting the surface colour.
 
 ### Buttons and Links (empty states)
-- **Primary action:** ink fill, surface text, 600 at 0.9rem, `0.55rem 1rem`, radius +6px; hover mixes 15% accent into the ink.
+- **Primary action:** ink fill, surface text, 600 at 0.9rem, `0.55rem 1rem`, the window radius; hover mixes 15% accent into the ink.
 - **Text link:** ink, 500 at 0.9rem, underline in hairline at 0.25em offset; the underline takes the accent on hover.
 - **Focus:** `--ws-border` solid accent outline, 3px offset.
 
@@ -238,7 +238,16 @@ Compact icons on the shared ground. Items weight 500, radius +6px; the active it
 A sentence of why and one next step: headline title, body copy in muted ink (max 34rem column, top margin `clamp(3rem, 12vh, 8rem)`), then one primary action and at most one text link.
 
 ### Inputs / Fields (person name)
-Transparent with no border at rest, ink 600, radius +6px. The placeholder appears on the card under the pointer or on focus (140ms). Focus: ink tint 6% and `--ws-border` accent outline.
+Transparent with no border at rest, ink 600, the window radius. The placeholder appears on the card under the pointer or on focus (140ms). Focus: ink tint 6% and `--ws-border` accent outline.
+
+### Settings Section (SettingAccordion)
+Settings and Administration › Settings are a column of rows on the page's own gutter (`.ws-page-column`, 60rem at most, left-aligned like the AI inbox; upstream centred a box), never cards.
+- **Row:** icon 20px muted (ink while open or pointed at), title in the heading role (17px, 600, ink), the description under it in meta (13px, muted), a muted chevron; a hairline below every row; pointing tints the row ink 4%; focus is an inset `--ws-border` accent outline.
+- **Open:** the row stays and its controls follow, indented under the title, the next hairline closing them. A section inside a section (Features › Albums) is the same row at UI size.
+- **Controls:** labels ink, descriptions muted (upstream paints labels in the accent); fields, buttons and switches take the window radius; a switch is an outlined track with a muted thumb when off and inverted (ink track, surface thumb) when on; a section's own action is ink.
+
+### Sharing and Shared links
+Sections on the page's gutter, each headed by its name with its count in data type over a hairline (`.ws-sharing-heading`); partners are rows of avatar, name and address; a shared link is a row with a hairline below, title in ink. With nothing shared they are empty states (no upstream illustration): shared albums offer Create album and Shared links, shared links say where links come from and point to Albums.
 
 ### Filter Rail
 Same surface as the ground with a hairline edge; collapsed by default. Its search and reopen buttons are transparent with a hairline border and no shadow.

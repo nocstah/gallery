@@ -482,7 +482,7 @@
   .chat-example {
     padding: 0.55rem 0.9rem;
     border: 1px solid var(--ws-hairline);
-    border-radius: calc(var(--ws-radius) + 6px);
+    border-radius: var(--ws-radius);
     font-size: 0.95rem;
     text-align: start;
     color: var(--immich-ui-dark);
@@ -506,7 +506,7 @@
   .chat-user {
     max-width: min(46rem, 85%);
     padding: 0.6rem 0.9rem;
-    border-radius: calc(var(--ws-radius) + 10px);
+    border-radius: var(--ws-radius);
     background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
     font-size: 1rem;
     line-height: 1.5;
@@ -530,7 +530,7 @@
     max-height: 12rem;
     padding: 0.65rem 0.9rem;
     border: 1px solid var(--ws-hairline);
-    border-radius: calc(var(--ws-radius) + 6px);
+    border-radius: var(--ws-radius);
     background: transparent;
     color: var(--immich-ui-dark);
     font-size: 1rem;

@@ -98,7 +98,7 @@
     margin-top: 0.6rem;
     padding: 0.85rem 1rem;
     border: 1px solid var(--ws-hairline);
-    border-radius: calc(var(--ws-radius) + 4px);
+    border-radius: var(--ws-radius);
   }
   .chat-proposal-text {
     display: grid;
