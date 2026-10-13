@@ -25,8 +25,8 @@
   import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
-  import TodoAction from '$lib/components/timeline/actions/TodoAction.svelte';
-  import { todoManager } from '$lib/managers/todo-manager.svelte';
+  import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
+  import { specialAlbumOf, specialAlbums } from '$lib/managers/special-albums.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
   import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
@@ -643,6 +643,8 @@
       (album.isActivityEnabled || activityManager.commentCount > 0),
   );
   const isEditor = $derived(isAlbumEditor(album));
+  // Local Omarchy layer: To do, Villa (managers/special-albums), when this album is one of them
+  const special = $derived(specialAlbumOf(album.id));
 
   const isSelectionMode = $derived(
     viewMode === AlbumPageViewMode.SELECT_ASSETS ? true : viewMode === AlbumPageViewMode.SELECT_THUMBNAIL,
@@ -955,10 +957,10 @@
                     <!-- Local Omarchy layer: a smart album says so, with Edit search and Stop updating -->
                     <SmartAlbumBadge albumId={album.id} />
 
-                    <!-- Local Omarchy layer: the To do album says how it works (managers/todo-manager); empty, it says
-                         how photos get there instead (below) -->
-                    {#if todoManager.isTodo(album.id) && album.assetCount > 0}
-                      <p class="ws-todo-note">{$t('todo_note')}</p>
+                    <!-- Local Omarchy layer: a special album says how it works; empty, it says how photos get there
+                         instead (below) -->
+                    {#if special && album.assetCount > 0}
+                      <p class="ws-album-note">{$t(special.words.note)}</p>
                     {/if}
 
                     <!-- rbac-6: owner-only — the server populates album.sharedSpaceLinks only for
@@ -1013,10 +1015,10 @@
                   </section>
                 {/if}
 
-                {#if album.assetCount === 0 && todoManager.isTodo(album.id)}
+                {#if album.assetCount === 0 && special}
                   <div class="ws-empty">
-                    <h2 class="ws-empty-title">{$t('todo_empty_title')}</h2>
-                    <p class="ws-empty-body">{$t('todo_empty_body')}</p>
+                    <h2 class="ws-empty-title">{$t(special.words.emptyTitle)}</h2>
+                    <p class="ws-empty-body">{$t(special.words.emptyBody)}</p>
                     <div class="ws-empty-actions">
                       <button
                         type="button"
@@ -1080,9 +1082,10 @@
              viewer can read is favoritable, including another member's in a shared space. -->
         <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleBulkFavorite}
         ></FavoriteAction>
-        <!-- Local Omarchy layer: in the To do album, Mark done puts the photos back where they came from (B) -->
-        {#if todoManager.isTodo(album.id) && assetMultiSelectManager.isAllUserOwned}
-          <span class="ws-primary-action contents"><TodoAction done /></span>
+        <!-- Local Omarchy layer: in a special album its way out (Mark done, Remove from Villa) puts the photos back
+             where they came from; its key does the same -->
+        {#if special && assetMultiSelectManager.isAllUserOwned}
+          <span class="ws-primary-action contents"><SpecialAlbumAction {special} done /></span>
         {/if}
         <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')} offset={{ x: 175, y: 25 }}>
           <DownloadAction menuItem filename={album.albumName} />
@@ -1092,9 +1095,11 @@
             <ChangeDescription menuItem />
             <ChangeLocation menuItem />
             <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
-            {#if !todoManager.isTodo(album.id)}
-              <TodoAction menuItem onArchive={handleBulkArchive} />
-            {/if}
+            {#each specialAlbums as other (other.key)}
+              {#if other !== special}
+                <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
+              {/if}
+            {/each}
             <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
           {/if}
           {#if isEditor && assetMultiSelectManager.assets.length === 1}

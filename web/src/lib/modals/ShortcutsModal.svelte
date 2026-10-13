@@ -46,8 +46,9 @@
         { key: ['t'], action: $t('tag_assets') },
         { key: ['p'], action: $t('tag_people') },
         { key: ['⇧', 'a'], action: $t('archive_or_unarchive_photo') },
-        // Local Omarchy layer: To do (managers/todo-manager)
+        // Local Omarchy layer: special albums (managers/special-albums)
         { key: ['b'], action: $t('todo_shortcut') },
+        { key: ['v'], action: $t('villa_shortcut') },
         { key: ['⇧', 'd'], action: $t('download') },
         { key: ['Space'], action: $t('play_or_pause_video') },
         { key: ['Del'], action: $t('trash_delete_asset'), info: $t('shift_to_permanent_delete') },

@@ -5,7 +5,8 @@
   import DeleteAction from '$lib/components/asset-viewer/actions/DeleteAction.svelte';
   import RestoreAction from '$lib/components/asset-viewer/actions/RestoreAction.svelte';
   import SetVisibilityAction from '$lib/components/asset-viewer/actions/SetVisibilityAction.svelte';
-  import TodoAction from '$lib/components/asset-viewer/actions/TodoAction.svelte';
+  import SpecialAlbumAction from '$lib/components/asset-viewer/actions/SpecialAlbumAction.svelte';
+  import { specialAlbums } from '$lib/managers/special-albums.svelte';
   import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
   import { liveEffects } from '$lib/components/curator/live-effects.svelte';
   import { lookUp } from '$lib/components/curator/look-up.svelte';
@@ -276,9 +277,11 @@
 
         {#if isOwner && !isLocked}
           <ArchiveAction {asset} {onAction} {preAction} />
-          <!-- Local Omarchy layer: set aside in To do, or Mark done there (B) -->
+          <!-- Local Omarchy layer: into a special album (To do B, Villa V), or out of it again -->
           {#if !asset.isTrashed}
-            <TodoAction {asset} {album} {onAction} {preAction} />
+            {#each specialAlbums as special (special.key)}
+              <SpecialAlbumAction {special} {asset} {album} {onAction} {preAction} />
+            {/each}
           {/if}
         {/if}
         <ActionMenuItem action={Actions.ViewInTimeline} />

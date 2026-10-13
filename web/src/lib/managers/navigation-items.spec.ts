@@ -11,6 +11,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 // web/src/lib/managers/ -> up 2 dirs -> web/src/routes
 const ROUTES_ROOT = resolve(here, '..', '..', 'routes');
 
+// Local Omarchy layer: the param matchers (`[name=matcher]` -> web/src/params/<matcher>.ts), so a required param
+// resolves only for a segment its matcher accepts (e.g. `(user)/[special=special]` serves /todo and /villa)
+const MATCHERS = import.meta.glob<{ match: (param: string) => boolean }>('../../params/*.ts', { eager: true });
+
 /**
  * Resolves a NAVIGATION_ITEMS `route` (a URL pathname, optionally with a
  * `?query` or `#hash` suffix) to a real SvelteKit page directory under
@@ -47,6 +51,10 @@ function resolveRoute(pathname: string, dir = ROUTES_ROOT, segments = pathToSegm
     }
     if (isRouteGroup(name) && resolveRoute(pathname, join(dir, name), segments)) {
       // Groups don't consume a segment — retry the same remaining segments.
+      return true;
+    }
+    // Required params consume exactly one segment, when their matcher (if any) accepts it.
+    if (isRequiredParam(name) && paramAccepts(name, next) && resolveRoute(pathname, join(dir, name), rest)) {
       return true;
     }
     if (!isOptionalParam(name)) {
@@ -86,9 +94,18 @@ function isOptionalParam(name: string): boolean {
   return name.startsWith('[[') && name.endsWith(']]');
 }
 
+function isRequiredParam(name: string): boolean {
+  return name.startsWith('[') && !name.startsWith('[[') && name.endsWith(']') && !name.startsWith('[...');
+}
+
+function paramAccepts(name: string, segment: string): boolean {
+  const matcher = /=(\w+)]$/.exec(name)?.[1];
+  return !matcher || !!MATCHERS[`../../params/${matcher}.ts`]?.match(segment);
+}
+
 describe('NAVIGATION_ITEMS schema', () => {
-  it('has exactly 53 items', () => {
-    expect(NAVIGATION_ITEMS).toHaveLength(53);
+  it('has exactly 54 items', () => {
+    expect(NAVIGATION_ITEMS).toHaveLength(54);
   });
 
   it('every item has non-empty required fields', () => {
@@ -157,7 +174,7 @@ describe('NAVIGATION_ITEMS schema', () => {
 
   it('user-pages items are not admin-only', () => {
     const items = NAVIGATION_ITEMS.filter((i) => i.category === 'userPages');
-    expect(items).toHaveLength(26);
+    expect(items).toHaveLength(27);
     for (const item of items) {
       expect(item.adminOnly).toBe(false);
     }

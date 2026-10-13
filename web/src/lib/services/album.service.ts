@@ -35,8 +35,8 @@ import { type MessageFormatter } from 'svelte-i18n';
 import { goto } from '$app/navigation';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
+import { specialAlbumOf, specialAlbums } from '$lib/managers/special-albums.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { todoManager } from '$lib/managers/todo-manager.svelte';
 import AddUsersModal from '$lib/modals/AddUsersModal.svelte';
 import AlbumEditModal from '$lib/modals/AlbumEditModal.svelte';
 import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
@@ -193,10 +193,12 @@ export const addAssetsToAlbumWithOutcome = async (
 ): Promise<{ ok: boolean; addedIds: string[]; deniedIds: string[] }> => {
   const $t = await getFormatter();
 
-  // Local Omarchy layer: the To do album takes photos its own way, tagged and out of Photos too (managers/todo-manager);
-  // an upload into it (no notice) goes quietly
-  if (todoManager.isTodo(albumId) || (await todoManager.ready()) === albumId) {
-    const moved = await todoManager.move(
+  // Local Omarchy layer: a special album (To do, Villa) takes photos its own way, tagged and out of Photos too
+  // (managers/special-albums); an upload into it (no notice) goes quietly
+  await Promise.all(specialAlbums.map((album) => album.ready()));
+  const special = specialAlbumOf(albumId);
+  if (special) {
+    const moved = await special.move(
       assetIds.map((id) => ({ id })),
       { quiet: !notify },
     );
@@ -241,13 +243,13 @@ export const addAssetsToAlbums = async (
     return ok;
   }
 
-  // Local Omarchy layer: the To do album among several still takes its photos its own way
-  const todo = albumIds.find((id) => todoManager.isTodo(id));
-  if (todo) {
+  // Local Omarchy layer: a special album among several still takes its photos its own way
+  const special = albumIds.find((id) => specialAlbumOf(id));
+  if (special) {
     const [moved, rest] = await Promise.all([
-      addAssetsToAlbumWithOutcome(todo, assetIds, { notify }),
+      addAssetsToAlbumWithOutcome(special, assetIds, { notify }),
       addAssetsToAlbums(
-        albumIds.filter((id) => id !== todo),
+        albumIds.filter((id) => id !== special),
         assetIds,
         { notify },
       ),

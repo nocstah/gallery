@@ -1603,8 +1603,9 @@ body.ws-dragging * {
   }
 }
 
-/* ---- To do (managers/todo-manager): the album says how it works, one muted line under its title ---- */
-.ws-todo-note {
+/* ---- special albums (managers/special-albums: To do, Villa): the album says how it works, one muted line under its
+   title ---- */
+.ws-album-note {
   margin-top: 0.5rem;
   max-width: 60ch;
   font-size: var(--ws-text-ui);

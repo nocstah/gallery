@@ -5,7 +5,7 @@
   import UploadCover from './DragAndDropUploadOverlay.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { todoManager } from '$lib/managers/todo-manager.svelte';
+  import { specialAlbums } from '$lib/managers/special-albums.svelte';
   import { onMount, type Snippet } from 'svelte';
   interface Props {
     children?: Snippet;
@@ -16,11 +16,13 @@
   // Local Omarchy layer: grid <-> viewer morph (lib/utils/photo-transition.ts)
   onNavigate((navigation) => photoTransition(navigation));
 
-  // Local Omarchy layer: which album is To do (managers/todo-manager), looked up once per page load, so the To do album
-  // knows itself even when opened directly (album pages have no sidebar)
+  // Local Omarchy layer: which albums are To do and Villa (managers/special-albums), looked up once per page load, so a
+  // special album knows itself even when opened directly (album pages have no sidebar)
   onMount(() => {
     if (authManager.authenticated) {
-      void todoManager.ready();
+      for (const special of specialAlbums) {
+        void special.ready();
+      }
     }
   });
 

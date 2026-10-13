@@ -6,10 +6,11 @@
   } from '$lib/components/timeline/actions/focus-actions';
   import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
+  import { authManager } from '$lib/managers/auth-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import { todoManager } from '$lib/managers/todo-manager.svelte';
+  import { specialAlbumOf, specialAlbums, type SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte';
   import NavigateToDateModal from '$lib/modals/NavigateToDateModal.svelte';
@@ -30,7 +31,7 @@
     assetInteraction: AssetMultiSelectManager;
     onEscape?: () => void;
     scrollToAsset: (asset: TimelineAsset) => boolean;
-    /** the album the timeline shows, if any (B marks photos done in the To do album) */
+    /** the album the timeline shows, if any (inside a special album its key takes photos out) */
     album?: AlbumResponseDto | null;
   };
 
@@ -92,21 +93,45 @@
     assetInteraction.clear();
   };
 
-  // Local Omarchy layer: B sets the selection aside in To do (managers/todo-manager), and in the To do album marks it
-  // done; the photos it archives leave a timeline that shows none, as after Shift+A
-  const toggleTodo = async () => {
-    const assets = assetInteraction.getOwnedAssets();
-    if (todoManager.isTodo(album?.id)) {
-      if (await todoManager.done(assets)) {
+  // Local Omarchy layer: with nothing selected, a special album's key acts on the photo under the pointer (its tile
+  // wears the accent border: hover is focus here), or else on the one keyboard focus is on
+  const pointedAsset = () => {
+    const tile =
+      document.querySelector<HTMLElement>('[data-thumbnail-focus-container][data-asset]:hover') ??
+      document.activeElement?.closest<HTMLElement>('[data-thumbnail-focus-container][data-asset]');
+    const id = tile?.dataset.asset;
+    return id ? timelineManager.getTimelineMonthByAssetId(id)?.findAssetById({ id }) : undefined;
+  };
+
+  // Local Omarchy layer: a special album's key (B To do, V Villa: managers/special-albums) moves the selection, or the
+  // photo under the pointer, in, and inside that album takes it out; the photos it archives leave a timeline that shows
+  // none, as after Shift+A
+  const toggleSpecial = async (special: SpecialAlbumManager) => {
+    const selected = assetInteraction.selectionActive;
+    const pointed = selected ? undefined : pointedAsset();
+    // someone else's photo goes by its id alone, so the album says it can't take it
+    const own = (asset: TimelineAsset) => authManager.authenticated && asset.ownerId === authManager.user.id;
+    const assets = selected
+      ? assetInteraction.getOwnedAssets()
+      : pointed
+        ? [own(pointed) ? pointed : { id: pointed.id }]
+        : [];
+    if (assets.length === 0) {
+      return;
+    }
+    if (specialAlbumOf(album?.id) === special) {
+      if ((await special.done(assets)) && selected) {
         assetInteraction.clear();
       }
       return;
     }
-    const moved = await todoManager.move(assets);
+    const moved = await special.move(assets);
     if (moved) {
       timelineManager.update(moved.archived, (asset) => (asset.visibility = AssetVisibility.Archive));
       eventManager.emit('AssetsArchive', moved.archived);
-      assetInteraction.clear();
+      if (selected) {
+        assetInteraction.clear();
+      }
     }
   };
 
@@ -165,6 +190,10 @@
     if (onEscape) {
       shortcuts.push({ shortcut: { key: 'Escape' }, onShortcut: onEscape });
     }
+    // Local Omarchy layer: the special albums' keys, for the selection or the photo under the pointer
+    for (const special of specialAlbums) {
+      shortcuts.push({ shortcut: { key: special.shortcut }, onShortcut: () => toggleSpecial(special) });
+    }
 
     if (assetInteraction.selectionActive) {
       shortcuts.push(
@@ -174,7 +203,6 @@
         // Local Omarchy layer: Shift+S, not plain s - with drag-select a stray keypress stacked big selections
         { shortcut: { key: 'S', shift: true }, onShortcut: () => onStackAssets() },
         { shortcut: { key: 'a', shift: true }, onShortcut: toggleArchive },
-        { shortcut: { key: 'b' }, onShortcut: toggleTodo },
       );
     } else {
       // conflicting shortcuts

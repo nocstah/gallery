@@ -1,27 +1,28 @@
 <script lang="ts">
-  // Local Omarchy layer: Move to To do for the selection (managers/todo-manager), or Mark done inside the To do album;
-  // B does the same from the keyboard (TimelineKeyboardActions)
+  // Local Omarchy layer: Move to a special album (To do, Villa: managers/special-albums) for the selection, or take the
+  // selection out inside that album (Mark done); the album's key does the same from the keyboard (TimelineKeyboardActions)
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { todoManager } from '$lib/managers/todo-manager.svelte';
+  import type { SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
   import type { OnArchive } from '$lib/utils/actions';
   import { AssetVisibility } from '@immich/sdk';
   import { IconButton } from '@immich/ui';
-  import { mdiClipboardCheckOutline, mdiClipboardTextClockOutline, mdiTimerSand } from '@mdi/js';
+  import { mdiTimerSand } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   type Props = {
+    special: SpecialAlbumManager;
     /** the page takes the archived photos out of its view, as after Archive */
     onArchive?: OnArchive;
     menuItem?: boolean;
-    /** inside the To do album: Mark done */
+    /** inside the album: take the photos out */
     done?: boolean;
   };
 
-  let { onArchive, menuItem = false, done = false }: Props = $props();
+  let { special, onArchive, menuItem = false, done = false }: Props = $props();
 
-  const text = $derived(done ? $t('todo_mark_done') : $t('todo_move'));
-  const icon = $derived(done ? mdiClipboardCheckOutline : mdiClipboardTextClockOutline);
+  const text = $derived($t(done ? special.words.done : special.words.move));
+  const icon = $derived(done ? special.doneIcon : special.icon);
 
   let loading = $state(false);
 
@@ -33,12 +34,12 @@
     loading = true;
     try {
       if (done) {
-        if (await todoManager.done(assets)) {
+        if (await special.done(assets)) {
           assetMultiSelectManager.clear();
         }
         return;
       }
-      const moved = await todoManager.move(assets);
+      const moved = await special.move(assets);
       if (moved) {
         onArchive?.(moved.archived, AssetVisibility.Archive);
         assetMultiSelectManager.clear();
@@ -50,7 +51,7 @@
 </script>
 
 {#if menuItem}
-  <MenuOption {text} {icon} onClick={run} shortcutLabel="B" />
+  <MenuOption {text} {icon} onClick={run} shortcutLabel={special.shortcut.toUpperCase()} />
 {:else}
   <IconButton
     shape="round"

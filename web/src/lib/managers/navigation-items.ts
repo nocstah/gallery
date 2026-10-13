@@ -22,6 +22,7 @@ import {
   mdiHeart,
   mdiHeartPulse,
   mdiHistory,
+  mdiHomeOutline,
   mdiImageMultiple,
   mdiImageOutline,
   mdiInboxOutline,
@@ -242,7 +243,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     route: '/favorites',
     adminOnly: false,
   },
-  // Local Omarchy layer: photos set aside for later (managers/todo-manager)
+  // Local Omarchy layer: the special albums, photos kept out of Photos (managers/special-albums)
   {
     id: 'nav:userPages:todo',
     category: 'userPages',
@@ -250,6 +251,15 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_todo_description',
     icon: mdiClipboardTextClockOutline,
     route: '/todo',
+    adminOnly: false,
+  },
+  {
+    id: 'nav:userPages:villa',
+    category: 'userPages',
+    labelKey: 'villa',
+    descriptionKey: 'cmdk_nav_villa_description',
+    icon: mdiHomeOutline,
+    route: '/villa',
     adminOnly: false,
   },
   {

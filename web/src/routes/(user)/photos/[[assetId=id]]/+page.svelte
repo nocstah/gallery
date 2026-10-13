@@ -36,7 +36,8 @@
   import { barSlot } from '$lib/managers/bar-slot.svelte';
   import TimelineWorkspaces from '$lib/components/timeline/TimelineWorkspaces.svelte';
   import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
-  import TodoAction from '$lib/components/timeline/actions/TodoAction.svelte';
+  import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
+  import { specialAlbums } from '$lib/managers/special-albums.svelte';
   import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import type { ViewportTopMonth } from '$lib/managers/timeline-manager/types';
   import { AssetAction } from '$lib/constants';
@@ -893,7 +894,9 @@
     {@const MenuActions = getAssetBulkActions($t)}
     <FavoriteAction menuItem removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
     {#if assetMultiSelectManager.isAllUserOwned}
-      <TodoAction menuItem onArchive={handleArchive} />
+      {#each specialAlbums as special (special.key)}
+        <SpecialAlbumAction {special} menuItem onArchive={handleArchive} />
+      {/each}
     {/if}
     <ActionMenuItem action={MenuActions.AddToAlbum} />
     <ActionMenuItem action={MenuActions.CreateSharedLink} />
@@ -939,8 +942,10 @@
     <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
 
     {#if assetMultiSelectManager.isAllUserOwned}
-      <!-- Local Omarchy layer: set aside in To do, out of Photos until marked done (B) -->
-      <TodoAction onArchive={handleArchive} />
+      <!-- Local Omarchy layer: into a special album (To do B, Villa V), out of Photos until taken out again -->
+      {#each specialAlbums as special (special.key)}
+        <SpecialAlbumAction {special} onArchive={handleArchive} />
+      {/each}
       <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
         <DownloadAction menuItem />
         {#if !showSearchResults}
