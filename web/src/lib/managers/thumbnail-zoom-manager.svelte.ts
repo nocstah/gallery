@@ -6,8 +6,8 @@ import { browser } from '$app/environment';
 
 const STORAGE_KEY = 'omarchy-thumbnail-zoom';
 export const ZOOM_MIN = 0.45;
-export const ZOOM_MAX = 2.4;
-const STEPS = [0.45, 0.6, 0.75, 1, 1.25, 1.55, 1.9, 2.4];
+export const ZOOM_MAX = 3.1;
+const STEPS = [0.45, 0.6, 0.75, 1, 1.25, 1.55, 1.9, 2.4, 3.1];
 
 type Mode = 'desktop' | 'narrow';
 type Stored = Record<Mode, number>;
@@ -47,20 +47,28 @@ const loadDayLabels = () => {
 class ThumbnailZoomManager {
   #scales = $state<Stored>(load());
   #dayLabels = $state(loadDayLabels());
-  #expandStacks = $state(browser ? (() => {
-    try {
-      return localStorage.getItem(EXPAND_STACKS_KEY) === 'on';
-    } catch {
-      return false;
-    }
-  })() : false);
-  #compact = $state(browser ? (() => {
-    try {
-      return localStorage.getItem(COMPACT_KEY) === 'on';
-    } catch {
-      return false;
-    }
-  })() : false);
+  #expandStacks = $state(
+    browser
+      ? (() => {
+          try {
+            return localStorage.getItem(EXPAND_STACKS_KEY) === 'on';
+          } catch {
+            return false;
+          }
+        })()
+      : false,
+  );
+  #compact = $state(
+    browser
+      ? (() => {
+          try {
+            return localStorage.getItem(COMPACT_KEY) === 'on';
+          } catch {
+            return false;
+          }
+        })()
+      : false,
+  );
   mode = $state<Mode>('desktop');
 
   get dayLabels() {
