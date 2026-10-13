@@ -996,6 +996,7 @@
   "album_delete_confirmation": "你確定要刪除相簿 {album} 嗎？",
   "album_delete_confirmation_description": "如果此相簿已被共享，其他使用者將無法再存取。",
   "album_deleted": "相簿已刪除",
+  "album_folder_delete_confirm": "要刪除「{name}」嗎？其中的相簿將上移一層。不會刪除任何相簿。",
   "album_info_updated": "已更新相簿資訊",
   "album_linked_to_space": "已連結至「{space}」",
   "album_name": "相簿名稱",

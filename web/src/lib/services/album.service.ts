@@ -30,9 +30,11 @@ import {
   mdiExitToApp,
   mdiUpload,
   mdiCogOutline,
+  mdiFolderMoveOutline,
 } from '@mdi/js';
 import { type MessageFormatter } from 'svelte-i18n';
 import { goto } from '$app/navigation';
+import { albumFolders } from '$lib/managers/album-folders.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { specialAlbumOf, specialAlbums } from '$lib/managers/special-albums.svelte';
@@ -126,6 +128,14 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     onAction: () => handleLeaveAlbum(album),
   };
 
+  // Local Omarchy layer: album folders (managers/album-folders), from the album's right-click menu and its ⋮ menu
+  const MoveToFolder: ActionItem = {
+    title: $t('space_album_folder_move'),
+    icon: mdiFolderMoveOutline,
+    $if: () => isOwned,
+    onAction: () => albumFolders.pickFolder(album.id),
+  };
+
   const Options: ActionItem = {
     title: $t('options'),
     icon: mdiCogOutline,
@@ -140,7 +150,7 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     onAction: () => modalManager.show(AlbumOptionsModal, { album }),
   };
 
-  return { AddUsers, CreateSharedLink, Delete, Download, Edit, Leave, Options, Share };
+  return { AddUsers, CreateSharedLink, Delete, Download, Edit, Leave, MoveToFolder, Options, Share };
 };
 
 export const getAlbumAssetActions = ($t: MessageFormatter, album: AlbumResponseDto, asset: AssetResponseDto) => {

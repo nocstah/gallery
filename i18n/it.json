@@ -998,6 +998,7 @@
   "album_delete_confirmation": "Sei sicuro di voler eliminare l'album {album}?",
   "album_delete_confirmation_description": "Se l'album è condiviso gli altri utenti perderanno l'accesso.",
   "album_deleted": "Album eliminato",
+  "album_folder_delete_confirm": "Eliminare \"{name}\"? Gli album al suo interno saliranno di un livello. Nessun album viene eliminato.",
   "album_info_updated": "Informazioni dell'album aggiornate",
   "album_linked_to_space": "Collegato a \"{space}\"",
   "album_name": "Nome album",

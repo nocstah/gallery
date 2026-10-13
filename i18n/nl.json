@@ -998,6 +998,7 @@
   "album_delete_confirmation": "Weet je zeker dat je het album {album} wilt verwijderen?",
   "album_delete_confirmation_description": "Als dit album gedeeld is, zullen andere gebruikers geen toegang meer hebben.",
   "album_deleted": "Album verwijderd",
+  "album_folder_delete_confirm": "\"{name}\" verwijderen? Albums erin gaan één niveau omhoog. Er wordt geen album verwijderd.",
   "album_info_updated": "Albumgegevens bijgewerkt",
   "album_linked_to_space": "Gekoppeld aan \"{space}\"",
   "album_name": "Albumnaam",

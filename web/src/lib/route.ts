@@ -50,7 +50,8 @@ export const Route = {
   pinPrompt: (params?: { continue?: string }) => '/auth/pin-prompt' + asQueryString({ continue: params?.continue }),
 
   // albums
-  albums: () => '/albums',
+  // Local Omarchy layer: ?folder= opens one of the album folders (managers/album-folders)
+  albums: (params?: { folder?: string | null }) => '/albums' + asQueryString({ folder: params?.folder ?? undefined }),
   viewAlbum: ({ id }: { id: string }) => `/albums/${id}`,
   viewAlbumAsset: ({ albumId, assetId }: { albumId: string; assetId: string }) =>
     `/albums/${albumId}/photos/${assetId}`,

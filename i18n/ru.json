@@ -998,6 +998,7 @@
   "album_delete_confirmation": "Вы уверены, что хотите удалить альбом {album}?",
   "album_delete_confirmation_description": "Если альбом был общим, другие пользователи больше не смогут получить к нему доступ.",
   "album_deleted": "Альбом удалён",
+  "album_folder_delete_confirm": "Удалить «{name}»? Альбомы внутри переместятся на уровень выше. Ни один альбом не будет удалён.",
   "album_info_updated": "Информация об альбоме обновлена",
   "album_linked_to_space": "Привязан к «{space}»",
   "album_name": "Название альбома",

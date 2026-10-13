@@ -26,6 +26,7 @@
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
+  import { albumFolders } from '$lib/managers/album-folders.svelte';
   import { specialAlbumOf, specialAlbums } from '$lib/managers/special-albums.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
@@ -239,7 +240,13 @@
       assetMultiSelectManager.clear();
       return;
     }
-    await goto(Route.albums());
+    await backToAlbums();
+  };
+
+  // Local Omarchy layer: back to the folder the album sits in (managers/album-folders), the top of Albums when none
+  const backToAlbums = async () => {
+    await albumFolders.ready();
+    await goto(Route.albums({ folder: albumFolders.folderOf(album.id) }));
   };
 
   const refreshAlbum = async () => {
@@ -714,7 +721,7 @@
       return;
     }
 
-    await goto(Route.albums());
+    await backToAlbums();
     viewMode = AlbumPageViewMode.VIEW;
   };
 
@@ -1120,7 +1127,7 @@
       </AssetSelectControlBar>
     {:else}
       {#if viewMode === AlbumPageViewMode.VIEW}
-        <ControlAppBar backIcon={mdiArrowLeft} onClose={() => goto(Route.albums())}>
+        <ControlAppBar backIcon={mdiArrowLeft} onClose={() => backToAlbums()}>
           {#snippet trailing()}
             <ActionButton action={Cast} />
 
@@ -1195,6 +1202,7 @@
                     }}
                   />
                 {/if}
+                <ActionMenuItem action={Actions.MoveToFolder} />
                 <ActionMenuItem action={Actions.Delete} />
                 <ActionMenuItem action={Actions.Leave} />
               </ButtonContextMenu>

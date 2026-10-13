@@ -1,14 +1,37 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import { scrollMemory } from '$lib/actions/scroll-memory';
   import AlbumsControls from './AlbumsControls.svelte';
   import Albums from '$lib/components/album-page/AlbumsList.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
+  import SpaceAlbumFolderBreadcrumb from '$lib/components/spaces/space-album-folder-breadcrumb.svelte';
+  import SpaceAlbumFolderCard from '$lib/components/spaces/space-album-folder-card.svelte';
   import GroupTab from '$lib/elements/GroupTab.svelte';
   import SearchBar from '$lib/elements/SearchBar.svelte';
+  import { albumFolders } from '$lib/managers/album-folders.svelte';
+  import SpaceAlbumFolderNameModal from '$lib/modals/SpaceAlbumFolderNameModal.svelte';
+  import SpaceAlbumFolderPickerModal from '$lib/modals/SpaceAlbumFolderPickerModal.svelte';
   import { Route } from '$lib/route';
   import { AlbumFilter, albumViewSettings } from '$lib/stores/preferences.store';
   import { createAlbumAndRedirect } from '$lib/utils/album-utils';
+  import {
+    canDrop,
+    setActiveDragPayload,
+    setDragLabel,
+    writeDragPayload,
+    type DragPayload,
+  } from '$lib/utils/space-album-folder-dnd';
+  import {
+    buildFolderSummaries,
+    EMPTY_FOLDER_SUMMARY,
+    getFolderContents,
+    getFolderPath,
+  } from '$lib/utils/space-album-folders';
+  import type { AlbumResponseDto, SharedSpaceAlbumFolderDto, SharedSpaceLinkedAlbumDto } from '@immich/sdk';
+  import { Button, modalManager } from '@immich/ui';
+  import { mdiFolderPlusOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -20,12 +43,110 @@
 
   let searchQuery = $state('');
   let albumGroups: string[] = $state([]);
+
+  // Local Omarchy layer: album folders (managers/album-folders). The page lists one level at a time: the folders in
+  // it, then its albums; ?folder= is the level, the top when absent. A search, or the Shared filter, lists every
+  // album at once, as before.
+  const browsing = $derived(!searchQuery.trim() && $albumViewSettings.filter !== AlbumFilter.Shared);
+  const requested = $derived(page.url.searchParams.get('folder'));
+  const folderId = $derived(
+    browsing && requested && albumFolders.folders.some(({ id }) => id === requested) ? requested : null,
+  );
+  const inLevel = (album: AlbumResponseDto) => !browsing || albumFolders.folderOf(album.id) === folderId;
+  const ownedHere = $derived(data.albums.filter((album) => inLevel(album)));
+  const sharedHere = $derived(data.sharedAlbums.filter((album) => inLevel(album)));
+  // folders by name, the way a person numbers them ("2" before "10", years in order)
+  const subfolders = $derived(
+    browsing
+      ? getFolderContents(albumFolders.folders, albumFolders.linked, folderId)
+          .folders.slice()
+          .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+      : [],
+  );
+  const summaries = $derived(buildFolderSummaries(albumFolders.folders, albumFolders.linked));
+  const path = $derived(getFolderPath(albumFolders.folders, folderId));
+  // what a drop is checked against: the Space's albums where they are, and every other album of mine at the top
+  const droppable = $derived.by(() => {
+    const linked = new Set(albumFolders.linked.map(({ id }) => id));
+    const outside = data.albums
+      .filter(({ id }) => !linked.has(id))
+      .map(({ id }) => ({ id, folderId: null }) as SharedSpaceLinkedAlbumDto);
+    return [...albumFolders.linked, ...outside];
+  });
+
+  const openFolder = (id: string | null) => goto(Route.albums({ folder: id }));
+
+  const newFolder = async () => {
+    const name = await modalManager.show(SpaceAlbumFolderNameModal, { title: $t('space_album_folder_new') });
+    if (name) {
+      await albumFolders.createFolder(name, folderId);
+    }
+  };
+
+  const renameFolder = async (folder: SharedSpaceAlbumFolderDto) => {
+    const name = await modalManager.show(SpaceAlbumFolderNameModal, {
+      title: $t('space_album_folder_rename'),
+      initialName: folder.name,
+    });
+    if (name && name !== folder.name) {
+      await albumFolders.renameFolder(folder, name);
+    }
+  };
+
+  const moveFolder = async (folder: SharedSpaceAlbumFolderDto) => {
+    const result = await modalManager.show(SpaceAlbumFolderPickerModal, {
+      folders: albumFolders.folders,
+      excludeFolderId: folder.id,
+      currentFolderId: folder.parentId ?? null,
+    });
+    if (result) {
+      await albumFolders.moveFolder(folder.id, result.folderId);
+    }
+  };
+
+  const deleteFolder = async (folder: SharedSpaceAlbumFolderDto) => {
+    const confirmed = await modalManager.showDialog({
+      title: $t('space_album_folder_delete'),
+      prompt: $t('album_folder_delete_confirm', { values: { name: folder.name } }),
+    });
+    if (confirmed) {
+      await albumFolders.deleteFolder(folder);
+    }
+  };
+
+  const drop = async (payload: DragPayload, target: string | null) => {
+    if (!canDrop(albumFolders.folders, droppable, payload, target)) {
+      return;
+    }
+    await (payload.kind === 'album'
+      ? albumFolders.moveAlbum(payload.id, target)
+      : albumFolders.moveFolder(payload.id, target));
+  };
+
+  // an album card is a link to the album: dragging one carries the album, for a folder or a crumb to take
+  const dragAlbum = (event: DragEvent) => {
+    const href = (event.target as Element | null)?.closest?.('a[href]')?.getAttribute('href');
+    const album = href ? data.albums.find(({ id }) => href === Route.viewAlbum({ id })) : undefined;
+    if (!album || !event.dataTransfer) {
+      return;
+    }
+    const payload: DragPayload = { kind: 'album', id: album.id };
+    writeDragPayload(event.dataTransfer, payload);
+    setActiveDragPayload(payload);
+    setDragLabel(event.dataTransfer, album.albumName);
+  };
 </script>
+
+<!-- the album cards are links: a drag that starts on one of mine carries the album, for a folder or a crumb to take -->
+<svelte:document ondragstart={dragAlbum} ondragend={() => setActiveDragPayload(null)} />
 
 <UserPageLayout title={data.meta.title} use={[[scrollMemory, { routeStartsWith: Route.albums() }]]}>
   {#snippet buttons()}
     <div class="flex place-items-center gap-2">
       <AlbumsControls {albumGroups} bind:searchQuery />
+      <Button leadingIcon={mdiFolderPlusOutline} onclick={newFolder} size="small" variant="ghost" color="secondary">
+        <p class="hidden md:block">{$t('space_album_folder_new')}</p>
+      </Button>
     </div>
   {/snippet}
 
@@ -43,16 +164,58 @@
     </div>
   </div>
 
+  {#if folderId}
+    <SpaceAlbumFolderBreadcrumb
+      {path}
+      folders={albumFolders.folders}
+      albums={droppable}
+      canManage
+      onNavigate={(id) => void openFolder(id)}
+      onDropItem={drop}
+    />
+  {/if}
+
+  {#if subfolders.length > 0}
+    <div class="mt-4 grid grid-auto-fill-56 gap-y-4" role="list" data-testid="album-folders">
+      {#each subfolders as folder (folder.id)}
+        {@const summary = summaries.get(folder.id) ?? EMPTY_FOLDER_SUMMARY}
+        <SpaceAlbumFolderCard
+          {folder}
+          albumCount={summary.albumCount}
+          previewAssetIds={summary.previewAssetIds}
+          canManage
+          folders={albumFolders.folders}
+          albums={droppable}
+          onOpen={(folder) => void openFolder(folder.id)}
+          onRename={renameFolder}
+          onMove={moveFolder}
+          onDelete={deleteFolder}
+          onDropItem={drop}
+        />
+      {/each}
+    </div>
+  {/if}
+
   <Albums
-    ownedAlbums={data.albums}
-    sharedAlbums={data.sharedAlbums}
+    ownedAlbums={ownedHere}
+    sharedAlbums={sharedHere}
     userSettings={$albumViewSettings}
     allowEdit
     {searchQuery}
     bind:albumGroupIds={albumGroups}
   >
     {#snippet empty()}
-      <EmptyPlaceholder text={$t('no_albums_message')} onClick={() => createAlbumAndRedirect()} class="mx-auto mt-10" />
+      {#if subfolders.length > 0}
+        <!-- a level of folders only -->
+      {:else if folderId}
+        <p class="mt-10 text-center text-sm text-gray-500 dark:text-gray-400">{$t('space_album_folder_empty')}</p>
+      {:else}
+        <EmptyPlaceholder
+          text={$t('no_albums_message')}
+          onClick={() => createAlbumAndRedirect()}
+          class="mx-auto mt-10"
+        />
+      {/if}
     {/snippet}
   </Albums>
 </UserPageLayout>
