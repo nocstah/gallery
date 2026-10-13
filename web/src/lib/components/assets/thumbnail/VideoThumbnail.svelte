@@ -5,6 +5,7 @@
   import { Duration } from 'luxon';
   import type { ClassValue } from 'svelte/elements';
   import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
+  import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
 
   interface Props {
     url: string;
@@ -64,11 +65,12 @@
 </script>
 
 {#if enablePlayback}
+  <!-- Local Omarchy layer: a video playing under the pointer is heard while Shift is held -->
   <video
     bind:this={player}
     class={cleanClass('h-full w-full object-cover', className)}
     class:rounded-xl={curve}
-    muted
+    muted={!keyboardManager.shift}
     autoplay
     loop
     src={url}
