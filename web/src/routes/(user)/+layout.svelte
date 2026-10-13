@@ -2,6 +2,7 @@
   import { onNavigate } from '$app/navigation';
   import { page } from '$app/state';
   import { photoTransition } from '$lib/utils/photo-transition';
+  import { onPageKey } from '$lib/utils/page-keys';
   import UploadCover from './DragAndDropUploadOverlay.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -38,6 +39,9 @@
     assetViewerManager.gridScrollTarget = { at: asset };
   });
 </script>
+
+<!-- Local Omarchy layer: Page Up / Page Down page the main view wherever the focus is (lib/utils/page-keys.ts) -->
+<svelte:window onkeydown={onPageKey} />
 
 <div class:display-none={assetViewerManager.isViewing}>
   {@render children?.()}
