@@ -215,7 +215,13 @@ export type LookUpSubject = {
 };
 export type LookUpAnswer = { asset_id: string; model: string; subjects: LookUpSubject[] };
 
-export type StackPickPlace = { asset_id: string; judge: number; vlm: number | null; flaw: string | null; score: number };
+export type StackPickPlace = {
+  asset_id: string;
+  judge: number;
+  vlm: number | null;
+  flaw: string | null;
+  score: number;
+};
 /** what pick.best found: the pick, why (the vision model's words and the measured reasons), and every photo's place */
 export type StackPick = {
   stack_id: string;
@@ -236,12 +242,24 @@ export type StackPick = {
   model: string | null;
 };
 
+/** one backup copy: whether its last run went well, and when it last did (ISO) */
+export type BackupCopy = { ok: boolean | null; last_ok: string | null; error: string | null };
+
 /** the command center's view of Curator and the machine (/api/overview) */
 export type CuratorOverview = {
-  schedule: { enabled: boolean; next_night: string; last_night: string | null; jobs: { kind: string; title: string }[] };
+  schedule: {
+    enabled: boolean;
+    next_night: string;
+    last_night: string | null;
+    jobs: { kind: string; title: string }[];
+  };
   gpu: { name: string; used_mib: number; total_mib: number; busy: number; at: number } | null;
   models_loaded: { name: string; vram_gb: number }[];
-  offsite_backup: { configured: boolean; last_run: string | null; ok: boolean } | null;
+  /** gallery-backup's two copies (the My Book every night, B2 once its key is in), as curator-health last saw them */
+  backups: {
+    mybook: BackupCopy;
+    b2: BackupCopy & { configured: boolean };
+  } | null;
   paused: boolean;
   pending: number;
   decided_today: number;
@@ -374,11 +392,7 @@ export const curator = {
   forgetChat: (id: string) => call<void>(`/chats/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   /** a Live Photo effect picked in the photo viewer (`seconds`: where in the clip, for a key photo); the job's result
    * names the suggestion holding the new version */
-  liveEffect: (
-    assetId: string,
-    effect: 'loop' | 'bounce' | 'long-exposure' | 'key-photo' | 'cinematic',
-    seconds = 0,
-  ) =>
+  liveEffect: (assetId: string, effect: 'loop' | 'bounce' | 'long-exposure' | 'key-photo' | 'cinematic', seconds = 0) =>
     post<{ job: number }>('/live-effect', { asset_id: assetId, effect, seconds }),
   overview: () => call<CuratorOverview>('/overview'),
   /** Gallery's duplicate groups that are QR-code slips (payment receipts), for the Duplicates page to leave out */

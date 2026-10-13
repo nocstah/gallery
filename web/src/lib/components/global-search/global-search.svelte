@@ -4,7 +4,7 @@
   import { Command } from 'bits-ui';
   import { t } from 'svelte-i18n';
   import { clickOutside } from '$lib/actions/click-outside';
-  import type { GlobalSearchManager, SearchMode } from '$lib/managers/global-search-manager.svelte';
+  import { monthJumpId, type GlobalSearchManager, type SearchMode } from '$lib/managers/global-search-manager.svelte';
   import GlobalSearchSection from './global-search-section.svelte';
   import LiveTypedFilterSection from './live-typed-filter-section.svelte';
   import GlobalSearchNavigationSections from './global-search-navigation-sections.svelte';
@@ -16,6 +16,7 @@
   import AlbumRow from './rows/album-row.svelte';
   import SpaceRow from './rows/space-row.svelte';
   import RecentRow from './rows/recent-row.svelte';
+  import MonthJumpRow from './rows/month-jump-row.svelte';
   import NavigationRow from './rows/navigation-row.svelte';
   import CommandRow from './rows/command-row.svelte';
   import GlobalSearchFooter from './global-search-footer.svelte';
@@ -157,6 +158,9 @@
     if (manager.topCommandMatch) {
       return manager.topCommandMatch.id;
     }
+    if (manager.topMonthJump) {
+      return monthJumpId(manager.topMonthJump);
+    }
     if (manager.topNavigationMatch) {
       return manager.topNavigationMatch.id;
     }
@@ -169,6 +173,9 @@
     const query = manager.query.trim();
     if (manager.topCommandMatch) {
       return `${inputEditRevision}:command:${manager.topCommandMatch.id}:${query}`;
+    }
+    if (manager.topMonthJump) {
+      return `${inputEditRevision}:month:${monthJumpId(manager.topMonthJump)}:${query}`;
     }
     if (manager.topNavigationMatch) {
       return `${inputEditRevision}:navigation:${manager.topNavigationMatch.id}:${query}`;
@@ -838,6 +845,23 @@
                     </Command.Item>
                   </Command.GroupItems>
                 </Command.Group>
+              {:else if manager.topMonthJump}
+                <Command.Group class="mb-2" data-cmdk-top-result-month data-testid="cmdk-top-result">
+                  <Command.GroupHeading
+                    class="px-3 pb-1 text-[11px] font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                  >
+                    {$t('cmdk_top_result')}
+                  </Command.GroupHeading>
+                  <Command.GroupItems>
+                    <Command.Item
+                      value={monthJumpId(manager.topMonthJump)}
+                      onSelect={() => manager.topMonthJump && manager.jumpToMonth(manager.topMonthJump)}
+                      class="group"
+                    >
+                      <MonthJumpRow jump={manager.topMonthJump} />
+                    </Command.Item>
+                  </Command.GroupItems>
+                </Command.Group>
               {:else if manager.topNavigationMatch}
                 <Command.Group class="mb-2" data-cmdk-top-result-navigation data-testid="cmdk-top-result">
                   <Command.GroupHeading
@@ -1251,6 +1275,23 @@
                           item={manager.topCommandMatch}
                           pending={manager.topCommandMatch.id === manager.pendingConfirmId}
                         />
+                      </Command.Item>
+                    </Command.GroupItems>
+                  </Command.Group>
+                {:else if manager.topMonthJump}
+                  <Command.Group class="mb-4" data-cmdk-top-result-month data-testid="cmdk-top-result">
+                    <Command.GroupHeading
+                      class="px-3 pb-1 text-[11px] font-semibold tracking-wider text-gray-500 uppercase dark:text-gray-400"
+                    >
+                      {$t('cmdk_top_result')}
+                    </Command.GroupHeading>
+                    <Command.GroupItems>
+                      <Command.Item
+                        value={monthJumpId(manager.topMonthJump)}
+                        onSelect={() => manager.topMonthJump && manager.jumpToMonth(manager.topMonthJump)}
+                        class="group"
+                      >
+                        <MonthJumpRow jump={manager.topMonthJump} />
                       </Command.Item>
                     </Command.GroupItems>
                   </Command.Group>

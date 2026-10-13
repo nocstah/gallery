@@ -1,6 +1,7 @@
 <script lang="ts">
   // Local Omarchy layer: what a suggestion is about, shown with the photos themselves. A cover change shows the
-  // current cover beside the proposed one, a name shows the face group beside photos it was found in, a merge shows
+  // current cover beside the proposed one, a sharper face icon the icon now beside the face it would be cut from, a
+  // name shows the face group beside photos it was found in, a merge shows
   // every face group being joined, a restored photo or clip shares one frame with its original. Each photo opens in
   // Gallery in a new tab, so the review keeps its place. Resting the pointer on a photo shows it large, whole, in
   // the middle of the screen, until the pointer moves off it.
@@ -95,6 +96,22 @@
   {:else if suggestion.kind === 'asset.rotate' && suggestion.asset_ids.length > 0}
     {@render photo(suggestion.asset_ids[0], 112, $t('ai_inbox_now'))}
     {@render photo(suggestion.asset_ids[0], 112, $t('ai_inbox_proposed'), rotation)}
+  {:else if suggestion.kind === 'person.portrait'}
+    <!-- the person's icon now beside the face it would be cut from next (Gallery's exact face crop) -->
+    <figure class="visual-tile" style:width="112px">
+      <img class="ws-strip-tile visual-face" src={face(suggestion.target_id)} alt="" width="112" height="112" />
+      <figcaption class="ws-inbox-meta">{$t('ai_inbox_now')}</figcaption>
+    </figure>
+    <figure class="visual-tile" style:width="112px">
+      <img
+        class="ws-strip-tile visual-face"
+        src="/api/people/{suggestion.target_id}/faces/{payload.face_id}/thumbnail"
+        alt=""
+        width="112"
+        height="112"
+      />
+      <figcaption class="ws-inbox-meta">{$t('ai_inbox_proposed')}</figcaption>
+    </figure>
   {:else if ['person.name', 'person.merge', 'person.hide'].includes(suggestion.kind)}
     {#each [...new Set(faces)] as personId (personId)}
       <img class="ws-strip-tile visual-face" src={face(personId)} alt="" loading="lazy" width="72" height="72" />

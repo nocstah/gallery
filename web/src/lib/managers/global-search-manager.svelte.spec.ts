@@ -30,6 +30,7 @@ import { commandContextManager } from './command-context-manager.svelte';
 import { COMMAND_ITEMS, type CommandItem } from './command-items';
 import {
   GlobalSearchManager,
+  monthJumpId,
   RECONCILE_ORDER_BY_SCOPE,
   type EntityItem,
   type Provider,
@@ -3004,6 +3005,27 @@ describe('topSearchMatch', () => {
 
     m.query = '@alice';
     expect(m.topSearchMatch).toBeNull();
+  });
+});
+
+// Local Omarchy layer: "July 2014" puts a month jump in the top slot instead of the free-text search row
+describe('topMonthJump', () => {
+  it('takes the top slot for a month or a year, and only unscoped', () => {
+    const m = new GlobalSearchManager();
+    m.query = 'July 2014';
+    expect(m.topMonthJump).toEqual({ year: 2014, month: 7 });
+    expect(m.topSearchMatch).toBeNull();
+    expect(monthJumpId(m.topMonthJump!)).toBe('month:2014-07');
+
+    m.query = '2014';
+    expect(m.topMonthJump).toEqual({ year: 2014 });
+
+    m.query = 'beach';
+    expect(m.topMonthJump).toBeNull();
+    expect(m.topSearchMatch).not.toBeNull();
+
+    m.query = '@2014';
+    expect(m.topMonthJump).toBeNull();
   });
 });
 

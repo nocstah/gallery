@@ -73,7 +73,10 @@
 
   const thumb = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
   const topGroups = $derived(
-    [...groups].filter((g) => g.pending > 0).sort((a, b) => b.pending - a.pending).slice(0, 6),
+    [...groups]
+      .filter((g) => g.pending > 0)
+      .sort((a, b) => b.pending - a.pending)
+      .slice(0, 6),
   );
   const active = $derived(jobs.filter((j) => j.status === 'running' || j.status === 'queued'));
   const failedRecently = $derived(
@@ -87,6 +90,12 @@
   const nextNight = $derived(overview ? DateTime.fromISO(overview.schedule.next_night) : undefined);
   const item = (key: string): HealthItem | undefined => health?.items.find((i) => i.key === key);
   const number = (value: number) => value.toLocaleString();
+  // a backup's last good run, short ("13 Oct, 07:37"); three days without one is worth a look (curator-health says so)
+  const when = (iso: string | null) =>
+    iso
+      ? DateTime.fromISO(iso).toLocaleString({ day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : '';
+  const stale = (iso: string | null) => !iso || DateTime.fromISO(iso) < DateTime.now().minus({ days: 3 });
   const memoryLabel = (found: MemoryResponseDto) => {
     // a featured memory's title, a trip's place, an "on this day" memory's year
     const data = (found.data ?? {}) as { year?: number; title?: string; context?: { placeLabel?: string } };
@@ -96,7 +105,9 @@
     if (typeof data.context?.placeLabel === 'string') {
       return data.context.placeLabel;
     }
-    return data.year ? $t('years_ago', { values: { years: DateTime.now().year - data.year } }) : $t('command_today_memory');
+    return data.year
+      ? $t('years_ago', { values: { years: DateTime.now().year - data.year } })
+      : $t('command_today_memory');
   };
 
   const runTonightNow = async () => {
@@ -117,7 +128,11 @@
   };
 
   const progress = (job: JobRow) =>
-    job.progress?.total ? Math.min(1, (job.progress.done ?? 0) / job.progress.total) : job.status === 'running' ? 0.05 : 0;
+    job.progress?.total
+      ? Math.min(1, (job.progress.done ?? 0) / job.progress.total)
+      : job.status === 'running'
+        ? 0.05
+        : 0;
 </script>
 
 <UserPageLayout hideNavbar={false} scrollbar>
@@ -187,7 +202,9 @@
           {#each active.slice(0, 6) as job (job.id)}
             <li>
               <span class="job-kind">{job.kind}</span>
-              <span class="job-note">{job.status === 'queued' ? $t('command_job_queued') : (job.progress?.note ?? '')}</span>
+              <span class="job-note"
+                >{job.status === 'queued' ? $t('command_job_queued') : (job.progress?.note ?? '')}</span
+              >
               <div class="ws-meter"><span style:width="{progress(job) * 100}%"></span></div>
             </li>
           {/each}
@@ -266,17 +283,29 @@
             <dt>{$t('command_db_backup')}</dt>
             <dd>{item('backup')?.detail}</dd>
           {/if}
-          <dt>{$t('command_offsite')}</dt>
-          <dd class:attention={overview?.offsite_backup && !overview.offsite_backup.configured}>
-            {#if !overview?.offsite_backup}
-              –
-            {:else if !overview.offsite_backup.configured}
-              {$t('command_offsite_not_set_up')}
-            {:else}
-              {overview.offsite_backup.ok ? $t('command_offsite_ok') : $t('command_offsite_failed')}
-              {overview.offsite_backup.last_run ?? ''}
-            {/if}
-          </dd>
+          {#if overview?.backups}
+            {@const { mybook, b2 } = overview.backups}
+            <dt>{$t('command_local_backup')}</dt>
+            <dd class:attention={!mybook.last_ok || mybook.ok === false || stale(mybook.last_ok)}>
+              {#if !mybook.last_ok && mybook.ok === null}
+                {$t('command_backup_none')}
+              {:else}
+                {mybook.ok === false ? $t('command_offsite_failed') : $t('command_offsite_ok')}
+                {when(mybook.last_ok)}
+              {/if}
+            </dd>
+            <dt>{$t('command_offsite')}</dt>
+            <dd class:attention={!b2.configured || b2.ok === false}>
+              {#if !b2.configured}
+                {$t('command_offsite_not_set_up')}
+              {:else if !b2.last_ok && b2.ok === null}
+                {$t('command_backup_none')}
+              {:else}
+                {b2.ok === false ? $t('command_offsite_failed') : $t('command_offsite_ok')}
+                {when(b2.last_ok)}
+              {/if}
+            </dd>
+          {/if}
           {#if overview?.paused}
             <dt>{$t('command_paused')}</dt>
             <dd>{$t('command_paused_detail')}</dd>

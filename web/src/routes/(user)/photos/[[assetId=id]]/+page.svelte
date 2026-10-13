@@ -45,6 +45,7 @@
   import { registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
   import { memoryManager } from '$lib/managers/memory-manager.svelte';
+  import { nearestMonth, parseMonthJumpParam, type MonthJump } from '$lib/managers/month-jump';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineAsset, TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
   import { removeSearchResults, selectAllSearchResults, updateSearchResults } from '$lib/utils/search-result-selection';
@@ -652,6 +653,40 @@
         smartFacetInFlight = undefined;
       }
       lastHandledSearchState = nextToken;
+    });
+  });
+
+  // Local Omarchy layer: "July 2014" in Ctrl+K lands here as ?jump=2014-07 (or ?jump=2014): the nearest month with
+  // photos becomes the timeline's anchor once the months are known, and the parameter leaves the address straight
+  // away, so Back and a reload show the timeline as usual
+  let jumpTo = $state<MonthJump | null>(null);
+  $effect(() => {
+    const jump = parseMonthJumpParam(page.url.searchParams.get('jump'));
+    if (!jump) {
+      return;
+    }
+    untrack(() => {
+      jumpTo = jump;
+      const url = new URL(page.url);
+      url.searchParams.delete('jump');
+      void goto(url.pathname + url.search, { replaceState: true, keepFocus: true, noScroll: true });
+    });
+  });
+  $effect(() => {
+    const target = jumpTo;
+    const months = timelineManager?.months;
+    if (!target || !months || months.length === 0) {
+      return;
+    }
+    untrack(() => {
+      jumpTo = null;
+      const month = nearestMonth(
+        months.map(({ yearMonth }) => yearMonth),
+        target,
+      );
+      if (month) {
+        temporalAnchor = { year: month.year, month: month.month };
+      }
     });
   });
 

@@ -67,6 +67,7 @@ import { resolveTypedSearchFilters, type TypedSearchChoice } from '$lib/utils/ty
 import { parseScope, personSuggestionsComparator, type ParsedQuery, type Scope } from './cmdk-prefix';
 import { commandContextManager } from './command-context-manager.svelte';
 import { COMMAND_ITEMS, isAlmostExactCommandMatch, type CommandItem } from './command-items';
+import { monthJumpParam, parseMonthJump, type MonthJump } from './month-jump';
 import { isAlmostExactNavMatch, NAVIGATION_ITEMS, type NavigationItem } from './navigation-items';
 
 // Local Omarchy layer: 'ask' puts the question to Curator (lib/utils/curator.ts), which answers with Gallery's own
@@ -311,6 +312,9 @@ function hasSerializableFilters(filters: FilterState | undefined): boolean {
       !!filters.dateBefore)
   );
 }
+
+/** The palette row id of a month jump: `month:2014-07`. */
+export const monthJumpId = (jump: MonthJump) => `month:${monthJumpParam(jump)}`;
 
 export class GlobalSearchManager {
   isOpen = $state(false);
@@ -1359,6 +1363,9 @@ export class GlobalSearchManager {
     if (this.activeItemId === this.topSearchMatch?.id) {
       return;
     }
+    if (this.topMonthJump && this.activeItemId === monthJumpId(this.topMonthJump)) {
+      return;
+    }
     if (this.getActiveItem() !== null) {
       return;
     }
@@ -2327,7 +2334,7 @@ export class GlobalSearchManager {
     // Command-wins tie-break: if a command is promoted to the top-result slot, nav
     // stays empty for that slot so the two never fight. Commands are high-intent
     // verbs and we want "theme" to fire the toggle, not jump to the settings page.
-    if (this.topCommandMatch !== null) {
+    if (this.topCommandMatch !== null || this.topMonthJump !== null) {
       return null;
     }
     const isAdmin = (authManager.authenticated ? authManager.user : undefined)?.isAdmin ?? false;
@@ -2358,11 +2365,29 @@ export class GlobalSearchManager {
     // stronger promoted command/navigation match. This keeps Enter aligned with the
     // high-confidence command/nav result for queries like `theme` or
     // `auto-classification`.
-    if (this.topCommandMatch !== null || this.topNavigationMatch !== null) {
+    if (this.topCommandMatch !== null || this.topNavigationMatch !== null || this.topMonthJump !== null) {
       return null;
     }
     return { id: 'top-search', query: this.typedSearchPlainQuery || query, rawQuery: query };
   });
+
+  /**
+   * Local Omarchy layer: a query that names a month ("July 2014", "2014-07") or a year ("2014") puts "Go to that
+   * month" in the top slot; Enter opens Photos scrolled there (month-jump.ts). Yields to a promoted command, and like
+   * the other promotions exists only unscoped and without typed filters.
+   */
+  topMonthJump = $derived.by<MonthJump | null>(() => {
+    if (this.scope !== 'all' || this.typedSearchDisplayTokens.length > 0 || this.topCommandMatch !== null) {
+      return null;
+    }
+    return parseMonthJump(this.query, [get(i18nLocale) ?? 'en', 'en']);
+  });
+
+  /** Photos at a month or year (it lands on the nearest month with photos), and the palette closed. */
+  jumpToMonth(jump: MonthJump) {
+    void goto(Route.photos({ jump: monthJumpParam(jump) }));
+    this.close();
+  }
 
   /**
    * Top command result — the single most confident command-item promotion for

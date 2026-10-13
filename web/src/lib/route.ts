@@ -136,8 +136,9 @@ export const Route = {
   // `city` with no `country` has nowhere to nest — it renders flat beside the country list as an
   // orphaned selection. The params are rebuilt here in a fixed order rather than forwarded, so the
   // emitted URL does not depend on the caller's object-literal key order.
-  photos: (params?: { at?: string; city?: string; country?: string }) =>
-    '/photos' + asQueryString({ at: params?.at, city: params?.city, country: params?.country }),
+  // `jump` (local Omarchy layer, month-jump.ts): 2014-07 or 2014, the month or year to scroll to
+  photos: (params?: { at?: string; city?: string; country?: string; jump?: string }) =>
+    '/photos' + asQueryString({ at: params?.at, city: params?.city, country: params?.country, jump: params?.jump }),
   viewAsset: ({ id }: { id: string }) => `/photos/${id}`,
   archive: () => '/archive',
   favorites: () => '/favorites',
