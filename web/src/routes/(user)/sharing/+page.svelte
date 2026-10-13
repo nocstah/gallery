@@ -74,7 +74,11 @@
         <h2 class="ws-empty-title">{$t('sharing_empty_title')}</h2>
         <p class="ws-empty-body">{$t('no_shared_albums_message')}</p>
         <div class="ws-empty-actions">
-          <button type="button" class="ws-empty-action" onclick={() => CreateAlbum.onAction(CreateAlbum)}>
+          <button
+            type="button"
+            class="ws-empty-action"
+            onclick={(event: MouseEvent) => CreateAlbum.onAction({ event, action: CreateAlbum })}
+          >
             {CreateAlbum.title}
           </button>
           <a class="ws-empty-link" href={Route.sharedLinks()}>{$t('shared_links')}</a>
