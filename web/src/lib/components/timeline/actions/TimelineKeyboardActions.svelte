@@ -9,6 +9,7 @@
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
+  import { todoManager } from '$lib/managers/todo-manager.svelte';
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte';
   import NavigateToDateModal from '$lib/modals/NavigateToDateModal.svelte';
@@ -21,7 +22,7 @@
   import { deleteAssets } from '$lib/utils/actions';
   import { holdQuickTrash, quickTrash } from '$lib/utils/quick-trash';
   import { archiveAssets, selectAllAssets } from '$lib/utils/asset-utils';
-  import { AssetVisibility } from '@immich/sdk';
+  import { AssetVisibility, type AlbumResponseDto } from '@immich/sdk';
   import { isModalOpen, modalManager } from '@immich/ui';
 
   type Props = {
@@ -29,9 +30,11 @@
     assetInteraction: AssetMultiSelectManager;
     onEscape?: () => void;
     scrollToAsset: (asset: TimelineAsset) => boolean;
+    /** the album the timeline shows, if any (B marks photos done in the To do album) */
+    album?: AlbumResponseDto | null;
   };
 
-  let { timelineManager = $bindable(), assetInteraction, onEscape, scrollToAsset }: Props = $props();
+  let { timelineManager = $bindable(), assetInteraction, onEscape, scrollToAsset, album = null }: Props = $props();
 
   const trashOrDelete = async (forceRequested?: boolean) => {
     const force = forceRequested || !featureFlagsManager.value.trash;
@@ -87,6 +90,24 @@
     timelineManager.update(ids, (asset) => (asset.visibility = visibility));
     eventManager.emit('AssetsArchive', ids);
     assetInteraction.clear();
+  };
+
+  // Local Omarchy layer: B sets the selection aside in To do (managers/todo-manager), and in the To do album marks it
+  // done; the photos it archives leave a timeline that shows none, as after Shift+A
+  const toggleTodo = async () => {
+    const assets = assetInteraction.getOwnedAssets();
+    if (todoManager.isTodo(album?.id)) {
+      if (await todoManager.done(assets)) {
+        assetInteraction.clear();
+      }
+      return;
+    }
+    const moved = await todoManager.move(assets);
+    if (moved) {
+      timelineManager.update(moved.archived, (asset) => (asset.visibility = AssetVisibility.Archive));
+      eventManager.emit('AssetsArchive', moved.archived);
+      assetInteraction.clear();
+    }
   };
 
   const onSelectStart = (e: Event) => {
@@ -153,6 +174,7 @@
         // Local Omarchy layer: Shift+S, not plain s - with drag-select a stray keypress stacked big selections
         { shortcut: { key: 'S', shift: true }, onShortcut: () => onStackAssets() },
         { shortcut: { key: 'a', shift: true }, onShortcut: toggleArchive },
+        { shortcut: { key: 'b' }, onShortcut: toggleTodo },
       );
     } else {
       // conflicting shortcuts

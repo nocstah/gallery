@@ -16,9 +16,11 @@
     isActive?: () => boolean;
     expanded?: boolean;
     items?: Snippet;
+    /** Local Omarchy layer: how many wait there (To do), shown at the row's end while the sidebar is expanded */
+    count?: number;
   }
 
-  let { title, href, icon, activeIcon, isActive, expanded = $bindable(false), items }: Props = $props();
+  let { title, href, icon, activeIcon, isActive, expanded = $bindable(false), items, count }: Props = $props();
 
   // Rail collapses to icons only; hovering or focusing floats the labels back without
   // touching the grid column, so `collapsed` follows hoverExpanded too.
@@ -134,6 +136,9 @@
       >
         {title}
       </span>
+      {#if count && !collapsed}
+        <span class="ws-nav-count">{count.toLocaleString()}</span>
+      {/if}
     </Link>
   </div>
 

@@ -25,6 +25,8 @@
   import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
+  import TodoAction from '$lib/components/timeline/actions/TodoAction.svelte';
+  import { todoManager } from '$lib/managers/todo-manager.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
   import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
@@ -953,6 +955,12 @@
                     <!-- Local Omarchy layer: a smart album says so, with Edit search and Stop updating -->
                     <SmartAlbumBadge albumId={album.id} />
 
+                    <!-- Local Omarchy layer: the To do album says how it works (managers/todo-manager); empty, it says
+                         how photos get there instead (below) -->
+                    {#if todoManager.isTodo(album.id) && album.assetCount > 0}
+                      <p class="ws-todo-note">{$t('todo_note')}</p>
+                    {/if}
+
                     <!-- rbac-6: owner-only — the server populates album.sharedSpaceLinks only for
                          the album owner, so this self-hides for every other caller. -->
                     <AlbumSharedSpaceLinks {album} />
@@ -1005,7 +1013,21 @@
                   </section>
                 {/if}
 
-                {#if album.assetCount === 0}
+                {#if album.assetCount === 0 && todoManager.isTodo(album.id)}
+                  <div class="ws-empty">
+                    <h2 class="ws-empty-title">{$t('todo_empty_title')}</h2>
+                    <p class="ws-empty-body">{$t('todo_empty_body')}</p>
+                    <div class="ws-empty-actions">
+                      <button
+                        type="button"
+                        class="ws-empty-action"
+                        onclick={() => (viewMode = AlbumPageViewMode.SELECT_ASSETS)}
+                      >
+                        {$t('select_photos')}
+                      </button>
+                    </div>
+                  </div>
+                {:else if album.assetCount === 0}
                   <section id="empty-album" class="mt-50 flex place-content-center place-items-center">
                     <div class="w-75">
                       <p class="text-xs uppercase dark:text-immich-dark-fg">{$t('add_photos')}</p>
@@ -1058,6 +1080,10 @@
              viewer can read is favoritable, including another member's in a shared space. -->
         <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleBulkFavorite}
         ></FavoriteAction>
+        <!-- Local Omarchy layer: in the To do album, Mark done puts the photos back where they came from (B) -->
+        {#if todoManager.isTodo(album.id) && assetMultiSelectManager.isAllUserOwned}
+          <span class="ws-primary-action contents"><TodoAction done /></span>
+        {/if}
         <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')} offset={{ x: 175, y: 25 }}>
           <DownloadAction menuItem filename={album.albumName} />
           {#if assetMultiSelectManager.isAllUserOwned}
@@ -1066,6 +1092,9 @@
             <ChangeDescription menuItem />
             <ChangeLocation menuItem />
             <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
+            {#if !todoManager.isTodo(album.id)}
+              <TodoAction menuItem onArchive={handleBulkArchive} />
+            {/if}
             <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
           {/if}
           {#if isEditor && assetMultiSelectManager.assets.length === 1}

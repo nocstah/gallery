@@ -772,6 +772,7 @@
   {timelineManager}
   {assetInteraction}
   {onEscape}
+  {album}
 />
 
 {#if timelineManager.months.length > 0}

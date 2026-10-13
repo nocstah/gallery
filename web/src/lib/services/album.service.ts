@@ -36,6 +36,7 @@ import { goto } from '$app/navigation';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+import { todoManager } from '$lib/managers/todo-manager.svelte';
 import AddUsersModal from '$lib/modals/AddUsersModal.svelte';
 import AlbumEditModal from '$lib/modals/AlbumEditModal.svelte';
 import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
@@ -192,6 +193,16 @@ export const addAssetsToAlbumWithOutcome = async (
 ): Promise<{ ok: boolean; addedIds: string[]; deniedIds: string[] }> => {
   const $t = await getFormatter();
 
+  // Local Omarchy layer: the To do album takes photos its own way, tagged and out of Photos too (managers/todo-manager);
+  // an upload into it (no notice) goes quietly
+  if (todoManager.isTodo(albumId) || (await todoManager.ready()) === albumId) {
+    const moved = await todoManager.move(
+      assetIds.map((id) => ({ id })),
+      { quiet: !notify },
+    );
+    return moved ? { ok: true, addedIds: moved.added, deniedIds: [] } : { ok: false, addedIds: [], deniedIds: [] };
+  }
+
   try {
     const results = await addToAlbum({ ...authManager.params, id: albumId, bulkIdsDto: { ids: assetIds } });
     if (notify) {
@@ -217,13 +228,31 @@ export const addAssetsToAlbumWithOutcome = async (
   }
 };
 
-export const addAssetsToAlbums = async (albumIds: string[], assetIds: string[], { notify }: { notify: boolean }) => {
+export const addAssetsToAlbums = async (
+  albumIds: string[],
+  assetIds: string[],
+  { notify }: { notify: boolean },
+): Promise<boolean> => {
   const $t = await getFormatter();
 
   // Delegate the single-album case so both paths share one implementation (and one event emit).
   if (albumIds.length === 1) {
     const { ok } = await addAssetsToAlbumWithOutcome(albumIds[0], assetIds, { notify });
     return ok;
+  }
+
+  // Local Omarchy layer: the To do album among several still takes its photos its own way
+  const todo = albumIds.find((id) => todoManager.isTodo(id));
+  if (todo) {
+    const [moved, rest] = await Promise.all([
+      addAssetsToAlbumWithOutcome(todo, assetIds, { notify }),
+      addAssetsToAlbums(
+        albumIds.filter((id) => id !== todo),
+        assetIds,
+        { notify },
+      ),
+    ]);
+    return moved.ok && rest;
   }
 
   try {

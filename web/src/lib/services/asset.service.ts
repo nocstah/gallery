@@ -57,6 +57,7 @@ import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
+import { todoManager } from '$lib/managers/todo-manager.svelte';
 import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.svelte';
 import AssetTagModal from '$lib/modals/AssetTagModal.svelte';
 import ProfileImageCropperModal from '$lib/modals/ProfileImageCropperModal.svelte';
@@ -145,7 +146,8 @@ export const getAssetBulkActions = (
     title: $t('remove_from_album'),
     icon: mdiImageRemoveOutline,
     shortcuts: [{ key: 'l', shift: true }],
-    $if: () => !!album && (isAlbumOwner || assetMultiSelectManager.isAllUserOwned),
+    // Local Omarchy layer: photos leave To do by Mark done, which also puts them back where they came from
+    $if: () => !!album && !todoManager.isTodo(album.id) && (isAlbumOwner || assetMultiSelectManager.isAllUserOwned),
     onAction: () => handleBulkRemoveAssetsFromAlbum(assetIds, album!),
   };
 
@@ -351,7 +353,8 @@ export const getAssetActions = (
     title: $t('remove_from_album'),
     icon: mdiImageRemoveOutline,
     shortcuts: [{ key: 'l', shift: true }],
-    $if: () => !!album && (isOwner || isAlbumOwner),
+    // Local Omarchy layer: photos leave To do by Mark done (managers/todo-manager)
+    $if: () => !!album && !todoManager.isTodo(album.id) && (isOwner || isAlbumOwner),
     onAction: () => handleRemoveAssetsFromAlbum([asset.id], album!),
   };
 

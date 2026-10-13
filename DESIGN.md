@@ -249,6 +249,9 @@ Settings and Administration › Settings are a column of rows on the page's own 
 ### Sharing and Shared links
 Sections on the page's gutter, each headed by its name with its count in data type over a hairline (`.ws-sharing-heading`); partners are rows of avatar, name and address; a shared link is a row with a hairline below, title in ink. With nothing shared they are empty states (no upstream illustration): shared albums offer Create album and Shared links, shared links say where links come from and point to Albums.
 
+### To do
+Photos set aside to deal with later live in the album "To do" (tagged "To do", archived so they leave Photos). Its sidebar row sits under Favorites with the waiting count at the row's end in data type (`.ws-nav-count`, muted; it inverts with the active row), and the album page lights that row, not Albums. Move to To do sits beside Favorite in the selection bar and in the right-click menu, Mark done is the To do album's primary (ink) selection action, and B does whichever applies; under the album's title one muted line says how it works (`.ws-todo-note`). Before anything is set aside, `/todo` is an empty state that names B and the right-click item.
+
 ### Filter Rail
 Same surface as the ground with a hairline edge; collapsed by default. Its search and reopen buttons are transparent with a hairline border and no shadow.
 

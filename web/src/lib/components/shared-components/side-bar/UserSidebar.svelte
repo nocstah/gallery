@@ -9,6 +9,7 @@
   import Sidebar from '$lib/components/sidebar/sidebar-shell.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
+  import { todoManager } from '$lib/managers/todo-manager.svelte';
   import { Route } from '$lib/route';
   import { recentAlbumsDropdown, recentSpacesDropdown } from '$lib/stores/preferences.store';
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
@@ -23,6 +24,8 @@
     mdiCardsOutline,
     mdiChat,
     mdiChatOutline,
+    mdiClipboardTextClock,
+    mdiClipboardTextClockOutline,
     mdiCompass,
     mdiCompassOutline,
     mdiDatabaseImportOutline,
@@ -122,9 +125,21 @@
 
   <SidebarNavItem title={$t('favorites')} href={Route.favorites()} icon={mdiHeartOutline} activeIcon={mdiHeart} />
 
+  <!-- Local Omarchy layer: photos set aside for later (managers/todo-manager); the album itself lights this row, not
+       Albums -->
+  <SidebarNavItem
+    title={$t('todo')}
+    href="/todo"
+    isActive={() => page.url.pathname === '/todo' || todoManager.isTodoPath(page.url.pathname)}
+    icon={mdiClipboardTextClockOutline}
+    activeIcon={mdiClipboardTextClock}
+    count={todoManager.count}
+  />
+
   <SidebarNavItem
     title={$t('albums')}
     href={Route.albums()}
+    isActive={() => page.url.pathname.startsWith(Route.albums()) && !todoManager.isTodoPath(page.url.pathname)}
     icon={{ icon: mdiImageAlbum, flipped: true }}
     bind:expanded={$recentAlbumsDropdown}
   >

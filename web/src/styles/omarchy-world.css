@@ -140,6 +140,19 @@ div:has(> [data-testid='admin-page-header']) {
 #sidebar a[class~='rounded-e-full'][data-active='true'] svg {
   color: inherit;
 }
+/* what waits on a row (To do), in data type at the row's end; it inverts with the active row */
+.ws-nav-count {
+  margin-inline-start: auto;
+  padding-inline-end: 1rem;
+  font-family: var(--ws-font-data);
+  font-size: var(--ws-text-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--immich-ui-muted);
+}
+#sidebar a[class~='rounded-e-full'][data-active='true'] .ws-nav-count {
+  color: inherit;
+  opacity: 0.7;
+}
 
 /* ---- tiles: every photo is a window. Hairline inactive border; the focused one (hover is
    focus here, like focus-follows-mouse) takes the active border in the theme accent ---- */
@@ -1588,4 +1601,13 @@ body.ws-dragging * {
   #asset-grid [data-thumbnail-focus-container] {
     animation: ws-tile-in 460ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
+}
+
+/* ---- To do (managers/todo-manager): the album says how it works, one muted line under its title ---- */
+.ws-todo-note {
+  margin-top: 0.5rem;
+  max-width: 60ch;
+  font-size: var(--ws-text-ui);
+  line-height: 1.5;
+  color: var(--immich-ui-muted);
 }

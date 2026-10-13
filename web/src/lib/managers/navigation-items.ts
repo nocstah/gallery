@@ -9,6 +9,7 @@ import {
   mdiBookshelf,
   mdiChartPie,
   mdiChatOutline,
+  mdiClipboardTextClockOutline,
   mdiClockOutline,
   mdiCog,
   mdiCompassOutline,
@@ -239,6 +240,16 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_favorites_description',
     icon: mdiHeart,
     route: '/favorites',
+    adminOnly: false,
+  },
+  // Local Omarchy layer: photos set aside for later (managers/todo-manager)
+  {
+    id: 'nav:userPages:todo',
+    category: 'userPages',
+    labelKey: 'todo',
+    descriptionKey: 'cmdk_nav_todo_description',
+    icon: mdiClipboardTextClockOutline,
+    route: '/todo',
     adminOnly: false,
   },
   {
