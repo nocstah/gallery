@@ -64,8 +64,9 @@
       case 'under': {
         return under !== null && value < under;
       }
+      // at least: so Under 3,000 and At least 3,000 leave no slip between them (four of exactly 3,000 had been missed)
       case 'over': {
-        return over !== null && value > over;
+        return over !== null && value >= over;
       }
       case 'between': {
         const low = Math.min(from ?? 0, to ?? Infinity);

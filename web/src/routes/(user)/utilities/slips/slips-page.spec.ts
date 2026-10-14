@@ -174,6 +174,25 @@ describe('Bank slips page', () => {
       ]);
     });
 
+    // under 3,000 to the Trash, then over 3,000 into QR, left four slips of exactly 3,000 in neither
+    it('files a slip of exactly the amount with At least, so Under and At least leave none between', async () => {
+      curatorMock.slips.mockResolvedValue({
+        album_id: 'qr-album',
+        slips: [
+          slip('just-under', { amount: 2999.99, checked: 2999.99, in_qr: false }),
+          slip('exactly', { amount: 3000, checked: 3000, in_qr: false }),
+        ],
+        reading: null,
+        auto: true,
+      });
+      await renderPage({ action: 'qr', mode: 'over', over: 3000 });
+
+      expect(screen.getByRole('button', { name: 'At least' })).toHaveAttribute('aria-pressed', 'true');
+      await fireEvent.click(applyButton());
+
+      expect(moveMock).toHaveBeenCalledWith([{ id: 'exactly', visibility: 'archive', ownerId: 'user-1' }]);
+    });
+
     it('switches between the two with the action buttons', async () => {
       await renderPage({ action: 'qr' });
 
