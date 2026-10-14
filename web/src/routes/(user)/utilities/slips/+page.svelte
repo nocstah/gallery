@@ -1,25 +1,27 @@
 <script lang="ts">
   // Local Omarchy layer: Utilities › Bank slips. The user: "where are all the qr codes stored ... they should all be in
   // one album similar to villa and todo called QR and i need a tool maybe under utilities that uses ai to read each
-  // one, check amount and if its under a certain amount I can set, lets say 3000 baht they will be deleted". Curator
-  // finds the slips and reads each amount twice, from Gallery's text recognition and with the vision model
-  // (jobs/slips.py); this page files them into QR (managers/special-albums) and sends the ones under the amount to the
-  // Trash, but only those whose two readings agree. A slip read once, or read two ways, waits under "Check these" for a
-  // person to look; one without an amount (a code to receive money) is never offered. The Trash keeps them 30 days,
-  // and Undo brings them back.
+  // one, check amount and if its under a certain amount I can set, lets say 3000 baht they will be deleted", then
+  // "any amount below 3000 delete it or move it to QR or any amount between 50,000 and 80,000 move it to QR or delete
+  // it so it should be flexible". Curator finds the slips and reads each amount twice, from Gallery's text recognition
+  // and with the vision model (jobs/slips.py). Here a rule picks what to do (into QR, managers/special-albums, or to the
+  // Trash) with which amounts (any, under, over, between), and a grid shows the slips it takes, each with its amount; a
+  // click leaves one out. A rule on amounts takes only slips whose two readings agree: one read once, or read two
+  // ways, waits under "Check these" until clicked in; a code without an amount never goes to the Trash. The Trash
+  // keeps them 30 days, and Undo brings back either move.
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { qrManager } from '$lib/managers/special-albums.svelte';
   import { undoManager } from '$lib/managers/undo-manager.svelte';
-  import { slipsThreshold } from '$lib/stores/preferences.store';
+  import { slipsRule, type SlipsRule } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl } from '$lib/utils';
   import { curator, waitForJob, type Slip, type SlipList } from '$lib/utils/curator';
   import { handleError } from '$lib/utils/handle-error';
   import { toastUndoable } from '$lib/utils/undoable';
   import { AssetMediaSize, deleteAssets as trashAssets, restoreAssets } from '@immich/sdk';
-  import { modalManager } from '@immich/ui';
-  import { onMount } from 'svelte';
+  import { Field, modalManager, Switch } from '@immich/ui';
+  import { onMount, untrack } from 'svelte';
   import { locale, t } from 'svelte-i18n';
   import { SvelteSet } from 'svelte/reactivity';
   import type { PageData } from './$types';
@@ -32,30 +34,86 @@
 
   let list = $state<SlipList>();
   let offline = $state(false);
-  let filing = $state(false);
-  let trashing = $state(false);
+  let busy = $state(false);
   let reading = $state<{ done: number; total: number }>();
-  /** agreeing slips under the amount that stay anyway, and ones to check that a person added */
-  const kept = new SvelteSet<string>();
+  /** slips the rule takes that a person left out, and ones to check that a person added */
+  const left = new SvelteSet<string>();
   const added = new SvelteSet<string>();
 
+  const rule = $derived($slipsRule);
   const mine = $derived(
     (list?.slips ?? []).filter((slip) => authManager.authenticated && slip.owner_id === authManager.user.id),
   );
-  const outside = $derived(mine.filter((slip) => !slip.in_qr));
-  const threshold = $derived(Math.max(0, Number($slipsThreshold) || 0));
-  const lowest = (slip: Slip) => Math.min(slip.amount ?? Infinity, slip.checked ?? Infinity);
-  const under = $derived(mine.filter((slip) => slip.status === 'agree' && slip.amount! < threshold));
+  const inQr = $derived(mine.filter((slip) => slip.in_qr).length);
+
+  /** whether an amount is one the rule names */
+  const fits = (value: number | null, { mode, under, over, from, to }: SlipsRule) => {
+    if (value === null) {
+      return false;
+    }
+    switch (mode) {
+      case 'any': {
+        return true;
+      }
+      case 'under': {
+        return under !== null && value < under;
+      }
+      case 'over': {
+        return over !== null && value > over;
+      }
+      case 'between': {
+        const low = Math.min(from ?? 0, to ?? Infinity);
+        const high = Math.max(from ?? 0, to ?? Infinity);
+        return value >= low && value <= high;
+      }
+    }
+  };
+
+  // into QR: the slips it does not hold yet (any amount: every one of them, whatever it says); to the Trash: any slip
+  const candidates = $derived(rule.action === 'qr' ? mine.filter((slip) => !slip.in_qr) : mine);
+  const everything = $derived(rule.action === 'qr' && rule.mode === 'any');
+  const taken = $derived(
+    everything ? candidates : candidates.filter((slip) => slip.status === 'agree' && fits(slip.amount, rule)),
+  );
   const check = $derived(
-    mine.filter((slip) => (slip.status === 'differ' || slip.status === 'single') && lowest(slip) < threshold),
+    everything
+      ? []
+      : candidates.filter(
+          (slip) =>
+            (slip.status === 'differ' || slip.status === 'single') &&
+            (fits(slip.amount, rule) || fits(slip.checked, rule)),
+        ),
   );
   const going = $derived([
-    ...under.filter((slip) => !kept.has(slip.id)),
+    ...taken.filter((slip) => !left.has(slip.id)),
     ...check.filter((slip) => added.has(slip.id)),
   ]);
-  const over = $derived(mine.filter((slip) => slip.status !== 'none' && lowest(slip) >= threshold).length);
-  const none = $derived(mine.filter((slip) => slip.status === 'none').length);
+  const alreadyInQr = $derived(
+    rule.action === 'qr'
+      ? mine.filter((slip) => slip.in_qr && (everything || (slip.status === 'agree' && fits(slip.amount, rule)))).length
+      : 0,
+  );
+  const noAmount = $derived(mine.filter((slip) => slip.status === 'none').length);
   const unread = $derived(mine.filter((slip) => slip.checked === null && slip.status !== 'none').length);
+
+  // a new rule starts with nothing left out or added
+  const ruleKey = $derived(`${rule.action}:${rule.mode}`);
+  $effect(() => {
+    if (ruleKey) {
+      untrack(() => {
+        left.clear();
+        added.clear();
+      });
+    }
+  });
+
+  const modes = ['any', 'under', 'over', 'between'] as const;
+  const modeLabel = {
+    any: 'slips_mode_any',
+    under: 'slips_mode_under',
+    over: 'slips_mode_over',
+    between: 'slips_mode_between',
+  } as const;
 
   /** ฿ in every language (English would write THB); satang only where there are any, never on a total */
   const money = (value: number | null, whole = false) => {
@@ -76,6 +134,26 @@
       return new Intl.NumberFormat(undefined, options).format(value);
     }
   };
+
+  const summary = $derived.by(() => {
+    const values = {
+      count: taken.length,
+      total: money(
+        taken.reduce((sum, slip) => sum + (slip.amount ?? 0), 0),
+        true,
+      ),
+      amount: money(rule.mode === 'over' ? rule.over : rule.under),
+      from: money(Math.min(rule.from ?? 0, rule.to ?? Infinity)),
+      to: money(rule.to === null ? null : Math.max(rule.from ?? 0, rule.to)),
+    };
+    const key = {
+      any: 'slips_match_any',
+      under: 'slips_match_under',
+      over: 'slips_match_over',
+      between: 'slips_match_between',
+    } as const;
+    return $t(key[rule.mode], { values });
+  });
 
   const thumbnail = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
   const preview = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Preview });
@@ -110,23 +188,13 @@
     }
   };
 
-  // into QR the special album's own way: album, tag and out of Photos (they are archived already), with its toast
-  // and undo
-  const fileAll = async () => {
-    filing = true;
-    try {
-      await qrManager.move(outside.map(({ id, visibility, owner_id }) => ({ id, visibility, ownerId: owner_id })));
-      await load();
-    } finally {
-      filing = false;
-    }
+  // into QR the special album's own way: album, tag and out of Photos, with its toast and undo
+  const toQr = async (slips: Slip[]) => {
+    await qrManager.move(slips.map(({ id, visibility, owner_id }) => ({ id, visibility, ownerId: owner_id })));
   };
 
-  const trash = async () => {
-    const ids = going.map(({ id }) => id);
-    if (ids.length === 0 || trashing) {
-      return;
-    }
+  const toTrash = async (slips: Slip[]) => {
+    const ids = slips.map(({ id }) => id);
     const confirmed = await modalManager.showDialog({
       title: $t('slips_trash', { values: { count: ids.length } }),
       prompt: $t('slips_trash_confirm', { values: { count: ids.length } }),
@@ -134,7 +202,6 @@
     if (!confirmed) {
       return;
     }
-    trashing = true;
     try {
       await trashAssets({ assetBulkDeleteDto: { ids, force: false } });
       const label = $t('slips_trashed', { values: { count: ids.length } });
@@ -147,17 +214,43 @@
         $t('errors.unable_to_restore_assets'),
       );
       toastUndoable(label, entry);
-      kept.clear();
-      added.clear();
-      await load();
     } catch (error) {
       handleError(error, $t('errors.unable_to_delete_assets'));
+    }
+  };
+
+  const apply = async () => {
+    const chosen = going;
+    if (chosen.length === 0 || busy) {
+      return;
+    }
+    busy = true;
+    try {
+      await (rule.action === 'qr' ? toQr(chosen) : toTrash(chosen));
+      left.clear();
+      added.clear();
+      await load();
     } finally {
-      trashing = false;
+      busy = false;
     }
   };
 
   const toggle = (set: SvelteSet<string>, id: string) => (set.has(id) ? set.delete(id) : set.add(id));
+
+  // new slips and QR codes into QR as they arrive (Curator's qr.watch), or left for this page
+  const setAuto = async (enabled: boolean) => {
+    if (!list) {
+      return;
+    }
+    const before = list.auto;
+    list.auto = enabled;
+    try {
+      await curator.setSlipsAuto(enabled);
+    } catch (error) {
+      list.auto = before;
+      handleError(error, $t('ai_inbox_offline_title'));
+    }
+  };
 
   // resting the pointer on a slip shows it large, so its amount can be read off the slip itself
   let peek = $state<string>();
@@ -200,9 +293,16 @@
       {/if}
     </span>
     {#if !out && !readings}
-      <span class="ws-slip-keep">{$t('slips_keep')}</span>
+      <span class="ws-slip-keep">{$t('slips_left_out')}</span>
     {/if}
   </button>
+{/snippet}
+
+{#snippet amountField(field: 'under' | 'over' | 'from' | 'to')}
+  <span class="ws-slips-amount">
+    <input type="number" min="0" step="100" inputmode="numeric" bind:value={$slipsRule[field]} />
+    <span aria-hidden="true">฿</span>
+  </span>
 {/snippet}
 
 <UserPageLayout title={data.meta.title}>
@@ -219,20 +319,15 @@
     {:else}
       <section class="ws-sharing-section" aria-labelledby="slips-qr">
         <h2 class="ws-sharing-heading" id="slips-qr">
-          {$t('qr')} <span class="ws-inbox-meta">{mine.length - outside.length} / {mine.length}</span>
+          {$t('qr')} <span class="ws-inbox-meta">{inQr} / {mine.length}</span>
           <a class="ws-sharing-heading-action" href={qrManager.route}>{$t('view')}</a>
         </h2>
-        {#if outside.length > 0}
-          <p class="ws-sharing-none">{$t('slips_outside', { values: { count: outside.length } })}</p>
-          <div class="ws-empty-actions">
-            <button type="button" class="ws-empty-action" disabled={filing} onclick={fileAll}>
-              {$t('slips_file', { values: { count: outside.length } })}
-            </button>
-            {#if filing}<LoadingSpinner />{/if}
-          </div>
-        {:else}
-          <p class="ws-sharing-none">{$t('slips_all_filed')}</p>
-        {/if}
+        <div class="ws-slips-auto">
+          <Field label={$t('slips_auto')}>
+            <Switch checked={list.auto} onCheckedChange={setAuto} data-testid="slips-auto" />
+          </Field>
+          <p class="ws-sharing-none">{$t('slips_auto_hint')}</p>
+        </div>
       </section>
 
       <section class="ws-sharing-section" aria-labelledby="slips-amounts">
@@ -248,32 +343,49 @@
           {/if}
         </h2>
 
-        <label class="ws-slips-threshold">
-          <span>{$t('slips_threshold')}</span>
-          <input type="number" min="0" step="100" inputmode="numeric" bind:value={$slipsThreshold} />
-          <span>฿</span>
-        </label>
+        <div class="ws-slips-rule">
+          <div class="ws-seg" role="group" aria-label={$t('slips_action')}>
+            <button
+              type="button"
+              aria-pressed={rule.action === 'qr'}
+              onclick={() => ($slipsRule = { ...rule, action: 'qr' })}>{$t('qr_move')}</button
+            >
+            <button
+              type="button"
+              aria-pressed={rule.action === 'trash'}
+              onclick={() => ($slipsRule = { ...rule, action: 'trash' })}>{$t('slips_action_trash')}</button
+            >
+          </div>
+          <div class="ws-seg" role="group" aria-label={$t('slips_range')}>
+            {#each modes as mode (mode)}
+              <button type="button" aria-pressed={rule.mode === mode} onclick={() => ($slipsRule = { ...rule, mode })}>
+                {$t(modeLabel[mode])}
+              </button>
+            {/each}
+          </div>
+          {#if rule.mode === 'under'}
+            {@render amountField('under')}
+          {:else if rule.mode === 'over'}
+            {@render amountField('over')}
+          {:else if rule.mode === 'between'}
+            {@render amountField('from')}
+            <span>{$t('slips_and')}</span>
+            {@render amountField('to')}
+          {/if}
+        </div>
 
-        {#if under.length > 0}
+        {#if taken.length > 0}
           <p class="ws-sharing-none">
-            {$t('slips_under', {
-              values: {
-                count: under.length,
-                amount: money(threshold),
-                total: money(
-                  under.reduce((sum, slip) => sum + (slip.amount ?? 0), 0),
-                  true,
-                ),
-              },
-            })}
+            {summary}
+            {everything ? $t('slips_click_hint') : $t('slips_match_hint')}
           </p>
           <div class="ws-slips-grid">
-            {#each under as slip (slip.id)}
-              {@render tile(slip, !kept.has(slip.id), () => toggle(kept, slip.id))}
+            {#each taken as slip (slip.id)}
+              {@render tile(slip, !left.has(slip.id), () => toggle(left, slip.id))}
             {/each}
           </div>
         {:else}
-          <p class="ws-sharing-none">{$t('slips_none_under', { values: { amount: money(threshold) } })}</p>
+          <p class="ws-sharing-none">{$t('slips_none_match')}</p>
         {/if}
 
         {#if check.length > 0}
@@ -288,20 +400,25 @@
           </div>
         {/if}
 
-        <p class="ws-inbox-meta ws-slips-stay">
-          {$t('slips_stay', { values: { over, none, amount: money(threshold) } })}
-        </p>
+        {#if alreadyInQr > 0}
+          <p class="ws-inbox-meta ws-slips-stay">{$t('slips_in_qr_already', { values: { count: alreadyInQr } })}</p>
+        {:else if rule.action === 'trash' && noAmount > 0}
+          <p class="ws-inbox-meta ws-slips-stay">{$t('slips_never', { values: { count: noAmount } })}</p>
+        {/if}
 
         <div class="ws-empty-actions">
           <button
             type="button"
-            class="ws-empty-action ws-slips-trash"
-            disabled={going.length === 0 || trashing}
-            onclick={trash}
+            class="ws-empty-action"
+            class:ws-slips-trash={rule.action === 'trash'}
+            disabled={going.length === 0 || busy}
+            onclick={apply}
           >
-            {$t('slips_trash', { values: { count: going.length } })}
+            {rule.action === 'qr'
+              ? $t('slips_move_qr', { values: { count: going.length } })
+              : $t('slips_trash', { values: { count: going.length } })}
           </button>
-          {#if trashing}<LoadingSpinner />{/if}
+          {#if busy}<LoadingSpinner />{/if}
         </div>
       </section>
     {/if}
@@ -313,20 +430,35 @@
 {/if}
 
 <style>
+  .ws-slips-auto {
+    display: grid;
+    gap: 0.4rem;
+    max-width: 60ch;
+  }
   .ws-slips-loading {
     display: flex;
     justify-content: center;
     padding: 4rem 0;
   }
-  .ws-slips-threshold {
-    display: inline-flex;
+  .ws-slips-rule {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.6rem 1rem;
     margin-bottom: calc(var(--ws-gap) * 1.2);
     font-size: var(--ws-text-ui);
     font-weight: 600;
   }
-  .ws-slips-threshold input {
+  /* the bar's segmented control, here at the start of the row rather than pushed to the end */
+  .ws-slips-rule .ws-seg {
+    margin-inline-start: 0;
+  }
+  .ws-slips-amount {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .ws-slips-amount input {
     width: 8rem;
     padding: 0.35rem 0.6rem;
     border: 1px solid var(--ws-hairline);
@@ -335,7 +467,7 @@
     font-family: var(--ws-font-data);
     font-variant-numeric: tabular-nums;
   }
-  .ws-slips-threshold input:focus-visible {
+  .ws-slips-amount input:focus-visible {
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: calc(var(--ws-border) * -1);
   }
@@ -374,7 +506,7 @@
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: calc(var(--ws-border) * -1);
   }
-  /* a slip that stays (kept, or not added) steps back; the ones going keep their colour */
+  /* a slip that stays (left out, or not added) steps back; the ones going keep their colour */
   .ws-slip-out img {
     opacity: 0.35;
     filter: grayscale(1);
@@ -412,7 +544,6 @@
   .ws-slips-trash:hover {
     background: color-mix(in oklab, var(--immich-ui-danger, #c62828) 85%, black);
   }
-  .ws-slips-trash:disabled,
   .ws-empty-action:disabled {
     opacity: 0.45;
     cursor: not-allowed;

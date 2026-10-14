@@ -139,8 +139,11 @@ export type Slip = {
   in_qr: boolean;
 };
 
-/** Every slip, the QR album when there is one, and a reading under way (its job id). */
-export type SlipList = { album_id: string | null; slips: Slip[]; reading: number | null };
+/**
+ * Every slip, the QR album when there is one, a reading under way (its job id), and whether new slips and QR codes are
+ * filed into QR as they arrive (Curator's qr.watch).
+ */
+export type SlipList = { album_id: string | null; slips: Slip[]; reading: number | null; auto: boolean };
 
 export type Health = {
   gallery: { ok: boolean; owner: string | null };
@@ -439,6 +442,9 @@ export const curator = {
   smartStop: (id: number) => call<void>(`/smart-albums/${id}`, { method: 'DELETE' }),
   /** bank slips and payment QR codes with their amounts, for Utilities › Bank slips */
   slips: () => call<SlipList>('/slips'),
+  /** the switch for filing new slips and QR codes into QR as they arrive */
+  setSlipsAuto: (enabled: boolean) =>
+    call<{ auto: boolean }>('/slips/auto', { method: 'PUT', body: JSON.stringify({ enabled }) }),
 };
 
 /**

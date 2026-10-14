@@ -4,14 +4,14 @@ import type { Component } from 'svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
-import { slipsThreshold } from '$lib/stores/preferences.store';
+import { slipsRule, type SlipsRule } from '$lib/stores/preferences.store';
 import type { Slip } from '$lib/utils/curator';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { userAdminFactory } from '@test-data/factories/user-factory';
 import SlipsPage from './+page.svelte';
 
 const { curatorMock, moveMock, sdkMock, showDialog } = vi.hoisted(() => ({
-  curatorMock: { slips: vi.fn(), startJob: vi.fn() },
+  curatorMock: { slips: vi.fn(), startJob: vi.fn(), setSlipsAuto: vi.fn() },
   moveMock: vi.fn(),
   sdkMock: { deleteAssets: vi.fn(), restoreAssets: vi.fn() },
   showDialog: vi.fn(),
@@ -49,13 +49,18 @@ const SLIPS = [
   slip('small'),
   slip('small-too', { amount: 2999.99, checked: 2999.99 }),
   slip('big', { amount: 30_000, checked: 30_000 }),
+  slip('mid', { amount: 60_000, checked: 60_000, in_qr: false }),
+  slip('mid-filed', { amount: 70_000, checked: 70_000 }),
   slip('read-two-ways', { amount: 390, checked: 3900, status: 'differ' }),
-  slip('code', { amount: null, checked: null, status: 'none', bank: 'PromptPay' }),
-  slip('not-filed', { amount: 50, checked: 50, in_qr: false, visibility: 'archive' }),
-  slip('someone-elses', { owner_id: 'user-2' }),
+  slip('code', { amount: null, checked: null, status: 'none', bank: 'PromptPay', in_qr: false }),
+  slip('not-filed', { amount: 50, checked: 50, in_qr: false }),
+  slip('someone-elses', { owner_id: 'user-2', in_qr: false }),
 ];
 
-const renderPage = async () => {
+const RULE: SlipsRule = { action: 'trash', mode: 'under', under: 3000, over: 50_000, from: 50_000, to: 80_000 };
+
+const renderPage = async (rule: Partial<SlipsRule> = {}) => {
+  slipsRule.set({ ...RULE, ...rule });
   const props = { data: { meta: { title: 'Bank slips' } } };
   render(TestWrapper as Component<{ component: typeof SlipsPage; componentProps: typeof props }>, {
     component: SlipsPage,
@@ -64,7 +69,8 @@ const renderPage = async () => {
   await screen.findByRole('heading', { name: /Amounts/ });
 };
 
-const trashButton = () => screen.getByRole('button', { name: /to Trash$/ });
+const applyButton = () => screen.getByRole('button', { name: /^Move \d+ slips? to (Trash|QR)$/ });
+const trashedIds = () => sdkMock.deleteAssets.mock.calls[0][0].assetBulkDeleteDto.ids.toSorted();
 
 describe('Bank slips page', () => {
   beforeAll(async () => {
@@ -76,66 +82,111 @@ describe('Bank slips page', () => {
   });
 
   beforeEach(() => {
-    slipsThreshold.set(3000);
-    curatorMock.slips.mockResolvedValue({ album_id: 'qr-album', slips: SLIPS, reading: null });
-    moveMock.mockReset().mockResolvedValue({ added: ['not-filed'] });
+    curatorMock.slips.mockResolvedValue({ album_id: 'qr-album', slips: SLIPS, reading: null, auto: true });
+    curatorMock.setSlipsAuto.mockReset().mockResolvedValue({ auto: false });
+    moveMock.mockReset().mockResolvedValue({ added: [] });
     sdkMock.deleteAssets.mockReset().mockResolvedValue(undefined);
     showDialog.mockReset().mockResolvedValue(true);
   });
 
-  it('offers only the slips both readings agree are under the amount, never a code without one', async () => {
-    await renderPage();
+  describe('to the Trash', () => {
+    it('takes only the slips both readings agree are under the amount, never a code without one', async () => {
+      await renderPage();
 
-    // small, small-too and not-filed: the one read two ways waits under "Check these", the big one and the code stay
-    expect(trashButton()).toHaveTextContent('Move 3 slips to Trash');
-    expect(screen.getByRole('heading', { name: /Check these/ })).toBeInTheDocument();
-    expect(screen.getByText(/1 slip at or above ฿3,000 stays/)).toBeInTheDocument();
+      // small, small-too and not-filed; the one read two ways waits under "Check these"
+      expect(applyButton()).toHaveTextContent('Move 3 slips to Trash');
+      expect(screen.getByRole('heading', { name: /Check these/ })).toBeInTheDocument();
+      expect(screen.getByText('Codes without an amount (1) are never sent to the Trash.')).toBeInTheDocument();
+    });
+
+    it('sends them to the Trash, not deleted for good, once confirmed', async () => {
+      await renderPage();
+
+      await fireEvent.click(applyButton());
+
+      await waitFor(() => expect(sdkMock.deleteAssets).toHaveBeenCalledTimes(1));
+      expect(sdkMock.deleteAssets.mock.calls[0][0].assetBulkDeleteDto.force).toBe(false);
+      expect(trashedIds()).toEqual(['not-filed', 'small', 'small-too']);
+    });
+
+    it('sends nothing when the question is answered no', async () => {
+      showDialog.mockResolvedValue(false);
+      await renderPage();
+
+      await fireEvent.click(applyButton());
+
+      await waitFor(() => expect(showDialog).toHaveBeenCalled());
+      expect(sdkMock.deleteAssets).not.toHaveBeenCalled();
+    });
+
+    it('takes a range: between two amounts, both ends included', async () => {
+      await renderPage({ mode: 'between', from: 60_000, to: 70_000 });
+
+      await fireEvent.click(applyButton());
+
+      await waitFor(() => expect(sdkMock.deleteAssets).toHaveBeenCalled());
+      expect(trashedIds()).toEqual(['mid', 'mid-filed']);
+    });
+
+    it('takes what is over an amount', async () => {
+      await renderPage({ mode: 'over', over: 20_000 });
+
+      expect(applyButton()).toHaveTextContent('Move 3 slips to Trash');
+    });
+
+    it('leaves out a slip clicked among those it takes, and adds one checked among those read two ways', async () => {
+      await renderPage();
+
+      // a slip's tile (its name carries its amount), not the rule's pressed buttons
+      await fireEvent.click(screen.getAllByRole('button', { pressed: true, name: /฿/ })[0]);
+      expect(applyButton()).toHaveTextContent('Move 2 slips to Trash');
+
+      await fireEvent.click(screen.getByRole('button', { pressed: false, name: /฿390/ }));
+      expect(applyButton()).toHaveTextContent('Move 3 slips to Trash');
+    });
   });
 
-  it('sends what it offers to the Trash, not deleted for good, once confirmed', async () => {
-    await renderPage();
+  describe('into QR', () => {
+    it('files the slips in range that QR does not hold yet, and says how many it holds already', async () => {
+      await renderPage({ action: 'qr', mode: 'between' });
 
-    await fireEvent.click(trashButton());
+      expect(screen.getByText('1 more is in QR already.')).toBeInTheDocument();
+      await fireEvent.click(applyButton());
 
-    await waitFor(() => expect(sdkMock.deleteAssets).toHaveBeenCalledTimes(1));
-    const { ids, force } = sdkMock.deleteAssets.mock.calls[0][0].assetBulkDeleteDto;
-    expect(force).toBe(false);
-    expect(ids.toSorted()).toEqual(['not-filed', 'small', 'small-too']);
+      expect(moveMock).toHaveBeenCalledWith([{ id: 'mid', visibility: 'archive', ownerId: 'user-1' }]);
+      expect(sdkMock.deleteAssets).not.toHaveBeenCalled();
+    });
+
+    it('files every slip at any amount, codes without one too', async () => {
+      await renderPage({ action: 'qr', mode: 'any' });
+
+      expect(applyButton()).toHaveTextContent('Move 3 slips to QR');
+      await fireEvent.click(applyButton());
+
+      expect(moveMock.mock.calls[0][0].map(({ id }: { id: string }) => id).toSorted()).toEqual([
+        'code',
+        'mid',
+        'not-filed',
+      ]);
+    });
+
+    it('switches between the two with the action buttons', async () => {
+      await renderPage({ action: 'qr' });
+
+      await fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }));
+
+      expect(applyButton()).toHaveTextContent('Move 3 slips to Trash');
+    });
   });
 
-  it('sends nothing when the question is answered no', async () => {
-    showDialog.mockResolvedValue(false);
+  // the user: "whenever a new image is added, there should be a detector ... we can have an option for that"
+  it('turns automatic filing of new slips and QR codes off and on', async () => {
     await renderPage();
+    const toggle = screen.getByRole('switch', { name: /File new slips and QR codes into QR automatically/ });
+    expect(toggle).toBeChecked();
 
-    await fireEvent.click(trashButton());
+    await fireEvent.click(toggle);
 
-    await waitFor(() => expect(showDialog).toHaveBeenCalled());
-    expect(sdkMock.deleteAssets).not.toHaveBeenCalled();
-  });
-
-  it('keeps a slip clicked among the agreeing ones, and adds one checked among those read two ways', async () => {
-    await renderPage();
-    const tiles = screen.getAllByRole('button', { pressed: true });
-
-    await fireEvent.click(tiles[0]);
-    expect(trashButton()).toHaveTextContent('Move 2 slips to Trash');
-
-    await fireEvent.click(screen.getByRole('button', { pressed: false, name: /฿390/ }));
-    expect(trashButton()).toHaveTextContent('Move 3 slips to Trash');
-  });
-
-  it('follows the amount it is given', async () => {
-    slipsThreshold.set(100);
-    await renderPage();
-
-    expect(trashButton()).toHaveTextContent('Move 1 slip to Trash');
-  });
-
-  it('files the slips QR does not hold yet into QR, with what it knows of them', async () => {
-    await renderPage();
-
-    await fireEvent.click(screen.getByRole('button', { name: 'Move it to QR' }));
-
-    expect(moveMock).toHaveBeenCalledWith([{ id: 'not-filed', visibility: 'archive', ownerId: 'user-1' }]);
+    await waitFor(() => expect(curatorMock.setSlipsAuto).toHaveBeenCalledWith(false));
   });
 });

@@ -166,8 +166,24 @@ export const alwaysLoadOriginalVideo = persisted<boolean>('always-load-original-
  */
 export const searchIncludeArchived = persisted<boolean>('omarchy-search-include-archived', false, {});
 
-/** Local Omarchy layer: Utilities › Bank slips sends slips under this many baht to the Trash ("lets say 3000 baht"). */
-export const slipsThreshold = persisted<number>('omarchy-slips-threshold', 3000, {});
+/**
+ * Local Omarchy layer: Utilities › Bank slips' rule, what to do with which amounts ("any amount below 3000 delete it or
+ * move it to QR or any amount between 50,000 and 80,000 move it to QR or delete it"). Each range keeps its own numbers.
+ */
+export type SlipsRule = {
+  action: 'qr' | 'trash';
+  mode: 'any' | 'under' | 'over' | 'between';
+  under: number | null;
+  over: number | null;
+  from: number | null;
+  to: number | null;
+};
+
+export const slipsRule = persisted<SlipsRule>(
+  'omarchy-slips-rule',
+  { action: 'qr', mode: 'under', under: 3000, over: 50_000, from: 50_000, to: 80_000 },
+  {},
+);
 
 /**
  * Whether the asset-viewer Info panel crops each person's avatar out of the photo on screen
