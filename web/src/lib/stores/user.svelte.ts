@@ -3,6 +3,7 @@ import type {
   ServerAboutResponseDto,
   ServerStorageResponseDto,
   ServerVersionHistoryResponseDto,
+  SharedSpaceAlbumFolderDto,
   SharedSpaceLinkedAlbumDto,
   SharedSpaceResponseDto,
 } from '@immich/sdk';
@@ -16,6 +17,8 @@ interface UserInteractions {
   recentAlbums?: AlbumResponseDto[];
   recentSpaces?: SharedSpaceResponseDto[];
   spaceAlbums?: Record<string, SharedSpaceLinkedAlbumDto[]>;
+  /** Local Omarchy layer: each space's album folders, for its tree in the sidebar */
+  spaceFolders?: Record<string, SharedSpaceAlbumFolderDto[]>;
   versions?: ServerVersionHistoryResponseDto[];
   aboutInfo?: ServerAboutResponseDto;
   serverInfo?: ServerStorageResponseDto;
@@ -25,6 +28,7 @@ const defaultUserInteraction: UserInteractions = {
   recentAlbums: undefined,
   recentSpaces: undefined,
   spaceAlbums: undefined,
+  spaceFolders: undefined,
   versions: undefined,
   aboutInfo: undefined,
   serverInfo: undefined,
@@ -68,6 +72,11 @@ const dropSpaceAlbumCache = (spaceId: string) => {
 
   const { [spaceId]: _, ...rest } = userInteraction.spaceAlbums;
   userInteraction.spaceAlbums = rest;
+  if (userInteraction.spaceFolders) {
+    userInteraction.spaceFolders = Object.fromEntries(
+      Object.entries(userInteraction.spaceFolders).filter(([id]) => id !== spaceId),
+    );
+  }
 };
 
 const reset = () => {

@@ -30,6 +30,8 @@ import {
   mdiExitToApp,
   mdiUpload,
   mdiCogOutline,
+  mdiEyeOffOutline,
+  mdiEyeOutline,
   mdiFolderMoveOutline,
 } from '@mdi/js';
 import { type MessageFormatter } from 'svelte-i18n';
@@ -42,6 +44,7 @@ import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import AddUsersModal from '$lib/modals/AddUsersModal.svelte';
 import AlbumEditModal from '$lib/modals/AlbumEditModal.svelte';
 import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
+import AlbumShareModal from '$lib/modals/AlbumShareModal.svelte';
 import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
 import SpacePickerModal from '$lib/modals/SpacePickerModal.svelte';
 import { Route } from '$lib/route';
@@ -136,6 +139,15 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     onAction: () => albumFolders.pickFolder(album.id),
   };
 
+  // Local Omarchy layer: Gallery's "hide this album from my timeline", from the same menus (managers/album-folders)
+  const hiddenFromTimeline = albumFolders.hiddenFromTimeline(album.id);
+  const ToggleTimeline: ActionItem = {
+    title: hiddenFromTimeline ? $t('space_albums_show_in_my_timeline') : $t('space_albums_hide_from_my_timeline'),
+    icon: hiddenFromTimeline ? mdiEyeOutline : mdiEyeOffOutline,
+    $if: () => isOwned,
+    onAction: () => albumFolders.toggleTimeline(album),
+  };
+
   const Options: ActionItem = {
     title: $t('options'),
     icon: mdiCogOutline,
@@ -147,10 +159,11 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     title: $t('share'),
     icon: mdiShareVariantOutline,
     $if: () => isOwned,
-    onAction: () => modalManager.show(AlbumOptionsModal, { album }),
+    // Local Omarchy layer (plan A): the Share sheet (people, links, Spaces); the album's settings stay in Options
+    onAction: () => modalManager.show(AlbumShareModal, { album }),
   };
 
-  return { AddUsers, CreateSharedLink, Delete, Download, Edit, Leave, MoveToFolder, Options, Share };
+  return { AddUsers, CreateSharedLink, Delete, Download, Edit, Leave, MoveToFolder, Options, Share, ToggleTimeline };
 };
 
 export const getAlbumAssetActions = ($t: MessageFormatter, album: AlbumResponseDto, asset: AssetResponseDto) => {

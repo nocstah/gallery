@@ -2,8 +2,9 @@
   import { page } from '$app/state';
   import BottomInfo from '$lib/components/shared-components/side-bar/BottomInfo.svelte';
   import RailStorage from '$lib/components/shared-components/side-bar/rail-storage.svelte';
-  import RecentAlbums from '$lib/components/shared-components/side-bar/RecentAlbums.svelte';
   import RecentSpaces from '$lib/components/shared-components/side-bar/recent-spaces.svelte';
+  import SharedLinksRow from '$lib/components/shared-components/side-bar/shared-links-row.svelte';
+  import AlbumsTree from '$lib/components/sidebar/albums-tree.svelte';
   import SidebarNavGroup from '$lib/components/sidebar/sidebar-nav-group.svelte';
   import SidebarNavItem from '$lib/components/sidebar/sidebar-nav-item.svelte';
   import Sidebar from '$lib/components/sidebar/sidebar-shell.svelte';
@@ -15,8 +16,6 @@
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
   import {
     mdiAccount,
-    mdiAccountGroup,
-    mdiAccountGroupOutline,
     mdiAccountOutline,
     mdiArchiveArrowDown,
     mdiArchiveArrowDownOutline,
@@ -35,7 +34,6 @@
     mdiImageMultipleOutline,
     mdiInbox,
     mdiInboxOutline,
-    mdiLink,
     mdiLock,
     mdiLockOutline,
     mdiMap,
@@ -73,23 +71,6 @@
     activeIcon={mdiImageMultiple}
   />
 
-  <!-- Exact match, not SidebarNavItem's default `startsWith`: the rows this expands into (spaces, and
-       their albums) highlight themselves, so a prefix match would light up two rows at once. -->
-  <SidebarNavItem
-    title={$t('spaces')}
-    href={Route.spaces()}
-    isActive={() => page.url.pathname === Route.spaces()}
-    icon={mdiAccountGroupOutline}
-    activeIcon={mdiAccountGroup}
-    bind:expanded={$recentSpacesDropdown}
-  >
-    {#snippet items()}
-      <span in:fly={{ y: -20 }} class="hidden md:block">
-        <RecentSpaces />
-      </span>
-    {/snippet}
-  </SidebarNavItem>
-
   {#if featureFlagsManager.value.search}
     <!-- Local Omarchy layer: a compass, since the bar's Search button already uses the magnifier -->
     <SidebarNavItem title={$t('explore')} href={Route.explore()} icon={mdiCompassOutline} activeIcon={mdiCompass} />
@@ -106,18 +87,6 @@
   {#if authManager.preferences.people.enabled && authManager.preferences.people.sidebarWeb}
     <SidebarNavItem title={$t('people')} href={Route.people()} icon={mdiAccountOutline} activeIcon={mdiAccount} />
   {/if}
-
-  {#if authManager.preferences.sharedLinks.enabled && authManager.preferences.sharedLinks.sidebarWeb}
-    <SidebarNavItem title={$t('shared_links')} href={Route.sharedLinks()} icon={mdiLink} />
-  {/if}
-
-  <!-- Local Omarchy layer: the share arrow (as in Ctrl+K), so Sharing no longer looks like Spaces in the rail -->
-  <SidebarNavItem
-    title={$t('sharing')}
-    href={Route.sharing()}
-    icon={mdiShareVariantOutline}
-    activeIcon={mdiShareVariant}
-  />
 
   <SidebarNavGroup title={$t('library')} />
 
@@ -136,18 +105,44 @@
     />
   {/each}
 
+  <!-- Local Omarchy layer: Albums opens into the albums' tree (folders and albums, like the Mac's My Albums), whose
+       rows light the folder or album on screen; Albums itself is lit at the top of the Albums page, or for any album
+       while its tree is closed -->
   <SidebarNavItem
     title={$t('albums')}
     href={Route.albums()}
     isActive={() =>
       page.url.pathname.startsWith(Route.albums()) &&
-      specialAlbums.every((special) => !special.isAlbumPath(page.url.pathname))}
+      specialAlbums.every((special) => !special.isAlbumPath(page.url.pathname)) &&
+      (!$recentAlbumsDropdown ||
+        collapsed ||
+        (page.url.pathname === Route.albums() && !page.url.searchParams.get('folder')))}
     icon={{ icon: mdiImageAlbum, flipped: true }}
     bind:expanded={$recentAlbumsDropdown}
   >
     {#snippet items()}
       <span in:fly={{ y: -20 }} class="hidden md:block">
-        <RecentAlbums />
+        <AlbumsTree />
+      </span>
+    {/snippet}
+  </SidebarNavItem>
+
+  <!-- Local Omarchy layer (plan A, "Let's go with A"): one Shared section beside Albums, as the Mac keeps Shared Albums
+       beside My Albums. It opens the Shared page (shared albums, Spaces, partners) and holds the Spaces (Library
+       excepted: it is the Albums tree's engine), each opening into its own folder tree, then the public links. It
+       replaces the separate Spaces, Sharing and Shared links rows; the share arrow, as in Ctrl+K. -->
+  <SidebarNavItem
+    title={$t('shared')}
+    href={Route.sharing()}
+    isActive={() => page.url.pathname === Route.sharing() || page.url.pathname === Route.spaces()}
+    icon={mdiShareVariantOutline}
+    activeIcon={mdiShareVariant}
+    bind:expanded={$recentSpacesDropdown}
+  >
+    {#snippet items()}
+      <span in:fly={{ y: -20 }} class="hidden md:block">
+        <RecentSpaces />
+        <SharedLinksRow />
       </span>
     {/snippet}
   </SidebarNavItem>

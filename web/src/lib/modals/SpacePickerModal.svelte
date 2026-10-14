@@ -1,5 +1,6 @@
 <script lang="ts">
   import { initInput } from '$lib/actions/focus';
+  import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { handleError } from '$lib/utils/handle-error';
   import { getAllSpaces, SharedSpaceRole, type SharedSpaceResponseDto } from '@immich/sdk';
@@ -19,7 +20,8 @@
   let selectedRowIndex = $state(0);
 
   const currentUserId = $derived(authManager.authenticated ? (authManager.user?.id ?? null) : null);
-  const writableSpaces = $derived(spaces.filter((space) => canWrite(space)));
+  // Local Omarchy layer: never Library, the Albums tree's engine (filing goes through Move to folder)
+  const writableSpaces = $derived(spaces.filter((space) => canWrite(space) && !isLibrarySpace(space)));
   const filteredSpaces = $derived(
     writableSpaces.filter((space) => space.name.toLowerCase().includes(search.trim().toLowerCase())),
   );

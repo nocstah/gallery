@@ -1,9 +1,11 @@
-import { AssetOrder, AssetTypeEnum } from '@immich/sdk';
+import { AssetOrder, AssetTypeEnum, AssetVisibility } from '@immich/sdk';
 import { applyTextFilters, buildFilterContext, type FilterState } from '$lib/components/filter-panel/filter-panel';
 import { handleRemoveFilter } from '$lib/utils/filter-remove';
 
 export function buildSpaceTimelineOptions(spaceId: string, filters: FilterState): Record<string, unknown> {
-  const base: Record<string, unknown> = { spaceId, withStacked: true };
+  // Local Omarchy layer: archived photos stay out of a Space's Photos as they stay out of Photos (bank slips and
+  // receipts in a Space's albums led its Photos as the newest); the albums themselves still show them
+  const base: Record<string, unknown> = { spaceId, withStacked: true, visibility: AssetVisibility.Timeline };
 
   if (filters.personIds.length > 0) {
     base.spacePersonIds = filters.personIds;

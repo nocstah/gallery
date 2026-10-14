@@ -1,5 +1,5 @@
 import type { SharedSpaceMemberResponseDto, SharedSpaceResponseDto } from '@immich/sdk';
-import { SharedSpaceRole, UserAvatarColor } from '@immich/sdk';
+import { SharedSpaceRole } from '@immich/sdk';
 import { modalManager, toastManager } from '@immich/ui';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
@@ -116,6 +116,14 @@ describe('space [spaceId] +layout.svelte', () => {
   it('hides ＋ Add photos for a viewer', () => {
     renderLayout(SharedSpaceRole.Viewer);
     expect(screen.queryByTestId('space-add-photos')).not.toBeInTheDocument();
+  });
+
+  // Local Omarchy layer: leaving the Space through Photos in the sidebar hands the layout the next page's data (no
+  // space) a moment before it unmounts; reading `space.name` then threw and the navigation stalled on the Space.
+  it('keeps its own Space while the next page, which has none, takes over', async () => {
+    const { rerender } = renderLayout(SharedSpaceRole.Editor);
+    await rerender({ data: { meta: { title: 'Photos' } } as never });
+    expect(screen.getByTestId('space-overflow')).toBeInTheDocument();
   });
 
   it('records an add-photos intent and navigates to the Photos route when ＋ is clicked', async () => {
@@ -379,37 +387,38 @@ describe('space [spaceId] +layout.svelte', () => {
     });
   });
 
-  it('renders the tab bar with badge counts when chrome is shown', () => {
-    renderLayout(SharedSpaceRole.Owner);
-    expect(screen.getByTestId('space-tabs')).toBeInTheDocument();
-    expect(screen.getByTestId('space-tab-photos')).toHaveTextContent('35');
+  // Local Omarchy layer: no cover over the page; the Space's sections sit in the bar beside its name
+  it('puts the sections in the bar beside the name, with the album count', () => {
+    renderLayout(SharedSpaceRole.Owner, { linkedAlbums: [{ id: 'a1' }, { id: 'a2' }] });
+    const trailing = screen.getByTestId('layout-description-trailing');
+    expect(within(trailing).getByTestId('space-tabs')).toBeInTheDocument();
+    expect(within(trailing).getByTestId('space-tab-albums')).toHaveTextContent('2');
   });
 
-  it('renders the cover (SpaceHero) when chrome is shown', () => {
+  it('draws no cover over the page', () => {
     renderLayout(SharedSpaceRole.Owner);
-    expect(screen.getByTestId('hero-title')).toHaveTextContent('Trip');
+    expect(screen.queryByTestId('space-hero')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hero-title')).not.toBeInTheDocument();
   });
 
-  // #1028: a phone gives the space roughly 520 CSS px of page height. The tall cover alone eats
-  // 220 of them, which — stacked with the app bar, tabs and the search header — left the results
-  // grid a sliver. A search is a results view, so the cover steps down to its compact size the
-  // moment results are on screen, before the reader scrolls at all.
-  it('shrinks the cover to compact while the photos tab is showing search results', () => {
-    mockPage.url = new URL('https://gallery.test/spaces/s1/photos?q=beach');
-    renderLayout(SharedSpaceRole.Owner);
-    expect(screen.getByTestId('space-hero').style.height).toBe('96px');
+  it('shows a Space of one only the sections that mean something to one person, and keeps inviting in the menu', async () => {
+    renderLayout(SharedSpaceRole.Owner, { linkedAlbums: [{ id: 'a1' }] });
+    expect(screen.queryByTestId('space-tab-members')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('space-tab-activity')).not.toBeInTheDocument();
+    await clickOverflowOption('invite_people');
+    expect(gotoMock).toHaveBeenCalledWith('/spaces/s1/members');
   });
 
-  // The counterpart: browsing the space is a cover-first view, and must stay that way.
-  it('keeps the cover tall on the photos tab when no search is running', () => {
-    mockPage.url = new URL('https://gallery.test/spaces/s1/photos');
-    renderLayout(SharedSpaceRole.Owner);
-    expect(screen.getByTestId('space-hero').style.height).toBe('220px');
-  });
-
-  it('passes a per-space colored gradient to the cover derived from space.color', () => {
-    renderLayout(SharedSpaceRole.Owner, { space: space({ color: UserAvatarColor.Pink }) });
-    expect(screen.getByTestId('hero-gradient')).toHaveClass('from-pink-300', 'to-pink-500');
+  it('leads a Space of one with its albums, its photos at /photos, where adding photos goes', async () => {
+    const { spaceUiManager } = await import('$lib/managers/space-ui-manager.svelte');
+    mockPage.url = new URL('https://gallery.test/spaces/s1/albums');
+    renderLayout(SharedSpaceRole.Owner, { linkedAlbums: [{ id: 'a1' }] });
+    const tabs = within(screen.getByTestId('space-tabs')).getAllByRole('link');
+    expect(tabs[0]).toHaveAttribute('data-testid', 'space-tab-albums');
+    expect(screen.getByTestId('space-tab-photos')).toHaveAttribute('href', '/spaces/s1/photos');
+    screen.getByTestId('space-add-photos').click();
+    expect(spaceUiManager.intent).toBe('add-assets');
+    expect(gotoMock).toHaveBeenCalledWith('/spaces/s1/photos');
   });
 
   it('defers entirely to the child on a detail route — no nested shell chrome', () => {
@@ -428,8 +437,6 @@ describe('space [spaceId] +layout.svelte', () => {
     renderLayout(SharedSpaceRole.Owner);
     expect(screen.queryByTestId('space-tabs')).not.toBeInTheDocument();
     expect(screen.queryByTestId('space-add-photos')).not.toBeInTheDocument();
-    // The cover (SpaceHero) is gated by the same showChrome flag.
-    expect(screen.queryByTestId('hero-title')).not.toBeInTheDocument();
   });
 
   describe('edit space', () => {

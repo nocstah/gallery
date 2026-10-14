@@ -1,4 +1,4 @@
-import { AssetOrder } from '@immich/sdk';
+import { AssetOrder, AssetVisibility } from '@immich/sdk';
 import { describe, expect, it } from 'vitest';
 import { createFilterState } from '$lib/components/filter-panel/filter-panel';
 import { buildAlbumAssetPickerOptions, buildAlbumTimelineOptions } from '$lib/utils/album-filter-options';
@@ -10,6 +10,13 @@ describe('space vs album timeline options — stack collapse (#751)', () => {
 
     expect(options.spaceId).toBe('space-1');
     expect(options.withStacked).toBe(true);
+  });
+
+  // Local Omarchy layer: the archived bank slips in Library's albums led its Photos as the newest photos
+  it('leaves archived photos out of a space timeline, as Photos does', () => {
+    const options = buildSpaceTimelineOptions('space-1', createFilterState());
+
+    expect(options.visibility).toBe(AssetVisibility.Timeline);
   });
 
   it('space-album detail does NOT collapse stacks (no withStacked) (E25)', () => {

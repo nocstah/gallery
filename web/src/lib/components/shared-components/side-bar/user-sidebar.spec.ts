@@ -50,6 +50,16 @@ vi.mock('$lib/components/shared-components/side-bar/recent-spaces.svelte', async
   return { default: module.default };
 });
 
+vi.mock('$lib/components/shared-components/side-bar/shared-links-row.svelte', async () => {
+  const module = await import('@test-data/mocks/noop-component.svelte');
+  return { default: module.default };
+});
+
+vi.mock('$lib/components/sidebar/albums-tree.svelte', async () => {
+  const module = await import('@test-data/mocks/noop-component.svelte');
+  return { default: module.default };
+});
+
 vi.mock('$lib/managers/auth-manager.svelte', () => ({
   authManager: mocks.authManager,
 }));
@@ -88,34 +98,40 @@ describe('UserSidebar', () => {
     sidebarMocks.sidebarModeStore.railExpanded = false;
   });
 
-  // The Spaces row expands into the individual spaces (and their albums), which highlight
-  // themselves. SidebarNavItem's default `pathname.startsWith('/spaces')` would keep the
-  // Spaces heading lit at the same time, showing two selected rows at once.
-  describe('Spaces selected state', () => {
-    const spacesLink = () => screen.getByRole('link', { name: /^spaces$/i });
+  // Local Omarchy layer (plan A): one Shared row, beside Albums, in place of Spaces, Sharing and Shared links. It
+  // expands into the Spaces and the links, which highlight themselves, so it is lit only on its own page and on the
+  // list of Spaces, never alongside one of its rows.
+  describe('Shared selected state', () => {
+    const sharedLink = () => screen.getByRole('link', { name: /^shared$/i });
 
-    it('marks Spaces selected on the spaces list page', () => {
+    it('replaces the separate Spaces and Sharing rows', () => {
+      render(UserSidebar);
+
+      expect(screen.queryByRole('link', { name: /^spaces$/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /^sharing$/i })).not.toBeInTheDocument();
+      expect(sharedLink()).toHaveAttribute('href', '/sharing');
+    });
+
+    it('marks Shared selected on its own page and on the list of Spaces', () => {
+      mockPage.url = new URL('https://gallery.test/sharing');
+      const { unmount } = render(UserSidebar);
+      expect(sharedLink()).toHaveAttribute('data-active', 'true');
+      unmount();
+
       mockPage.url = new URL('https://gallery.test/spaces');
-
       render(UserSidebar);
-
-      expect(spacesLink()).toHaveAttribute('data-active', 'true');
+      expect(sharedLink()).toHaveAttribute('data-active', 'true');
     });
 
-    it('does not mark Spaces selected once a space is open', () => {
+    it('does not mark Shared selected once a space or the links are open', () => {
       mockPage.url = new URL('https://gallery.test/spaces/space-1');
+      const { unmount } = render(UserSidebar);
+      expect(sharedLink()).toHaveAttribute('data-active', 'false');
+      unmount();
 
+      mockPage.url = new URL('https://gallery.test/shared-links');
       render(UserSidebar);
-
-      expect(spacesLink()).toHaveAttribute('data-active', 'false');
-    });
-
-    it('does not mark Spaces selected once a space album is open', () => {
-      mockPage.url = new URL('https://gallery.test/spaces/space-1/albums/album-1');
-
-      render(UserSidebar);
-
-      expect(spacesLink()).toHaveAttribute('data-active', 'false');
+      expect(sharedLink()).toHaveAttribute('data-active', 'false');
     });
   });
 
@@ -163,7 +179,8 @@ describe('UserSidebar', () => {
       render(UserSidebar);
 
       expect(screen.getByTestId('rail-storage-stub')).toBeInTheDocument();
-      expect(screen.getAllByTestId('noop-component')).toHaveLength(2);
+      // the sub-trees' stand-ins: the Albums tree, the Spaces and the links under Shared
+      expect(screen.getAllByTestId('noop-component')).toHaveLength(3);
     });
 
     it('renders BottomInfo when the rail is hover-expanded', () => {
@@ -174,7 +191,8 @@ describe('UserSidebar', () => {
       render(UserSidebar);
 
       expect(screen.queryByTestId('rail-storage-stub')).not.toBeInTheDocument();
-      expect(screen.getAllByTestId('noop-component')).toHaveLength(3);
+      // the three sub-trees' stand-ins, and BottomInfo's
+      expect(screen.getAllByTestId('noop-component')).toHaveLength(4);
     });
 
     it('renders BottomInfo in the expanded layout', () => {
@@ -183,7 +201,8 @@ describe('UserSidebar', () => {
       render(UserSidebar);
 
       expect(screen.queryByTestId('rail-storage-stub')).not.toBeInTheDocument();
-      expect(screen.getAllByTestId('noop-component')).toHaveLength(3);
+      // the three sub-trees' stand-ins, and BottomInfo's
+      expect(screen.getAllByTestId('noop-component')).toHaveLength(4);
     });
   });
 });

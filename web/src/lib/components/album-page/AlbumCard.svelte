@@ -3,7 +3,8 @@
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { getShortDateRange } from '$lib/utils/date-time';
   import { type AlbumResponseDto } from '@immich/sdk';
-  import { ContextMenuButton, type MenuItems } from '@immich/ui';
+  import { ContextMenuButton, Icon, type MenuItems } from '@immich/ui';
+  import { mdiEyeOffOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   type Props = {
@@ -13,6 +14,8 @@
     showItemCount?: boolean;
     preload?: boolean;
     contextMenuItems?: MenuItems;
+    /** Local Omarchy layer: hidden from my timeline (managers/album-folders), marked as on the Space's own card */
+    hiddenFromTimeline?: boolean;
   };
 
   const {
@@ -22,6 +25,7 @@
     showItemCount = false,
     preload = false,
     contextMenuItems,
+    hiddenFromTimeline = false,
   }: Props = $props();
 </script>
 
@@ -45,7 +49,11 @@
     </div>
   {/if}
 
-  <AlbumCover {album} {preload} class="transition-all duration-300 hover:shadow-lg" />
+  <AlbumCover
+    {album}
+    {preload}
+    class="transition-all duration-300 hover:shadow-lg {hiddenFromTimeline ? 'opacity-60' : ''}"
+  />
 
   <div class="mt-4">
     <p
@@ -86,5 +94,15 @@
         <p>{$t('shared')}</p>
       {/if}
     </span>
+
+    {#if hiddenFromTimeline}
+      <p
+        class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400"
+        data-testid="album-hidden-from-timeline"
+      >
+        <Icon icon={mdiEyeOffOutline} size="14" />
+        {$t('space_albums_hidden_from_timeline')}
+      </p>
+    {/if}
   </div>
 </div>

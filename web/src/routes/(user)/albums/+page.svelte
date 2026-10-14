@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { scrollMemory } from '$lib/actions/scroll-memory';
+  import OnEvents from '$lib/components/OnEvents.svelte';
   import AlbumsControls from './AlbumsControls.svelte';
   import Albums from '$lib/components/album-page/AlbumsList.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
@@ -139,6 +140,16 @@
 
 <!-- the album cards are links: a drag that starts on one of mine carries the album, for a folder or a crumb to take -->
 <svelte:document ondragstart={dragAlbum} ondragend={() => setActiveDragPayload(null)} />
+
+<!-- a new album made here while a folder is open goes into that folder, as on the Mac (Create album, or the empty
+     state's); made anywhere else it waits at the top, where every album outside the folders sits -->
+<OnEvents
+  onAlbumCreate={(album) => {
+    if (folderId) {
+      void albumFolders.moveAlbum(album.id, folderId);
+    }
+  }}
+/>
 
 <UserPageLayout title={data.meta.title} use={[[scrollMemory, { routeStartsWith: Route.albums() }]]}>
   {#snippet buttons()}

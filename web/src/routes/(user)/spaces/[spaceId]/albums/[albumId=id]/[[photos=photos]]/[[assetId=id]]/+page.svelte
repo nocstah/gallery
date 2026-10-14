@@ -90,8 +90,17 @@
 
   let { data }: Props = $props();
 
-  const space: SharedSpaceResponseDto = $derived(data.space);
-  const members: SharedSpaceMemberResponseDto[] = $derived(data.members);
+  // Local Omarchy layer: the next page's data arrives a moment before this page unmounts (see the Space layout), so
+  // the title in the bar keeps reading this Space's data meanwhile.
+  let kept: PageData | undefined;
+  const current = $derived.by(() => {
+    if (data.space) {
+      kept = data;
+    }
+    return kept ?? data;
+  });
+  const space: SharedSpaceResponseDto = $derived(current.space);
+  const members: SharedSpaceMemberResponseDto[] = $derived(current.members);
   let album = $state<AlbumResponseDto>(data.album);
 
   // Mode: 'browse' shows the album timeline; 'add' shows the asset picker
@@ -534,7 +543,8 @@
   // re-seeded by hand, or the URL changes while the page keeps rendering the album we came from.
   // Mirrors the identical effect on the global album route.
   $effect(() => {
-    if (data.album.id === album.id) {
+    // no album: this page is being left for another one (see `current` above)
+    if (!data.album || data.album.id === album.id) {
       return;
     }
 

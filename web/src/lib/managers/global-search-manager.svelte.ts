@@ -32,6 +32,7 @@ import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import type { FilterState } from '$lib/components/filter-panel/filter-panel';
 import { createFilterState } from '$lib/components/filter-panel/filter-panel';
+import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
 import { Route } from '$lib/route';
@@ -883,7 +884,9 @@ export class GlobalSearchManager {
 
   private async fetchSpacesCatalog(): Promise<void> {
     try {
-      this.spacesCache = await getAllSpaces({ signal: this.closeSignal });
+      // Local Omarchy layer: Library holds the album folders and is found under Albums (managers/album-folders)
+      const spaces = await getAllSpaces({ signal: this.closeSignal });
+      this.spacesCache = spaces.filter((space) => !isLibrarySpace(space));
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
         return;

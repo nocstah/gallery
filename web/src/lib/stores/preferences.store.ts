@@ -172,7 +172,12 @@ export const cropFacesFromAsset = persisted<boolean>('crop-faces-from-asset', tr
 export const recentAlbumsDropdown = persisted<boolean>('recent-albums-open', true, {});
 export const recentSpacesDropdown = persisted<boolean>('recent-spaces-open', true, {});
 
-export const recentSpaceAlbumsExpanded = persisted<Record<string, boolean>>('recent-space-albums-open', {}, {});
+// Local Omarchy layer: a space now opens into its folder tree, not three recent albums; a new key so every space
+// starts closed (Library's tree is also under Albums)
+export const recentSpaceAlbumsExpanded = persisted<Record<string, boolean>>('space-tree-open', {}, {});
+
+/** Local Omarchy layer: the open folders of the sidebar's album trees, keyed `<tree>:<folder id>` */
+export const albumTreeOpen = persisted<Record<string, boolean>>('album-tree-open', {}, {});
 
 export const isSpaceAlbumsExpanded = (state: Record<string, boolean>, spaceId: string): boolean => state[spaceId];
 

@@ -122,7 +122,7 @@
     mdiPlus,
     mdiPresentationPlay,
   } from '@mdi/js';
-  import { onDestroy, untrack } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
   import { fly } from 'svelte/transition';
   import { SvelteMap } from 'svelte/reactivity';
@@ -248,6 +248,9 @@
     await albumFolders.ready();
     await goto(Route.albums({ folder: albumFolders.folderOf(album.id) }));
   };
+
+  // ...and the ⋮ menu's "hide this album from my timeline" says which way it goes, on a page opened straight from a link
+  onMount(() => void albumFolders.ready());
 
   const refreshAlbum = async () => {
     album = await getAlbumInfo({ id: album.id });
@@ -1203,6 +1206,7 @@
                   />
                 {/if}
                 <ActionMenuItem action={Actions.MoveToFolder} />
+                <ActionMenuItem action={Actions.ToggleTimeline} />
                 <ActionMenuItem action={Actions.Delete} />
                 <ActionMenuItem action={Actions.Leave} />
               </ButtonContextMenu>

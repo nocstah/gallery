@@ -1,0 +1,258 @@
+<script lang="ts" module>
+  /** An album in a tree: where it sits (`folderId`, null at the top) is all the tree needs to place it. */
+  export interface TreeAlbum {
+    id: string;
+    name: string;
+    folderId: string | null;
+    /** shared with people or by a link: marked at the row's end, as the Mac marks a shared album */
+    shared?: boolean;
+  }
+</script>
+
+<script lang="ts">
+  // Local Omarchy layer: albums in their folders as a tree, the way the Mac's Photos sidebar shows them ("should be
+  // like mac with tree structure thats collapsable.. expandable"). A folder opens and closes on its chevron and opens
+  // its page on its name; the open folders are remembered per tree; the folder or album on screen is lit and the
+  // folders above it open so it can be seen.
+  import { albumTreeOpen } from '$lib/stores/preferences.store';
+  import type { SharedSpaceAlbumFolderDto } from '@immich/sdk';
+  import { Icon } from '@immich/ui';
+  import {
+    mdiChevronDown,
+    mdiChevronRight,
+    mdiFolderOpenOutline,
+    mdiFolderOutline,
+    mdiImageAlbum,
+    mdiShareVariantOutline,
+  } from '@mdi/js';
+  import { untrack } from 'svelte';
+  import { t } from 'svelte-i18n';
+  import { get } from 'svelte/store';
+
+  interface Props {
+    /** Which tree this is ('albums', 'space:<id>'): each remembers its own open folders */
+    scope: string;
+    folders: SharedSpaceAlbumFolderDto[];
+    albums: TreeAlbum[];
+    folderHref: (folderId: string) => string;
+    albumHref: (albumId: string) => string;
+    activeFolderId?: string | null;
+    activeAlbumId?: string | null;
+    label: string;
+  }
+
+  let { scope, folders, albums, folderHref, albumHref, activeFolderId, activeAlbumId, label }: Props = $props();
+
+  // by name the way a person numbers them ("2" before "10", years in order), as on the Albums page
+  const byName = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
+  const parentOf = $derived(new Map(folders.map(({ id, parentId }) => [id, parentId ?? null])));
+
+  // a folder whose parent is gone, or an album whose folder is, sits at the top rather than nowhere
+  const placed = (folderId: string | null | undefined) => (folderId && parentOf.has(folderId) ? folderId : null);
+
+  // what sits at each level, keyed by the folder ('' is the top), each level by name
+  const group = <T,>(items: T[], at: (item: T) => string | null, name: (item: T) => string) => {
+    const levels: Record<string, T[]> = {};
+    for (const item of items) {
+      (levels[at(item) ?? ''] ??= []).push(item);
+    }
+    for (const level of Object.values(levels)) {
+      level.sort((a, b) => byName(name(a), name(b)));
+    }
+    return levels;
+  };
+  const foldersIn = $derived(
+    group(
+      folders,
+      (folder) => placed(folder.parentId),
+      (folder) => folder.name,
+    ),
+  );
+  const albumsIn = $derived(
+    group(
+      albums,
+      (album) => placed(album.folderId),
+      (album) => album.name,
+    ),
+  );
+
+  const key = (folderId: string) => `${scope}:${folderId}`;
+  const isOpen = (folderId: string) => !!$albumTreeOpen[key(folderId)];
+  const toggle = (folderId: string) =>
+    albumTreeOpen.update((open) => ({ ...open, [key(folderId)]: !open[key(folderId)] }));
+
+  // What comes on screen is never hidden in a closed folder: the folders above it open, once, when it arrives (a
+  // folder closed by hand afterwards stays closed). A chain is never longer than Gallery's depth cap, so a broken
+  // tree cannot loop.
+  $effect(() => {
+    const album = activeAlbumId ? albums.find(({ id }) => id === activeAlbumId) : undefined;
+    const chain: string[] = [];
+    let folderId = activeFolderId ? parentOf.get(activeFolderId) : placed(album?.folderId);
+    while (folderId && chain.length < 32) {
+      chain.push(key(folderId));
+      folderId = parentOf.get(folderId) ?? null;
+    }
+    untrack(() => {
+      const open = get(albumTreeOpen);
+      const closed = chain.filter((k) => !open[k]);
+      if (closed.length > 0) {
+        albumTreeOpen.update((state) => ({ ...state, ...Object.fromEntries(closed.map((k) => [k, true])) }));
+      }
+    });
+  });
+</script>
+
+{#snippet level(parentId: string | null, depth: number)}
+  {#each foldersIn[parentId ?? ''] ?? [] as folder (folder.id)}
+    {@const open = isOpen(folder.id)}
+    {@const filled = (foldersIn[folder.id]?.length ?? 0) + (albumsIn[folder.id]?.length ?? 0) > 0}
+    {@const active = folder.id === activeFolderId}
+    <li>
+      <div class="ws-tree-row" style:--depth={depth} data-active={active}>
+        {#if filled}
+          <button
+            type="button"
+            class="ws-tree-toggle"
+            aria-expanded={open}
+            aria-controls="ws-tree-{scope}-{folder.id}"
+            aria-label={open ? $t('collapse') : $t('expand')}
+            onclick={() => toggle(folder.id)}
+          >
+            <Icon icon={open ? mdiChevronDown : mdiChevronRight} size="16" aria-hidden={true} />
+          </button>
+        {:else}
+          <span class="ws-tree-toggle" aria-hidden="true"></span>
+        {/if}
+        <a
+          class="ws-tree-link"
+          href={folderHref(folder.id)}
+          title={folder.name}
+          aria-current={active ? 'page' : undefined}
+          data-testid="tree-folder-{folder.id}"
+        >
+          <Icon
+            icon={open && filled ? mdiFolderOpenOutline : mdiFolderOutline}
+            size="18"
+            class="ws-tree-icon"
+            aria-hidden={true}
+          />
+          <span class="ws-tree-name">{folder.name}</span>
+        </a>
+      </div>
+      {#if open && filled}
+        <ul id="ws-tree-{scope}-{folder.id}" class="ws-tree-group">
+          {@render level(folder.id, depth + 1)}
+        </ul>
+      {/if}
+    </li>
+  {/each}
+  {#each albumsIn[parentId ?? ''] ?? [] as album (album.id)}
+    {@const active = album.id === activeAlbumId}
+    <li>
+      <div class="ws-tree-row" style:--depth={depth} data-active={active}>
+        <span class="ws-tree-toggle" aria-hidden="true"></span>
+        <a
+          class="ws-tree-link"
+          href={albumHref(album.id)}
+          title={album.name}
+          aria-current={active ? 'page' : undefined}
+          data-testid="tree-album-{album.id}"
+        >
+          <Icon icon={mdiImageAlbum} size="18" flipped class="ws-tree-icon" aria-hidden={true} />
+          <span class="ws-tree-name">{album.name}</span>
+          {#if album.shared}
+            <Icon icon={mdiShareVariantOutline} size="14" class="ws-tree-shared" aria-label={$t('shared')} />
+          {/if}
+        </a>
+      </div>
+    </li>
+  {/each}
+{/snippet}
+
+<ul class="ws-tree" aria-label={label} data-testid="album-tree-{scope}">
+  {@render level(null, 0)}
+</ul>
+
+<style>
+  .ws-tree,
+  .ws-tree-group {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .ws-tree {
+    padding-block: 2px 6px;
+  }
+  /* a row starts under its parent's label, one step further in for each level, on the sidebar's own pill inset */
+  .ws-tree-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-height: 2rem;
+    margin-inline: 0.75rem;
+    padding-inline: calc(1.25rem + var(--depth) * 1rem) 0.5rem;
+    border-radius: var(--ws-radius);
+    color: var(--immich-ui-dark);
+  }
+  .ws-tree-row:hover {
+    background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
+  }
+  /* what is on screen inverts, like the sidebar's own active row and the Omarchy bar's active workspace */
+  .ws-tree-row[data-active='true'] {
+    background: var(--immich-ui-dark);
+    color: var(--immich-ui-light);
+  }
+  .ws-tree-toggle {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: var(--ws-radius);
+    color: var(--immich-ui-muted);
+  }
+  button.ws-tree-toggle:hover {
+    color: var(--immich-ui-dark);
+  }
+  .ws-tree-row[data-active='true'] .ws-tree-toggle {
+    color: inherit;
+  }
+  .ws-tree-link {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding-block: 0.3rem;
+    color: inherit;
+    font-size: var(--ws-text-ui);
+    font-weight: 500;
+  }
+  .ws-tree-link :global(.ws-tree-icon) {
+    flex: none;
+    color: var(--immich-ui-muted);
+  }
+  .ws-tree-row[data-active='true'] .ws-tree-link :global(.ws-tree-icon) {
+    color: inherit;
+  }
+  .ws-tree-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-tree-link :global(.ws-tree-shared) {
+    flex: none;
+    margin-inline-start: auto;
+    color: var(--immich-ui-muted);
+  }
+  .ws-tree-row[data-active='true'] .ws-tree-link :global(.ws-tree-shared) {
+    color: inherit;
+  }
+  .ws-tree-toggle:focus-visible,
+  .ws-tree-link:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: 1px;
+    border-radius: var(--ws-radius);
+  }
+</style>

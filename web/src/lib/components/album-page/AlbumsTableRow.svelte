@@ -2,13 +2,14 @@
   import { goto } from '$app/navigation';
   import { dateFormats } from '$lib/constants';
   import Portal from '$lib/elements/Portal.svelte';
+  import { albumFolders } from '$lib/managers/album-folders.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { Route } from '$lib/route';
   import { getAlbumActions } from '$lib/services/album.service';
   import { locale } from '$lib/stores/preferences.store';
   import { AlbumUserRole, type AlbumResponseDto } from '@immich/sdk';
   import { Icon, menuManager } from '@immich/ui';
-  import { mdiShareVariantOutline } from '@mdi/js';
+  import { mdiEyeOffOutline, mdiShareVariantOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   type Props = {
@@ -19,8 +20,8 @@
 
   let contextMenuAnchor: HTMLDivElement | undefined = $state();
   const items = $derived.by(() => {
-    const { Edit, MoveToFolder, Share, Download, Leave, Delete } = getAlbumActions($t, album);
-    return [Edit, MoveToFolder, Share, Download, Leave, Delete];
+    const { Edit, MoveToFolder, ToggleTimeline, Share, Download, Leave, Delete } = getAlbumActions($t, album);
+    return [Edit, MoveToFolder, ToggleTimeline, Share, Download, Leave, Delete];
   });
 
   const dateLocaleString = (dateString: string) => {
@@ -58,6 +59,14 @@
           : $t('shared_by_user', {
               values: { user: album.albumUsers[0].user.name },
             })}
+      />
+    {/if}
+    {#if albumFolders.hiddenFromTimeline(album.id)}
+      <Icon
+        icon={mdiEyeOffOutline}
+        size="16"
+        class="ms-1 inline opacity-70"
+        title={$t('space_albums_hidden_from_timeline')}
       />
     {/if}
   </td>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
   import { handleError } from '$lib/utils/handle-error';
   import { unlinkAlbum, type AlbumResponseDto } from '@immich/sdk';
   import { IconButton, modalManager } from '@immich/ui';
@@ -30,7 +31,12 @@
     removedSpaceIds.clear();
   });
 
-  let links = $derived((album.sharedSpaceLinks ?? []).filter((link) => !removedSpaceIds.has(link.spaceId)));
+  // Local Omarchy layer: Library is not listed: unlinking it here would quietly take the album out of its folder
+  let links = $derived(
+    (album.sharedSpaceLinks ?? []).filter(
+      (link) => !removedSpaceIds.has(link.spaceId) && !isLibrarySpace({ id: link.spaceId, name: link.spaceName }),
+    ),
+  );
 
   const handleUnlink = async (spaceId: string, spaceName: string) => {
     const confirmed = await modalManager.showDialog({

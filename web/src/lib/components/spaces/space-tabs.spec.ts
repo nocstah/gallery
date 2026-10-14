@@ -111,4 +111,20 @@ describe('SpaceTabs', () => {
     render(SpaceTabs, { ...base, isAdmin: true });
     expect(screen.getByTestId('space-tab-libraries')).toHaveAttribute('aria-current', 'page');
   });
+  // Local Omarchy layer: a Space of one (Library) shows what means something to one person, led by its albums
+  it('shows a Space of one only Albums, Photos and Map: Members, Activity and an empty Libraries wait', () => {
+    render(SpaceTabs, { ...base, memberCount: 1, personal: true, albumsFirst: true, isAdmin: true });
+    expect(screen.queryByTestId('space-tab-members')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('space-tab-activity')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('space-tab-libraries')).not.toBeInTheDocument();
+    expect(screen.getByTestId('space-tab-map')).toBeInTheDocument();
+  });
+
+  it('leads with Albums when they come first, and gives Photos its own segment', () => {
+    mockPage.url = new URL('https://gallery.test/spaces/s1/photos');
+    render(SpaceTabs, { ...base, personal: true, albumsFirst: true });
+    expect(screen.getAllByRole('link')[0]).toHaveAttribute('data-testid', 'space-tab-albums');
+    expect(screen.getByTestId('space-tab-photos')).toHaveAttribute('href', '/spaces/s1/photos');
+    expect(screen.getByTestId('space-tab-photos')).toHaveAttribute('aria-current', 'page');
+  });
 });

@@ -94,12 +94,25 @@
     </a>
   </div>
 
+  <!-- A page's content is drawn here, outside the page, so a page that is being closed can still be asked for its
+       title after its data is gone (a Space left through Photos in the sidebar); each boundary keeps such a throw in the
+       bar instead of stopping the whole navigation, and starts over with the next page's content. -->
   <div class="ws-bar-middle">
-    {@render barSlot.content?.()}
+    {#key barSlot.content}
+      <svelte:boundary>
+        {@render barSlot.content?.()}
+        {#snippet failed()}{/snippet}
+      </svelte:boundary>
+    {/key}
   </div>
 
   <div class="ws-bar-end">
-    {@render barSlot.tools?.()}
+    {#key barSlot.tools}
+      <svelte:boundary>
+        {@render barSlot.tools?.()}
+        {#snippet failed()}{/snippet}
+      </svelte:boundary>
+    {/key}
     <BarSearch />
     <BarUndo />
     <BarViewMenu />

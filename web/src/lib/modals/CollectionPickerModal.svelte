@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
   import { initInput } from '$lib/actions/focus';
   import AlbumListItem from '$lib/components/asset-viewer/AlbumListItem.svelte';
   import NewAlbumListItem from '$lib/components/shared-components/album-selection/NewAlbumListItem.svelte';
@@ -206,7 +207,9 @@
   };
 
   const loadSpaces = async () => {
-    spaces = await getAllSpaces();
+    // Local Omarchy layer: Library is offered through its albums, never as a Space of its own
+    const all = await getAllSpaces();
+    spaces = all.filter((space) => !isLibrarySpace(space));
   };
 
   /**

@@ -4,7 +4,7 @@ import { tick } from 'svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import RecentSpaces from '$lib/components/shared-components/side-bar/recent-spaces.svelte';
-import { recentSpaceAlbumsExpanded } from '$lib/stores/preferences.store';
+import { albumTreeOpen, recentSpaceAlbumsExpanded } from '$lib/stores/preferences.store';
 import { pinnedSpaceIds } from '$lib/stores/space-view.store';
 import { userInteraction } from '$lib/stores/user.svelte';
 import { handleError } from '$lib/utils/handle-error';
@@ -45,6 +45,8 @@ describe('RecentSpaces component', () => {
     pinnedSpaceIds.set([]);
     recentSpaceAlbumsExpanded.set({});
     userInteraction.spaceAlbums = undefined;
+    userInteraction.spaceFolders = undefined;
+    albumTreeOpen.set({});
     mockPage.url = new URL('https://gallery.test/photos');
     sidebarMocks.sidebarModeStore.layout = 'expanded';
     sidebarMocks.sidebarModeStore.hoverExpanded = false;
@@ -160,13 +162,13 @@ describe('RecentSpaces component', () => {
       expect(screen.queryByTestId('sidebar-space-chevron-rail-1')).not.toBeInTheDocument();
     });
 
-    it('keeps the see-all row so the rail stays a row-for-row match', async () => {
-      // Four albums: only three render, so the see-all row appears.
+    // Local Omarchy layer: a space opens into its folder tree, which waits for the sidebar to open; the rail shows
+    // the spaces' thumbnails alone
+    it('shows no tree in the rail, only the space', async () => {
       await railWithAlbums(4);
 
-      const seeAll = screen.getByTestId('sidebar-space-see-all-rail-1');
-      expect(seeAll.className).toContain('w-12');
-      expect(seeAll.className).not.toMatch(/\bps-16\b/);
+      expect(screen.queryAllByTestId(/^tree-album-/)).toHaveLength(0);
+      expect(screen.getByTestId('sidebar-space-rail-1')).toBeInTheDocument();
     });
 
     it('restores the full rows while hover-expanded', async () => {
@@ -383,15 +385,18 @@ describe('RecentSpaces component', () => {
     });
   });
 
-  describe('album drill-down list', () => {
+  // Local Omarchy layer: a space opens into its tree, like the Mac's sidebar: its folders, then its albums, each level by
+  // name; every album, not three and a "See all"
+  describe('album drill-down tree', () => {
     const buildSpaceWithAlbums = (albums: number) =>
       sharedSpaceFactory.build({ id: 'space-a', albumCount: albums, newAssetCount: 0 });
+    const albumRows = () => screen.queryAllByTestId(/^tree-album-/);
 
-    it('fetches albums once on first expand and caches on the second', async () => {
+    it('fetches albums and folders once on first expand and caches on the second', async () => {
       const space = buildSpaceWithAlbums(2);
-      const albums = sharedSpaceLinkedAlbumFactory.buildList(2);
       sdkMock.getAllSpaces.mockResolvedValueOnce([space]);
-      sdkMock.getSharedSpaceAlbums.mockResolvedValue(albums);
+      sdkMock.getSharedSpaceAlbums.mockResolvedValue(sharedSpaceLinkedAlbumFactory.buildList(2));
+      sdkMock.getSharedSpaceAlbumFolders.mockResolvedValue([]);
       await renderAndFlush();
 
       await fireEvent.click(screen.getByTestId('sidebar-space-chevron-space-a'));
@@ -399,6 +404,7 @@ describe('RecentSpaces component', () => {
       await tick();
       expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledTimes(1);
       expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledWith({ id: 'space-a' });
+      expect(sdkMock.getSharedSpaceAlbumFolders).toHaveBeenCalledWith({ id: 'space-a' });
 
       // collapse then expand again — served from cache, no second call
       await fireEvent.click(screen.getByTestId('sidebar-space-chevron-space-a'));
@@ -409,28 +415,45 @@ describe('RecentSpaces component', () => {
       expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledTimes(1);
     });
 
-    it('renders albums sorted by linkedAt descending, sliced to three', async () => {
-      const space = buildSpaceWithAlbums(4);
-      const albums = [
-        sharedSpaceLinkedAlbumFactory.build({ id: 'old', albumName: 'Old', linkedAt: '2024-01-01T00:00:00Z' }),
-        sharedSpaceLinkedAlbumFactory.build({ id: 'new', albumName: 'New', linkedAt: '2024-06-01T00:00:00Z' }),
-        sharedSpaceLinkedAlbumFactory.build({ id: 'mid', albumName: 'Mid', linkedAt: '2024-03-01T00:00:00Z' }),
-        sharedSpaceLinkedAlbumFactory.build({ id: 'older', albumName: 'Older', linkedAt: '2023-01-01T00:00:00Z' }),
-      ];
+    it('opens into the folders, then every album at the top by name', async () => {
+      const space = buildSpaceWithAlbums(5);
       sdkMock.getAllSpaces.mockResolvedValueOnce([space]);
-      sdkMock.getSharedSpaceAlbums.mockResolvedValue(albums);
+      sdkMock.getSharedSpaceAlbumFolders.mockResolvedValue([
+        { id: 'trips', name: 'Trips', parentId: null, spaceId: 'space-a' } as never,
+      ]);
+      sdkMock.getSharedSpaceAlbums.mockResolvedValue([
+        sharedSpaceLinkedAlbumFactory.build({ id: 'c', albumName: 'Christmas', folderId: null }),
+        sharedSpaceLinkedAlbumFactory.build({ id: 'a', albumName: 'Autumn', folderId: null }),
+        sharedSpaceLinkedAlbumFactory.build({ id: 'b', albumName: 'Bali', folderId: 'trips' }),
+        sharedSpaceLinkedAlbumFactory.build({ id: 'd', albumName: 'Dinner', folderId: null }),
+        sharedSpaceLinkedAlbumFactory.build({ id: 'e', albumName: 'Easter', folderId: null }),
+      ]);
+      recentSpaceAlbumsExpanded.set({ 'space-a': true });
+      await renderAndFlush();
+      await tick();
+      await tick();
+
+      expect(screen.getByTestId('tree-folder-trips')).toHaveAttribute('href', '/spaces/space-a/albums?folder=trips');
+      expect(albumRows().map((row) => row.getAttribute('href'))).toEqual([
+        '/spaces/space-a/albums/a',
+        '/spaces/space-a/albums/c',
+        '/spaces/space-a/albums/d',
+        '/spaces/space-a/albums/e',
+      ]);
+    });
+
+    it('leaves Library out: it holds the Albums tree', async () => {
+      const { albumFolders } = await import('$lib/managers/album-folders.svelte');
+      albumFolders.spaceId = 'library';
+      sdkMock.getAllSpaces.mockResolvedValueOnce([
+        sharedSpaceFactory.build({ id: 'library', name: 'Library' }),
+        sharedSpaceFactory.build({ id: 'family', name: 'Family' }),
+      ]);
       await renderAndFlush();
 
-      await fireEvent.click(screen.getByTestId('sidebar-space-chevron-space-a'));
-      await tick();
-      await tick();
-
-      const rows = screen.getAllByTestId(/^sidebar-space-album-/);
-      expect(rows.map((r) => r.getAttribute('href'))).toEqual([
-        '/spaces/space-a/albums/new',
-        '/spaces/space-a/albums/mid',
-        '/spaces/space-a/albums/old',
-      ]);
+      expect(screen.queryByTestId('sidebar-space-library')).not.toBeInTheDocument();
+      expect(screen.getByTestId('sidebar-space-family')).toBeInTheDocument();
+      albumFolders.spaceId = undefined;
     });
 
     it('renders nothing when the fetch resolves empty despite a stale albumCount > 0', async () => {
@@ -443,9 +466,8 @@ describe('RecentSpaces component', () => {
       await tick();
       await tick();
 
-      // No album rows, no "See all", no crash — the derived `expanded` collapses on an empty result.
-      expect(screen.queryAllByTestId(/^sidebar-space-album-/)).toHaveLength(0);
-      expect(screen.queryByTestId('sidebar-space-see-all-space-a')).not.toBeInTheDocument();
+      // No album rows, no crash — the derived `expanded` collapses on an empty result.
+      expect(albumRows()).toHaveLength(0);
       // Cached empty → a second expand does not refetch.
       await fireEvent.click(screen.getByTestId('sidebar-space-chevron-space-a'));
       await tick();
@@ -466,43 +488,14 @@ describe('RecentSpaces component', () => {
       await tick();
 
       expect(handleError).toHaveBeenCalledWith(expect.any(Error), expect.any(String));
-      expect(screen.queryAllByTestId(/^sidebar-space-album-/)).toHaveLength(0);
+      expect(albumRows()).toHaveLength(0);
     });
 
-    it('shows no "See all" row at exactly three albums', async () => {
-      const space = sharedSpaceFactory.build({ id: 'space-a', albumCount: 3, newAssetCount: 0 });
-      sdkMock.getAllSpaces.mockResolvedValueOnce([space]);
-      sdkMock.getSharedSpaceAlbums.mockResolvedValue(sharedSpaceLinkedAlbumFactory.buildList(3));
-      await renderAndFlush();
-
-      await fireEvent.click(screen.getByTestId('sidebar-space-chevron-space-a'));
-      await tick();
-      await tick();
-
-      expect(screen.queryByTestId('sidebar-space-see-all-space-a')).not.toBeInTheDocument();
-    });
-
-    it('shows a "See all (N)" row above three albums using the fetched length', async () => {
-      const space = sharedSpaceFactory.build({ id: 'space-a', albumCount: 3, newAssetCount: 0 }); // stale count
-      sdkMock.getAllSpaces.mockResolvedValueOnce([space]);
-      sdkMock.getSharedSpaceAlbums.mockResolvedValue(sharedSpaceLinkedAlbumFactory.buildList(5)); // fetched truth
-      await renderAndFlush();
-
-      await fireEvent.click(screen.getByTestId('sidebar-space-chevron-space-a'));
-      await tick();
-      await tick();
-
-      const seeAll = screen.getByTestId('sidebar-space-see-all-space-a');
-      expect(seeAll).toHaveAttribute('href', '/spaces/space-a/albums');
-      expect(seeAll.textContent).toContain('5');
-    });
-
-    it('auto-loads albums on mount for a persisted-expanded space without a click', async () => {
+    it('auto-loads the tree on mount for a persisted-expanded space without a click', async () => {
       const space = buildSpaceWithAlbums(2);
-      const albums = sharedSpaceLinkedAlbumFactory.buildList(2);
       recentSpaceAlbumsExpanded.set({ 'space-a': true });
       sdkMock.getAllSpaces.mockResolvedValueOnce([space]);
-      sdkMock.getSharedSpaceAlbums.mockResolvedValue(albums);
+      sdkMock.getSharedSpaceAlbums.mockResolvedValue(sharedSpaceLinkedAlbumFactory.buildList(2));
 
       await renderAndFlush();
       await tick();
@@ -510,19 +503,19 @@ describe('RecentSpaces component', () => {
 
       expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledTimes(1);
       expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledWith({ id: 'space-a' });
-      expect(screen.getAllByTestId(/^sidebar-space-album-/)).toHaveLength(2);
+      expect(albumRows()).toHaveLength(2);
     });
 
-    // Only one row in the tree should read as selected at a time. Opening an album hands the
-    // selection down from the space to that album; the space keeps it everywhere else, including
-    // its own albums *list* page, which has no row of its own.
+    // Only one row reads as selected at a time. Opening an album hands the selection down from the
+    // space to that album's row in the tree; the space keeps it everywhere else, including its own
+    // albums page at the top.
     describe('selected row', () => {
       const renderExpanded = async () => {
         const space = sharedSpaceFactory.build({ id: 'space-a', albumCount: 4, newAssetCount: 0 });
         sdkMock.getAllSpaces.mockResolvedValueOnce([space]);
         sdkMock.getSharedSpaceAlbums.mockResolvedValue([
-          sharedSpaceLinkedAlbumFactory.build({ id: 'album-1', linkedAt: '2024-03-01T00:00:00Z' }),
-          sharedSpaceLinkedAlbumFactory.build({ id: 'album-2', linkedAt: '2024-02-01T00:00:00Z' }),
+          sharedSpaceLinkedAlbumFactory.build({ id: 'album-1', albumName: 'One', folderId: null }),
+          sharedSpaceLinkedAlbumFactory.build({ id: 'album-2', albumName: 'Two', folderId: null }),
         ]);
         recentSpaceAlbumsExpanded.set({ 'space-a': true });
         await renderAndFlush();
@@ -535,14 +528,14 @@ describe('RecentSpaces component', () => {
         await renderExpanded();
 
         expect(screen.getByTestId('sidebar-space-space-a')).toHaveAttribute('aria-current', 'page');
-        expect(screen.getByTestId('sidebar-space-album-album-1')).not.toHaveAttribute('aria-current');
+        expect(screen.getByTestId('tree-album-album-1')).not.toHaveAttribute('aria-current');
       });
 
       it('hands the selection to the album row on an album page', async () => {
         mockPage.url = new URL('https://gallery.test/spaces/space-a/albums/album-1');
         await renderExpanded();
 
-        expect(screen.getByTestId('sidebar-space-album-album-1')).toHaveAttribute('aria-current', 'page');
+        expect(screen.getByTestId('tree-album-album-1')).toHaveAttribute('aria-current', 'page');
         expect(screen.getByTestId('sidebar-space-space-a')).not.toHaveAttribute('aria-current');
       });
 
@@ -550,19 +543,19 @@ describe('RecentSpaces component', () => {
         mockPage.url = new URL('https://gallery.test/spaces/space-a/albums/album-2');
         await renderExpanded();
 
-        expect(screen.getByTestId('sidebar-space-album-album-2')).toHaveAttribute('aria-current', 'page');
-        expect(screen.getByTestId('sidebar-space-album-album-1')).not.toHaveAttribute('aria-current');
+        expect(screen.getByTestId('tree-album-album-2')).toHaveAttribute('aria-current', 'page');
+        expect(screen.getByTestId('tree-album-album-1')).not.toHaveAttribute('aria-current');
       });
 
       it('keeps the album row selected while viewing a photo inside it', async () => {
         mockPage.url = new URL('https://gallery.test/spaces/space-a/albums/album-1/photos/asset-1');
         await renderExpanded();
 
-        expect(screen.getByTestId('sidebar-space-album-album-1')).toHaveAttribute('aria-current', 'page');
+        expect(screen.getByTestId('tree-album-album-1')).toHaveAttribute('aria-current', 'page');
         expect(screen.getByTestId('sidebar-space-space-a')).not.toHaveAttribute('aria-current');
       });
 
-      it('keeps the space row selected on its albums list page, which has no row of its own', async () => {
+      it('keeps the space row selected on its albums page at the top', async () => {
         mockPage.url = new URL('https://gallery.test/spaces/space-a/albums');
         await renderExpanded();
 
@@ -582,17 +575,16 @@ describe('RecentSpaces component', () => {
 
       // The chevron is absolutely positioned and vertically centred (top-1/2 + -translate-y-1/2),
       // so its containing block decides what it centres against. That block must wrap the space
-      // row alone — if the expanded album rows share the positioning context, the chevron drifts
-      // down to the middle of the whole expanded group instead of sitting beside the space name.
+      // row alone — if the tree shared the positioning context, the chevron would drift down to
+      // the middle of the whole expanded group instead of sitting beside the space name.
       const chevron = screen.getByTestId('sidebar-space-chevron-space-a');
       const positioningContext = chevron.offsetParent ?? chevron.closest('.relative');
       expect(positioningContext).not.toBeNull();
       expect(positioningContext).toContainElement(screen.getByTestId('sidebar-space-space-a'));
 
-      for (const albumRow of screen.getAllByTestId(/^sidebar-space-album-/)) {
+      for (const albumRow of albumRows()) {
         expect(positioningContext).not.toContainElement(albumRow);
       }
-      expect(positioningContext).not.toContainElement(screen.getByTestId('sidebar-space-see-all-space-a'));
     });
   });
 });

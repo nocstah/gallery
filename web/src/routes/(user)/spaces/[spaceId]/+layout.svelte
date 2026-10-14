@@ -4,7 +4,6 @@
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import SpaceHero from '$lib/components/spaces/space-hero.svelte';
   import SpaceTabs from '$lib/components/spaces/space-tabs.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { spaceUiManager } from '$lib/managers/space-ui-manager.svelte';
@@ -12,7 +11,6 @@
   import SpaceHideFromTimelineConfirmModal from '$lib/modals/SpaceHideFromTimelineConfirmModal.svelte';
   import { Route } from '$lib/route';
   import { handleError } from '$lib/utils/handle-error';
-  import { getSearchablePageState } from '$lib/utils/searchable-page-search';
   import {
     bulkAddAssets,
     getTimelineHidePreview,
@@ -22,10 +20,10 @@
     updateMemberPreferences,
     updateMemberTimeline,
     updateSpace,
-    UserAvatarColor,
   } from '@immich/sdk';
   import { Button, IconButton, modalManager, toastManager } from '@immich/ui';
   import {
+    mdiAccountPlusOutline,
     mdiArrowLeft,
     mdiDeleteOutline,
     mdiDotsVertical,
@@ -33,6 +31,7 @@
     mdiEyeOffOutline,
     mdiEyeOutline,
     mdiFaceRecognition,
+    mdiImageEditOutline,
     mdiImageMultipleOutline,
     mdiImagePlusOutline,
     mdiPaw,
@@ -49,8 +48,17 @@
 
   let { data, children }: Props = $props();
 
-  const space = $derived(data.space);
-  const members = $derived(data.members);
+  // Local Omarchy layer: SvelteKit hands this layout the next page's data for a moment before it unmounts it (leaving
+  // the Space through Photos in the sidebar), so everything here keeps reading the Space's own data meanwhile.
+  let kept: LayoutData | undefined;
+  const current = $derived.by(() => {
+    if (data.space) {
+      kept = data;
+    }
+    return kept ?? data;
+  });
+  const space = $derived(current.space);
+  const members = $derived(current.members);
   const base = $derived(`/spaces/${space.id}`);
 
   const currentMember = $derived(members.find((m) => m.userId === authManager.user.id));
@@ -64,54 +72,26 @@
   // L16: departing members' own albums are auto-unlinked on leave (cleanupDepartingMemberAlbums) —
   // warn upfront when the current member has any, so leaving isn't a surprise for the space's
   // other members.
-  const hasOwnLinkedAlbums = $derived(data.linkedAlbums.some((album) => album.addedById === authManager.user.id));
+  const hasOwnLinkedAlbums = $derived(current.linkedAlbums.some((album) => album.addedById === authManager.user.id));
 
-  // A detail route (person or album) suppresses the cover + tabs; it keeps its own back nav.
+  // A detail route (person or album) suppresses the tabs; it keeps its own back nav.
   const suffix = $derived(page.url.pathname.slice(base.length));
   const isDetailRoute = $derived(/^\/(people|albums)\/[^/]+/.test(suffix));
   const showChrome = $derived(!isDetailRoute && !spaceUiManager.chromeHidden);
 
-  // The cover (SpaceHero) is tall + scroll-collapsible on the Photos route, compact on other tabs.
-  let repositioning = $state(false);
-  const onPhotosTab = $derived(page.url.pathname === base || page.url.pathname.startsWith(`${base}/photos`));
-
-  // It is compact on the Photos route too while a search is showing results — a results view leads
-  // with the results. A phone leaves the space ~520 CSS px of page height, and a tall cover stacked
-  // with the app bar, tabs and search header left the grid a sliver of it (#1028). The query is read
-  // from the URL (`?q=`), the same source the Photos page commits it from.
-  const searchActive = $derived(onPhotosTab && getSearchablePageState(page.url).query.length > 0);
-
-  // No-cover spaces fall back to a per-space colored gradient derived from space.color.
-  const gradientClasses: Record<string, string> = {
-    [UserAvatarColor.Primary]: 'from-immich-primary/60 to-immich-primary',
-    [UserAvatarColor.Pink]: 'from-pink-300 to-pink-500',
-    [UserAvatarColor.Red]: 'from-red-400 to-red-600',
-    [UserAvatarColor.Yellow]: 'from-yellow-300 to-yellow-500',
-    [UserAvatarColor.Blue]: 'from-blue-400 to-blue-600',
-    [UserAvatarColor.Green]: 'from-green-400 to-green-700',
-    [UserAvatarColor.Purple]: 'from-purple-400 to-purple-700',
-    [UserAvatarColor.Orange]: 'from-orange-400 to-orange-600',
-    [UserAvatarColor.Gray]: 'from-gray-400 to-gray-600',
-    [UserAvatarColor.Amber]: 'from-amber-400 to-amber-600',
-  };
-
-  const spaceGradient = $derived(gradientClasses[space.color ?? 'primary'] ?? gradientClasses[UserAvatarColor.Primary]);
+  // Local Omarchy layer ("spaces library looks like it could use some impeccable redesign"): no cover over the page;
+  // the Space's name and its sections share the one bar. A Space of one (Library, where the albums live) shows only
+  // what means something to one person, and with albums it opens on them (its index route redirects there, see
+  // [[photos=photos]]/+page.ts), so its Photos tab, and every intent that needs the photos, goes to /photos.
+  const personal = $derived(members.length <= 1);
+  const albumsFirst = $derived(personal && current.linkedAlbums.length > 0);
+  const photosPath = $derived(albumsFirst ? `${base}/photos` : base);
+  const onPhotos = $derived(page.url.pathname === base || page.url.pathname.startsWith(`${base}/photos`));
 
   const handleChangeCover = () => {
     spaceUiManager.requestChangeCover();
-    if (page.url.pathname !== base) {
-      void goto(base);
-    }
-  };
-
-  const handleSavePosition = async (cropY: number) => {
-    try {
-      await updateSpace({ id: space.id, sharedSpaceUpdateDto: { thumbnailCropY: cropY } });
-      repositioning = false;
-      await invalidateAll();
-      toastManager.success($t('space_cover_updated'));
-    } catch (error) {
-      handleError(error, $t('errors.unable_to_update_space_cover'));
+    if (!onPhotos) {
+      void goto(photosPath);
     }
   };
 
@@ -124,8 +104,8 @@
 
   const handleAddPhotos = () => {
     spaceUiManager.requestAddPhotos();
-    if (page.url.pathname !== base) {
-      void goto(base);
+    if (!onPhotos) {
+      void goto(photosPath);
     }
   };
 
@@ -242,6 +222,22 @@
       {/if}
     {/snippet}
 
+    <!-- the Space's sections, beside its name in the bar (no cover above the page, no second row) -->
+    {#snippet descriptionTrailing()}
+      {#if showChrome}
+        <SpaceTabs
+          spaceId={space.id}
+          faceRecognitionEnabled={space.faceRecognitionEnabled}
+          albumCount={current.linkedAlbums.length}
+          memberCount={members.length}
+          isAdmin={authManager.user?.isAdmin ?? false}
+          libraryCount={space.linkedLibraries?.length ?? 0}
+          {personal}
+          {albumsFirst}
+        />
+      {/if}
+    {/snippet}
+
     {#snippet buttons()}
       {#if !spaceUiManager.chromeHidden}
         <div class="flex items-center gap-1">
@@ -280,7 +276,17 @@
             {#if isEditor}
               <hr class="my-1 border-gray-300" />
               <MenuOption text={$t('spaces_edit')} icon={mdiPencilOutline} onClick={handleEditSpace} />
+              <!-- Local Omarchy layer: the cover's own menu went with the cover over the page -->
+              <MenuOption text={$t('change_cover_photo')} icon={mdiImageEditOutline} onClick={handleChangeCover} />
               <MenuOption text={$t('add_all_photos')} icon={mdiImageMultipleOutline} onClick={handleBulkAddAssets} />
+            {/if}
+            {#if personal && isOwner}
+              <!-- a Space of one shows no Members tab; inviting someone is still here -->
+              <MenuOption
+                text={$t('invite_people')}
+                icon={mdiAccountPlusOutline}
+                onClick={() => goto(`${base}/members`)}
+              />
             {/if}
             {#if currentMember && !isOwner}
               <hr class="my-1 border-gray-300" />
@@ -314,32 +320,6 @@
     {/snippet}
 
     <div class="flex h-full flex-col">
-      {#if showChrome}
-        <SpaceHero
-          {space}
-          assetCount={space.assetCount ?? 0}
-          gradientClass={spaceGradient}
-          currentRole={currentMember?.role}
-          canEdit={isEditor}
-          onChangeCover={handleChangeCover}
-          onEditSpace={handleEditSpace}
-          onReposition={() => (repositioning = true)}
-          {repositioning}
-          onSavePosition={handleSavePosition}
-          onCancelReposition={() => (repositioning = false)}
-          compact={!onPhotosTab || searchActive}
-          collapsed={onPhotosTab && spaceUiManager.coverCollapsed}
-        />
-        <SpaceTabs
-          spaceId={space.id}
-          faceRecognitionEnabled={space.faceRecognitionEnabled}
-          photoCount={space.assetCount ?? 0}
-          albumCount={data.linkedAlbums.length}
-          memberCount={members.length}
-          isAdmin={authManager.user?.isAdmin ?? false}
-          libraryCount={space.linkedLibraries?.length ?? 0}
-        />
-      {/if}
       <div class="min-h-0 flex-1">
         {@render children?.()}
       </div>

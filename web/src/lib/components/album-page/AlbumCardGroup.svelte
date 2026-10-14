@@ -1,6 +1,7 @@
 <script lang="ts">
   import AlbumCard from '$lib/components/album-page/AlbumCard.svelte';
   import Portal from '$lib/elements/Portal.svelte';
+  import { albumFolders } from '$lib/managers/album-folders.svelte';
   import { Route } from '$lib/route';
   import { getAlbumActions } from '$lib/services/album.service';
   import { albumViewSettings } from '$lib/stores/preferences.store';
@@ -66,8 +67,8 @@
   {#if !isCollapsed}
     <div class="grid grid-auto-fill-56 gap-y-4" transition:slide={{ duration: 300 }}>
       {#each albums as album, index (album.id)}
-        {@const { Edit, MoveToFolder, Share, Download, Leave, Delete } = getAlbumActions($t, album)}
-        {@const items = [Edit, MoveToFolder, Share, Download, Leave, Delete]}
+        {@const { Edit, MoveToFolder, ToggleTimeline, Share, Download, Leave, Delete } = getAlbumActions($t, album)}
+        {@const items = [Edit, MoveToFolder, ToggleTimeline, Share, Download, Leave, Delete]}
         <a
           href={Route.viewAlbum(album)}
           class="h-fit"
@@ -81,6 +82,7 @@
             {showItemCount}
             preload={index < 20}
             contextMenuItems={items}
+            hiddenFromTimeline={albumFolders.hiddenFromTimeline(album.id)}
           />
         </a>
       {/each}

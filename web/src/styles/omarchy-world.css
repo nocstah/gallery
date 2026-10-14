@@ -1430,6 +1430,35 @@ body.ws-dragging * {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* (plan A) a section with nothing in it yet says so in a line, and what fills it; a Space's row leads with its cover */
+.ws-sharing-none {
+  max-width: 60ch;
+  color: var(--immich-ui-muted);
+  font-size: var(--ws-text-body);
+}
+.ws-sharing-heading-action {
+  margin-inline-start: auto;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--ws-hairline);
+  border-radius: var(--ws-radius);
+  color: var(--immich-ui-dark);
+  font-size: var(--ws-text-ui);
+  font-weight: 600;
+}
+.ws-sharing-heading-action:hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 7%, transparent);
+}
+.ws-sharing-heading-action:focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: 2px;
+}
+.ws-sharing-space-cover {
+  flex: none;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--ws-radius);
+  background: color-mix(in oklab, var(--immich-ui-dark) 10%, transparent) center / cover no-repeat;
+}
 /* a shared link is a row on the ground: a hairline below, its title in ink, the row tinted while pointed at */
 .ws-shared-link {
   border-color: var(--ws-hairline) !important;
