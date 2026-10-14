@@ -20,7 +20,8 @@
   import { handleError } from '$lib/utils/handle-error';
   import { toastUndoable } from '$lib/utils/undoable';
   import { AssetMediaSize, deleteAssets as trashAssets, restoreAssets } from '@immich/sdk';
-  import { Field, modalManager, Switch } from '@immich/ui';
+  import { Field, Icon, modalManager, Switch } from '@immich/ui';
+  import { mdiRefresh } from '@mdi/js';
   import { onMount, untrack } from 'svelte';
   import { locale, t } from 'svelte-i18n';
   import { SvelteSet } from 'svelte/reactivity';
@@ -35,12 +36,17 @@
   let list = $state<SlipList>();
   let offline = $state(false);
   let busy = $state(false);
+  let refreshing = $state(false);
+  let loadedAt = $state<Date>();
   let reading = $state<{ done: number; total: number }>();
   /** slips the rule takes that a person left out, and ones to check that a person added */
   const left = new SvelteSet<string>();
   const added = new SvelteSet<string>();
 
   const rule = $derived($slipsRule);
+  // what to do is never remembered: every visit starts on Move to QR, so a rule set for the Trash once is not waiting,
+  // ready to go, the next time (the ranges and their numbers are remembered)
+  let action = $state<'qr' | 'trash'>('qr');
   const mine = $derived(
     (list?.slips ?? []).filter((slip) => authManager.authenticated && slip.owner_id === authManager.user.id),
   );
@@ -70,8 +76,8 @@
   };
 
   // into QR: the slips it does not hold yet (any amount: every one of them, whatever it says); to the Trash: any slip
-  const candidates = $derived(rule.action === 'qr' ? mine.filter((slip) => !slip.in_qr) : mine);
-  const everything = $derived(rule.action === 'qr' && rule.mode === 'any');
+  const candidates = $derived(action === 'qr' ? mine.filter((slip) => !slip.in_qr) : mine);
+  const everything = $derived(action === 'qr' && rule.mode === 'any');
   const taken = $derived(
     everything ? candidates : candidates.filter((slip) => slip.status === 'agree' && fits(slip.amount, rule)),
   );
@@ -89,15 +95,32 @@
     ...check.filter((slip) => added.has(slip.id)),
   ]);
   const alreadyInQr = $derived(
-    rule.action === 'qr'
+    action === 'qr'
       ? mine.filter((slip) => slip.in_qr && (everything || (slip.status === 'agree' && fits(slip.amount, rule)))).length
       : 0,
   );
   const noAmount = $derived(mine.filter((slip) => slip.status === 'none').length);
+  /** slips the action could take that this rule does not */
+  const outside = $derived(candidates.length - taken.length - check.length);
+
+  // an amount applies once typing pauses (or on Enter, or leaving the field), not at every keystroke: the grid of
+  // hundreds of slips no longer jumps through 3, 30 and 300 on the way to 3000
+  let typing: ReturnType<typeof setTimeout> | undefined;
+  const setAmount = (field: 'under' | 'over' | 'from' | 'to', raw: string, now = false) => {
+    clearTimeout(typing);
+    const value = raw.trim() === '' ? null : Number(raw);
+    const write = () =>
+      ($slipsRule = { ...$slipsRule, [field]: value !== null && Number.isFinite(value) ? value : null });
+    if (now) {
+      write();
+    } else {
+      typing = setTimeout(write, 400);
+    }
+  };
   const unread = $derived(mine.filter((slip) => slip.checked === null && slip.status !== 'none').length);
 
   // a new rule starts with nothing left out or added
-  const ruleKey = $derived(`${rule.action}:${rule.mode}`);
+  const ruleKey = $derived(`${action}:${rule.mode}`);
   $effect(() => {
     if (ruleKey) {
       untrack(() => {
@@ -161,9 +184,24 @@
   const load = async () => {
     try {
       list = await curator.slips();
+      loadedAt = new Date();
       offline = false;
     } catch {
       offline = true;
+    }
+  };
+
+  // the list as Curator has it now ("can we have a refresh button so i can refresh the list to make sure the selection
+  // is correct"); slips left out or added stay so, the rest follows the fresh list
+  const refresh = async () => {
+    if (refreshing) {
+      return;
+    }
+    refreshing = true;
+    try {
+      await load();
+    } finally {
+      refreshing = false;
     }
   };
 
@@ -226,7 +264,7 @@
     }
     busy = true;
     try {
-      await (rule.action === 'qr' ? toQr(chosen) : toTrash(chosen));
+      await (action === 'qr' ? toQr(chosen) : toTrash(chosen));
       left.clear();
       added.clear();
       await load();
@@ -300,7 +338,15 @@
 
 {#snippet amountField(field: 'under' | 'over' | 'from' | 'to')}
   <span class="ws-slips-amount">
-    <input type="number" min="0" step="100" inputmode="numeric" bind:value={$slipsRule[field]} />
+    <input
+      type="number"
+      min="0"
+      step="100"
+      inputmode="numeric"
+      value={rule[field] ?? ''}
+      oninput={(event) => setAmount(field, event.currentTarget.value)}
+      onchange={(event) => setAmount(field, event.currentTarget.value, true)}
+    />
     <span aria-hidden="true">฿</span>
   </span>
 {/snippet}
@@ -339,21 +385,29 @@
             >
           {:else if unread > 0}
             <span class="ws-inbox-meta">{$t('slips_unread', { values: { count: unread } })}</span>
-            <button type="button" class="ws-sharing-heading-action" onclick={read}>{$t('slips_read')}</button>
           {/if}
+          <span class="ws-slips-heading-actions">
+            {#if loadedAt}
+              <span class="ws-inbox-meta" data-testid="slips-loaded-at"
+                >{$t('updated_at')} {loadedAt.toLocaleTimeString($locale ?? undefined)}</span
+              >
+            {/if}
+            {#if !reading && unread > 0}
+              <button type="button" class="ws-sharing-heading-action" onclick={read}>{$t('slips_read')}</button>
+            {/if}
+            <button type="button" class="ws-sharing-heading-action" disabled={refreshing} onclick={refresh}>
+              <Icon icon={mdiRefresh} size="16" class={refreshing ? 'animate-spin' : undefined} />
+              {$t('refresh')}
+            </button>
+          </span>
         </h2>
 
         <div class="ws-slips-rule">
           <div class="ws-seg" role="group" aria-label={$t('slips_action')}>
-            <button
-              type="button"
-              aria-pressed={rule.action === 'qr'}
-              onclick={() => ($slipsRule = { ...rule, action: 'qr' })}>{$t('qr_move')}</button
+            <button type="button" aria-pressed={action === 'qr'} onclick={() => (action = 'qr')}>{$t('qr_move')}</button
             >
-            <button
-              type="button"
-              aria-pressed={rule.action === 'trash'}
-              onclick={() => ($slipsRule = { ...rule, action: 'trash' })}>{$t('slips_action_trash')}</button
+            <button type="button" aria-pressed={action === 'trash'} onclick={() => (action = 'trash')}
+              >{$t('slips_action_trash')}</button
             >
           </div>
           <div class="ws-seg" role="group" aria-label={$t('slips_range')}>
@@ -387,6 +441,9 @@
         {:else}
           <p class="ws-sharing-none">{$t('slips_none_match')}</p>
         {/if}
+        {#if outside > 0}
+          <p class="ws-inbox-meta">{$t('slips_outside_rule', { values: { count: outside } })}</p>
+        {/if}
 
         {#if check.length > 0}
           <h3 class="ws-slips-subheading">
@@ -402,7 +459,7 @@
 
         {#if alreadyInQr > 0}
           <p class="ws-inbox-meta ws-slips-stay">{$t('slips_in_qr_already', { values: { count: alreadyInQr } })}</p>
-        {:else if rule.action === 'trash' && noAmount > 0}
+        {:else if action === 'trash' && noAmount > 0}
           <p class="ws-inbox-meta ws-slips-stay">{$t('slips_never', { values: { count: noAmount } })}</p>
         {/if}
 
@@ -410,11 +467,11 @@
           <button
             type="button"
             class="ws-empty-action"
-            class:ws-slips-trash={rule.action === 'trash'}
+            class:ws-slips-trash={action === 'trash'}
             disabled={going.length === 0 || busy}
             onclick={apply}
           >
-            {rule.action === 'qr'
+            {action === 'qr'
               ? $t('slips_move_qr', { values: { count: going.length } })
               : $t('slips_trash', { values: { count: going.length } })}
           </button>
@@ -430,6 +487,24 @@
 {/if}
 
 <style>
+  /* the heading's actions at its end, side by side: when the list was loaded, Read amounts, Refresh */
+  .ws-slips-heading-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-inline-start: auto;
+  }
+  .ws-slips-heading-actions .ws-sharing-heading-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-inline-start: 0;
+  }
+  .ws-slips-heading-actions .ws-sharing-heading-action:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
   .ws-slips-auto {
     display: grid;
     gap: 0.4rem;

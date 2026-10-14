@@ -3419,6 +3419,7 @@
   "slips_move_qr": "Mover {count, plural, one {# comprobante} other {# comprobantes}} a QR",
   "slips_never": "Los códigos sin importe ({count}) nunca van a la papelera.",
   "slips_none_match": "Ningún comprobante coincide.",
+  "slips_outside_rule": "{count, plural, one {# comprobante queda} other {# comprobantes quedan}} fuera de esta regla.",
   "slips_range": "Qué importes",
   "slips_read": "Leer importes",
   "slips_reading": "Leyendo los importes: {done} de {total}",

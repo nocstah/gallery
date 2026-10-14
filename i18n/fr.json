@@ -3419,6 +3419,7 @@
   "slips_move_qr": "Déplacer {count, plural, one {# reçu} other {# reçus}} vers QR",
   "slips_never": "Les codes sans montant ({count}) ne vont jamais à la corbeille.",
   "slips_none_match": "Aucun reçu ne correspond.",
+  "slips_outside_rule": "{count, plural, one {# reçu est} other {# reçus sont}} hors de cette règle.",
   "slips_range": "Montants concernés",
   "slips_read": "Lire les montants",
   "slips_reading": "Lecture des montants : {done} sur {total}",

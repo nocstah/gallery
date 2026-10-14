@@ -3419,6 +3419,7 @@
   "slips_move_qr": "{count, plural, one {# Beleg} other {# Belege}} nach QR verschieben",
   "slips_never": "Codes ohne Betrag ({count}) kommen nie in den Papierkorb.",
   "slips_none_match": "Keine passenden Belege.",
+  "slips_outside_rule": "{count, plural, one {# Beleg liegt} other {# Belege liegen}} außerhalb dieser Regel.",
   "slips_range": "Welche Beträge",
   "slips_read": "Beträge lesen",
   "slips_reading": "Beträge werden gelesen: {done} von {total}",

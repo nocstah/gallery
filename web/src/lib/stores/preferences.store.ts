@@ -167,11 +167,11 @@ export const alwaysLoadOriginalVideo = persisted<boolean>('always-load-original-
 export const searchIncludeArchived = persisted<boolean>('omarchy-search-include-archived', false, {});
 
 /**
- * Local Omarchy layer: Utilities › Bank slips' rule, what to do with which amounts ("any amount below 3000 delete it or
- * move it to QR or any amount between 50,000 and 80,000 move it to QR or delete it"). Each range keeps its own numbers.
+ * Local Omarchy layer: Utilities › Bank slips' rule, which amounts ("any amount below 3000 delete it or move it to QR or
+ * any amount between 50,000 and 80,000 move it to QR or delete it"). Each range keeps its own numbers; what to do with
+ * them is not kept, so the page always opens on Move to QR.
  */
 export type SlipsRule = {
-  action: 'qr' | 'trash';
   mode: 'any' | 'under' | 'over' | 'between';
   under: number | null;
   over: number | null;
@@ -181,7 +181,7 @@ export type SlipsRule = {
 
 export const slipsRule = persisted<SlipsRule>(
   'omarchy-slips-rule',
-  { action: 'qr', mode: 'under', under: 3000, over: 50_000, from: 50_000, to: 80_000 },
+  { mode: 'under', under: 3000, over: 50_000, from: 50_000, to: 80_000 },
   {},
 );
 

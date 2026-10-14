@@ -3436,6 +3436,7 @@
   "slips_move_qr": "Przenieś {count, plural, one {# potwierdzenie} few {# potwierdzenia} other {# potwierdzeń}} do albumu QR",
   "slips_never": "Kody bez kwoty ({count}) nigdy nie trafiają do kosza.",
   "slips_none_match": "Brak pasujących potwierdzeń.",
+  "slips_outside_rule": "{count, plural, one {# potwierdzenie jest} few {# potwierdzenia są} other {# potwierdzeń jest}} poza tą regułą.",
   "slips_range": "Które kwoty",
   "slips_read": "Odczytaj kwoty",
   "slips_reading": "Odczytywanie kwot: {done} z {total}",

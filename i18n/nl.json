@@ -3418,6 +3418,7 @@
   "slips_move_qr": "{count, plural, one {# bewijs} other {# bewijzen}} naar QR verplaatsen",
   "slips_never": "Codes zonder bedrag ({count}) gaan nooit naar de prullenbak.",
   "slips_none_match": "Geen passende bewijzen.",
+  "slips_outside_rule": "{count, plural, one {# bewijs valt} other {# bewijzen vallen}} buiten deze regel.",
   "slips_range": "Welke bedragen",
   "slips_read": "Bedragen lezen",
   "slips_reading": "Bedragen lezen: {done} van {total}",

@@ -3421,6 +3421,7 @@
   "slips_move_qr": "Переместить {count, plural, one {# квитанцию} few {# квитанции} many {# квитанций} other {# квитанции}} в QR",
   "slips_never": "Коды без суммы ({count}) никогда не попадают в корзину.",
   "slips_none_match": "Подходящих квитанций нет.",
+  "slips_outside_rule": "{count, plural, one {# квитанция не подходит} few {# квитанции не подходят} many {# квитанций не подходят} other {# квитанции не подходят}} под это правило.",
   "slips_range": "Какие суммы",
   "slips_read": "Прочитать суммы",
   "slips_reading": "Чтение сумм: {done} из {total}",

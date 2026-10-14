@@ -3418,6 +3418,7 @@
   "slips_move_qr": "Sposta {count, plural, one {# ricevuta} other {# ricevute}} in QR",
   "slips_never": "I codici senza importo ({count}) non finiscono mai nel cestino.",
   "slips_none_match": "Nessuna ricevuta corrisponde.",
+  "slips_outside_rule": "{count, plural, one {# ricevuta è} other {# ricevute sono}} fuori da questa regola.",
   "slips_range": "Quali importi",
   "slips_read": "Leggi gli importi",
   "slips_reading": "Lettura degli importi: {done} di {total}",

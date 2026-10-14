@@ -57,9 +57,10 @@ const SLIPS = [
   slip('someone-elses', { owner_id: 'user-2', in_qr: false }),
 ];
 
-const RULE: SlipsRule = { action: 'trash', mode: 'under', under: 3000, over: 50_000, from: 50_000, to: 80_000 };
+const RULE: SlipsRule = { mode: 'under', under: 3000, over: 50_000, from: 50_000, to: 80_000 };
 
-const renderPage = async (rule: Partial<SlipsRule> = {}) => {
+/** the page with this rule; it opens on Move to QR, so the Trash takes a click on its action, as for a person */
+const renderPage = async ({ action = 'trash', ...rule }: Partial<SlipsRule> & { action?: 'qr' | 'trash' } = {}) => {
   slipsRule.set({ ...RULE, ...rule });
   const props = { data: { meta: { title: 'Bank slips' } } };
   render(TestWrapper as Component<{ component: typeof SlipsPage; componentProps: typeof props }>, {
@@ -67,6 +68,9 @@ const renderPage = async (rule: Partial<SlipsRule> = {}) => {
     componentProps: props,
   });
   await screen.findByRole('heading', { name: /Amounts/ });
+  if (action === 'trash') {
+    await fireEvent.click(screen.getByRole('button', { name: 'Move to Trash' }));
+  }
 };
 
 const applyButton = () => screen.getByRole('button', { name: /^Move \d+ slips? to (Trash|QR)$/ });
@@ -177,6 +181,14 @@ describe('Bank slips page', () => {
 
       expect(applyButton()).toHaveTextContent('Move 3 slips to Trash');
     });
+
+    // the page that once trashed slips under 3,000 opened again ready to trash everything over it
+    it('opens on Move to QR every time, whatever was done last', async () => {
+      await renderPage({ action: 'qr', mode: 'over', over: 3000 });
+
+      expect(screen.getByRole('button', { name: 'Move to QR' })).toHaveAttribute('aria-pressed', 'true');
+      expect(applyButton()).toHaveTextContent(/to QR$/);
+    });
   });
 
   // the user: "whenever a new image is added, there should be a detector ... we can have an option for that"
@@ -188,5 +200,42 @@ describe('Bank slips page', () => {
     await fireEvent.click(toggle);
 
     await waitFor(() => expect(curatorMock.setSlipsAuto).toHaveBeenCalledWith(false));
+  });
+
+  it('loads the list again from Curator with Refresh, keeping a slip left out', async () => {
+    await renderPage();
+    await fireEvent.click(screen.getAllByRole('button', { pressed: true, name: /฿/ })[0]);
+    expect(applyButton()).toHaveTextContent('Move 2 slips to Trash');
+    // someone trashed small-too elsewhere meanwhile
+    curatorMock.slips.mockResolvedValue({
+      album_id: 'qr-album',
+      slips: SLIPS.filter(({ id }) => id !== 'small-too'),
+      reading: null,
+      auto: true,
+    });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    await waitFor(() => expect(curatorMock.slips).toHaveBeenCalledTimes(2));
+    // small stays left out, small-too is gone: only not-filed is left to go
+    await waitFor(() => expect(applyButton()).toHaveTextContent('Move 1 slip to Trash'));
+  });
+
+  it('says how many slips the rule leaves out, so an empty grid does not read as everything gone', async () => {
+    await renderPage();
+
+    // big, mid, mid-filed and the code without an amount
+    expect(screen.getByText('4 slips are outside this rule.')).toBeInTheDocument();
+  });
+
+  it('applies a typed amount once it is entered, not at every keystroke', async () => {
+    await renderPage();
+    const field = screen.getByRole('spinbutton');
+
+    await fireEvent.input(field, { target: { value: '1' } });
+    expect(applyButton()).toHaveTextContent('Move 3 slips to Trash');
+
+    await fireEvent.change(field, { target: { value: '100' } });
+    expect(applyButton()).toHaveTextContent('Move 1 slip to Trash');
   });
 });

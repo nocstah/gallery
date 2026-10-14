@@ -3369,6 +3369,7 @@
   "slips_move_qr": "將 {count, plural, other {# 張憑證}}移至 QR",
   "slips_never": "沒有金額的 QR 碼（{count} 個）永遠不會移至垃圾桶。",
   "slips_none_match": "沒有符合條件的憑證。",
+  "slips_outside_rule": "{count, plural, other {# 張憑證}}不在此規則範圍內。",
   "slips_range": "哪些金額",
   "slips_read": "讀取金額",
   "slips_reading": "正在讀取金額：{done} / {total}",

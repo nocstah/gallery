@@ -3438,6 +3438,7 @@
   "slips_move_qr": "Move {count, plural, one {# slip} other {# slips}} to QR",
   "slips_never": "Codes without an amount ({count}) are never sent to the Trash.",
   "slips_none_match": "No slips match.",
+  "slips_outside_rule": "{count, plural, one {# slip is} other {# slips are}} outside this rule.",
   "slips_range": "Which amounts",
   "slips_read": "Read amounts",
   "slips_reading": "Reading the amounts: {done} of {total}",
