@@ -122,6 +122,26 @@ export type JobRow = {
 
 export type JobKind = { kind: string; title: string; heavy: boolean };
 
+/**
+ * A bank transfer slip or payment QR code (Curator's jobs/slips.py) with its two readings of the amount, in baht: one
+ * from Gallery's text recognition, one from the vision model. `agree`: both, and the same; `differ`: both, not the
+ * same; `single`: only one; `none`: no amount (a code to receive money, say).
+ */
+export type Slip = {
+  id: string;
+  owner_id: string;
+  visibility: string;
+  taken_at: string | null;
+  bank: string | null;
+  amount: number | null;
+  checked: number | null;
+  status: 'agree' | 'differ' | 'single' | 'none';
+  in_qr: boolean;
+};
+
+/** Every slip, the QR album when there is one, and a reading under way (its job id). */
+export type SlipList = { album_id: string | null; slips: Slip[]; reading: number | null };
+
 export type Health = {
   gallery: { ok: boolean; owner: string | null };
   schema_drift: string[];
@@ -417,6 +437,8 @@ export const curator = {
   smartForAlbum: (albumId: string) => call<SmartAlbum | null>(`/smart-albums/by-album/${albumId}`),
   smartGet: (id: number) => call<SmartAlbum[]>('/smart-albums').then((all) => all.find((s) => s.id === id)),
   smartStop: (id: number) => call<void>(`/smart-albums/${id}`, { method: 'DELETE' }),
+  /** bank slips and payment QR codes with their amounts, for Utilities › Bank slips */
+  slips: () => call<SlipList>('/slips'),
 };
 
 /**

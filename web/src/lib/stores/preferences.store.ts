@@ -166,6 +166,9 @@ export const alwaysLoadOriginalVideo = persisted<boolean>('always-load-original-
  */
 export const searchIncludeArchived = persisted<boolean>('omarchy-search-include-archived', false, {});
 
+/** Local Omarchy layer: Utilities › Bank slips sends slips under this many baht to the Trash ("lets say 3000 baht"). */
+export const slipsThreshold = persisted<number>('omarchy-slips-threshold', 3000, {});
+
 /**
  * Whether the asset-viewer Info panel crops each person's avatar out of the photo on screen
  * (`true`, the long-standing behaviour) or shows their profile face instead (`false`).

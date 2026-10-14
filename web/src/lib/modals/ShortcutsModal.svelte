@@ -49,6 +49,7 @@
         // Local Omarchy layer: special albums (managers/special-albums)
         { key: ['b'], action: $t('todo_shortcut') },
         { key: ['v'], action: $t('villa_shortcut') },
+        { key: ['q'], action: $t('qr_shortcut') },
         { key: ['⇧', 'd'], action: $t('download') },
         { key: ['Space'], action: $t('play_or_pause_video') },
         { key: ['Del'], action: $t('trash_delete_asset'), info: $t('shift_to_permanent_delete') },

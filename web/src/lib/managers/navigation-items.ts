@@ -23,6 +23,7 @@ import {
   mdiHeartPulse,
   mdiHistory,
   mdiHomeOutline,
+  mdiQrcode,
   mdiImageMultiple,
   mdiImageOutline,
   mdiInboxOutline,
@@ -260,6 +261,15 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_villa_description',
     icon: mdiHomeOutline,
     route: '/villa',
+    adminOnly: false,
+  },
+  {
+    id: 'nav:userPages:qr',
+    category: 'userPages',
+    labelKey: 'qr',
+    descriptionKey: 'cmdk_nav_qr_description',
+    icon: mdiQrcode,
+    route: '/qr',
     adminOnly: false,
   },
   {

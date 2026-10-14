@@ -1,7 +1,8 @@
 // Local Omarchy layer: special albums, places that keep photos out of Photos. To do came first: the user asked for "a
 // special album called todo, where I can easily send photos for dealing with later; they are removed from the main
 // list, tagged todo and only show under the todo album". Villa followed: "another special album called Villa, that works
-// in a similar way as todo". Moving a photo into one puts it in the album, tags it with the album's name and archives
+// in a similar way as todo", and QR for the bank slips: "they should all be in one album similar to villa and todo
+// called QR" (Curator's slips.archive files new ones there, utilities/slips reads their amounts). Moving a photo into one puts it in the album, tags it with the album's name and archives
 // it, which is Gallery's own way of taking a photo out of Photos (so, like every archived photo, it also shows under
 // Archive). Each photo notes where it came from in Gallery's per-photo metadata (a key per album), and taking it out
 // again (Mark done, Remove from Villa) puts it back there: into Photos, or left in Archive when it was archived before;
@@ -35,6 +36,9 @@ import {
   mdiHome,
   mdiHomeMinusOutline,
   mdiHomeOutline,
+  mdiQrcode,
+  mdiQrcodeRemove,
+  mdiQrcodeScan,
 } from '@mdi/js';
 import { t, type Translations } from 'svelte-i18n';
 import { get } from 'svelte/store';
@@ -479,8 +483,30 @@ export const villaManager = new SpecialAlbumManager({
   },
 });
 
+export const qrManager = new SpecialAlbumManager({
+  name: 'QR',
+  key: 'omarchy-qr',
+  slug: 'qr',
+  shortcut: 'q',
+  icon: mdiQrcode,
+  activeIcon: mdiQrcodeScan,
+  doneIcon: mdiQrcodeRemove,
+  words: {
+    label: 'qr',
+    move: 'qr_move',
+    moved: 'qr_moved_count',
+    done: 'qr_remove',
+    doneCount: 'qr_removed_count',
+    failed: 'qr_failed',
+    nothing: 'qr_nothing_to_move',
+    note: 'qr_note',
+    emptyTitle: 'qr_empty_title',
+    emptyBody: 'qr_empty_body',
+  },
+});
+
 /** Every special album, in sidebar order. */
-export const specialAlbums: readonly SpecialAlbumManager[] = [todoManager, villaManager];
+export const specialAlbums: readonly SpecialAlbumManager[] = [todoManager, villaManager, qrManager];
 
 /** The special album with this id, if it is one. */
 export const specialAlbumOf = (albumId: string | null | undefined) =>

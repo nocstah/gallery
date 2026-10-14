@@ -104,8 +104,8 @@ function paramAccepts(name: string, segment: string): boolean {
 }
 
 describe('NAVIGATION_ITEMS schema', () => {
-  it('has exactly 54 items', () => {
-    expect(NAVIGATION_ITEMS).toHaveLength(54);
+  it('has exactly 55 items', () => {
+    expect(NAVIGATION_ITEMS).toHaveLength(55);
   });
 
   it('every item has non-empty required fields', () => {
@@ -174,7 +174,7 @@ describe('NAVIGATION_ITEMS schema', () => {
 
   it('user-pages items are not admin-only', () => {
     const items = NAVIGATION_ITEMS.filter((i) => i.category === 'userPages');
-    expect(items).toHaveLength(27);
+    expect(items).toHaveLength(28);
     for (const item of items) {
       expect(item.adminOnly).toBe(false);
     }
