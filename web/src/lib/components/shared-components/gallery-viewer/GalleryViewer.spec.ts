@@ -5,7 +5,17 @@ import type { Component } from 'svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
 import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
+import { authManager } from '$lib/managers/auth-manager.svelte';
+import { preferencesFactory } from '@test-data/factories/preferences-factory';
+import { userAdminFactory } from '@test-data/factories/user-factory';
 import GalleryViewer from './GalleryViewer.svelte';
+
+// Local Omarchy layer: one stand-in special album (To do, key B), so its key can be pressed on the grid
+const { specialDone, specialMove } = vi.hoisted(() => ({ specialDone: vi.fn(), specialMove: vi.fn() }));
+vi.mock('$lib/managers/special-albums.svelte', () => ({
+  specialAlbums: [{ key: 'omarchy-todo', shortcut: 'b', move: specialMove, done: specialDone }],
+  specialAlbumOf: () => undefined,
+}));
 
 const { assetViewerPropsCalls, mockAssetInteraction, mockAssetViewerManager } = vi.hoisted(() => {
   // Bound to a local name (not an inline literal) so the accessors reference the
@@ -579,5 +589,41 @@ describe('GalleryViewer grouping', () => {
     expect(screen.queryByTestId('timeline-desktop-grouping-control')).not.toBeInTheDocument();
     expect(screen.getByTestId('thumbnail-asset-2016')).toBeInTheDocument();
     expect(screen.getByTestId('thumbnail-asset-2015-aug')).toBeInTheDocument();
+  });
+});
+
+// Local Omarchy layer: B (To do) and V (Villa) work on search results and the other grids, as on the timeline
+describe('GalleryViewer special albums', () => {
+  beforeAll(() => {
+    authManager.setUser(userAdminFactory.build({ id: 'user-1' }));
+    authManager.setPreferences(preferencesFactory.build());
+  });
+
+  beforeEach(() => {
+    specialMove.mockReset();
+    specialDone.mockReset();
+  });
+
+  it('moves the photo under keyboard focus in with the key and drops what it archived from the grid', async () => {
+    specialMove.mockResolvedValue({ archived: ['asset-a'] });
+    renderViewer({
+      assets: [asset('asset-a', '2024-01-02T00:00:00.000Z'), asset('asset-b', '2024-01-01T00:00:00.000Z')],
+      enableGrouping: false,
+    });
+
+    screen.getByTestId('thumbnail-asset-a').focus();
+    await fireEvent.keyDown(document, { key: 'b' });
+
+    await waitFor(() => expect(specialMove).toHaveBeenCalledWith([expect.objectContaining({ id: 'asset-a' })]));
+    await waitFor(() => expect(screen.queryByTestId('thumbnail-asset-a')).not.toBeInTheDocument());
+    expect(screen.getByTestId('thumbnail-asset-b')).toBeInTheDocument();
+  });
+
+  it('does nothing with the key when no photo is selected, pointed at or focused', async () => {
+    renderViewer({ assets: [asset('asset-a', '2024-01-02T00:00:00.000Z')], enableGrouping: false });
+
+    await fireEvent.keyDown(document, { key: 'b' });
+
+    expect(specialMove).not.toHaveBeenCalled();
   });
 });

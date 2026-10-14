@@ -928,7 +928,7 @@ ul[role='menu'] > hr {
   pointer-events: none;
   border: 1px solid var(--ws-accent);
   background: color-mix(in oklab, var(--ws-accent) 16%, transparent);
-  border-radius: 3px;
+  border-radius: var(--ws-radius);
 }
 body.ws-marquee-active,
 body.ws-marquee-active * {

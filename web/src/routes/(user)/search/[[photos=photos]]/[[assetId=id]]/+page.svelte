@@ -15,12 +15,14 @@
   import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
   import RotateAction from '$lib/components/timeline/actions/RotateAction.svelte';
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import { QueryParameter } from '$lib/constants';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
+  import { specialAlbums } from '$lib/managers/special-albums.svelte';
   import type { Viewport } from '$lib/managers/timeline-manager/types';
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
@@ -139,7 +141,9 @@
 
   const onArchive = (ids: string[], visibility: AssetVisibility) => {
     const idSet = new Set(ids);
-    if (terms.visibility && terms.visibility !== visibility) {
+    // Local Omarchy layer: the search asks for Timeline unless told otherwise (loadNextPage), so what is archived (To do,
+    // Villa) leaves the results, as it leaves the timeline
+    if ((terms.visibility ?? AssetVisibility.Timeline) !== visibility) {
       searchResultAssets = searchResultAssets.filter((asset) => !idSet.has(asset.id));
       return;
     }
@@ -436,6 +440,10 @@
           <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} {onFavorite} />
 
           {#if assetMultiSelectManager.isAllUserOwned}
+            <!-- Local Omarchy layer: into a special album (To do B, Villa V), as on Photos -->
+            {#each specialAlbums as special (special.key)}
+              <SpecialAlbumAction {special} {onArchive} />
+            {/each}
             <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
               <ActionMenuItem action={Actions.AddToAlbum} />
               <DownloadAction menuItem />

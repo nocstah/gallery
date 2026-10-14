@@ -1,6 +1,8 @@
 <script lang="ts">
   import { lazyComponent } from '$lib/utils/lazy-component.svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
+  import { marqueeSelect } from '$lib/actions/marquee-select';
   import { shortcuts, type ShortcutOptions } from '$lib/actions/shortcut';
   import type { Action } from '$lib/components/asset-viewer/actions/action';
   import type { AssetCursor } from '$lib/components/asset-viewer/AssetViewer.svelte';
@@ -11,7 +13,9 @@
   import Portal from '$lib/elements/Portal.svelte';
   import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
+  import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
+  import { specialAlbumOf, specialAlbums, type SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
   import type {
     TimelineAsset,
     TimelineGrouping,
@@ -107,6 +111,13 @@
   );
 
   const navigationAssets = $derived(viewerAssets ?? assets);
+
+  // Local Omarchy layer: the photo behind a tile, for the selection box and the special albums' keys below
+  const assetById = $derived(new Map(assets.map((asset) => [asset.id, asset])));
+  const tileAsset = (id: string) => {
+    const found = assetById.get(id);
+    return found ? toTimelineAsset(found) : undefined;
+  };
 
   const geometry = $derived(
     getJustifiedLayoutFromAssets(assets, {
@@ -308,6 +319,46 @@
     }
   };
 
+  // Local Omarchy layer: a special album's key (B To do, V Villa: managers/special-albums) moves the selection, or the
+  // photo under the pointer (or keyboard focus), in, as on the timeline (TimelineKeyboardActions); searching inside that
+  // album, it takes them out again. The photos it archives leave this grid, as after Shift+A.
+  const pointedAsset = () => {
+    const tile =
+      galleryViewerElement?.querySelector<HTMLElement>('[data-thumbnail-focus-container][data-asset]:hover') ??
+      document.activeElement?.closest<HTMLElement>('[data-thumbnail-focus-container][data-asset]');
+    const id = tile && galleryViewerElement?.contains(tile) ? tile.dataset.asset : undefined;
+    return id ? tileAsset(id) : undefined;
+  };
+
+  const toggleSpecial = async (special: SpecialAlbumManager) => {
+    const selected = assetInteraction.selectionActive;
+    const pointed = selected ? undefined : pointedAsset();
+    // someone else's photo goes by its id alone, so the album says it can't take it
+    const own = (asset: TimelineAsset) => authManager.authenticated && asset.ownerId === authManager.user.id;
+    const picked = selected
+      ? assetInteraction.getOwnedAssets()
+      : pointed
+        ? [own(pointed) ? pointed : { id: pointed.id }]
+        : [];
+    if (picked.length === 0) {
+      return;
+    }
+    if (specialAlbumOf(page.params.albumId) === special) {
+      if ((await special.done(picked)) && selected) {
+        assetInteraction.clear();
+      }
+      return;
+    }
+    const moved = await special.move(picked);
+    if (moved) {
+      const archived = new Set(moved.archived);
+      assets = assets.filter((asset) => !archived.has(asset.id));
+      if (selected) {
+        assetInteraction.clear();
+      }
+    }
+  };
+
   const focusNextAsset = () => moveFocus((element) => element.dataset.thumbnailFocusContainer !== undefined, 'next');
   const focusPreviousAsset = () =>
     moveFocus((element) => element.dataset.thumbnailFocusContainer !== undefined, 'previous');
@@ -340,6 +391,13 @@
             ]
           : []),
       ];
+
+      // Local Omarchy layer: the special albums' keys, for the selection or the photo under the pointer
+      if (!disableAssetSelect && authManager.authenticated) {
+        for (const special of specialAlbums) {
+          shortcuts.push({ shortcut: { key: special.shortcut }, onShortcut: () => toggleSpecial(special) });
+        }
+      }
 
       if (assetInteraction.selectionActive) {
         shortcuts.push(
@@ -532,7 +590,19 @@
   onauxclickcapture={onQuickTrash}
 />
 
-<div bind:this={galleryViewerElement} data-testid="gallery-viewer">
+<!-- Local Omarchy layer: use:marqueeSelect draws the timeline's drag-selection box here too (lib/actions/marquee-select.ts);
+     a hold only selects, as search results have no stacking -->
+<div
+  bind:this={galleryViewerElement}
+  data-testid="gallery-viewer"
+  use:marqueeSelect={{
+    assetInteraction,
+    enabled: !disableAssetSelect && !assetViewerManager.isViewing && !showRepresentativeBuckets,
+    assetFor: tileAsset,
+    stacking: false,
+    scroller: scrollElement ?? null,
+  }}
+>
   {#if enableGrouping && assets.length > 0}
     <TimelineRouteGroupingBar
       grouping={galleryGrouping}

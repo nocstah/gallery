@@ -34,6 +34,9 @@ import { handleError } from '$lib/utils/handle-error';
 /** The Space whose folders are the Albums page's (Curator files its albums into it by this name too). */
 export const FOLDER_SPACE = 'Library';
 
+/** Me, or undefined when signed out (a shared link's page, a test), where `authManager.user` throws. */
+const myId = () => (authManager.authenticated ? authManager.user.id : undefined);
+
 class AlbumFolderManager {
   spaceId = $state<string | undefined>();
   folders = $state<SharedSpaceAlbumFolderDto[]>([]);
@@ -62,7 +65,7 @@ class AlbumFolderManager {
   async #load() {
     try {
       // signed out (a shared link's page, a test) there is no Library to find
-      const me = authManager.user?.id;
+      const me = myId();
       const spaces = (me && (await getAllSpaces())) || [];
       const space = spaces
         .filter(({ name, createdById }) => name === FOLDER_SPACE && createdById === me)
@@ -252,4 +255,4 @@ export const albumFolders = new AlbumFolderManager();
 export const isLibrarySpace = (space: { id: string; name?: string | null; createdById?: string | null }) =>
   albumFolders.spaceId
     ? space.id === albumFolders.spaceId
-    : space.name === FOLDER_SPACE && (!space.createdById || space.createdById === authManager.user?.id);
+    : space.name === FOLDER_SPACE && (!space.createdById || space.createdById === myId());

@@ -252,6 +252,55 @@ describe('SpaceSearchResults', () => {
     expect(screen.getByTestId('search-empty')).toBeInTheDocument();
   });
 
+  // Local Omarchy layer: the Photos page's "Include archived" box
+  it('should offer no Include archived box unless the host asks for one', () => {
+    render(SpaceSearchResults, {
+      props: {
+        results: mockAssets,
+        isLoading: false,
+        hasMore: false,
+        totalLoaded: 3,
+        onLoadMore: vi.fn(),
+        sortMode: 'relevance',
+      },
+    });
+    expect(screen.queryByTestId('search-include-archived')).not.toBeInTheDocument();
+  });
+
+  it('should show the Include archived box beside the count, as the host left it, and tick it', async () => {
+    render(SpaceSearchResults, {
+      props: {
+        results: mockAssets,
+        isLoading: false,
+        hasMore: false,
+        totalLoaded: 3,
+        onLoadMore: vi.fn(),
+        sortMode: 'relevance',
+        includeArchived: false,
+      },
+    });
+    const box = screen.getByRole('checkbox', { name: 'Include archived' });
+    expect(box).not.toBeChecked();
+    await fireEvent.click(box);
+    expect(box).toBeChecked();
+  });
+
+  it('should still offer Include archived when nothing was found without archived photos', () => {
+    render(SpaceSearchResults, {
+      props: {
+        results: [],
+        isLoading: false,
+        hasMore: false,
+        totalLoaded: 0,
+        onLoadMore: vi.fn(),
+        sortMode: 'relevance',
+        includeArchived: false,
+      },
+    });
+    expect(screen.getByTestId('search-empty')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Include archived' })).toBeInTheDocument();
+  });
+
   it('should show contextual result count for date-sorted mode', () => {
     render(SpaceSearchResults, {
       props: {

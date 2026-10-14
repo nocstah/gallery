@@ -161,6 +161,12 @@ export const autoPlayVideo = persisted<boolean>('auto-play-video', true, {});
 export const alwaysLoadOriginalVideo = persisted<boolean>('always-load-original-video', false, {});
 
 /**
+ * Local Omarchy layer: whether a search on Photos shows archived photos too (its "Include archived" box). Off by
+ * default: a search finds what Photos shows, not what was put away (the archive, To do, Villa).
+ */
+export const searchIncludeArchived = persisted<boolean>('omarchy-search-include-archived', false, {});
+
+/**
  * Whether the asset-viewer Info panel crops each person's avatar out of the photo on screen
  * (`true`, the long-standing behaviour) or shows their profile face instead (`false`).
  *

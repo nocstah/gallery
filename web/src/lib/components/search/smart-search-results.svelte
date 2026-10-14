@@ -34,6 +34,11 @@
     reloadToken?: number;
     /** Reports the results grid's scroll offset — see `SpaceSearchResults` (#1028). */
     onScroll?: (scrollTop: number) => void;
+    /**
+     * Local Omarchy layer: whether archived photos are among the results, bound to the "Include archived" box the
+     * results then show (the Photos page). Left out: no box, and the server's default (archived included).
+     */
+    includeArchived?: boolean;
   }
 
   let {
@@ -50,6 +55,7 @@
     results: searchResults = $bindable([]),
     reloadToken = 0,
     onScroll,
+    includeArchived = $bindable(),
   }: Props = $props();
 
   /**
@@ -90,7 +96,7 @@
     try {
       const { assets } = await searchSmart({
         smartSearchDto: {
-          ...buildSmartSearchParams({ query, filters, spaceId, albumIds, withSharedSpaces, language }),
+          ...buildSmartSearchParams({ query, filters, spaceId, albumIds, withSharedSpaces, language, includeArchived }),
           page,
           size: 100,
         },
@@ -179,6 +185,7 @@
       filters.sortOrder,
       filters.isFavorite,
       language,
+      includeArchived,
     ]);
 
     // Tracked so a bump re-runs the search, but deliberately kept OUT of `searchKey`: a reload
@@ -226,4 +233,5 @@
   sortMode={filters.sortOrder}
   {total}
   {onScroll}
+  bind:includeArchived
 />

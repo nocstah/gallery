@@ -1,11 +1,11 @@
-import { AssetOrder } from '@immich/sdk';
+import { AssetOrder, AssetVisibility } from '@immich/sdk';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FilterState } from '$lib/components/filter-panel/filter-panel';
 import SmartSearchResultsRerunHost from '$lib/components/search/smart-search-results-rerun.test-host.svelte';
 import SmartSearchResults from '$lib/components/search/smart-search-results.svelte';
 import SmartSearchResultsHost from '$lib/components/search/smart-search-results.test-host.svelte';
-import { SEARCH_FILTER_DEBOUNCE_MS } from '$lib/utils/space-search';
+import { buildSmartSearchFacetsParams, SEARCH_FILTER_DEBOUNCE_MS } from '$lib/utils/space-search';
 
 const searchSmartMock = vi.fn();
 vi.mock('@immich/sdk', async (importOriginal) => {
@@ -293,6 +293,41 @@ describe('SmartSearchResults', () => {
     await vi.advanceTimersByTimeAsync(SEARCH_FILTER_DEBOUNCE_MS);
     const dto = searchSmartMock.mock.calls[0][0].smartSearchDto as Record<string, unknown>;
     expect(dto).not.toHaveProperty('albumIds');
+  });
+
+  // Local Omarchy layer: the Photos page's "Include archived" box
+  it('leaves archived photos out when the host unticks Include archived', async () => {
+    render(SmartSearchResults, { props: { ...baseProps, includeArchived: false } });
+    await vi.advanceTimersByTimeAsync(SEARCH_FILTER_DEBOUNCE_MS);
+    expect(searchSmartMock).toHaveBeenCalledWith(
+      expect.objectContaining({ smartSearchDto: expect.objectContaining({ visibility: AssetVisibility.Timeline }) }),
+    );
+  });
+
+  it('keeps the server default, archived included, when the host shows no Include archived box', async () => {
+    render(SmartSearchResults, { props: baseProps });
+    await vi.advanceTimersByTimeAsync(SEARCH_FILTER_DEBOUNCE_MS);
+    const dto = searchSmartMock.mock.calls[0][0].smartSearchDto as Record<string, unknown>;
+    expect(dto).not.toHaveProperty('visibility');
+  });
+
+  it('searches again with archived photos once Include archived is ticked', async () => {
+    render(SmartSearchResults, { props: { ...baseProps, includeArchived: false } });
+    await vi.advanceTimersByTimeAsync(SEARCH_FILTER_DEBOUNCE_MS);
+    expect(searchSmartMock).toHaveBeenCalledTimes(1);
+
+    // nothing found without them, so the empty state offers the box
+    await fireEvent.click(screen.getByRole('checkbox'));
+    await vi.advanceTimersByTimeAsync(SEARCH_FILTER_DEBOUNCE_MS);
+
+    expect(searchSmartMock).toHaveBeenCalledTimes(2);
+    expect(searchSmartMock.mock.calls[1][0].smartSearchDto).not.toHaveProperty('visibility');
+  });
+
+  it('never sends the archived choice to the facets endpoint, which has no such filter', () => {
+    expect(
+      buildSmartSearchFacetsParams({ query: 'beach', filters: baseFilters, includeArchived: false }),
+    ).not.toHaveProperty('visibility');
   });
 
   // #1028: the space shell collapses its cover as the reader scrolls the results, and the only

@@ -33,6 +33,8 @@
      * collapsing its cover — has no other way to hear about it (#1028). Mirrors `Timeline`'s prop.
      */
     onScroll?: (scrollTop: number) => void;
+    /** Local Omarchy layer: the "Include archived" box, shown when given (see `SmartSearchResults`) */
+    includeArchived?: boolean;
   }
 
   let {
@@ -48,6 +50,7 @@
     total,
     onReload,
     onScroll,
+    includeArchived = $bindable(),
   }: Props = $props();
 
   let isViewerOpen = $state(false);
@@ -120,6 +123,17 @@
   const LazyAssetViewer = lazyComponent(() => import('$lib/components/asset-viewer/AssetViewer.svelte'));
 </script>
 
+<!-- Local Omarchy layer: archived photos (the archive, To do, Villa) among the results or not, remembered per browser -->
+{#snippet archivedToggle()}
+  <label
+    class="flex cursor-pointer items-center gap-2 text-sm text-gray-500 select-none dark:text-gray-400"
+    data-testid="search-include-archived"
+  >
+    <input type="checkbox" class="size-4" bind:checked={includeArchived} />
+    {$t('include_archived')}
+  </label>
+{/snippet}
+
 <!-- `viewport.height` is the *visible* height of the scroll container (what GalleryViewer
      virtualizes against), while `viewport.width` is measured on the inner content div so it
      excludes this section's padding. -->
@@ -138,6 +152,10 @@
     <p class="mt-8 text-center text-gray-500 dark:text-gray-400" data-testid="search-empty">
       {$t('search_no_result')}
     </p>
+    <!-- with archived photos left out, the way to look among them too -->
+    {#if includeArchived === false}
+      <div class="mt-3 flex justify-center">{@render archivedToggle()}</div>
+    {/if}
   {:else}
     <div class="mb-4 flex items-center gap-2">
       <span class="text-sm text-gray-500 dark:text-gray-400" data-testid="result-count">
@@ -157,6 +175,9 @@
       </span>
       {#if isLoading}
         <LoadingSpinner size="small" />
+      {/if}
+      {#if includeArchived !== undefined}
+        <span class="ms-auto">{@render archivedToggle()}</span>
       {/if}
     </div>
 

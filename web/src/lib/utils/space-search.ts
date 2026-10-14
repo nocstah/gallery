@@ -1,6 +1,7 @@
 import {
   AssetOrder,
   AssetTypeEnum,
+  AssetVisibility,
   type SmartSearchDto,
   type SmartSearchFacetsDto,
   type SmartSearchFacetsResponseDto,
@@ -23,6 +24,11 @@ type SmartSearchParamsArgs = {
    * dropped by a hand-edited `?album=` in the URL.
    */
   albumIds?: string[];
+  /**
+   * Local Omarchy layer: false leaves archived photos out (the Photos page's "Include archived" box); undefined keeps the
+   * server's default, which includes them.
+   */
+  includeArchived?: boolean;
 };
 
 /**
@@ -72,6 +78,10 @@ export const QUERY_MODE_FILTER_HANDLING = {
 export function buildSmartSearchParams(args: SmartSearchParamsArgs): SmartSearchDto {
   const { query, filters, spaceId, withSharedSpaces, language, albumIds: scopeAlbumIds } = args;
   const params: SmartSearchDto = { query };
+  if (args.includeArchived === false) {
+    // the flat field is deprecated but still honoured; the facets endpoint has none (buildSmartSearchFacetsParams)
+    params.visibility = AssetVisibility.Timeline;
+  }
   if (language) {
     params.language = language;
   }
@@ -160,7 +170,8 @@ export function buildSmartSearchParams(args: SmartSearchParamsArgs): SmartSearch
 }
 
 export function buildSmartSearchFacetsParams(args: SmartSearchParamsArgs): SmartSearchFacetsDto {
-  const { order: _, ...params } = buildSmartSearchParams(args);
+  // the facets endpoint takes no order, and no archived choice either (see includeArchived)
+  const { order: _, ...params } = buildSmartSearchParams({ ...args, includeArchived: undefined });
   return params;
 }
 

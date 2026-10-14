@@ -54,7 +54,7 @@
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
   import { getStackBulkActions } from '$lib/services/stack.service';
-  import { lang } from '$lib/stores/preferences.store';
+  import { lang, searchIncludeArchived } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl, memoryLaneTitle } from '$lib/utils';
   import {
     buildSearchablePageUrl,
@@ -394,7 +394,11 @@
     // Replay the active filters (and free-text query, if any) against search so the collector can
     // page every matching id. Non-query mode mirrors buildPhotosTimelineOptions' partner/shared-space
     // scoping so the collected set matches the timeline.
-    const terms: SearchTerms = { ...filterStateToSearchTerms(filters), visibility: AssetVisibility.Timeline };
+    // Local Omarchy layer: a search showing archived photos ("Include archived") adds them too
+    const terms: SearchTerms = {
+      ...filterStateToSearchTerms(filters),
+      visibility: query && $searchIncludeArchived ? undefined : AssetVisibility.Timeline,
+    };
     if (query) {
       terms.query = query;
     } else {
@@ -502,6 +506,12 @@
 
   const handleArchive = (ids: string[], visibility: AssetVisibility) => {
     if (showSearchResults) {
+      // Local Omarchy layer: with archived photos left out of the results ("Include archived" off), what is archived
+      // (Archive, To do, Villa) leaves them, as it leaves the timeline
+      if (visibility === AssetVisibility.Archive && !$searchIncludeArchived) {
+        removeSearchResults(searchResults, ids);
+        return;
+      }
       updateSearchResults(searchResults, ids, (asset) => (asset.visibility = visibility));
       return;
     }
@@ -819,6 +829,7 @@
           isShared={false}
           withSharedSpaces={true}
           total={smartFacetTotal}
+          bind:includeArchived={$searchIncludeArchived}
         />
       {:else}
         <!-- #1041: keyed so handleSpaceAddAssets can force a fresh TimelineManager — see the

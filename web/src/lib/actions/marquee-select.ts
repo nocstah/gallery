@@ -1,4 +1,5 @@
-// Local Omarchy layer: Mac-Photos-style marquee selection and drag-to-stack on the timeline. One rule decides
+// Local Omarchy layer: Mac-Photos-style marquee selection and drag-to-stack on the timeline, and the same selection
+// box on every other photo grid (search results, folders: GalleryViewer), where a hold only selects. One rule decides
 // what a press on the grid does, and it depends only on timing, never on what is already selected:
 //
 //   press and move right away   a selection box. Every tile it touches is selected live, and tiles it leaves
@@ -7,17 +8,29 @@
 //                               of one). Move to carry it and drop it on another photo to stack them there: the
 //                               drop target becomes the cover, and stacks either side already heads fold in.
 //                               Esc or an empty drop puts it back; releasing without moving toggles its selection,
-//                               the way Immich's long-press does.
+//                               the way Immich's long-press does. Without stacking (`stacking: false`) nothing
+//                               lifts: releasing toggles the selection and moving draws the box.
 //   click                       still opens the photo.
 //
-// Dragging near the top or bottom edge scrolls the timeline. Only rendered tiles can be hit, so tiles that scroll
-// out of view keep whatever state the box gave them. Touch keeps Immich's own long-press (Thumbnail.svelte skips
-// mouse and pen holds inside [data-ws-gestures]).
+// Dragging near the top or bottom edge scrolls the grid (or the page or pane it scrolls in: `scroller`). Only rendered
+// tiles can be hit, so tiles that scroll out of view keep whatever state the box gave them. Touch keeps Immich's own
+// long-press (Thumbnail.svelte skips mouse and pen holds inside [data-ws-gestures]).
 import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
+import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 
-type Options = { timelineManager: TimelineManager; assetInteraction: AssetMultiSelectManager; enabled: boolean };
-type Phase = 'idle' | 'pressed' | 'marquee' | 'lifted' | 'dragging';
+type Options = {
+  assetInteraction: AssetMultiSelectManager;
+  enabled: boolean;
+  /** the photo a tile shows, by its id; a tile it can't name is left alone */
+  assetFor: (id: string) => TimelineAsset | undefined;
+  /** photos a hold may not pick (those already in the album being added to) */
+  locked?: (id: string) => boolean;
+  /** hold and drag a photo onto another to stack them (the timeline, the default); elsewhere a hold only selects */
+  stacking?: boolean;
+  /** what scrolls, when it is not the grid itself: the pane the grid sits in, or null for the page */
+  scroller?: HTMLElement | null;
+};
+type Phase = 'idle' | 'pressed' | 'marquee' | 'held' | 'lifted' | 'dragging';
 type Box = { x: number; y: number; w: number; h: number };
 
 const TILE = '[data-thumbnail-focus-container][data-asset]';
@@ -27,14 +40,14 @@ const EDGE = 56;
 const GHOST_SIZE = 104; // longest side of the carried photo
 const SETTLE = 180;
 
-const tileFor = (scroller: HTMLElement, id: string) =>
-  scroller.querySelector<HTMLElement>(`[data-thumbnail-focus-container][data-asset="${CSS.escape(id)}"]`) ?? undefined;
+const tileFor = (grid: HTMLElement, id: string) =>
+  grid.querySelector<HTMLElement>(`[data-thumbnail-focus-container][data-asset="${CSS.escape(id)}"]`) ?? undefined;
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
+export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
   let options = initial;
   let phase: Phase = 'idle';
-  let start: { x: number; y: number } | undefined; // in scroller content coordinates
+  let start: { x: number; y: number } | undefined; // in grid content coordinates
   let press = { x: 0, y: 0 }; // client coordinates
   let pointer = { x: 0, y: 0 }; // client coordinates
   let startTile: HTMLElement | undefined;
@@ -50,24 +63,30 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
   let ghost: HTMLDivElement | undefined;
   let home: Box | undefined; // where the lifted photo sits in the grid
   let dropTarget: HTMLElement | undefined;
+  let scrolling: EventTarget | undefined; // what scrolls under a press, for its listener
 
-  const sync = () => scroller.toggleAttribute('data-ws-gestures', options.enabled);
+  const sync = () => grid.toggleAttribute('data-ws-gestures', options.enabled);
 
+  // a grid that scrolls itself (the timeline) adds its scroll offset; one inside a pane or the page moves with it
   const toContent = (x: number, y: number) => {
-    const r = scroller.getBoundingClientRect();
-    return { x: x - r.left + scroller.scrollLeft, y: y - r.top + scroller.scrollTop };
+    const r = grid.getBoundingClientRect();
+    return { x: x - r.left + grid.scrollLeft, y: y - r.top + grid.scrollTop };
   };
 
-  const assetFor = (id: string) => options.timelineManager.getTimelineMonthByAssetId(id)?.findAssetById({ id });
+  /** the element that scrolls: the grid, the pane it sits in, or null for the page */
+  const scrollerOf = () => (options.scroller === undefined ? grid : options.scroller);
+  /** the part of the grid on screen: the scroller's box, or the window */
+  const visible = () => scrollerOf()?.getBoundingClientRect() ?? new DOMRect(0, 0, innerWidth, innerHeight);
+  const scrollBy = (top: number) => (scrollerOf() ?? document.scrollingElement)?.scrollBy(0, top);
 
   const autoScroll = () => {
-    const rect = scroller.getBoundingClientRect();
+    const rect = visible();
     if (pointer.y < rect.top + EDGE) {
-      scroller.scrollBy(0, -Math.ceil((rect.top + EDGE - pointer.y) / 3));
+      scrollBy(-Math.ceil((rect.top + EDGE - pointer.y) / 3));
       return true;
     }
     if (pointer.y > rect.bottom - EDGE) {
-      scroller.scrollBy(0, Math.ceil((pointer.y - (rect.bottom - EDGE)) / 3));
+      scrollBy(Math.ceil((pointer.y - (rect.bottom - EDGE)) / 3));
       return true;
     }
     return false;
@@ -94,21 +113,22 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
       return;
     }
     autoScroll();
-    const scrollerRect = scroller.getBoundingClientRect();
+    const view = visible();
+    const gridRect = grid.getBoundingClientRect();
     const end = toContent(pointer.x, pointer.y);
     const left = Math.min(start.x, end.x);
     const top = Math.min(start.y, end.y);
     const right = Math.max(start.x, end.x);
     const bottom = Math.max(start.y, end.y);
-    // draw in client space
-    const originX = scrollerRect.left - scroller.scrollLeft;
-    const originY = scrollerRect.top - scroller.scrollTop;
+    // draw in client space, cut to what is on screen
+    const originX = gridRect.left - grid.scrollLeft;
+    const originY = gridRect.top - grid.scrollTop;
     box.style.left = `${left + originX}px`;
-    box.style.top = `${Math.max(top + originY, scrollerRect.top)}px`;
+    box.style.top = `${Math.max(top + originY, view.top)}px`;
     box.style.width = `${right - left}px`;
-    box.style.height = `${Math.min(bottom + originY, scrollerRect.bottom) - Math.max(top + originY, scrollerRect.top)}px`;
+    box.style.height = `${Math.max(0, Math.min(bottom + originY, view.bottom) - Math.max(top + originY, view.top))}px`;
 
-    for (const tile of scroller.querySelectorAll<HTMLElement>(TILE)) {
+    for (const tile of grid.querySelectorAll<HTMLElement>(TILE)) {
       const id = tile.dataset.asset!;
       const t = tile.getBoundingClientRect();
       const tl = t.left - originX;
@@ -116,7 +136,7 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
       const hit = tl < right && tl + t.width > left && tt < bottom && tt + t.height > top;
       const selected = options.assetInteraction.hasSelectedAsset(id);
       if (hit && !selected) {
-        const asset = assetFor(id);
+        const asset = options.assetFor(id);
         if (asset) {
           options.assetInteraction.selectAsset(asset);
           touched.add(id);
@@ -136,13 +156,18 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
     if (phase !== 'pressed' || !startTile?.isConnected) {
       return;
     }
+    if (options.stacking === false) {
+      // nothing to carry it to: the hold only selects, and moving on draws the box
+      phase = 'held';
+      return;
+    }
     phase = 'lifted';
     const id = startTile.dataset.asset!;
     const selection = options.assetInteraction.assets.map((asset) => asset.id);
     // a photo that is part of the selection carries the selection with it; any other photo travels alone
     dragIds = selection.includes(id) ? [id, ...selection.filter((other) => other !== id)] : [id];
     for (const dragId of dragIds) {
-      tileFor(scroller, dragId)?.setAttribute('data-dragging', '');
+      tileFor(grid, dragId)?.setAttribute('data-dragging', '');
     }
 
     const rect = startTile.getBoundingClientRect();
@@ -247,8 +272,8 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
       interaction.setAssetSelectionStart(null);
       return;
     }
-    const asset = assetFor(id);
-    if (asset && !options.timelineManager.albumAssets.has(id)) {
+    const asset = options.assetFor(id);
+    if (asset && !options.locked?.(id)) {
       interaction.selectAsset(asset);
       interaction.setAssetSelectionStart(asset);
     }
@@ -289,13 +314,15 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
     addEventListener('pointerup', onPointerUp);
     addEventListener('pointercancel', cancel);
     window.addEventListener('blur', cancel);
-    scroller.addEventListener('scroll', onScroll, { passive: true });
+    // the page's own scrolling is heard on the document
+    scrolling = scrollerOf() ?? document;
+    scrolling.addEventListener('scroll', onScroll, { passive: true });
   };
 
   const onPointerMove = (event: PointerEvent) => {
     pointer = { x: event.clientX, y: event.clientY };
     const moved = Math.hypot(pointer.x - press.x, pointer.y - press.y) > THRESHOLD;
-    if (phase === 'pressed' && moved) {
+    if ((phase === 'pressed' || phase === 'held') && moved) {
       clearTimeout(liftTimer);
       beginMarquee();
     } else if (phase === 'lifted' && moved) {
@@ -319,6 +346,7 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
         swallowNextClick();
         break;
       }
+      case 'held':
       case 'lifted': {
         // held and released in place
         toggleSelection(startTile!.dataset.asset!);
@@ -335,7 +363,7 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
           // timeline has no other need of (and its unit test mocks around)
           void import('$lib/services/stack.service').then(({ handleStack }) => handleStack([target, ...dragIds]));
         } else {
-          settleGhost(tileFor(scroller, startTile?.dataset.asset ?? ''));
+          settleGhost(tileFor(grid, startTile?.dataset.asset ?? ''));
         }
         swallowNextClick();
         break;
@@ -352,7 +380,7 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
   /** Esc, pointercancel or losing focus: put a carried photo back, keep whatever a box selected. */
   const cancel = () => {
     if (phase === 'lifted' || phase === 'dragging') {
-      settleGhost(tileFor(scroller, startTile?.dataset.asset ?? ''));
+      settleGhost(tileFor(grid, startTile?.dataset.asset ?? ''));
     }
     finish();
   };
@@ -372,14 +400,15 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
     removeEventListener('pointercancel', cancel);
     window.removeEventListener('blur', cancel);
     removeEventListener('keydown', onKey, { capture: true });
-    scroller.removeEventListener('scroll', onScroll);
+    scrolling?.removeEventListener('scroll', onScroll);
+    scrolling = undefined;
     clearTimeout(liftTimer);
     liftTimer = undefined;
     cancelAnimationFrame(frame);
     box?.remove();
     box = undefined;
     settleGhost(undefined);
-    for (const tile of scroller.querySelectorAll<HTMLElement>('[data-dragging]')) {
+    for (const tile of grid.querySelectorAll<HTMLElement>('[data-dragging]')) {
       delete tile.dataset.dragging;
     }
     setDropTarget(undefined);
@@ -399,8 +428,8 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
   };
 
   sync();
-  scroller.addEventListener('pointerdown', onPointerDown);
-  scroller.addEventListener('dragstart', onDragStart);
+  grid.addEventListener('pointerdown', onPointerDown);
+  grid.addEventListener('dragstart', onDragStart);
   return {
     update(next: Options) {
       options = next;
@@ -411,9 +440,9 @@ export const marqueeSelect = (scroller: HTMLElement, initial: Options) => {
     },
     destroy() {
       cancel();
-      delete scroller.dataset.wsGestures;
-      scroller.removeEventListener('pointerdown', onPointerDown);
-      scroller.removeEventListener('dragstart', onDragStart);
+      delete grid.dataset.wsGestures;
+      grid.removeEventListener('pointerdown', onPointerDown);
+      grid.removeEventListener('dragstart', onDragStart);
     },
   };
 };

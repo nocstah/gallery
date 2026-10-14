@@ -804,7 +804,12 @@
 <!-- Right margin MUST be equal to the width of scrubber -->
 <!-- Local Omarchy layer: use:marqueeSelect draws a drag-selection box over the grid (lib/actions/marquee-select.ts) -->
 <section
-  use:marqueeSelect={{ timelineManager, assetInteraction, enabled: !singleSelect && !assetViewerManager.isViewing }}
+  use:marqueeSelect={{
+    assetInteraction,
+    enabled: !singleSelect && !assetViewerManager.isViewing,
+    assetFor: (id) => timelineManager.getTimelineMonthByAssetId(id)?.findAssetById({ id }),
+    locked: (id) => timelineManager.albumAssets.has(id),
+  }}
   id="asset-grid"
   class={['h-full scrollbar-hidden overflow-y-auto outline-none', { 'm-0': isEmpty }, { 'ms-0': !isEmpty }]}
   style:margin-inline-end={(usingMobileDevice ? 0 : scrubberWidth) + 'px'}

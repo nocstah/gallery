@@ -11,6 +11,14 @@ class KeyboardManager {
     addEventListener('keydown', this.#update);
     addEventListener('keyup', this.#update);
     addEventListener('blur', this.#clear);
+    // Local Omarchy layer: a pointer event carries the real modifier state too. A key let go while a desktop shortcut
+    // (Super+Shift+…) or another surface had the keyboard never reaches the page as a keyup, which left Shift "held"
+    // until the next key press, so every video under the pointer played with sound; the next pointer event (moving
+    // onto a tile is one) puts it right.
+    for (const type of ['pointermove', 'pointerdown', 'mouseover'] as const) {
+      addEventListener(type, this.#update, { capture: true, passive: true });
+    }
+    document.addEventListener('visibilitychange', () => document.hidden && this.#clear());
   }
 
   get shift() {
@@ -29,7 +37,7 @@ class KeyboardManager {
     return this.#alt;
   }
 
-  #update = (event: KeyboardEvent) => {
+  #update = (event: KeyboardEvent | MouseEvent) => {
     this.#shift = event.shiftKey;
     this.#ctrl = event.ctrlKey;
     this.#meta = event.metaKey;
