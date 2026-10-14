@@ -200,6 +200,18 @@ Corners come from the desktop: everything (tiles, menus, modals, fields, buttons
 
 Tile focus is drawn **inset** (an inset box-shadow on a pseudo-element), because day sections use layout/paint containment and an outset border would clip at section edges.
 
+## Motion
+
+Things move the way the owner's desktop moves them. The theme hook reads Hyprland's animations (`hyprctl animations`) into motion tokens beside the geometry, so a window's animation on the desktop is a photo's animation here, and turning an animation off there turns it off here (0ms). `omarchy-world.css` carries the owner's values as fallbacks; `lib/utils/desktop-motion.ts` reads the same tokens for motion written in script.
+
+- **Open** (`--ws-open-*` from windowsIn, `--ws-fade-in-*` from fadeIn; the owner's: popin 92%, 550ms `cubic-bezier(0.22, 1, 0.36, 1)`, fading in over 400ms): a photo, album, folder or month that comes into view grows from the popin scale while it fades in (`lib/actions/tile-open.ts`, `[data-ws-open]`). Grids make tiles before they reach the screen, so a tile waits on its first frame until it is actually seen. A screen that opens at once (a page loading, a folder opening, a stack expanding) ripples in reading order, at most 280ms from first to last; a row scrolled into view ripples along the row. This is the one authored moment: opening the library opens a workspace full of windows.
+- **Close** (`--ws-close-*` from windowsOut; popin 92%, 350ms): a photo that leaves (trash, archive, To do, Villa, QR) shrinks to the popin scale as it fades.
+- **Re-tile** (`--ws-move-*` from windowsMove; 400ms on the snap curve `cubic-bezier(0.16, 1, 0.3, 1)`): the photos left behind glide into their new places, as windows do when one closes.
+- **Workspace** (`--ws-workspace-*` from workspaces; slidefade 20%, 500ms snap): switching years (see Time Strip).
+- **Favourite:** a heart given while the photo is on screen pops in from 40% on the open curve (0.65 of the open time); a heart already there when the tile is made just sits there.
+- **Never in the way:** nothing waits while the view moves faster than the eye follows (a jump of more than a screen, as the scrubber and a year switch make, or a fling faster than 2.5 screens a second): those tiles are simply there. The timeline's own suspension (scrolling, zoom, relayout) stops close and re-tile. Hidden tabs never hold a tile.
+- **Reduced motion:** tiles are simply there; a leaving photo only fades (150ms at most) and the rest re-tile at once; years cut.
+
 ## Components
 
 ### Photo Tile (signature)
@@ -208,6 +220,7 @@ Every photo is a window.
 - **Rest:** inset 1px hairline.
 - **Focus / Hover:** inset `--ws-border` in the theme accent (hover counts as focus, like focus-follows-mouse); default outline suppressed. 140ms `cubic-bezier(0.22, 1, 0.36, 1)`; reduced motion: no transition.
 - **Place caption:** city and country on a bottom black scrim, white 12px 600, fades in with focus (140ms); indented past the favourite star. Permanent on coarse pointers for tiles 200px and wider.
+- **Open and close:** like a window on the desktop (see Motion).
 
 ### Time Strip (signature)
 One calm line in the middle of the one bar that never rearranges itself (`TimelineWorkspaces.svelte`):
@@ -220,7 +233,7 @@ One calm line in the middle of the one bar that never rearranges itself (`Timeli
 The archive's years as workspace numbers, newest first.
 - **Pill:** monospace 12px 600, muted, transparent; hover tints ink 7% and raises to ink; active (the year under the viewport) inverts to ink fill and surface text; focus outline `--ws-border` accent, 2px offset.
 - **Behaviour:** horizontally scrolling, scrollbar hidden, 1rem edge masks, chevrons at both ends page it; the active pill scrolls to centre. Below it, the months of the year in view as 1-12 (10px mono; empty months faded, the one in view underlined in the accent); the heading's month name opens the Months overview, the year the Years overview, so the Years/Months/All row is only drawn in those overviews and with active filters. Filter and search sit with the header tools. `[` and `]` step to the older/newer year (ignored in inputs and while the viewer is open).
-- **Workspace slide:** switching years slides the timeline layer out across the full width (170ms, ease-in `cubic-bezier(0.55, 0, 1, 0.45)`), jumps, and slides the new year in from the other side (240ms, ease-out `cubic-bezier(0.22, 1, 0.36, 1)`); older years arrive from the right. The month heading flies 40px in the direction of travel (260ms cubic-out). Reduced motion cuts straight to the year.
+- **Workspace slide:** switching years moves the timeline layer the way the desktop switches workspaces (`--ws-workspace-*`; the owner's slidefade 20% over 500ms on the snap curve): the year in view slides the shift and fades in the first 40% of the time (ease-in `cubic-bezier(0.55, 0, 1, 0.45)`), the timeline jumps, and the new year comes in from the other side in the rest on the desktop's curve; older years arrive from the right. A plain slide on the desktop slides the full width without the fade. The month heading flies 40px in the direction of travel (260ms cubic-out). Reduced motion, or the desktop's workspace animation off, cuts straight to the year.
 
 ### Segmented Control (Years / Months / All)
 - **Shell:** transparent, 1px hairline, the window radius, 3px inner padding; floating variant takes the surface and the popup shadow.

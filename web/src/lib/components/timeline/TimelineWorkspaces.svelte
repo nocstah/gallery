@@ -9,6 +9,7 @@
   import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineGrouping, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
   import { locale } from '$lib/stores/preferences.store';
+  import { desktopMotion } from '$lib/utils/desktop-motion';
   import { Icon } from '@immich/ui';
   import { mdiChevronLeft, mdiChevronRight } from '@mdi/js';
   import { untrack } from 'svelte';
@@ -25,8 +26,7 @@
 
   let { timelineManager, viewportMonth, onGrouping }: Props = $props();
 
-  const reducedMotion =
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // months come in timeline order (newest first unless the timeline runs oldest first); fold them into years
   const years = $derived.by(() => {
@@ -95,10 +95,12 @@
     return Math.max(0, top - cover);
   };
 
-  // Switching workspaces slides the current year out across the width and the new one in from the
-  // other side, like Hyprland's workspace slide: older years arrive from the right. Only the inner
-  // timeline layer moves; the scroll container is left alone. Reduced motion cuts straight to it.
-  // A year opens at its first month in timeline order.
+  // Switching workspaces moves the timeline the way the desktop switches its workspaces (the hook's
+  // --ws-workspace-* tokens: Hyprland's workspaces animation; the owner's is slidefade 20% on its snap
+  // curve): the current year slides away and fades, the new one comes in from the other side. Older
+  // years arrive from the right. Only the inner timeline layer moves; the scroll container is left
+  // alone. Reduced motion, or the desktop's workspace animation off, cuts straight to it. A year opens
+  // at its first month in timeline order.
   let switching = false;
   const switchTo = async (year: number) => {
     const target = timelineManager.months.find((m) => m.yearMonth.year === year);
@@ -107,22 +109,34 @@
     }
     const sign = year < current.year ? 1 : -1;
     const layer = document.querySelector<HTMLElement>('#virtual-timeline');
-    if (!layer || reducedMotion) {
+    const { workspace } = desktopMotion();
+    if (!layer || reducedMotion || workspace.duration === 0) {
       timelineManager.scrollTo(monthTarget(target.top));
       return;
     }
+    const shift = workspace.shift * 100;
+    const faded = workspace.fade ? 0 : 1;
     switching = true;
     try {
-      await layer.animate([{ translate: '0 0' }, { translate: `${-sign * 100}% 0` }], {
-        duration: 170,
-        easing: 'cubic-bezier(0.55, 0, 1, 0.45)',
-        fill: 'forwards',
-      }).finished;
+      await layer.animate(
+        [
+          { translate: '0 0', opacity: 1 },
+          { translate: `${-sign * shift}% 0`, opacity: faded },
+        ],
+        {
+          duration: workspace.duration * 0.4,
+          easing: 'cubic-bezier(0.55, 0, 1, 0.45)',
+          fill: 'forwards',
+        },
+      ).finished;
       timelineManager.scrollTo(monthTarget(target.top));
-      await layer.animate([{ translate: `${sign * 100}% 0` }, { translate: '0 0' }], {
-        duration: 240,
-        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-      }).finished;
+      await layer.animate(
+        [
+          { translate: `${sign * shift}% 0`, opacity: faded },
+          { translate: '0 0', opacity: 1 },
+        ],
+        { duration: workspace.duration * 0.6, easing: workspace.ease },
+      ).finished;
     } finally {
       layer.getAnimations().forEach((animation) => animation.cancel());
       switching = false;
@@ -279,7 +293,13 @@
     const target = event.target instanceof Element ? event.target : null;
     // The asset viewer's editor uses [ and ] to rotate; the timeline only listens while it is in front.
     const viewerOpen = document.querySelector('#immich-asset-viewer') !== null;
-    if (viewerOpen || event.ctrlKey || event.metaKey || event.altKey || target?.closest('input, textarea, [contenteditable]')) {
+    if (
+      viewerOpen ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      target?.closest('input, textarea, [contenteditable]')
+    ) {
       return;
     }
     if ((event.key !== '[' && event.key !== ']') || !current) {
@@ -333,7 +353,14 @@
     <span class="ws-split" aria-hidden="true"></span>
 
     <div class="ws-years" data-start={atStart ? '' : undefined} data-end={atEnd ? '' : undefined}>
-      <button type="button" class="ws-step" tabindex="-1" aria-hidden="true" title={$t('previous')} onclick={() => page(-1)}>
+      <button
+        type="button"
+        class="ws-step"
+        tabindex="-1"
+        aria-hidden="true"
+        title={$t('previous')}
+        onclick={() => page(-1)}
+      >
         <Icon icon={mdiChevronLeft} size="16" />
       </button>
       <div

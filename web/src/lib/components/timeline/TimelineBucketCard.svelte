@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tileOpen } from '$lib/actions/tile-open';
   import Thumbhash from '$lib/components/Thumbhash.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
@@ -123,6 +124,7 @@
   {disabled}
   data-state={renderState}
   data-testid="timeline-bucket-card"
+  use:tileOpen
   onclick={activate}
 >
   <div class="absolute inset-0 overflow-hidden bg-gray-200 dark:bg-gray-800" data-testid="timeline-bucket-card-media">

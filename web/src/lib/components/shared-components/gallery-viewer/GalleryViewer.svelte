@@ -650,6 +650,7 @@
             data-gallery-asset-month={assetDate?.month ?? null}
           >
             <Thumbnail
+              opens
               readonly={disableAssetSelect}
               onClick={() => {
                 if (assetInteraction.selectionActive) {

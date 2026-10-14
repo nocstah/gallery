@@ -25,7 +25,8 @@
     mdiMotionPlayOutline,
     mdiRotate360,
   } from '@mdi/js';
-  import { onMount } from 'svelte';
+  import { tileOpen } from '$lib/actions/tile-open';
+  import { onMount, untrack } from 'svelte';
   import type { ClassValue } from 'svelte/elements';
   import { fade } from 'svelte/transition';
   import Thumbhash from '$lib/components/Thumbhash.svelte';
@@ -46,6 +47,8 @@
     showStackedIcon?: boolean;
     /** Local Omarchy layer: false where the grid cannot expand a stack in place (search results): a plain count */
     stackBadgeExpands?: boolean;
+    /** Local Omarchy layer: the tile opens like a window when it comes into view (actions/tile-open; photo grids) */
+    opens?: boolean;
     imageClass?: ClassValue;
     brokenAssetClass?: ClassValue;
     albumUsers?: UserResponseDto[];
@@ -69,6 +72,7 @@
     showArchiveIcon = false,
     showStackedIcon = true,
     stackBadgeExpands = true,
+    opens = false,
     albumUsers = [],
     onClick = undefined,
     onPreview = undefined,
@@ -244,6 +248,20 @@
     }
     return 'dark:bg-neutral-700 bg-neutral-200';
   });
+
+  // Local Omarchy layer: a heart given while the photo is on screen (F, the viewer's heart) pops in, so the favourite
+  // reads as done; one that was already there when the tile was made just sits there
+  let favoritePop = $state(false);
+  let wasFavorite = untrack(() => asset.isFavorite);
+  $effect(() => {
+    const favorite = asset.isFavorite;
+    untrack(() => {
+      if (favorite && !wasFavorite) {
+        favoritePop = true;
+      }
+      wasFavorite = favorite;
+    });
+  });
 </script>
 
 <div
@@ -258,6 +276,7 @@
   onmouseenter={onMouseEnter}
   onmouseleave={onMouseLeave}
   use:longPress={{ onLongPress: () => onSelect?.($state.snapshot(asset)) }}
+  use:tileOpen={opens}
   onkeydown={(evt) => {
     if (evt.key === 'Enter') {
       callClickHandlers();
@@ -375,7 +394,10 @@
 
         <!-- Favorite asset star -->
         {#if !authManager.isSharedLink && asset.isFavorite}
-          <div class="absolute inset-s-2 bottom-2 z-2">
+          <div
+            class={['absolute inset-s-2 bottom-2 z-2', { 'ws-favorite-pop': favoritePop }]}
+            onanimationend={() => (favoritePop = false)}
+          >
             <Icon data-icon-favorite icon={mdiHeart} size="24" class="text-white" />
           </div>
         {/if}

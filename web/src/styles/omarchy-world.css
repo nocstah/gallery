@@ -23,6 +23,23 @@
   --ws-gap: 10px;
   --ws-radius: 0px;
   --ws-border: 2px;
+  /* Hyprland motion: how a window opens (windowsIn, popin from a scale, with fadeIn), closes (windowsOut, fadeOut),
+     moves when the tiling changes (windowsMove), and how workspaces switch; photos and years move the same way.
+     The hook writes the desktop's own; these are the owner's values (2026-10-15), and 0ms means off. */
+  --ws-open-ms: 550ms;
+  --ws-open-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ws-open-scale: 0.92;
+  --ws-fade-in-ms: 400ms;
+  --ws-fade-in-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ws-close-ms: 350ms;
+  --ws-close-ease: cubic-bezier(0.38, 0, 0.2, 1);
+  --ws-close-scale: 0.92;
+  --ws-move-ms: 400ms;
+  --ws-move-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ws-workspace-ms: 500ms;
+  --ws-workspace-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ws-workspace-shift: 20%;
+  --ws-workspace-fade: 1;
   --ws-hairline: color-mix(in oklab, var(--immich-ui-dark) 13%, transparent);
   --ws-accent: var(--omarchy-accent, var(--immich-ui-primary-500));
   --ws-font-data: var(--omarchy-font-mono, 'JetBrainsMono Nerd Font'), 'GoogleSansCode', ui-monospace, monospace;
@@ -1616,19 +1633,43 @@ body.ws-dragging * {
   font-size: var(--ws-text-micro);
 }
 
-/* ---- photos fade into place as they scroll into view: the timeline creates a tile when it nears the screen, so the
-   entrance plays once per arrival (a slight rise, a little growth, the fade). backwards fill only, so afterwards the
-   tile's own opacity (the stack spotlight's dimming) is untouched ---- */
-@keyframes ws-tile-in {
+/* ---- photos open like windows (lib/actions/tile-open.ts): a photo, album or folder that comes into view pops in the
+   way the desktop opens a window, growing from --ws-open-scale on windowsIn's curve while it fades in on fadeIn's.
+   A tile made before it reaches the screen waits on its first frame ('waiting') until it is seen; a screen that opens
+   at once ripples in reading order through --ws-open-delay. backwards fill only, so once open the tile's own scale
+   and opacity (the stack spotlight's dimming) are its own again. Reduced motion: tiles are simply there ---- */
+@keyframes ws-open {
+  from {
+    scale: var(--ws-open-scale);
+  }
+}
+@keyframes ws-fade-in {
   from {
     opacity: 0;
-    translate: 0 12px;
-    scale: 0.985;
   }
 }
 @media (prefers-reduced-motion: no-preference) {
-  #asset-grid [data-thumbnail-focus-container] {
-    animation: ws-tile-in 460ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  [data-ws-open] {
+    animation:
+      ws-open var(--ws-open-ms) var(--ws-open-ease) var(--ws-open-delay, 0ms) backwards,
+      ws-fade-in var(--ws-fade-in-ms) var(--ws-fade-in-ease) var(--ws-open-delay, 0ms) backwards;
+  }
+  [data-ws-open='waiting'] {
+    animation-play-state: paused;
+  }
+}
+
+/* ---- a heart given while the photo is on screen pops in on the window-open curve (Thumbnail.svelte); a favourite
+   that was already there just sits there ---- */
+@keyframes ws-favorite-pop {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ws-favorite-pop {
+    animation: ws-favorite-pop calc(var(--ws-open-ms) * 0.65) var(--ws-open-ease);
   }
 }
 
