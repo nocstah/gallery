@@ -70,4 +70,17 @@ describe('album tree', () => {
     render(AlbumTree, props);
     expect(screen.queryByTestId('tree-folder-asia')).not.toBeInTheDocument();
   });
+
+  it('marks an album kept out of Photos with the eye at its row end', () => {
+    render(AlbumTree, {
+      ...props,
+      albums: [...props.albums, { id: 'slips', name: 'Old slips', folderId: null, hidden: true }],
+    });
+
+    expect(screen.getByTestId('tree-album-hidden-slips')).toHaveAttribute(
+      'title',
+      expect.stringMatching(/album_not_in_photos|Not in Photos/),
+    );
+    expect(screen.queryByTestId('tree-album-hidden-highlights')).not.toBeInTheDocument();
+  });
 });

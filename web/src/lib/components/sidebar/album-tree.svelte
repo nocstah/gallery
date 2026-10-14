@@ -6,6 +6,8 @@
     folderId: string | null;
     /** shared with people or by a link: marked at the row's end, as the Mac marks a shared album */
     shared?: boolean;
+    /** hidden from my timeline: marked at the row's end too, its photos are not in Photos */
+    hidden?: boolean;
   }
 </script>
 
@@ -23,6 +25,7 @@
     mdiFolderOpenOutline,
     mdiFolderOutline,
     mdiImageAlbum,
+    mdiEyeOffOutline,
     mdiShareVariantOutline,
   } from '@mdi/js';
   import { untrack } from 'svelte';
@@ -161,8 +164,17 @@
         >
           <Icon icon={mdiImageAlbum} size="18" flipped class="ws-tree-icon" aria-hidden={true} />
           <span class="ws-tree-name">{album.name}</span>
-          {#if album.shared}
-            <Icon icon={mdiShareVariantOutline} size="14" class="ws-tree-shared" aria-label={$t('shared')} />
+          {#if album.shared || album.hidden}
+            <span class="ws-tree-marks">
+              {#if album.hidden}
+                <span title={$t('album_not_in_photos')} data-testid="tree-album-hidden-{album.id}">
+                  <Icon icon={mdiEyeOffOutline} size="14" class="ws-tree-mark" aria-label={$t('album_not_in_photos')} />
+                </span>
+              {/if}
+              {#if album.shared}
+                <Icon icon={mdiShareVariantOutline} size="14" class="ws-tree-mark" aria-label={$t('shared')} />
+              {/if}
+            </span>
           {/if}
         </a>
       </div>
@@ -241,12 +253,17 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .ws-tree-link :global(.ws-tree-shared) {
+  .ws-tree-marks {
+    display: inline-flex;
     flex: none;
+    gap: 0.3rem;
+    align-items: center;
     margin-inline-start: auto;
+  }
+  .ws-tree-link :global(.ws-tree-mark) {
     color: var(--immich-ui-muted);
   }
-  .ws-tree-row[data-active='true'] .ws-tree-link :global(.ws-tree-shared) {
+  .ws-tree-row[data-active='true'] .ws-tree-link :global(.ws-tree-mark) {
     color: inherit;
   }
   .ws-tree-toggle:focus-visible,

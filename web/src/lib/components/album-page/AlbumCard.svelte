@@ -14,7 +14,11 @@
     showItemCount?: boolean;
     preload?: boolean;
     contextMenuItems?: MenuItems;
-    /** Local Omarchy layer: hidden from my timeline (managers/album-folders), marked as on the Space's own card */
+    /**
+     * Local Omarchy layer: hidden from my timeline (managers/album-folders). The cover turns grey and carries a "Not in
+     * Photos" chip, so such an album can be told apart across the grid at a glance ("have a better visual indicator for
+     * albums that are excluded from photos").
+     */
     hiddenFromTimeline?: boolean;
   };
 
@@ -49,11 +53,19 @@
     </div>
   {/if}
 
-  <AlbumCover
-    {album}
-    {preload}
-    class="transition-all duration-300 hover:shadow-lg {hiddenFromTimeline ? 'opacity-60' : ''}"
-  />
+  <div class="relative">
+    <AlbumCover
+      {album}
+      {preload}
+      class="transition-all duration-300 hover:shadow-lg {hiddenFromTimeline ? 'ws-album-cover-hidden' : ''}"
+    />
+    {#if hiddenFromTimeline}
+      <span class="ws-hidden-chip" data-testid="album-hidden-from-timeline">
+        <Icon icon={mdiEyeOffOutline} size="14" aria-hidden={true} />
+        {$t('album_not_in_photos')}
+      </span>
+    {/if}
+  </div>
 
   <div class="mt-4">
     <p
@@ -94,15 +106,5 @@
         <p>{$t('shared')}</p>
       {/if}
     </span>
-
-    {#if hiddenFromTimeline}
-      <p
-        class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400"
-        data-testid="album-hidden-from-timeline"
-      >
-        <Icon icon={mdiEyeOffOutline} size="14" />
-        {$t('space_albums_hidden_from_timeline')}
-      </p>
-    {/if}
   </div>
 </div>

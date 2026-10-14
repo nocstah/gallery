@@ -43,7 +43,11 @@
       ...outside.map(({ id, albumName }) => ({ id, name: albumName, folderId: null })),
     ]
       .filter(({ id }) => specialAlbums.every((special) => !special.isAlbum(id)))
-      .map((album) => ({ ...album, shared: shared.has(album.id) }));
+      .map((album) => ({
+        ...album,
+        shared: shared.has(album.id),
+        hidden: albumFolders.hiddenFromTimeline(album.id),
+      }));
   });
 
   const activeFolderId = $derived(page.url.pathname === Route.albums() ? page.url.searchParams.get('folder') : null);

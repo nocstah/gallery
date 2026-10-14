@@ -115,6 +115,7 @@
     mdiArrowLeft,
     mdiDotsHorizontal,
     mdiDotsVertical,
+    mdiEyeOffOutline,
     mdiImageOutline,
     mdiImagePlusOutline,
     mdiLink,
@@ -971,6 +972,20 @@
                          instead (below) -->
                     {#if special && album.assetCount > 0}
                       <p class="ws-album-note">{$t(special.words.note)}</p>
+                    {/if}
+                    <!-- Local Omarchy layer: hidden from my timeline (managers/album-folders) says so under the title,
+                         with the way back right beside it -->
+                    {#if !special && albumFolders.hiddenFromTimeline(album.id)}
+                      <p class="ws-album-note ws-album-hidden-note" data-testid="album-hidden-note">
+                        <span class="ws-hidden-mark">
+                          <Icon icon={mdiEyeOffOutline} size="14" aria-hidden={true} />
+                          {$t('album_not_in_photos')}
+                        </span>
+                        {$t('album_not_in_photos_note')}
+                        <button type="button" class="ws-empty-link" onclick={() => albumFolders.toggleTimeline(album)}>
+                          {$t('album_show_in_photos')}
+                        </button>
+                      </p>
                     {/if}
 
                     <!-- rbac-6: owner-only — the server populates album.sharedSpaceLinks only for

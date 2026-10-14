@@ -62,12 +62,11 @@
       />
     {/if}
     {#if albumFolders.hiddenFromTimeline(album.id)}
-      <Icon
-        icon={mdiEyeOffOutline}
-        size="16"
-        class="ms-1 inline opacity-70"
-        title={$t('space_albums_hidden_from_timeline')}
-      />
+      <!-- Local Omarchy layer: said in words, not only an icon ("a better visual indicator") -->
+      <span class="ws-hidden-mark ms-2" data-testid="album-row-hidden-from-timeline">
+        <Icon icon={mdiEyeOffOutline} size="14" aria-hidden={true} />
+        {$t('album_not_in_photos')}
+      </span>
     {/if}
   </td>
   <td class="text-md text-center text-ellipsis sm:w-2/12 md:w-2/12 xl:w-[15%] 2xl:w-[12%]">

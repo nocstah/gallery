@@ -1641,3 +1641,42 @@ body.ws-dragging * {
   line-height: 1.5;
   color: var(--immich-ui-muted);
 }
+
+/* ---- albums kept out of Photos (hidden from my timeline: managers/album-folders) ----
+   one mark wherever the album shows: on its cover a glass chip, the cover itself grey; in a list row and under the
+   album's title the same words in muted ink; in the sidebar tree the eye at the row's end */
+.ws-album-cover-hidden {
+  filter: grayscale(1) brightness(0.92);
+}
+.ws-hidden-chip {
+  position: absolute;
+  inset-inline-start: 0.5rem;
+  top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--ws-radius);
+  background: var(--ws-glass-strong);
+  -webkit-backdrop-filter: var(--ws-glass-blur);
+  backdrop-filter: var(--ws-glass-blur);
+  color: #fff;
+  font-size: var(--ws-text-micro);
+  font-weight: 600;
+  pointer-events: none;
+}
+.ws-hidden-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--immich-ui-muted);
+  font-size: var(--ws-text-meta);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ws-album-hidden-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.6rem;
+}

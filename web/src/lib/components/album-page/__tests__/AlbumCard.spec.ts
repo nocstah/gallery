@@ -80,4 +80,20 @@ describe('AlbumCard component', () => {
     const contextButtonParent = sut.queryByTestId('context-button-parent');
     expect(contextButtonParent).not.toBeInTheDocument();
   });
+
+  // Local Omarchy layer: "have a better visual indicator for albums that are excluded from photos"
+  it('marks an album hidden from the timeline on its cover, which turns grey', () => {
+    const album = albumFactory.build({ albumThumbnailAssetId: null });
+    sut = render(AlbumCard, { album, hiddenFromTimeline: true });
+
+    expect(sut.getByTestId('album-hidden-from-timeline')).toHaveTextContent('Not in Photos');
+    expect(sut.container.querySelector('.ws-album-cover-hidden')).toBeInTheDocument();
+  });
+
+  it('leaves an album in Photos unmarked', () => {
+    const album = albumFactory.build({ albumThumbnailAssetId: null });
+    sut = render(AlbumCard, { album });
+
+    expect(sut.queryByTestId('album-hidden-from-timeline')).not.toBeInTheDocument();
+  });
 });
