@@ -3,11 +3,11 @@
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { mergeRotation } from '$lib/services/asset.service';
-  import { waitForWebsocketEvent } from '$lib/stores/websocket';
   import { getEditableAssetsWithWarning } from '$lib/utils/asset-utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { waitForEditRendered } from '$lib/utils/edit-rendered';
   import { editsDone } from '$lib/utils/undoable';
-  import { editAsset, getAssetEdits, getAssetInfo, removeAssetEdits, type AssetEditActionItemDto } from '@immich/sdk';
+  import { editAsset, getAssetEdits, removeAssetEdits, type AssetEditActionItemDto } from '@immich/sdk';
   import { mdiRotateLeft, mdiRotateRight } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
@@ -47,11 +47,9 @@
           const prior = existing.edits.map(({ action, parameters }) => ({ action, parameters }));
           const edits = mergeRotation(prior, angle);
 
-          const editCompleted = waitForWebsocketEvent(
-            'AssetEditReadyV2',
-            (event) => event.asset.id === asset.id,
-            10_000,
-          );
+          // Local Omarchy layer: wait for the server to draw the turned photo however long its queue takes
+          // (utils/edit-rendered), then show it, new shape and all
+          const editRendered = waitForEditRendered(asset.id, asset.thumbhash);
 
           await (edits.length === 0
             ? removeAssetEdits({ id: asset.id })
@@ -59,10 +57,7 @@
           before.push({ id: asset.id, edits: prior });
 
           pendingRefreshes.push(
-            editCompleted
-              .then(() => getAssetInfo({ id: asset.id }))
-              .then((refreshed) => void eventManager.emit('AssetUpdate', refreshed))
-              .catch(() => {}),
+            editRendered.then((refreshed) => void eventManager.emit('AssetUpdate', refreshed)).catch(() => {}),
           );
           success++;
         } catch {

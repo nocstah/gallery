@@ -7,6 +7,7 @@
   import type { Action } from '$lib/components/asset-viewer/actions/action';
   import type { AssetCursor } from '$lib/components/asset-viewer/AssetViewer.svelte';
   import Thumbnail from '$lib/components/assets/thumbnail/Thumbnail.svelte';
+  import OnEvents from '$lib/components/OnEvents.svelte';
   import TimelineBucketCard from '$lib/components/timeline/TimelineBucketCard.svelte';
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
   import { AssetAction } from '$lib/constants';
@@ -588,6 +589,17 @@
   onscroll={() => updateSlidingWindow()}
   onmousedowncapture={holdQuickTrash}
   onauxclickcapture={onQuickTrash}
+/>
+
+<!-- Local Omarchy layer: a photo changed from its menu or the selection (rotated, edited, favourited) shows its new self
+     here too, its new thumbnail and, after a rotation, its new shape; search, Folders, Memories and shared links kept
+     the old picture until a reload -->
+<OnEvents
+  onAssetUpdate={(asset) => {
+    if (assets.some(({ id }) => id === asset.id)) {
+      updateCurrentAsset(asset);
+    }
+  }}
 />
 
 <!-- Local Omarchy layer: use:marqueeSelect draws the timeline's drag-selection box here too (lib/actions/marquee-select.ts);

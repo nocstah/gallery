@@ -64,11 +64,11 @@ import ProfileImageCropperModal from '$lib/modals/ProfileImageCropperModal.svelt
 import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
 import { Route } from '$lib/route';
 import { SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
-import { waitForWebsocketEvent } from '$lib/stores/websocket';
 import { getAssetMediaUrl, getSharedLink, sleep } from '$lib/utils';
 import { downloadUrl } from '$lib/utils';
 import { canEditAsset } from '$lib/utils/asset-editability';
 import { getEditableAssetsWithWarning } from '$lib/utils/asset-utils';
+import { waitForEditRendered } from '$lib/utils/edit-rendered';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
 import {
@@ -742,14 +742,14 @@ const handleQuickRotate = async (asset: AssetResponseDto, angle: number) => {
     const before = existing.edits.map(({ action, parameters }) => ({ action, parameters }));
     const edits = mergeRotation(before, angle);
 
-    const editCompleted = waitForWebsocketEvent('AssetEditReadyV2', (event) => event.asset.id === asset.id, 10_000);
+    // Local Omarchy layer: wait for the server to draw the turned photo however long its queue takes (utils/edit-rendered)
+    const editRendered = waitForEditRendered(asset.id, asset.thumbhash);
 
     await (edits.length === 0
       ? removeAssetEdits({ id: asset.id })
       : editAsset({ id: asset.id, assetEditsCreateDto: { edits } }));
-    await editCompleted;
 
-    const refreshedAsset = await getAssetInfo({ id: asset.id });
+    const refreshedAsset = await editRendered;
     assetViewerManager.setAsset(refreshedAsset);
     eventManager.emit('AssetUpdate', refreshedAsset);
     eventManager.emit('AssetEditsApplied', asset.id);

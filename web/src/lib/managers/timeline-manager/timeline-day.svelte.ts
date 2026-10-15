@@ -140,6 +140,9 @@ export class TimelineDay {
       }
 
       const oldTime = { ...getOrderingDate(asset, this.orderBy) };
+      // Local Omarchy layer: a photo that turned (rotated, cropped) has a new shape, so the day lays out again; without
+      // this its new thumbnail filled the old box, and a rotation looked like nothing but a crop
+      const oldRatio = asset.ratio;
       const callbackResult = callback(asset);
       let remove = (callbackResult as { remove?: boolean } | undefined)?.remove ?? false;
       const newTime = getOrderingDate(asset, this.orderBy);
@@ -147,6 +150,9 @@ export class TimelineDay {
         const { year, month, day } = newTime;
         remove = true;
         moveAssets.push({ asset, date: { year, month, day } });
+      }
+      if (asset.ratio !== oldRatio) {
+        changedGeometry = true;
       }
       unprocessedIds.delete(assetId);
       processedIds.add(assetId);
