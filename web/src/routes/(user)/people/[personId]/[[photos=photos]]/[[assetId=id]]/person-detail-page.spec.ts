@@ -45,6 +45,14 @@ const {
       return formatCount(options?.values?.count, 'face', 'faces');
     }
 
+    if (key === 'cmdk_preview_photo_count') {
+      return formatCount(options?.values?.count, 'photo', 'photos');
+    }
+
+    if (key === 'person_birthdate') {
+      return `Born on ${String(options?.values?.date)}`;
+    }
+
     return key;
   };
 
@@ -102,6 +110,14 @@ vi.mock('svelte-i18n', () => ({
       return () => {};
     },
   },
+  // the person actions ask getFormatter for their toasts
+  locale: {
+    subscribe: (run: (value: string) => void) => {
+      run('en');
+      return () => {};
+    },
+  },
+  waitLocale: () => Promise.resolve(),
 }));
 
 vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({
@@ -117,6 +133,13 @@ vi.mock('@immich/ui', async (importOriginal) => {
     modalManager: { show: vi.fn(), showDialog: vi.fn() },
     toastManager: { primary: vi.fn(), success: vi.fn(), warning: vi.fn(), danger: vi.fn() },
   };
+});
+
+// Local Omarchy layer: the page lives in the shell; the stand-in renders the bar's leading and buttons snippets inline
+// and carries the description, so they can be read and clicked
+vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+  return { default: MockComponent };
 });
 
 vi.mock('$lib/components/OnEvents.svelte', async () => {
@@ -205,6 +228,22 @@ function makeSuggestion(overrides: Partial<PersonFaceSuggestionPageResponseDto['
   };
 }
 
+// vi.resetAllMocks() also empties the setup's matchMedia stand-in, which the page's MediaQuery reads: put it back, as a
+// wide screen unless a test asks for a phone
+function stubMatchMedia(matches = false) {
+  vi.mocked(matchMedia).mockImplementation(
+    (query: string) =>
+      ({
+        matches,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }) as unknown as MediaQueryList,
+  );
+}
+
 function renderPage({
   person = makePerson(),
   statistics = { assets: 5, faces: 6 },
@@ -232,6 +271,7 @@ function renderPage({
 describe('Person detail page', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    stubMatchMedia();
     userInteraction.recentSpaces = undefined;
     gotoMock.mockResolvedValue(undefined);
     invalidateAllMock.mockResolvedValue(undefined);
@@ -304,25 +344,35 @@ describe('Person detail page', () => {
     });
   });
 
-  it('renders asset and face counts in the person header', () => {
+  it('puts the photo and face counts in the bar, worded as photos', () => {
     renderPage({
       person: makePerson({ name: 'Alice' }),
       statistics: { assets: 7, faces: 10 },
     });
 
-    expect(screen.getByText('7 assets')).toBeInTheDocument();
-    expect(screen.getByText('10 faces')).toBeInTheDocument();
+    const layout = screen.getByTestId('user-page-layout');
+    expect(layout).toHaveAttribute('data-description', '7 photos · 10 faces');
+    expect(layout.dataset.description).not.toMatch(/asset/);
   });
 
-  it('hides the face count line when the peopleStatistics feature flag is disabled', () => {
+  it('leaves the face count out of the bar when the peopleStatistics feature flag is disabled', () => {
     featureFlagsMock.value.peopleStatistics = false;
     renderPage({
       person: makePerson({ name: 'Alice' }),
       statistics: { assets: 7, faces: 10 },
     });
 
-    expect(screen.getByText('7 assets')).toBeInTheDocument();
-    expect(screen.queryByText('10 faces')).not.toBeInTheDocument();
+    expect(screen.getByTestId('user-page-layout')).toHaveAttribute('data-description', '7 photos');
+  });
+
+  it('adds the birthday to the bar when it is known', () => {
+    featureFlagsMock.value.peopleStatistics = false;
+    renderPage({
+      person: makePerson({ name: 'Alice', birthDate: '1990-03-04' }),
+      statistics: { assets: 1, faces: 1 },
+    });
+
+    expect(screen.getByTestId('user-page-layout')).toHaveAttribute('data-description', '1 photo · Born on Mar 4, 1990');
   });
 
   it('keeps the page person as the repair target when a space candidate is promoted by auto-swap', async () => {
@@ -416,19 +466,19 @@ describe('Person detail page', () => {
   });
 
   it('keeps the grouping control outside the scrolling timeline so it stays visible while scrolling', async () => {
-    const { container } = renderPage();
+    renderPage();
 
-    const main = container.querySelector<HTMLElement>('main');
+    const personPage = screen.getByTestId('person-page');
     const timeline = screen.getByTestId('space-person-timeline');
-    const header = await screen.findByTestId('person-timeline-header');
+    const details = await screen.findByTestId('person-details');
     const control = await screen.findByTestId('timeline-desktop-grouping-control');
 
     // Regression guard for Hagen's report: the switcher must not scroll away with the photo
-    // grid, so it must live outside the timeline scroll container and the person header
+    // grid, so it must live outside the timeline scroll container and the person's details
     // (both of which scroll) — pinned in the sticky page chrome instead, exactly like Tags.
     expect(timeline).not.toContainElement(control);
-    expect(header).not.toContainElement(control);
-    expect(main).toContainElement(control);
+    expect(details).not.toContainElement(control);
+    expect(personPage).toContainElement(control);
   });
 
   it('changes person timeline grouping while preserving person scope without temporal chips', async () => {
@@ -645,9 +695,179 @@ describe('Person detail page', () => {
   });
 });
 
+// Local Omarchy layer: the person page in the shell (2026-10-15): its back arrow, name, rename and buttons sit in the
+// one bar
+describe('the person in the bar', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    stubMatchMedia();
+    userInteraction.recentSpaces = undefined;
+    gotoMock.mockResolvedValue(undefined);
+    invalidateAllMock.mockResolvedValue(undefined);
+    mockAssetMultiSelectManager.selectionActive = false;
+    mockAssetMultiSelectManager.assets = [];
+    sdkMock.getPerson.mockResolvedValue(makePerson());
+    sdkMock.getPersonFaceSuggestions.mockResolvedValue({ total: 0, items: [] });
+    sdkMock.searchPerson.mockResolvedValue([]);
+    featureFlagsMock.value.peopleStatistics = true;
+  });
+
+  it('goes up to People from the back arrow', async () => {
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'back' }));
+
+    expect(gotoMock).toHaveBeenCalledWith('/people');
+  });
+
+  it('shows the face and the name, and Add a name for someone unnamed', () => {
+    const { unmount } = renderPage();
+    expect(screen.getByRole('img', { name: 'Alice' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Alice' })).toBeInTheDocument();
+    unmount();
+
+    renderPage({ person: makePerson({ name: '' }) });
+    expect(screen.getByRole('button', { name: 'add_a_name' })).toBeInTheDocument();
+  });
+
+  it('renames the person in place: Enter saves the new name', async () => {
+    sdkMock.updatePerson.mockResolvedValue(makePerson({ name: 'Alicia' }));
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Alice' }));
+    const field = screen.getByRole('textbox');
+    expect(field).toHaveValue('Alice');
+    await userEvent.clear(field);
+    await userEvent.type(field, 'Alicia{Enter}');
+
+    await waitFor(() =>
+      expect(sdkMock.updatePerson).toHaveBeenCalledWith({ id: 'person-1', personUpdateDto: { name: 'Alicia' } }),
+    );
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('keeps the old name when the field is left with Escape', async () => {
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Alice' }));
+    await userEvent.type(screen.getByRole('textbox'), 'xyz{Escape}');
+
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Alice' })).toBeInTheDocument();
+    expect(sdkMock.updatePerson).not.toHaveBeenCalled();
+    expect(gotoMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the old name on Escape from the list of matches too', async () => {
+    // Chromium fires focusout when it removes the focused element (happy-dom does not). Closing the list removes the
+    // focused match inside the portal's teardown, where Svelte reads state as it was, and that focusout once saved
+    // the half-typed name (2026-10-15)
+    const remove = Element.prototype.remove;
+    const removing = vi.spyOn(Element.prototype, 'remove').mockImplementation(function (this: Element) {
+      const active = document.activeElement;
+      if (active && this.contains(active)) {
+        active.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+      }
+      remove.call(this);
+    });
+    try {
+      sdkMock.searchPerson.mockResolvedValue([makePerson({ id: 'person-2', name: 'Bob' })]);
+      renderPage();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Alice' }));
+      const field = screen.getByRole('textbox');
+      await userEvent.clear(field);
+      await userEvent.type(field, 'Bo');
+      await screen.findByRole('menuitem', { name: 'Bob' });
+      await userEvent.keyboard('{ArrowDown}');
+      expect(screen.getByRole('menuitem', { name: 'Bob' })).toHaveFocus();
+      await userEvent.keyboard('{Escape}');
+
+      expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      expect(sdkMock.searchPerson).not.toHaveBeenCalledWith({ name: 'Bo', withHidden: true });
+      expect(sdkMock.updatePerson).not.toHaveBeenCalled();
+    } finally {
+      removing.mockRestore();
+    }
+  });
+
+  it('offers to merge with a person picked from the matches, without renaming', async () => {
+    sdkMock.searchPerson.mockResolvedValue([makePerson({ id: 'person-2', name: 'Bob' })]);
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Alice' }));
+    const field = screen.getByRole('textbox');
+    await userEvent.clear(field);
+    await userEvent.type(field, 'Bo');
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Bob' }));
+
+    expect(modalManager.show).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        personToMerge: expect.objectContaining({ id: 'person-1' }),
+        personToBeMergedInto: expect.objectContaining({ id: 'person-2' }),
+      }),
+    );
+    expect(sdkMock.updatePerson).not.toHaveBeenCalled();
+  });
+
+  it('offers no rename to a space viewer', async () => {
+    mockSpaceRoles({ 'viewer-space-rename': SharedSpaceRole.Viewer });
+    renderPage({
+      person: makePerson({
+        id: 'space-person-1',
+        primaryProfile: { type: Type.SpacePerson, id: 'space-person-1', spaceId: 'viewer-space-rename' },
+      }),
+    });
+
+    await waitFor(() => expect(userInteraction.recentSpaces).toBeDefined());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Alice' })).not.toBeInTheDocument());
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+  });
+
+  it('favourites the person from the heart, and keeps the rest in the menu', async () => {
+    sdkMock.updatePerson.mockResolvedValue(makePerson({ isFavorite: true }));
+    renderPage();
+
+    expect(screen.getByRole('button', { name: 'merge_people' })).toBeInTheDocument();
+    expect(screen.getByText('set_date_of_birth')).toBeInTheDocument();
+    expect(screen.queryByText('to_favorite')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'to_favorite', pressed: false }));
+
+    await waitFor(() =>
+      expect(sdkMock.updatePerson).toHaveBeenCalledWith({ id: 'person-1', personUpdateDto: { isFavorite: true } }),
+    );
+  });
+
+  it('folds the heart into the menu on a phone, keeping Merge in the bar', () => {
+    stubMatchMedia(true);
+    renderPage();
+
+    // the heart is the toggle (aria-pressed); the menu's Favorite is a plain item
+    expect(screen.queryByRole('button', { name: 'to_favorite', pressed: false })).not.toBeInTheDocument();
+    expect(screen.getByText('to_favorite')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'merge_people' })).toBeInTheDocument();
+  });
+
+  it('shows no heart for a space person, who has no favourite state', () => {
+    renderPage({
+      person: makePerson({
+        id: 'space-person-1',
+        primaryProfile: { type: Type.SpacePerson, id: 'space-person-1', spaceId: 'space-heart' },
+      }),
+    });
+
+    expect(screen.queryByRole('button', { name: 'to_favorite', pressed: false })).not.toBeInTheDocument();
+    expect(screen.queryByText('to_favorite')).not.toBeInTheDocument();
+  });
+});
+
 describe('face suggestions', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    stubMatchMedia();
     userInteraction.recentSpaces = undefined;
     gotoMock.mockResolvedValue(undefined);
     invalidateAllMock.mockResolvedValue(undefined);

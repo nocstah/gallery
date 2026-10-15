@@ -1,16 +1,14 @@
 <script lang="ts">
-  import { afterNavigate, goto, invalidateAll } from '$app/navigation';
+  import { goto, invalidateAll } from '$app/navigation';
   import { page } from '$app/stores';
-  import { clickOutside } from '$lib/actions/click-outside';
-  import { listNavigation } from '$lib/actions/list-navigation';
   import { scrollMemoryClearer } from '$lib/actions/scroll-memory';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
-  import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
+  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
+  import PersonBarTitle from '$lib/components/omarchy/PersonBarTitle.svelte';
   import PeopleMergeSelector from '$lib/components/people/people-merge-selector.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
@@ -48,7 +46,6 @@
   import { lang, locale } from '$lib/stores/preferences.store';
   import { loadSpaces, userInteraction } from '$lib/stores/user.svelte';
   import { websocketEvents } from '$lib/stores/websocket';
-  import { getPeopleThumbnailUrl } from '$lib/utils';
   import { getGlobalPersonThumbnailUrl } from '$lib/utils/global-person-route';
   import {
     createCrossOwnerMergeHandlers,
@@ -84,19 +81,27 @@
   } from '@immich/sdk';
   import {
     ActionButton,
+    Button,
     CommandPaletteDefaultProvider,
     ContextMenuButton,
-    LoadingSpinner,
+    IconButton,
     modalManager,
     toastManager,
     type ActionItem,
   } from '@immich/ui';
-  import { mdiAccountBoxOutline, mdiAccountMultipleCheckOutline, mdiArrowLeft, mdiDotsVertical } from '@mdi/js';
+  import {
+    mdiAccountBoxOutline,
+    mdiAccountMultipleCheckOutline,
+    mdiArrowLeft,
+    mdiDotsVertical,
+    mdiHeart,
+    mdiHeartOutline,
+  } from '@mdi/js';
   import { DateTime } from 'luxon';
   import { onMount } from 'svelte';
+  import { MediaQuery } from 'svelte/reactivity';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
-  import EditNameInput from './EditNameInput.svelte';
   import UnmergeFaceSelector from './UnmergeFaceSelector.svelte';
 
   interface Props {
@@ -137,37 +142,19 @@
   });
 
   let viewMode: PersonPageViewMode = $state(PersonPageViewMode.VIEW_ASSETS);
-  let isEditingName = $state(false);
-  let previousRoute = $state<string>(Route.explore());
   let personMerge1: PersonResponseDto | undefined = $state();
   let personMerge2: PersonResponseDto | undefined = $state();
   let potentialMergePeople: PersonResponseDto[] = $state([]);
   let isSuggestionSelectedByUser = $state(false);
 
   let personName = $derived(person.name);
-  let suggestedPeople: PersonResponseDto[] = $state([]);
-
-  /**
-   * Save the word used to search people name: for example,
-   * if searching 'r' and the server returns 15 people with names starting with 'r',
-   * there's no need to search again people with name starting with 'ri'.
-   * However, it needs to make a new api request if searching 'r' returns 20 names (arbitrary value, the limit sent back by the server).
-   * or if the new search word starts with another word / letter
-   **/
-  let isSearchingPeople = $state(false);
-  let suggestionContainer: HTMLElement | undefined = $state();
 
   function getScopedThumbnailUrl(person: PersonResponseDto, updatedAt?: string): string {
     return getGlobalPersonThumbnailUrl(person, { updatedAt });
   }
 
   onMount(() => {
-    const action = $page.url.searchParams.get(QueryParameter.ACTION);
-
-    const fallbackRoute = $page.params.assetId ? Route.viewPerson(data.person) : Route.explore();
-    previousRoute = Route.continue($page.url.searchParams.get(QueryParameter.PREVIOUS_ROUTE), fallbackRoute).toString();
-
-    if (action === 'merge') {
+    if ($page.url.searchParams.get(QueryParameter.ACTION) === 'merge') {
       viewMode = PersonPageViewMode.MERGE_PEOPLE;
     }
 
@@ -178,26 +165,42 @@
     });
   });
 
+  // Local Omarchy layer: the person lives in the shell (2026-10-15). The back arrow, Escape and hiding the person go
+  // up to People, as an album's go to its folder (upstream went back to wherever the page was opened from)
+  const backToPeople = () => goto(Route.people());
+
   const handleEscape = async () => {
     if (assetMultiSelectManager.selectionActive) {
       assetMultiSelectManager.clear();
       return;
     }
 
-    await goto(previousRoute);
-    return;
+    await backToPeople();
   };
+
+  // ...the bar's description: how many photos (never "assets"), the faces where the server counts them, and the
+  // birthday when it is known
+  const birthday = (birthDate: string) =>
+    DateTime.fromISO(birthDate).toLocaleString(
+      { month: 'short', day: 'numeric', year: 'numeric' },
+      { locale: $locale },
+    );
+  const personBarDescription = $derived(
+    [
+      $t('cmdk_preview_photo_count', { values: { count: numberOfAssets } }),
+      featureFlagsManager.value.peopleStatistics ? $t('faces_count', { values: { count: data.statistics.faces } }) : '',
+      person.birthDate ? $t('person_birthdate', { values: { date: birthday(person.birthDate) } }) : '',
+    ]
+      .filter(Boolean)
+      .join(' · '),
+  );
+
+  // ...and on a phone its tools fold into the ⋮ (the bar has room for Merge and the menu, not the heart too)
+  const narrowBar = new MediaQuery('max-width: 767px');
 
   const updateAssetCount = async () => {
     await invalidateAll();
   };
-
-  afterNavigate(({ from }) => {
-    // Prevent setting previousRoute to the current page.
-    if (from?.url && from.route.id !== $page.route.id) {
-      previousRoute = from.url.href;
-    }
-  });
 
   const handleUnmerge = () => {
     timelineManager.removeAssets(assetMultiSelectManager.assets.map((a) => a.id));
@@ -326,7 +329,6 @@
   };
 
   const handleSuggestPeople = async (person2: PersonResponseDto) => {
-    isEditingName = false;
     if (person.id !== person2.id) {
       potentialMergePeople = [];
       personMerge1 = person;
@@ -334,6 +336,9 @@
       isSuggestionSelectedByUser = true;
 
       await handleMergeSuggestion();
+      // Local Omarchy layer: a person picked from the bar's name field only offers the merge; the next rename is a
+      // rename again (left set, the flag swallowed it)
+      isSuggestionSelectedByUser = false;
     }
   };
 
@@ -341,7 +346,6 @@
     const before = person.name;
     viewMode = PersonPageViewMode.VIEW_ASSETS;
     person.name = personName;
-    isEditingName = false;
 
     if (isSuggestionSelectedByUser) {
       // User canceled the merge
@@ -358,13 +362,7 @@
     }
   };
 
-  const handleCancelEditName = () => {
-    isSearchingPeople = false;
-    isEditingName = false;
-  };
-
   const handleNameChange = async (name: string) => {
-    isEditingName = false;
     potentialMergePeople = [];
     personName = name;
 
@@ -546,7 +544,7 @@
     }
 
     if (response.isHidden) {
-      await goto(previousRoute);
+      await backToPeople();
       return;
     }
 
@@ -615,6 +613,18 @@
     },
   };
 
+  // Local Omarchy layer: the bar's own buttons are Merge (labelled) and the heart; the ⋮ holds the rest, and on a phone
+  // the heart too
+  const FavoriteToggle = $derived(person.isFavorite ? Unfavorite : Favorite);
+  const menuItems = $derived([
+    ...(narrowBar.current ? [Favorite, Unfavorite] : []),
+    SelectRepresentativeFace,
+    SetDateOfBirth,
+    HidePerson,
+    ShowPerson,
+    SeparateFromGroupedPerson,
+  ]);
+
   $effect(() => {
     const currentPerson = person;
     suggestionTotal = 0;
@@ -631,228 +641,164 @@
   onAssetsUnarchive={updateAssetCount}
 />
 
-<main
-  class="relative z-0 flex h-dvh flex-col overflow-hidden px-2 pt-(--control-bar-height) md:px-6 md:pt-(--control-bar-height-md)"
-  use:scrollMemoryClearer={{
-    routeStartsWith: Route.people(),
-    beforeClear: () => {
-      sessionStorage.removeItem(SessionStorageKey.INFINITE_SCROLL_PAGE);
-    },
-  }}
->
-  <!-- Sticky grouping switcher: lives outside the scrolling timeline so it stays visible (see Tags).
-       mt-12 clears the taller ControlAppBar, which exceeds the --control-bar-height padding reserve. -->
-  <TimelineRouteGroupingBar
-    grouping={timelineGrouping}
-    hidden={assetMultiSelectManager.selectionActive || viewMode !== PersonPageViewMode.VIEW_ASSETS}
-    class="mt-12 shrink-0"
-    resultCount={numberOfAssets}
-    onGroupingChange={handleTimelineGroupingChange}
-    onAddAllToCollection={handleAddAllToCollection}
+{#snippet personBarLeading()}
+  <IconButton
+    shape="round"
+    variant="ghost"
+    color="secondary"
+    icon={mdiArrowLeft}
+    aria-label={$t('back')}
+    class="shrink-0"
+    onclick={() => backToPeople()}
   />
-  <div class="relative min-h-0 flex-1">
-    {#key person.id}
-      <Timeline
-        enableRouting={true}
-        {person}
-        bind:timelineManager
-        {options}
-        assetInteraction={assetMultiSelectManager}
-        onEscape={handleEscape}
-        {temporalAnchor}
-        onTimelineBucketActivate={handleTimelineBucketActivate}
-        onTemporalAnchorResolved={() => (temporalAnchor = undefined)}
-        grouping={timelineGrouping}
-        onGroupingChange={handleTimelineGroupingChange}
-      >
-        {#if viewMode === PersonPageViewMode.VIEW_ASSETS}
-          <!-- Person information block -->
-          <div
-            class="relative p-4 pt-12 sm:px-6"
-            use:clickOutside={{
-              onOutclick: handleCancelEditName,
-              onEscape: isEditingName ? handleCancelEditName : undefined,
-            }}
-            use:listNavigation={suggestionContainer}
-          >
-            <div class="flex flex-wrap items-center gap-4" data-testid="person-timeline-header">
-              <section class="flex w-fit place-items-center border-black" data-testid="person-timeline-identity">
-                {#if isEditingName}
-                  <EditNameInput
-                    {person}
-                    bind:suggestedPeople
-                    name={person.name}
-                    bind:isSearchingPeople
-                    onChange={handleNameChange}
-                    {thumbnailData}
-                  />
-                {:else}
-                  <div class="relative">
-                    <button
-                      type="button"
-                      class="flex items-center justify-center"
-                      title={canEditSpacePerson ? $t('edit_name') : undefined}
-                      onclick={() => (isEditingName = canEditSpacePerson)}
-                    >
-                      <ImageThumbnail
-                        circle
-                        shadow
-                        url={thumbnailData}
-                        altText={person.name}
-                        widthStyle="3.375rem"
-                        heightStyle="3.375rem"
-                      />
-                      <div class="flex flex-col justify-center px-4 text-start text-primary">
-                        <p class="w-40 truncate font-medium">{person.name || $t('add_a_name')}</p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                          {$t('assets_count', { values: { count: numberOfAssets } })}
-                        </p>
-                        {#if featureFlagsManager.value.peopleStatistics}
-                          <p class="text-sm text-gray-500 dark:text-gray-400">
-                            {$t('faces_count', { values: { count: data.statistics.faces } })}
-                          </p>
-                        {/if}
-                        {#if person.birthDate}
-                          <p class="text-sm text-gray-500 dark:text-gray-400">
-                            {$t('person_birthdate', {
-                              values: {
-                                date: DateTime.fromISO(person.birthDate).toLocaleString(
-                                  {
-                                    month: 'numeric',
-                                    day: 'numeric',
-                                    year: 'numeric',
-                                  },
-                                  { locale: $locale },
-                                ),
-                              },
-                            })}
-                          </p>
-                        {/if}
-                      </div>
-                    </button>
-                  </div>
-                {/if}
-              </section>
-            </div>
-            {#if isEditingName}
-              <div class="absolute z-1 w-64 sm:w-96">
-                {#if isSearchingPeople}
-                  <div
-                    class="flex h-14 place-items-center rounded-b-lg border border-gray-400 bg-gray-200 p-2 dark:border-immich-dark-gray dark:bg-gray-700"
-                  >
-                    <div class="flex w-full place-items-center">
-                      <LoadingSpinner />
-                    </div>
-                  </div>
-                {:else}
-                  <div bind:this={suggestionContainer}>
-                    {#each suggestedPeople as person, index (person.id)}
-                      <button
-                        type="button"
-                        class="flex h-14 w-full place-items-center border border-gray-200 bg-gray-100 p-2 hover:bg-gray-300 focus:bg-gray-300 dark:border-immich-dark-gray dark:bg-gray-700 hover:dark:bg-[#232932] focus:dark:bg-[#232932] {index ===
-                        suggestedPeople.length - 1
-                          ? 'rounded-b-lg border-b'
-                          : ''}"
-                        onclick={() => handleSuggestPeople(person)}
-                      >
-                        <ImageThumbnail
-                          circle
-                          shadow
-                          url={getPeopleThumbnailUrl(person)}
-                          altText={person.name}
-                          widthStyle="2rem"
-                          heightStyle="2rem"
-                        />
-                        <p class="ms-4 text-gray-700 dark:text-gray-100">{person.name}</p>
-                      </button>
-                    {/each}
-                  </div>
-                {/if}
-              </div>
-            {/if}
-          </div>
-          {#if canEditSpacePerson}
-            <!-- Defence in depth, not the primary gate: the server already returns an empty page (`total: 0`)
-                 to space members below editor (loadSuggestionSummary/fetchSuggestions above), which is what
-                 actually keeps this hidden from viewers today. `canEditSpacePerson` is always true for a
-                 personal (non-space) person — only a space-scoped profile is role-gated. This client-side
-                 check exists so that a future relaxation of that read gate ("let viewers see what is
-                 pending") does not also silently expose the review action — it must be relaxed here
-                 explicitly, not by accident. -->
-            <PersonSuggestionBanner
-              {person}
-              snoozeId={getSuggestionTarget(person).personId}
-              total={suggestionTotal}
-              previews={suggestionPreviews}
-              referenceThumbnailUrl={thumbnailData}
-              onReview={openSuggestionReview}
-            />
-          {/if}
-        {/if}
-      </Timeline>
-    {/key}
-  </div>
-</main>
+  <PersonBarTitle
+    {person}
+    thumbnailUrl={thumbnailData}
+    editable={canEditSpacePerson}
+    onRename={handleNameChange}
+    onPick={handleSuggestPeople}
+  />
+{/snippet}
 
-<header>
-  {#if assetMultiSelectManager.selectionActive}
-    <AssetSelectControlBar>
-      {@const Actions = getAssetBulkActions($t)}
-      <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
-      <ActionButton action={Actions.CreateSharedLink} />
-      <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
-      <ActionButton action={Actions.AddToAlbum} />
-      <FavoriteAction
-        removeFavorite={assetMultiSelectManager.isAllFavorite}
-        onFavorite={(ids, isFavorite) => timelineManager.update(ids, (asset) => (asset.isFavorite = isFavorite))}
-      />
-      <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
-        <DownloadAction menuItem filename={person.name || 'immich'} />
-        <MenuOption
-          icon={mdiAccountMultipleCheckOutline}
-          text={$t('fix_incorrect_match')}
-          onClick={handleReassignAssets}
-        />
-        <ChangeDate menuItem />
-        <ChangeDescription menuItem />
-        <ChangeLocation menuItem />
-        <ArchiveAction
-          menuItem
-          unarchive={assetMultiSelectManager.isAllArchived}
-          onArchive={(ids, visibility) =>
-            timelineManager.update(ids, (asset) => {
-              asset.visibility = visibility;
-            })}
-        />
-        <ActionMenuItem action={Actions.Tag} />
-        <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
-        <DeleteAssets
-          menuItem
-          onAssetDelete={(assetIds) => handleDeleteAssets(assetIds)}
-          onUndoDelete={(assets) => handleUndoDeleteAssets(assets)}
-        />
-      </ButtonContextMenu>
-    </AssetSelectControlBar>
-  {:else if viewMode === PersonPageViewMode.VIEW_ASSETS}
-    <ControlAppBar backIcon={mdiArrowLeft} onClose={() => goto(previousRoute)}>
-      {#snippet trailing()}
-        <ContextMenuButton
-          items={[
-            SelectRepresentativeFace,
-            HidePerson,
-            ShowPerson,
-            SetDateOfBirth,
-            Merge,
-            SeparateFromGroupedPerson,
-            Favorite,
-            Unfavorite,
-          ]}
-          aria-label={$t('open')}
-        />
-      {/snippet}
-    </ControlAppBar>
+{#snippet personBarButtons()}
+  {#if Merge.$if?.() ?? true}
+    <Button
+      leadingIcon={Merge.icon}
+      variant="ghost"
+      size="small"
+      color="secondary"
+      onclick={(event: MouseEvent) => Merge.onAction({ event, action: Merge })}
+    >
+      <span class="ws-action-label">{Merge.title}</span>
+    </Button>
   {/if}
-</header>
+  {#if !narrowBar.current && (FavoriteToggle.$if?.() ?? true)}
+    <IconButton
+      shape="round"
+      variant="ghost"
+      color="secondary"
+      icon={person.isFavorite ? mdiHeart : mdiHeartOutline}
+      aria-label={FavoriteToggle.title}
+      aria-pressed={!!person.isFavorite}
+      onclick={(event: MouseEvent) => FavoriteToggle.onAction({ event, action: FavoriteToggle })}
+    />
+  {/if}
+  <ContextMenuButton items={menuItems} color="secondary" aria-label={$t('menu')} />
+{/snippet}
+
+<!-- Local Omarchy layer: the person lives in the shell like every page (2026-10-15): the sidebar stays, and the one bar
+     carries the back arrow to People, their face and name (renamed in place), how many photos and their birthday, and
+     the page's own buttons, Merge first. Selecting, merging and fixing a match swap the bar for theirs (below the shell) -->
+<UserPageLayout
+  hideNavbar={assetMultiSelectManager.selectionActive || viewMode !== PersonPageViewMode.VIEW_ASSETS}
+  barFitsNavbar
+  scrollbar={false}
+  description={personBarDescription}
+  leading={personBarLeading}
+  buttons={personBarButtons}
+>
+  <div
+    class="flex h-full flex-col overflow-hidden"
+    data-testid="person-page"
+    use:scrollMemoryClearer={{
+      routeStartsWith: Route.people(),
+      beforeClear: () => {
+        sessionStorage.removeItem(SessionStorageKey.INFINITE_SCROLL_PAGE);
+      },
+    }}
+  >
+    <!-- Sticky grouping switcher: lives outside the scrolling timeline so it stays visible (see Tags); on the page's
+         gutter, as the album's toolbar row -->
+    <TimelineRouteGroupingBar
+      grouping={timelineGrouping}
+      hidden={assetMultiSelectManager.selectionActive || viewMode !== PersonPageViewMode.VIEW_ASSETS}
+      class="ps-0"
+      resultCount={numberOfAssets}
+      onGroupingChange={handleTimelineGroupingChange}
+      onAddAllToCollection={handleAddAllToCollection}
+    />
+    <div class="relative min-h-0 flex-1">
+      {#key person.id}
+        <Timeline
+          enableRouting={true}
+          {person}
+          bind:timelineManager
+          {options}
+          assetInteraction={assetMultiSelectManager}
+          onEscape={handleEscape}
+          {temporalAnchor}
+          onTimelineBucketActivate={handleTimelineBucketActivate}
+          onTemporalAnchorResolved={() => (temporalAnchor = undefined)}
+          grouping={timelineGrouping}
+          onGroupingChange={handleTimelineGroupingChange}
+        >
+          <!-- Defence in depth, not the primary gate: the server already returns an empty page (`total: 0`)
+               to space members below editor (loadSuggestionSummary/fetchSuggestions above), which is what
+               actually keeps this hidden from viewers today. `canEditSpacePerson` is always true for a
+               personal (non-space) person — only a space-scoped profile is role-gated. This client-side
+               check exists so that a future relaxation of that read gate ("let viewers see what is
+               pending") does not also silently expose the review action — it must be relaxed here
+               explicitly, not by accident. -->
+          {#if viewMode === PersonPageViewMode.VIEW_ASSETS && canEditSpacePerson}
+            <!-- Local Omarchy layer: the person's details under the bar, scrolling away with the photos: the faces
+                 found that could be them (their name, count and birthday are in the bar) -->
+            <section class="ws-person-details" data-testid="person-details">
+              <PersonSuggestionBanner
+                {person}
+                snoozeId={getSuggestionTarget(person).personId}
+                total={suggestionTotal}
+                previews={suggestionPreviews}
+                referenceThumbnailUrl={thumbnailData}
+                onReview={openSuggestionReview}
+              />
+            </section>
+          {/if}
+        </Timeline>
+      {/key}
+    </div>
+  </div>
+</UserPageLayout>
+
+<!-- Local Omarchy layer: selecting swaps the bar for its own, after the shell as on Photos -->
+{#if assetMultiSelectManager.selectionActive}
+  <AssetSelectControlBar>
+    {@const Actions = getAssetBulkActions($t)}
+    <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
+    <ActionButton action={Actions.CreateSharedLink} />
+    <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
+    <ActionButton action={Actions.AddToAlbum} />
+    <FavoriteAction
+      removeFavorite={assetMultiSelectManager.isAllFavorite}
+      onFavorite={(ids, isFavorite) => timelineManager.update(ids, (asset) => (asset.isFavorite = isFavorite))}
+    />
+    <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
+      <DownloadAction menuItem filename={person.name || 'immich'} />
+      <MenuOption
+        icon={mdiAccountMultipleCheckOutline}
+        text={$t('fix_incorrect_match')}
+        onClick={handleReassignAssets}
+      />
+      <ChangeDate menuItem />
+      <ChangeDescription menuItem />
+      <ChangeLocation menuItem />
+      <ArchiveAction
+        menuItem
+        unarchive={assetMultiSelectManager.isAllArchived}
+        onArchive={(ids, visibility) =>
+          timelineManager.update(ids, (asset) => {
+            asset.visibility = visibility;
+          })}
+      />
+      <ActionMenuItem action={Actions.Tag} />
+      <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+      <DeleteAssets
+        menuItem
+        onAssetDelete={(assetIds) => handleDeleteAssets(assetIds)}
+        onUndoDelete={(assets) => handleUndoDeleteAssets(assets)}
+      />
+    </ButtonContextMenu>
+  </AssetSelectControlBar>
+{/if}
 
 {#if viewMode === PersonPageViewMode.UNASSIGN_ASSETS}
   <UnmergeFaceSelector
@@ -876,3 +822,70 @@
     onSwapPerson={handleSwapMergePerson}
   />
 {/if}
+
+<style>
+  /* Local Omarchy layer: the person's details under the bar, on the album page's rhythm (0.5rem between parts, 1rem
+     before the photos), and nothing at all when there is nothing to say */
+  .ws-person-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0 0 1rem;
+  }
+  .ws-person-details:not(:has(*)) {
+    display: none;
+  }
+  /* the faces found that could be them, as one calm row on the gutter instead of a card (styled through the banner's
+     own hooks, which the space person page shares): the person's face and the question, the count in data type, the
+     candidates as small round faces, Review in ink and Not now as a quiet word; a narrow screen wraps it */
+  .ws-person-details :global([data-testid='person-suggestion-banner']) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+  }
+  .ws-person-details :global([data-testid='person-suggestion-banner'] > :first-child) {
+    gap: 0.75rem;
+  }
+  .ws-person-details :global([data-testid='suggestion-banner-reference']) {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  .ws-person-details :global([data-testid='suggestion-banner-reference'] + p) {
+    font-size: var(--ws-text-ui);
+    font-weight: 600;
+    color: var(--immich-ui-dark);
+  }
+  .ws-person-details :global([data-testid='person-suggestion-banner'] > :first-child > p) {
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--immich-ui-muted);
+  }
+  .ws-person-details :global([data-testid='person-suggestion-banner'] :has(> [data-testid='face-crop'])) {
+    width: 2.5rem;
+  }
+  .ws-person-details :global([data-testid='person-suggestion-banner'] :has(> div > [data-testid='face-crop'])) {
+    gap: 0.25rem;
+  }
+  /* a face stays round */
+  .ws-person-details :global([data-testid='face-crop']) {
+    border-radius: 9999px;
+  }
+  .ws-person-details :global([data-testid='suggestion-snooze-btn']) {
+    background: transparent;
+    color: var(--immich-ui-muted);
+  }
+  .ws-person-details :global([data-testid='suggestion-snooze-btn']:hover) {
+    background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
+    color: var(--immich-ui-dark);
+  }
+</style>
