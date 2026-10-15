@@ -23,11 +23,9 @@
     expiresAt = $bindable(),
   }: Props = $props();
 
-  $effect(() => {
-    if (!showMetadata && allowDownload) {
-      allowDownload = false;
-    }
-  });
+  // Local Omarchy layer: upstream turns downloads off with the metadata, since an original carries where it was taken.
+  // Here the public link page fetches everything through the privacy filter (~/immich/public-links/privacy-filter),
+  // which removes the place from what a link without location hands out, so the two switches are independent.
 </script>
 
 <div class="mt-4 flex flex-col gap-4">
@@ -52,11 +50,11 @@
   </Field>
 
   <SharedLinkExpiration bind:expiresAt />
-  <Field label={$t('show_metadata')}>
+  <Field label={$t('shared_link_include_location')} description={$t('shared_link_include_location_description')}>
     <Switch bind:checked={showMetadata} />
   </Field>
 
-  <Field label={$t('allow_public_user_to_download')} disabled={!showMetadata}>
+  <Field label={$t('allow_public_user_to_download')}>
     <Switch bind:checked={allowDownload} />
   </Field>
 

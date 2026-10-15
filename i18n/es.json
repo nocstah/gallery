@@ -3324,6 +3324,8 @@
   "shared_link_expires_never": "Caduca ∞",
   "shared_link_expires_second": "Caduca en {count} segundo",
   "shared_link_expires_seconds": "Caduca en {count} segundos",
+  "shared_link_include_location": "Incluir ubicación",
+  "shared_link_include_location_description": "Desactivado: la página no muestra dónde se tomaron las fotos y las descargas no incluyen la ubicación.",
   "shared_link_includes_contributed_assets": "{count, plural, one {# foto de este enlace la añadió otro miembro. Al crear el enlace pasará a ser públicamente visible para cualquiera que tenga la URL.} other {# fotos de este enlace las añadieron otros miembros. Al crear el enlace pasarán a ser públicamente visibles para cualquiera que tenga la URL.}}",
   "shared_link_individual_shared": "Compartido individualmente",
   "shared_link_info_chip_metadata": "EXIF",

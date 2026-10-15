@@ -36,7 +36,8 @@
   let description = $state('');
   let allowDownload = $state(true);
   let allowUpload = $state(false);
-  let showMetadata = $state(true);
+  // Local Omarchy layer: a new link leaves the place out unless asked (SharedLinkFormFields, the privacy filter)
+  let showMetadata = $state(false);
   let password = $state('');
   let slug = $state('');
   let expiresAt = $state<string | null>(null);

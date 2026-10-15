@@ -3278,6 +3278,8 @@
   "shared_link_expires_never": "永不過期",
   "shared_link_expires_second": "將在 {count} 秒後過期",
   "shared_link_expires_seconds": "將在 {count} 秒後過期",
+  "shared_link_include_location": "包含位置",
+  "shared_link_include_location_description": "關閉時：頁面不顯示相片的拍攝地點，下載的檔案也不包含位置。",
   "shared_link_includes_contributed_assets": "{count, plural, other {此連結中有 # 張照片由其他成員新增。建立連結後，任何擁有該網址的人都能公開檢視這些照片。}}",
   "shared_link_individual_shared": "個人共享",
   "shared_link_info_chip_metadata": "EXIF",

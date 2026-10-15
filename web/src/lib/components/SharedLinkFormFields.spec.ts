@@ -6,7 +6,8 @@ describe('SharedLinkFormFields component', () => {
   const isChecked = (element: Element) =>
     element instanceof HTMLInputElement ? element.checked : element.getAttribute('aria-checked') === 'true';
 
-  it('turns downloads off when metadata is disabled', async () => {
+  // Local Omarchy layer: leaving the place out keeps downloads on (the privacy filter removes the place from them)
+  it('keeps downloads on when the location is left out', async () => {
     const { container } = renderWithTooltips(SharedLinkFormFields, {
       slug: '',
       password: '',
@@ -27,6 +28,6 @@ describe('SharedLinkFormFields component', () => {
     await user.click(showMetadataSwitch);
 
     expect(isChecked(showMetadataSwitch)).toBe(false);
-    expect(isChecked(allowDownloadSwitch)).toBe(false);
+    expect(isChecked(allowDownloadSwitch)).toBe(true);
   });
 });

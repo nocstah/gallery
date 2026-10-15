@@ -69,6 +69,11 @@ export const handleCreateSharedLink = async (dto: SharedLinkCreateDto) => {
 
   try {
     let sharedLink = await createSharedLink({ sharedLinkCreateDto: dto });
+    // Local Omarchy layer: the server turns downloads off on a link that hides metadata; the public link page's
+    // privacy filter removes the place from those downloads, so they are turned back on as asked
+    if (dto.showMetadata === false && dto.allowDownload && !sharedLink.allowDownload) {
+      sharedLink = await updateSharedLink({ id: sharedLink.id, sharedLinkEditDto: { allowDownload: true } });
+    }
     if (dto.albumId) {
       // fetch album details, for event
       sharedLink = await getSharedLinkById({ id: sharedLink.id });

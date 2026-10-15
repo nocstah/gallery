@@ -3341,6 +3341,8 @@
   "shared_link_expires_never": "Wygasa ∞",
   "shared_link_expires_second": "Wygasa za {count} sekundę",
   "shared_link_expires_seconds": "Wygasa za {count} sekund(y)",
+  "shared_link_include_location": "Dołącz lokalizację",
+  "shared_link_include_location_description": "Wyłączone: strona nie pokazuje, gdzie zrobiono zdjęcia, a pobrane pliki nie zawierają lokalizacji.",
   "shared_link_includes_contributed_assets": "{count, plural, one {# zdjęcie w tym linku zostało dodane przez innego członka. Utworzenie linku sprawi, że stanie się ono publicznie widoczne dla każdego, kto ma ten adres URL.} few {# zdjęcia w tym linku zostały dodane przez innych członków. Utworzenie linku sprawi, że staną się one publicznie widoczne dla każdego, kto ma ten adres URL.} many {# zdjęć w tym linku zostało dodanych przez innych członków. Utworzenie linku sprawi, że staną się one publicznie widoczne dla każdego, kto ma ten adres URL.} other {# zdjęć w tym linku zostało dodanych przez innych członków. Utworzenie linku sprawi, że staną się one publicznie widoczne dla każdego, kto ma ten adres URL.}}",
   "shared_link_individual_shared": "Indywidualnie udostępnione",
   "shared_link_info_chip_metadata": "EXIF",

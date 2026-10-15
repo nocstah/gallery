@@ -3323,6 +3323,8 @@
   "shared_link_expires_never": "Verloopt ∞",
   "shared_link_expires_second": "Verloopt over {count} seconde",
   "shared_link_expires_seconds": "Verloopt over {count} seconden",
+  "shared_link_include_location": "Locatie meesturen",
+  "shared_link_include_location_description": "Uit: de pagina toont niet waar de foto's zijn gemaakt en downloads bevatten geen locatie.",
   "shared_link_includes_contributed_assets": "{count, plural, one {# foto in deze link is toegevoegd door een ander lid. Door de link te maken wordt die openbaar zichtbaar voor iedereen met de URL.} other {# foto’s in deze link zijn toegevoegd door andere leden. Door de link te maken worden ze openbaar zichtbaar voor iedereen met de URL.}}",
   "shared_link_individual_shared": "Individueel gedeeld",
   "shared_link_info_chip_metadata": "EXIF",

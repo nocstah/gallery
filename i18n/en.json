@@ -3343,6 +3343,8 @@
   "shared_link_expires_never": "Expires ∞",
   "shared_link_expires_second": "Expires in {count} second",
   "shared_link_expires_seconds": "Expires in {count} seconds",
+  "shared_link_include_location": "Include location",
+  "shared_link_include_location_description": "Off: the page doesn't show where the photos were taken, and downloads have the place removed.",
   "shared_link_includes_contributed_assets": "{count, plural, one {# photo in this link was contributed by another member. Creating the link makes it publicly visible to anyone who has the URL.} other {# photos in this link were contributed by other members. Creating the link makes them publicly visible to anyone who has the URL.}}",
   "shared_link_individual_shared": "Individual shared",
   "shared_link_info_chip_metadata": "EXIF",

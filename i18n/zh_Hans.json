@@ -3323,6 +3323,8 @@
   "shared_link_expires_never": "过期时间 ∞",
   "shared_link_expires_second": "{count}秒后过期",
   "shared_link_expires_seconds": "{count}秒后过期",
+  "shared_link_include_location": "包含位置",
+  "shared_link_include_location_description": "关闭时：页面不显示照片的拍摄地点，下载的文件也不包含位置。",
   "shared_link_includes_contributed_assets": "{count, plural, other {此链接中有 # 张照片由其他成员添加。创建链接后，任何拥有该网址的人都能公开查看这些照片。}}",
   "shared_link_individual_shared": "个人共享",
   "shared_link_info_chip_metadata": "EXIF",
