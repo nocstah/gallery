@@ -8,6 +8,10 @@
 # web (local-build.sh) is unaffected.
 #
 #   ./local-dev.sh start | stop | restart | status | logs
+#   ./local-dev.sh login                  once: log in to the screenshot browser (a window opens; you type, I don't)
+#   ./local-dev.sh shots [options]        headless screenshots of the dev server (tools/local-shots.mjs has the options:
+#                                         --live, --routes, --viewports aorus,dell,laptop,tablet,phone, --modes, --all,
+#                                         --hidpi, --compare RUN_A RUN_B) into ~/.cache/gallery-shots/<time>/
 #
 # Differences from the deployed build: upstream names show where the build's apply-branding would say Gallery, and
 # web files outside src/ and static/ (vite.config.ts, package.json) come from the image, so rebuild the image when
@@ -56,5 +60,7 @@ case ${1:-status} in
   restart) docker rm -f "$NAME" >/dev/null 2>&1 || true; start ;;
   status) running && echo "running: http://localhost:$PORT" || echo "not running" ;;
   logs) docker logs --tail "${2:-50}" -f "$NAME" ;;
-  *) echo "usage: $0 start|stop|restart|status|logs" >&2; exit 2 ;;
+  login) shift; node "$SRC/tools/local-shots.mjs" login "$@" ;;
+  shots) shift; node "$SRC/tools/local-shots.mjs" "$@" ;;
+  *) echo "usage: $0 start|stop|restart|status|logs|login|shots" >&2; exit 2 ;;
 esac
