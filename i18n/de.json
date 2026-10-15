@@ -2216,6 +2216,7 @@
   "folder": "Ordner",
   "folder_not_found": "Ordner nicht gefunden",
   "folders": "Ordner",
+  "folders_count": "{count, plural, one {# Ordner} other {# Ordner}}",
   "folders_feature_description": "Durchsuchen der Ordneransicht für Fotos und Videos im Dateisystem",
   "forgot_pin_code_question": "PIN-Code vergessen?",
   "forward": "Vorwärts",

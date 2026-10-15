@@ -2216,6 +2216,7 @@
   "folder": "Dossier",
   "folder_not_found": "Dossier introuvable",
   "folders": "Dossiers",
+  "folders_count": "{count, plural, one {# dossier} other {# dossiers}}",
   "folders_feature_description": "Parcourir l'affichage par dossiers pour les photos et les vidéos sur le système de fichiers",
   "forgot_pin_code_question": "Code PIN oublié ?",
   "forward": "Avant",

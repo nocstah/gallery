@@ -2218,6 +2218,7 @@
   "folder": "Папка",
   "folder_not_found": "Папка не найдена",
   "folders": "Папки",
+  "folders_count": "{count, plural, one {# папка} few {# папки} many {# папок} other {# папки}}",
   "folders_feature_description": "Просмотр папок с фото и видео в файловой системе",
   "forgot_pin_code_question": "Забыли PIN-код?",
   "forward": "Вперёд",

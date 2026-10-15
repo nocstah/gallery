@@ -3,10 +3,9 @@
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import UserPageLayout, { headerId } from '$lib/components/layouts/UserPageLayout.svelte';
+  import ExplorerList from '$lib/components/omarchy/ExplorerList.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import TreeBreadcrumbs from '$lib/components/shared-components/tree/TreeBreadcrumbs.svelte';
-  import TreeItemThumbnails from '$lib/components/shared-components/tree/TreeItemThumbnails.svelte';
-  import TreeItems from '$lib/components/shared-components/tree/TreeItems.svelte';
+  import ExplorerTree from '$lib/components/sidebar/explorer-tree.svelte';
   import Sidebar from '$lib/components/sidebar/Sidebar.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
@@ -32,10 +31,10 @@
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
   import { getTimelineBucketZoomTarget, type ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
   import { getTimelineTopVisibleAnchor } from '$lib/managers/timeline-manager/timeline-anchor';
-  import { joinPaths, TreeNode } from '$lib/utils/tree-utils';
+  import { TreeNode } from '$lib/utils/tree-utils';
   import { AssetVisibility, getAllTags, type TagResponseDto } from '@immich/sdk';
-  import { ActionButton, CommandPaletteDefaultProvider, Text } from '@immich/ui';
-  import { mdiDotsVertical, mdiTag, mdiTagMultiple } from '@mdi/js';
+  import { ActionButton, CommandPaletteDefaultProvider, IconButton } from '@immich/ui';
+  import { mdiArrowLeft, mdiDotsVertical, mdiTagMultipleOutline, mdiTagOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -66,9 +65,20 @@
     grouping: timelineGrouping,
   });
 
-  const handleNavigation = (tag: string) => navigateToView(joinPaths(data.path, tag));
-
   const getLink = (path: string) => Route.tags({ path });
+
+  // Local Omarchy layer: the tag on screen titles the one bar, as an album does, with an arrow up a level and its
+  // full path in data type when it sits inside another; the top level says how many tags there are
+  const barTitle = $derived(tag.path ? tag.value : data.meta.title);
+  const barDescription = $derived(
+    tag.path
+      ? tag.parents.length > 0
+        ? tag.path
+        : undefined
+      : $t('cmdk_count_tags', { values: { count: tags.length } }),
+  );
+  const tagsIn = (node: TreeNode) =>
+    node.size > 0 ? $t('cmdk_count_tags', { values: { count: node.size } }) : undefined;
 
   const navigateToView = (path: string) => goto(getLink(path));
 
@@ -138,24 +148,42 @@
 
 <OnEvents onTagCreate={onRefresh} {onTagUpdate} {onTagDelete} />
 
-<UserPageLayout title={data.meta.title} actions={[Create, Update, Delete]}>
+<UserPageLayout title={barTitle} description={barDescription} actions={[Create, Update, Delete]}>
+  {#snippet leading()}
+    {#if tag.parent}
+      <IconButton
+        shape="round"
+        color="secondary"
+        variant="ghost"
+        icon={mdiArrowLeft}
+        aria-label={$t('to_parent')}
+        href={getLink(tag.parent.path)}
+      />
+    {/if}
+  {/snippet}
+
   {#snippet sidebar()}
     <Sidebar>
       <SkipLink target={`#${headerId}`} text={$t('skip_to_tags')} breakpoint="md" />
-      <section>
-        <Text class="mb-4 ps-4" size="small">{$t('explorer')}</Text>
-        <div class="h-full">
-          <TreeItems icons={{ default: mdiTag, active: mdiTag }} {tree} active={tag.path} {getLink} />
-        </div>
-      </section>
+      <!-- Local Omarchy layer: the tree reads like the albums' tree (sidebar/explorer-tree.svelte) -->
+      <ExplorerTree
+        {tree}
+        active={tag.path}
+        {getLink}
+        title={$t('tags')}
+        icon={{ icon: mdiTagMultipleOutline, flipped: true }}
+        nodeIcon={{ closed: mdiTagOutline, open: mdiTagOutline }}
+        scope="tags"
+      />
     </Sidebar>
   {/snippet}
 
-  <TreeBreadcrumbs node={tag} icon={mdiTagMultiple} title={$t('tags')} {getLink} />
-
-  <section class="mt-2 h-[calc(100%-(--spacing(20)))] immich-scrollbar overflow-auto">
+  <!-- Local Omarchy layer: the level's tags as a calm list on the gutter (omarchy/ExplorerList.svelte), where upstream
+       drew a breadcrumb slab and a grid of 64px icons; the bar carries the way up -->
+  <section class="h-full immich-scrollbar overflow-auto">
     {#if tag.hasAssets}
       <TimelineRouteGroupingBar
+        class="ps-0"
         grouping={timelineGrouping}
         hidden={assetMultiSelectManager.selectionActive}
         onGroupingChange={handleTimelineGroupingChange}
@@ -173,11 +201,11 @@
         onGroupingChange={handleTimelineGroupingChange}
       >
         {#snippet empty()}
-          <TreeItemThumbnails items={tag.children} icon={mdiTag} onClick={handleNavigation} />
+          <ExplorerList node={tag} {getLink} icon={mdiTagOutline} count={tagsIn} label={$t('tags')} />
         {/snippet}
       </Timeline>
     {:else}
-      <TreeItemThumbnails items={tag.children} icon={mdiTag} onClick={handleNavigation} />
+      <ExplorerList node={tag} {getLink} icon={mdiTagOutline} count={tagsIn} label={$t('tags')} />
     {/if}
   </section>
 </UserPageLayout>

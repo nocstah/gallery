@@ -2232,6 +2232,7 @@
   "folder": "Katalog",
   "folder_not_found": "Nie znaleziono folderu",
   "folders": "Foldery",
+  "folders_count": "{count, plural, one {# folder} few {# foldery} many {# folderów} other {# folderów}}",
   "folders_feature_description": "Przeglądanie zdjęć i filmów w widoku folderów",
   "forgot_pin_code_question": "Nie pamiętasz kodu PIN?",
   "forward": "Do przodu",

@@ -2216,6 +2216,7 @@
   "folder": "Map",
   "folder_not_found": "Map niet gevonden",
   "folders": "Mappen",
+  "folders_count": "{count, plural, one {# map} other {# mappen}}",
   "folders_feature_description": "Bladeren door de map­weergave van de foto's en video's op het bestands­systeem",
   "forgot_pin_code_question": "Pincode vergeten?",
   "forward": "Vooruit",

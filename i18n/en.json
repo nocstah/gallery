@@ -2228,6 +2228,7 @@
   "folder": "Folder",
   "folder_not_found": "Folder not found",
   "folders": "Folders",
+  "folders_count": "{count, plural, one {# folder} other {# folders}}",
   "folders_feature_description": "Browsing the folder view for the photos and videos on the file system",
   "forgot_pin_code_question": "Forgot your PIN?",
   "forward": "Forward",

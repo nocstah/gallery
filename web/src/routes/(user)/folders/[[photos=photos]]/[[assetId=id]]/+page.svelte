@@ -1,14 +1,13 @@
 <script lang="ts">
-  import { afterNavigate, beforeNavigate, goto, invalidateAll } from '$app/navigation';
+  import { afterNavigate, beforeNavigate, invalidateAll } from '$app/navigation';
   import { isAssetViewerRoute } from '$lib/utils/navigation';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import UserPageLayout, { headerId } from '$lib/components/layouts/UserPageLayout.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import ExplorerList from '$lib/components/omarchy/ExplorerList.svelte';
   import GalleryViewer from '$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte';
-  import TreeBreadcrumbs from '$lib/components/shared-components/tree/TreeBreadcrumbs.svelte';
-  import TreeItemThumbnails from '$lib/components/shared-components/tree/TreeItemThumbnails.svelte';
-  import TreeItems from '$lib/components/shared-components/tree/TreeItems.svelte';
+  import ExplorerTree from '$lib/components/sidebar/explorer-tree.svelte';
   import Sidebar from '$lib/components/sidebar/Sidebar.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
@@ -27,9 +26,9 @@
   import { getAssetBulkActions } from '$lib/services/asset.service';
   import { foldersStore } from '$lib/stores/folders.svelte';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
-  import { joinPaths } from '$lib/utils/tree-utils';
-  import { ActionButton, CommandPaletteDefaultProvider, IconButton, Text } from '@immich/ui';
-  import { mdiDotsVertical, mdiFolder, mdiFolderHome, mdiFolderOutline, mdiSelectAll } from '@mdi/js';
+  import type { TreeNode } from '$lib/utils/tree-utils';
+  import { ActionButton, CommandPaletteDefaultProvider, IconButton } from '@immich/ui';
+  import { mdiArrowLeft, mdiDotsVertical, mdiFolderOpenOutline, mdiFolderOutline, mdiSelectAll } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -43,9 +42,24 @@
   let folderScrollContainer: HTMLElement | undefined = $state();
   let savedScrollTop = 0;
 
-  const handleNavigateToFolder = (folderName: string) => navigateToView(joinPaths(data.tree.path, folderName));
-
   const getLinkForPath = (path: string) => Route.folders({ path });
+
+  // Local Omarchy layer: the folder on screen titles the one bar, with an arrow up a level and, below the top two levels
+  // ("/" and a root such as mnt/archive/iCloud, which say where they are themselves), its full path in data type; the
+  // top level says how many folders hold photos
+  const countFolders = (node: TreeNode): number =>
+    node.children.reduce((sum, child) => sum + countFolders(child), node.hasAssets ? 1 : 0);
+  const folderCount = $derived(foldersStore.folders ? countFolders(foldersStore.folders) : 0);
+  const barTitle = $derived(data.tree.path ? data.tree.value : data.meta.title);
+  const barDescription = $derived(
+    data.tree.path
+      ? data.tree.parents.length > 1
+        ? data.tree.path
+        : undefined
+      : $t('folders_count', { values: { count: folderCount } }),
+  );
+  const foldersIn = (node: TreeNode) =>
+    node.size > 0 ? $t('folders_count', { values: { count: node.size } }) : undefined;
 
   beforeNavigate(({ to }) => {
     if (isAssetViewerRoute(to)) {
@@ -58,12 +72,11 @@
 
     if (isAssetViewerRoute(from) && folderScrollContainer) {
       folderScrollContainer.scrollTop = savedScrollTop;
+    } else if (folderScrollContainer) {
+      // Local Omarchy layer: a folder opened from the list starts at its top, not where the list above it was scrolled
+      folderScrollContainer.scrollTop = 0;
     }
   });
-
-  const navigateToView = (path: string) => {
-    return goto(getLinkForPath(path), { keepFocus: true, noScroll: true });
-  };
 
   const triggerAssetUpdate = async () => {
     assetMultiSelectManager.clear();
@@ -86,34 +99,57 @@
   };
 </script>
 
-<UserPageLayout title={data.meta.title}>
+<UserPageLayout title={barTitle} description={barDescription}>
+  {#snippet leading()}
+    {#if data.tree.parent}
+      <IconButton
+        shape="round"
+        color="secondary"
+        variant="ghost"
+        icon={mdiArrowLeft}
+        aria-label={$t('to_parent')}
+        href={getLinkForPath(data.tree.parent.path)}
+      />
+    {/if}
+  {/snippet}
+
   {#snippet sidebar()}
     <Sidebar>
       <SkipLink target={`#${headerId}`} text={$t('skip_to_folders')} breakpoint="md" />
-      <section>
-        <Text class="mb-4 ps-4" size="small">{$t('explorer')}</Text>
-        <div class="h-full">
-          <TreeItems
-            icons={{ default: mdiFolderOutline, active: mdiFolder }}
-            tree={foldersStore.folders!}
-            active={data.tree.path}
-            getLink={getLinkForPath}
-          />
-        </div>
-      </section>
+      <!-- Local Omarchy layer: the tree reads like the albums' tree (sidebar/explorer-tree.svelte) -->
+      <ExplorerTree
+        tree={foldersStore.folders!}
+        active={data.tree.path}
+        getLink={getLinkForPath}
+        title={$t('folders')}
+        icon={{ icon: mdiFolderOutline, flipped: true }}
+        nodeIcon={{ closed: mdiFolderOutline, open: mdiFolderOpenOutline }}
+        scope="folders"
+      />
     </Sidebar>
   {/snippet}
 
   <OnEvents onAssetsDelete={invalidateAll} />
 
-  <TreeBreadcrumbs node={data.tree} icon={mdiFolderHome} title={$t('folders')} getLink={getLinkForPath} />
-
-  <section class="mt-2 h-[calc(100%-(--spacing(25)))] immich-scrollbar overflow-auto" bind:this={folderScrollContainer}>
-    <TreeItemThumbnails items={data.tree.children} icon={mdiFolder} onClick={handleNavigateToFolder} />
+  <!-- Local Omarchy layer: the level's folders as a calm list on the gutter (omarchy/ExplorerList.svelte), where upstream
+       drew a breadcrumb slab and a grid of 64px icons; the bar carries the way up; the folder's own photos follow -->
+  <section class="h-full immich-scrollbar overflow-auto" bind:this={folderScrollContainer}>
+    <ExplorerList
+      node={data.tree}
+      getLink={getLinkForPath}
+      icon={mdiFolderOutline}
+      count={foldersIn}
+      label={$t('folders')}
+    />
 
     <!-- Assets -->
     {#if data.pathAssets && data.pathAssets.length > 0}
-      <div bind:clientHeight={viewport.height} bind:clientWidth={viewport.width} class="mt-2">
+      <div
+        bind:clientHeight={viewport.height}
+        bind:clientWidth={viewport.width}
+        class="ws-folder-photos"
+        class:mt-6={data.tree.size > 0}
+      >
         <GalleryViewer
           assets={data.pathAssets}
           assetInteraction={assetMultiSelectManager}
@@ -176,3 +212,10 @@
     </AssetSelectControlBar>
   </div>
 {/if}
+
+<style>
+  /* Local Omarchy layer: the photos' grouping control starts on the gutter, as on the album page */
+  .ws-folder-photos :global([data-testid='filter-toolbar-root']) {
+    padding-inline-start: 0;
+  }
+</style>
