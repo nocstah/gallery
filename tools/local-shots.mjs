@@ -129,7 +129,17 @@ async function shoot() {
   const out = option('out', join(ROOT, stamp));
   if (!flag('eval')) mkdirSync(out, { recursive: true });
 
-  const browser = await launch();
+  // another run can take the profile between the check above and the launch: Chromium then refuses it (its
+  // SingletonLock), and the run waits and tries again within the same ten minutes
+  let browser;
+  for (let waited = 0; !browser; waited += 2) {
+    try {
+      browser = await launch();
+    } catch (error) {
+      if (!/SingletonLock|ProcessSingleton/.test(error.message) || waited >= 600) fail(error.message);
+      await sleep(2000);
+    }
+  }
   const shots = [];
   try {
     const page = await browser.page();
