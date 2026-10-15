@@ -2,19 +2,24 @@
 // tile that comes into view pops in the way the desktop opens a window: styles/omarchy-world.css plays Hyprland's
 // windowsIn and fadeIn on it from the --ws-* motion tokens ([data-ws-open]). The timeline and the gallery grid make a
 // tile before it reaches the screen, so a tile waits on its first frame until it is actually seen (one shared
-// IntersectionObserver). A screen that opens at once (the page loading, a folder opening, a stack expanding) ripples
-// in reading order; a row scrolled into view ripples along the row.
+// IntersectionObserver), and opens once a fifth of it is on screen: opening the moment its first pixel crossed the
+// edge, it played out while still sliding in at the bottom, where nobody looks (the owner: "I don't really see them").
+// A tile left peeking in at the edge opens as soon as scrolling stops, so no blank strip is left there. A screen that
+// opens at once (the page loading, a folder opening, a stack expanding) ripples in reading order; a row scrolled into
+// view ripples along the row.
 //
 // A tile is simply there, with no wait, under reduced motion, in a hidden tab (nothing would ever play there), when
 // the desktop has its window animations off, and while the view moves faster than the eye follows: a jump of more
-// than a screen (the scrubber, a year switch, whose workspace slide is the transition) or a fast fling.
+// than a screen (the scrubber, a year switch, whose workspace slide is the transition) or a real fling.
 import type { Action } from 'svelte/action';
 
 const ROW_MS = 120; // the ripple along a row, from one side of the screen to the other
 const SCREEN_MS = 200; // the ripple down a whole screen
 const RIPPLE_MAX_MS = 280;
+const SEEN = 0.2; // how much of a tile is on screen before it opens (of a tile taller than that, of the screen)
+const IDLE_MS = 150; // a tile still peeking in at the edge opens once the view has been still this long
 const JUMP_SCREENS = 1.5; // one scroll step further than this is a jump, not scrolling
-const FLING_SCREENS_PER_SECOND = 2.5;
+const FLING_SCREENS_PER_SECOND = 4; // a mouse wheel spun briskly stays under this; a fling or a scrubber drag does not
 const QUIET_MS = 300; // tiles arriving this long after a jump or a fling just appear
 
 const ANIMATIONS = new Set(['ws-open', 'ws-fade-in']);
@@ -25,14 +30,27 @@ let listening = false;
 let observer: IntersectionObserver | undefined;
 let desktopCheckedAt = -Infinity;
 let desktopOpens = true;
+let idle: ReturnType<typeof setTimeout> | undefined;
 const scrolls = new WeakMap<Element, { top: number; at: number; speed: number }>();
 const ended = new WeakMap<HTMLElement, number>();
+// waiting tiles with a sliver on screen, too little to open yet
+const peeking = new Set<HTMLElement>();
+
+const quiet = () => document.hidden || performance.now() < quietUntil;
+
+const openWhenStill = () => {
+  clearTimeout(idle);
+  if (peeking.size > 0) {
+    idle = setTimeout(openPeeking, IDLE_MS);
+  }
+};
 
 const onScroll = (event: Event) => {
   const scroller = event.target instanceof Element ? event.target : document.scrollingElement;
   if (!scroller) {
     return;
   }
+  openWhenStill();
   const now = performance.now();
   const top = scroller.scrollTop;
   const last = scrolls.get(scroller);
@@ -78,32 +96,53 @@ const settle = (node: HTMLElement) => {
   node.style.removeProperty('--ws-open-delay');
 };
 
-const arrive = (entries: IntersectionObserverEntry[]) => {
-  const seen = entries.filter((entry) => entry.isIntersecting);
-  if (seen.length === 0) {
+/** enough of the tile is on screen to watch it open */
+const inSight = (entry: IntersectionObserverEntry) =>
+  entry.intersectionRatio >= SEEN || entry.intersectionRect.height >= (globalThis.innerHeight || 1) * SEEN;
+
+/** opens tiles together: at once when the view moves too fast to follow, else rippling in reading order */
+const open = (tiles: Array<{ node: HTMLElement; box: DOMRectReadOnly }>) => {
+  if (tiles.length === 0) {
     return;
   }
-  const quiet = document.hidden || performance.now() < quietUntil;
+  const still = !quiet();
   const rtl = document.documentElement.dir === 'rtl';
-  const boxes = seen.map((entry) => entry.boundingClientRect);
-  const top = Math.min(...boxes.map((box) => box.top));
-  const start = rtl ? Math.max(...boxes.map((box) => box.right)) : Math.min(...boxes.map((box) => box.left));
+  const top = Math.min(...tiles.map(({ box }) => box.top));
+  const start = rtl ? Math.max(...tiles.map(({ box }) => box.right)) : Math.min(...tiles.map(({ box }) => box.left));
   const width = globalThis.innerWidth || 1;
   const height = globalThis.innerHeight || 1;
-  for (const [index, entry] of seen.entries()) {
-    const node = entry.target as HTMLElement;
+  for (const { node, box } of tiles) {
     observer?.unobserve(node);
-    if (quiet) {
+    peeking.delete(node);
+    if (!still) {
       settle(node);
       continue;
     }
-    const box = boxes[index];
     const along = Math.abs(rtl ? start - box.right : box.left - start) / width;
     const down = (box.top - top) / height;
     const delay = Math.min(RIPPLE_MAX_MS, Math.round(along * ROW_MS + down * SCREEN_MS));
     node.style.setProperty('--ws-open-delay', `${delay}ms`);
     node.dataset.wsOpen = 'open';
   }
+};
+
+const openPeeking = () => open([...peeking].map((node) => ({ node, box: node.getBoundingClientRect() })));
+
+const arrive = (entries: IntersectionObserverEntry[]) => {
+  const fast = quiet();
+  const opening: Array<{ node: HTMLElement; box: DOMRectReadOnly }> = [];
+  for (const entry of entries) {
+    const node = entry.target as HTMLElement;
+    if (!entry.isIntersecting) {
+      peeking.delete(node);
+    } else if (fast || inSight(entry)) {
+      opening.push({ node, box: entry.boundingClientRect });
+    } else {
+      peeking.add(node);
+    }
+  }
+  open(opening);
+  openWhenStill();
 };
 
 const onEnd = (event: AnimationEvent) => {
@@ -136,7 +175,8 @@ export const tileOpen: Action<HTMLElement, boolean | undefined> = (node, enabled
     // eslint-disable-next-line unicorn/prefer-observer-apis -- a jump or a fling is how far the view moved between two scroll events, which no observer reports
     document.addEventListener('scroll', onScroll, { capture: true, passive: true });
   }
-  observer ??= new IntersectionObserver(arrive);
+  // 0 to know a tile is peeking in, the rest to know when enough of it is in (a tall one passes at a smaller part)
+  observer ??= new IntersectionObserver(arrive, { threshold: [0, SEEN / 2, SEEN] });
   node.dataset.wsOpen = 'waiting';
   node.addEventListener('animationend', onEnd);
   node.addEventListener('animationcancel', onEnd);
@@ -144,6 +184,7 @@ export const tileOpen: Action<HTMLElement, boolean | undefined> = (node, enabled
   return {
     destroy() {
       observer?.unobserve(node);
+      peeking.delete(node);
       node.removeEventListener('animationend', onEnd);
       node.removeEventListener('animationcancel', onEnd);
     },

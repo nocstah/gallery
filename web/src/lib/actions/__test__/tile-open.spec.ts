@@ -16,18 +16,26 @@ const tile = () => {
 
 const box = (left: number, top: number) => ({ left, top, right: left + 200, bottom: top + 200 }) as DOMRectReadOnly;
 
-const comeIntoView = (...tiles: Array<{ node: HTMLElement; left?: number; top?: number }>) =>
+// `shown` is how much of the 200 px tile is on screen; `rect` overrides how tall that part is (a tile taller than the
+// screen)
+const comeIntoView = (
+  ...tiles: Array<{ node: HTMLElement; left?: number; top?: number; shown?: number; rect?: number; gone?: boolean }>
+) =>
   seen(
     tiles.map(
-      ({ node, left = 0, top = 0 }) =>
+      ({ node, left = 0, top = 0, shown = 1, rect, gone = false }) =>
         ({
           target: node,
-          isIntersecting: true,
+          isIntersecting: !gone,
+          intersectionRatio: gone ? 0 : shown,
+          intersectionRect: { height: gone ? 0 : (rect ?? 200 * shown) },
           boundingClientRect: box(left, top),
         }) as unknown as IntersectionObserverEntry,
     ),
     {} as IntersectionObserver,
   );
+
+const still = () => new Promise((resolve) => setTimeout(resolve, 200));
 
 const end = (node: HTMLElement, animationName: string) =>
   node.dispatchEvent(Object.assign(new Event('animationend'), { animationName }));
@@ -89,6 +97,60 @@ describe('tileOpen', () => {
     expect(node.dataset.wsOpen).toBe('open');
     expect(delayOf(node)).toBe(0);
     expect(unobserve).toHaveBeenCalledWith(node);
+  });
+
+  it('waits until a fifth of the tile is on screen, so it opens where it can be seen', () => {
+    const node = tile();
+    tileOpen(node);
+
+    comeIntoView({ node, shown: 0.05 });
+    expect(node.dataset.wsOpen).toBe('waiting');
+
+    comeIntoView({ node, shown: 0.3 });
+    expect(node.dataset.wsOpen).toBe('open');
+  });
+
+  it('opens a tile taller than the screen once a good part of the screen shows it', () => {
+    const node = tile();
+    tileOpen(node);
+
+    comeIntoView({ node, shown: 0.1, rect: 300 });
+
+    expect(node.dataset.wsOpen).toBe('open');
+  });
+
+  it('opens a tile left peeking in at the edge once the view is still', async () => {
+    const node = tile();
+    tileOpen(node);
+
+    comeIntoView({ node, shown: 0.05 });
+    expect(node.dataset.wsOpen).toBe('waiting');
+
+    await still();
+    expect(node.dataset.wsOpen).toBe('open');
+  });
+
+  it('forgets a tile that left the screen before enough of it was in', async () => {
+    const node = tile();
+    tileOpen(node);
+
+    comeIntoView({ node, shown: 0.05 });
+    comeIntoView({ node, gone: true });
+    await still();
+
+    expect(node.dataset.wsOpen).toBe('waiting');
+  });
+
+  it('shows a peeking tile at once while the view flings past', () => {
+    const waiting = tile();
+    tileOpen(waiting);
+    const view = scroller();
+    view.scrollTo(100);
+    view.scrollTo(8000);
+
+    comeIntoView({ node: waiting, shown: 0.05 });
+
+    expect(waiting.dataset.wsOpen).toBeUndefined();
   });
 
   it('ripples a screen that opens at once in reading order, quickly', () => {
