@@ -10,9 +10,16 @@
 //   ./local-dev.sh shots --compare A B          what changed between two runs (ImageMagick), with diff images
 //
 // Options: --live (the deployed Gallery on :2283 instead of the dev server on :2284), --base URL,
-// --routes /photos,/albums,@album,@photo (@album: the album changed last; @photo: the newest photo, in the viewer),
+// --routes /photos,/albums,@album,@photo (@album: the album changed last; @photo: the newest photo, in the viewer;
+// @person: the named person with the most photos), --states (the interactive states below instead of the pages),
 // --viewports aorus,dell,laptop,tablet,phone, --modes dark,light, --all (every viewport and mode),
 // --hidpi (the monitors' real pixel density), --out DIR.
+//
+// A route can go on into a state before the shot, with steps after ">": key:Control+k, hover:SELECTOR,
+// click:SELECTOR, rclick:SELECTOR (right click), scroll:PX (the wheel over the middle of the page), wait:MS; and it can
+// be named with "name=" in front, e.g. --routes 'menu=/photos>rclick:[data-asset]'. Steps are real input events, so the
+// page reacts as to a person (hover shows a tile's checkbox, a right click opens Gallery's own menu). A selector cannot
+// hold "," or ">".
 //
 // The profile (~/.cache/gallery-shots/profile) holds only the Gallery session you log in with; nothing here reads or
 // stores a password. Its colour mode is the page's prefers-color-scheme, which is what "Follow Omarchy" follows.
@@ -48,6 +55,21 @@ const ROUTES = [
   '/sharing',
   '/utilities',
   '/user-settings',
+];
+const TILE = '[data-thumbnail-focus-container][data-asset]';
+/** What a person clicks into: the states a page-only run never shows. */
+const STATES = [
+  `photos-hover=/photos>hover:${TILE}`,
+  `photos-selected=/photos>hover:${TILE}>click:${TILE} [role=checkbox]`,
+  `photos-menu=/photos>rclick:${TILE}`,
+  `photos-filters=/photos>click:[data-testid=filter-toggle-btn]`,
+  'photos-scrolled=/photos>scroll:6000',
+  'photos-years=/photos>click:button.ws-year',
+  'photos-palette=/photos>key:Control+k',
+  'photos-shortcuts=/photos>key:Shift+?',
+  'photo-info=@photo>key:i',
+  'person=@person',
+  `search=/search?query=${encodeURIComponent(JSON.stringify({ query: 'beach' }))}`,
 ];
 
 const args = process.argv.slice(2);
@@ -88,7 +110,7 @@ async function shoot() {
   const base = (flag('live') ? 'http://localhost:2283' : option('base', 'http://localhost:2284')).replace(/\/$/, '');
   const viewports = flag('all') ? Object.keys(VIEWPORTS) : list(option('viewports', 'aorus,phone'));
   const modes = flag('all') ? ['dark', 'light'] : list(option('modes', 'dark'));
-  const routes = list(option('routes', ROUTES.join(',')));
+  const routes = (flag('states') ? STATES : list(option('routes', ROUTES.join(',')))).map(parseRoute);
   for (const name of viewports) {
     if (!VIEWPORTS[name]) fail(`unknown viewport ${name} (${Object.keys(VIEWPORTS).join(', ')})`);
   }
@@ -115,14 +137,22 @@ async function shoot() {
       await page.send('Emulation.setTouchEmulationEnabled', { enabled: vp.mobile });
       for (const mode of modes) {
         await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }] });
-        for (const { route, path } of resolved) {
-          const file = `${slug(route)}.${name}.${mode}.png`;
+        for (const { route, label, path, steps } of resolved) {
+          const file = `${slug(label)}.${name}.${mode}.png`;
           const started = Date.now();
-          const landed = await page.visit(base + path);
+          let landed = await page.visit(base + path);
+          const missed = [];
+          for (const step of steps) {
+            const problem = await page.act(step);
+            if (problem) missed.push(problem);
+          }
+          if (steps.length) landed = await page.settle();
           const png = await page.send('Page.captureScreenshot', { format: 'png' });
           writeFileSync(join(out, file), Buffer.from(png.data, 'base64'));
-          shots.push({ route, path, viewport: name, mode, file, landed, ms: Date.now() - started });
-          process.stdout.write(`  ${file}${landed === path ? '' : `  (landed on ${landed})`}\n`);
+          if (steps.length) await page.pointerAway();
+          shots.push({ route, label, path, steps, viewport: name, mode, file, landed, missed, ms: Date.now() - started });
+          const notes = [landed === path ? '' : `landed on ${landed}`, ...missed].filter(Boolean);
+          process.stdout.write(`  ${file}${notes.length ? `  (${notes.join('; ')})` : ''}\n`);
         }
       }
     }
@@ -139,7 +169,14 @@ async function shoot() {
   console.log(`${shots.length} screenshots in ${out}  (contact sheet: ${join(out, 'index.html')}; also ${latest})`);
 }
 
-/** @album and @photo become real paths, asked of Gallery with the session's own cookie. */
+/** "name=TARGET>step>step": the target is a path or an @alias; the name (else the whole spec) names the file. */
+function parseRoute(spec) {
+  const named = spec.match(/^([a-z0-9-]+)=(.*)$/i);
+  const [target, ...steps] = (named ? named[2] : spec).split('>');
+  return { route: spec, label: named ? named[1] : spec, target, steps };
+}
+
+/** @album, @photo and @person become real paths, asked of Gallery with the session's own cookie. */
 async function resolveRoutes(page, base, routes) {
   const landed = await page.visit(`${base}/photos`);
   if (landed.startsWith('/auth/')) throw new Error('not logged in: run ./local-dev.sh login once');
@@ -148,12 +185,18 @@ async function resolveRoutes(page, base, routes) {
     const album = albums.filter((a) => a.assetCount > 8).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0];
     const found = await fetch('/api/search/metadata', { method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ size: 1, type: 'IMAGE', visibility: 'timeline' }) }).then((r) => r.json()).catch(() => ({}));
-    return { album: album?.id ?? null, photo: found?.assets?.items?.[0]?.id ?? null };
+    const people = await fetch('/api/people?size=100').then((r) => r.json()).catch(() => ({}));
+    const person = (people.people ?? []).find((p) => p.name && !p.isHidden);
+    return { album: album?.id ?? null, photo: found?.assets?.items?.[0]?.id ?? null, person: person?.id ?? null };
   })()`);
+  const aliases = {
+    '@album': ids.album && `/albums/${ids.album}`,
+    '@photo': ids.photo && `/photos/${ids.photo}`,
+    '@person': ids.person && `/people/${ids.person}`,
+  };
   return routes.flatMap((route) => {
-    if (route === '@album') return ids.album ? [{ route, path: `/albums/${ids.album}` }] : [];
-    if (route === '@photo') return ids.photo ? [{ route, path: `/photos/${ids.photo}` }] : [];
-    return [{ route, path: route }];
+    const path = route.target.startsWith('@') ? aliases[route.target] : route.target;
+    return path ? [{ ...route, path }] : [];
   });
 }
 
@@ -256,10 +299,34 @@ async function pageSession(cdp, sessionId) {
     if (result.exceptionDetails) throw new Error(result.exceptionDetails.text);
     return result.result.value;
   };
+  /** Waits until the network has been quiet for 800 ms and the images are decoded; returns where the page is. */
+  const settle = async () => {
+    const deadline = Date.now() + 15000;
+    while (Date.now() < deadline && (inflight.size > 0 || Date.now() - lastActivity < 800)) {
+      await sleep(100);
+    }
+    await evaluate(`Promise.race([
+      Promise.all([...document.images].filter((i) => !i.complete).map((i) => new Promise((r) => { i.onload = i.onerror = r; }))),
+      new Promise((r) => setTimeout(r, 5000)),
+    ])`);
+    await sleep(400);
+    return evaluate('location.pathname + location.search');
+  };
+  const mouse = (type, x, y, extra = {}) => send('Input.dispatchMouseEvent', { type, x, y, ...extra });
+  /** The middle of the first element matching the selector, brought into view if it is outside it. */
+  const centre = (selector) =>
+    evaluate(`(() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!el) return null;
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      const r = el.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    })()`);
   return {
     send,
     evaluate,
-    /** Opens the URL and waits until the page has settled: loaded, the network quiet for 800 ms, images decoded. */
+    settle,
+    /** Opens the URL and waits until the page has settled: loaded, the network quiet, images decoded. */
     async visit(url) {
       inflight.clear();
       const loaded = new Promise((resolve) => {
@@ -273,17 +340,51 @@ async function pageSession(cdp, sessionId) {
       });
       await send('Page.navigate', { url });
       await loaded;
-      const deadline = Date.now() + 15000;
-      while (Date.now() < deadline && (inflight.size > 0 || Date.now() - lastActivity < 800)) {
-        await sleep(100);
-      }
-      await evaluate(`Promise.race([
-        Promise.all([...document.images].filter((i) => !i.complete).map((i) => new Promise((r) => { i.onload = i.onerror = r; }))),
-        new Promise((r) => setTimeout(r, 5000)),
-      ])`);
-      await sleep(400);
-      return evaluate('location.pathname + location.search');
+      return settle();
     },
+    /** One step as real input (key:, hover:, click:, rclick:, scroll:, wait:); returns what went wrong, if anything. */
+    async act(step) {
+      const at = step.indexOf(':');
+      const kind = step.slice(0, at);
+      const arg = step.slice(at + 1);
+      if (kind === 'wait') {
+        await sleep(Number(arg) || 0);
+      } else if (kind === 'key') {
+        const parts = arg.split('+');
+        const key = parts.pop();
+        const bits = { Alt: 1, Control: 2, Meta: 4, Shift: 8 };
+        const modifiers = parts.reduce((sum, part) => sum | (bits[part] ?? 0), 0);
+        const printable = key.length === 1 && !(modifiers & 6);
+        const code = key.length === 1 ? key.toUpperCase().charCodeAt(0) : 0;
+        await send('Input.dispatchKeyEvent', {
+          type: printable ? 'keyDown' : 'rawKeyDown',
+          key,
+          modifiers,
+          windowsVirtualKeyCode: key === '?' ? 191 : code,
+          ...(printable ? { text: key } : {}),
+        });
+        await send('Input.dispatchKeyEvent', { type: 'keyUp', key, modifiers });
+      } else if (kind === 'scroll') {
+        const { w, h } = await evaluate('({ w: innerWidth, h: innerHeight })');
+        await mouse('mouseWheel', w / 2, h / 2, { deltaX: 0, deltaY: Number(arg) || 0 });
+        await sleep(1200);
+      } else if (kind === 'hover' || kind === 'click' || kind === 'rclick') {
+        const point = await centre(arg);
+        if (!point) return `${kind}: nothing matches ${arg}`;
+        await mouse('mouseMoved', point.x, point.y);
+        if (kind !== 'hover') {
+          const button = kind === 'rclick' ? 'right' : 'left';
+          await mouse('mousePressed', point.x, point.y, { button, clickCount: 1 });
+          await mouse('mouseReleased', point.x, point.y, { button, clickCount: 1 });
+        }
+      } else {
+        return `unknown step ${step}`;
+      }
+      await sleep(350);
+      return null;
+    },
+    /** Takes the pointer off the page, so a hover does not carry into the next shot. */
+    pointerAway: () => mouse('mouseMoved', -10, -10),
   };
 }
 
@@ -321,8 +422,8 @@ function compare(a, b) {
 function sheet(base, shots) {
   const byRoute = new Map();
   for (const shot of shots) {
-    if (!byRoute.has(shot.route)) byRoute.set(shot.route, []);
-    byRoute.get(shot.route).push(shot);
+    if (!byRoute.has(shot.label)) byRoute.set(shot.label, []);
+    byRoute.get(shot.label).push(shot);
   }
   const sections = [...byRoute]
     .map(
@@ -360,7 +461,8 @@ function profileInUse() {
 }
 
 function slug(route) {
-  return route.replace(/^@/, '').replace(/^\//, '').replace(/[^a-z0-9]+/gi, '-').replace(/-$/, '') || 'root';
+  const name = route.replace(/^@/, '').replace(/^\//, '').replace(/[^a-z0-9]+/gi, '-').replace(/-$/, '');
+  return name.slice(0, 80) || 'root';
 }
 
 function sleep(ms) {

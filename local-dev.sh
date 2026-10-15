@@ -10,8 +10,8 @@
 #   ./local-dev.sh start | stop | restart | status | logs
 #   ./local-dev.sh login                  once: log in to the screenshot browser (a window opens; you type, I don't)
 #   ./local-dev.sh shots [options]        headless screenshots of the dev server (tools/local-shots.mjs has the options:
-#                                         --live, --routes, --viewports aorus,dell,laptop,tablet,phone, --modes, --all,
-#                                         --hidpi, --compare RUN_A RUN_B) into ~/.cache/gallery-shots/<time>/
+#                                         --live, --routes, --states, --viewports aorus,dell,laptop,tablet,phone, --modes,
+#                                         --all, --hidpi, --compare RUN_A RUN_B) into ~/.cache/gallery-shots/<time>/
 #
 # Differences from the deployed build: upstream names show where the build's apply-branding would say Gallery, and
 # web files outside src/ and static/ (vite.config.ts, package.json) come from the image, so rebuild the image when
