@@ -39,6 +39,7 @@ import { Route } from '$lib/route';
 import { addEntry, getEntries, makePlaceId, removeEntry, type RecentEntry } from '$lib/stores/cmdk-recent';
 import { curator } from '$lib/utils/curator';
 import { getPhotosPersonFilterId, type PhotosPersonFilterReference } from '$lib/utils/photos-filter-options';
+import { fieldSearchTerms } from '$lib/utils/search-mode-terms';
 import {
   buildSearchablePageUrl,
   getSearchablePageBasePath,
@@ -1729,19 +1730,7 @@ export class GlobalSearchManager {
       return;
     }
     this.navigateToFilteredResults({
-      applyFilter: (filters: FilterState): FilterState => {
-        switch (mode) {
-          case 'metadata': {
-            return { ...filters, originalFileName: trimmed };
-          }
-          case 'description': {
-            return { ...filters, description: trimmed };
-          }
-          case 'ocr': {
-            return { ...filters, ocr: trimmed };
-          }
-        }
-      },
+      applyFilter: (filters: FilterState): FilterState => ({ ...filters, ...fieldSearchTerms(mode, trimmed) }),
     });
   }
 
@@ -2924,9 +2913,7 @@ export class GlobalSearchManager {
             size: 5,
             visibility: AssetVisibility.Timeline,
             withSharedSpaces: true,
-            ...(mode === 'metadata' && { originalFileName: query }),
-            ...(mode === 'description' && { description: query }),
-            ...(mode === 'ocr' && { ocr: query }),
+            ...fieldSearchTerms(mode, query),
           };
           const response = await searchAssets({ metadataSearchDto }, { signal });
           const items = response.assets.items;

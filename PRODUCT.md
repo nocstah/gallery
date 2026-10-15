@@ -36,7 +36,6 @@ Self-hosted Noodle Gallery (a community fork of Immich), on the owner's own hard
 - **Seeing it:** `./local-dev.sh shots` takes headless screenshots of the main pages at the owner's real sizes (AORUS 2560×1440, Dell portrait 1296×2304, plus laptop, tablet and phone; dark and light) into `~/.cache/gallery-shots/<time>/` with a contact sheet; `--routes`, `--viewports`, `--modes`, `--all`, `--hidpi` narrow or widen it, and `--compare RUN_A RUN_B` shows what changed between two runs. `--states` shoots what a person clicks into instead of the pages (a hovered tile, a selection, the right-click menu, the filter rail, a scrolled timeline, the Years overview, Ctrl+K, the shortcuts sheet, the viewer's info, a person, search results), and any route can go on into a state with real input after `>` (`key:`, `hover:`, `click:`, `rclick:`, `scroll:`, `wait:`). It uses its own browser profile, logged in once by the owner with `./local-dev.sh login`. Take a run before a redesign and after it.
 - **Live variants:** `impeccable live --target web` (config in `web/.impeccable/live/`) puts the element picker on the dev server's pages; accepted variants are written to source.
 - **Strings:** user-facing strings go through i18n (`i18n/en.json` plus the nine maintained locales, if a commit is ever upstreamed).
-- **Known bugs in reach:** `/search?query=<plain text>` crashes the page; the search hint shows "⌘K" on Linux.
 
 ## Evidence on Hand
 

@@ -1,7 +1,10 @@
 import { AssetVisibility, type AssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { userEvent } from '@testing-library/user-event';
 import type { Component } from 'svelte';
+import { init, register, waitLocale } from 'svelte-i18n';
+import { goto } from '$app/navigation';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
 import { QueryParameter } from '$lib/constants';
 import SearchPage from './+page.svelte';
@@ -16,6 +19,7 @@ const {
   mockPage,
   mockRegisterSelectionContext,
   mockSearchAssets,
+  mockSearchAssetStatistics,
   mockSearchPerson,
   mockSearchSmart,
 } = vi.hoisted(() => ({
@@ -37,6 +41,9 @@ const {
   },
   mockGlobalSearchManager: {
     open: vi.fn(),
+    mode: 'smart' as string,
+    mlHealthy: true,
+    setMode: vi.fn(),
   },
   mockGetPerson: vi.fn(),
   mockPage: {
@@ -46,6 +53,7 @@ const {
   },
   mockRegisterSelectionContext: vi.fn(),
   mockSearchAssets: vi.fn(),
+  mockSearchAssetStatistics: vi.fn(),
   mockSearchPerson: vi.fn(),
   mockSearchSmart: vi.fn(),
 }));
@@ -58,6 +66,18 @@ vi.mock('$app/navigation', () => ({
 vi.mock('$app/state', () => ({ page: mockPage }));
 
 vi.mock('$lib/components/ActionMenuItem.svelte', async () => {
+  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+  return { default: MockComponent };
+});
+
+// Local Omarchy layer: the page lives in the shell (UserPageLayout); the bar stub renders what the page puts in the one
+// bar (its query field), as the real bar does
+vi.mock('$lib/components/omarchy/OmarchyBar.svelte', async () => {
+  const module = await import('@test-data/mocks/omarchy-bar-rail-aware.stub.svelte');
+  return { default: module.default };
+});
+
+vi.mock('$lib/components/shared-components/side-bar/UserSidebar.svelte', async () => {
   const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
   return { default: MockComponent };
 });
@@ -187,6 +207,7 @@ vi.mock('@immich/sdk', async () => {
     getPerson: mockGetPerson,
     getTagById: vi.fn().mockResolvedValue({ value: 'Tag' }),
     searchAssets: mockSearchAssets,
+    searchAssetStatistics: mockSearchAssetStatistics,
     searchPerson: mockSearchPerson,
     searchSmart: mockSearchSmart,
   };
@@ -206,6 +227,21 @@ function makeAsset(overrides: Partial<AssetResponseDto> = {}): AssetResponseDto 
   } as AssetResponseDto;
 }
 
+// the page's words in English, so the tests read what a person reads (the counts among them)
+beforeAll(async () => {
+  register('en-US', () => import('$i18n/en.json'));
+  await init({ fallbackLocale: 'en-US' });
+  await waitLocale('en-US');
+});
+
+const searchUrl = (terms: Record<string, unknown>) =>
+  new URL(`https://gallery.test/search?${QueryParameter.QUERY}=${encodeURIComponent(JSON.stringify(terms))}`);
+
+const searchedTerms = () => {
+  const url = vi.mocked(goto).mock.calls.at(-1)?.[0] as string;
+  return JSON.parse(new URL(url, 'https://gallery.test').searchParams.get(QueryParameter.QUERY) ?? '{}') as unknown;
+};
+
 function renderPage() {
   return render(TestWrapper as Component<{ component: typeof SearchPage; componentProps: Record<string, never> }>, {
     component: SearchPage,
@@ -219,7 +255,9 @@ describe('Search page cmdk selection context', () => {
     mockAssetMultiSelectManager.selectionActive = false;
     mockAssetMultiSelectManager.assets = [];
     mockFeatureFlagsManager.value.smartSearch = false;
+    mockGlobalSearchManager.mode = 'smart';
     mockPage.url = new URL('https://gallery.test/search');
+    mockSearchAssetStatistics.mockResolvedValue({ total: 1 });
     mockSearchAssets.mockResolvedValue({
       albums: { items: [] },
       assets: { items: [makeAsset()], nextPage: null },
@@ -261,6 +299,7 @@ describe('Search page cmdk selection context', () => {
   });
 
   it('enables GalleryViewer grouping for legacy search result grids', async () => {
+    mockPage.url = searchUrl({ city: 'Berlin' });
     renderPage();
 
     await waitFor(() => expect(screen.getByTestId('gallery-viewer')).toHaveAttribute('data-enable-grouping', 'true'));
@@ -378,5 +417,131 @@ describe('Search page cmdk selection context', () => {
     await waitFor(() => expect(screen.getByText('Pierre')).toBeInTheDocument());
     expect(screen.queryByText('withSharedSpaces')).not.toBeInTheDocument();
     expect(mockGetPerson).not.toHaveBeenCalledWith({ id: 'space-person:space-person-1' });
+  });
+});
+
+// Local Omarchy layer: the page lives in the shell (2026-10-15). Its query is a field in the one bar that searches
+// again in place, beside the palette's mode control; the other terms are chips; the bar says how many results there are.
+describe('Search page in the shell', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAssetMultiSelectManager.selectionActive = false;
+    mockAssetMultiSelectManager.assets = [];
+    mockFeatureFlagsManager.value.smartSearch = true;
+    mockGlobalSearchManager.mode = 'smart';
+    mockPage.url = new URL('https://gallery.test/search');
+    mockSearchAssets.mockResolvedValue({ albums: { items: [] }, assets: { items: [makeAsset()], nextPage: null } });
+    mockSearchSmart.mockResolvedValue({ albums: { items: [] }, assets: { items: [makeAsset()], nextPage: '2' } });
+    mockSearchAssetStatistics.mockResolvedValue({ total: 42 });
+    mockGetPerson.mockResolvedValue({ name: 'Person' });
+    mockSearchPerson.mockResolvedValue([]);
+  });
+
+  const field = () => screen.getByRole('searchbox', { name: 'Search your photos' });
+
+  it('says how to search, and searches nothing, before anything is asked', async () => {
+    renderPage();
+
+    expect(await screen.findByTestId('search-empty')).toBeInTheDocument();
+    expect(field()).toHaveValue('');
+    expect(mockSearchAssets).not.toHaveBeenCalled();
+    expect(mockSearchSmart).not.toHaveBeenCalled();
+  });
+
+  it('puts the text in the field and every other term in a chip', async () => {
+    mockPage.url = searchUrl({ query: 'beach', city: 'Berlin' });
+
+    renderPage();
+
+    expect(field()).toHaveValue('beach');
+    expect(await screen.findByText('Berlin')).toBeInTheDocument();
+    expect(screen.queryByText('Context')).not.toBeInTheDocument();
+  });
+
+  it('searches the edited text in place on Enter, keeping the other terms', async () => {
+    mockPage.url = searchUrl({ query: 'beach', city: 'Berlin' });
+    renderPage();
+
+    await fireEvent.input(field(), { target: { value: 'sunset' } });
+    await fireEvent.submit(field().closest('form')!);
+
+    await waitFor(() => expect(goto).toHaveBeenCalled());
+    expect(searchedTerms()).toEqual({ city: 'Berlin', query: 'sunset' });
+    expect(vi.mocked(goto).mock.calls.at(-1)?.[1]).toMatchObject({ keepFocus: true });
+  });
+
+  it('searches the text in the mode picked beside the field, which the palette then keeps', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    mockPage.url = searchUrl({ query: 'beach' });
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: 'Search mode: Smart' }));
+    expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent?.trim())).toEqual([
+      'Smart',
+      'Filename',
+      'Description',
+      'OCR',
+    ]);
+    await user.click(screen.getByRole('menuitemradio', { name: 'OCR' }));
+
+    await waitFor(() => expect(goto).toHaveBeenCalled());
+    expect(searchedTerms()).toEqual({ ocr: 'beach' });
+    expect(mockGlobalSearchManager.setMode).toHaveBeenCalledWith('ocr');
+  });
+
+  it('counts a search the statistics endpoint can count, and offers to add every result', async () => {
+    mockPage.url = searchUrl({ city: 'Berlin' });
+    mockSearchAssets.mockResolvedValue({ albums: { items: [] }, assets: { items: [makeAsset()], nextPage: '2' } });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByTestId('search-result-count')).toHaveTextContent('42 results'));
+    expect(mockSearchAssetStatistics).toHaveBeenCalledWith(
+      { statisticsSearchDto: { visibility: AssetVisibility.Timeline, withSharedSpaces: true, city: 'Berlin' } },
+      expect.anything(),
+    );
+    expect(screen.getByTestId('add-all-to-collection')).toHaveTextContent('Add all 42 results to');
+  });
+
+  it('counts a smart search by what has loaded, with a + while more follow, and offers no "add all"', async () => {
+    mockPage.url = searchUrl({ query: 'beach' });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByTestId('search-result-count')).toHaveTextContent('1+ results'));
+    expect(mockSearchAssetStatistics).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('add-all-to-collection')).not.toBeInTheDocument();
+  });
+
+  it('offers a smart search when a field mode finds nothing', async () => {
+    mockPage.url = searchUrl({ ocr: 'zzqxv' });
+    mockSearchAssets.mockResolvedValue({ albums: { items: [] }, assets: { items: [], nextPage: null } });
+    renderPage();
+
+    expect(await screen.findByTestId('search-no-results')).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'Search by context' }));
+
+    await waitFor(() => expect(goto).toHaveBeenCalled());
+    expect(searchedTerms()).toEqual({ query: 'zzqxv' });
+  });
+
+  it('takes a chip away and keeps the rest of the search', async () => {
+    mockPage.url = searchUrl({ query: 'beach', city: 'Berlin' });
+    renderPage();
+
+    await fireEvent.click(await screen.findByRole('button', { name: 'Remove filter' }));
+
+    expect(searchedTerms()).toEqual({ query: 'beach' });
+  });
+
+  it('takes an edit back on Escape', async () => {
+    mockPage.url = searchUrl({ query: 'beach' });
+    renderPage();
+
+    await fireEvent.input(field(), { target: { value: 'sunset' } });
+    await fireEvent.keyDown(field(), { key: 'Escape' });
+
+    expect(field()).toHaveValue('beach');
+    expect(goto).not.toHaveBeenCalled();
   });
 });

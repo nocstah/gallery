@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '$lib/__mocks__/sdk.mock';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { collectSearchResultAssetIds } from './search.service';
+import { collectSearchResultAssetIds, countSearchResults } from './search.service';
 
 const page = (ids: string[], nextPage: string | null) =>
   ({
@@ -86,4 +86,33 @@ describe('collectSearchResultAssetIds', () => {
     });
     expect(sdkMock.searchAssets).not.toHaveBeenCalled();
   });
+});
+
+describe('countSearchResults', () => {
+  it('counts a search by terms the statistics endpoint knows, leaving out paging', async () => {
+    sdkMock.searchAssetStatistics.mockResolvedValueOnce({ total: 42 });
+
+    const total = await countSearchResults({
+      city: 'Berlin',
+      visibility: 'timeline' as never,
+      withSharedSpaces: true,
+      page: 2,
+      withExif: true,
+    });
+
+    expect(total).toBe(42);
+    expect(sdkMock.searchAssetStatistics).toHaveBeenCalledWith(
+      { statisticsSearchDto: { city: 'Berlin', visibility: 'timeline', withSharedSpaces: true } },
+      { signal: undefined },
+    );
+  });
+
+  // The server drops a term it does not know, so these would be counted as if the term were not there.
+  it.each([{ originalFileName: 'IMG' }, { originalPath: '/photos' }, { query: 'beach' }, { queryAssetId: 'asset-1' }])(
+    'cannot count a search by %o',
+    async (terms) => {
+      expect(await countSearchResults({ city: 'Berlin', ...terms })).toBeUndefined();
+      expect(sdkMock.searchAssetStatistics).not.toHaveBeenCalled();
+    },
+  );
 });

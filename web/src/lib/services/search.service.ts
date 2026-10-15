@@ -1,4 +1,11 @@
-import { searchAssets, searchSmart, type MetadataSearchDto, type SmartSearchDto } from '@immich/sdk';
+import {
+  searchAssets,
+  searchAssetStatistics,
+  searchSmart,
+  type MetadataSearchDto,
+  type SmartSearchDto,
+  type StatisticsSearchDto,
+} from '@immich/sdk';
 
 const COLLECT_PAGE_SIZE = 1000;
 
@@ -30,4 +37,68 @@ export const collectSearchResultAssetIds = async (
   }
 
   return ids;
+};
+
+// Local Omarchy layer: the terms the statistics endpoint counts by (StatisticsSearchDto), and those that only page or
+// shape the results. The server drops a term it does not know without a word, so a search by anything else (a file
+// name, a path, a smart query) would be counted as if that term were not there.
+const STATISTICS_TERMS = new Set<string>([
+  'albumIds',
+  'city',
+  'country',
+  'createdAfter',
+  'createdBefore',
+  'description',
+  'isEncoded',
+  'isFavorite',
+  'isMotion',
+  'isNotInAlbum',
+  'isOffline',
+  'lensModel',
+  'libraryId',
+  'make',
+  'model',
+  'ocr',
+  'personIds',
+  'rating',
+  'spaceId',
+  'spacePersonIds',
+  'state',
+  'tagIds',
+  'takenAfter',
+  'takenBefore',
+  'trashedAfter',
+  'trashedBefore',
+  'type',
+  'updatedAfter',
+  'updatedBefore',
+  'visibility',
+  'withSharedSpaces',
+]);
+const PAGING_TERMS = new Set<string>(['page', 'size', 'withExif', 'withPeople', 'withStacked', 'order']);
+
+/**
+ * Local Omarchy layer: how many photos a metadata search finds (the search page's count), or undefined when the
+ * statistics endpoint cannot count these terms: a smart search, which ranks every photo rather than matching some,
+ * or a term it does not know, such as a file name.
+ */
+export const countSearchResults = async (
+  terms: SearchTerms,
+  options: { signal?: AbortSignal } = {},
+): Promise<number | undefined> => {
+  const statisticsSearchDto: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(terms)) {
+    if (value === undefined || PAGING_TERMS.has(key)) {
+      continue;
+    }
+    if (!STATISTICS_TERMS.has(key)) {
+      return undefined;
+    }
+    statisticsSearchDto[key] = value;
+  }
+  const { total } = await searchAssetStatistics(
+    { statisticsSearchDto: statisticsSearchDto as StatisticsSearchDto },
+    { signal: options.signal },
+  );
+  return total;
 };

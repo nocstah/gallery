@@ -104,6 +104,24 @@ describe('search-mode-control — chip variant', () => {
   });
 });
 
+// Local Omarchy layer: the search page offers the modes that search by a text, leaving Ask to the palette
+describe('search-mode-control — offered modes', () => {
+  it('offers only the modes it is given, in the palette order', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    render(SearchModeControl, {
+      props: { variant: 'chip', mode: 'smart', onSelect: vi.fn(), modes: ['ocr', 'smart', 'description'] },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Search mode: Smart' }));
+
+    expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent?.trim())).toEqual([
+      'Smart',
+      'Description',
+      'OCR',
+    ]);
+  });
+});
+
 describe('search-mode-control — chip menu dismissal', () => {
   const openMenu = async (user: ReturnType<typeof userEvent.setup>) => {
     render(SearchModeControl, { props: { variant: 'chip', mode: 'smart', onSelect: vi.fn() } });

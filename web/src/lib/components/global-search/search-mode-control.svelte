@@ -24,11 +24,13 @@
     scoped?: boolean;
     /** True when the ML service is down, which makes smart search return nothing. */
     smartUnavailable?: boolean;
+    /** Local Omarchy layer: the modes offered, in this order's subset (the search page leaves out Ask). */
+    modes?: readonly SearchMode[];
   }
 
-  let { variant, mode, onSelect, scoped = false, smartUnavailable = false }: Props = $props();
+  let { variant, mode, onSelect, scoped = false, smartUnavailable = false, modes }: Props = $props();
 
-  const options: Array<{ value: SearchMode; labelKey: Translations; icon: string }> = [
+  const allOptions: Array<{ value: SearchMode; labelKey: Translations; icon: string }> = [
     { value: 'smart', labelKey: 'cmdk_mode_smart' as Translations, icon: mdiCreation },
     { value: 'metadata', labelKey: 'cmdk_mode_filename' as Translations, icon: mdiFormatTitle },
     { value: 'description', labelKey: 'cmdk_mode_description' as Translations, icon: mdiTextBoxOutline },
@@ -36,6 +38,7 @@
     // Local Omarchy layer: questions for Curator ("when were we last in Bali?")
     { value: 'ask', labelKey: 'cmdk_mode_ask' as Translations, icon: mdiChatQuestionOutline },
   ];
+  const options = $derived(modes ? allOptions.filter((option) => modes.includes(option.value)) : allOptions);
 
   let open = $state(false);
 

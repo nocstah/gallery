@@ -1,11 +1,14 @@
 <script lang="ts">
   import { afterNavigate, goto } from '$app/navigation';
   import { page } from '$app/state';
+  import type { ActionArray } from '$lib/actions/use-actions';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
+  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
+  import SearchBarQuery from '$lib/components/omarchy/SearchBarQuery.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import GalleryViewer from '$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte';
+  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
@@ -19,39 +22,65 @@
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import { QueryParameter } from '$lib/constants';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
+  import { barSlot } from '$lib/managers/bar-slot.svelte';
   import { registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
   import { specialAlbums } from '$lib/managers/special-albums.svelte';
   import type { Viewport } from '$lib/managers/timeline-manager/types';
+  import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
+  import { countSearchResults, type SearchTerms } from '$lib/services/search.service';
   import { lang, locale } from '$lib/stores/preferences.store';
-  import { handlePromiseError } from '$lib/utils';
+  import { getAssetMediaUrl, handlePromiseError } from '$lib/utils';
   import { parseUtcDate } from '$lib/utils/date-time';
   import { handleError } from '$lib/utils/handle-error';
   import { isAlbumsRoute, isPeopleRoute } from '$lib/utils/navigation';
+  import {
+    getSearchModeText,
+    isTextSearchMode,
+    searchModeField,
+    withSearchModeText,
+    type TextSearchMode,
+  } from '$lib/utils/search-mode-terms';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import {
     type AlbumResponseDto,
+    AssetMediaSize,
     type AssetResponseDto,
     AssetVisibility,
     getPerson,
     getTagById,
-    type MetadataSearchDto,
     searchAssets,
     searchPerson,
     searchSmart,
-    type SmartSearchDto,
   } from '@immich/sdk';
-  import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton } from '@immich/ui';
-  import { mdiArrowLeft, mdiClose, mdiDotsVertical, mdiImageOffOutline, mdiSelectAll } from '@mdi/js';
-  import { tick, untrack } from 'svelte';
+  import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton, modalManager } from '@immich/ui';
+  import { mdiClose, mdiDotsVertical, mdiPlus, mdiSelectAll } from '@mdi/js';
+  import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
+  import { MediaQuery } from 'svelte/reactivity';
 
   const viewport: Viewport = $state({ width: 0, height: 0 });
   let searchResultsElement: HTMLElement | undefined = $state();
+
+  // Local Omarchy layer: the page lives in the shell (2026-10-15), so the shell's panel scrolls the results, not the
+  // window: the grid follows that panel and is as tall as it
+  let scroller = $state<HTMLElement>();
+  const scrollerActions: ActionArray = [
+    (node: HTMLElement) => {
+      scroller = node;
+      const resized = new ResizeObserver(() => (viewport.height = node.clientHeight));
+      resized.observe(node);
+      return {
+        destroy: () => {
+          resized.disconnect();
+          scroller = undefined;
+        },
+      };
+    },
+  ];
 
   // The GalleryViewer pushes it's own history state, which causes weird
   // behavior for history.back(). To prevent that we store the previous page
@@ -62,10 +91,14 @@
   let searchResultAlbums: AlbumResponseDto[] = $state([]);
   let searchResultAssets: AssetResponseDto[] = $state([]);
   let isLoading = $state(true);
-  let scrollY = $state(0);
-  let scrollYHistory = 0;
+  // Local Omarchy layer: the last search failed (handleError said why), so the page offers it again instead of
+  // claiming there are no results; how many photos the search finds, when the statistics endpoint can count them, less
+  // those taken out of the results since; and a counter that outdates answers still on their way for an older search
+  let loadFailed = $state(false);
+  let searchTotal = $state<number>();
+  let removedCount = $state(0);
+  let searchSerial = 0;
 
-  type SearchTerms = MetadataSearchDto & Pick<SmartSearchDto, 'query' | 'queryAssetId'>;
   let searchQuery = $derived(page.url.searchParams.get(QueryParameter.QUERY));
   let smartSearchEnabled = $derived(featureFlagsManager.value.smartSearch);
   // `query` normally carries JSON-encoded search terms, but a hand-typed, bookmarked or shared
@@ -84,21 +117,42 @@
   };
 
   let terms = $derived<SearchTerms>(searchQuery ? parseSearchTerms(searchQuery) : {});
-  const searchHotkey =
-    typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl+K';
   let searchTermKeys = $derived(getVisibleSearchKeys(terms));
+  const hasSearch = $derived(searchTermKeys.length > 0);
+
+  // #830: this page is Gallery's global search surface, but a URL-driven search only ever
+  // covered the caller's own (and partner) assets. A Space member who opened "Show similar
+  // photos" on a photo shared with them — or pasted the same `queryAssetId` URL — got zero
+  // results while the space owner got a long list. Opt into shared spaces the way the command
+  // palette already does (#894); the server scopes them to spaces the member has kept in their
+  // timeline. Spread before `terms` so an explicit value in the URL still wins, and skip it
+  // entirely for a space-scoped URL — the server rejects `spaceId` + `withSharedSpaces`.
+  // (Local Omarchy layer: shared by the search, its count and "Add all".)
+  const searchTerms = $derived<SearchTerms>({ ...(!terms.spaceId && { withSharedSpaces: true }), ...terms });
+
+  // Local Omarchy layer: the field in the bar holds the text the terms search by, in the mode it searches with
+  // (smart, filename, description or OCR, the palette's modes); every other term is a chip under the bar. With no text
+  // in the terms, the field starts in the mode the palette was last left in. Both are the user's to edit until the
+  // search changes.
+  const modeText = $derived(getSearchModeText(terms));
+  const preferredMode = (): TextSearchMode =>
+    isTextSearchMode(globalSearchManager.mode) ? globalSearchManager.mode : 'smart';
+  let draft = $derived(modeText?.text ?? '');
+  let mode = $derived<TextSearchMode>(modeText?.mode ?? untrack(preferredMode));
+  const chipKeys = $derived(searchTermKeys.filter((key) => !modeText || key !== searchModeField[modeText.mode]));
+
+  // ...on a phone the field keeps the bar; the count moves under it, as it does when the bar is too narrow for it
+  const narrowBar = new MediaQuery('max-width: 767px');
+  let barRoomy = $state(!narrowBar.current);
 
   $effect(() => {
     // we want this to *only* be reactive on `terms`
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     terms;
-    untrack(() => handlePromiseError(onSearchQueryUpdate()));
-  });
-
-  $effect(() => {
-    if (scrollY) {
-      scrollYHistory = scrollY;
-    }
+    untrack(() => {
+      scroller?.scrollTo({ top: 0 });
+      handlePromiseError(onSearchQueryUpdate());
+    });
   });
 
   afterNavigate(({ from }) => {
@@ -115,19 +169,18 @@
     if (isAlbumsRoute(route)) {
       previousRoute = Route.explore();
     }
-
-    tick()
-      .then(() => {
-        window.scrollTo(0, scrollYHistory);
-      })
-      .catch(() => {
-        // do nothing
-      });
   });
 
-  const onAssetDelete = (assetIds: string[]) => {
+  // Local Omarchy layer: what leaves the results leaves the count too
+  const removeResults = (assetIds: string[]) => {
     const assetIdSet = new Set(assetIds);
+    const before = searchResultAssets.length;
     searchResultAssets = searchResultAssets.filter((asset: AssetResponseDto) => !assetIdSet.has(asset.id));
+    removedCount += before - searchResultAssets.length;
+  };
+
+  const onAssetDelete = (assetIds: string[]) => {
+    removeResults(assetIds);
   };
 
   const handleSetVisibility = (assetIds: string[]) => {
@@ -145,11 +198,10 @@
   };
 
   const onArchive = (ids: string[], visibility: AssetVisibility) => {
-    const idSet = new Set(ids);
     // Local Omarchy layer: the search asks for Timeline unless told otherwise (loadNextPage), so what is archived (To do,
     // Villa) leaves the results, as it leaves the timeline
     if ((terms.visibility ?? AssetVisibility.Timeline) !== visibility) {
-      searchResultAssets = searchResultAssets.filter((asset) => !idSet.has(asset.id));
+      removeResults(ids);
       return;
     }
     for (const id of ids) {
@@ -179,32 +231,48 @@
   };
 
   async function onSearchQueryUpdate() {
+    searchSerial++;
     nextPage = 1;
     searchResultAssets = [];
     searchResultAlbums = [];
+    loadFailed = false;
+    searchTotal = undefined;
+    removedCount = 0;
+    // Local Omarchy layer: nothing asked yet (a bare /search): the page says how to search rather than listing
+    // every photo, which is what an empty search finds
+    if (!hasSearch) {
+      isLoading = false;
+      return;
+    }
+    void countResults(searchSerial);
     await loadNextPage(true);
   }
 
-  // eslint-disable-next-line svelte/valid-prop-names-in-kit-pages
-  export const loadNextPage = async (force?: boolean) => {
-    if (!nextPage || (isLoading && !force)) {
+  // Local Omarchy layer: the count of a search the statistics endpoint can count (a place, a description, OCR text);
+  // a smart search ranks every photo instead, so its count is what has loaded, with a + while more follow
+  const countResults = async (serial: number) => {
+    if (('query' in searchTerms || 'queryAssetId' in searchTerms) && smartSearchEnabled) {
       return;
     }
+    try {
+      const total = await countSearchResults({ visibility: AssetVisibility.Timeline, ...searchTerms });
+      if (serial === searchSerial) {
+        searchTotal = total;
+      }
+    } catch {
+      // only the count is missing: the pages still say how many as they come
+    }
+  };
+
+  // eslint-disable-next-line svelte/valid-prop-names-in-kit-pages
+  export const loadNextPage = async (force?: boolean) => {
+    if (!hasSearch || !nextPage || (isLoading && !force)) {
+      return;
+    }
+    const serial = searchSerial;
     isLoading = true;
 
-    const searchDto: SearchTerms = {
-      page: nextPage,
-      withExif: true,
-      // #830: this page is Gallery's global search surface, but a URL-driven search only ever
-      // covered the caller's own (and partner) assets. A Space member who opened "Show similar
-      // photos" on a photo shared with them — or pasted the same `queryAssetId` URL — got zero
-      // results while the space owner got a long list. Opt into shared spaces the way the command
-      // palette already does (#894); the server scopes them to spaces the member has kept in their
-      // timeline. Spread before `terms` so an explicit value in the URL still wins, and skip it
-      // entirely for a space-scoped URL — the server rejects `spaceId` + `withSharedSpaces`.
-      ...(!terms.spaceId && { withSharedSpaces: true }),
-      ...terms,
-    };
+    const searchDto: SearchTerms = { page: nextPage, withExif: true, ...searchTerms };
 
     try {
       const { albums, assets } =
@@ -214,15 +282,83 @@
             })
           : await searchAssets({ metadataSearchDto: { visibility: AssetVisibility.Timeline, ...searchDto } });
 
+      // Local Omarchy layer: a search refined since this one was asked has cleared the results for its own
+      if (serial !== searchSerial) {
+        return;
+      }
       searchResultAlbums.push(...albums.items);
       searchResultAssets.push(...assets.items);
 
       nextPage = Number(assets.nextPage) || 0;
     } catch (error) {
+      if (serial !== searchSerial) {
+        return;
+      }
+      loadFailed = true;
       handleError(error, $t('loading_search_results_failed'));
     } finally {
-      isLoading = false;
+      if (serial === searchSerial) {
+        isLoading = false;
+      }
     }
+  };
+
+  // Local Omarchy layer: the field's search, run in place: its text in the mode beside it, with the chips' terms kept.
+  // The same search again (Enter on an unchanged field) runs it again.
+  const search = async (text: string, searchMode: TextSearchMode) => {
+    const next = withSearchModeText(terms, searchMode, text);
+    if (Route.search(next) === Route.search(terms)) {
+      await onSearchQueryUpdate();
+      return;
+    }
+    assetMultiSelectManager.clear();
+    await goto(Route.search(next), { keepFocus: true, noScroll: true });
+  };
+
+  // ...and a mode picked beside the field searches its text that way; the palette opens in that mode from then on
+  const changeMode = (next: TextSearchMode) => {
+    mode = next;
+    globalSearchManager.setMode(next);
+    if (draft.trim()) {
+      void search(draft, next);
+    }
+  };
+
+  // Local Omarchy layer: the number of results, in data type: exact once every page has loaded or when the search can
+  // be counted, otherwise what has loaded so far with a + (a smart search ranks every photo, best match first)
+  const resultCount = $derived.by(() => {
+    if (!hasSearch || loadFailed || (isLoading && searchResultAssets.length === 0)) {
+      return;
+    }
+    if (!nextPage) {
+      return { count: searchResultAssets.length, exact: true };
+    }
+    if (searchTotal !== undefined) {
+      return { count: Math.max(searchTotal - removedCount, searchResultAssets.length), exact: true };
+    }
+    return { count: searchResultAssets.length, exact: false };
+  });
+  // (none for no results: the page says so in words)
+  const countText = $derived(
+    resultCount && resultCount.count > 0
+      ? $t(resultCount.exact ? 'spaces_search_result_count' : 'spaces_search_result_count_more', {
+          values: { count: resultCount.count },
+        })
+      : undefined,
+  );
+
+  // Local Omarchy layer: every result into an album or a Space, once the count is known (never "all" of a ranking)
+  const canAddAll = $derived(!!resultCount?.exact && resultCount.count > 0);
+  const handleAddAll = () => {
+    if (!resultCount?.exact) {
+      return;
+    }
+    void modalManager.show(SearchAddAllToCollectionModal, {
+      terms: { visibility: AssetVisibility.Timeline, ...searchTerms },
+      total: resultCount.count,
+      smartSearchEnabled,
+      language: $lang,
+    });
   };
 
   function getHumanReadableDate(dateString: string) {
@@ -315,8 +451,7 @@
     assetMultiSelectManager.clear();
 
     if (terms.isNotInAlbum) {
-      const assetIdSet = new Set(assetIds);
-      searchResultAssets = searchResultAssets.filter((asset) => !assetIdSet.has(asset.id));
+      removeResults(assetIds);
     }
   };
 
@@ -329,75 +464,122 @@
   }
 
   function removeFilter(key: keyof SearchTerms) {
-    delete terms[key];
     assetMultiSelectManager.clear();
-    void goto(Route.search(terms));
+    void goto(Route.search(Object.fromEntries(Object.entries(terms).filter(([termKey]) => termKey !== key))));
   }
-</script>
 
-<svelte:window bind:scrollY />
+  // Local Omarchy layer: the search's own part of the one bar (OmarchyBar), while the page is open
+  $effect(() => {
+    barSlot.content = searchBar;
+    return () => {
+      if (barSlot.content === searchBar) {
+        barSlot.content = undefined;
+      }
+    };
+  });
+</script>
 
 <OnEvents {onAlbumAddAssets} />
 
-{#if searchTermKeys.length > 0}
-  <section id="search-chips" class="mx-auto mt-24 w-full max-w-7xl px-4 sm:px-8 lg:px-12">
-    <div class="flex w-full flex-wrap place-content-center place-items-center gap-2.5 sm:gap-3">
-      {#each searchTermKeys as searchKey (searchKey)}
+<!-- Local Omarchy layer: the search's query, its mode and its count in the one bar -->
+{#snippet searchBar()}
+  <SearchBarQuery
+    bind:draft={() => draft, (value) => (draft = value)}
+    committed={modeText?.text ?? ''}
+    {mode}
+    count={countText}
+    narrow={narrowBar.current}
+    bind:roomy={barRoomy}
+    autofocus={!hasSearch}
+    smartUnavailable={!smartSearchEnabled || !globalSearchManager.mlHealthy}
+    onSubmit={() => void search(draft, mode)}
+    onModeChange={changeMode}
+    onBack={() => goto(previousRoute)}
+  />
+{/snippet}
+
+<!-- Local Omarchy layer: search lives in the shell like every page (2026-10-15; upstream opened it on its own with a
+     back arrow, and this fork showed a notice there pointing to Ctrl+K): the sidebar stays, the query is a field in the
+     one bar, the other terms are chips over the results, and the selection bar takes the bar's place (below the
+     shell) -->
+<UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} barFitsNavbar use={scrollerActions}>
+  {#if hasSearch && ((countText && !barRoomy) || chipKeys.length > 0 || canAddAll)}
+    <div class="ws-search-terms" data-testid="search-terms">
+      {#if countText && !barRoomy}
+        <span class="ws-search-terms-count" data-testid="search-result-count">{countText}</span>
+      {/if}
+      {#each chipKeys as searchKey (searchKey)}
         {@const value = terms[searchKey]}
-        <div
-          class="inline-flex max-w-full items-center rounded-full bg-primary/10 py-1 ps-1 pe-1 text-xs text-primary ring-1 ring-primary/15 transition-shadow hover:ring-primary/25 dark:bg-immich-dark-primary/15 dark:text-immich-dark-primary dark:ring-immich-dark-primary/20 dark:hover:ring-immich-dark-primary/30"
-        >
-          <span
-            class="shrink-0 rounded-full bg-primary px-3 py-1.5 font-medium text-light dark:bg-immich-dark-primary dark:text-immich-dark-gray"
-          >
-            {getHumanReadableSearchKey(searchKey as keyof SearchTerms)}
-          </span>
-
-          {#if value !== true}
-            <span class="max-w-[min(36rem,55vw)] min-w-0 truncate px-3 py-1.5 text-immich-fg dark:text-immich-dark-fg">
-              {#if (searchKey === 'takenAfter' || searchKey === 'takenBefore') && typeof value === 'string'}
-                {getHumanReadableDate(value)}
-              {:else if searchKey === 'personIds' && Array.isArray(value)}
-                {#await getPersonName(value) then personName}
-                  {personName}
-                {/await}
-              {:else if searchKey === 'tagIds' && (Array.isArray(value) || value === null)}
-                {#await getTagNames(value) then tagNames}
-                  {tagNames}
-                {/await}
-              {:else if searchKey === 'rating'}
-                {$t('rating_count', { values: { count: value ?? 0 } })}
-              {:else if value === null || value === ''}
-                {$t('unknown')}
-              {:else}
-                {value}
-              {/if}
-            </span>
+        <span class="ws-search-term">
+          {#if searchKey === 'queryAssetId' && typeof value === 'string'}
+            <!-- a photo to find others like: the photo itself, small -->
+            <span class="ws-search-term-key">{$t('search_similar_to')}</span>
+            <img
+              class="ws-search-term-photo"
+              src={getAssetMediaUrl({ id: value, size: AssetMediaSize.Thumbnail })}
+              alt=""
+              draggable="false"
+            />
+          {:else}
+            <span class="ws-search-term-key">{getHumanReadableSearchKey(searchKey as keyof SearchTerms)}</span>
+            {#if value !== true}
+              <span class="ws-search-term-value">
+                {#if (searchKey === 'takenAfter' || searchKey === 'takenBefore') && typeof value === 'string'}
+                  {getHumanReadableDate(value)}
+                {:else if searchKey === 'personIds' && Array.isArray(value)}
+                  {#await getPersonName(value) then personName}
+                    {personName}
+                  {/await}
+                {:else if searchKey === 'tagIds' && (Array.isArray(value) || value === null)}
+                  {#await getTagNames(value) then tagNames}
+                    {tagNames}
+                  {/await}
+                {:else if searchKey === 'rating'}
+                  {$t('rating_count', { values: { count: value ?? 0 } })}
+                {:else if value === null || value === ''}
+                  {$t('unknown')}
+                {:else}
+                  {value}
+                {/if}
+              </span>
+            {/if}
           {/if}
-
           <button
             type="button"
-            class="ms-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-primary outline-offset-2 outline-immich-primary transition-colors hover:bg-primary/15 focus-visible:outline-2 dark:text-immich-dark-primary dark:outline-immich-dark-primary dark:hover:bg-immich-dark-primary/20"
+            class="ws-search-term-remove"
             aria-label={$t('remove_filter')}
             title={$t('remove_filter')}
             onclick={() => removeFilter(searchKey)}
           >
             <Icon icon={mdiClose} size="14" />
           </button>
-        </div>
+        </span>
       {/each}
+      {#if canAddAll && resultCount}
+        <button type="button" class="ws-search-add-all" onclick={handleAddAll} data-testid="add-all-to-collection">
+          <Icon icon={mdiPlus} size="16" aria-hidden />
+          <span>{$t('add_all_search_results', { values: { count: resultCount.count } })}</span>
+        </button>
+      {/if}
     </div>
-  </section>
-{/if}
+  {/if}
 
-<section
-  class="m-4 mb-12 max-h-screen bg-immich-bg dark:bg-immich-dark-bg"
-  bind:clientHeight={viewport.height}
-  bind:clientWidth={viewport.width}
-  bind:this={searchResultsElement}
->
-  <section id="search-content">
-    {#if searchResultAssets.length > 0}
+  <section
+    class="ws-search-results"
+    bind:clientWidth={viewport.width}
+    bind:this={searchResultsElement}
+    data-testid="search-results"
+  >
+    {#if !hasSearch}
+      <!-- Local Omarchy layer: the empty states say why and offer the next step (DESIGN.md, Empty State) -->
+      <div class="ws-empty" data-testid="search-empty">
+        <h2 class="ws-empty-title">{$t('search_your_photos')}</h2>
+        <p class="ws-empty-body">{$t('search_page_empty_body')}</p>
+        <div class="ws-empty-actions">
+          <a class="ws-empty-link" href={Route.explore()}>{$t('explore')}</a>
+        </div>
+      </div>
+    {:else if searchResultAssets.length > 0}
       <GalleryViewer
         assets={searchResultAssets}
         assetInteraction={assetMultiSelectManager}
@@ -405,16 +587,31 @@
         showArchiveIcon={true}
         {viewport}
         onReload={onSearchQueryUpdate}
-        slidingWindowOffset={searchResultsElement.offsetTop}
+        slidingWindowOffset={searchResultsElement?.offsetTop ?? 0}
         enableGrouping
+        scrollElement={scroller}
       />
-    {:else if !isLoading}
-      <div class="flex min-h-[calc(66vh-11rem)] w-full place-content-center items-center dark:text-white">
-        <div class="flex flex-col content-center items-center text-center">
-          <Icon icon={mdiImageOffOutline} size="3.5em" />
-          <p class="mt-5 text-3xl font-medium">{$t('no_results')}</p>
-          <p class="text-base font-normal">{$t('no_results_description')}</p>
+    {:else if loadFailed}
+      <div class="ws-empty" data-testid="search-failed">
+        <h2 class="ws-empty-title">{$t('loading_search_results_failed')}</h2>
+        <div class="ws-empty-actions">
+          <button type="button" class="ws-empty-action" onclick={() => void onSearchQueryUpdate()}>
+            {$t('retry')}
+          </button>
         </div>
+      </div>
+    {:else if !isLoading}
+      <div class="ws-empty" data-testid="search-no-results">
+        <h2 class="ws-empty-title">{$t('no_results')}</h2>
+        <p class="ws-empty-body">{$t('no_results_description')}</p>
+        <!-- a text that no file name, description or photo holds may still be what a photo shows -->
+        {#if modeText && modeText.mode !== 'smart' && smartSearchEnabled}
+          <div class="ws-empty-actions">
+            <button type="button" class="ws-empty-action" onclick={() => changeMode('smart')}>
+              {$t('search_by_context')}
+            </button>
+          </div>
+        {/if}
       </div>
     {/if}
 
@@ -424,71 +621,144 @@
       </div>
     {/if}
   </section>
+</UserPageLayout>
 
-  <section>
-    {#if assetMultiSelectManager.selectionActive}
-      <div class="fixed inset-s-0 top-0 z-2 w-full">
-        <AssetSelectControlBar>
-          {@const Actions = getAssetBulkActions($t)}
-          <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
+{#if assetMultiSelectManager.selectionActive}
+  <AssetSelectControlBar>
+    {@const Actions = getAssetBulkActions($t)}
+    <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
 
-          <ActionButton action={Actions.CreateSharedLink} />
-          <IconButton
-            shape="round"
-            color="secondary"
-            variant="ghost"
-            aria-label={$t('select_all')}
-            icon={mdiSelectAll}
-            onclick={handleSelectAll}
-          />
-          <ActionButton action={Actions.AddToAlbum} />
-          <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} {onFavorite} />
+    <ActionButton action={Actions.CreateSharedLink} />
+    <IconButton
+      shape="round"
+      color="secondary"
+      variant="ghost"
+      aria-label={$t('select_all')}
+      icon={mdiSelectAll}
+      onclick={handleSelectAll}
+    />
+    <ActionButton action={Actions.AddToAlbum} />
+    <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} {onFavorite} />
 
-          {#if assetMultiSelectManager.isAllUserOwned}
-            <!-- Local Omarchy layer: into a special album (To do B, Villa V), as on Photos -->
-            {#each specialAlbums as special (special.key)}
-              <SpecialAlbumAction {special} {onArchive} />
-            {/each}
-            <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
-              <ActionMenuItem action={Actions.AddToAlbum} />
-              <DownloadAction menuItem />
-              <RotateAction />
-              <ChangeDate menuItem />
-              <ChangeDescription menuItem />
-              <ChangeLocation menuItem />
-              <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} {onArchive} />
-              <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
-              <ActionMenuItem action={Actions.Tag} />
-              <DeleteAssets menuItem {onAssetDelete} onUndoDelete={onSearchQueryUpdate} />
-              <hr />
-              <ActionMenuItem action={Actions.RegenerateThumbnailJob} />
-              <ActionMenuItem action={Actions.RefreshMetadataJob} />
-              <ActionMenuItem action={Actions.TranscodeVideoJob} />
-            </ButtonContextMenu>
-          {:else}
-            <DownloadAction />
-          {/if}
-        </AssetSelectControlBar>
-      </div>
+    {#if assetMultiSelectManager.isAllUserOwned}
+      <!-- Local Omarchy layer: into a special album (To do B, Villa V), as on Photos -->
+      {#each specialAlbums as special (special.key)}
+        <SpecialAlbumAction {special} {onArchive} />
+      {/each}
+      <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
+        <ActionMenuItem action={Actions.AddToAlbum} />
+        <DownloadAction menuItem />
+        <RotateAction />
+        <ChangeDate menuItem />
+        <ChangeDescription menuItem />
+        <ChangeLocation menuItem />
+        <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} {onArchive} />
+        <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+        <ActionMenuItem action={Actions.Tag} />
+        <DeleteAssets menuItem {onAssetDelete} onUndoDelete={onSearchQueryUpdate} />
+        <hr />
+        <ActionMenuItem action={Actions.RegenerateThumbnailJob} />
+        <ActionMenuItem action={Actions.RefreshMetadataJob} />
+        <ActionMenuItem action={Actions.TranscodeVideoJob} />
+      </ButtonContextMenu>
     {:else}
-      <div class="fixed inset-s-0 top-0 z-2 w-full">
-        <ControlAppBar onClose={() => goto(previousRoute)} backIcon={mdiArrowLeft}>
-          <div class="mx-auto w-full max-w-2xl pe-2">
-            <div
-              class="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200/80 bg-white/90 px-4 py-2 text-sm text-gray-700 shadow-sm dark:border-gray-700 dark:bg-immich-dark-gray/90 dark:text-gray-200"
-            >
-              <span>{$t('search_legacy_notice', { values: { hotkey: searchHotkey } })}</span>
-              <button
-                type="button"
-                class="font-medium text-primary hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-primary"
-                onclick={() => globalSearchManager.open()}
-              >
-                {$t('search_open_palette')}
-              </button>
-            </div>
-          </div>
-        </ControlAppBar>
-      </div>
+      <DownloadAction />
     {/if}
-  </section>
-</section>
+  </AssetSelectControlBar>
+{/if}
+
+<style>
+  /* the search's other terms, over the results and scrolling away with them: each a chip in the field's hairline with
+     its name in muted ink and its value in ink; then "Add all" at the row's end. On a phone (or a narrow bar) the count
+     leads the row */
+  .ws-search-terms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    padding-bottom: 0.75rem;
+  }
+  .ws-search-terms-count {
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--immich-ui-muted);
+    white-space: nowrap;
+  }
+  .ws-search-term {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    max-width: 100%;
+    height: 2rem;
+    padding-inline: 0.625rem 0.25rem;
+    border-radius: var(--ws-radius);
+    box-shadow: inset 0 0 0 1px var(--ws-hairline);
+    font-size: var(--ws-text-meta);
+  }
+  .ws-search-term-key {
+    flex: none;
+    color: var(--immich-ui-muted);
+  }
+  .ws-search-term-value {
+    min-width: 0;
+    max-width: min(36rem, 55vw);
+    overflow: hidden;
+    color: var(--immich-ui-dark);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-search-term-photo {
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--ws-radius);
+    object-fit: cover;
+  }
+  .ws-search-term-remove {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: var(--ws-radius);
+    color: var(--immich-ui-muted);
+  }
+  .ws-search-term-remove:hover {
+    color: var(--immich-ui-dark);
+    background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
+  }
+  .ws-search-term-remove:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: -2px;
+  }
+  /* Photos' "Add all" in its filter row: a quiet ink tint, at the row's end */
+  .ws-search-add-all {
+    display: inline-flex;
+    gap: 0.375rem;
+    align-items: center;
+    height: 2rem;
+    margin-inline-start: auto;
+    padding-inline: 0.625rem 0.75rem;
+    border-radius: var(--ws-radius);
+    background: color-mix(in oklab, var(--immich-ui-dark) 10%, transparent);
+    color: var(--immich-ui-dark);
+    font-size: var(--ws-text-meta);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ws-search-add-all:hover {
+    background: color-mix(in oklab, var(--immich-ui-dark) 16%, transparent);
+  }
+  .ws-search-add-all:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: 2px;
+  }
+  /* the grid's Years / Months / All row starts on the page's gutter, as the photos under it do (it keeps upstream's
+     1rem inset elsewhere) */
+  .ws-search-results :global([data-testid='gallery-viewer'] > [data-testid='filter-toolbar-root']) {
+    padding-inline-start: 0;
+  }
+</style>
