@@ -142,11 +142,10 @@ class ThumbnailZoomManager {
     return this.#compact ? Math.min(auto, COMPACT_SPACING) : auto;
   }
 
-  /** Tile corner radius: like Mac Photos, barely rounded when tiny, ~6px from the default size up. */
+  /** Tile corner radius: the desktop's window radius exactly, at every size (DESIGN.md, Shapes; square on the owner's
+   * theme, 2026-10-15). */
   radiusFor(desktopRadius: number) {
-    const shrink = Math.min(1, Math.max(0, (this.scale - ZOOM_MIN) / (1 - ZOOM_MIN)));
-    const auto = Math.round((1 + 5 * shrink) * (this.#compact ? 0.5 : 1));
-    return Math.max(desktopRadius, auto);
+    return desktopRadius;
   }
 
   step(direction: 1 | -1) {

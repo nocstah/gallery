@@ -485,7 +485,7 @@
     gap: 2px;
     padding: 3px;
     border: 1px solid var(--ws-glass-edge);
-    border-radius: 999px;
+    border-radius: var(--ws-radius);
     background: var(--ws-glass);
     -webkit-backdrop-filter: var(--ws-glass-blur);
     backdrop-filter: var(--ws-glass-blur);
@@ -510,7 +510,7 @@
   }
   .remove-actions .ws-btn,
   .remove-actions .ws-btn-quiet {
-    border-radius: 999px;
+    border-radius: var(--ws-radius);
   }
   .remove-size {
     width: 7.5rem;

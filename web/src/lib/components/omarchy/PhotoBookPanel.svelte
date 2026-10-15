@@ -179,7 +179,7 @@
     color: var(--immich-ui-muted);
   }
   .ws-books-failed {
-    color: oklch(0.66 0.19 25);
+    color: var(--immich-ui-danger-500);
   }
   /* a finished book's files, a line each under its title */
   .ws-books-part {

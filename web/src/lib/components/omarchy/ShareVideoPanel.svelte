@@ -132,7 +132,7 @@
     color: var(--immich-ui-muted);
   }
   .ws-share-failed {
-    color: oklch(0.66 0.19 25);
+    color: var(--immich-ui-danger-500);
   }
   .ws-share-note {
     margin-top: 0.25rem;

@@ -72,6 +72,46 @@
   --ws-text-micro: 11px;
 }
 
+/* ---- upstream's roles in this world, as Tailwind theme tokens, so every utility and every @immich/ui component
+   follows (these come after @immich/ui's and gallery-theme.css's @theme, so they win) ---- */
+@theme inline {
+  /* "primary" is a brand colour this layer does not have. Its role here is ink (The Active Border Rule): titles,
+     icons, chips, meters and filled buttons take ink and inversion, and the accent is left to focus and response
+     through --ws-accent, which reads --omarchy-accent and the raw --immich-ui-primary-* ramp, still the theme's */
+  --color-primary: var(--immich-ui-dark);
+  /* the legacy --color-immich-primary and --color-immich-dark-primary are set to ink at the end of app.css's own
+     theme, since app.css defines them after its imports */
+}
+@theme {
+  /* every corner is the desktop's window radius (Shapes), in upstream's markup too; rounded-full stays round, for
+     faces and avatars */
+  --radius-xs: var(--ws-radius);
+  --radius-sm: var(--ws-radius);
+  --radius-md: var(--ws-radius);
+  --radius-lg: var(--ws-radius);
+  --radius-xl: var(--ws-radius);
+  --radius-2xl: var(--ws-radius);
+  --radius-3xl: var(--ws-radius);
+  --radius-4xl: var(--ws-radius);
+}
+
+/* a fill in the primary role is ink now, so text that upstream set white or black on it would vanish in one face:
+   it takes the surface, as inversion does */
+:is(.bg-primary, .bg-primary\/90, .bg-immich-primary, .bg-immich-primary\/90, .dark\:bg-immich-dark-primary):is(
+  .text-white,
+  .text-black,
+  .text-gray-100
+) {
+  color: var(--immich-ui-light);
+}
+
+/* upstream's round controls (@immich/ui shape="round": icon buttons, buttons, control bars; switches; pill links) take
+   the window radius like every control here; whatever holds a picture keeps its circle, so faces stay round, and so do
+   avatars, dots and spinners, which are not controls */
+:is(button, a, nav, [role='switch'], [role='switch'] > span).rounded-full:not(:has(img)) {
+  border-radius: var(--ws-radius);
+}
+
 /* ---- the one bar (components/omarchy): its icons are square tools on the glass, muted until hovered, the accent
    only for focus; a dot marks a state (filters on, unread notifications) ---- */
 .ws-bar-icon {
@@ -146,6 +186,14 @@ div:has(> [data-testid='admin-page-header']) {
 }
 
 /* ---- sidebar: workspace indicators, the active one inverted like the Omarchy bar ---- */
+/* the storage line at the sidebar's foot: on the ground under a hairline that runs edge to edge, not a tinted card
+   (The Hairline Rule); its text stays where the card's padding put it */
+.ws-storage {
+  margin-inline-start: 0;
+  padding-inline: 2rem 1rem;
+  background: transparent;
+  box-shadow: inset 0 1px 0 var(--ws-hairline);
+}
 #sidebar a[class~='rounded-e-full'] {
   border-radius: var(--ws-radius);
   font-weight: 500;
@@ -302,6 +350,40 @@ div[role='dialog'] :is(.border-b, .border-t) {
 }
 :focus-visible {
   outline-color: var(--ws-accent);
+}
+
+/* the field upstream gives Albums, People and Places for searching their own list (lib/elements/SearchBar.svelte,
+   .ws-search-field): the ground with a hairline like every field, not a grey slab, on which the placeholder fell to
+   3.3:1 in dark themes (muted is tuned against the surface) */
+.ws-search-field,
+.ws-search-field input {
+  background: transparent;
+  color: var(--immich-ui-dark);
+}
+.ws-search-field {
+  box-shadow: inset 0 0 0 1px var(--ws-hairline);
+}
+.ws-search-field input::placeholder {
+  color: var(--immich-ui-muted);
+  opacity: 1;
+}
+.ws-search-field input:focus {
+  outline: none;
+}
+.ws-search-field:focus-within {
+  box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+}
+
+/* an album's dates and count under its title: muted ink, not upstream's fixed grey (3.2:1 on dark themes) */
+[data-testid='album-details'] {
+  color: var(--immich-ui-muted);
+}
+
+/* upstream bounces the drop-to-upload overlay's icon; with reduced motion it stays still */
+@media (prefers-reduced-motion: reduce) {
+  .animate-bounce {
+    animation: none;
+  }
 }
 
 /* ---- empty states: a sentence of why, one next step ---- */
@@ -515,7 +597,7 @@ div[role='dialog'] :is(.border-b, .border-t) {
   position: relative;
   z-index: 0;
   border: 1px solid var(--ws-glass-edge);
-  border-radius: 999px;
+  border-radius: var(--ws-radius);
   padding: 3px;
   margin: 0;
 }
@@ -895,7 +977,7 @@ ul[role='menu'] > hr {
 .ws-stack-badge {
   padding: 4px 6px 4px 8px;
   margin: 4px;
-  border-radius: 999px;
+  border-radius: var(--ws-radius);
   background: rgb(0 0 0 / 0.38);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -926,7 +1008,7 @@ ul[role='menu'] > hr {
 .ws-stack-place {
   margin: 8px;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--ws-radius);
   background: rgb(0 0 0 / 0.55);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -1024,7 +1106,7 @@ div.z-70[style*='max-height: 0px']:has(> ul[role='menu']) {
   min-width: 24px;
   height: 24px;
   padding: 0 6px;
-  border-radius: 999px;
+  border-radius: var(--ws-radius);
   background: var(--ws-accent);
   color: #fff;
   font: 600 12px/24px var(--ws-font-data);

@@ -199,7 +199,7 @@
     display: grid;
     place-items: center;
     padding: 0.3rem;
-    border-radius: 999px;
+    border-radius: var(--ws-radius);
     color: rgb(255 255 255 / 0.75);
   }
   .pick-icon:hover {
@@ -276,9 +276,9 @@
     inset-inline-end: 2px;
     width: 0.9rem;
     height: 0.9rem;
-    border-radius: 999px;
-    background: rgb(220 38 38);
-    font-size: 0.65rem;
+    border-radius: var(--ws-radius);
+    background: var(--immich-ui-danger-500);
+    font-size: var(--ws-text-micro);
     font-weight: 800;
     line-height: 0.9rem;
     text-align: center;

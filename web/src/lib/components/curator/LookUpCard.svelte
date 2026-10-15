@@ -156,7 +156,7 @@
     display: grid;
     place-items: center;
     padding: 0.3rem;
-    border-radius: 999px;
+    border-radius: var(--ws-radius);
     color: rgb(255 255 255 / 0.75);
   }
   .lookup-icon:hover:not(:disabled) {
@@ -194,7 +194,7 @@
     place-items: center;
     width: 2rem;
     height: 2rem;
-    border-radius: 999px;
+    border-radius: var(--ws-radius);
     background: rgb(255 255 255 / 0.1);
     color: var(--ws-accent, #fff);
   }

@@ -214,6 +214,17 @@
     display: flex;
     margin-inline-start: 0.5rem;
   }
+  /* the account as a quiet ring with the initial in ink (a picture still fills it): upstream's colour discs put the
+     initial at 2.9:1 under a dark theme's light ink, and the chrome recedes. The ring is filled with the surface, as
+     the disc was, so a page's tools that overrun the bar on a phone stay hidden under it */
+  .ws-bar-avatar > :global(*) {
+    background: var(--immich-ui-light);
+    color: var(--immich-ui-dark);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--immich-ui-dark) 38%, transparent);
+  }
+  .ws-bar-avatar:hover > :global(*) {
+    background: color-mix(in oklab, var(--immich-ui-dark) 8%, var(--immich-ui-light));
+  }
   @media (max-width: 767px) {
     .ws-bar {
       --ws-bar-start: auto;

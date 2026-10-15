@@ -137,7 +137,7 @@
     display: grid;
     place-items: center;
     padding: 0.2rem;
-    border-radius: 999px;
+    border-radius: var(--ws-radius);
     color: inherit;
   }
   .memory-story-close:hover {

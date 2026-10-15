@@ -253,7 +253,7 @@
     width: 2rem;
     height: 2rem;
     translate: -50% -50%;
-    border-radius: 999px;
+    border-radius: var(--ws-radius);
     background: var(--immich-ui-light);
     color: var(--immich-ui-dark);
     box-shadow: 0 1px 4px color-mix(in oklab, var(--immich-ui-dark) 40%, transparent);

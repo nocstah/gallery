@@ -34,7 +34,7 @@
 </script>
 
 <div
-  class="ms-4 min-w-52 rounded-lg bg-light-100 p-4 text-sm"
+  class="ws-storage ms-4 min-w-52 rounded-lg bg-light-100 p-4 text-sm"
   title={$t('storage_usage', {
     values: {
       used: getByteUnitString(usedBytes, $locale, 3),

@@ -18,6 +18,12 @@
   --color-immich-dark-fg: rgb(var(--immich-dark-fg));
   --color-immich-dark-gray: rgb(var(--immich-dark-gray));
 }
+/* Local Omarchy layer: the legacy primary is ink too, like --color-primary in styles/omarchy-world.css (the accent
+   is only for focus there); it has to follow the block above, which comes after the imported files */
+@theme inline {
+  --color-immich-primary: var(--immich-ui-dark);
+  --color-immich-dark-primary: var(--immich-ui-dark);
+}
 
 @theme {
   --font-sans: 'GoogleSans', sans-serif;
