@@ -1633,32 +1633,6 @@ body.ws-dragging * {
   font-size: var(--ws-text-micro);
 }
 
-/* ---- photos open like windows (lib/actions/tile-open.ts): a photo, album or folder that comes into view pops in the
-   way the desktop opens a window, growing from --ws-open-scale on windowsIn's curve while it fades in on fadeIn's.
-   A tile made before it reaches the screen waits on its first frame ('waiting') until it is seen; a screen that opens
-   at once ripples in reading order through --ws-open-delay. backwards fill only, so once open the tile's own scale
-   and opacity (the stack spotlight's dimming) are its own again. Reduced motion: tiles are simply there ---- */
-@keyframes ws-open {
-  from {
-    scale: var(--ws-open-scale);
-  }
-}
-@keyframes ws-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-@media (prefers-reduced-motion: no-preference) {
-  [data-ws-open] {
-    animation:
-      ws-open var(--ws-open-ms) var(--ws-open-ease) var(--ws-open-delay, 0ms) backwards,
-      ws-fade-in var(--ws-fade-in-ms) var(--ws-fade-in-ease) var(--ws-open-delay, 0ms) backwards;
-  }
-  [data-ws-open='waiting'] {
-    animation-play-state: paused;
-  }
-}
-
 /* ---- a heart given while the photo is on screen pops in on the window-open curve (Thumbnail.svelte); a favourite
    that was already there just sits there ---- */
 @keyframes ws-favorite-pop {

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { tileOpen } from '$lib/actions/tile-open';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import SpaceCollage from '$lib/components/spaces/space-collage.svelte';
@@ -66,7 +65,6 @@
 <div
   data-testid="space-album-folder-card"
   data-folder-id={folder.id}
-  use:tileOpen
   role="listitem"
   draggable={canManage}
   ondragstart={(event) => {

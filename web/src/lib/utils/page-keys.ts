@@ -23,10 +23,6 @@ const scrollerOf = (element: Element | null) => {
 /** How far one press goes: as the browser pages, a screen less a little overlap. */
 export const pageStep = (height: number) => Math.max(height * 0.875, height - 40);
 
-// presses in quick succession add up, as the browser's own do, instead of each starting from mid-glide
-let gliding: { element: HTMLElement; top: number } | undefined;
-let settle: ReturnType<typeof setTimeout> | undefined;
-
 export const onPageKey = (event: KeyboardEvent) => {
   const down = event.key === 'PageDown';
   if ((!down && event.key !== 'PageUp') || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
@@ -46,12 +42,9 @@ export const onPageKey = (event: KeyboardEvent) => {
     return;
   }
   event.preventDefault();
-  const from = gliding?.element === element ? gliding.top : element.scrollTop;
   const step = pageStep(element.clientHeight) * (down ? 1 : -1);
-  const top = Math.min(element.scrollHeight - element.clientHeight, Math.max(0, from + step));
-  gliding = { element, top };
-  const instant = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  element.scrollTo({ top, behavior: instant ? 'instant' : 'smooth' });
-  clearTimeout(settle);
-  settle = setTimeout(() => (gliding = undefined), 450);
+  const top = Math.min(element.scrollHeight - element.clientHeight, Math.max(0, element.scrollTop + step));
+  // at once, as a page turns: a glide made each press wait a third of a second, and held down the key outran it (the
+  // owner: "page down quickly shows new photos, and we quickly can multiple page down")
+  element.scrollTo({ top, behavior: 'instant' });
 };

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { tileOpen } from '$lib/actions/tile-open';
   import AlbumCover from '$lib/components/album-page/AlbumCover.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
@@ -24,7 +23,6 @@
 
 <div
   data-testid="space-album-card"
-  use:tileOpen
   role="listitem"
   draggable={canManage}
   ondragstart={(event) => {

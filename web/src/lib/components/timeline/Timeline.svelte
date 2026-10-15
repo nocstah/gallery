@@ -906,7 +906,6 @@
                     assetInteraction.hasSelectedAsset(asset.id) || timelineManager.albumAssets.has(asset.id)}
                   {@const isAssetDisabled = timelineManager.albumAssets.has(asset.id)}
                   <Thumbnail
-                    opens
                     showStackedIcon={withStacked}
                     {showArchiveIcon}
                     {asset}

@@ -22,8 +22,10 @@ export const TUNABLES = {
     WASM: getBoolean(storage.getItem('LAYOUT.WASM'), true),
   },
   TIMELINE: {
-    INTERSECTION_EXPAND_TOP: getNumber(storage.getItem('TIMELINE_INTERSECTION_EXPAND_TOP'), 500),
-    INTERSECTION_EXPAND_BOTTOM: getNumber(storage.getItem('TIMELINE_INTERSECTION_EXPAND_BOTTOM'), 500),
+    // Local Omarchy layer: about a screen above and two below are made ahead (upstream: 500px each), so Page Down and
+    // a quick scroll land on photos already there: a tile is made, and its thumbnail fetched, only inside this reach
+    INTERSECTION_EXPAND_TOP: getNumber(storage.getItem('TIMELINE_INTERSECTION_EXPAND_TOP'), 1300),
+    INTERSECTION_EXPAND_BOTTOM: getNumber(storage.getItem('TIMELINE_INTERSECTION_EXPAND_BOTTOM'), 2600),
   },
   ASSET_GRID: {
     NAVIGATE_ON_ASSET_IN_VIEW: getBoolean(storage.getItem('ASSET_GRID.NAVIGATE_ON_ASSET_IN_VIEW'), false),

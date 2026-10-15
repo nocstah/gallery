@@ -35,6 +35,21 @@ describe('page keys', () => {
     expect(element.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 760 }));
   });
 
+  it('jumps at once, each press from where the view is, so presses in a row page as fast as they come', () => {
+    const element = view();
+    let top = 0;
+    Object.defineProperty(element, 'scrollTop', { get: () => top });
+    vi.mocked(element.scrollTo).mockImplementation(((options: ScrollToOptions) => {
+      top = options.top ?? top;
+    }) as typeof element.scrollTo);
+
+    press('PageDown');
+    press('PageDown');
+
+    expect(element.scrollTo).toHaveBeenNthCalledWith(1, { top: 760, behavior: 'instant' });
+    expect(element.scrollTo).toHaveBeenNthCalledWith(2, { top: 1520, behavior: 'instant' });
+  });
+
   it('never pages above the top', () => {
     const element = view();
     press('PageUp');

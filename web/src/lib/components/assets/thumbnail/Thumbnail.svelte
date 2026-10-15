@@ -25,7 +25,6 @@
     mdiMotionPlayOutline,
     mdiRotate360,
   } from '@mdi/js';
-  import { tileOpen } from '$lib/actions/tile-open';
   import { onMount, untrack } from 'svelte';
   import type { ClassValue } from 'svelte/elements';
   import { fade } from 'svelte/transition';
@@ -47,8 +46,6 @@
     showStackedIcon?: boolean;
     /** Local Omarchy layer: false where the grid cannot expand a stack in place (search results): a plain count */
     stackBadgeExpands?: boolean;
-    /** Local Omarchy layer: the tile opens like a window when it comes into view (actions/tile-open; photo grids) */
-    opens?: boolean;
     imageClass?: ClassValue;
     brokenAssetClass?: ClassValue;
     albumUsers?: UserResponseDto[];
@@ -72,7 +69,6 @@
     showArchiveIcon = false,
     showStackedIcon = true,
     stackBadgeExpands = true,
-    opens = false,
     albumUsers = [],
     onClick = undefined,
     onPreview = undefined,
@@ -276,7 +272,6 @@
   onmouseenter={onMouseEnter}
   onmouseleave={onMouseLeave}
   use:longPress={{ onLongPress: () => onSelect?.($state.snapshot(asset)) }}
-  use:tileOpen={opens}
   onkeydown={(evt) => {
     if (evt.key === 'Enter') {
       callClickHandlers();
