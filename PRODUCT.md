@@ -32,6 +32,7 @@ Self-hosted Noodle Gallery (a community fork of Immich), on the owner's own hard
 - **Change scope:** the visual layer only (fonts, tokens, components, layouts, empty states, copy), applied as a small patch set on branch `local/omarchy` and rebased onto each Gallery release. Restructuring screens or navigation is out of scope.
 - **Upstream code:** server code and the API are untouched.
 - **Build:** `./local-build.sh` builds only the web stage (branding applied on a copy) and installs to `~/immich/web-custom`, mounted over `/build/www`.
+- **Preview while designing:** `./local-dev.sh start` serves this checkout's `web/src` with hot reload at `http://localhost:2284`, against the live Gallery and Curator and logged in through the browser's localhost session. Look there after every edit (screenshots, live variants) instead of rebuilding; deploy with `local-build.sh` once it is right. Upstream names show there ("Immich"), since branding is applied only by the build.
 - **Strings:** user-facing strings go through i18n (`i18n/en.json` plus the nine maintained locales, if a commit is ever upstreamed).
 - **Known bugs in reach:** `/search?query=<plain text>` crashes the page; the search hint shows "⌘K" on Linux.
 
