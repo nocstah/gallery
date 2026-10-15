@@ -89,6 +89,7 @@
     mapSmartSearchFacetsToFilterSuggestions,
   } from '$lib/utils/space-search';
   import { consumeTypedSearchNamesInto } from '$lib/utils/typed-search/typed-search-name-cache';
+  import { quickTrashInAlbum, takeOutOfAlbum } from '$lib/utils/quick-trash';
   import { removeSearchResults, selectAllSearchResults, updateSearchResults } from '$lib/utils/search-result-selection';
   import {
     AlbumUserRole,
@@ -656,6 +657,20 @@
   const isEditor = $derived(isAlbumEditor(album));
   // Local Omarchy layer: To do, Villa (managers/special-albums), when this album is one of them
   const special = $derived(specialAlbumOf(album.id));
+
+  // Local Omarchy layer: Shift + middle-click on a photo here takes it out of this album only, like Delete in a Mac
+  // Photos album (utils/quick-trash); a special album takes it out its own way, tag and archive too. The Add photos
+  // picker shows the library instead, where the gesture still trashes.
+  $effect(() => {
+    if (viewMode === AlbumPageViewMode.SELECT_ASSETS) {
+      return;
+    }
+    const albumId = album.id;
+    const out = special;
+    return quickTrashInAlbum(
+      out ? (asset) => out.done([asset]) : isEditor ? (asset) => takeOutOfAlbum(albumId, [asset.id]) : undefined,
+    );
+  });
 
   const isSelectionMode = $derived(
     viewMode === AlbumPageViewMode.SELECT_ASSETS ? true : viewMode === AlbumPageViewMode.SELECT_THUMBNAIL,
