@@ -13,13 +13,15 @@
 // --routes /photos,/albums,@album,@photo (@album: the album changed last; @photo: the newest photo, in the viewer;
 // @person: the named person with the most photos), --states (the interactive states below instead of the pages),
 // --viewports aorus,dell,laptop,tablet,phone, --modes dark,light, --all (every viewport and mode),
-// --hidpi (the monitors' real pixel density), --out DIR.
+// --hidpi (the monitors' real pixel density), --out DIR, --keep-storage (keep what the pages left in the profile's
+// localStorage; by default a run starts from none, so two runs compare: the session cookie is kept either way).
 //
 // A route can go on into a state before the shot, with steps after ">": key:Control+k, hover:SELECTOR,
 // click:SELECTOR, rclick:SELECTOR (right click), scroll:PX (the wheel over the middle of the page), wait:MS; and it can
 // be named with "name=" in front, e.g. --routes 'menu=/photos>rclick:[data-asset]'. Steps are real input events, so the
 // page reacts as to a person (hover shows a tile's checkbox, a right click opens Gallery's own menu). A selector cannot
-// hold "," or ">".
+// hold "," or ">". What a stepped shot leaves in localStorage or sessionStorage (an opened filter rail, a grouping) is
+// put back after it, so it cannot carry into the shots that follow.
 //
 // The profile (~/.cache/gallery-shots/profile) holds only the Gallery session you log in with; nothing here reads or
 // stores a password. Its colour mode is the page's prefers-color-scheme, which is what "Follow Omarchy" follows.
@@ -141,6 +143,7 @@ async function shoot() {
           const file = `${slug(label)}.${name}.${mode}.png`;
           const started = Date.now();
           let landed = await page.visit(base + path);
+          const stored = steps.length ? await page.storage() : null;
           const missed = [];
           for (const step of steps) {
             const problem = await page.act(step);
@@ -149,7 +152,10 @@ async function shoot() {
           if (steps.length) landed = await page.settle();
           const png = await page.send('Page.captureScreenshot', { format: 'png' });
           writeFileSync(join(out, file), Buffer.from(png.data, 'base64'));
-          if (steps.length) await page.pointerAway();
+          if (steps.length) {
+            await page.pointerAway();
+            await page.storage(stored);
+          }
           shots.push({ route, label, path, steps, viewport: name, mode, file, landed, missed, ms: Date.now() - started });
           const notes = [landed === path ? '' : `landed on ${landed}`, ...missed].filter(Boolean);
           process.stdout.write(`  ${file}${notes.length ? `  (${notes.join('; ')})` : ''}\n`);
@@ -180,6 +186,7 @@ function parseRoute(spec) {
 async function resolveRoutes(page, base, routes) {
   const landed = await page.visit(`${base}/photos`);
   if (landed.startsWith('/auth/')) throw new Error('not logged in: run ./local-dev.sh login once');
+  if (!flag('keep-storage')) await page.evaluate('localStorage.clear(); sessionStorage.clear()');
   const ids = await page.evaluate(`(async () => {
     const albums = await fetch('/api/albums').then((r) => r.json()).catch(() => []);
     const album = albums.filter((a) => a.assetCount > 8).sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0];
@@ -385,6 +392,17 @@ async function pageSession(cdp, sessionId) {
     },
     /** Takes the pointer off the page, so a hover does not carry into the next shot. */
     pointerAway: () => mouse('mouseMoved', -10, -10),
+    /** Without an argument, the page's localStorage and sessionStorage; with one, puts them back as they were. */
+    storage: (saved) =>
+      saved
+        ? evaluate(`(() => {
+            const saved = ${JSON.stringify(saved)};
+            for (const [store, items] of [[localStorage, saved.local], [sessionStorage, saved.session]]) {
+              store.clear();
+              for (const [key, value] of Object.entries(items)) store.setItem(key, value);
+            }
+          })()`)
+        : evaluate('({ local: { ...localStorage }, session: { ...sessionStorage } })'),
   };
 }
 
