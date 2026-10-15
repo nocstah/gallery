@@ -240,6 +240,12 @@ div.absolute.font-mono {
 div[role='listbox'][data-select-content] {
   border-radius: var(--ws-radius) !important;
 }
+/* toasts (@immich/ui's ToastPanel, given the ws-toasts hook in routes/+layout) float like these popups and take the
+   theme's corner too, square here: each toast, its buttons and its icon's badge */
+.ws-toasts > div,
+.ws-toasts > div :is(button, [class*='rounded']) {
+  border-radius: var(--ws-radius);
+}
 
 /* ---- modals (@immich/ui Modal): square Omarchy windows. The role=dialog element is only the positioning wrapper
    (the rule above would draw a stray frame around it); the panel inside carries one hairline frame and the shadow,

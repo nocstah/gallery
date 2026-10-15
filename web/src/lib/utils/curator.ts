@@ -286,6 +286,10 @@ export type SavedFrame = {
   height: number;
   /** tone-mapped from HDR, as the playback copy is */
   hdr: boolean;
+  /** where it is: the video's own place, archived with an archived video */
+  visibility: 'timeline' | 'archive';
+  /** the album it joined (the one the viewer had the video open in), or null */
+  album_id: string | null;
 };
 
 export type StackPickPlace = {
@@ -473,9 +477,10 @@ export const curator = {
    * names the suggestion holding the new version */
   liveEffect: (assetId: string, effect: 'loop' | 'bounce' | 'long-exposure' | 'key-photo' | 'cinematic', seconds = 0) =>
     post<{ job: number }>('/live-effect', { asset_id: assetId, effect, seconds }),
-  /** the frame a video (or a Live Photo's clip) is on, `seconds` in as the player counts, saved as a new photo; the
-   * job's result is a SavedFrame */
-  saveFrame: (assetId: string, seconds: number) => post<{ job: number }>('/frame', { asset_id: assetId, seconds }),
+  /** the frame a video (or a Live Photo's clip) is on, `seconds` in as the player counts, saved as a new photo that
+   * joins `albumId` (the album the viewer is open in) when the owner may add to it; the job's result is a SavedFrame */
+  saveFrame: (assetId: string, seconds: number, albumId?: string) =>
+    post<{ job: number }>('/frame', { asset_id: assetId, seconds, ...(albumId && { album_id: albumId }) }),
   /** Keep in the photo viewer's Adjust panel: the settings its preview showed, rendered at full size; the job's result
    * names the suggestion holding the new version */
   adjust: (assetId: string, settings: AdjustSettings) =>

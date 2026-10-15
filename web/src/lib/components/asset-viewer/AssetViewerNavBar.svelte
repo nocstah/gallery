@@ -257,7 +257,7 @@
     <ActionButton action={LookUp} />
     <ActionButton action={CopySubject} />
     <!-- Local Omarchy layer: Save frame as photo, for a video on screen (Curator) -->
-    <SaveFrameAction {asset} />
+    <SaveFrameAction {asset} {album} />
 
     {#if isOwner}
       <DeleteAction {asset} {onAction} {preAction} {onUndoDelete} />

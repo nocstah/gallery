@@ -1,21 +1,24 @@
 <script lang="ts">
   // Local Omarchy layer: Save frame as photo in the viewer's bar (components/curator/save-frame.svelte.ts), for the
   // owner's own video, or a Live Photo while its video half plays, once Curator says it saves frames. The button spins
-  // while Curator works; Shift+S does the same (VLC's snapshot key; plain S is the photo viewer's slideshow).
+  // while Curator works; Shift+S does the same (VLC's snapshot key; plain S is the photo viewer's slideshow). Inside an
+  // album the photo joins that album too.
   import { shortcut } from '$lib/actions/shortcut';
   import { saveFrame } from '$lib/components/curator/save-frame.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { getSharedLink } from '$lib/utils';
-  import { AssetVisibility, type AssetResponseDto } from '@immich/sdk';
+  import { AssetVisibility, type AlbumResponseDto, type AssetResponseDto } from '@immich/sdk';
   import { IconButton } from '@immich/ui';
   import { mdiCameraPlusOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
     asset: AssetResponseDto;
+    /** the album the viewer is open in */
+    album?: AlbumResponseDto;
   }
 
-  let { asset }: Props = $props();
+  let { asset, album }: Props = $props();
 
   const sharedLink = getSharedLink();
   const isOwner = $derived(authManager.authenticated && asset.ownerId === authManager.user.id && !sharedLink);
@@ -37,7 +40,7 @@
 
   const save = () => {
     if (offered) {
-      void saveFrame.save();
+      void saveFrame.save(album?.id);
     }
   };
 </script>

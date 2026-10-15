@@ -196,7 +196,7 @@ Flat on the ground; depth only for what floats above it, like a Hyprland popup. 
 
 ## Shapes
 
-Corners come from the desktop: everything (tiles, menus, modals, fields, buttons, pills) uses the window radius `--ws-radius` exactly (Hyprland `decoration:rounding`; fallback 0px, square). Never add an offset to it: the owner rejected rounded controls on the square desktop (2026-10-12). A panel has one frame; separators run edge to edge. The last rules that added +4..10px were brought back to the token on 2026-10-13. Borders take the desktop's `--ws-border` (`general:border_size`, minimum 1px; fallback 2px) for focus, 1px for hairlines.
+Corners come from the desktop: everything (tiles, menus, modals, toasts, fields, buttons, pills) uses the window radius `--ws-radius` exactly (Hyprland `decoration:rounding`; fallback 0px, square). Never add an offset to it: the owner rejected rounded controls on the square desktop (2026-10-12). A panel has one frame; separators run edge to edge. The last rules that added +4..10px were brought back to the token on 2026-10-13. Borders take the desktop's `--ws-border` (`general:border_size`, minimum 1px; fallback 2px) for focus, 1px for hairlines.
 
 Tile focus is drawn **inset** (an inset box-shadow on a pseudo-element), because day sections use layout/paint containment and an outset border would clip at section edges.
 

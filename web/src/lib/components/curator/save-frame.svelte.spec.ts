@@ -2,6 +2,8 @@ import type { AssetResponseDto } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
+import { eventManager } from '$lib/managers/event-manager.svelte';
+import { specialAlbums } from '$lib/managers/special-albums.svelte';
 import { undoManager } from '$lib/managers/undo-manager.svelte';
 import type { JobRow } from '$lib/utils/curator';
 import { navigate } from '$lib/utils/navigation';
@@ -9,8 +11,9 @@ import SavedFrameToast from './SavedFrameToast.svelte';
 import { saveFrame } from './save-frame.svelte';
 
 // Local Omarchy layer: Save frame as photo against a stand-in Curator: the video on screen stops where it is, that
-// moment goes to /api/frame, the job is followed until the new photo's id comes back, and its toast and undo are
-// recorded; the undo trashes the photo with the user's own session.
+// moment goes to /api/frame (with the album the viewer is open in), the job is followed until the new photo's id comes
+// back, and its toast and undo are recorded; the undo trashes the photo with the user's own session and takes it out of
+// the album it joined. View opens it where it is: its album, the Archive, or Photos.
 
 const { curatorMock, waitForJobMock, gotoMock } = vi.hoisted(() => ({
   curatorMock: { kinds: vi.fn(), saveFrame: vi.fn() },
@@ -52,6 +55,8 @@ const SAVED = {
   width: 1920,
   height: 1080,
   hdr: true,
+  visibility: 'timeline',
+  album_id: null,
 };
 
 const playing = (currentTime: number) => ({ pause: vi.fn(), currentTime }) as unknown as HTMLVideoElement;
@@ -108,7 +113,7 @@ describe('saveFrame', () => {
     expect(video.pause).toHaveBeenCalled();
     expect(saveFrame.isSaving('video-1')).toBe(true);
     await vi.waitFor(() => expect(waitForJobMock).toHaveBeenCalledWith(7, undefined, 400));
-    expect(curatorMock.saveFrame).toHaveBeenCalledWith('video-1', 12.345);
+    expect(curatorMock.saveFrame).toHaveBeenCalledWith('video-1', 12.345, undefined);
 
     void saveFrame.save(); // a second press while Curator works asks nothing more
     finish(job({ result: SAVED }));
@@ -157,6 +162,68 @@ describe('saveFrame', () => {
     expect(sdkMock.getAssetInfo).toHaveBeenCalledTimes(2);
     expect(gotoMock).toHaveBeenCalledOnce();
     expect(gotoMock).toHaveBeenCalledWith('/photos/new-photo');
+  });
+
+  it('opens a frame of an archived video in the Archive, where it is', async () => {
+    sdkMock.getAssetInfo.mockResolvedValue({ id: 'new-photo', thumbhash: 'drawn' } as AssetResponseDto);
+    waitForJobMock.mockResolvedValue(job({ result: { ...SAVED, visibility: 'archive' } }));
+    saveFrame.show(playing(3), 'video-1');
+    await saveFrame.save();
+
+    await toastProps().onView();
+
+    expect(gotoMock).toHaveBeenCalledWith('/archive/photos/new-photo');
+  });
+
+  it('puts a frame saved inside an album there, opens it there, and the undo takes it out again', async () => {
+    const emit = vi.spyOn(eventManager, 'emit');
+    sdkMock.getAssetInfo.mockResolvedValue({ id: 'new-photo', thumbhash: 'drawn' } as AssetResponseDto);
+    waitForJobMock.mockResolvedValue(job({ result: { ...SAVED, album_id: 'album-1' } }));
+    saveFrame.show(playing(3), 'video-1');
+
+    await saveFrame.save('album-1');
+
+    expect(curatorMock.saveFrame).toHaveBeenCalledWith('video-1', 3, 'album-1');
+    // the album's page shows it once Gallery has drawn it: a live event cannot say a photo joined an album
+    await vi.waitFor(() =>
+      expect(emit).toHaveBeenCalledWith('AlbumAddAssets', { assetIds: ['new-photo'], albumIds: ['album-1'] }),
+    );
+    await toastProps().onView();
+    expect(gotoMock).toHaveBeenCalledWith('/albums/album-1/photos/new-photo');
+
+    await undoManager.undo();
+
+    expect(sdkMock.deleteAssets).toHaveBeenCalledWith({ assetBulkDeleteDto: { ids: ['new-photo'], force: false } });
+    expect(sdkMock.removeAssetFromAlbum).toHaveBeenCalledWith({ id: 'album-1', bulkIdsDto: { ids: ['new-photo'] } });
+    expect(emit).toHaveBeenCalledWith('AlbumRemoveAssets', { assetIds: ['new-photo'], albumIds: ['album-1'] });
+    emit.mockRestore();
+  });
+
+  it("gives a frame saved in To do its video's tag and note there, so taking it out puts it where the video goes", async () => {
+    const [todo] = specialAlbums;
+    todo.albumId = 'todo-album';
+    sdkMock.getAllAlbums.mockResolvedValue([]);
+    sdkMock.getAssetInfo.mockResolvedValue({ id: 'new-photo', thumbhash: 'drawn' } as AssetResponseDto);
+    sdkMock.upsertTags.mockResolvedValue([{ id: 'tag-todo' }] as never);
+    sdkMock.getAssetMetadata.mockResolvedValue([
+      { key: 'omarchy-todo', value: { from: 'timeline' }, updatedAt: '2026-10-15T05:00:00Z' },
+    ] as never);
+    waitForJobMock.mockResolvedValue(job({ result: { ...SAVED, visibility: 'archive', album_id: 'todo-album' } }));
+    saveFrame.show(playing(3), 'video-1');
+
+    await saveFrame.save('todo-album');
+
+    await vi.waitFor(() =>
+      expect(sdkMock.updateBulkAssetMetadata).toHaveBeenCalledWith({
+        assetMetadataBulkUpsertDto: {
+          items: [{ assetId: 'new-photo', key: 'omarchy-todo', value: { from: 'timeline' } }],
+        },
+      }),
+    );
+    expect(sdkMock.upsertTags).toHaveBeenCalledWith({ tagUpsertDto: { tags: ['To do'] } });
+    expect(sdkMock.tagAssets).toHaveBeenCalledWith({ id: 'tag-todo', bulkIdsDto: { ids: ['new-photo'] } });
+    expect(sdkMock.getAssetMetadata).toHaveBeenCalledWith({ id: 'video-1' });
+    todo.albumId = undefined;
   });
 
   it('says why when Curator could not save it, and records nothing', async () => {

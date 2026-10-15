@@ -171,7 +171,8 @@
 
   let showNavigationLoadingBar = $state(false);
 
-  toastManager.setOptions({ class: 'top-16 fixed' });
+  // Local Omarchy layer: ws-toasts, the hook by which styles/omarchy-world.css gives every toast the window's corner
+  toastManager.setOptions({ class: 'top-16 fixed ws-toasts' });
 
   // Local Omarchy layer: a chosen theme's CSS is made again on every load, so a newer theme engine reaches it
   onMount(() => {

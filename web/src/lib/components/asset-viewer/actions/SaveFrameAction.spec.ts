@@ -1,4 +1,4 @@
-import { AssetVisibility, type AssetResponseDto } from '@immich/sdk';
+import { AssetVisibility, type AlbumResponseDto, type AssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, screen } from '@testing-library/svelte';
 import { saveFrame } from '$lib/components/curator/save-frame.svelte';
@@ -51,6 +51,16 @@ describe('SaveFrameAction', () => {
     const button = await screen.findByLabelText('save_frame_as_photo');
     await fireEvent.click(button);
     expect(save).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledWith(undefined); // in no album
+  });
+
+  it('saves into the album the viewer is open in', async () => {
+    const save = vi.spyOn(saveFrame, 'save').mockResolvedValue();
+    saveFrame.show(video, 'video-1');
+    renderWithTooltips(SaveFrameAction, { asset: mine(), album: { id: 'album-1' } as AlbumResponseDto });
+
+    await fireEvent.click(await screen.findByLabelText('save_frame_as_photo'));
+    expect(save).toHaveBeenCalledWith('album-1');
   });
 
   it('saves on Shift+S, and only while it is offered', async () => {
