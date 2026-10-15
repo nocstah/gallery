@@ -34,12 +34,14 @@ import {
   mdiEyeOutline,
   mdiFolderMoveOutline,
   mdiCallMerge,
+  mdiBookOpenPageVariantOutline,
 } from '@mdi/js';
 import { type MessageFormatter } from 'svelte-i18n';
 import { goto } from '$app/navigation';
 import { albumFolders } from '$lib/managers/album-folders.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
+import { photoBooks } from '$lib/managers/photo-book-manager.svelte';
 import { specialAlbumOf, specialAlbums } from '$lib/managers/special-albums.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import AddUsersModal from '$lib/modals/AddUsersModal.svelte';
@@ -159,6 +161,16 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     onAction: () => albumFolders.toggleTimeline(album),
   };
 
+  // Local Omarchy layer: Make photo book (managers/photo-book-manager): Curator lays the album's best photos out as a
+  // print-ready book; offered once Curator says it makes books, and never for To do, Villa or QR, which hold photos
+  // set aside
+  const MakeBook: ActionItem = {
+    title: $t('photo_book_make'),
+    icon: mdiBookOpenPageVariantOutline,
+    $if: () => photoBooks.available && album.assetCount > 0 && !specialAlbumOf(album.id),
+    onAction: () => void photoBooks.askForAlbum(album),
+  };
+
   const Options: ActionItem = {
     title: $t('options'),
     icon: mdiCogOutline,
@@ -181,6 +193,7 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     Download,
     Edit,
     Leave,
+    MakeBook,
     Merge,
     MoveToFolder,
     Options,

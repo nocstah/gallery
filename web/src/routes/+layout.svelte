@@ -38,6 +38,7 @@
   import { t } from 'svelte-i18n';
   import { get } from 'svelte/store';
   import DownloadPanel from './DownloadPanel.svelte';
+  import PhotoBookPanel from '$lib/components/omarchy/PhotoBookPanel.svelte';
   import ShareVideoPanel from '$lib/components/omarchy/ShareVideoPanel.svelte';
   import ErrorLayout from './ErrorLayout.svelte';
   import NavigationLoadingBar from './NavigationLoadingBar.svelte';
@@ -334,7 +335,11 @@
   {/if}
 
   <DownloadPanel />
-  <ShareVideoPanel />
+  <!-- Local Omarchy layer: what Curator makes on request, one panel above the other in the bottom-left corner -->
+  <div class="fixed inset-s-3 bottom-3 z-60 flex flex-col items-start gap-3">
+    <PhotoBookPanel />
+    <ShareVideoPanel />
+  </div>
   <UploadPanel />
   {#if globalSearchManager.isOpen && globalSearchManager.presentation === 'modal'}
     <GlobalSearch manager={globalSearchManager} />

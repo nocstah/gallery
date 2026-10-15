@@ -74,12 +74,9 @@
 {/if}
 
 <style>
-  /* one frame, the theme's corners, rows split by hairlines from edge to edge */
+  /* one frame, the theme's corners, rows split by hairlines from edge to edge; the root layout puts it in the
+     bottom-left corner, under the photo books */
   .ws-share {
-    position: fixed;
-    inset-inline-start: 0.75rem;
-    bottom: 0.75rem;
-    z-index: 60;
     width: min(21rem, calc(100vw - 1.5rem));
     border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);
     border-radius: var(--ws-radius);

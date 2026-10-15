@@ -16,6 +16,7 @@ import {
   mdiAccountPlus,
   mdiAccountSearchOutline,
   mdiArchiveArrowDownOutline,
+  mdiBookOpenPageVariantOutline,
   mdiBrain,
   mdiBroom,
   mdiCloudUploadOutline,
@@ -45,6 +46,7 @@ import { ADMIN_VISIBLE_QUEUES } from '$lib/constants';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { isAlmostExactWordMatch } from '$lib/managers/cmdk-match';
 import type { CommandContext } from '$lib/managers/command-context-manager.svelte';
+import { photoBooks } from '$lib/managers/photo-book-manager.svelte';
 import {
   canAddSelectedToAlbum,
   canAddSelectedToCurrentSpace,
@@ -492,6 +494,17 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
         handleError(error, $t('errors.something_went_wrong'));
       }
     },
+  },
+
+  // Local Omarchy layer: a year's photo book, from any page (managers/photo-book-manager; an album's is in the album's
+  // own menus). The dialog asks which year. Offered once Curator says it makes books.
+  {
+    id: 'cmd:photo_book',
+    labelKey: 'cmdk_cmd_photo_book_label',
+    descriptionKey: 'cmdk_cmd_photo_book_description',
+    icon: mdiBookOpenPageVariantOutline,
+    isAvailable: () => photoBooks.available,
+    handler: () => photoBooks.askForYear(),
   },
 ];
 

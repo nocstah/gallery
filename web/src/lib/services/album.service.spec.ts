@@ -43,6 +43,18 @@ vi.mock('@immich/ui', async (orig) => ({
 
 vi.mock('$lib/utils/handle-error', () => ({ handleError: (...a: unknown[]) => handleError(...a) }));
 
+// Local Omarchy layer: Make photo book asks the photo book manager, once Curator says it makes books
+const { photoBooksMock } = vi.hoisted(() => ({ photoBooksMock: { available: true, askForAlbum: vi.fn() } }));
+vi.mock('$lib/managers/photo-book-manager.svelte', () => ({ photoBooks: photoBooksMock }));
+vi.mock('$lib/managers/special-albums.svelte', async (orig) => {
+  const actual = await orig<typeof import('$lib/managers/special-albums.svelte')>();
+  return {
+    ...actual,
+    specialAlbumOf: (id: string | null | undefined) =>
+      id === 'album-todo' ? actual.specialAlbums[0] : actual.specialAlbumOf(id),
+  };
+});
+
 vi.mock('$lib/utils/i18n', async (importOriginal) => ({
   ...(await importOriginal<typeof import('$lib/utils/i18n')>()),
   getFormatter: () =>
@@ -227,5 +239,40 @@ describe('getAlbumActions Leave', () => {
         ]),
       ),
     ).toBe(false);
+  });
+});
+
+describe('getAlbumActions MakeBook', () => {
+  const $t = ((key: string) => key) as unknown as Parameters<typeof getAlbumActions>[0];
+  const trip = (fields: Partial<AlbumResponseDto> = {}) =>
+    ({
+      id: 'album-1',
+      albumName: 'Vang Vieng, Laos · February – March 2015',
+      assetCount: 27,
+      albumUsers: [{ user: { id: 'me' }, role: AlbumUserRole.Owner }],
+      ...fields,
+    }) as AlbumResponseDto;
+  const offered = (album: AlbumResponseDto) => getAlbumActions($t, album).MakeBook.$if?.() ?? true;
+
+  beforeEach(() => {
+    photoBooksMock.available = true;
+  });
+
+  it('is offered for an album with photos once Curator makes books', () => {
+    expect(offered(trip())).toBe(true);
+  });
+
+  it('is not offered before Curator says so, for an empty album, or for To do, Villa and QR', () => {
+    expect(offered(trip({ assetCount: 0 }))).toBe(false);
+    expect(offered(trip({ id: 'album-todo' }))).toBe(false);
+    photoBooksMock.available = false;
+    expect(offered(trip())).toBe(false);
+  });
+
+  it('asks what the book should be', () => {
+    const album = trip();
+    const { MakeBook } = getAlbumActions($t, album);
+    MakeBook.onAction({ action: MakeBook } as never);
+    expect(photoBooksMock.askForAlbum).toHaveBeenCalledWith(album);
   });
 });

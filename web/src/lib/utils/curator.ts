@@ -200,6 +200,39 @@ export type ShareResult = {
   source: string;
 };
 
+/** What a photo book is of (Curator's curator/books.py): an album, one of Curator's trips or events, or a year. */
+export type BookSubject = { album_id: string } | { event_id: number } | { year: number };
+
+/** A photo book's files: the interior for the print lab, its cover, and a light preview of the spreads to read. */
+export type BookPart = 'book' | 'cover' | 'preview';
+
+/** About how many photos a book can be asked for (curator/jobs/books.py); fewer go in when fewer are good. */
+export const BOOK_PHOTOS = { least: 12, most: 400, standard: 120 } as const;
+
+/** What book.make made: the PDFs in a folder of their own in ~/Pictures/Photo books. */
+export type BookResult = {
+  title: string;
+  subtitle: string | null;
+  /** the book's folder in Photo books */
+  folder: string;
+  files: Record<BookPart, { name: string; size: number; missing?: boolean }>;
+  pages: number;
+  photos: number;
+  /** the photos it chose from */
+  candidates: number;
+  chapters: (string | null)[];
+};
+
+/** A photo book as it is made: its job, which goes from choosing the photos through the pages to the finishing. */
+export type BookJob = {
+  id: number;
+  status: JobRow['status'];
+  progress: { done?: number; total?: number; note?: 'choosing' | 'pages' | 'finishing' } | null;
+  result: BookResult | null;
+  /** the error's first line */
+  error: string | null;
+};
+
 /** What needs attention in the library, from Curator's /api/library-health. */
 export type LibraryHealth = {
   checked_at: string;
@@ -344,6 +377,9 @@ export const curatorSubject = async (assetId: string): Promise<Blob> => {
 
 /** The file Curator made for a chat app, sent as an attachment under its own name, so the browser saves it. */
 export const shareVideoUrl = (assetId: string, app: ShareApp) => `${base()}/share/${assetId}/${app}.mp4`;
+/** One of a photo book's PDFs: shown by the browser, or with `download` saved under its own name. */
+export const bookFileUrl = (jobId: number, part: BookPart, download = false) =>
+  `${base()}/books/${jobId}/${part}.pdf${download ? '?download=true' : ''}`;
 /** A pending highlight reel, streamed by Curator (byte ranges, so the player can seek). */
 export const reelUrl = (suggestionId: number) => `${base()}/reels/${suggestionId}.mp4`;
 /** a restore suggestion's original ('before') or restored version ('after'): a photo `width` pixels across, or a clip */
@@ -431,6 +467,11 @@ export const curator = {
     post<{ ready?: ShareResult; job?: number }>('/share', { asset_id: assetId, preset: app }),
   /** pick a stack's best photo, carefully (a job of 10-60 seconds; its result is a StackPick) */
   pickBest: (stackId: string) => post<{ job: number }>(`/stacks/${stackId}/best`, {}),
+  /** a photo book of an album, a trip or a year (`title` and `photos` left out: Curator's own); follow it with book() */
+  makeBook: (subject: BookSubject, title?: string, photos?: number) =>
+    post<{ job: number }>('/books', { ...subject, title, photos }),
+  /** a photo book being made, or made */
+  book: (jobId: number) => call<BookJob>(`/books/${jobId}`),
   /** Look Up: what the photo shows that has a name (the kept answer unless `again`) */
   lookUp: (assetId: string, again = false, signal?: AbortSignal) =>
     call<LookUpAnswer>('/lookup', { method: 'POST', body: JSON.stringify({ asset_id: assetId, again }), signal }),

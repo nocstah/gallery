@@ -43,6 +43,10 @@ vi.mock('@immich/sdk', async (orig) => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn().mockResolvedValue(undefined) }));
 
+// Local Omarchy layer: the year's photo book command asks the photo book manager
+const { photoBooksMock } = vi.hoisted(() => ({ photoBooksMock: { available: false, askForYear: vi.fn() } }));
+vi.mock('$lib/managers/photo-book-manager.svelte', () => ({ photoBooks: photoBooksMock }));
+
 vi.mock('$lib/services/album.service', () => ({
   handleDeleteAlbum: vi.fn().mockResolvedValue(true),
   handleDownloadAlbum: vi.fn().mockResolvedValue(undefined),
@@ -110,8 +114,8 @@ describe('COMMAND_ITEMS', () => {
     expect(COMMAND_ITEMS.find((c) => c.id === 'cmd:theme')).toBeDefined();
   });
 
-  it('has 32 entries (7 v1.3.0 + 8 v1.3.1 + 5 v1.4 album + 6 v1.4 space + 6 v1.5A selection)', () => {
-    expect(COMMAND_ITEMS).toHaveLength(32);
+  it('has 33 entries (7 v1.3.0 + 8 v1.3.1 + 5 v1.4 album + 6 v1.4 space + 6 v1.5A selection + 1 photo book)', () => {
+    expect(COMMAND_ITEMS).toHaveLength(33);
   });
 
   it('CommandItem type allows isAvailable and destructive', () => {
@@ -354,6 +358,36 @@ describe('cmd:create_space', () => {
     const cmd = COMMAND_ITEMS.find((c) => c.id === 'cmd:create_space')!;
     await cmd.handler();
     expect(spy).toHaveBeenCalledWith(SpaceCreateModal, {});
+  });
+});
+
+describe('cmd:photo_book', () => {
+  const ctx: CommandContext = {
+    routeId: '/(user)/photos/[[assetId=id]]',
+    params: {},
+    album: null,
+    space: null,
+    selection: null,
+    userId: 'test-user',
+    isAdmin: false,
+  };
+  const cmd = () => COMMAND_ITEMS.find((c) => c.id === 'cmd:photo_book')!;
+
+  it('is offered on any page once Curator says it makes books', () => {
+    photoBooksMock.available = false;
+    expect(cmd().isAvailable?.(ctx)).toBe(false);
+    photoBooksMock.available = true;
+    expect(cmd().isAvailable?.(ctx)).toBe(true);
+  });
+
+  it("asks which year's book to make", async () => {
+    await cmd().handler(ctx);
+    expect(photoBooksMock.askForYear).toHaveBeenCalledOnce();
+  });
+
+  it('has its words in en.json', () => {
+    expect(en).toHaveProperty(cmd().labelKey);
+    expect(en).toHaveProperty(cmd().descriptionKey);
   });
 });
 

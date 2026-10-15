@@ -235,6 +235,11 @@ div.absolute.font-mono {
   box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
   border: 1px solid var(--ws-hairline);
 }
+/* @immich/ui's Select opens its options in a popup of its own, portalled out of the dialog or page it sits in (the
+   dialog's corner rule below never reaches it), so it takes the theme's corner here */
+div[role='listbox'][data-select-content] {
+  border-radius: var(--ws-radius) !important;
+}
 
 /* ---- modals (@immich/ui Modal): square Omarchy windows. The role=dialog element is only the positioning wrapper
    (the rule above would draw a stray frame around it); the panel inside carries one hairline frame and the shadow,
