@@ -11,7 +11,8 @@
 </script>
 
 <UserPageLayout title={data.meta.title}>
-  <div class="m-auto w-full max-w-xl">
+  <!-- Local Omarchy layer: on the gutter like Settings, not centred in the page -->
+  <div class="w-full max-w-xl">
     <div class="mt-5">
       <UtilitiesMenu />
     </div>

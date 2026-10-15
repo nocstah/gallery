@@ -781,7 +781,7 @@
         onFiltersChange={handleFiltersChange}
       />
     {/key}
-    <div class="flex flex-1 flex-col overflow-hidden pl-2">
+    <div class="flex flex-1 flex-col overflow-hidden">
       {#snippet photoFiltersBar()}
         <ActiveFiltersBar
           embedded

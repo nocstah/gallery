@@ -998,7 +998,7 @@
             </div>
           </div>
 
-          <div class="flex flex-1 flex-col overflow-hidden pl-2">
+          <div class="flex flex-1 flex-col overflow-hidden">
             {#if viewMode === AlbumPageViewMode.SELECT_ASSETS && getActiveFilterCount(pickerFilters) > 0}
               <ActiveFiltersBar
                 filters={pickerFilters}
@@ -1040,7 +1040,7 @@
                 />
               {/snippet}
               <FilterToolbar
-                class="mb-2"
+                class="ps-0"
                 grouping={timelineGrouping}
                 onGroupingChange={handleTimelineGroupingChange}
                 showGrouping={isBrowseTimeline && !showSearchResults && !assetMultiSelectManager.selectionActive}

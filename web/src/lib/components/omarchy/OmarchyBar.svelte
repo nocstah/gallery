@@ -201,17 +201,24 @@
     align-items: center;
     min-width: 0;
   }
+  /* the page's own part of the bar starts on the content's gutter (the grids and text columns sit 0.5rem in from the
+     sidebar), so a title lines up with what it heads */
   .ws-bar-middle {
     display: flex;
     align-items: center;
     min-width: 0;
     height: 100%;
+    padding-inline-start: 0.5rem;
   }
+  /* the bar's own icons stand apart from the page's tools behind a full-height hairline, like the time strip's, with
+     the same 0.5rem on each side, rather than behind a gap that read as an accident */
   .ws-bar-end {
     display: flex;
     gap: 0.125rem;
     align-items: center;
-    padding-inline: 0.75rem 1rem;
+    align-self: stretch;
+    padding-inline: 0.5rem 1rem;
+    border-inline-start: 1px solid var(--ws-hairline);
   }
   .ws-bar-anchor {
     position: relative;

@@ -1246,7 +1246,8 @@ body.ws-dragging * {
    An operate surface on the same ground: a poster heading with its count in data type, rows split by hairlines,
    photos as small tiles on the window radius, inverted segmented tabs, one ink action per row of decisions. */
 .ws-inbox {
-  padding: calc(var(--ws-gap) * 0.6) clamp(1rem, 3vw, 2.5rem) 4rem;
+  /* one gutter: the column starts where the bar's page title and the photo grids start */
+  padding: calc(var(--ws-gap) * 0.6) 0 4rem;
   color: var(--immich-ui-dark);
 }
 .ws-inbox-head {
@@ -1453,7 +1454,8 @@ body.ws-dragging * {
 /* one column on the page's own gutter (Settings, Shared links), where upstream centres a box */
 .ws-page-column {
   max-width: 60rem;
-  padding: calc(var(--ws-gap) * 0.6) clamp(1rem, 3vw, 2.5rem) 4rem;
+  /* one gutter: the column starts where the bar's page title and the photo grids start */
+  padding: calc(var(--ws-gap) * 0.6) 0 4rem;
 }
 .ws-setting {
   margin: 0 !important;
@@ -1593,7 +1595,8 @@ body.ws-dragging * {
 /* ---- Sharing (routes/(user)/sharing): sections on the page's gutter, each headed by its name with the count in data
    type; partners are rows of avatar, name and address on the ground, a hairline between them ---- */
 .ws-sharing {
-  padding: calc(var(--ws-gap) * 0.6) clamp(1rem, 3vw, 2.5rem) 4rem;
+  /* one gutter: the column starts where the bar's page title and the photo grids start */
+  padding: calc(var(--ws-gap) * 0.6) 0 4rem;
   color: var(--immich-ui-dark);
 }
 .ws-sharing-section + .ws-sharing-section,
@@ -1850,12 +1853,13 @@ body.ws-dragging * {
 
 /* ---- the album page in the shell (routes/(user)/albums/[albumId]): its name, dates and count are in the one bar; its
    details sit under it and scroll away with the photos ---- */
+/* on the 8px rhythm: 0.5rem between its parts, 1rem before the photos; the toolbar row above starts on the gutter too */
 .ws-album-details {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.5rem;
-  padding: 0.25rem 0 1rem;
+  padding: 0 0 1rem;
 }
 .ws-album-description {
   width: 100%;

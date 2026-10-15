@@ -63,7 +63,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.25rem;
-    margin-top: 0.75rem;
   }
   .ws-album-person {
     display: inline-flex;
