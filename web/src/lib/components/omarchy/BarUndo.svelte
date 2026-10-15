@@ -1,13 +1,11 @@
 <script lang="ts">
   // Local Omarchy layer: the one bar's undo. Everything that can still be taken back (managers/undo-manager), newest
-  // first, in a sheet under the icon: a row takes its action back. Ctrl+Z takes back the newest from anywhere but a
-  // text field, a dialog or the editor. The icon shows only while there is something to undo (one less icon in the
-  // bar the rest of the time); Ctrl+Z works either way.
-  import { shortcuts } from '$lib/actions/shortcut';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
+  // first, in a sheet under the icon: a row takes its action back. The icon shows only while there is something to
+  // undo (one less icon in the bar the rest of the time). Ctrl+Z belongs to the user pages' layout, so it also works on
+  // pages without this bar (an album).
   import { undoManager } from '$lib/managers/undo-manager.svelte';
   import { locale } from '$lib/stores/preferences.store';
-  import { Icon, isModalOpen } from '@immich/ui';
+  import { Icon } from '@immich/ui';
   import { mdiUndoVariant } from '@mdi/js';
   import { tick } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -62,21 +60,9 @@
       open = false;
     }
   };
-
-  const undoNewest = () => {
-    if (newest && !isModalOpen() && !assetViewerManager.isShowEditor) {
-      void undoManager.undo();
-    }
-  };
 </script>
 
 <svelte:window onpointerdown={close} onkeyup={close} />
-<svelte:document
-  use:shortcuts={[
-    { shortcut: { key: 'z', ctrl: true }, onShortcut: undoNewest, preventDefault: true },
-    { shortcut: { key: 'z', meta: true }, onShortcut: undoNewest, preventDefault: true },
-  ]}
-/>
 
 <div class="ws-undo" bind:this={box}>
   {#if newest}

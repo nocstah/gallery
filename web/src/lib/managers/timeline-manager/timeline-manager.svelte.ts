@@ -71,6 +71,11 @@ type ViewportTopMonthIntersection = {
   // Where month bottom is in viewport (0 = viewport top, 1 = viewport bottom)
   monthBottomViewportRatio: number;
 };
+
+// Local Omarchy layer: photos put back into an album are fetched one by one, so only an undo-sized batch comes back
+const PUT_BACK_AT_MOST = 200;
+const PUT_BACK_AT_ONCE = 8;
+
 export class TimelineManager extends VirtualScrollManager {
   override bottomSectionHeight = $state(60);
 
@@ -168,6 +173,13 @@ export class TimelineManager extends VirtualScrollManager {
         AlbumRemoveAssets: ({ assetIds, albumIds }) => {
           if (this.#options.albumId && albumIds.includes(this.#options.albumId)) {
             this.removeAssets(assetIds);
+          }
+        },
+        // Local Omarchy layer: photos put back into this album (the Undo of a removal) come back on screen; a live
+        // event can't say an asset joined an album, this one does
+        AlbumAddAssets: ({ assetIds, albumIds }) => {
+          if (this.#options.albumId && albumIds.includes(this.#options.albumId)) {
+            void this.#putBack(assetIds);
           }
         },
         StackCreate: (stack) => {
@@ -605,6 +617,23 @@ export class TimelineManager extends VirtualScrollManager {
     // by an undo, would lay it out beside its own stack)
     const notExcluded = notUpdated.filter((asset) => !this.isExcluded(asset) && !this.#folded(asset));
     this.addAssetsUpsertSegments([...notExcluded]);
+  }
+
+  /** Photos added to this album, fetched fresh a few at a time and laid out like any upsert (a big add is left to a reload). */
+  async #putBack(ids: string[]) {
+    if (ids.length > PUT_BACK_AT_MOST) {
+      return;
+    }
+    const fresh: AssetResponseDto[] = [];
+    for (let index = 0; index < ids.length; index += PUT_BACK_AT_ONCE) {
+      const batch = await Promise.all(
+        ids
+          .slice(index, index + PUT_BACK_AT_ONCE)
+          .map((id) => getAssetInfo({ ...authManager.params, id }).catch(() => undefined)),
+      );
+      fresh.push(...batch.filter((asset): asset is AssetResponseDto => !!asset));
+    }
+    this.upsertAssets(fresh.map((asset) => toTimelineAsset(asset)));
   }
 
   /** One of a stack's other photos, kept under its cover while the timeline shows stacks folded. */

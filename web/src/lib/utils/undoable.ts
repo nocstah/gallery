@@ -34,20 +34,27 @@ import { refreshAssets } from '$lib/utils/asset-refresh';
 
 type Tone = 'primary' | 'info' | 'success' | 'warning';
 
+// a toast offering Undo stays a while: the default 3 s is gone before a hand gets there, and an album page has no bar
+// undo to fall back on (Ctrl+Z still works there)
+const UNDO_TOAST_MS = 8000;
+
 /** The toast of a done action, with an Undo that takes back its history entry (in the tone its own toast had: `info`
  * or `warning` for a partly done one). */
 export const toastUndoable = (description: string, entry: number, tone: Tone = 'primary') => {
   const $t = get(t);
-  toastManager[tone]({
-    description,
-    button: (close) => ({
-      label: $t('undo'),
-      onclick: () => {
-        close();
-        void undoManager.undo(entry);
-      },
-    }),
-  });
+  toastManager[tone](
+    {
+      description,
+      button: (close) => ({
+        label: $t('undo'),
+        onclick: () => {
+          close();
+          void undoManager.undo(entry);
+        },
+      }),
+    },
+    { timeout: UNDO_TOAST_MS },
+  );
 };
 
 /** Favourites: taken back by setting them the other way round. */

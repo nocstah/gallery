@@ -552,6 +552,41 @@ describe('TimelineManager', () => {
     });
   });
 
+  describe('album events', () => {
+    let timelineManager: TimelineManager;
+
+    beforeEach(async () => {
+      timelineManager = new TimelineManager();
+      sdkMock.getTimeBuckets.mockResolvedValue([]);
+      sdkMock.getAssetInfo.mockReset();
+
+      await timelineManager.updateViewport({ width: 1588, height: 1000 });
+      await timelineManager.updateOptions({ albumId: 'album-id' });
+    });
+
+    afterEach(() => {
+      timelineManager.destroy();
+    });
+
+    it('puts photos added back to its album on screen (the undo of a removal)', async () => {
+      const asset = assetFactory.build();
+      sdkMock.getAssetInfo.mockResolvedValue(asset);
+
+      eventManager.emit('AlbumAddAssets', { assetIds: [asset.id], albumIds: ['album-id'] });
+
+      await vi.waitFor(() => expect(timelineManager.assetCount).toEqual(1));
+      expect(sdkMock.getAssetInfo).toHaveBeenCalledWith(expect.objectContaining({ id: asset.id }));
+    });
+
+    it('leaves photos added to another album alone', async () => {
+      eventManager.emit('AlbumAddAssets', { assetIds: ['other-asset'], albumIds: ['other-album'] });
+      await tick();
+
+      expect(sdkMock.getAssetInfo).not.toHaveBeenCalled();
+      expect(timelineManager.assetCount).toEqual(0);
+    });
+  });
+
   describe('live event asset insertion', () => {
     let timelineManager: TimelineManager;
 

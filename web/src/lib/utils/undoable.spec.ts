@@ -43,7 +43,10 @@ describe('undo history', () => {
 
       taggedDone(['asset-a', 'asset-b'], ['tag-1', 'tag-2'], before, 'tagged');
       expect(undoManager.entries).toHaveLength(1);
-      expect(toastManager.primary).toHaveBeenCalledWith(expect.objectContaining({ description: 'tagged' }));
+      // the toast stays long enough to reach its Undo
+      expect(toastManager.primary).toHaveBeenCalledWith(expect.objectContaining({ description: 'tagged' }), {
+        timeout: 8000,
+      });
 
       await undoManager.undo();
 
@@ -108,7 +111,9 @@ describe('undo history', () => {
         ],
         { toast: 'rotated', tone: 'success' },
       );
-      expect(toastManager.success).toHaveBeenCalledWith(expect.objectContaining({ description: 'rotated' }));
+      expect(toastManager.success).toHaveBeenCalledWith(expect.objectContaining({ description: 'rotated' }), {
+        timeout: 8000,
+      });
 
       await undoManager.undo();
 
