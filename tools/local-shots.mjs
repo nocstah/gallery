@@ -118,7 +118,13 @@ async function shoot() {
     if (!VIEWPORTS[name]) fail(`unknown viewport ${name} (${Object.keys(VIEWPORTS).join(', ')})`);
   }
   if (!existsSync(join(PROFILE, 'Default'))) fail('no screenshot session yet: run ./local-dev.sh login once');
-  if (profileInUse()) fail('the screenshot profile is open in a window: close the login window first');
+  // the profile serves one browser at a time: a run started while another holds it (a second checkout, a second
+  // agent) waits its turn, up to ten minutes
+  for (let waited = 0; profileInUse(); waited += 2) {
+    if (waited === 0) console.log('waiting for the screenshot profile (another run or the login window has it)');
+    if (waited >= 600) fail('the screenshot profile stayed in use for ten minutes: close the login window first');
+    await sleep(2000);
+  }
   const stamp = new Date().toISOString().slice(0, 19).replaceAll(':', '').replace('T', '-');
   const out = option('out', join(ROOT, stamp));
   if (!flag('eval')) mkdirSync(out, { recursive: true });

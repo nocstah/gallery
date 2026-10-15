@@ -20,7 +20,10 @@
 # import, which Node (no Image) rejects; left to the default, that rejection stops the whole dev server.
 set -euo pipefail
 SRC=$(cd "$(dirname "$0")" && pwd)
-NAME=gallery-web-dev
+# several checkouts (git worktrees) can each run one beside the main one: GALLERY_DEV_NAME=gallery-web-dev-2
+# GALLERY_DEV_PORT=2285 ./local-dev.sh start (the login cookie is localhost's, so it holds on every port; Curator only
+# answers :2284)
+NAME=${GALLERY_DEV_NAME:-gallery-web-dev}
 PORT=${GALLERY_DEV_PORT:-2284}
 IMAGE=${GALLERY_DEV_IMAGE:-gallery-web-check:local}
 
