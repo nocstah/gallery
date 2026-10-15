@@ -1,7 +1,8 @@
 <script lang="ts">
   // Local Omarchy layer: on a smart album's page (Curator, curator/smart.py), what it is and the two things to do with
   // it: change the search behind it on the Photos page, or stop it updating and keep it as an ordinary album. Left
-  // out for ordinary albums and when Curator does not answer.
+  // out for ordinary albums and when Curator does not answer. A media type's album (Selfies, Panoramas) has no
+  // Photos page search behind it, so it only offers to stop.
   import { goto } from '$app/navigation';
   import { curator, type SmartAlbum } from '$lib/utils/curator';
   import { Icon, modalManager, toastManager } from '@immich/ui';
@@ -70,7 +71,9 @@
         <span class="query">“{smart.rule.query}”</span>
       {/if}
     </span>
-    <button type="button" onclick={editSearch}>{$t('smart_album_edit')}</button>
+    {#if !smart.rule.media}
+      <button type="button" onclick={editSearch}>{$t('smart_album_edit')}</button>
+    {/if}
     <button type="button" onclick={stop}>{$t('smart_album_stop')}</button>
   </div>
 {/if}

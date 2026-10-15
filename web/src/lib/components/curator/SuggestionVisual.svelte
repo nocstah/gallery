@@ -2,9 +2,10 @@
   // Local Omarchy layer: what a suggestion is about, shown with the photos themselves. A cover change shows the
   // current cover beside the proposed one, a sharper face icon the icon now beside the face it would be cut from, a
   // name shows the face group beside photos it was found in, a merge shows
-  // every face group being joined, a restored photo or clip shares one frame with its original. Each photo opens in
-  // Gallery in a new tab, so the review keeps its place. Resting the pointer on a photo shows it large, whole, in
-  // the middle of the screen, until the pointer moves off it.
+  // every face group being joined, a restored photo or clip shares one frame with its original, an album of people
+  // seen together (a smart album Curator proposes) shows their faces before photos of them together. Each photo
+  // opens in Gallery in a new tab, so the review keeps its place. Resting the pointer on a photo shows it large,
+  // whole, in the middle of the screen, until the pointer moves off it.
   import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
   import { reelUrl, type Suggestion } from '$lib/utils/curator';
   import { getAssetMediaUrl } from '$lib/utils';
@@ -39,6 +40,10 @@
     suggestion.kind === 'person.merge'
       ? [String(payload.into_id), ...((payload.ids as string[] | undefined) ?? [])]
       : [suggestion.target_id],
+  );
+  /** the people an album of people together is about, in the order its name gives them */
+  const together = $derived(
+    suggestion.kind === 'smart.create' ? ((payload.person_ids as string[] | undefined) ?? []) : [],
   );
 </script>
 
@@ -121,6 +126,13 @@
         {@render photo(id, 72)}
       {/each}
     {/if}
+  {:else if together.length > 0}
+    {#each together as personId (personId)}
+      <img class="ws-strip-tile visual-face" src={face(personId)} alt="" loading="lazy" width="72" height="72" />
+    {/each}
+    {#each photos.slice(0, 4) as id (id)}
+      {@render photo(id, 72)}
+    {/each}
   {:else if ['asset.archive', 'asset.tag', 'asset.lock'].includes(suggestion.kind) && suggestion.asset_ids.length > 0}
     {@render photo(suggestion.asset_ids[0], 112)}
   {:else}

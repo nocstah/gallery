@@ -296,6 +296,9 @@ export type SmartRule = {
   query?: string | null;
   strictness: SmartStrictness;
   filters: { url?: string };
+  /** one of Apple's media types Curator tells from the camera data (selfies, panoramas, …); no Photos page search
+   * holds it, so such a rule is not edited there */
+  media?: string | null;
 };
 export type SmartAlbum = {
   id: number;
