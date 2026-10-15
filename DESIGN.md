@@ -290,6 +290,9 @@ No cover over the page (upstream's tall hero is gone): the Space's name sits in 
 ### Filter Rail
 Same surface as the ground with a hairline edge; collapsed by default. Its search and reopen buttons are transparent with a hairline border and no shadow.
 
+### Adjust panel (photo viewer)
+Adjust, Filters and Straighten (Apple Photos' editing, Curator's `live.adjust`; `components/curator/AdjustPhoto.svelte`) hold the viewer like Curator's other tools: the photo on the black stage, adjusted live on the GPU with the math Curator keeps it with, and a calm side panel along the stage's right edge, 20rem of strong smoked glass behind a glass-edge hairline (below the photo on a phone). Its header names it beside a close button; then a `.ws-seg` of Adjust / Filters / Straighten, the controls, and a footer: one muted line of help (an error in its place; hidden on touch screens), Hold for original, then Reset apart from Cancel and Keep (ink). A slider is a row: the name in UI type and its value in data type (muted at zero, signed −100 to +100, degrees for Straighten) over a 2px hairline track lit in ink from its rest point (the middle, or the left end for Intensity) to a square thumb; a double-click sets it back. Light and Color are headed in meta type, a hairline between groups. Filters are square tiles of the photo's middle in each filter, three across, the name below (two lines rather than an ellipsis); the chosen one takes an ink frame and its name inverts. Straighten lays thirds, and thirds of those, over the photo, which is cut to its own shape as it turns. Keep shows a strong-glass card at the photo's foot while Curator renders, then the new version takes the photo's place, on top of its stack, with an Undo in the toast and the bar.
+
 ## Do's and Don'ts
 
 ### Do:

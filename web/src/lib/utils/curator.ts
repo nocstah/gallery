@@ -1,4 +1,5 @@
 import type { AssetResponseDto } from '@immich/sdk';
+import type { AdjustSettings } from '$lib/components/curator/adjust-math';
 
 // Local Omarchy layer: client for Curator (~/code/curator), the local AI service behind the AI inbox. Curator runs
 // beside Gallery on port 2290 of the same host and authenticates the browser's Gallery session cookie, so every call
@@ -475,6 +476,10 @@ export const curator = {
   /** the frame a video (or a Live Photo's clip) is on, `seconds` in as the player counts, saved as a new photo; the
    * job's result is a SavedFrame */
   saveFrame: (assetId: string, seconds: number) => post<{ job: number }>('/frame', { asset_id: assetId, seconds }),
+  /** Keep in the photo viewer's Adjust panel: the settings its preview showed, rendered at full size; the job's result
+   * names the suggestion holding the new version */
+  adjust: (assetId: string, settings: AdjustSettings) =>
+    post<{ job: number }>('/adjust', { asset_id: assetId, settings }),
   overview: () => call<CuratorOverview>('/overview'),
   /** Gallery's duplicate groups that are QR-code slips (payment receipts), for the Duplicates page to leave out */
   duplicatesWithQr: () => call<{ groups: string[] }>('/duplicates/qr'),

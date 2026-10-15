@@ -9,6 +9,7 @@
   import SpecialAlbumAction from '$lib/components/asset-viewer/actions/SpecialAlbumAction.svelte';
   import { specialAlbums } from '$lib/managers/special-albums.svelte';
   import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
+  import { adjustPhoto } from '$lib/components/curator/adjust-photo.svelte';
   import { liveEffects } from '$lib/components/curator/live-effects.svelte';
   import { lookUp } from '$lib/components/curator/look-up.svelte';
   import { shareVideos } from '$lib/managers/share-video-manager.svelte';
@@ -46,6 +47,7 @@
     mdiMotionPlayOutline,
     mdiPencilOutline,
     mdiSendOutline,
+    mdiTuneVariant,
     mdiVideoOutline,
     mdiWhatsapp,
   } from '@mdi/js';
@@ -132,8 +134,22 @@
     if (isOwner && !sharedLink) {
       removeObjects.check();
       liveEffects.check();
+      adjustPhoto.check();
       lookUp.check();
     }
+  });
+  // Local Omarchy layer: Curator's Adjust panel (light, colour, filters, straighten), for the owner's own photos
+  const Adjust: ActionItem = $derived({
+    title: $t('adjust'),
+    icon: mdiTuneVariant,
+    $if: () =>
+      adjustPhoto.available &&
+      isOwner &&
+      !isLocked &&
+      !asset.isTrashed &&
+      !sharedLink &&
+      asset.type === AssetTypeEnum.Image,
+    onAction: () => adjustPhoto.open(asset.id),
   });
   // Local Omarchy layer: subject lift, the photo's main subject to the clipboard (Curator)
   const CopySubject: ActionItem = $derived({
@@ -187,7 +203,16 @@
 
 <CommandPaletteDefaultProvider
   name={$t('assets')}
-  actions={withoutIcons([Close, Cast, ...Object.values(Actions), RemoveObjects, LiveEffects, LookUp, CopySubject])}
+  actions={withoutIcons([
+    Close,
+    Cast,
+    ...Object.values(Actions),
+    Adjust,
+    RemoveObjects,
+    LiveEffects,
+    LookUp,
+    CopySubject,
+  ])}
 />
 
 <div
@@ -226,6 +251,7 @@
     <ActionButton action={Actions.Unfavorite} />
 
     <ActionButton action={Actions.Edit} />
+    <ActionButton action={Adjust} />
     <ActionButton action={RemoveObjects} />
     <ActionButton action={LiveEffects} />
     <ActionButton action={LookUp} />

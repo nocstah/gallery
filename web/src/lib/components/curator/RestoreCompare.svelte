@@ -16,7 +16,13 @@
 
   let { suggestion, size }: Props = $props();
 
-  type Payload = { variant?: string; width?: number; height?: number; source?: { width?: number; height?: number } };
+  type Payload = {
+    variant?: string;
+    width?: number;
+    height?: number;
+    source?: { width?: number; height?: number };
+    settings?: { angle?: number };
+  };
   const payload = $derived(suggestion.payload as Payload);
   const clip = $derived(payload.variant === 'video');
   // Local Omarchy layer: a Live Photo effect (curator/live.py), a straightened document or a collage is shown on its
@@ -24,7 +30,9 @@
   const effect = $derived(
     ['loop', 'bounce', 'long-exposure', 'key-photo', 'cinematic', 'animation', 'straightened', 'collage'].includes(
       payload.variant ?? '',
-    ),
+    ) ||
+      // an adjusted photo that was straightened is framed apart from its original: no divider between the two
+      (payload.variant === 'adjusted' && !!payload.settings?.angle),
   );
   const effectClip = $derived(['loop', 'bounce', 'cinematic', 'animation'].includes(payload.variant ?? ''));
   // photos are asked for at about twice the width they are shown at, for sharp edges on HiDPI screens

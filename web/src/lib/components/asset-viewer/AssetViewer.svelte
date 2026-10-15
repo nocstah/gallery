@@ -8,6 +8,8 @@
   import AssetViewerNavBar from '$lib/components/asset-viewer/AssetViewerNavBar.svelte';
   import { preloadManager } from '$lib/components/asset-viewer/PreloadManager.svelte';
   import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
+  import AdjustPhoto from '$lib/components/curator/AdjustPhoto.svelte';
+  import { adjustPhoto } from '$lib/components/curator/adjust-photo.svelte';
   import LiveEffects from '$lib/components/curator/LiveEffects.svelte';
   import { liveEffects } from '$lib/components/curator/live-effects.svelte';
   import LookUpCard from '$lib/components/curator/LookUpCard.svelte';
@@ -129,7 +131,9 @@
   const brushing = $derived(removeObjects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
   // Local Omarchy layer: Curator's effects panel (Live Photo effects, cinematic), which holds the viewer like the brush
   const livening = $derived(liveEffects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
-  const inCuratorTool = $derived(brushing || livening);
+  // Local Omarchy layer: Curator's Adjust panel (light, colour, filters, straighten), which holds the viewer the same way
+  const adjusting = $derived(adjustPhoto.assetId === asset.id && asset.type === AssetTypeEnum.Image);
+  const inCuratorTool = $derived(brushing || livening || adjusting);
   const ownStack = $derived(authManager.authenticated && asset.ownerId === authManager.user.id);
   const nextAsset = $derived(cursor.nextAsset);
   const previousAsset = $derived(cursor.previousAsset);
@@ -248,6 +252,7 @@
   onDestroy(() => {
     removeObjects.close();
     liveEffects.close();
+    adjustPhoto.close();
     stackPick.close();
     activityManager.reset();
     assetViewerManager.resetPanelState();
@@ -321,6 +326,13 @@
 
       await handleStopSlideshow();
     }, $t('error_while_navigating'));
+  };
+
+  // Local Omarchy layer: a version just kept in the Adjust panel is shown in its place, on top of the stack, as stepping
+  // through the stack would show it
+  const showVersion = (version: AssetResponseDto) => {
+    previewStackedAsset = undefined;
+    cursor.current = version;
   };
 
   const navigateStack = (direction: 'previous' | 'next') => {
@@ -501,6 +513,9 @@
     if (livening) {
       return 'LiveEffects';
     }
+    if (adjusting) {
+      return 'AdjustPhoto';
+    }
     if (previewStackedAsset) {
       return previewStackedAsset.type === AssetTypeEnum.Image ? 'PhotoViewer' : 'StackVideoViewer';
     }
@@ -677,6 +692,8 @@
       <RemoveObjects {asset} onClose={() => removeObjects.close()} />
     {:else if viewerKind === 'LiveEffects'}
       <LiveEffects {asset} onClose={() => liveEffects.close()} />
+    {:else if viewerKind === 'AdjustPhoto'}
+      <AdjustPhoto {asset} onClose={() => adjustPhoto.close()} onKept={showVersion} />
     {:else if viewerKind === 'ImagePanaramaViewer'}
       <ImagePanoramaViewer {asset} />
     {:else if viewerKind === 'TrimArea'}
