@@ -13,7 +13,8 @@
 // --routes /photos,/albums,@album,@photo (@album: the album changed last; @photo: the newest photo, in the viewer;
 // @person: the named person with the most photos), --states (the interactive states below instead of the pages),
 // --viewports aorus,dell,laptop,tablet,phone, --modes dark,light, --all (every viewport and mode),
-// --hidpi (the monitors' real pixel density), --out DIR, --keep-storage (keep what the pages left in the profile's
+// --hidpi (the monitors' real pixel density), --out DIR, --eval JS (no shots: run the expression on each route, after
+// its steps, at the first viewport and mode, and print what it returns, to read the real DOM), --keep-storage (keep what the pages left in the profile's
 // localStorage; by default a run starts from none, so two runs compare: the session cookie is kept either way).
 //
 // A route can go on into a state before the shot, with steps after ">": key:Control+k, hover:SELECTOR,
@@ -127,6 +128,25 @@ async function shoot() {
   try {
     const page = await browser.page();
     const resolved = await resolveRoutes(page, base, routes);
+    const probe = option('eval', null);
+    if (probe) {
+      const vp = VIEWPORTS[viewports[0]];
+      await page.send('Emulation.setDeviceMetricsOverride', {
+        width: vp.width,
+        height: vp.height,
+        deviceScaleFactor: vp.scale,
+        mobile: vp.mobile,
+      });
+      await page.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: modes[0] }] });
+      for (const { label, path, steps } of resolved) {
+        await page.visit(base + path);
+        for (const step of steps) await page.act(step);
+        if (steps.length) await page.settle();
+        console.log(`${label}: ${JSON.stringify(await page.evaluate(probe), null, 1)}`);
+      }
+      browser.close();
+      return;
+    }
     for (const name of viewports) {
       const vp = VIEWPORTS[name];
       const scale = flag('hidpi') ? vp.hidpi : vp.scale;
