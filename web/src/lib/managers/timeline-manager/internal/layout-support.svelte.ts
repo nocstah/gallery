@@ -31,6 +31,12 @@ export function updateGeometry(timelineManager: TimelineManager, month: Timeline
 // than the viewport.
 const MIN_SCALE = 0.72;
 const MAX_SCALE = 1.6;
+// A run of days too small to fill a row even at MAX_SCALE (a month of three or four photos) widens its tiles, their
+// edges cropped as object-fit: cover does, by up to this much so the row still ends at the edge; a month of one or two
+// photos would need more and stays short (2026-10-15, the owner: "make it so that images align on the right side").
+const MAX_STRETCH = 1.35;
+// A row that cannot reach the edge costs more than any arrangement of rows that can.
+const SHORT_ROW_COST = 100;
 
 type DayLine = { day: TimelineMonth['timelineDays'][number]; ratios: number[] };
 
@@ -62,17 +68,33 @@ const singleLineRatios = (
   return total * rowHeight * MIN_SCALE + (ratios.length - 1) * spacing <= width ? ratios : undefined;
 };
 
-const placeLine = (line: DayLine, height: number, spacing: number) => {
-  let left = 0;
-  for (const [index, viewerAsset] of line.day.viewerAssets.entries()) {
-    const width = line.ratios[index] * height;
-    viewerAsset.position = { top: 0, left, width, height };
-    left += width + spacing;
+/**
+ * Lays tiles out left to right from `x` (a fractional position on the row) at one height, each `ratio * height *
+ * stretch` wide, and rounds every tile's edges to whole pixels relative to `origin`, so a line that fills ends exactly
+ * at the edge (flooring the height lost up to a pixel per photo and left most rows a few pixels short). Returns where
+ * the last tile ends.
+ */
+const placeTiles = (
+  viewerAssets: TimelineMonth['timelineDays'][number]['viewerAssets'],
+  ratios: number[],
+  {
+    x,
+    origin,
+    top,
+    height,
+    stretch,
+    spacing,
+  }: { x: number; origin: number; top: number; height: number; stretch: number; spacing: number },
+) => {
+  let at = x;
+  for (const [index, viewerAsset] of viewerAssets.entries()) {
+    const width = ratios[index] * height * stretch;
+    const left = Math.round(at) - origin;
+    viewerAsset.position = { top, left, width: Math.round(at + width) - origin - left, height };
+    at += width + spacing;
   }
-  line.day.width = left - spacing;
-  line.day.height = height;
+  return at - spacing;
 };
-
 
 // A day too wide for one line: split its photos into lines of even weight and justify every line to
 // the full width, so no line (the last included) is left with an orphan tile and empty ground.
@@ -106,13 +128,13 @@ const placeBalanced = (
   let top = 0;
   for (const indexes of lines) {
     const ratioSum = indexes.reduce((acc, index) => acc + ratios[index], 0);
-    const height = Math.floor((width - (indexes.length - 1) * spacing) / ratioSum);
-    let left = 0;
-    for (const index of indexes) {
-      const tileWidth = ratios[index] * height;
-      day.viewerAssets[index].position = { top, left, width: tileWidth, height };
-      left += tileWidth + spacing;
-    }
+    const fill = (width - (indexes.length - 1) * spacing) / ratioSum;
+    const height = Math.round(fill);
+    placeTiles(
+      indexes.map((index) => day.viewerAssets[index]),
+      indexes.map((index) => ratios[index]),
+      { x: 0, origin: 0, top, height, stretch: fill / height, spacing },
+    );
     top += height + spacing;
   }
   day.width = width;
@@ -145,49 +167,62 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
     return (viewportWidth - fixed) / ratioSum;
   };
 
-  // 1. pool single-line days greedily into rows; multi-line days stand alone
+  // 1. cut each run of single-line days (between days that take several lines) into rows as a whole, choosing the cuts
+  //    that keep every row's height nearest the target, the last row included, so no run ends on a short row while
+  //    another cut would have filled it (greedy pooling left the month's last row wherever its days ran out)
+  const balanceRun = (lines: DayLine[]): Row[] => {
+    const ratioPrefix = [0];
+    const tilePrefix = [0];
+    for (const line of lines) {
+      ratioPrefix.push(ratioPrefix.at(-1)! + line.ratios.reduce((a, b) => a + b, 0));
+      tilePrefix.push(tilePrefix.at(-1)! + line.ratios.length);
+    }
+    const heightOf = (from: number, to: number) => {
+      const days = to - from;
+      const fixed = (tilePrefix[to] - tilePrefix[from] - days) * spacing + (days - 1) * gap;
+      return (viewportWidth - fixed) / (ratioPrefix[to] - ratioPrefix[from]);
+    };
+    const best: number[] = [0];
+    const cutAt: number[] = [0];
+    for (let to = 1; to <= lines.length; to++) {
+      best[to] = Infinity;
+      cutAt[to] = to - 1;
+      for (let from = to - 1; from >= 0; from--) {
+        const scale = heightOf(from, to) / rowHeight;
+        // more days only squeeze the row further; a single day always fits at MIN_SCALE
+        if (scale < MIN_SCALE && from < to - 1) {
+          break;
+        }
+        const cost = best[from] + Math.log(scale) ** 2 + (scale > MAX_SCALE ? SHORT_ROW_COST : 0);
+        if (cost >= best[to]) {
+          continue;
+        }
+        best[to] = cost;
+        cutAt[to] = from;
+      }
+    }
+    const balanced: Row[] = [];
+    for (let to = lines.length; to > 0; to = cutAt[to]) {
+      balanced.unshift({ kind: 'pool', lines: lines.slice(cutAt[to], to) });
+    }
+    return balanced;
+  };
+
   const rows: Row[] = [];
-  let pending: DayLine[] = [];
+  let run: DayLine[] = [];
   for (const timelineDay of month.timelineDays) {
     const ratios = singleLineRatios(timelineDay, viewportWidth, rowHeight, spacing);
-    if (!ratios) {
-      if (pending.length > 0) {
-        rows.push({ kind: 'pool', lines: pending });
-        pending = [];
-      }
-      rows.push({ kind: 'multi', day: timelineDay });
+    if (ratios) {
+      run.push({ day: timelineDay, ratios });
       continue;
     }
-    const candidate = [...pending, { day: timelineDay, ratios }];
-    if (pending.length > 0 && fillHeight(candidate) < rowHeight * MIN_SCALE) {
-      rows.push({ kind: 'pool', lines: pending });
-      pending = [{ day: timelineDay, ratios }];
-    } else {
-      pending = candidate;
-    }
+    rows.push(...balanceRun(run), { kind: 'multi', day: timelineDay });
+    run = [];
   }
-  if (pending.length > 0) {
-    rows.push({ kind: 'pool', lines: pending });
-  }
+  rows.push(...balanceRun(run));
 
-  // 2. a pooled row that could only fill by growing past MAX_SCALE joins the pooled row above it
-  //    when the two together still fill at MIN_SCALE or more, so stray days never balloon
-  for (let index = rows.length - 1; index > 0; index--) {
-    const current = rows[index];
-    const previous = rows[index - 1];
-    if (current.kind !== 'pool' || previous.kind !== 'pool') {
-      continue;
-    }
-    if (fillHeight(current.lines) > rowHeight * MAX_SCALE) {
-      const merged = [...previous.lines, ...current.lines];
-      if (fillHeight(merged) >= rowHeight * MIN_SCALE) {
-        rows.splice(index - 1, 2, { kind: 'pool', lines: merged });
-      }
-    }
-  }
-
-  // 3. place: pooled rows fill the width at one shared height (a row that still cannot fill stays short
-  //    at MAX_SCALE); multi-line days get balanced, full-width lines
+  // 2. place: pooled rows fill the width at one shared height; a row that cannot fill at MAX_SCALE widens its tiles
+  //    within MAX_STRETCH to end at the edge, or stays short past it; multi-line days get balanced, full-width lines
   let top = 0;
   for (const [rowIndex, entry] of rows.entries()) {
     if (entry.kind === 'multi') {
@@ -204,17 +239,32 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
       top += day.height + headerHeight + rowGap;
       continue;
     }
-    // the height that ends the row at the edge, capped at MAX_SCALE; never raised past it (that ran over the edge)
-    const height = Math.floor(Math.min(fillHeight(entry.lines), rowHeight * MAX_SCALE));
-    let start = 0;
+    // the height that ends the row at the edge, capped at MAX_SCALE, in whole pixels; the widths then take the hair
+    // that rounding left (or, past the cap, widen the tiles, their edges cropped, by up to MAX_STRETCH) so the row ends
+    // exactly at the edge; a row that would need more stays short
+    const fill = fillHeight(entry.lines);
+    const height = Math.round(Math.min(fill, rowHeight * MAX_SCALE));
+    const reach = fill / height;
+    const stretch = reach <= MAX_STRETCH ? reach : 1;
+    let x = 0;
     for (const [col, line] of entry.lines.entries()) {
-      placeLine(line, height, spacing);
+      const start = Math.round(x);
+      const end = placeTiles(line.day.viewerAssets, line.ratios, {
+        x,
+        origin: start,
+        top: 0,
+        height,
+        stretch,
+        spacing,
+      });
+      line.day.width = Math.round(end) - start;
+      line.day.height = height;
       line.day.row = rowIndex;
       line.day.col = col;
       line.day.start = start;
       line.day.top = top;
       line.day.updateAssetBoundaries();
-      start += line.day.width + gap;
+      x = end + gap;
     }
     top += height + headerHeight + rowGap;
   }
