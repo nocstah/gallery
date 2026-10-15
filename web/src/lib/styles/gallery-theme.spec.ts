@@ -64,9 +64,12 @@ describe('L2 neutrals', () => {
 describe('L3 typography', () => {
   const css = readFileSync(resolve(process.cwd(), 'src/styles/gallery-theme.css'), 'utf8');
 
-  it('imports the self-hosted variable fonts', () => {
-    expect(css).toMatch(/@import\s+['"]@fontsource-variable\/dm-sans['"]/);
-    expect(css).toMatch(/@import\s+['"]@fontsource-variable\/bricolage-grotesque['"]/);
+  // Local Omarchy layer: Bricolage comes once, as the full axis set, from omarchy-world.css; the wght-only build this
+  // file imported registered a second face under the same name that the browser preferred, so nothing condensed
+  it('leaves the display face to the layer, loaded once with its width axis', () => {
+    const world = readFileSync(resolve(process.cwd(), 'src/styles/omarchy-world.css'), 'utf8');
+    expect(css).not.toMatch(/@import\s+['"]@fontsource-variable\/bricolage-grotesque['"]/);
+    expect(world).toMatch(/@import\s+['"]@fontsource-variable\/bricolage-grotesque\/standard\.css['"]/);
   });
   it('sets sans + display font tokens', () => {
     expect(css).toMatch(/--font-sans:\s*['"]DM Sans Variable['"]/);

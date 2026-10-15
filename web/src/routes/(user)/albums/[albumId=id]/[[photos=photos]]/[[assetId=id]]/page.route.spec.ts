@@ -34,12 +34,20 @@ vi.mock('$app/navigation', () => ({
   goto: gotoMock,
   invalidate: vi.fn().mockResolvedValue(undefined),
   onNavigate: vi.fn(),
+  // Local Omarchy layer: the album page renders the shell (UserPageLayout), whose parts listen for navigations
+  beforeNavigate: vi.fn(),
+  afterNavigate: vi.fn(),
 }));
 // The mock module and the spec import the SAME singleton, so assigning mockPage.url in a test is
 // what the page's $effect sees.
 vi.mock('$app/state', async () => {
   const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
   return { page: reactivePageMock };
+});
+
+vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockUserPageLayout } = await import('./mock-user-page-layout.test-wrapper.svelte');
+  return { default: MockUserPageLayout };
 });
 
 vi.mock('$lib/components/timeline/Timeline.svelte', async () => {
@@ -195,19 +203,18 @@ describe('album detail filter panel route', () => {
   // bg-light surface sits directly on the darker app background instead of blending into a card.
   // It therefore has to shape itself: rounded to the app's 16px surface radius and held off the
   // bottom edge, rather than running as a flush slab to the foot of the window.
-  it('shapes the filter panel as a rounded card lifted off the bottom edge', async () => {
+  // Local Omarchy layer: the album page lives in the shell, whose panel is the page's own ground, so the filter panel
+  // sits on it square and full height instead of floating as a rounded card
+  it('sets the filter panel on the ground, square and full height', async () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByTestId('filter-panel-shell')).toBeInTheDocument());
 
     const clip = screen.getByTestId('album-filter-panel-surface');
     expect(clip).toContainElement(screen.getByTestId('filter-panel-shell'));
-    // rounded-lg is 16px in this theme — the same radius UserPageLayout gives every other page.
-    expect(clip.className).toContain('rounded-lg');
     expect(clip.className).toContain('overflow-hidden');
-    // py-4: inset equally from the app bar above and the window edge below, so the card doesn't
-    // sit flush against either.
-    expect(clip.parentElement?.className).toContain('py-4');
+    expect(clip.className).not.toContain('rounded-lg');
+    expect(clip.parentElement?.className).not.toContain('py-4');
   });
 
   it('registers cmdk selection context for album view mode only', async () => {
