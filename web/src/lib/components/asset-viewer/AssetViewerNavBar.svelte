@@ -4,6 +4,7 @@
   import ArchiveAction from '$lib/components/asset-viewer/actions/ArchiveAction.svelte';
   import DeleteAction from '$lib/components/asset-viewer/actions/DeleteAction.svelte';
   import RestoreAction from '$lib/components/asset-viewer/actions/RestoreAction.svelte';
+  import SaveFrameAction from '$lib/components/asset-viewer/actions/SaveFrameAction.svelte';
   import SetVisibilityAction from '$lib/components/asset-viewer/actions/SetVisibilityAction.svelte';
   import SpecialAlbumAction from '$lib/components/asset-viewer/actions/SpecialAlbumAction.svelte';
   import { specialAlbums } from '$lib/managers/special-albums.svelte';
@@ -229,6 +230,8 @@
     <ActionButton action={LiveEffects} />
     <ActionButton action={LookUp} />
     <ActionButton action={CopySubject} />
+    <!-- Local Omarchy layer: Save frame as photo, for a video on screen (Curator) -->
+    <SaveFrameAction {asset} />
 
     {#if isOwner}
       <DeleteAction {asset} {onAction} {preAction} {onUndoDelete} />

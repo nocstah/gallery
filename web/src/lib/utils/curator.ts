@@ -271,6 +271,22 @@ export type LookUpSubject = {
 };
 export type LookUpAnswer = { asset_id: string; model: string; subjects: LookUpSubject[] };
 
+/** A video's frame saved as a photo (Curator's frame.save): the new photo, and where it came from. */
+export type SavedFrame = {
+  /** the new photo in Gallery */
+  asset_id: string;
+  /** the video it was taken from (a Live Photo's video half) */
+  video_id: string;
+  seconds: number;
+  /** its capture time: the video's plus the moment, with the video's UTC offset */
+  taken: string;
+  file_name: string;
+  width: number;
+  height: number;
+  /** tone-mapped from HDR, as the playback copy is */
+  hdr: boolean;
+};
+
 export type StackPickPlace = {
   asset_id: string;
   judge: number;
@@ -456,6 +472,9 @@ export const curator = {
    * names the suggestion holding the new version */
   liveEffect: (assetId: string, effect: 'loop' | 'bounce' | 'long-exposure' | 'key-photo' | 'cinematic', seconds = 0) =>
     post<{ job: number }>('/live-effect', { asset_id: assetId, effect, seconds }),
+  /** the frame a video (or a Live Photo's clip) is on, `seconds` in as the player counts, saved as a new photo; the
+   * job's result is a SavedFrame */
+  saveFrame: (assetId: string, seconds: number) => post<{ job: number }>('/frame', { asset_id: assetId, seconds }),
   overview: () => call<CuratorOverview>('/overview'),
   /** Gallery's duplicate groups that are QR-code slips (payment receipts), for the Duplicates page to leave out */
   duplicatesWithQr: () => call<{ groups: string[] }>('/duplicates/qr'),
@@ -587,8 +606,8 @@ export const chatStream = async (
   }
 };
 
-/** Poll a Curator job until it leaves the queue. */
-export const waitForJob = async (id: number, onProgress?: (job: JobRow) => void) => {
+/** Poll a Curator job until it leaves the queue, asking every `every` milliseconds (a quick job wants it sooner). */
+export const waitForJob = async (id: number, onProgress?: (job: JobRow) => void, every = 1500) => {
   for (;;) {
     const jobs = await curator.jobs(50);
     const job = jobs.find((row) => row.id === id);
@@ -599,6 +618,6 @@ export const waitForJob = async (id: number, onProgress?: (job: JobRow) => void)
     if (job.status !== 'queued' && job.status !== 'running') {
       return job;
     }
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, every));
   }
 };

@@ -1,6 +1,7 @@
 <script lang="ts">
   import FaceEditorPanel from '$lib/components/asset-viewer/face-editor/FaceEditorPanel.svelte';
   import VideoRemoteViewer from '$lib/components/asset-viewer/VideoRemoteViewer.svelte';
+  import { saveFrame } from '$lib/components/curator/save-frame.svelte';
   import { assetViewerFadeDuration } from '$lib/constants';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { castManager } from '$lib/managers/cast-manager.svelte';
@@ -257,6 +258,9 @@
   onMount(() => {
     showVideo = true;
   });
+
+  // Local Omarchy layer: the video on screen, for Save frame as photo in the bar (components/curator/save-frame)
+  $effect(() => (videoPlayer ? saveFrame.show(videoPlayer, asset.id) : undefined));
 
   $effect(() => {
     // reactive on `assetFileUrl` changes
