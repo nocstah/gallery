@@ -121,7 +121,7 @@ async function shoot() {
   if (profileInUse()) fail('the screenshot profile is open in a window: close the login window first');
   const stamp = new Date().toISOString().slice(0, 19).replaceAll(':', '').replace('T', '-');
   const out = option('out', join(ROOT, stamp));
-  mkdirSync(out, { recursive: true });
+  if (!flag('eval')) mkdirSync(out, { recursive: true });
 
   const browser = await launch();
   const shots = [];
