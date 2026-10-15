@@ -287,6 +287,49 @@
   .ws-page-actions :global(:is(button, a, input, [class*='rounded'])) {
     border-radius: var(--ws-radius);
   }
+  /* one rhythm for a page's own controls, as for the bar's icons: every button is 36px tall, its label or icon sits
+     0.5rem inside its edge (an icon in its square, a label in its padding), and buttons stand 2px apart, so the glyphs
+     step evenly however text and icon buttons mix (Albums mixed 16px-padded labels, bare 40px icon buttons and a gapless
+     pair: 40, 33, 18 and 33px between neighbours) */
+  .ws-page-actions,
+  .ws-page-actions > :global(div),
+  .ws-page-actions :global([class~='gap-0']) {
+    gap: 2px;
+  }
+  .ws-page-actions :global(:is(button, a):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
+    height: 2.25rem;
+    min-width: 2.25rem;
+    padding-inline: 0.5rem;
+    gap: 0.375rem;
+  }
+  .ws-page-actions :global(:is(button, a):not(.ws-search-field *, .ws-seg *, [role='tablist'] *, [class~='w-10']) svg) {
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+  /* upstream pulls a title's trailing button back over the title's own pe-8 pad (-ms-6: the Map's filter toggle); the
+     one bar's title has no such pad, so the pull laid the button over the word "Map" */
+  .ws-page-bar :global([class~='-ms-6']) {
+    margin-inline-start: 0.25rem;
+  }
+  /* a field among the buttons is its own framed box: it stands a little apart from its neighbours */
+  .ws-page-actions :global(:has(> .ws-search-field)) {
+    margin-inline: 0.5rem;
+  }
+  .ws-page-actions :global([class~='h-10']) {
+    height: 2.25rem;
+  }
+  /* icon-only buttons (the kit's IconButton, 40px with a 24px icon) are squares like the bar's icons: 36px with a 20px
+     icon, which sits 8px in as a label does */
+  .ws-page-actions :global(button[class~='w-10']) {
+    width: 2.25rem;
+    padding: 0;
+  }
+  .ws-page-actions :global(button[class~='w-10'] svg) {
+    flex: none;
+    width: 20px;
+    height: 20px;
+  }
   /* tightening steps (see refitPage) */
   .ws-page-bar:not([data-fit='0']) .ws-page-description {
     display: none;
