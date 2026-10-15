@@ -357,6 +357,18 @@ div:has(> [data-testid='admin-page-header']) {
   }
 }
 
+/* ---- months share rows (managers/timeline-manager/internal/layout-support): a month's last row can hang below its
+   box, beside the next month's first days, so a month box paints what overflows it (no paint containment) and lets
+   clicks through to the day sections: its own empty corner must not cover the tiles above it that share its first
+   row ---- */
+#asset-grid .timeline-month {
+  contain: layout size;
+  pointer-events: none;
+}
+#asset-grid .timeline-month section[data-group] {
+  pointer-events: auto;
+}
+
 /* ---- day labels: the date as a label on the workspace, not a Material subhead ---- */
 .ws-day {
   font-family: var(--font-display);

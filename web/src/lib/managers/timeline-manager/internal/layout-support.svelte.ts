@@ -17,7 +17,7 @@ export function updateGeometry(timelineManager: TimelineManager, month: Timeline
     }
     return;
   }
-  layoutTimelineMonth(timelineManager, month, noDefer);
+  layoutTimelineMonths(timelineManager, month, noDefer);
 }
 
 // Local Omarchy layer ("Tiled Workspace"): rows of days fill the width edge to edge, the way tiled
@@ -67,6 +67,49 @@ const singleLineRatios = (
   const total = ratios.reduce((sum, ratio) => sum + ratio, 0);
   return total * rowHeight * MIN_SCALE + (ratios.length - 1) * spacing <= width ? ratios : undefined;
 };
+
+// Months share rows (2026-10-15, the owner: "yes let months share rows"): a month whose last row cannot fill the width
+// even at MAX_SCALE hands it to the next month instead of leaving it short, and the next month cuts it in with its own
+// first days. The handed-on days hang below their own month's box, exactly where the next month's box begins, so the
+// row reads as one; a month whose photos all go on that way has no height of its own. What a month hands on, and its
+// height when it did (the next month places those days relative to it):
+type Carry = { lines: DayLine[]; height: number };
+const carried = new WeakMap<TimelineMonth, Carry>();
+
+const sameCarry = (a: Carry | undefined, b: Carry | undefined) =>
+  a === b ||
+  (!!a &&
+    !!b &&
+    a.height === b.height &&
+    a.lines.length === b.lines.length &&
+    a.lines.every(
+      (line, index) => line.day === b.lines[index].day && line.ratios.length === b.lines[index].ratios.length,
+    ));
+
+/**
+ * Lays out a loaded month and what its change reaches: the month before it decides afresh whether its short last row
+ * waits for this one, and each month after is laid out again while what it is handed changes.
+ */
+function layoutTimelineMonths(timelineManager: TimelineManager, month: TimelineMonth, noDefer: boolean) {
+  const months = timelineManager.months;
+  const requested = months.indexOf(month);
+  if (requested === -1) {
+    layoutTimelineMonth(timelineManager, month, noDefer);
+    return;
+  }
+  for (
+    let index = requested > 0 && months[requested - 1].isLoaded ? requested - 1 : requested;
+    index < months.length && months[index].isLoaded;
+    index++
+  ) {
+    const current = months[index];
+    const before = carried.get(current);
+    layoutTimelineMonth(timelineManager, current, noDefer);
+    if (index >= requested && sameCarry(before, carried.get(current))) {
+      break;
+    }
+  }
+}
 
 /**
  * Lays tiles out left to right from `x` (a fractional position on the row) at one height, each `ratio * height *
@@ -146,8 +189,9 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
   for (const timelineDay of month.timelineDays) {
     timelineDay.layout(options, noDefer);
   }
-  // a tile with neither a ratio nor a box to take one from: upstream's packing
+  // a tile with neither a ratio nor a box to take one from: upstream's packing (and nothing handed on either way)
   if (month.timelineDays.some((day) => !ratiosOf(day))) {
+    carried.delete(month);
     layoutTimelineMonthPacked(timelineManager, month);
     return;
   }
@@ -208,8 +252,15 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
     return balanced;
   };
 
+  const months = timelineManager.months;
+  const index = months.indexOf(month);
+  const previous = index > 0 ? months[index - 1] : undefined;
+  const next = index === -1 ? undefined : months[index + 1];
+  // what the month before handed on starts this month's first run
+  const incoming = previous?.isLoaded ? carried.get(previous) : undefined;
+
   const rows: Row[] = [];
-  let run: DayLine[] = [];
+  let run: DayLine[] = [...(incoming?.lines ?? [])];
   for (const timelineDay of month.timelineDays) {
     const ratios = singleLineRatios(timelineDay, viewportWidth, rowHeight, spacing);
     if (ratios) {
@@ -220,6 +271,20 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
     run = [];
   }
   rows.push(...balanceRun(run));
+
+  // a last row that cannot fill even at MAX_SCALE waits for the next month, when that one is here to take it: loaded,
+  // laid out the same way, and opening with days that go on one line
+  const last = rows.at(-1);
+  const nextFirst = next?.isLoaded ? next.timelineDays[0] : undefined;
+  const handOn =
+    last?.kind === 'pool' &&
+    fillHeight(last.lines) > rowHeight * MAX_SCALE &&
+    !!nextFirst &&
+    next!.timelineDays.every((day) => ratiosOf(day)) &&
+    !!singleLineRatios(nextFirst, viewportWidth, rowHeight, spacing);
+  if (handOn) {
+    rows.pop();
+  }
 
   // 2. place: pooled rows fill the width at one shared height; a row that cannot fill at MAX_SCALE widens its tiles
   //    within MAX_STRETCH to end at the edge, or stays short past it; multi-line days get balanced, full-width lines
@@ -262,7 +327,8 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
       line.day.row = rowIndex;
       line.day.col = col;
       line.day.start = start;
-      line.day.top = top;
+      // a day handed on by an earlier month hangs below that month's box, on this month's row
+      line.day.top = top + (line.day.timelineMonth === month ? 0 : month.top - line.day.timelineMonth.top);
       line.day.updateAssetBoundaries();
       x = end + gap;
     }
@@ -271,6 +337,11 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
 
   month.height = top;
   month.isHeightActual = true;
+  if (handOn && last?.kind === 'pool') {
+    carried.set(month, { lines: last.lines, height: month.height });
+  } else {
+    carried.delete(month);
+  }
 }
 
 function layoutTimelineMonthPacked(timelineManager: TimelineManager, month: TimelineMonth) {

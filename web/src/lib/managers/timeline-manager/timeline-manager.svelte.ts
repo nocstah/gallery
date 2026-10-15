@@ -292,6 +292,11 @@ export class TimelineManager extends VirtualScrollManager {
     if (!month) {
       return 0;
     }
+    // Local Omarchy layer: a month whose photos all share a row with the next month's has no height of its own
+    // (layout-support)
+    if (month.height <= 0) {
+      return 0;
+    }
     return clamp((this.visibleWindow.top - month.top) / month.height, 0, 1);
   }
 
