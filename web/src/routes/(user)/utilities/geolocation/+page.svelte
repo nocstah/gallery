@@ -1,7 +1,6 @@
 <script lang="ts">
   import { isDefined } from '$lib';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import { AssetAction } from '$lib/constants';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
@@ -14,11 +13,12 @@
   import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
   import type { LatLng } from '$lib/types';
   import { setQueryValue } from '$lib/utils/navigation';
+  import { openFileUploadDialog } from '$lib/utils/file-uploader';
   import { beforeChange, placesDone } from '$lib/utils/undoable';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import { AssetVisibility, getAssetInfo, updateAssets } from '@immich/sdk';
-  import { Button, modalManager, Text } from '@immich/ui';
-  import { mdiMapMarkerMultipleOutline, mdiPencilOutline, mdiSelectRemove } from '@mdi/js';
+  import { Button, Icon, modalManager } from '@immich/ui';
+  import { mdiMapMarkerMultipleOutline, mdiMapMarkerOutline, mdiSelectRemove } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
   import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
@@ -42,6 +42,9 @@
   };
 
   const isOwnAsset = (asset: TimelineAsset) => asset.ownerId === authManager.user.id;
+  // Local Omarchy layer: the page's note waits until there are photos to point at
+  const isEmpty = $derived(!!timelineManager?.isInitialized && timelineManager.assetCount === 0);
+  const coordinates = $derived(point ? `${point.lat.toFixed(3)}, ${point.lng.toFixed(3)}` : '');
 
   const handleUpdate = async () => {
     if (!point) {
@@ -146,52 +149,50 @@
 <svelte:document onkeydown={onKeyDown} onkeyup={onKeyUp} />
 
 <UserPageLayout title={data.meta.title} scrollbar={true}>
+  <!-- Local Omarchy layer: the bar holds what the page does, in the bar's rhythm: the location to give, a field in data
+       type that opens the map (Choose on map until one is picked; it inverts for a moment when a click on a photo
+       picks one), Unselect all while photos are selected, and Apply, ink, once there are photos and a place. How it
+       works moved under the bar, so nothing crowds the title -->
   {#snippet buttons()}
-    <div class="flex place-items-center justify-end gap-2">
-      <Text class="mr-4 hidden md:block" size="tiny" color="muted">{$t('geolocation_instruction_location')}</Text>
-      <div class="flex place-content-center place-items-center rounded-2xl border bg-primary/10 px-2 py-1">
-        <Text class="mr-5 ml-2 hidden font-mono md:inline-block" color="muted" size="tiny">
-          {$t('selected_gps_coordinates')}
-        </Text>
-        <Text
-          title="latitude, longitude"
-          class="rounded-3xl px-2 py-1 font-mono text-sm text-primary transition-all duration-100 ease-in-out {locationUpdated
-            ? 'scale-105 bg-primary/90 font-semibold text-light'
-            : ''}"
-        >
-          {#if point}
-            {point.lat.toFixed(3)}, {point.lng.toFixed(3)}
-          {:else}
-            {$t('none')}
-          {/if}
-        </Text>
-      </div>
-
-      <Button size="small" color="secondary" variant="ghost" leadingIcon={mdiPencilOutline} onclick={handlePickPoint}>
-        <Text class="hidden sm:inline-block">{$t('location_picker_choose_on_map')}</Text>
-      </Button>
+    <button
+      type="button"
+      class="ws-geo-point"
+      class:ws-geo-point-set={locationUpdated}
+      onclick={handlePickPoint}
+      title={$t('location_picker_choose_on_map')}
+      aria-label={point ? `${$t('selected_gps_coordinates')}: ${coordinates}` : $t('location_picker_choose_on_map')}
+    >
+      <Icon icon={mdiMapMarkerOutline} size="16" />
+      {#if point}
+        <span class="ws-geo-coordinates">{coordinates}</span>
+      {:else}
+        <span class="ws-action-label">{$t('location_picker_choose_on_map')}</span>
+      {/if}
+    </button>
+    {#if assetMultiSelectManager.selectionActive}
       <Button
         leadingIcon={mdiSelectRemove}
         size="small"
         color="secondary"
         variant="ghost"
-        disabled={!assetMultiSelectManager.selectionActive}
         onclick={() => assetMultiSelectManager.clear()}
+        title={$t('unselect_all')}
       >
-        {$t('unselect_all')}
+        <span class="ws-action-label">{$t('unselect_all')}</span>
       </Button>
-      <Button
-        leadingIcon={mdiMapMarkerMultipleOutline}
-        size="small"
-        color="primary"
-        disabled={assetMultiSelectManager.assets.length === 0}
-        onclick={() => handleUpdate()}
-      >
-        <Text class="hidden sm:inline-block">
-          {$t('apply_count', { values: { count: assetMultiSelectManager.assets.length } })}
-        </Text>
-      </Button>
-    </div>
+    {/if}
+    <Button
+      leadingIcon={mdiMapMarkerMultipleOutline}
+      size="small"
+      color="primary"
+      disabled={assetMultiSelectManager.assets.length === 0 || !point}
+      onclick={() => handleUpdate()}
+      title={$t('apply_count', { values: { count: assetMultiSelectManager.assets.length } })}
+    >
+      <span class="ws-action-label">
+        {$t('apply_count', { values: { count: assetMultiSelectManager.assets.length } })}
+      </span>
+    </Button>
   {/snippet}
 
   {#if isLoading}
@@ -211,22 +212,98 @@
     withStacked
     onThumbnailClick={handleThumbnailClick}
   >
+    {#if !isEmpty}
+      <p class="ws-geo-note">{$t('geolocation_instruction_location')}</p>
+    {/if}
+    <!-- Local Omarchy layer: a photo with a place shows it on hover, as on Photos; one without is marked on the photo,
+         a strong-glass chip with white text (upstream's green and red chips on every tile) -->
     {#snippet customThumbnailLayout(asset: TimelineAsset)}
       {#if !isOwnAsset(asset)}
         <div class="pointer-events-none absolute inset-0 rounded-sm bg-black/40"></div>
       {/if}
-      {#if hasGps(asset)}
-        <div class="absolute inset-e-3 bottom-1 rounded-xl bg-success px-4 py-1 text-xs text-black transition-colors">
-          {asset.city || $t('gps')}
-        </div>
-      {:else}
-        <div class="absolute inset-e-3 bottom-1 rounded-xl bg-danger px-4 py-1 text-xs text-light transition-colors">
-          {$t('gps_missing')}
-        </div>
+      {#if !hasGps(asset)}
+        <span class="ws-geo-chip">{$t('gps_missing')}</span>
       {/if}
     {/snippet}
     {#snippet empty()}
-      <EmptyPlaceholder text={$t('no_assets_message')} onClick={() => {}} class="mx-auto mt-10" />
+      <div class="ws-page-column">
+        <div class="ws-empty">
+          <h2 class="ws-empty-title">{$t('timeline_empty_title')}</h2>
+          <p class="ws-empty-body">{$t('timeline_empty_subtitle')}</p>
+          <div class="ws-empty-actions">
+            <button type="button" class="ws-empty-action" onclick={() => openFileUploadDialog()}>{$t('upload')}</button>
+          </div>
+        </div>
+      </div>
     {/snippet}
   </Timeline>
 </UserPageLayout>
+
+<style>
+  /* the location to give: a field on the ground (a hairline inside the theme's corner) holding the coordinates in data
+     type; picking one from a photo inverts it for a moment */
+  .ws-geo-point {
+    display: inline-flex;
+    align-items: center;
+    border-radius: var(--ws-radius);
+    box-shadow: inset 0 0 0 1px var(--ws-hairline);
+    color: var(--immich-ui-dark);
+    font-size: var(--ws-text-ui);
+    font-weight: 600;
+    white-space: nowrap;
+    transition:
+      background-color 200ms,
+      color 200ms;
+  }
+  .ws-geo-point:hover {
+    background: color-mix(in oklab, var(--immich-ui-dark) 7%, transparent);
+  }
+  .ws-geo-point:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: 2px;
+  }
+  .ws-geo-point-set,
+  .ws-geo-point-set:hover {
+    background: var(--immich-ui-dark);
+    color: var(--immich-ui-light);
+  }
+  .ws-geo-coordinates {
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-variant-numeric: tabular-nums;
+  }
+  /* how the page works, one muted line on the gutter above the photos (it scrolls away with them) */
+  .ws-geo-note {
+    max-width: 80ch;
+    padding: calc(var(--ws-gap) * 0.6) 0 calc(var(--ws-gap) * 1.2);
+    font-size: var(--ws-text-ui);
+    line-height: 1.5;
+    color: var(--immich-ui-muted);
+  }
+  /* "No GPS" on the photo: strong glass, white caption type; tight enough to fit a phone's narrow tiles */
+  .ws-geo-chip {
+    position: absolute;
+    inset-inline-end: 0.3rem;
+    bottom: 0.3rem;
+    z-index: 3;
+    max-width: calc(100% - 0.6rem);
+    overflow: hidden;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--ws-radius);
+    background: var(--ws-glass-strong);
+    -webkit-backdrop-filter: var(--ws-glass-blur);
+    backdrop-filter: var(--ws-glass-blur);
+    color: #fff;
+    font-size: var(--ws-text-micro);
+    font-weight: 600;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ws-geo-point {
+      transition: none;
+    }
+  }
+</style>
