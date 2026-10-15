@@ -2409,6 +2409,7 @@
   "language_search_hint": "Search languages...",
   "language_setting_description": "Select your preferred language",
   "large_files": "Large Files",
+  "large_files_empty_body": "Your largest photos and videos are listed here, biggest first, so you can see what takes up the space.",
   "last": "Last",
   "last_activity": "Last activity",
   "last_months": "{count, plural, one {Last month} other {Last # months}}",

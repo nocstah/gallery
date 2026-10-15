@@ -9,6 +9,7 @@
   import { handlePromiseError } from '$lib/utils';
   import { getNextAsset, getPreviousAsset, navigateToAsset } from '$lib/utils/asset-utils';
   import { navigate } from '$lib/utils/navigation';
+  import { Route } from '$lib/route';
   import type { AssetResponseDto } from '@immich/sdk';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
@@ -69,17 +70,25 @@
 <OnEvents {onAssetsDelete} />
 
 <UserPageLayout title={data.meta.title} scrollbar={true}>
-  <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-    {#if assets && assets.length > 0}
+  <!-- Local Omarchy layer: square photo tiles on the desktop's gap from the page's gutter, biggest first; with none, an
+       empty state that says what would be here -->
+  {#if assets && assets.length > 0}
+    <div class="ws-large-grid">
       {#each assets as asset (asset.id)}
         <LargeAssetData {asset} {onViewAsset} />
       {/each}
-    {:else}
-      <p class="flex place-content-center place-items-center text-center text-lg dark:text-white">
-        {$t('no_assets_to_show')}
-      </p>
-    {/if}
-  </div>
+    </div>
+  {:else}
+    <div class="ws-page-column">
+      <div class="ws-empty">
+        <h2 class="ws-empty-title">{$t('nothing_here_yet')}</h2>
+        <p class="ws-empty-body">{$t('large_files_empty_body')}</p>
+        <div class="ws-empty-actions">
+          <a class="ws-empty-action" href={Route.photos()}>{$t('photos')}</a>
+        </div>
+      </div>
+    </div>
+  {/if}
 </UserPageLayout>
 
 {#if assetViewerManager.isViewing}
@@ -99,3 +108,17 @@
     </Portal>
   {/if}
 {/if}
+
+<style>
+  .ws-large-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: var(--ws-gap);
+    padding-bottom: 4rem;
+  }
+  @media (max-width: 639px) {
+    .ws-large-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

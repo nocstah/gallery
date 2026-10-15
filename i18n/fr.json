@@ -2397,6 +2397,7 @@
   "language_search_hint": "Recherche de langues...",
   "language_setting_description": "Sélectionnez votre langue préférée",
   "large_files": "Fichiers volumineux",
+  "large_files_empty_body": "Vos photos et vidéos les plus volumineuses s'affichent ici, de la plus grande à la plus petite, pour que vous voyiez ce qui occupe l'espace.",
   "last": "Dernier",
   "last_activity": "Dernière activité",
   "last_months": "{count, plural, one {Dernier mois} other {Derniers # mois}}",

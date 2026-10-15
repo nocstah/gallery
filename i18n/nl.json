@@ -2397,6 +2397,7 @@
   "language_search_hint": "Zoek talen...",
   "language_setting_description": "Selecteer je voorkeurstaal",
   "large_files": "Grote bestanden",
+  "large_files_empty_body": "Hier staan je grootste foto's en video's, de grootste eerst, zodat je ziet wat de ruimte inneemt.",
   "last": "Laatste",
   "last_activity": "Laatste activiteit",
   "last_months": "{count, plural, one {Vorige maand} other {Laatste # maanden}}",

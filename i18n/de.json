@@ -2397,6 +2397,7 @@
   "language_search_hint": "Sprachen durchsuchen...",
   "language_setting_description": "Wähle deine bevorzugte Sprache",
   "large_files": "Große Dateien",
+  "large_files_empty_body": "Hier stehen deine größten Fotos und Videos, die größten zuerst, damit du siehst, was den Platz belegt.",
   "last": "Letzte",
   "last_activity": "Letzte Aktivität",
   "last_months": "{count, plural, one {Letzter Monat} other {Letzte # Monate}}",

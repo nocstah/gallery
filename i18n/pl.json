@@ -2413,6 +2413,7 @@
   "language_search_hint": "Szukaj języków...",
   "language_setting_description": "Wybierz swój preferowany język",
   "large_files": "Duże pliki",
+  "large_files_empty_body": "Tutaj znajdziesz swoje największe zdjęcia i filmy, od największego, żeby zobaczyć, co zajmuje miejsce.",
   "last": "Ostatni",
   "last_activity": "Ostatnia aktywność",
   "last_months": "{count, plural, one {Zeszły miesiąc} few {# zeszłe miesiące} other {# zeszłych miesięcy}}",

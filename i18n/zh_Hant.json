@@ -2383,6 +2383,7 @@
   "language_search_hint": "搜尋語言...",
   "language_setting_description": "選取您偏好的語言",
   "large_files": "大型檔案",
+  "large_files_empty_body": "這裡由大到小列出您最大的相片和影片，方便您看清是什麼佔用了空間。",
   "last": "最後一個",
   "last_activity": "最近活動",
   "last_months": "{count, plural, one {上個月} other {最近 # 個月}}",

@@ -2397,6 +2397,7 @@
   "language_search_hint": "搜索语言...",
   "language_setting_description": "选择您的首选语言",
   "large_files": "大文件",
+  "large_files_empty_body": "这里从大到小列出您最大的照片和视频，方便您看清是什么占用了空间。",
   "last": "最后一个",
   "last_activity": "最近活动",
   "last_months": "{count, plural, one {上个月} other {最近#个月}}",
