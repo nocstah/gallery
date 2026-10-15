@@ -3581,6 +3581,7 @@
   "space_album_unlinked_success": "已取消关联相簿",
   "space_albums_also_hide_from_my_timeline": "同时从我自己的时间线中隐藏",
   "space_albums_empty": "尚未关联任何相簿",
+  "space_albums_empty_body": "在此关联的相簿会与此 Space 中的所有人共享。",
   "space_albums_empty_editor_cta": "关联相簿",
   "space_albums_hidden": "已隐藏",
   "space_albums_hidden_from_space_photos": "已从 Space 照片中隐藏",

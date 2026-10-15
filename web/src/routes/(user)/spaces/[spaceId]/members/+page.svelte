@@ -1,11 +1,11 @@
 <script lang="ts">
   import { invalidateAll } from '$app/navigation';
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import RoleBadge from '$lib/components/spaces/role-badge.svelte';
   import SpaceAddMemberModal from '$lib/modals/SpaceAddMemberModal.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { spaceRoleLabelKey } from '$lib/utils/space-utils';
   import { formatTimeAgo } from '$lib/utils/timesince';
   import {
     removeMember,
@@ -14,8 +14,7 @@
     UserAvatarColor,
     type SharedSpaceMemberResponseDto,
   } from '@immich/sdk';
-  import { Button, Field, modalManager, Select, type SelectOption } from '@immich/ui';
-  import { mdiAccountPlusOutline } from '@mdi/js';
+  import { Field, modalManager, Select, type SelectOption } from '@immich/ui';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -70,61 +69,120 @@
   }
 </script>
 
-<div class="mx-auto w-full max-w-3xl p-4">
-  <div class="mb-3 flex items-center justify-between">
-    <h2 class="text-base font-semibold">{$t('members')} ({members.length})</h2>
+<!-- Local Omarchy layer: the members as a section on the page's gutter, headed like Shared's sections (the name, the
+     count in data type, the action at the heading's end, a hairline under it) and listed as rows split by hairlines,
+     where upstream centred a narrow column in a rounded box with coloured role pills -->
+<section class="ws-space-pane ws-space-column" aria-labelledby="space-members-heading">
+  <h2 class="ws-sharing-heading" id="space-members-heading">
+    {$t('members')} <span class="ws-inbox-meta">{members.length}</span>
     {#if isOwner}
-      <Button size="small" leadingIcon={mdiAccountPlusOutline} onclick={handleAddMember} data-testid="members-invite">
+      <button type="button" class="ws-sharing-heading-action" onclick={handleAddMember} data-testid="members-invite">
         {$t('spaces_add_member')}
-      </Button>
+      </button>
     {/if}
-  </div>
+  </h2>
 
-  <div data-testid="member-list" class="rounded-xl border border-gray-200 dark:border-gray-800">
+  <ul data-testid="member-list" class="ws-members">
     {#each members as member (member.userId)}
-      <div class="border-b border-gray-100 px-4 py-3 last:border-b-0 dark:border-gray-800/50">
-        <div class="flex items-center gap-3">
-          <UserAvatar user={toAvatarUser(member)} size="sm" />
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium">{member.name}</p>
-            <p class="truncate text-xs text-gray-500">{member.email}</p>
-          </div>
-          {#if isOwner && member.role !== 'owner'}
-            <Field class="w-28 shrink-0">
-              <Select
-                value={member.role as string as SharedSpaceRole}
-                options={[
-                  { label: $t('role_editor'), value: SharedSpaceRole.Editor },
-                  { label: $t('role_viewer'), value: SharedSpaceRole.Viewer },
-                  { label: $t('remove'), value: 'remove' },
-                ] as SelectOption<SharedSpaceRole | 'remove'>[]}
-                onChange={(value) => void handleRoleChange(member, value)}
-              />
-            </Field>
-          {:else}
-            <RoleBadge role={member.role} spaceColor={space.color} size="sm" />
+      <li class="ws-member">
+        <UserAvatar user={toAvatarUser(member)} size="md" />
+        <div class="ws-member-text">
+          <span class="ws-member-name">{member.name}</span>
+          <span class="ws-inbox-meta">{member.email}</span>
+          {#if (member.contributionCount ?? 0) > 0}
+            <span class="ws-member-contribution">
+              {#if member.recentAssetId}
+                <img
+                  alt=""
+                  src={getAssetMediaUrl({ id: member.recentAssetId })}
+                  class="ws-member-recent"
+                  loading="lazy"
+                  draggable="false"
+                />
+              {/if}
+              <span class="ws-inbox-meta">
+                {$t('space_album_photo_count', { values: { count: member.contributionCount ?? 0 } })}
+                {#if member.lastActiveAt}
+                  · {formatTimeAgo(member.lastActiveAt)}
+                {/if}
+              </span>
+            </span>
           {/if}
         </div>
-        {#if (member.contributionCount ?? 0) > 0}
-          <div class="mt-2 flex items-center gap-2.5">
-            {#if member.recentAssetId}
-              <img
-                alt=""
-                src={getAssetMediaUrl({ id: member.recentAssetId })}
-                class="size-12 rounded-lg object-cover"
-                loading="lazy"
-                draggable="false"
-              />
-            {/if}
-            <div class="text-xs text-gray-500">
-              <span>{member.contributionCount} {$t('photos')}</span>
-              {#if member.lastActiveAt}
-                <span class="mx-0.5">·</span><span>{formatTimeAgo(member.lastActiveAt)}</span>
-              {/if}
-            </div>
-          </div>
+        {#if isOwner && member.role !== 'owner'}
+          <Field class="w-28 shrink-0">
+            <Select
+              value={member.role as string as SharedSpaceRole}
+              options={[
+                { label: $t('role_editor'), value: SharedSpaceRole.Editor },
+                { label: $t('role_viewer'), value: SharedSpaceRole.Viewer },
+                { label: $t('remove'), value: 'remove' },
+              ] as SelectOption<SharedSpaceRole | 'remove'>[]}
+              onChange={(value) => void handleRoleChange(member, value)}
+            />
+          </Field>
+        {:else}
+          <!-- the role is a word at the row's end, not a pill in the Space's colour -->
+          <span class="ws-member-role" data-testid="role-badge-{member.role}">
+            {$t(spaceRoleLabelKey(member.role))}
+          </span>
         {/if}
-      </div>
+      </li>
     {/each}
-  </div>
-</div>
+  </ul>
+</section>
+
+<style>
+  .ws-members {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  /* a member is a row like a partner on Shared: avatar, name over address, a hairline between rows */
+  .ws-member {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.65rem 0.5rem;
+    color: var(--immich-ui-dark);
+  }
+  .ws-member + .ws-member {
+    border-top: 1px solid var(--ws-hairline);
+  }
+  .ws-member-text {
+    display: grid;
+    flex: 1;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+  .ws-member-text > :global(*) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-member-name {
+    font-size: var(--ws-text-ui);
+    font-weight: 600;
+  }
+  .ws-member-contribution {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.35rem;
+  }
+  .ws-member-recent {
+    flex: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    object-fit: cover;
+    border-radius: var(--ws-radius);
+    outline: 1px solid var(--ws-hairline);
+    outline-offset: -1px;
+  }
+  .ws-member-role {
+    flex: none;
+    color: var(--immich-ui-muted);
+    font-size: var(--ws-text-ui);
+    font-weight: 500;
+  }
+</style>

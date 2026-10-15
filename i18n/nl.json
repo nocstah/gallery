@@ -3581,6 +3581,7 @@
   "space_album_unlinked_success": "Album ontkoppeld",
   "space_albums_also_hide_from_my_timeline": "Ook verbergen uit mijn eigen tijdlijn",
   "space_albums_empty": "Nog geen albums gekoppeld",
+  "space_albums_empty_body": "Albums die je hier koppelt, zijn te zien voor iedereen in deze Space.",
   "space_albums_empty_editor_cta": "Koppel een album",
   "space_albums_hidden": "Verborgen",
   "space_albums_hidden_from_space_photos": "Verborgen uit de Space-foto's",

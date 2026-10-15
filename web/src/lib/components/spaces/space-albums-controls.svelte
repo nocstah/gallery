@@ -126,7 +126,9 @@
 
 <svelte:window onclick={handleClickOutside} />
 
-<div class="flex items-center justify-between gap-2 px-4 py-2" data-testid="space-albums-view-toggle">
+<!-- Local Omarchy layer: the toolbar starts on the page's gutter (no inset of its own), and the search is the list search
+     of Albums and People (the ground inside a hairline, the accent only on focus), not a grey slab -->
+<div class="flex items-center justify-between gap-2 py-2" data-testid="space-albums-view-toggle">
   <!-- Search Albums -->
   <input
     type="search"
@@ -134,7 +136,7 @@
     bind:value={searchQuery}
     aria-label={$t('search_albums')}
     placeholder={$t('search_albums')}
-    class="h-8 w-48 rounded-lg bg-gray-100 px-3 text-sm text-gray-700 placeholder-gray-400 outline-none focus:ring-2 focus:ring-immich-primary sm:w-64 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+    class="ws-space-albums-search h-8 w-48 px-3 text-sm sm:w-64"
   />
   <div class="flex items-center gap-1">
     <!-- Sort Albums -->
@@ -286,3 +288,20 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .ws-space-albums-search {
+    border-radius: var(--ws-radius);
+    background: transparent;
+    color: var(--immich-ui-dark);
+    box-shadow: inset 0 0 0 1px var(--ws-hairline);
+    outline: none;
+  }
+  .ws-space-albums-search::placeholder {
+    color: var(--immich-ui-muted);
+    opacity: 1;
+  }
+  .ws-space-albums-search:focus-visible {
+    box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+  }
+</style>

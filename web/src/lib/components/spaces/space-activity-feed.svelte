@@ -5,16 +5,18 @@
   import { UserAvatarColor, type SharedSpaceActivityResponseDto } from '@immich/sdk';
   import { Button } from '@immich/ui';
   import { mdiChevronDown } from '@mdi/js';
+  import type { Snippet } from 'svelte';
   import { t, type MessageFormatter } from 'svelte-i18n';
 
   interface Props {
     activities: SharedSpaceActivityResponseDto[];
-    spaceColor: string;
     onLoadMore: () => void;
     hasMore: boolean;
+    /** Local Omarchy layer: the next step the empty feed offers (the page knows what this member may do) */
+    emptyActions?: Snippet;
   }
 
-  let { activities, spaceColor, onLoadMore, hasMore }: Props = $props();
+  let { activities, onLoadMore, hasMore, emptyActions }: Props = $props();
 
   const HIGH_IMPACT_TYPES = new Set(['asset_add', 'asset_remove']);
   const MEDIUM_TYPES = new Set([
@@ -152,123 +154,77 @@
 
     return groups;
   });
-
-  const spaceColorMap: Record<string, string> = {
-    primary: 'bg-primary',
-    pink: 'bg-pink-400',
-    red: 'bg-red-500',
-    yellow: 'bg-yellow-500',
-    blue: 'bg-blue-500',
-    green: 'bg-green-600',
-    purple: 'bg-purple-600',
-    orange: 'bg-orange-600',
-    gray: 'bg-gray-600',
-    amber: 'bg-amber-600',
-  };
-
-  let dotColorClass = $derived(spaceColorMap[spaceColor] ?? 'bg-gray-400');
-  let borderColorMap: Record<string, string> = {
-    primary: 'border-primary',
-    pink: 'border-pink-400',
-    red: 'border-red-500',
-    yellow: 'border-yellow-500',
-    blue: 'border-blue-500',
-    green: 'border-green-600',
-    purple: 'border-purple-600',
-    orange: 'border-orange-600',
-    gray: 'border-gray-600',
-    amber: 'border-amber-600',
-  };
-  let borderClass = $derived(borderColorMap[spaceColor] ?? 'border-gray-400');
 </script>
 
+<!-- Local Omarchy layer: the feed in the Tiled Workspace's grammar. An empty feed is the Empty State (a sentence of why,
+     the next step the page passes in); a day is a muted label over a hairline; every event is a row split from the next
+     by a hairline, its time in data type at the row's end: photos added or removed with the avatar and the first photos
+     as small square tiles, member and face events with the avatar, the rest as a quiet line. No cards on a second tone,
+     no borders or dots in the Space's colour. -->
 {#if activities.length === 0}
-  <div class="flex flex-col items-center justify-center px-6 py-12 text-center" data-testid="activity-empty-state">
-    <p class="text-sm text-gray-500 dark:text-gray-400">{$t('spaces_activity_none')}</p>
-    <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-      {$t('spaces_activity_none_description')}
-    </p>
+  <div class="ws-empty ws-activity-empty" data-testid="activity-empty-state">
+    <h2 class="ws-empty-title">{$t('spaces_activity_none')}</h2>
+    <p class="ws-empty-body">{$t('spaces_activity_none_description')}</p>
+    {#if emptyActions}
+      <div class="ws-empty-actions">{@render emptyActions()}</div>
+    {/if}
   </div>
 {:else}
-  <div class="flex flex-col">
+  <div class="ws-activity">
     {#each groupedByDay as group, groupIndex (group.label)}
-      <!-- Day header -->
-      <div
-        class="sticky top-0 z-10 bg-white/90 px-4 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase backdrop-blur-sm dark:bg-immich-dark-bg/90 dark:text-gray-400"
-        data-testid="day-header-{groupIndex}"
-      >
-        {group.label}
-      </div>
+      <h3 class="ws-activity-day" data-testid="day-header-{groupIndex}">{group.label}</h3>
 
-      {#each group.activities as activity (activity.id)}
-        {#if HIGH_IMPACT_TYPES.has(activity.type)}
-          <!-- High-impact: full card with avatar + thumbnail strip -->
-          <div
-            class="mx-3 mb-2 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50"
-            data-testid="activity-item-{activity.id}"
-          >
-            <div class="flex items-start gap-3">
-              <div class="shrink-0">
-                <UserAvatar user={toAvatarUser(activity)} size="sm" />
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="text-sm">{getDescription(activity, $t)}</p>
-                <p class="mt-0.5 text-xs text-gray-400">{formatTimeAgo(activity.createdAt)}</p>
-              </div>
-            </div>
-            {#if activity.type === 'asset_add'}
-              {@const assetIds = ((activity.data as Record<string, unknown>).assetIds as string[]) ?? []}
-              {#if assetIds.length > 0}
-                <div class="mt-2 flex gap-1.5">
-                  {#each assetIds.slice(0, 4) as assetId (assetId)}
-                    <img
-                      alt=""
-                      src={getAssetMediaUrl({ id: assetId })}
-                      class="size-8 rounded-md object-cover"
-                      loading="lazy"
-                      draggable="false"
-                    />
-                  {/each}
-                  {#if assetIds.length > 4}
-                    <div
-                      class="flex size-8 items-center justify-center rounded-md bg-gray-200 text-xs text-gray-500 dark:bg-gray-700 dark:text-gray-400"
-                    >
-                      +{assetIds.length - 4}
+      <ul class="ws-activity-rows">
+        {#each group.activities as activity (activity.id)}
+          {#if HIGH_IMPACT_TYPES.has(activity.type)}
+            <li class="ws-activity-row" data-tier="high" data-testid="activity-item-{activity.id}">
+              <UserAvatar user={toAvatarUser(activity)} size="sm" />
+              <div class="ws-activity-text">
+                <p>{getDescription(activity, $t)}</p>
+                {#if activity.type === 'asset_add'}
+                  {@const assetIds = ((activity.data as Record<string, unknown>).assetIds as string[]) ?? []}
+                  {#if assetIds.length > 0}
+                    <div class="ws-activity-photos">
+                      {#each assetIds.slice(0, 4) as assetId (assetId)}
+                        <img
+                          alt=""
+                          src={getAssetMediaUrl({ id: assetId })}
+                          class="ws-activity-photo"
+                          loading="lazy"
+                          draggable="false"
+                        />
+                      {/each}
+                      {#if assetIds.length > 4}
+                        <span class="ws-activity-more">+{assetIds.length - 4}</span>
+                      {/if}
                     </div>
                   {/if}
-                </div>
-              {/if}
-            {/if}
-          </div>
-        {:else if MEDIUM_TYPES.has(activity.type)}
-          <!-- Medium: row with avatar + left border accent -->
-          <div
-            class="mx-3 mb-2 flex items-center gap-3 border-l-2 {borderClass} py-2 pr-2 pl-3"
-            data-testid="activity-item-{activity.id}"
-          >
-            <div class="shrink-0">
+                {/if}
+              </div>
+              <span class="ws-activity-time">{formatTimeAgo(activity.createdAt)}</span>
+            </li>
+          {:else if MEDIUM_TYPES.has(activity.type)}
+            <li class="ws-activity-row" data-tier="medium" data-testid="activity-item-{activity.id}">
               <UserAvatar user={toAvatarUser(activity)} size="sm" />
-            </div>
-            <div class="min-w-0 flex-1">
-              <p class="text-sm">{getDescription(activity, $t)}</p>
-              <p class="mt-0.5 text-xs text-gray-400">{formatTimeAgo(activity.createdAt)}</p>
-            </div>
-          </div>
-        {:else}
-          <!-- Low: compact single line with small colored dot -->
-          <div class="mx-3 mb-1 flex items-center gap-2 px-2 py-1.5" data-testid="activity-item-{activity.id}">
-            <div class="size-2 shrink-0 rounded-full {dotColorClass}"></div>
-            <p class="flex-1 truncate text-xs text-gray-500 dark:text-gray-400">
-              {getDescription(activity, $t)}
-            </p>
-            <span class="shrink-0 text-xs text-gray-400">{formatTimeAgo(activity.createdAt)}</span>
-          </div>
-        {/if}
-      {/each}
+              <div class="ws-activity-text">
+                <p>{getDescription(activity, $t)}</p>
+              </div>
+              <span class="ws-activity-time">{formatTimeAgo(activity.createdAt)}</span>
+            </li>
+          {:else}
+            <li class="ws-activity-row ws-activity-quiet" data-tier="low" data-testid="activity-item-{activity.id}">
+              <div class="ws-activity-text">
+                <p>{getDescription(activity, $t)}</p>
+              </div>
+              <span class="ws-activity-time">{formatTimeAgo(activity.createdAt)}</span>
+            </li>
+          {/if}
+        {/each}
+      </ul>
     {/each}
 
     {#if hasMore}
-      <div class="flex justify-center px-4 py-3" data-testid="load-more-button">
+      <div class="ws-activity-more-row" data-testid="load-more-button">
         <Button size="small" variant="ghost" color="secondary" leadingIcon={mdiChevronDown} onclick={onLoadMore}>
           {$t('spaces_load_more')}
         </Button>
@@ -276,3 +232,104 @@
     {/if}
   </div>
 {/if}
+
+<style>
+  /* on the page's gutter, under the heading, not centred in the page */
+  .ws-activity-empty {
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+  /* a day: a muted label in the meta role over a hairline; it stays at the top while its rows scroll by, reaching up over
+     the content panel's 0.5rem gutter so no row shows through above it */
+  .ws-activity-day {
+    position: sticky;
+    top: -0.5rem;
+    z-index: 1;
+    margin: 0;
+    padding: 1.25rem 0.5rem 0.4rem;
+    border-bottom: 1px solid var(--ws-hairline);
+    background: var(--immich-ui-light);
+    color: var(--immich-ui-muted);
+    font-size: var(--ws-text-meta);
+    font-weight: 600;
+  }
+  .ws-activity-day:first-child {
+    padding-top: 0.5rem;
+  }
+  .ws-activity-rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ws-activity-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.6rem 0.5rem;
+    color: var(--immich-ui-dark);
+    font-size: var(--ws-text-ui);
+  }
+  .ws-activity-row + .ws-activity-row {
+    border-top: 1px solid var(--ws-hairline);
+  }
+  .ws-activity-row :global(figure) {
+    flex: none;
+  }
+  .ws-activity-text {
+    flex: 1;
+    min-width: 0;
+    padding-top: 0.2rem;
+  }
+  /* what no one needs to act on (an album linked, a Space renamed) reads quieter */
+  .ws-activity-quiet {
+    color: var(--immich-ui-muted);
+  }
+  .ws-activity-quiet .ws-activity-text {
+    padding-top: 0;
+  }
+  .ws-activity-quiet .ws-activity-text p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-activity-time {
+    flex: none;
+    padding-top: 0.25rem;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--immich-ui-muted);
+  }
+  .ws-activity-quiet .ws-activity-time {
+    padding-top: 0.1rem;
+  }
+  .ws-activity-photos {
+    display: flex;
+    gap: calc(var(--ws-gap) * 0.5);
+    margin-top: 0.5rem;
+  }
+  .ws-activity-photo,
+  .ws-activity-more {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--ws-radius);
+  }
+  .ws-activity-photo {
+    object-fit: cover;
+    outline: 1px solid var(--ws-hairline);
+    outline-offset: -1px;
+  }
+  .ws-activity-more {
+    display: grid;
+    place-items: center;
+    box-shadow: inset 0 0 0 1px var(--ws-hairline);
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    color: var(--immich-ui-muted);
+  }
+  .ws-activity-more-row {
+    padding: 0.75rem 0 0;
+  }
+</style>

@@ -3582,6 +3582,7 @@
   "space_album_unlinked_success": "Album délié",
   "space_albums_also_hide_from_my_timeline": "Le masquer aussi de ma propre Chronologie",
   "space_albums_empty": "Aucun album lié pour le moment",
+  "space_albums_empty_body": "Les albums liés ici sont partagés avec tous les membres de cet espace.",
   "space_albums_empty_editor_cta": "Lier un album",
   "space_albums_hidden": "Masqué",
   "space_albums_hidden_from_space_photos": "Masqué des photos de l'espace",

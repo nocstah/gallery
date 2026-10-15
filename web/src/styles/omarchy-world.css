@@ -1963,3 +1963,28 @@ body.ws-dragging * {
   align-items: baseline;
   gap: 0.2rem 0.6rem;
 }
+
+/* ---- a Space's own pages (routes/(user)/spaces/[spaceId]: Members, People, Activity, Albums) ----
+   one column on the page's gutter, as Shared and Settings, where upstream centred a narrow box or inset its controls
+   another rem: sections headed like Shared's (.ws-sharing-heading, the count in data type, the action at its end), rows
+   split by hairlines, and the Empty State on the gutter too, not centred in the page */
+.ws-space-pane {
+  /* one gutter: the column starts where the bar's title and the photo grids start */
+  padding: calc(var(--ws-gap) * 0.6) 0 4rem;
+  color: var(--immich-ui-dark);
+}
+/* a page that is a column of rows (Members, Activity) keeps to Settings' measure, its heading's hairline included */
+.ws-space-column {
+  max-width: 60rem;
+}
+.ws-space-pane .ws-empty {
+  margin-inline: 0;
+  padding-inline: 0;
+}
+/* a search or a filter that finds nothing says so in one muted line */
+.ws-space-none {
+  max-width: 60ch;
+  padding: 0.75rem 0 0;
+  color: var(--immich-ui-muted);
+  font-size: var(--ws-text-body);
+}

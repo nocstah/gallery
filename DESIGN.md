@@ -277,6 +277,8 @@ Tags and Folders keep upstream's sidebar of their own, the Explorer (836 tags un
 ### Empty State
 A sentence of why and one next step: headline title, body copy in muted ink (max 34rem column, top margin `clamp(3rem, 12vh, 8rem)`), then one primary action and at most one text link.
 
+On a Space's own pages it stands on the gutter, left-aligned under the bar's title (`.ws-space-pane .ws-empty`), as the one gutter asks; the other pages' empty states are still centred (2026-10-15).
+
 ### Inputs / Fields (person name)
 Transparent with no border at rest, ink 600, the window radius. The placeholder appears on the card under the pointer or on focus (140ms). Focus: ink tint 6% and `--ws-border` accent outline.
 
@@ -313,6 +315,12 @@ Albums sit in folders, as they did on the Mac. Gallery keeps folders only inside
 
 ### Space page
 No cover over the page (upstream's tall hero is gone): the Space's name sits in the one bar like every page's title, and its sections sit beside it as one segmented control (`.ws-seg`, the AI inbox's tabs: transparent shell with a hairline, the one on screen inverted, a count after its label in data type), scrolling sideways before it crowds the name or the buttons. Change cover and Edit Space are in the ⋮ menu. A Space of one shows only what means something to one person (Albums, Photos, Map; People with face recognition on, Libraries once one is linked): Members and Activity wait until someone joins, and Invite People sits in the ⋮ menu. A Space of one with albums opens on its albums, Albums leading the control, its photos at `/photos`. A Space's Photos leaves archived photos out, as Photos does; its albums still hold them.
+
+**A Space's own pages** (Members, People, Activity, Albums; `.ws-space-pane`, 2026-10-15) start on the gutter like Shared, where upstream centred a narrow column or inset its controls another rem.
+- **Members:** a section headed like Shared's (the name, the count in data type, Add Member at the heading's end, a hairline under it), 60rem at most (`.ws-space-column`) like Settings. A member is a row: the avatar (a circle, as faces are), the name over the address in data type, what they added (their latest photo as a small square tile, the count and when in data type), and at the row's end the role as a muted word, or for the owner looking at someone else the role menu. Upstream's rounded box and role pills filled in the Space's colour are gone.
+- **Activity:** headed Recent activity, 60rem at most. A day is a muted meta label over a hairline that stays at the top while its rows pass; every event is a row with a hairline above the next and its time in data type at the end: photos added or removed with the avatar and the first four photos as small square tiles (+N in data type), member and face events with the avatar, everything else as one quiet muted line. No cards on a second tone, no borders or dots in the Space's colour.
+- **People** keeps its controls and faces on the gutter, its counts in data type; a search or a filter that finds no one says so in one muted line (`.ws-space-none`). **Albums**' toolbar starts on the gutter, its search the list search (the ground inside a hairline).
+- **Empty:** the Empty State on the gutter. People: "No people found", why, Add photos (editors). Activity: "No activity yet", why, Add photos (editors) and Invite People (the owner, to Members). Albums: "No albums linked yet", what linking does, then Link an album as the action (a family Space is mostly filled from albums that exist) and Create album and New folder as text links: two links, one past the pattern, since an empty Space has no other way to make a folder. Add photos opens the Space's Photos in its add mode, as the bar's button does.
 
 ### Filter Rail
 Same surface as the ground with a hairline edge; collapsed by default. Its search and reopen buttons are transparent with a hairline border and no shadow.

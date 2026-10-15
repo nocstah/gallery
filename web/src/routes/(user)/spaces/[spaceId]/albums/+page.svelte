@@ -35,8 +35,7 @@
     type SharedSpaceMemberResponseDto,
     type SharedSpaceResponseDto,
   } from '@immich/sdk';
-  import { Button, Icon, modalManager } from '@immich/ui';
-  import { mdiFolderPlusOutline, mdiImageMultipleOutline, mdiLinkVariantPlus, mdiPlus } from '@mdi/js';
+  import { modalManager } from '@immich/ui';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -468,46 +467,43 @@
   }
 </script>
 
-<div class="flex h-full flex-col">
+<!-- Local Omarchy layer: on the page's gutter (upstream inset the toolbar and the grid another 1rem); an empty Space says
+     what linking does and offers it first, since a family Space is mostly filled from albums that already exist, with
+     Create album and New folder as the quieter ways in -->
+<div class="ws-space-pane flex h-full flex-col">
   {#if albums.length === 0 && folders.length === 0}
-    <div class="flex min-h-[calc(66vh-11rem)] w-full place-content-center items-center dark:text-white">
-      <div class="flex flex-col content-center items-center gap-4 text-center">
-        <Icon icon={mdiImageMultipleOutline} size="3.5em" />
-        <p class="text-lg text-gray-500 dark:text-gray-400" data-testid="empty-state-message">
-          {$t('space_albums_empty')}
-        </p>
-        {#if isEditor}
-          <!-- Same pair as the populated view's toolbar (space-albums-controls.svelte): creating a
-               fresh album is the primary action, linking an existing one the secondary. -->
-          <div class="flex flex-wrap items-center justify-center gap-2">
-            <Button
-              leadingIcon={mdiPlus}
-              onclick={() => void handleCreateAlbum()}
-              data-testid="empty-create-album-button"
-            >
-              {$t('create_album')}
-            </Button>
-            <Button
-              variant="ghost"
-              leadingIcon={mdiLinkVariantPlus}
-              onclick={() => void openLinkAlbumModal()}
-              data-testid="empty-link-album-button"
-            >
-              {$t('space_albums_empty_editor_cta')}
-            </Button>
-            <!-- Otherwise a brand-new space has no way to make a folder until an album exists to
-                 put in one. -->
-            <Button
-              variant="ghost"
-              leadingIcon={mdiFolderPlusOutline}
-              onclick={() => void handleCreateFolder()}
-              data-testid="empty-create-folder-button"
-            >
-              {$t('space_album_folder_new')}
-            </Button>
-          </div>
-        {/if}
-      </div>
+    <div class="ws-empty">
+      <h2 class="ws-empty-title" data-testid="empty-state-message">{$t('space_albums_empty')}</h2>
+      <p class="ws-empty-body">{$t('space_albums_empty_body')}</p>
+      {#if isEditor}
+        <div class="ws-empty-actions">
+          <button
+            type="button"
+            class="ws-empty-action"
+            onclick={() => void openLinkAlbumModal()}
+            data-testid="empty-link-album-button"
+          >
+            {$t('space_albums_empty_editor_cta')}
+          </button>
+          <button
+            type="button"
+            class="ws-empty-link"
+            onclick={() => void handleCreateAlbum()}
+            data-testid="empty-create-album-button"
+          >
+            {$t('create_album')}
+          </button>
+          <!-- Otherwise a brand-new space has no way to make a folder until an album exists to put in one. -->
+          <button
+            type="button"
+            class="ws-empty-link"
+            onclick={() => void handleCreateFolder()}
+            data-testid="empty-create-folder-button"
+          >
+            {$t('space_album_folder_new')}
+          </button>
+        </div>
+      {/if}
     </div>
   {:else}
     {#if folders.length > 0 && !isSearching}
@@ -530,7 +526,7 @@
       onLink={openLinkAlbumModal}
       onCreateFolder={handleCreateFolder}
     />
-    <div class="px-4 pt-4">
+    <div class="pt-4">
       <SpaceAlbumsList
         spaceId={space.id}
         {albums}
@@ -554,3 +550,10 @@
     </div>
   {/if}
 </div>
+
+<style>
+  /* Local Omarchy layer: the folders' crumbs start on the gutter with the toolbar under them */
+  .ws-space-pane :global([data-testid='space-album-folder-breadcrumb']) {
+    padding-inline: 0;
+  }
+</style>

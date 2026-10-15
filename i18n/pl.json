@@ -3599,6 +3599,7 @@
   "space_album_unlinked_success": "Album odłączony",
   "space_albums_also_hide_from_my_timeline": "Ukryj to również z mojej własnej osi czasu",
   "space_albums_empty": "Brak połączonych albumów",
+  "space_albums_empty_body": "Albumy połączone tutaj są udostępniane wszystkim w tym Space.",
   "space_albums_empty_editor_cta": "Połącz album",
   "space_albums_hidden": "Ukryte",
   "space_albums_hidden_from_space_photos": "Ukryte ze zdjęć Space",

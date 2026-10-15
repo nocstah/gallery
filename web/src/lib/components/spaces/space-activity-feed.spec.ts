@@ -138,18 +138,16 @@ describe('SpaceActivityFeed', () => {
   });
 
   describe('face-attribution activity impact tier', () => {
-    // person_face_assign/detach must sit in MEDIUM_TYPES: a row with an avatar and a left
-    // border accent (`border-l-2`, unique to the medium branch), never the high-impact card
-    // wrapper (`rounded-lg`, unique to asset_add/asset_remove) and never the low-tier dot row
-    // (no avatar `<figure>` at all).
+    // person_face_assign/detach must sit in MEDIUM_TYPES: a row with an avatar (`data-tier="medium"`),
+    // never the high-impact row with its photos (asset_add/asset_remove) and never the quiet low-tier
+    // row (no avatar `<figure>` at all).
     it('renders "person_face_assign" in the medium-impact tier', () => {
       const activities = [
         makeActivity({ id: 'act-assign-tier', type: 'person_face_assign', data: { count: 1 }, userName: 'Bob' }),
       ];
       renderFeed({ activities, spaceColor: 'primary', onLoadMore: vi.fn(), hasMore: false });
       const item = screen.getByTestId('activity-item-act-assign-tier');
-      expect(item.className).toContain('border-l-2');
-      expect(item.className).not.toContain('rounded-lg');
+      expect(item).toHaveAttribute('data-tier', 'medium');
       expect(item.querySelector('figure')).not.toBeNull();
     });
 
@@ -159,8 +157,7 @@ describe('SpaceActivityFeed', () => {
       ];
       renderFeed({ activities, spaceColor: 'primary', onLoadMore: vi.fn(), hasMore: false });
       const item = screen.getByTestId('activity-item-act-detach-tier');
-      expect(item.className).toContain('border-l-2');
-      expect(item.className).not.toContain('rounded-lg');
+      expect(item).toHaveAttribute('data-tier', 'medium');
       expect(item.querySelector('figure')).not.toBeNull();
     });
   });

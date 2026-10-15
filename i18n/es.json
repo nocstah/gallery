@@ -3582,6 +3582,7 @@
   "space_album_unlinked_success": "Álbum desvinculado",
   "space_albums_also_hide_from_my_timeline": "Ocultarlo también de mi propia línea de tiempo",
   "space_albums_empty": "Aún no hay álbumes vinculados",
+  "space_albums_empty_body": "Los álbumes que vincules aquí se comparten con todos en este Space.",
   "space_albums_empty_editor_cta": "Vincular un álbum",
   "space_albums_hidden": "Oculto",
   "space_albums_hidden_from_space_photos": "Oculto de las fotos del Space",

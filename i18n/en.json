@@ -3601,6 +3601,7 @@
   "space_album_unlinked_success": "Album unlinked",
   "space_albums_also_hide_from_my_timeline": "Also hide it from my own timeline",
   "space_albums_empty": "No albums linked yet",
+  "space_albums_empty_body": "Albums linked here are shared with everyone in this Space.",
   "space_albums_empty_editor_cta": "Link an album",
   "space_albums_hidden": "Hidden",
   "space_albums_hidden_from_space_photos": "Hidden from the space's photos",

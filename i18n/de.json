@@ -3582,6 +3582,7 @@
   "space_album_unlinked_success": "Album-Verknüpfung aufgehoben",
   "space_albums_also_hide_from_my_timeline": "Auch aus meiner eigenen Zeitleiste ausblenden",
   "space_albums_empty": "Noch keine Alben verknüpft",
+  "space_albums_empty_body": "Alben, die hier verknüpft sind, sehen alle in diesem Space.",
   "space_albums_empty_editor_cta": "Album verknüpfen",
   "space_albums_hidden": "Ausgeblendet",
   "space_albums_hidden_from_space_photos": "Aus den Space-Fotos ausgeblendet",

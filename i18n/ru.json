@@ -3584,6 +3584,7 @@
   "space_album_unlinked_success": "Альбом отвязан",
   "space_albums_also_hide_from_my_timeline": "Также скрыть с моей собственной временной шкалы",
   "space_albums_empty": "Пока не привязано ни одного альбома",
+  "space_albums_empty_body": "Альбомы, привязанные здесь, видят все участники этого Space.",
   "space_albums_empty_editor_cta": "Привязать альбом",
   "space_albums_hidden": "Скрыт",
   "space_albums_hidden_from_space_photos": "Скрыт из фотографий Space",

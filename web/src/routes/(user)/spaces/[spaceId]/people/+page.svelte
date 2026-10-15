@@ -13,6 +13,7 @@
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
+  import { spaceUiManager } from '$lib/managers/space-ui-manager.svelte';
   import PersonEditBirthDateModal from '$lib/modals/PersonEditBirthDateModal.svelte';
   import { locale, PeopleFilterBy, PeopleSortBy, peopleViewSettings } from '$lib/stores/preferences.store';
   import { handlePromiseError } from '$lib/utils';
@@ -35,7 +36,7 @@
     type SharedSpacePersonResponseDto,
     type SharedSpaceResponseDto,
   } from '@immich/sdk';
-  import { Button, Icon, modalManager, toastManager } from '@immich/ui';
+  import { Button, modalManager, toastManager } from '@immich/ui';
   import {
     mdiAccountGroupOutline,
     mdiAccountMultipleCheckOutline,
@@ -526,12 +527,14 @@
   }
 </script>
 
-<div class="flex h-full flex-col">
+<!-- Local Omarchy layer: on the page's gutter (upstream inset the controls and the faces another 1rem), its counts in
+     data type; with no one in the Space yet the Empty State says why and offers Add photos -->
+<div class="ws-space-pane flex h-full flex-col">
   {#if headerDescription || hasSearchablePeople || canManageVisibility}
-    <div class="flex items-center justify-between gap-2 px-4 py-2">
+    <div class="flex items-center justify-between gap-2 pb-2">
       {#if headerDescription}
         <div class="flex min-w-0 items-center gap-1">
-          <p class="truncate text-sm text-gray-500" data-testid="space-people-heading-description">
+          <p class="ws-inbox-meta truncate" data-testid="space-people-heading-description">
             {headerDescription}
           </p>
           {#if showFaceStatisticsInfo}
@@ -584,22 +587,25 @@
     </div>
   {/if}
 
-  {#if visiblePeople.length === 0}
-    <div class="flex min-h-[calc(66vh-11rem)] w-full place-content-center items-center dark:text-white">
-      <div class="flex flex-col content-center items-center text-center">
-        <Icon icon={mdiAccountGroupOutline} size="3.5em" />
-        <p class="mt-5 text-lg text-gray-500 dark:text-gray-400">
-          {$t(searchName ? 'search_no_people_named' : 'spaces_no_people', { values: { name: searchName } })}
-        </p>
-        {#if !searchName}
-          <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">
-            {$t('spaces_no_people_description')}
-          </p>
-        {/if}
-      </div>
+  {#if visiblePeople.length === 0 && (searchName || peopleFilterBy !== PeopleFilterBy.All)}
+    <!-- a search or a filter that finds no one says so in a line; the Space itself is not empty -->
+    <p class="ws-space-none">
+      {$t(searchName ? 'search_no_people_named' : 'spaces_no_people', { values: { name: searchName } })}
+    </p>
+  {:else if visiblePeople.length === 0}
+    <div class="ws-empty" data-testid="space-people-empty">
+      <h2 class="ws-empty-title">{$t('spaces_no_people')}</h2>
+      <p class="ws-empty-body">{$t('spaces_no_people_description')}</p>
+      {#if isEditor}
+        <div class="ws-empty-actions">
+          <a class="ws-empty-action" href="/spaces/{space.id}/photos" onclick={() => spaceUiManager.requestAddPhotos()}>
+            {$t('add_photos')}
+          </a>
+        </div>
+      {/if}
     </div>
   {:else}
-    <div class="px-4 pt-4">
+    <div class="pt-2">
       <PeopleManagementGrid
         people={visiblePeople}
         {toManagedPerson}
