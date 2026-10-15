@@ -358,10 +358,13 @@ export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
         const target = dropTarget?.dataset.asset;
         if (target) {
           settleGhost(dropTarget);
-          // the drop target leads, so it becomes the cover; stacks it or the carried photos head merge in
+          // the drop target leads, so it becomes the cover; stacks it or the carried photos head merge in. The ids
+          // are taken now: finish() below empties dragIds before the service has loaded, and the drop then sent the
+          // target alone ("Validation failed: assetIds: Too small: expected array to have >=2 items")
+          const ids = [target, ...dragIds];
           // loaded on first use: the stack service pulls in the uploader and the album service, which the
           // timeline has no other need of (and its unit test mocks around)
-          void import('$lib/services/stack.service').then(({ handleStack }) => handleStack([target, ...dragIds]));
+          void import('$lib/services/stack.service').then(({ handleStack }) => handleStack(ids));
         } else {
           settleGhost(tileFor(grid, startTile?.dataset.asset ?? ''));
         }
