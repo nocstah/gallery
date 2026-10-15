@@ -24,12 +24,17 @@
   type Props = {
     onClose: (albums?: AlbumResponseDto[]) => void;
     selectedItemsCount?: number;
+    /** Local Omarchy layer: the picker's own heading (Merge into…: utils/album-merge) */
+    title?: string;
+    /** Local Omarchy layer: albums the picker leaves out (the album being merged, To do/Villa/QR) */
+    exclude?: (album: AlbumResponseDto) => boolean;
   };
 
-  let { onClose, selectedItemsCount }: Props = $props();
+  let { onClose, selectedItemsCount, title, exclude }: Props = $props();
 
   onMount(async () => {
-    albums = await getAllAlbums({});
+    const all = await getAllAlbums({});
+    albums = all.filter((album) => !exclude?.(album));
     recentAlbums = [...albums].sort((a, b) => (new Date(a.updatedAt) > new Date(b.updatedAt) ? -1 : 1)).slice(0, 3);
     loading = false;
   });
@@ -149,14 +154,15 @@
     }
   };
 
-  const title = $derived(
-    selectedItemsCount === undefined
-      ? $t('select_albums')
-      : $t('add_to_album_item_count', { values: { count: selectedItemsCount } }),
+  const heading = $derived(
+    title ??
+      (selectedItemsCount === undefined
+        ? $t('select_albums')
+        : $t('add_to_album_item_count', { values: { count: selectedItemsCount } })),
   );
 </script>
 
-<Modal {title} {onClose} size="small">
+<Modal title={heading} {onClose} size="small">
   <ModalBody>
     <div class="mb-2 flex max-h-100 flex-col">
       {#if loading}

@@ -20,8 +20,8 @@
 
   let contextMenuAnchor: HTMLDivElement | undefined = $state();
   const items = $derived.by(() => {
-    const { Edit, MoveToFolder, ToggleTimeline, Share, Download, Leave, Delete } = getAlbumActions($t, album);
-    return [Edit, MoveToFolder, ToggleTimeline, Share, Download, Leave, Delete];
+    const { Edit, MoveToFolder, Merge, ToggleTimeline, Share, Download, Leave, Delete } = getAlbumActions($t, album);
+    return [Edit, MoveToFolder, Merge, ToggleTimeline, Share, Download, Leave, Delete];
   });
 
   const dateLocaleString = (dateString: string) => {

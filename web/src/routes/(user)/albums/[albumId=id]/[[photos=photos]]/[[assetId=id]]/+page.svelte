@@ -1236,6 +1236,7 @@
                   />
                 {/if}
                 <ActionMenuItem action={Actions.MoveToFolder} />
+                <ActionMenuItem action={Actions.Merge} />
                 <ActionMenuItem action={Actions.ToggleTimeline} />
                 <ActionMenuItem action={Actions.Delete} />
                 <ActionMenuItem action={Actions.Leave} />

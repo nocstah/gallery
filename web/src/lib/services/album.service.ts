@@ -33,6 +33,7 @@ import {
   mdiEyeOffOutline,
   mdiEyeOutline,
   mdiFolderMoveOutline,
+  mdiCallMerge,
 } from '@mdi/js';
 import { type MessageFormatter } from 'svelte-i18n';
 import { goto } from '$app/navigation';
@@ -49,6 +50,7 @@ import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
 import SpacePickerModal from '$lib/modals/SpacePickerModal.svelte';
 import { Route } from '$lib/route';
 import { userInteraction } from '$lib/stores/user.svelte';
+import { pickAndMerge } from '$lib/utils/album-merge';
 import { createAlbumAndRedirect } from '$lib/utils/album-utils';
 import { downloadArchive } from '$lib/utils/asset-utils';
 import { openFileUploadDialog } from '$lib/utils/file-uploader';
@@ -139,6 +141,15 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     onAction: () => albumFolders.pickFolder(album.id),
   };
 
+  // Local Omarchy layer: Merge into… (utils/album-merge): its photos join another album, then it goes, with an Undo;
+  // never To do, Villa or QR, whose photos also carry a tag and the archive
+  const Merge: ActionItem = {
+    title: $t('album_merge_into'),
+    icon: mdiCallMerge,
+    $if: () => isOwned && !specialAlbumOf(album.id),
+    onAction: () => void pickAndMerge(album),
+  };
+
   // Local Omarchy layer: Gallery's "hide this album from my timeline", from the same menus (managers/album-folders)
   const hiddenFromTimeline = albumFolders.hiddenFromTimeline(album.id);
   const ToggleTimeline: ActionItem = {
@@ -163,7 +174,19 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     onAction: () => modalManager.show(AlbumShareModal, { album }),
   };
 
-  return { AddUsers, CreateSharedLink, Delete, Download, Edit, Leave, MoveToFolder, Options, Share, ToggleTimeline };
+  return {
+    AddUsers,
+    CreateSharedLink,
+    Delete,
+    Download,
+    Edit,
+    Leave,
+    Merge,
+    MoveToFolder,
+    Options,
+    Share,
+    ToggleTimeline,
+  };
 };
 
 export const getAlbumAssetActions = ($t: MessageFormatter, album: AlbumResponseDto, asset: AssetResponseDto) => {

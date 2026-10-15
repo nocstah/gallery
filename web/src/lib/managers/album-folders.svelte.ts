@@ -34,6 +34,9 @@ import { handleError } from '$lib/utils/handle-error';
 /** The Space whose folders are the Albums page's (Curator files its albums into it by this name too). */
 export const FOLDER_SPACE = 'Library';
 
+/** Where an album sits on the Albums page: its folder (null at the top) and whether I hid it from my timeline. */
+export type AlbumPlace = { folderId: string | null; hidden: boolean };
+
 /** Me, or undefined when signed out (a shared link's page, a test), where `authManager.user` throws. */
 const myId = () => (authManager.authenticated ? authManager.user.id : undefined);
 
@@ -159,6 +162,31 @@ class AlbumFolderManager {
   /** Whether I hid an album's photos from my timeline (Gallery's switch, on an album of the Space). */
   hiddenFromTimeline(albumId: string) {
     return this.linked.some(({ id, hiddenFromMyTimeline }) => id === albumId && hiddenFromMyTimeline);
+  }
+
+  /** Where an album sits in the Space (its folder, hidden from my timeline or not); undefined when it is not in it. */
+  placeOf(albumId: string): AlbumPlace | undefined {
+    const linked = this.linked.find(({ id }) => id === albumId);
+    return linked ? { folderId: this.folderOf(albumId), hidden: !!linked.hiddenFromMyTimeline } : undefined;
+  }
+
+  /** Puts an album where another one sat, without asking (the undo of a merge brings an album back this way). */
+  async refile(albumId: string, place: AlbumPlace) {
+    try {
+      const id = await this.#space();
+      // `?? undefined` matters to linkAlbum: its folderId may be left out but never null (see moveAlbum)
+      await linkAlbum({ id, albumId, folderId: place.folderId ?? undefined });
+      if (place.hidden) {
+        await updateAlbumTimelineForMember({
+          id,
+          albumId,
+          sharedSpaceAlbumMemberTimelineDto: { showInTimeline: false },
+        });
+      }
+    } catch (error) {
+      handleError(error, this.#t('space_album_folder_error_move'));
+    }
+    await this.#settle();
   }
 
   /**
