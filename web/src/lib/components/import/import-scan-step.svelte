@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ScanProgress } from '$lib/utils/google-takeout-scanner';
-  import { Button, Icon } from '@immich/ui';
-  import { mdiArchive, mdiClose, mdiImage, mdiMapMarker, mdiStar } from '@mdi/js';
+  import { Icon } from '@immich/ui';
+  import { mdiClose } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -16,61 +16,67 @@
   );
 </script>
 
-<div class="flex flex-col items-center gap-6">
-  <h2 class="text-xl font-medium">{$t('import_scanning')}</h2>
-  <p class="text-sm text-gray-500">{$t('import_scanning_description')}</p>
+<!-- Local Omarchy layer: the step on the gutter: its heading and a muted line, the desktop's 2px meter (an ink line on a
+     hairline track), the zip and the file being read in data type, what was found as a line of counts (upstream: grey
+     tiles with coloured icons), and Cancel, quiet: it only goes back to the files -->
+<div class="ws-import-step">
+  <div>
+    <h2 class="ws-import-heading">{$t('import_scanning')}</h2>
+    <p class="ws-import-note">{$t('import_scanning_description')}</p>
+  </div>
 
-  <!-- Progress bar -->
-  <div class="w-full">
-    <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-      <div
-        data-testid="scan-progress-bar"
-        class="h-full rounded-full bg-primary transition-all duration-300"
-        style="width: {progressPercent}%"
-      ></div>
+  <div class="ws-import-progress">
+    <div class="ws-meter">
+      <span data-testid="scan-progress-bar" style="width: {progressPercent}%"></span>
     </div>
     {#if progress}
-      <p class="mt-1 text-center text-xs text-gray-400">
-        {progress.currentZip} ({progress.zipIndex + 1} / {progress.zipCount})
-      </p>
+      <p class="ws-inbox-meta">{progress.currentZip} ({progress.zipIndex + 1} / {progress.zipCount})</p>
     {/if}
   </div>
 
-  <!-- Current file -->
   {#if progress?.currentFile}
-    <p class="max-w-full truncate text-sm text-gray-500">
-      {progress.currentFile}
-    </p>
+    <p class="ws-inbox-meta ws-import-current">{progress.currentFile}</p>
   {/if}
 
-  <!-- Stats -->
   {#if progress}
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-      <div class="flex flex-col items-center gap-1 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-        <Icon icon={mdiImage} size="20" class="text-primary" />
-        <span class="text-lg font-semibold">{progress.mediaCount}</span>
-        <span class="text-xs text-gray-500">{$t('import_found_so_far')}</span>
+    <dl class="ws-import-stats">
+      <div>
+        <dt>{$t('import_found_so_far')}</dt>
+        <dd class="ws-import-count">{progress.mediaCount}</dd>
       </div>
-      <div class="flex flex-col items-center gap-1 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-        <Icon icon={mdiMapMarker} size="20" class="text-green-500" />
-        <span class="text-lg font-semibold">{progress.withLocation}</span>
-        <span class="text-xs text-gray-500">{$t('location')}</span>
+      <div>
+        <dt>{$t('location')}</dt>
+        <dd class="ws-import-count">{progress.withLocation}</dd>
       </div>
-      <div class="flex flex-col items-center gap-1 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-        <Icon icon={mdiStar} size="20" class="text-yellow-500" />
-        <span class="text-lg font-semibold">{progress.favorites}</span>
-        <span class="text-xs text-gray-500">{$t('favorites')}</span>
+      <div>
+        <dt>{$t('favorites')}</dt>
+        <dd class="ws-import-count">{progress.favorites}</dd>
       </div>
-      <div class="flex flex-col items-center gap-1 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-        <Icon icon={mdiArchive} size="20" class="text-gray-500" />
-        <span class="text-lg font-semibold">{progress.albumNames.size}</span>
-        <span class="text-xs text-gray-500">{$t('albums')}</span>
+      <div>
+        <dt>{$t('albums')}</dt>
+        <dd class="ws-import-count">{progress.albumNames.size}</dd>
       </div>
-    </div>
+    </dl>
   {/if}
 
-  <!-- Cancel button -->
-  <Button variant="outline" color="danger" leadingIcon={mdiClose} onclick={onCancel}>
-    {$t('cancel')}
-  </Button>
+  <div class="ws-import-nav">
+    <button type="button" class="ws-import-outline" onclick={onCancel}>
+      <Icon icon={mdiClose} size="16" />
+      {$t('cancel')}
+    </button>
+  </div>
 </div>
+
+<style>
+  .ws-import-progress {
+    display: grid;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  .ws-import-current {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+</style>

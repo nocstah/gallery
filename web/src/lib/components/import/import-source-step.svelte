@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Button, Icon } from '@immich/ui';
-  import { mdiApple, mdiArrowRight, mdiGoogle, mdiInformationOutline } from '@mdi/js';
+  import { Icon } from '@immich/ui';
+  import { mdiApple, mdiArrowRight, mdiGoogle } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -10,61 +10,57 @@
   let { onNext }: Props = $props();
 </script>
 
-<div class="flex flex-col gap-6">
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-    <!-- Google Photos card -->
-    <button
-      type="button"
-      data-testid="source-google"
-      class="flex cursor-pointer items-center gap-4 rounded-xl border-2 border-primary bg-primary/5 p-6 text-left transition-colors"
-    >
-      <div class="flex size-12 items-center justify-center rounded-full bg-primary/10">
-        <Icon icon={mdiGoogle} size="24" color="primary" />
-      </div>
-      <div>
-        <p class="font-medium">{$t('import_from_google_photos')}</p>
-        <p class="text-sm text-gray-500">{$t('import_request_takeout')}</p>
-      </div>
+<!-- Local Omarchy layer: where the photos come from is a choice of two in the segmented control (upstream: two big
+     cards), the one chosen inverted, Apple Photos waiting with its "Coming soon"; what Google needs is one muted line
+     with its link (upstream: a blue panel); Next is the step's one ink action -->
+<div class="ws-import-step">
+  <div class="ws-seg ws-import-sources" role="group" aria-label={$t('import_step_source')}>
+    <button type="button" data-testid="source-google" aria-pressed="true">
+      <Icon icon={mdiGoogle} size="16" />
+      {$t('import_from_google_photos')}
     </button>
-
-    <!-- Apple Photos card -->
-    <div
-      data-testid="source-apple"
-      aria-disabled="true"
-      class="flex cursor-not-allowed items-center gap-4 rounded-xl border-2 border-gray-200 p-6 opacity-50 dark:border-gray-700"
-    >
-      <div class="flex size-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-        <Icon icon={mdiApple} size="24" />
-      </div>
-      <div>
-        <p class="font-medium">{$t('import_from_apple_photos')}</p>
-        <p class="text-sm text-gray-500">{$t('import_coming_soon')}</p>
-      </div>
-    </div>
+    <button type="button" data-testid="source-apple" aria-pressed="false" aria-disabled="true" disabled>
+      <Icon icon={mdiApple} size="16" />
+      {$t('import_from_apple_photos')}
+      <span class="ws-import-soon">{$t('import_coming_soon')}</span>
+    </button>
   </div>
 
-  <!-- Takeout info -->
-  <div class="flex items-start gap-3 rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
-    <Icon icon={mdiInformationOutline} size="20" class="mt-0.5 shrink-0 text-blue-600" />
-    <div class="text-sm">
-      <p>
-        {$t('import_takeout_info')}
-        <a
-          href="https://takeout.google.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="font-medium text-primary underline"
-        >
-          takeout.google.com
-        </a>
-      </p>
-    </div>
-  </div>
+  <p class="ws-import-note">
+    {$t('import_takeout_info')}
+    <a href="https://takeout.google.com" target="_blank" rel="noopener noreferrer" class="ws-empty-link">
+      takeout.google.com
+    </a>
+  </p>
 
-  <!-- Next button -->
-  <div class="flex justify-end">
-    <Button onclick={onNext} trailingIcon={mdiArrowRight}>
+  <div class="ws-import-nav">
+    <button type="button" class="ws-btn" onclick={onNext}>
       {$t('next')}
-    </Button>
+      <Icon icon={mdiArrowRight} size="16" />
+    </button>
   </div>
 </div>
+
+<style>
+  .ws-import-sources {
+    flex-wrap: wrap;
+    margin-inline-start: 0;
+  }
+  .ws-import-sources button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .ws-import-sources button:disabled {
+    cursor: not-allowed;
+  }
+  .ws-import-sources button:disabled:hover {
+    background: transparent;
+    color: var(--immich-ui-muted);
+  }
+  .ws-import-soon {
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+  }
+</style>

@@ -1,20 +1,8 @@
 <script lang="ts">
   import type { ImportOptions } from '$lib/managers/import-manager.svelte';
   import type { TakeoutAlbum, TakeoutMediaItem } from '$lib/utils/google-takeout-parser';
-  import { Button, Checkbox, Icon, Switch } from '@immich/ui';
-  import {
-    mdiAlertOutline,
-    mdiArchive,
-    mdiArrowLeft,
-    mdiCalendar,
-    mdiContentCopy,
-    mdiImage,
-    mdiMapMarker,
-    mdiStar,
-    mdiTextBox,
-    mdiUpload,
-    mdiVideo,
-  } from '@mdi/js';
+  import { Checkbox, Icon, Switch } from '@immich/ui';
+  import { mdiAlertOutline, mdiArrowLeft, mdiUpload } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -69,129 +57,178 @@
   }
 </script>
 
-<div class="flex flex-col gap-6">
-  <!-- Summary card -->
-  <div class="rounded-xl border border-gray-200 p-6 dark:border-gray-700">
-    <h3 class="mb-4 text-lg font-medium">{$t('import_step_review')}</h3>
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-      <div class="flex flex-col items-center gap-1">
-        <Icon icon={mdiImage} size="20" class="text-primary" />
-        <span class="text-lg font-semibold">{photoCount}</span>
-        <span class="text-xs text-gray-500">{$t('photos')}</span>
+<!-- Local Omarchy layer: the step on the gutter in sections like Shared's, each headed by its name with its count in data
+     type over a hairline (upstream: three bordered cards). What was found is a line of counts and the dates it spans; a
+     gap in the dates is one line in ink with its icon (upstream: a yellow panel); albums and options are rows split by
+     hairlines, the switches the layer's; Back quiet, Import ink -->
+<div class="ws-import-step">
+  <section class="ws-import-section">
+    <h3 class="ws-sharing-heading">{$t('import_step_review')}</h3>
+    <dl class="ws-import-stats">
+      <div>
+        <dt>{$t('photos')}</dt>
+        <dd class="ws-import-count">{photoCount}</dd>
       </div>
-      <div class="flex flex-col items-center gap-1">
-        <Icon icon={mdiVideo} size="20" class="text-purple-500" />
-        <span class="text-lg font-semibold">{videoCount}</span>
-        <span class="text-xs text-gray-500">{$t('videos')}</span>
+      <div>
+        <dt>{$t('videos')}</dt>
+        <dd class="ws-import-count">{videoCount}</dd>
       </div>
-      <div class="flex flex-col items-center gap-1">
-        <Icon icon={mdiMapMarker} size="20" class="text-green-500" />
-        <span class="text-lg font-semibold">{stats.withLocation}</span>
-        <span class="text-xs text-gray-500">{$t('location')}</span>
+      <div>
+        <dt>{$t('location')}</dt>
+        <dd class="ws-import-count">{stats.withLocation}</dd>
       </div>
-      <div class="flex flex-col items-center gap-1">
-        <Icon icon={mdiStar} size="20" class="text-yellow-500" />
-        <span class="text-lg font-semibold">{stats.favorites}</span>
-        <span class="text-xs text-gray-500">{$t('favorites')}</span>
+      <div>
+        <dt>{$t('favorites')}</dt>
+        <dd class="ws-import-count">{stats.favorites}</dd>
       </div>
-      <div class="flex flex-col items-center gap-1">
-        <Icon icon={mdiArchive} size="20" class="text-gray-500" />
-        <span class="text-lg font-semibold">{stats.archived}</span>
-        <span class="text-xs text-gray-500">{$t('archived')}</span>
+      <div>
+        <dt>{$t('archived')}</dt>
+        <dd class="ws-import-count">{stats.archived}</dd>
       </div>
-      {#if stats.dateRange}
-        <div class="flex flex-col items-center gap-1">
-          <Icon icon={mdiCalendar} size="20" class="text-blue-500" />
-          <span class="text-xs font-medium">{formatDate(stats.dateRange.earliest)}</span>
-          <span class="text-xs text-gray-500">— {formatDate(stats.dateRange.latest)}</span>
-        </div>
-      {/if}
-    </div>
+    </dl>
+    {#if stats.dateRange}
+      <p class="ws-inbox-meta ws-import-span">
+        {formatDate(stats.dateRange.earliest)} – {formatDate(stats.dateRange.latest)}
+      </p>
+    {/if}
 
     {#if missingDates > 0}
-      <div
-        class="mt-4 flex items-center gap-2 rounded-lg bg-yellow-50 p-3 text-sm text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400"
-      >
-        <Icon icon={mdiAlertOutline} size="18" class="shrink-0" />
+      <p class="ws-import-warning">
+        <Icon icon={mdiAlertOutline} size="18" />
         <span>{$t('import_missing_dates_warning', { values: { count: missingDates } })}</span>
-      </div>
+      </p>
     {/if}
-  </div>
+  </section>
 
-  <!-- Albums card -->
-  <div data-testid="albums-section" class="rounded-xl border border-gray-200 p-6 dark:border-gray-700">
-    <div class="mb-4 flex items-center justify-between">
-      <h3 class="text-lg font-medium">
-        {$t('albums')} ({selectedAlbums.size} / {albums.length})
-      </h3>
-      <div class="flex gap-2">
-        <Button variant="ghost" size="small" onclick={onSelectAllAlbums}>
-          {$t('import_select_all')}
-        </Button>
-        <Button variant="ghost" size="small" onclick={onDeselectAllAlbums}>
-          {$t('import_deselect_all')}
-        </Button>
-      </div>
-    </div>
-    <div class="max-h-64 overflow-y-auto">
+  <section data-testid="albums-section" class="ws-import-section">
+    <h3 class="ws-sharing-heading">
+      {$t('albums')} <span class="ws-inbox-meta">{selectedAlbums.size} / {albums.length}</span>
+      <span class="ws-import-heading-actions">
+        <button type="button" class="ws-btn-quiet" onclick={onSelectAllAlbums}>{$t('import_select_all')}</button>
+        <button type="button" class="ws-btn-quiet" onclick={onDeselectAllAlbums}>{$t('import_deselect_all')}</button>
+      </span>
+    </h3>
+    <ul class="ws-import-rows ws-import-albums">
       {#each albums as album (album.name)}
-        <div
-          data-testid="album-{album.name}"
-          class="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800
-            {album.isAutoGenerated ? 'opacity-60' : ''}"
-        >
+        <li data-testid="album-{album.name}" class:ws-import-album-auto={album.isAutoGenerated}>
           <Checkbox checked={selectedAlbums.has(album.name)} onCheckedChange={() => onToggleAlbum(album.name)} />
-          <div class="flex-1">
-            <span class="text-sm">{album.name}</span>
-            <span class="ml-2 text-xs text-gray-400">({album.itemCount})</span>
-          </div>
-        </div>
+          <span class="ws-import-album-name">{album.name}</span>
+          <span class="ws-inbox-meta">{album.itemCount}</span>
+        </li>
       {/each}
-    </div>
-  </div>
+    </ul>
+  </section>
 
-  <!-- Options card -->
-  <div class="rounded-xl border border-gray-200 p-6 dark:border-gray-700">
-    <h3 class="mb-4 text-lg font-medium">{$t('import_options')}</h3>
-    <div class="flex flex-col gap-4">
-      <label class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <Icon icon={mdiStar} size="18" class="text-yellow-500" />
-          <span class="text-sm">{$t('import_option_favorites')}</span>
-        </div>
+  <section class="ws-import-section">
+    <h3 class="ws-sharing-heading">{$t('import_options')}</h3>
+    <div class="ws-import-rows">
+      <label class="ws-import-option">
+        <span>{$t('import_option_favorites')}</span>
         <Switch checked={options.importFavorites} onCheckedChange={(v) => onSetOption('importFavorites', v)} />
       </label>
-      <label class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <Icon icon={mdiArchive} size="18" class="text-gray-500" />
-          <span class="text-sm">{$t('import_option_archived')}</span>
-        </div>
+      <label class="ws-import-option">
+        <span>{$t('import_option_archived')}</span>
         <Switch checked={options.importArchived} onCheckedChange={(v) => onSetOption('importArchived', v)} />
       </label>
-      <label class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <Icon icon={mdiTextBox} size="18" class="text-blue-500" />
-          <span class="text-sm">{$t('import_option_descriptions')}</span>
-        </div>
+      <label class="ws-import-option">
+        <span>{$t('import_option_descriptions')}</span>
         <Switch checked={options.importDescriptions} onCheckedChange={(v) => onSetOption('importDescriptions', v)} />
       </label>
-      <label class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <Icon icon={mdiContentCopy} size="18" class="text-orange-500" />
-          <span class="text-sm">{$t('import_option_skip_duplicates')}</span>
-        </div>
+      <label class="ws-import-option">
+        <span>{$t('import_option_skip_duplicates')}</span>
         <Switch checked={options.skipDuplicates} onCheckedChange={(v) => onSetOption('skipDuplicates', v)} />
       </label>
     </div>
-  </div>
+  </section>
 
-  <!-- Navigation -->
-  <div class="flex justify-between">
-    <Button variant="outline" leadingIcon={mdiArrowLeft} onclick={onBack}>
+  <div class="ws-import-nav">
+    <button type="button" class="ws-btn-quiet" onclick={onBack}>
+      <Icon icon={mdiArrowLeft} size="16" />
       {$t('back')}
-    </Button>
-    <Button data-testid="import-button" leadingIcon={mdiUpload} onclick={onImport}>
+    </button>
+    <button type="button" class="ws-btn" data-testid="import-button" onclick={onImport}>
+      <Icon icon={mdiUpload} size="16" />
       {$t('import_start', { values: { count: items.length } })}
-    </Button>
+    </button>
   </div>
 </div>
+
+<style>
+  .ws-import-section {
+    width: 100%;
+  }
+  .ws-import-section .ws-sharing-heading {
+    flex-wrap: wrap;
+  }
+  .ws-import-heading-actions {
+    display: inline-flex;
+    gap: 2px;
+    margin-inline-start: auto;
+  }
+  .ws-import-span {
+    margin-top: 0.5rem;
+  }
+  .ws-import-warning {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    max-width: 60ch;
+    margin-top: 1rem;
+    font-size: var(--ws-text-ui);
+    line-height: 1.5;
+  }
+  .ws-import-warning :global(svg) {
+    flex: none;
+    margin-top: 0.05rem;
+  }
+  .ws-import-rows {
+    list-style: none;
+  }
+  .ws-import-albums {
+    max-height: 20rem;
+    overflow-y: auto;
+  }
+  .ws-import-albums li,
+  .ws-import-option {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--ws-hairline);
+    font-size: var(--ws-text-ui);
+  }
+  .ws-import-album-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* the albums Google made by itself (by year, by place) step back */
+  .ws-import-album-auto .ws-import-album-name {
+    color: var(--immich-ui-muted);
+  }
+  .ws-import-option {
+    justify-content: space-between;
+    cursor: pointer;
+  }
+  /* a switch as in Settings: an outlined track with a muted thumb when off, inverted (ink track, surface thumb) when on */
+  .ws-import-option :global([role='switch']) {
+    border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 28%, transparent) !important;
+    background: transparent !important;
+  }
+  .ws-import-option :global([role='switch'] > span) {
+    background: var(--immich-ui-muted) !important;
+  }
+  .ws-import-option :global([role='switch'][data-state='checked']) {
+    border-color: var(--immich-ui-dark) !important;
+    background: var(--immich-ui-dark) !important;
+  }
+  .ws-import-option :global([role='switch'][data-state='checked'] > span) {
+    background: var(--immich-ui-light) !important;
+  }
+  .ws-import-option :global([role='switch']:focus-visible) {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: 2px;
+  }
+</style>

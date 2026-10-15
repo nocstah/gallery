@@ -22,7 +22,8 @@ describe('ImportSourceStep', () => {
 
   it('has Google Photos selected by default', () => {
     const { getByTestId } = render(ImportSourceStep, { props: { onNext } });
-    expect(getByTestId('source-google').className).toContain('border-primary');
+    // Local Omarchy layer: the sources are a segmented control; the one chosen is pressed (drawn inverted)
+    expect(getByTestId('source-google')).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('calls onNext when Next clicked', async () => {

@@ -1,16 +1,8 @@
 <script lang="ts">
   import type { ImportProgress } from '$lib/managers/import-manager.svelte';
-  import { Button, Icon } from '@immich/ui';
-  import {
-    mdiAlertCircle,
-    mdiCheckCircle,
-    mdiCheckDecagram,
-    mdiClockOutline,
-    mdiImage,
-    mdiPause,
-    mdiPlay,
-    mdiSkipNext,
-  } from '@mdi/js';
+  import { Route } from '$lib/route';
+  import { Icon } from '@immich/ui';
+  import { mdiPause, mdiPlay } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -30,120 +22,93 @@
   let remaining = $derived(total - progress.imported - progress.skipped - progress.errors);
 </script>
 
+<!-- Local Omarchy layer: the step on the gutter. While it runs: its heading and a muted line, the desktop's meter with the
+     count in data type, what happened as a line of counts (upstream: green, yellow and red tiles; errors take the danger
+     colour on their number only, and only when there are some), the file in hand, Pause framed by a hairline. Done: an
+     empty state's headline, the counts, View Photos in ink and View Albums as a link (upstream: a green badge) -->
 {#if isComplete}
-  <!-- Complete state -->
-  <div class="flex flex-col items-center gap-6">
-    <div class="flex size-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-      <Icon icon={mdiCheckDecagram} size="48" class="text-green-500" />
+  <div class="ws-import-step">
+    <h2 class="ws-empty-title">{$t('import_complete')}</h2>
+
+    <div class="ws-import-stats">
+      <span><span class="ws-import-count">{progress.imported}</span> {$t('import_status_imported')}</span>
+      <span><span class="ws-import-count">{progress.skipped}</span> {$t('import_status_skipped')}</span>
+      <span>
+        <span class="ws-import-count" class:ws-import-failed={progress.errors > 0}>{progress.errors}</span>
+        {$t('import_status_errors')}
+      </span>
+      <span>{$t('albums')} <span class="ws-import-count">{progress.albumsCreated}</span></span>
     </div>
 
-    <h2 class="text-2xl font-medium">{$t('import_complete')}</h2>
-
-    <!-- Final stats -->
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-      <div class="flex flex-col items-center gap-1 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-        <Icon icon={mdiCheckCircle} size="20" class="text-green-500" />
-        <span class="text-lg font-semibold">{progress.imported}</span>
-        <span class="text-xs text-gray-500">{$t('import_status_imported')}</span>
-      </div>
-      <div class="flex flex-col items-center gap-1 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-        <Icon icon={mdiSkipNext} size="20" class="text-yellow-500" />
-        <span class="text-lg font-semibold">{progress.skipped}</span>
-        <span class="text-xs text-gray-500">{$t('import_status_skipped')}</span>
-      </div>
-      <div class="flex flex-col items-center gap-1 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-        <Icon icon={mdiAlertCircle} size="20" class="text-red-500" />
-        <span class="text-lg font-semibold">{progress.errors}</span>
-        <span class="text-xs text-gray-500">{$t('import_status_errors')}</span>
-      </div>
-      <div class="flex flex-col items-center gap-1 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-        <Icon icon={mdiImage} size="20" class="text-primary" />
-        <span class="text-lg font-semibold">{progress.albumsCreated}</span>
-        <span class="text-xs text-gray-500">{$t('albums')}</span>
-      </div>
-    </div>
-
-    <!-- Navigation links -->
-    <div class="flex gap-4">
-      <Button href="/photos">
-        {$t('import_view_photos')}
-      </Button>
-      <Button variant="outline" href="/albums">
-        {$t('import_view_albums')}
-      </Button>
+    <div class="ws-empty-actions ws-import-done">
+      <a class="ws-empty-action" href={Route.photos()}>{$t('import_view_photos')}</a>
+      <a class="ws-empty-link" href={Route.albums()}>{$t('import_view_albums')}</a>
     </div>
   </div>
 {:else}
-  <!-- Importing state -->
-  <div class="flex flex-col items-center gap-6">
-    <h2 class="text-xl font-medium">{$t('import_importing')}</h2>
-    <p class="text-sm text-gray-500">{$t('import_keep_tab_open')}</p>
-
-    <!-- Progress bar -->
-    <div class="w-full">
-      <div class="h-3 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-        <div
-          data-testid="import-progress-bar"
-          class="h-full rounded-full bg-primary transition-all duration-300"
-          style="width: {progressPercent}%"
-        ></div>
-      </div>
-      <p class="mt-1 text-center text-sm text-gray-500">
-        {progress.imported + progress.skipped + progress.errors} / {total}
-      </p>
+  <div class="ws-import-step">
+    <div>
+      <h2 class="ws-import-heading">{$t('import_importing')}</h2>
+      <p class="ws-import-note">{$t('import_keep_tab_open')}</p>
     </div>
 
-    <!-- Status counters -->
-    <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-      <div
-        data-testid="status-imported"
-        class="flex flex-col items-center gap-1 rounded-lg bg-green-50 p-3 dark:bg-green-900/20"
-      >
-        <Icon icon={mdiCheckCircle} size="18" class="text-green-500" />
-        <span class="text-lg font-semibold text-green-600 dark:text-green-400">{progress.imported}</span>
-        <span class="text-xs text-gray-500">{$t('import_status_imported')}</span>
+    <div class="ws-import-progress">
+      <div class="ws-meter">
+        <span data-testid="import-progress-bar" style="width: {progressPercent}%"></span>
       </div>
-      <div
-        data-testid="status-skipped"
-        class="flex flex-col items-center gap-1 rounded-lg bg-yellow-50 p-3 dark:bg-yellow-900/20"
-      >
-        <Icon icon={mdiSkipNext} size="18" class="text-yellow-500" />
-        <span class="text-lg font-semibold text-yellow-600 dark:text-yellow-400">{progress.skipped}</span>
-        <span class="text-xs text-gray-500">{$t('import_status_skipped')}</span>
-      </div>
-      <div
-        data-testid="status-errors"
-        class="flex flex-col items-center gap-1 rounded-lg bg-red-50 p-3 dark:bg-red-900/20"
-      >
-        <Icon icon={mdiAlertCircle} size="18" class="text-red-500" />
-        <span class="text-lg font-semibold text-red-600 dark:text-red-400">{progress.errors}</span>
-        <span class="text-xs text-gray-500">{$t('import_status_errors')}</span>
-      </div>
-      <div
-        data-testid="status-remaining"
-        class="flex flex-col items-center gap-1 rounded-lg bg-gray-50 p-3 dark:bg-gray-800"
-      >
-        <Icon icon={mdiClockOutline} size="18" class="text-gray-400" />
-        <span class="text-lg font-semibold text-gray-500">{remaining}</span>
-        <span class="text-xs text-gray-500">{$t('import_status_remaining')}</span>
-      </div>
+      <p class="ws-inbox-meta">{progress.imported + progress.skipped + progress.errors} / {total}</p>
     </div>
 
-    <!-- Current file -->
+    <div class="ws-import-stats">
+      <span data-testid="status-imported">
+        <span class="ws-import-count">{progress.imported}</span>
+        {$t('import_status_imported')}
+      </span>
+      <span data-testid="status-skipped">
+        <span class="ws-import-count">{progress.skipped}</span>
+        {$t('import_status_skipped')}
+      </span>
+      <span data-testid="status-errors">
+        <span class="ws-import-count" class:ws-import-failed={progress.errors > 0}>{progress.errors}</span>
+        {$t('import_status_errors')}
+      </span>
+      <span data-testid="status-remaining">
+        <span class="ws-import-count">{remaining}</span>
+        {$t('import_status_remaining')}
+      </span>
+    </div>
+
     {#if progress.currentFile}
-      <p class="max-w-full truncate text-sm text-gray-500">
-        {progress.currentFile}
-      </p>
+      <p class="ws-inbox-meta ws-import-current">{progress.currentFile}</p>
     {/if}
 
-    <!-- Pause/Resume button -->
-    <Button
-      data-testid="pause-button"
-      variant="outline"
-      leadingIcon={isPaused ? mdiPlay : mdiPause}
-      onclick={onTogglePause}
-    >
-      {isPaused ? $t('import_resume') : $t('import_pause')}
-    </Button>
+    <div class="ws-import-nav">
+      <button type="button" class="ws-import-outline" data-testid="pause-button" onclick={onTogglePause}>
+        <Icon icon={isPaused ? mdiPlay : mdiPause} size="16" />
+        {isPaused ? $t('import_resume') : $t('import_pause')}
+      </button>
+    </div>
   </div>
 {/if}
+
+<style>
+  .ws-import-progress {
+    display: grid;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  .ws-import-current {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* errors are the one count that means something is wrong: the theme's danger role on the number, nothing more (in
+     the stats, so it outranks the wizard's ink for every count) */
+  .ws-import-stats .ws-import-failed {
+    color: var(--immich-ui-danger-700);
+  }
+  .ws-import-done {
+    margin-top: 0.5rem;
+  }
+</style>

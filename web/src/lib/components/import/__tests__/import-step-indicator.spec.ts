@@ -21,8 +21,9 @@ describe('ImportStepIndicator', () => {
   it('marks current step as active', () => {
     const { getByTestId } = render(ImportStepIndicator, { props: { currentStep: ImportStep.Scan } });
 
+    // Local Omarchy layer: the step in hand is marked as the current step (it is drawn inverted, not in the primary fill)
     const activeStep = getByTestId('step-2');
-    expect(activeStep.querySelector('.bg-primary')).toBeInTheDocument();
+    expect(activeStep).toHaveAttribute('aria-current', 'step');
   });
 
   it('marks previous steps as completed', () => {

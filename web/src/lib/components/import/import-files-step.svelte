@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, Icon } from '@immich/ui';
+  import { Icon } from '@immich/ui';
   import { mdiArrowLeft, mdiArrowRight, mdiClose, mdiFolderOpen, mdiTrayArrowDown, mdiZipBox } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
@@ -62,28 +62,32 @@
   }
 </script>
 
-<div class="flex flex-col gap-6">
-  <h2 class="text-lg font-medium">{$t('import_select_files')}</h2>
+<!-- Local Omarchy layer: the step on the gutter. The drop zone is a dashed hairline on the ground (ink while files are
+     over it), its two pickers framed by a hairline; the files picked are rows split by hairlines, each name with its size
+     in data type, the count beside the heading; Back is quiet and Next ink -->
+<div class="ws-import-step">
+  <h2 class="ws-import-heading">{$t('import_select_files')}</h2>
 
-  <!-- Drop zone -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     data-testid="drop-zone"
-    class="flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed p-10 transition-colors
-      {isDragging ? 'border-primary bg-primary/5' : 'border-gray-300 dark:border-gray-600'}"
+    class="ws-import-drop"
+    class:ws-import-drop-over={isDragging}
     ondragover={handleDragOver}
     ondragleave={handleDragLeave}
     ondrop={handleDrop}
   >
-    <Icon icon={mdiTrayArrowDown} size="48" class="text-gray-400" />
-    <p class="text-center text-gray-500">{$t('import_drop_files')}</p>
-    <div class="flex gap-3">
-      <Button variant="outline" leadingIcon={mdiZipBox} onclick={() => zipInput?.click()}>
+    <Icon icon={mdiTrayArrowDown} size="32" />
+    <p class="ws-import-note">{$t('import_drop_files')}</p>
+    <div class="ws-import-pickers">
+      <button type="button" class="ws-import-outline" onclick={() => zipInput?.click()}>
+        <Icon icon={mdiZipBox} size="16" />
         {$t('import_select_zips')}
-      </Button>
-      <Button variant="outline" leadingIcon={mdiFolderOpen} onclick={() => folderInput?.click()}>
+      </button>
+      <button type="button" class="ws-import-outline" onclick={() => folderInput?.click()}>
+        <Icon icon={mdiFolderOpen} size="16" />
         {$t('import_select_folder')}
-      </Button>
+      </button>
     </div>
   </div>
 
@@ -91,40 +95,104 @@
   <input bind:this={zipInput} type="file" accept=".zip" multiple class="hidden" onchange={handleZipSelect} />
   <input bind:this={folderInput} type="file" webkitdirectory class="hidden" onchange={handleFolderSelect} />
 
-  <!-- File list -->
   {#if files.length > 0}
-    <div class="flex flex-col gap-3">
-      <div class="flex items-center justify-between">
-        <h3 class="text-sm font-medium">
-          {$t('import_selected_files')} ({files.length})
-        </h3>
-        <Button variant="ghost" size="small" leadingIcon={mdiClose} onclick={onClearFiles}>
+    <section class="ws-import-files">
+      <h3 class="ws-sharing-heading">
+        {$t('import_selected_files')} <span class="ws-inbox-meta">{files.length}</span>
+        <button type="button" class="ws-sharing-heading-action ws-import-clear" onclick={onClearFiles}>
+          <Icon icon={mdiClose} size="16" />
           {$t('import_clear')}
-        </Button>
-      </div>
-      <div class="max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700">
+        </button>
+      </h3>
+      <ul class="ws-import-file-list">
         {#each files as file (file.name)}
-          <div
-            class="flex items-center justify-between border-b border-gray-100 px-4 py-2 last:border-b-0 dark:border-gray-800"
-          >
-            <span class="truncate text-sm">{file.name}</span>
-            <span class="ml-2 shrink-0 text-xs text-gray-400">{formatSize(file.size)}</span>
-          </div>
+          <li>
+            <span class="ws-import-file-name">{file.name}</span>
+            <span class="ws-inbox-meta">{formatSize(file.size)}</span>
+          </li>
         {/each}
-      </div>
-      <p class="text-sm text-gray-500">
-        {$t('total')}: {formatSize(totalSize)}
-      </p>
-    </div>
+      </ul>
+      <p class="ws-import-total">{$t('total')} <span class="ws-inbox-meta">{formatSize(totalSize)}</span></p>
+    </section>
   {/if}
 
-  <!-- Navigation -->
-  <div class="flex justify-between">
-    <Button variant="outline" leadingIcon={mdiArrowLeft} onclick={onBack}>
+  <div class="ws-import-nav">
+    <button type="button" class="ws-btn-quiet" onclick={onBack}>
+      <Icon icon={mdiArrowLeft} size="16" />
       {$t('back')}
-    </Button>
-    <Button data-testid="next-button" disabled={files.length === 0} trailingIcon={mdiArrowRight} onclick={onNext}>
+    </button>
+    <button type="button" class="ws-btn" data-testid="next-button" disabled={files.length === 0} onclick={onNext}>
       {$t('next')}
-    </Button>
+      <Icon icon={mdiArrowRight} size="16" />
+    </button>
   </div>
 </div>
+
+<style>
+  .ws-import-drop {
+    display: grid;
+    justify-items: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 2.5rem 1.5rem;
+    border: 1px dashed color-mix(in oklab, var(--immich-ui-dark) 28%, transparent);
+    border-radius: var(--ws-radius);
+    color: var(--immich-ui-muted);
+    text-align: center;
+    transition:
+      border-color 140ms,
+      background-color 140ms;
+  }
+  .ws-import-drop-over {
+    border-color: var(--immich-ui-dark);
+    background: color-mix(in oklab, var(--immich-ui-dark) 5%, transparent);
+  }
+  .ws-import-pickers {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .ws-import-files {
+    width: 100%;
+  }
+  .ws-import-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .ws-import-file-list {
+    max-height: 18rem;
+    overflow-y: auto;
+    list-style: none;
+  }
+  .ws-import-file-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--ws-hairline);
+  }
+  .ws-import-file-name {
+    overflow: hidden;
+    font-size: var(--ws-text-ui);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-import-file-list .ws-inbox-meta {
+    flex: none;
+  }
+  .ws-import-total {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    margin-top: 0.75rem;
+    font-size: var(--ws-text-meta);
+    color: var(--immich-ui-muted);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ws-import-drop {
+      transition: none;
+    }
+  }
+</style>
