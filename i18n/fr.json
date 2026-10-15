@@ -3355,6 +3355,8 @@
   "show_file_location": "Afficher l'emplacement du fichier",
   "show_gallery": "Afficher la galerie",
   "show_hidden_people": "Afficher les personnes masquées",
+  "show_in_archive": "Afficher dans Archive",
+  "show_in_photos": "Afficher dans Photos",
   "show_in_timeline": "Afficher dans la vue chronologique",
   "show_in_timeline_setting_description": "Afficher les photos et vidéos de cet utilisateur dans votre vue chronologique",
   "show_keyboard_shortcuts": "Afficher les raccourcis clavier",

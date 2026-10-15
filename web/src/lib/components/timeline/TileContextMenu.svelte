@@ -17,7 +17,8 @@
   import { generateId } from '$lib/utils/generate-id';
   import { getAssetMediaUrl } from '$lib/utils';
   import { fromTimelinePlainDateTime } from '$lib/utils/timeline-util';
-  import { AssetMediaSize, getAssetInfo } from '@immich/sdk';
+  import { AssetMediaSize, AssetVisibility, getAssetInfo } from '@immich/sdk';
+  import { revealInPhotos } from '$lib/utils/reveal';
   import { goto } from '$app/navigation';
   import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import { copySubject } from '$lib/utils/copy-subject';
@@ -27,6 +28,7 @@
     mdiArrowCollapseHorizontal,
     mdiArrowExpandHorizontal,
     mdiContentCut,
+    mdiImageSearch,
     mdiImageCheckOutline,
     mdiSendOutline,
     mdiStarFourPointsOutline,
@@ -41,11 +43,13 @@
     findAsset: (id: string) => TimelineAsset | undefined;
     /** the stack items (expand, collapse, make cover), which only the timeline can show the result of */
     withStackItems?: boolean;
+    /** Show in Photos for one photo (utils/reveal): grids other than Photos' own timeline, an album or search results */
+    reveal?: boolean;
     assetInteraction: AssetMultiSelectManager;
     children: Snippet;
   }
 
-  let { grid, findAsset, withStackItems = true, assetInteraction, children }: Props = $props();
+  let { grid, findAsset, withStackItems = true, reveal = false, assetInteraction, children }: Props = $props();
 
   let isOpen = $state(false);
   let position = $state({ x: 0, y: 0 });
@@ -56,6 +60,8 @@
   let stackMenu = $state<StackMenu | undefined>();
   // Local Omarchy layer: subject lift for one of the owner's own photos
   let liftAsset = $state<TimelineAsset | undefined>();
+  // Local Omarchy layer: the photo Show in Photos would open Photos at (one of the owner's own, not in the trash)
+  let revealAsset = $state<TimelineAsset | undefined>();
   let selectedByMenu = false;
   let opening = 0;
 
@@ -96,6 +102,15 @@
     const user = authManager.authenticated ? authManager.user : undefined;
     liftAsset =
       assetInteraction.assets.length === 1 && asset.isImage && user && asset.ownerId === user.id ? asset : undefined;
+    revealAsset =
+      reveal &&
+      assetInteraction.assets.length === 1 &&
+      user &&
+      asset.ownerId === user.id &&
+      !asset.isTrashed &&
+      asset.visibility !== AssetVisibility.Locked
+        ? asset
+        : undefined;
     position = { x, y };
     isOpen = true;
     requestAnimationFrame(() => menuContainer?.focus());
@@ -106,7 +121,12 @@
   const picked = $derived(isOpen ? assetInteraction.assets : []);
   const day = (asset: TimelineAsset, withYear = true) =>
     fromTimelinePlainDateTime(asset.localDateTime).toLocaleString(
-      { weekday: withYear ? 'short' : undefined, month: 'short', day: 'numeric', year: withYear ? 'numeric' : undefined },
+      {
+        weekday: withYear ? 'short' : undefined,
+        month: 'short',
+        day: 'numeric',
+        year: withYear ? 'numeric' : undefined,
+      },
       { locale: $locale ?? undefined },
     );
   const headline = $derived.by(() => {
@@ -252,6 +272,16 @@
             {#if headline.detail}<small>{headline.detail}</small>{/if}
           </span>
         </li>
+      {/if}
+      {#if revealAsset}
+        {@const shown = revealAsset}
+        <!-- Local Omarchy layer: the photo in Photos (or Archive), selected there and ready to act on (utils/reveal) -->
+        <MenuOption
+          icon={mdiImageSearch}
+          text={shown.visibility === AssetVisibility.Archive ? $t('show_in_archive') : $t('show_in_photos')}
+          onClick={() => onStackAction(() => revealInPhotos(shown.id))}
+        />
+        <hr />
       {/if}
       {#if stackMenu}
         {@const menu = stackMenu}

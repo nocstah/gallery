@@ -3354,6 +3354,8 @@
   "show_file_location": "显示文件位置",
   "show_gallery": "显示图库",
   "show_hidden_people": "显示隐藏人物",
+  "show_in_archive": "在归档中显示",
+  "show_in_photos": "在照片中显示",
   "show_in_timeline": "在时间轴中显示",
   "show_in_timeline_setting_description": "在时间轴中显示此用户的照片和视频",
   "show_keyboard_shortcuts": "显示键盘快捷键",

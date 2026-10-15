@@ -3306,6 +3306,8 @@
   "show_file_location": "顯示檔案位置",
   "show_gallery": "顯示媒體庫",
   "show_hidden_people": "顯示隱藏的人物",
+  "show_in_archive": "在封存中顯示",
+  "show_in_photos": "在相片中顯示",
   "show_in_timeline": "在時間軸中顯示",
   "show_in_timeline_setting_description": "在您的時間軸中顯示這位使用者的相片和影片",
   "show_keyboard_shortcuts": "顯示鍵盤快捷鍵",

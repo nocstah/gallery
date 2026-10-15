@@ -900,6 +900,7 @@
     grid={showSearchResults ? '[data-testid="gallery-viewer"]' : '#asset-grid'}
     findAsset={findMenuAsset}
     withStackItems={!showSearchResults}
+    reveal={showSearchResults}
     assetInteraction={assetMultiSelectManager}
   >
     {@const MenuActions = getAssetBulkActions($t)}

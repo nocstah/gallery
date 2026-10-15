@@ -32,6 +32,7 @@
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { attachThumbnailZoom, thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
+  import { takeReveal, type Reveal } from '$lib/utils/reveal';
   import { marqueeSelect } from '$lib/actions/marquee-select';
   import { lang } from '$lib/stores/preferences.store';
   import { isAssetViewerRoute, navigate } from '$lib/utils/navigation';
@@ -382,10 +383,15 @@
       }
     }
     const scrollTarget = assetViewerManager.gridScrollTarget?.at;
+    // Local Omarchy layer: Show in Photos (utils/reveal) came here to select a photo
+    const reveal = takeReveal(scrollTarget);
     const scrolled = scrollTarget ? await scrollAndLoadAsset(scrollTarget) : false;
     if (scrolled && scrollTarget) {
       await tick();
       focusAsset(scrollTarget);
+      if (reveal) {
+        await selectRevealed(reveal);
+      }
     } else if (scrollTarget) {
       if (!temporalAnchor) {
         // A pending temporal anchor owns the scroll position; running the routing fallback here
@@ -399,6 +405,27 @@
     }
 
     invisible = false;
+  };
+
+  // Local Omarchy layer: the photo Show in Photos came for is selected, ready to act on; one folded under its stack's
+  // cover is laid out first by expanding that stack in place, so the selection is never the cover in its stead
+  const selectRevealed = async ({ at, select, stackId }: Reveal) => {
+    const find = () => timelineManager.getTimelineMonthByAssetId(select)?.findAssetById({ id: select });
+    if (!find() && stackId && !stackExpandManager.isExpanded(stackId)) {
+      await stackExpandManager.toggle(stackId, at);
+      await tick();
+    }
+    const asset = find();
+    if (!asset) {
+      return;
+    }
+    assetInteraction.clear();
+    assetInteraction.selectAsset(asset);
+    assetInteraction.setAssetSelectionStart(asset);
+    // the stack laid out beside its cover can push the photo along: bring the photo itself into view
+    scrollToAsset(asset);
+    await tick();
+    focusAsset(select);
   };
 
   // note: only modified once in afterNavigate()

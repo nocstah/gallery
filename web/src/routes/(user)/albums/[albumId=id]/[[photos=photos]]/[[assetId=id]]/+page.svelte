@@ -38,7 +38,9 @@
   import SelectAllAssets from '$lib/components/timeline/actions/SelectAllAction.svelte';
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
+  import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
+  import { toTimelineAsset } from '$lib/utils/timeline-util';
   import { AlbumPageViewMode } from '$lib/constants';
   import { activityManager } from '$lib/managers/activity-manager.svelte';
   import { assetMultiSelectManager, AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
@@ -162,6 +164,14 @@
   // Loaded smart-search results. The browse Timeline (and its TimelineManager) is unmounted while
   // these show, so the selection toolbar acts on this array instead — mirrors the space timeline.
   let searchResults = $state<AssetResponseDto[]>([]);
+  // Local Omarchy layer: the photo a right-click lands on, in the album's grid or among its search results
+  const findMenuAsset = (id: string) => {
+    if (showSearchResults) {
+      const found = searchResults.find((asset) => asset.id === id);
+      return found ? toTimelineAsset(found) : undefined;
+    }
+    return timelineManager?.getTimelineMonthByAssetId(id)?.findAssetById({ id });
+  };
   let searchIsLoading = $state(false);
   // Bumped to force a re-run of the current search (undo-delete restores the removed assets).
   let searchReloadToken = $state(0);
@@ -1104,6 +1114,58 @@
         </div>
       {/if}
     </main>
+
+    <!-- Local Omarchy layer: right-click menu on the album's photos (the owner: "a right click in albums that allows to
+         reveal original photo in the photo view"), acting on the selection like the bar below; Show in Photos leads -->
+    {#if viewMode === AlbumPageViewMode.VIEW && (showSearchResults || timelineManager)}
+      <TileContextMenu
+        grid={showSearchResults ? '[data-testid="gallery-viewer"]' : '#asset-grid'}
+        findAsset={findMenuAsset}
+        withStackItems={false}
+        reveal
+        assetInteraction={assetMultiSelectManager}
+      >
+        {@const MenuActions = getAssetBulkActions($t, { album })}
+        <FavoriteAction
+          menuItem
+          removeFavorite={assetMultiSelectManager.isAllFavorite}
+          onFavorite={handleBulkFavorite}
+        />
+        {#if special && assetMultiSelectManager.isAllUserOwned}
+          <SpecialAlbumAction {special} done menuItem />
+        {/if}
+        <ActionMenuItem action={MenuActions.AddToAlbum} />
+        <ActionMenuItem action={MenuActions.CreateSharedLink} />
+        <DownloadAction menuItem filename={album.albumName} />
+        {#if isEditor && assetMultiSelectManager.assets.length === 1}
+          <MenuOption
+            text={$t('set_as_album_cover')}
+            icon={mdiImageOutline}
+            onClick={() => updateThumbnailUsingCurrentSelection()}
+          />
+        {/if}
+        {#if assetMultiSelectManager.isAllUserOwned}
+          <hr />
+          <RotateAction />
+          <ActionMenuItem action={MenuActions.Tag} />
+          <ChangeDate menuItem />
+          <ChangeLocation menuItem />
+          <ChangeDescription menuItem />
+        {/if}
+        <hr />
+        <ActionMenuItem action={MenuActions.RemoveFromAlbum} />
+        {#if assetMultiSelectManager.isAllUserOwned}
+          <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
+          {#each specialAlbums as other (other.key)}
+            {#if other !== special}
+              <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
+            {/if}
+          {/each}
+          <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+          <DeleteAssets menuItem onAssetDelete={handleRemoveAssets} onUndoDelete={handleUndoRemoveAssets} />
+        {/if}
+      </TileContextMenu>
+    {/if}
 
     {#if assetMultiSelectManager.selectionActive}
       <AssetSelectControlBar>
