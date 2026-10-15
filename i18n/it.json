@@ -1771,6 +1771,7 @@
   "duplicate_workflow": "Duplica sequenza",
   "duplicates": "Duplicati",
   "duplicates_description": "Risolvi ciascun gruppo indicando quali sono, se esistono, i duplicati.",
+  "duplicates_empty_body": "Le foto e i video che si somigliano compaiono qui a gruppi man mano che la libreria viene elaborata. Ogni gruppo aspetta che tu decida se mantenerlo, spostarlo nel cestino o raggrupparlo.",
   "duplicates_qr_show": "Mostrali",
   "duplicates_qr_skipped": "{count, plural, one {# gruppo di ricevute di pagamento con codice QR è escluso} other {# gruppi di ricevute di pagamento con codice QR sono esclusi}}: si somigliano, ma ognuna è una transazione a sé.",
   "duration": "Durata",

@@ -1771,6 +1771,7 @@
   "duplicate_workflow": "Duplikuj przepływ pracy",
   "duplicates": "Duplikaty",
   "duplicates_description": "Rozstrzygnij każdą grupę, określając, które zasoby są duplikatami, jeżeli są duplikatami.",
+  "duplicates_empty_body": "Podobne zdjęcia i filmy trafiają tu w grupach w miarę przetwarzania biblioteki. Każda grupa czeka, aż ją zachowasz, przeniesiesz do kosza lub ułożysz w stos.",
   "duplicates_qr_show": "Pokaż je",
   "duplicates_qr_skipped": "{count, plural, one {# grupa potwierdzeń płatności z kodem QR jest pominięta} few {# grupy potwierdzeń płatności z kodem QR są pominięte} other {# grup potwierdzeń płatności z kodem QR jest pominiętych}}: wyglądają podobnie, ale każde to osobna transakcja.",
   "duration": "Czas trwania",

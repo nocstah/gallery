@@ -1771,6 +1771,7 @@
   "duplicate_workflow": "Duplicar el flujo de trabajo",
   "duplicates": "Duplicados",
   "duplicates_description": "Resuelve cada grupo indicando cuáles son duplicados, si los hay.",
+  "duplicates_empty_body": "Las fotos y los vídeos que se parecen se agrupan aquí a medida que se procesa la biblioteca. Cada grupo espera a que lo conserves, lo envíes a la papelera o lo apiles.",
   "duplicates_qr_show": "Mostrarlos",
   "duplicates_qr_skipped": "{count, plural, one {# grupo de comprobantes de pago con código QR queda fuera} other {# grupos de comprobantes de pago con código QR quedan fuera}}: se parecen, pero cada uno es una transacción distinta.",
   "duration": "Duración",

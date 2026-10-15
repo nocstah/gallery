@@ -1771,6 +1771,7 @@
   "duplicate_workflow": "Kopieer werkstroom",
   "duplicates": "Duplicaten",
   "duplicates_description": "Kies voor iedere groep welke, indien aanwezig, duplicaten zijn.",
+  "duplicates_empty_body": "Foto's en video's die op elkaar lijken komen hier in groepen terecht terwijl de bibliotheek wordt verwerkt. Elke groep wacht tot je hem behoudt, naar de prullenbak verplaatst of stapelt.",
   "duplicates_qr_show": "Toon ze",
   "duplicates_qr_skipped": "{count, plural, one {# groep betaalbewijzen met een QR-code is} other {# groepen betaalbewijzen met een QR-code zijn}} weggelaten: ze lijken op elkaar, maar elk is een eigen transactie.",
   "duration": "Tijdsduur",

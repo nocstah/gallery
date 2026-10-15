@@ -1760,6 +1760,7 @@
   "duplicate_workflow": "複製工作流程",
   "duplicates": "重複項目",
   "duplicates_description": "逐一檢查每個群組，並標示其中是否有重複項目。",
+  "duplicates_empty_body": "媒體庫處理期間，相似的相片和影片會在這裡分組顯示。每組都等待您選擇保留、移至垃圾桶或堆疊。",
   "duplicates_qr_show": "顯示",
   "duplicates_qr_skipped": "已略過 {count} 組帶 QR 碼的付款憑證：它們看起來相似，但每張都是一筆獨立的交易。",
   "duration": "顯示時長",

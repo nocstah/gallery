@@ -1782,6 +1782,7 @@
   "duplicate_workflow": "Duplicate workflow",
   "duplicates": "Duplicates",
   "duplicates_description": "Resolve each group by indicating which, if any, are duplicates.",
+  "duplicates_empty_body": "Photos and videos that look alike are grouped here as the library is processed. Each group waits for you to keep, trash or stack it.",
   "duplicates_qr_show": "Show them",
   "duplicates_qr_skipped": "{count, plural, one {# group of payment slips with a QR code is} other {# groups of payment slips with a QR code are}} left out: they look alike, but each is its own transaction.",
   "duration": "Duration",

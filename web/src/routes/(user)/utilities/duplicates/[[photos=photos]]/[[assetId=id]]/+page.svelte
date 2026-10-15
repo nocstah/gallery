@@ -14,7 +14,7 @@
   import { handleError } from '$lib/utils/handle-error';
   import type { AssetResponseDto } from '@immich/sdk';
   import { createStack, deleteDuplicates, resolveDuplicates, updateAssets } from '@immich/sdk';
-  import { Button, HStack, IconButton, modalManager, Text, toastManager } from '@immich/ui';
+  import { Button, HStack, Icon, IconButton, modalManager, Text, toastManager } from '@immich/ui';
   import {
     mdiCheckOutline,
     mdiChevronLeft,
@@ -223,7 +223,12 @@
       ]}
 />
 
-<UserPageLayout title={data.meta.title + ` (${duplicates.length.toLocaleString($locale)})`} scrollbar={true}>
+<!-- Local Omarchy layer: the count of groups follows the title in data type, as on every page of the one bar -->
+<UserPageLayout
+  title={data.meta.title}
+  description={hasDuplicates ? duplicates.length.toLocaleString($locale) : undefined}
+  scrollbar={true}
+>
   {#snippet buttons()}
     <HStack gap={0}>
       <Button
@@ -258,91 +263,154 @@
     </HStack>
   {/snippet}
 
-  <div>
-    {#if qrSlips.length > 0}
-      <p class="ws-dup-qr">
-        {$t('duplicates_qr_skipped', { values: { count: qrSlips.length } })}
-        <button type="button" class="ws-empty-link" onclick={showQrSlips}>{$t('duplicates_qr_show')}</button>
-      </p>
-    {/if}
-    {#if duplicates && duplicates.length > 0}
-      <Text size="small" color="muted" class="mb-4">
+  <!-- Local Omarchy layer: the page on its gutter: how it works in a muted line or two, then the group (its tools, its
+       photos and their details) and under a hairline the way through the groups, the place in data type. With no
+       groups, an empty state: why, and what to do next (the payment slips left out, when there are some) -->
+  {#if hasDuplicates}
+    <div class="ws-dup-page">
+      <p class="ws-dup-note">
         {$t('duplicates_description')}
         <LinkToDocs href="https://docs.immich.app/features/duplicates-utility" />
-      </Text>
+      </p>
+      {#if qrSlips.length > 0}
+        <p class="ws-dup-note">
+          {$t('duplicates_qr_skipped', { values: { count: qrSlips.length } })}
+          <button type="button" class="ws-empty-link" onclick={showQrSlips}>{$t('duplicates_qr_show')}</button>
+        </p>
+      {/if}
 
       {#key duplicates[duplicatesIndex].duplicateId}
-        <DuplicatesCompareControl
-          assets={duplicates[duplicatesIndex].assets}
-          suggestedKeepAssetIds={duplicates[duplicatesIndex].suggestedKeepAssetIds}
-          bind:showMore
-          onResolve={(duplicateAssetIds, trashIds) =>
-            handleResolve(duplicates[duplicatesIndex].duplicateId, duplicateAssetIds, trashIds)}
-          onStack={(assets) => handleStack(duplicates[duplicatesIndex].duplicateId, assets)}
-        />
-        <div class="mx-auto mb-16 max-w-5xl">
-          <div class="mb-4 flex w-full place-content-center place-items-center items-center justify-between sm:px-6">
-            <div class="flex text-xs text-black">
-              <Button
-                size="small"
-                leadingIcon={languageManager.rtl ? mdiPageLast : mdiPageFirst}
-                class="flex place-items-center gap-2 rounded-s-full px-2 sm:px-4"
-                onclick={handleFirst}
-                disabled={duplicatesIndex === 0}
-              >
-                {$t('first')}
-              </Button>
-              <Button
-                size="small"
-                leadingIcon={languageManager.rtl ? mdiChevronRight : mdiChevronLeft}
-                class="flex place-items-center gap-2 rounded-e-full px-2 sm:px-4"
-                onclick={handlePrevious}
-                disabled={duplicatesIndex === 0}
-              >
-                {$t('previous')}
-              </Button>
-            </div>
-            <p class="rounded-lg border px-3 py-1 text-xs md:px-6 md:text-sm dark:bg-subtle">
-              {duplicatesIndex + 1} / {duplicates.length.toLocaleString($locale)}
-            </p>
-            <div class="flex text-xs text-black">
-              <Button
-                size="small"
-                trailingIcon={languageManager.rtl ? mdiChevronLeft : mdiChevronRight}
-                class="flex place-items-center gap-2 rounded-s-full px-2 sm:px-4"
-                onclick={handleNext}
-                disabled={duplicatesIndex === duplicates.length - 1}
-              >
-                {$t('next')}
-              </Button>
-              <Button
-                size="small"
-                trailingIcon={languageManager.rtl ? mdiPageFirst : mdiPageLast}
-                class="flex place-items-center gap-2 rounded-e-full px-2 sm:px-4"
-                onclick={handleLast}
-                disabled={duplicatesIndex === duplicates.length - 1}
-              >
-                {$t('last')}
-              </Button>
-            </div>
-          </div>
+        <div class="ws-dup-group">
+          <DuplicatesCompareControl
+            assets={duplicates[duplicatesIndex].assets}
+            suggestedKeepAssetIds={duplicates[duplicatesIndex].suggestedKeepAssetIds}
+            bind:showMore
+            onResolve={(duplicateAssetIds, trashIds) =>
+              handleResolve(duplicates[duplicatesIndex].duplicateId, duplicateAssetIds, trashIds)}
+            onStack={(assets) => handleStack(duplicates[duplicatesIndex].duplicateId, assets)}
+          />
+          <nav class="ws-dup-pager" aria-label={data.meta.title}>
+            <button
+              type="button"
+              class="ws-btn-quiet"
+              onclick={handleFirst}
+              disabled={duplicatesIndex === 0}
+              title={$t('first')}
+            >
+              <Icon icon={languageManager.rtl ? mdiPageLast : mdiPageFirst} size="16" />
+              <span class="ws-dup-pager-label">{$t('first')}</span>
+            </button>
+            <button
+              type="button"
+              class="ws-btn-quiet"
+              onclick={handlePrevious}
+              disabled={duplicatesIndex === 0}
+              title={$t('previous')}
+            >
+              <Icon icon={languageManager.rtl ? mdiChevronRight : mdiChevronLeft} size="16" />
+              <span class="ws-dup-pager-label">{$t('previous')}</span>
+            </button>
+            <span class="ws-dup-position">
+              {(duplicatesIndex + 1).toLocaleString($locale)} / {duplicates.length.toLocaleString($locale)}
+            </span>
+            <button
+              type="button"
+              class="ws-btn-quiet"
+              onclick={handleNext}
+              disabled={duplicatesIndex === duplicates.length - 1}
+              title={$t('next')}
+            >
+              <span class="ws-dup-pager-label">{$t('next')}</span>
+              <Icon icon={languageManager.rtl ? mdiChevronLeft : mdiChevronRight} size="16" />
+            </button>
+            <button
+              type="button"
+              class="ws-btn-quiet"
+              onclick={handleLast}
+              disabled={duplicatesIndex === duplicates.length - 1}
+              title={$t('last')}
+            >
+              <span class="ws-dup-pager-label">{$t('last')}</span>
+              <Icon icon={languageManager.rtl ? mdiPageFirst : mdiPageLast} size="16" />
+            </button>
+          </nav>
         </div>
       {/key}
-    {:else}
-      <p class="flex place-content-center place-items-center text-center text-lg dark:text-white">
-        {$t('no_duplicates_found')}
-      </p>
-    {/if}
-  </div>
+    </div>
+  {:else}
+    <div class="ws-page-column">
+      <div class="ws-empty">
+        <h2 class="ws-empty-title">{$t('no_duplicates_found')}</h2>
+        {#if qrSlips.length > 0}
+          <p class="ws-empty-body">{$t('duplicates_qr_skipped', { values: { count: qrSlips.length } })}</p>
+          <div class="ws-empty-actions">
+            <button type="button" class="ws-empty-action" onclick={showQrSlips}>{$t('duplicates_qr_show')}</button>
+          </div>
+        {:else}
+          <p class="ws-empty-body">{$t('duplicates_empty_body')}</p>
+          <div class="ws-empty-actions">
+            <a class="ws-empty-action" href={Route.utilities()}>{$t('utilities')}</a>
+          </div>
+        {/if}
+      </div>
+    </div>
+  {/if}
 </UserPageLayout>
 
 <style>
-  .ws-dup-qr {
-    margin-bottom: 0.75rem;
-    font-size: 0.9rem;
+  .ws-dup-page {
+    padding: calc(var(--ws-gap) * 0.6) 0 4rem;
+    color: var(--immich-ui-dark);
+  }
+  /* how the page works, one muted line each, as an album's note */
+  .ws-dup-note {
+    max-width: 60ch;
+    font-size: var(--ws-text-ui);
+    line-height: 1.5;
     color: var(--immich-ui-muted);
   }
-  .ws-dup-qr button {
+  .ws-dup-note + .ws-dup-note {
+    margin-top: 0.35rem;
+  }
+  .ws-dup-note button {
     margin-inline-start: 0.35rem;
+  }
+  .ws-dup-group {
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 1.5rem;
+  }
+  /* the way through the groups under a hairline, the place in data type between the arrows */
+  .ws-dup-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    margin-top: 1rem;
+    padding-top: calc(var(--ws-gap) * 0.8);
+    border-top: 1px solid var(--ws-hairline);
+  }
+  .ws-dup-pager button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .ws-dup-pager > button:first-child {
+    margin-inline-start: -0.6rem;
+  }
+  .ws-dup-position {
+    padding-inline: 0.75rem;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--immich-ui-dark);
+    white-space: nowrap;
+  }
+  /* a phone keeps the arrows and the place; the words stay in the buttons' titles */
+  @media (max-width: 639px) {
+    .ws-dup-pager-label {
+      display: none;
+    }
   }
 </style>

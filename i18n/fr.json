@@ -1771,6 +1771,7 @@
   "duplicate_workflow": "Dupliquer le flux de traitement",
   "duplicates": "Doublons",
   "duplicates_description": "Examiner chaque groupe et indiquer s'il y a des doublons.",
+  "duplicates_empty_body": "Les photos et vidéos qui se ressemblent sont regroupées ici à mesure que la bibliothèque est traitée. Chaque groupe attend que vous le conserviez, le mettiez à la corbeille ou l'empiliez.",
   "duplicates_qr_show": "Les afficher",
   "duplicates_qr_skipped": "{count, plural, one {# groupe de reçus de paiement avec un code QR est masqué} other {# groupes de reçus de paiement avec un code QR sont masqués}} : ils se ressemblent, mais chacun est une transaction distincte.",
   "duration": "Durée",

@@ -1771,6 +1771,7 @@
   "duplicate_workflow": "Workflow duplizieren",
   "duplicates": "Duplikate",
   "duplicates_description": "Löse jede Gruppe auf, indem du angibst, welche, wenn überhaupt, Duplikate sind.",
+  "duplicates_empty_body": "Ähnliche Fotos und Videos landen hier in Gruppen, während die Bibliothek verarbeitet wird. Jede Gruppe wartet, bis du sie behältst, in den Papierkorb verschiebst oder stapelst.",
   "duplicates_qr_show": "Anzeigen",
   "duplicates_qr_skipped": "{count, plural, one {# Gruppe von Zahlungsbelegen mit QR-Code ist} other {# Gruppen von Zahlungsbelegen mit QR-Code sind}} ausgeblendet: Sie sehen sich ähnlich, aber jeder ist eine eigene Buchung.",
   "duration": "Dauer",

@@ -6,7 +6,7 @@
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { handlePromiseError } from '$lib/utils';
-  import { getNextAsset, getPreviousAsset } from '$lib/utils/asset-utils';
+  import { getAssetRatio, getNextAsset, getPreviousAsset } from '$lib/utils/asset-utils';
   import {
     computeDifferingMetadataFields,
     countDifferingMetadataItems,
@@ -14,7 +14,7 @@
   } from '$lib/utils/duplicate-utils';
   import { navigate } from '$lib/utils/navigation';
   import { getAssetInfo, type AssetResponseDto } from '@immich/sdk';
-  import { Button, Icon } from '@immich/ui';
+  import { Icon } from '@immich/ui';
   import { mdiCheck, mdiChevronDown, mdiChevronUp, mdiImageMultipleOutline, mdiTrashCanOutline } from '@mdi/js';
   import { onDestroy, onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -38,6 +38,9 @@
   const differingMetadataFields: DifferingMetadataFields = $derived(computeDifferingMetadataFields(assets));
   const differingCount = $derived(countDifferingMetadataItems(differingMetadataFields));
   const hasMore = $derived(differingCount > InitialVisibleCount);
+  // Local Omarchy layer: every tile of a group takes one shape, portrait or landscape after its first photo, so the
+  // rows of details under them line up across the columns; portrait columns are narrower, so a tile stays in view
+  const portrait = $derived(((assets[0] && getAssetRatio(assets[0])) ?? 1) < 1);
 
   onMount(() => {
     if (suggestedKeepAssetIds.length > 0) {
@@ -122,85 +125,64 @@
   ]}
 />
 
-<div class="px-0.2 mx-auto mb-4 max-w-5xl rounded-3xl border border-gray-300 py-6 dark:border-2 dark:border-gray-700">
-  <div class="mb-4 flex w-full flex-wrap place-content-end justify-between gap-y-6 px-6">
-    <!-- MARK ALL BUTTONS -->
-    <div class="flex text-xs text-black">
-      <Button class="rounded-s-full" size="small" color="primary" leadingIcon={mdiCheck} onclick={onSelectAll}
-        >{$t('select_keep_all')}</Button
-      >
-      <Button
-        class="rounded-e-full"
-        size="small"
-        color="secondary"
-        leadingIcon={mdiTrashCanOutline}
-        onclick={onSelectNone}>{$t('select_trash_all')}</Button
-      >
-    </div>
+<!-- Local Omarchy layer: the group sits on the page's gutter, not in a centred card. A row of what to do comes first
+     (mark every photo to keep or to the Trash; then Stack, and the action: ink to keep them all, the danger colour once
+     it trashes), a hairline under it; then the photos side by side, each a tile over its rows of details -->
+<section class="ws-dup">
+  <div class="ws-dup-tools">
+    <button type="button" class="ws-btn-quiet" onclick={onSelectAll}>
+      <Icon icon={mdiCheck} size="16" />
+      {$t('select_keep_all')}
+    </button>
+    <button type="button" class="ws-btn-quiet" onclick={onSelectNone}>
+      <Icon icon={mdiTrashCanOutline} size="16" />
+      {$t('select_trash_all')}
+    </button>
 
-    <!-- CONFIRM BUTTONS -->
-    <div class="flex text-xs text-black">
-      {#if trashCount === 0}
-        <Button
-          size="small"
-          leadingIcon={mdiCheck}
-          color="success"
-          class="flex place-items-center gap-2 rounded-s-full"
-          onclick={handleResolve}
-        >
-          {$t('keep_all')}
-        </Button>
-      {:else}
-        <Button
-          size="small"
-          color="danger"
-          leadingIcon={mdiTrashCanOutline}
-          class="rounded-s-full"
-          onclick={handleResolve}
-        >
-          {trashCount === assets.length ? $t('trash_all') : $t('trash_count', { values: { count: trashCount } })}
-        </Button>
-      {/if}
-      <Button
-        size="small"
-        color="primary"
-        leadingIcon={mdiImageMultipleOutline}
-        class="rounded-e-full"
-        onclick={handleStack}
-        disabled={selectedAssetIds.size !== 1}
-      >
+    <span class="ws-dup-decide">
+      <button type="button" class="ws-dup-outline" onclick={handleStack} disabled={selectedAssetIds.size !== 1}>
+        <Icon icon={mdiImageMultipleOutline} size="16" />
         {$t('stack')}
-      </Button>
-    </div>
+      </button>
+      {#if trashCount === 0}
+        <button type="button" class="ws-btn" onclick={handleResolve}>
+          <Icon icon={mdiCheck} size="16" />
+          {$t('keep_all')}
+        </button>
+      {:else}
+        <button type="button" class="ws-btn ws-dup-trash" onclick={handleResolve}>
+          <Icon icon={mdiTrashCanOutline} size="16" />
+          {trashCount === assets.length ? $t('trash_all') : $t('trash_count', { values: { count: trashCount } })}
+        </button>
+      {/if}
+    </span>
   </div>
 
-  <div class="overflow-x-auto p-2">
-    <div class="mx-auto flex w-fit min-w-full flex-nowrap place-items-start justify-center gap-1">
-      {#each assets as asset (asset.id)}
-        <DuplicateAsset
-          {asset}
-          {onSelectAsset}
-          isSelected={selectedAssetIds.has(asset.id)}
-          {onViewAsset}
-          {differingMetadataFields}
-          {showMore}
-          initialVisibleCount={InitialVisibleCount}
-        />
-      {/each}
-    </div>
+  <div
+    class="ws-dup-columns"
+    style:--ws-dup-ratio={portrait ? '3 / 4' : '4 / 3'}
+    style:--ws-dup-column={portrait ? '24rem' : '32rem'}
+  >
+    {#each assets as asset (asset.id)}
+      <DuplicateAsset
+        {asset}
+        {onSelectAsset}
+        isSelected={selectedAssetIds.has(asset.id)}
+        {onViewAsset}
+        {differingMetadataFields}
+        {showMore}
+        initialVisibleCount={InitialVisibleCount}
+      />
+    {/each}
   </div>
 
   {#if hasMore}
-    <div class="flex justify-center">
-      <Button size="small" variant="ghost" color="secondary" onclick={() => (showMore = !showMore)}>
-        <Icon icon={showMore ? mdiChevronUp : mdiChevronDown} size="18" class="me-1" />
-        {showMore
-          ? $t('show_less')
-          : $t('show_more_fields', { values: { count: differingCount - InitialVisibleCount } })}
-      </Button>
-    </div>
+    <button type="button" class="ws-btn-quiet ws-dup-more" onclick={() => (showMore = !showMore)}>
+      <Icon icon={showMore ? mdiChevronUp : mdiChevronDown} size="16" />
+      {showMore ? $t('show_less') : $t('show_more_fields', { values: { count: differingCount - InitialVisibleCount } })}
+    </button>
   {/if}
-</div>
+</section>
 
 {#if assetViewerManager.isViewing}
   {#if LazyAssetViewer.current}
@@ -218,3 +200,81 @@
     </Portal>
   {/if}
 {/if}
+
+<style>
+  /* as wide as its photos (at most the page), so the action at the row's end sits over the last photo's edge */
+  .ws-dup {
+    width: fit-content;
+    max-width: 100%;
+  }
+  .ws-dup-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 2px;
+    padding-bottom: calc(var(--ws-gap) * 0.8);
+    margin-bottom: calc(var(--ws-gap) * 1.2);
+    border-bottom: 1px solid var(--ws-hairline);
+  }
+  .ws-dup-tools button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  /* a quiet button's icon starts on the gutter, over the first photo's edge */
+  .ws-dup-tools > button:first-child {
+    margin-inline-start: -0.6rem;
+  }
+  .ws-dup-decide {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-inline-start: auto;
+  }
+  .ws-dup-outline {
+    padding: 0.5rem 0.95rem;
+    border: 1px solid var(--ws-hairline);
+    border-radius: var(--ws-radius);
+    color: var(--immich-ui-dark);
+    font-size: var(--ws-text-ui);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .ws-dup-outline:hover {
+    background: color-mix(in oklab, var(--immich-ui-dark) 7%, transparent);
+  }
+  .ws-dup-outline:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .ws-dup-outline:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: 3px;
+  }
+  /* the destructive action takes the danger role, as Bank slips' Move to Trash does: the deep step of the theme's
+     danger ramp under the surface's text (the ramp turns over in dark mode, so the label holds AA in both) */
+  .ws-dup-trash {
+    background: var(--immich-ui-danger-700);
+    color: var(--immich-ui-light);
+  }
+  .ws-dup-trash:hover {
+    background: color-mix(in oklab, var(--immich-ui-danger-700) 85%, var(--immich-ui-dark));
+  }
+  /* the photos side by side, each column up to 32rem (24rem for portrait photos), scrolling sideways when they do not
+     fit */
+  .ws-dup-columns {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(15rem, var(--ws-dup-column, 32rem));
+    gap: var(--ws-gap);
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+  .ws-dup-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    margin-inline-start: -0.6rem;
+  }
+</style>

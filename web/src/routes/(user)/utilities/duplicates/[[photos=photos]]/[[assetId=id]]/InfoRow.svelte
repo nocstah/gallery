@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, Text } from '@immich/ui';
+  import { Icon } from '@immich/ui';
   import type { Snippet } from 'svelte';
 
   interface Props {
@@ -12,16 +12,42 @@
   let { icon, children, title, tooltip }: Props = $props();
 </script>
 
-<div class="grid w-full grid-cols-[20px_auto_1fr] gap-1 overflow-hidden px-2 py-1.5" title={title ?? tooltip}>
-  <Icon {icon} size="16" class="self-center text-dark/25" />
-
-  <Text size="tiny" class="self-center truncate pe-1 text-immich-fg/40 dark:text-immich-dark-fg/40">
-    {title}
-  </Text>
-
-  <div class="justify-self-end overflow-hidden rounded-sm text-end transition-colors">
-    <Text size="tiny" class="break-all">
-      {@render children()}
-    </Text>
-  </div>
+<!-- Local Omarchy layer: a row of a duplicate's details on the ground: the icon and the label in muted meta, the value in
+     data type at the row's end, a hairline below -->
+<div class="ws-dup-row" title={title ?? tooltip}>
+  <Icon {icon} size="16" />
+  <span class="ws-dup-row-label">{title}</span>
+  <span class="ws-dup-row-value">{@render children()}</span>
 </div>
+
+<style>
+  .ws-dup-row {
+    display: grid;
+    grid-template-columns: 16px auto minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: baseline;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--ws-hairline);
+    color: var(--immich-ui-muted);
+  }
+  .ws-dup-row :global(svg) {
+    align-self: center;
+  }
+  .ws-dup-row-label {
+    overflow: hidden;
+    font-size: var(--ws-text-meta);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-dup-row-value {
+    justify-self: end;
+    min-width: 0;
+    color: var(--immich-ui-dark);
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+    overflow-wrap: anywhere;
+  }
+</style>
