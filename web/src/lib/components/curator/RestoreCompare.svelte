@@ -268,7 +268,7 @@
     background: color-mix(in oklab, var(--immich-ui-dark) 78%, transparent);
     color: var(--immich-ui-light);
     font-family: var(--ws-font-data);
-    font-size: 11px;
+    font-size: var(--ws-text-data);
     font-weight: 600;
     pointer-events: none;
   }

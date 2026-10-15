@@ -103,7 +103,7 @@
     background: var(--immich-ui-dark);
     color: var(--immich-ui-light);
     font-family: var(--ws-font-data);
-    font-size: 11px;
+    font-size: var(--ws-text-data);
     font-weight: 600;
   }
   .health-value {

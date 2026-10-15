@@ -288,7 +288,7 @@
     color: var(--ws-accent);
   }
   .theme-meta {
-    font-size: 0.72rem;
+    font-size: var(--ws-text-data);
     color: var(--immich-ui-muted);
   }
   .theme-tools {

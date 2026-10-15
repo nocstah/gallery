@@ -259,7 +259,7 @@
   }
   kbd {
     font-family: var(--ws-font-data);
-    font-size: 11px;
+    font-size: var(--ws-text-data);
     opacity: 0.7;
   }
 </style>

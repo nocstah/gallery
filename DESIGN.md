@@ -33,23 +33,33 @@ typography:
     fontVariation: "'wdth' 80, 'opsz' 72"
   title:
     fontFamily: "'Bricolage Grotesque Variable', 'Mona Sans', ui-sans-serif, sans-serif"
-    fontSize: "20px"
+    fontSize: "1.25rem"
     fontWeight: 650
     letterSpacing: "-0.01em"
     fontFeature: "'tnum'"
+  heading:
+    fontFamily: "'Mona Sans', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "1.125rem"
+    fontWeight: 650
+    lineHeight: 1.3
   body:
     fontFamily: "'Mona Sans', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "15px"
+    fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.55
     fontFeature: "'ss01', 'ss02'"
   label:
     fontFamily: "'Mona Sans', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "14px"
+    fontSize: "0.875rem"
     fontWeight: 600
+  meta:
+    fontFamily: "'Mona Sans', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "0.8125rem"
+    fontWeight: 400
+    lineHeight: 1.45
   data:
     fontFamily: "var(--omarchy-font-mono, 'JetBrainsMono Nerd Font'), 'GoogleSansCode', ui-monospace, monospace"
-    fontSize: "12px"
+    fontSize: "0.75rem"
     fontWeight: 600
     fontFeature: "'tnum'"
 rounded:
@@ -153,18 +163,22 @@ The palette is the active Omarchy theme, read at runtime; this system defines ro
 **Body Font:** Mona Sans variable (self-hosted, wght 200 to 900, stretch 75 to 125%, `ss01` + `ss02` on)
 **Label/Mono Font:** the desktop's monospace (`--omarchy-font-mono` from the font-set hook; fallback JetBrainsMono Nerd Font, then GoogleSansCode)
 
+**Delivery.** Bricolage is loaded once, as Fontsource's standard axis set (wght, wdth, opsz) from `omarchy-world.css`. Until 2026-10-15 `gallery-theme.css` also imported the wght-only build under the same family name, the browser picked it, and nothing but the bar's heading ever condensed (Years numerals, the AI inbox headline and empty-state titles ran wide); that import and the unused DM Sans are gone. Mona Sans is preloaded (`app.html`, filled by `hooks.server.ts`); upstream's Google Sans (4.8 MB) and Google Sans Code are no longer preloaded, and nothing shows them.
+
 **Character:** Condensed, heavy grotesque numerals set the time like a poster; a neutral variable sans does the work; the desktop's own terminal font carries every number that is data.
 
 ### Hierarchy
-One size per role, as tokens in `omarchy-world.css` (`--ws-text-*`); components use the token, never a literal size:
-display `clamp(2.25rem, 1rem + 3vw, 4rem)` · title 20px · heading 17px · body 15px · ui 14px · meta 13px · data 12px · micro 11px.
+One size per role, as tokens in `omarchy-world.css` (`--ws-text-*`, in rem so one root size scales them all, for a TV); components use the token, never a literal size:
+display `clamp(2.25rem, 1rem + 3vw, 4rem)` · title 1.25rem · heading 1.125rem · body 1rem · ui 0.875rem · meta 0.8125rem · data 0.75rem. Nothing a person reads is under 12px (the 11px micro size is retired into data).
 
-- **Display** (800, condensed `wdth 75`, `--ws-text-display`, line-height 0.85, -0.035em): the year in view in the timeline header, page headlines (AI inbox, Command center), Years banners. With the glass chrome the timeline heading folds to title size in one slim glass row once the photos scroll (the space reserved above them keeps the open height, so nothing moves).
+**Upstream follows at the token** (2026-10-15): Tailwind's sizes are the roles, in a `@theme` block in `omarchy-world.css`, so a stock page reads as the same product as Photos. `text-xs` is meta (13px, +0.005em), `sm` ui, `base` body (line-height 1.55), `lg` heading (18px, 650), `xl` a title-sized line in Mona (20px), and `2xl` to `5xl` headlines and numerals in the display face at its condensed width (24, 30, 36, 48px; 750 then 800), so album and group titles, the Years and Months tiles, places and statistics speak the bar's voice at about upstream's sizes; `6xl` is the display role. Every h1-h4 is Mona at 650 (gallery-theme.css had sent them all to the display face, at 14px a 96pt poster design); a rule that wants the display face for a heading names it. `font-mono text-xs` keeps the data size; upstream's arbitrary 9-11.5px sizes are the data size; thin, extralight and light weights read as regular. On a dark ground body text runs at 420 and the small roles get a little more tracking and leading.
+
+- **Display** (800, condensed `wdth 75`, `--ws-text-display`, line-height 0.85; numerals -0.035em, words -0.01em with 0.06-0.08em word spacing, since at the condensed width a tight setting runs words together): the year in view in the timeline header, page headlines (AI inbox, Command center), Years banners. With the glass chrome the timeline heading folds to title size in one slim glass row once the photos scroll (the space reserved above them keeps the open height, so nothing moves).
 - **Display Month** (500, same size and width): the month name beside it, first letter capitalised. Weight contrast, not size, separates month from year.
 - **Headline** (750, `wdth 80`, `clamp(1.75rem, 1.2rem + 1.6vw, 2.5rem)`, line-height 1.05, balanced wrap): empty-state titles.
 - **Title** (650, 20px, -0.01em, display face): a page's name in its title bar.
-- **Heading** (650, 17px): section and group names, inbox row titles.
-- **Body** (400, 15px, line-height 1.55, max 60ch): explanatory copy, empty-state bodies, day labels in the timeline (display face, tabular).
+- **Heading** (650, 18px): section and group names, inbox row titles.
+- **Body** (400, 420 on dark, 16px, line-height 1.55, max 60ch): explanatory copy, empty-state bodies, day labels in the timeline (display face, tabular).
 - **UI** (500-600, 14px): buttons, tabs, sidebar items, segmented options.
 - **Meta** (400, 13px, muted): details and captions. Menus run a step smaller (12.5px) on the owner's wish.
 - **Data** (600, 12px, tabular, monospace): counts ("59 items"), year pills, dates, EXIF, workspace numbers.

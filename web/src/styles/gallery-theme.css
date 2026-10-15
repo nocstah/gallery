@@ -8,8 +8,9 @@
  * the :root,.light block (matching upstream app.css), NOT in .dark.
  */
 
-@import '@fontsource-variable/dm-sans';
-@import '@fontsource-variable/bricolage-grotesque';
+/* Local Omarchy layer: DM Sans is unused and the wght-only Bricolage registered a second face under the family name
+   that the browser picked over the layer's full one (omarchy-world.css imports the standard axis set), so nothing
+   off the bar ever condensed; both imports are gone */
 
 :root,
 .light {

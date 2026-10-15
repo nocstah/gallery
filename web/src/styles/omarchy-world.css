@@ -53,23 +53,27 @@
   --font-display: 'Bricolage Grotesque Variable', 'Mona Sans', ui-sans-serif, sans-serif;
   --font-mono: var(--ws-font-data);
 
-  /* the type scale: one size per role. display is the timeline's month and the page headlines; title a page's
-     name in its title bar; heading a section or group; body running text; ui buttons, tabs, sidebar; meta details
-     and captions (muted); data counts, years and EXIF (mono); micro small chips only */
+  /* the type scale: one size per role, in rem so one root size scales it all (a TV). display is the timeline's month
+     and the page headlines; title a page's name in its title bar; heading a section or group; body running text; ui
+     buttons, tabs, sidebar; meta details and captions (muted); data counts, years and EXIF (mono). Nothing a person
+     reads is under 12px: micro, the old 11px chip size, is the data size now. Upstream's Tailwind sizes are these
+     roles too (the @theme block below), so a stock page and Photos read as one product (2026-10-15) */
   --ws-text-display: clamp(2.25rem, 1rem + 3vw, 4rem);
   /* the one bar is 56px: its search is an icon until opened, so nothing in it needs upstream's 4rem band
      (app.css sets 4rem inside a layer; this unlayered value wins) */
   --navbar-height: 3.5rem;
   --navbar-height-md: 3.5rem;
   /* the bar's own heading (the month in view, a page's name): the title role, a label rather than a headline */
-  --ws-text-bar: 20px;
-  --ws-text-title: 20px;
-  --ws-text-heading: 17px;
-  --ws-text-body: 15px;
-  --ws-text-ui: 14px;
-  --ws-text-meta: 13px;
-  --ws-text-data: 12px;
-  --ws-text-micro: 11px;
+  --ws-text-bar: 1.25rem;
+  --ws-text-title: 1.25rem;
+  --ws-text-heading: 1.125rem;
+  --ws-text-body: 1rem;
+  --ws-text-ui: 0.875rem;
+  --ws-text-meta: 0.8125rem;
+  --ws-text-data: 0.75rem;
+  --ws-text-micro: 0.75rem;
+  /* upstream's Google Sans wanted 0.1px of tracking on everything (app.css); Mona Sans and the mono want none */
+  letter-spacing: normal;
 }
 
 /* ---- upstream's roles in this world, as Tailwind theme tokens, so every utility and every @immich/ui component
@@ -81,6 +85,50 @@
   --color-primary: var(--immich-ui-dark);
   /* the legacy --color-immich-primary and --color-immich-dark-primary are set to ink at the end of app.css's own
      theme, since app.css defines them after its imports */
+}
+@theme {
+  /* upstream's Tailwind sizes are this layer's roles: text-xs is meta, sm ui, base body, lg a heading, xl a title-sized
+     line in Mona; 2xl and up are headlines and numerals in the display face (the components layer below), at about
+     upstream's sizes so no stock layout grows, and 6xl is the display role. Explicit font-* and tracking-* classes
+     still win over the weights and tracking set here */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.45;
+  --text-xs--letter-spacing: 0.005em;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.4;
+  --text-base: 1rem;
+  --text-base--line-height: 1.55;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.3;
+  --text-lg--letter-spacing: -0.005em;
+  --text-lg--font-weight: 650;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.25;
+  --text-xl--letter-spacing: -0.01em;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.1;
+  --text-2xl--letter-spacing: -0.005em;
+  --text-2xl--font-weight: 750;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 1.05;
+  --text-3xl--letter-spacing: -0.01em;
+  --text-3xl--font-weight: 750;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 1;
+  --text-4xl--letter-spacing: -0.01em;
+  --text-4xl--font-weight: 800;
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 0.95;
+  --text-5xl--letter-spacing: -0.015em;
+  --text-5xl--font-weight: 800;
+  --text-6xl: var(--ws-text-display);
+  --text-6xl--line-height: 0.95;
+  --text-6xl--letter-spacing: -0.015em;
+  --text-6xl--font-weight: 800;
+  /* hairline weights fade on a dark ground and at a distance: the lightest anything reads is regular */
+  --font-weight-thin: 400;
+  --font-weight-extralight: 400;
+  --font-weight-light: 400;
 }
 @theme {
   /* every corner is the desktop's window radius (Shapes), in upstream's markup too; rounded-full stays round, for
@@ -103,6 +151,60 @@
   .text-gray-100
 ) {
   color: var(--immich-ui-light);
+}
+
+/* headings are words: Mona at the heading weight (gallery-theme.css sent every h1-h4 to the display face, so 14px
+   labels in settings and shared sections came out in a 96pt poster design); a rule that wants the display face for
+   a heading names it. In the base layer, so any class on the heading still wins */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-sans);
+    font-weight: 650;
+    letter-spacing: normal;
+  }
+}
+/* headlines and numerals, upstream's text-2xl and up (album and group titles, the Years and Months tiles, places,
+   statistics): the display face at its condensed width, as the bar's own heading */
+@layer components {
+  :is(.text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl) {
+    font-family: var(--font-display);
+    font-stretch: 75%;
+    /* at the condensed width a word space shrinks with the letters: give it back */
+    word-spacing: 0.06em;
+  }
+}
+/* data set in mono keeps the data size when text-xs grows to meta */
+.font-mono.text-xs {
+  font-size: var(--ws-text-data);
+}
+/* nothing a person reads is under 12px: upstream's arbitrary 9 to 11.5px (palette rows, trim tool, people filter,
+   setting hints) is the data size */
+:is(
+  .text-\[9px\],
+  .text-\[9\.5px\],
+  .text-\[10px\],
+  .text-\[11px\],
+  .text-\[11\.5px\],
+  .text-\[0\.6rem\],
+  .text-\[0\.65rem\],
+  .text-\[0\.7rem\]
+) {
+  font-size: var(--ws-text-data);
+}
+/* light text on a dark ground reads thinner and tighter: a touch more weight for body text, and air for the small
+   roles (display and titles stay as drawn) */
+:root.dark {
+  --text-xs--letter-spacing: 0.015em;
+  --text-xs--line-height: 1.5;
+  --text-sm--letter-spacing: 0.008em;
+  --text-base--line-height: 1.6;
+  --font-weight-normal: 420;
+}
+:root.dark body {
+  font-weight: 420;
 }
 
 /* upstream's round controls (@immich/ui shape="round": icon buttons, buttons, control bars; switches; pill links) take
@@ -399,7 +501,10 @@ div[role='dialog'] :is(.border-b, .border-t) {
   font-variation-settings:
     'wdth' 80,
     'opsz' 72;
-  letter-spacing: -0.03em;
+  /* words at the condensed width: the tight tracking is the numerals' (it ran letters together once the condensing
+     worked, 2026-10-15) */
+  letter-spacing: -0.01em;
+  word-spacing: 0.06em;
   line-height: 1.05;
   text-wrap: balance;
   color: var(--immich-ui-dark);
@@ -674,13 +779,13 @@ div[role='dialog'] :is(.border-b, .border-t) {
   border-color: var(--immich-ui-dark);
   color: var(--immich-ui-dark);
   font-family: var(--ws-font-data);
-  font-size: 11px;
+  font-size: var(--ws-text-data);
   font-variant-numeric: tabular-nums;
 }
 .maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib {
   background: color-mix(in oklab, var(--immich-ui-light) 75%, transparent);
   color: var(--immich-ui-muted);
-  font-size: 11px;
+  font-size: var(--ws-text-data);
 }
 .maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib a {
   color: var(--immich-ui-muted);
@@ -793,7 +898,8 @@ div[role='dialog'] :is(.border-b, .border-t) {
   font-variation-settings:
     'wdth' 75,
     'opsz' 96;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.02em;
+  word-spacing: 0.06em;
   /* the title truncates (overflow hidden): leave room for month descenders */
   line-height: 1;
 }
@@ -953,7 +1059,7 @@ ul[role='menu'] > li[role='menuitem']:not(.bg-slate-100) svg {
 ul[role='menu'] > li[role='menuitem'] .text-gray-500 {
   color: var(--immich-ui-muted);
   font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: 0.7rem;
+  font-size: var(--ws-text-data);
   letter-spacing: 0.02em;
   opacity: 0.8;
 }
@@ -1158,7 +1264,9 @@ body.ws-dragging * {
   font-variation-settings:
     'wdth' 75,
     'opsz' 96;
-  letter-spacing: -0.035em;
+  /* words, not numerals: at -0.035em "AI inbox" ran together once the condensing worked */
+  letter-spacing: -0.01em;
+  word-spacing: 0.08em;
   line-height: 0.85;
 }
 .ws-inbox-count {
