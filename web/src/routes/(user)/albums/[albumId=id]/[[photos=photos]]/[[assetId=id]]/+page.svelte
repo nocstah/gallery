@@ -4,7 +4,6 @@
   import { scrollMemoryClearer } from '$lib/actions/scroll-memory';
   import AlbumMap from '$lib/components/album-page/AlbumMap.svelte';
   import AlbumSharedSpaceLinks from '$lib/components/album-page/AlbumSharedSpaceLinks.svelte';
-  import AlbumSummary from '$lib/components/album-page/AlbumSummary.svelte';
   import ActivityStatus from '$lib/components/asset-viewer/ActivityStatus.svelte';
   import ActivityViewer from '$lib/components/asset-viewer/ActivityViewer.svelte';
   import ActiveFiltersBar from '$lib/components/filter-panel/active-filters-bar.svelte';
@@ -106,6 +105,7 @@
   } from '@immich/sdk';
   import {
     ActionButton,
+    Button,
     CommandPaletteDefaultProvider,
     Icon,
     IconButton,
@@ -116,7 +116,6 @@
     mdiAccountEye,
     mdiAccountEyeOutline,
     mdiArrowLeft,
-    mdiDotsHorizontal,
     mdiDotsVertical,
     mdiEyeOffOutline,
     mdiImageOutline,
@@ -129,13 +128,16 @@
   import { onDestroy, onMount, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
   import { fly } from 'svelte/transition';
-  import { SvelteMap } from 'svelte/reactivity';
+  import { MediaQuery, SvelteMap } from 'svelte/reactivity';
   import type { PageData } from './$types';
   import AlbumDescription from '$lib/components/album-page/AlbumDescription.svelte';
   import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
   import SmartAlbumBadge from '$lib/components/curator/SmartAlbumBadge.svelte';
-  import AlbumTitle from '$lib/components/album-page/AlbumTitle.svelte';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
+  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
+  import AlbumBarTitle from '$lib/components/omarchy/AlbumBarTitle.svelte';
+  import AlbumPeopleStrip from '$lib/components/omarchy/AlbumPeopleStrip.svelte';
+  import { getAlbumDateRange } from '$lib/utils/date-time';
 
   interface Props {
     data: PageData;
@@ -256,6 +258,36 @@
   };
 
   // Local Omarchy layer: back to the folder the album sits in (managers/album-folders), the top of Albums when none
+  // Local Omarchy layer: the album lives in the shell (2026-10-15): its dates and count sit in the bar beside its name
+  const albumBarDescription = $derived.by(() => {
+    const count = $t('items_count', { values: { count: album.assetCount } });
+    return album.startDate
+      ? `${getAlbumDateRange(album.startDate, album.endDate ?? album.startDate)} · ${count}`
+      : count;
+  });
+
+  // ...on a phone its tools fold into the ⋮ (the bar has room for Share and the menu, not six icons)
+  const narrowBar = new MediaQuery('max-width: 767px');
+  const startAddPhotos = async () => {
+    timelineManager.suspendTransitions = true;
+    viewMode = AlbumPageViewMode.SELECT_ASSETS;
+    oldAt = { at: assetViewerManager.gridScrollTarget?.at };
+    await navigate(
+      { targetRoute: 'current', assetId: null, assetGridRouteSearchParams: { at: null } },
+      { replaceState: true },
+    );
+  };
+
+  // ...and a face in its details narrows it to that person, as the filter rail's People does
+  const toggleAlbumPerson = (person: { id: string; name: string }) => {
+    albumPersonNames.set(person.id, person.name);
+    const personIds = albumFilters.personIds.includes(person.id)
+      ? albumFilters.personIds.filter((id) => id !== person.id)
+      : [...albumFilters.personIds, person.id];
+    albumFilters = { ...albumFilters, personIds };
+    syncAlbumFilterUrl(albumFilters);
+  };
+
   const backToAlbums = async () => {
     await albumFolders.ready();
     await goto(Route.albums({ folder: albumFolders.folderOf(album.id) }));
@@ -456,7 +488,6 @@
     });
   });
 
-  const albumHasViewers = $derived(album.albumUsers.some(({ role }) => role === AlbumUserRole.Viewer));
   const containsEditors = $derived(album?.shared && album.albumUsers.some(({ role }) => role === AlbumUserRole.Editor));
   const albumUsers = $derived(showAlbumUsers && containsEditors ? album.albumUsers.map(({ user }) => user) : []);
 
@@ -816,394 +847,423 @@
 />
 <CommandPaletteDefaultProvider name={$t('album')} actions={[AddAssets, Upload, Close, ...Object.values(Actions)]} />
 
-<div class="flex overflow-hidden" use:scrollMemoryClearer={{ routeStartsWith: Route.albums() }}>
-  <div class="relative w-full shrink">
-    <main
-      class="relative h-dvh overflow-hidden px-2 pt-(--control-bar-height) max-md:pt-(--control-bar-height-md) md:px-6"
+{#snippet albumBarLeading()}
+  <IconButton
+    shape="round"
+    variant="ghost"
+    color="secondary"
+    icon={mdiArrowLeft}
+    aria-label={$t('back')}
+    onclick={() => backToAlbums()}
+  />
+  <AlbumBarTitle {album} {isEditor} onUpdate={(albumName) => (album = { ...album, albumName })} />
+{/snippet}
+
+{#snippet albumBarButtons()}
+  {#if Actions.Share.$if?.() ?? true}
+    <Button
+      leadingIcon={Actions.Share.icon}
+      variant="ghost"
+      size="small"
+      color="secondary"
+      onclick={(event: MouseEvent) => Actions.Share.onAction({ event, action: Actions.Share })}
     >
-      <div class="flex h-full" data-testid="discovery-timeline">
-        <!-- This route doesn't use UserPageLayout, so there's no page-level card for the panel to
-             blend into — its bg-light surface would otherwise read as a flush black slab running to
-             the foot of the window. Give it the app's own surface radius (rounded-lg is 16px in this
-             theme, matching UserPageLayout's <main>) and inset it equally from the app bar above and
-             the window edge below, so it reads as a deliberate floating panel. -->
-        <div class="h-full shrink-0 py-4">
-          <div class="h-full overflow-hidden rounded-lg" data-testid="album-filter-panel-surface">
-            {#if viewMode === AlbumPageViewMode.SELECT_ASSETS}
-              {#key `picker-${album.id}`}
-                <FilterPanel
-                  config={pickerFilterConfig}
-                  bind:filters={pickerFilters}
-                  {timeBuckets}
-                  storageKey="gallery-filter-visible-sections-album-detail"
-                  hidden={isTimelineEmpty}
-                />
-              {/key}
-            {:else}
-              <!-- Keyed on the search too: switching between browse and query mode swaps the whole
+      <span class="ws-action-label">{$t('share')}</span>
+    </Button>
+  {/if}
+  {#if !narrowBar.current}
+    <ActionButton action={Cast} />
+
+    {#if isEditor}
+      <IconButton
+        variant="ghost"
+        shape="round"
+        color="secondary"
+        aria-label={$t('add_photos')}
+        onclick={startAddPhotos}
+        icon={mdiImagePlusOutline}
+      />
+    {/if}
+
+    {#if featureFlagsManager.value.map}
+      <AlbumMap {album} filters={albumFilters} />
+    {/if}
+
+    {#if album.assetCount > 0}
+      <IconButton
+        shape="round"
+        variant="ghost"
+        color="secondary"
+        aria-label={$t('slideshow')}
+        onclick={handleStartSlideshow}
+        icon={mdiPresentationPlay}
+      />
+    {/if}
+    <ActionButton action={Actions.Download} />
+  {/if}
+
+  {#if isOwned || album.albumUsers.length > 1 || narrowBar.current}
+    <ButtonContextMenu icon={mdiDotsVertical} title={$t('album_options')} color="secondary" offset={{ x: 175, y: 25 }}>
+      {#if narrowBar.current}
+        {#if isEditor}
+          <MenuOption icon={mdiImagePlusOutline} text={$t('add_photos')} onClick={startAddPhotos} />
+        {/if}
+        {#if album.assetCount > 0}
+          <MenuOption icon={mdiPresentationPlay} text={$t('slideshow')} onClick={handleStartSlideshow} />
+        {/if}
+        <ActionMenuItem action={Actions.Download} />
+      {/if}
+      {#if containsEditors}
+        <MenuOption
+          icon={showAlbumUsers ? mdiAccountEye : mdiAccountEyeOutline}
+          text={showAlbumUsers ? $t('hide_asset_owners') : $t('view_asset_owners')}
+          onClick={() => timelineManager.toggleShowAssetOwners()}
+        />
+      {/if}
+      <ActionMenuItem action={Actions.Options} />
+      {#if isOwned && album.assetCount > 0}
+        <MenuOption
+          icon={mdiImageOutline}
+          text={$t('select_album_cover')}
+          onClick={() => (viewMode = AlbumPageViewMode.SELECT_THUMBNAIL)}
+        />
+      {/if}
+
+      {#if isOwned}
+        <MenuOption
+          icon={mdiLinkVariantPlus}
+          text={$t('link_album_to_space')}
+          onClick={async () => {
+            if (await handleLinkAlbumToSpace(album)) {
+              await refreshAlbum();
+            }
+          }}
+        />
+      {/if}
+      <ActionMenuItem action={Actions.MoveToFolder} />
+      <ActionMenuItem action={Actions.Merge} />
+      <ActionMenuItem action={Actions.ToggleTimeline} />
+      <ActionMenuItem action={Actions.MakeBook} />
+      <ActionMenuItem action={Actions.Delete} />
+      <ActionMenuItem action={Actions.Leave} />
+    </ButtonContextMenu>
+  {/if}
+{/snippet}
+
+<!-- Local Omarchy layer: the album lives in the shell like every page (2026-10-15): the sidebar stays, with the album
+     lit in its tree, and the one bar carries its back arrow, its name (renamed in place), its dates and count and its
+     own buttons, Share first. Selecting, adding photos and choosing a cover swap the bar for theirs (below the shell) -->
+<UserPageLayout
+  hideNavbar={viewMode !== AlbumPageViewMode.VIEW || assetMultiSelectManager.selectionActive}
+  barFitsNavbar
+  scrollbar={false}
+  description={albumBarDescription}
+  leading={albumBarLeading}
+  buttons={albumBarButtons}
+>
+  <div class="flex h-full overflow-hidden" use:scrollMemoryClearer={{ routeStartsWith: Route.albums() }}>
+    <div class="relative w-full shrink">
+      <main class="relative h-full overflow-hidden">
+        <div class="flex h-full" data-testid="discovery-timeline">
+          <div class="h-full shrink-0">
+            <div class="h-full overflow-hidden" data-testid="album-filter-panel-surface">
+              {#if viewMode === AlbumPageViewMode.SELECT_ASSETS}
+                {#key `picker-${album.id}`}
+                  <FilterPanel
+                    config={pickerFilterConfig}
+                    bind:filters={pickerFilters}
+                    {timeBuckets}
+                    storageKey="gallery-filter-visible-sections-album-detail"
+                    hidden={isTimelineEmpty}
+                  />
+                {/key}
+              {:else}
+                <!-- Keyed on the search too: switching between browse and query mode swaps the whole
                    suggestions provider, so the panel has to re-run it rather than keep browse facets. -->
-              {#key `album-${album.id}:${showSearchResults ? `search-${committedSearchQuery.trim()}:${$lang}` : 'browse'}`}
-                <FilterPanel
-                  config={albumFilterConfig}
-                  bind:filters={albumFilters}
-                  bind:collapsed={filterCollapsed}
-                  externalToggle
-                  timeBuckets={filterTimeBuckets}
-                  storageKey="gallery-filter-visible-sections-album-detail"
-                  hidden={isTimelineEmpty && !showSearchResults}
+                {#key `album-${album.id}:${showSearchResults ? `search-${committedSearchQuery.trim()}:${$lang}` : 'browse'}`}
+                  <FilterPanel
+                    config={albumFilterConfig}
+                    bind:filters={albumFilters}
+                    bind:collapsed={filterCollapsed}
+                    externalToggle
+                    timeBuckets={filterTimeBuckets}
+                    storageKey="gallery-filter-visible-sections-album-detail"
+                    hidden={isTimelineEmpty && !showSearchResults}
+                    personNames={albumPersonNames}
+                    tagNames={albumTagNames}
+                    onFiltersChange={syncAlbumFilterUrl}
+                  />
+                {/key}
+              {/if}
+            </div>
+          </div>
+
+          <div class="flex flex-1 flex-col overflow-hidden pl-2">
+            {#if viewMode === AlbumPageViewMode.SELECT_ASSETS && getActiveFilterCount(pickerFilters) > 0}
+              <ActiveFiltersBar
+                filters={pickerFilters}
+                resultCount={totalAssetCount}
+                personNames={pickerPersonNames}
+                tagNames={pickerTagNames}
+                onRemoveFilter={(type, id) => {
+                  pickerFilters = handlePhotosRemoveFilter(pickerFilters, type, id);
+                }}
+                onClearAll={() => {
+                  pickerFilters = clearFilters(pickerFilters);
+                }}
+              />
+            {:else if viewMode !== AlbumPageViewMode.SELECT_ASSETS}
+              {#snippet albumFiltersBar()}
+                <ActiveFiltersBar
+                  embedded
+                  filters={albumFilters}
+                  resultCount={showSearchResults ? searchTotal : totalAssetCount}
                   personNames={albumPersonNames}
                   tagNames={albumTagNames}
-                  onFiltersChange={syncAlbumFilterUrl}
+                  ownerNames={albumOwnerNames}
+                  onRemoveFilter={(type, id) => {
+                    if (type === 'timeline') {
+                      clearAlbumTemporalFilter();
+                    } else {
+                      albumFilters = handlePhotosRemoveFilter(albumFilters, type, id);
+                      syncAlbumFilterUrl(albumFilters);
+                    }
+                  }}
+                  onClearAll={() => {
+                    albumFilters = clearFilters(albumFilters);
+                    temporalAnchor = undefined;
+                    syncAlbumFilterUrl(albumFilters);
+                  }}
+                  searchQuery={committedSearchQuery}
+                  onClearSearch={clearAlbumSearch}
+                  onAddAllToCollection={handleAddAllToCollection}
                 />
-              {/key}
+              {/snippet}
+              <FilterToolbar
+                class="mb-2"
+                grouping={timelineGrouping}
+                onGroupingChange={handleTimelineGroupingChange}
+                showGrouping={isBrowseTimeline && !showSearchResults && !assetMultiSelectManager.selectionActive}
+                showFilters={getActiveFilterCount(albumFilters) > 0 || showSearchResults}
+                filters={albumFiltersBar}
+                showFilterButton={filterCollapsed &&
+                  isBrowseTimeline &&
+                  !assetMultiSelectManager.selectionActive &&
+                  (!isTimelineEmpty || showSearchResults)}
+                filterActive={getActiveFilterCount(albumFilters) > 0}
+                onExpandFilters={() => (filterCollapsed = false)}
+                showSearchButton={isBrowseTimeline && !assetMultiSelectManager.selectionActive}
+                onSearch={() => globalSearchManager.open()}
+              />
+            {/if}
+
+            {#if showSearchResults && viewMode !== AlbumPageViewMode.SELECT_ASSETS}
+              <SmartSearchResults
+                searchQuery={committedSearchQuery}
+                bind:isLoading={searchIsLoading}
+                bind:results={searchResults}
+                reloadToken={searchReloadToken}
+                filters={albumFilters}
+                albumIds={searchAlbumIds}
+                language={$lang}
+                {isShared}
+                total={searchTotal}
+              />
+            {:else if showFilteredEmptyState}
+              <div class="flex flex-1 flex-col items-center justify-center gap-2" data-testid="empty-state-message">
+                <p class="text-sm text-(--fg-muted)">
+                  {viewMode === AlbumPageViewMode.SELECT_ASSETS
+                    ? 'None of the photos you can add match your filters'
+                    : 'No photos match your filters'}
+                </p>
+                <button
+                  type="button"
+                  class="text-sm text-(--primary)"
+                  onclick={() => {
+                    if (viewMode === AlbumPageViewMode.SELECT_ASSETS) {
+                      pickerFilters = clearFilters(pickerFilters);
+                    } else {
+                      albumFilters = clearFilters(albumFilters);
+                      temporalAnchor = undefined;
+                      syncAlbumFilterUrl(albumFilters);
+                    }
+                  }}
+                >
+                  Clear all filters
+                </button>
+              </div>
+            {:else}
+              <Timeline
+                enableRouting={viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : true}
+                {album}
+                {albumUsers}
+                bind:timelineManager
+                {options}
+                assetInteraction={currentAssetIntersection}
+                {isShared}
+                {isSelectionMode}
+                {singleSelect}
+                {showArchiveIcon}
+                {onSelect}
+                onEscape={handleEscape}
+                withStacked={true}
+                onTimelineBucketActivate={isBrowseTimeline ? handleTimelineBucketActivate : undefined}
+                temporalAnchor={isBrowseTimeline ? temporalAnchor : undefined}
+                onTemporalAnchorResolved={isBrowseTimeline ? () => (temporalAnchor = undefined) : undefined}
+                grouping={isBrowseTimeline ? timelineGrouping : 'day'}
+                onGroupingChange={isBrowseTimeline ? handleTimelineGroupingChange : undefined}
+              >
+                {#if viewMode !== AlbumPageViewMode.SELECT_ASSETS}
+                  {#if viewMode !== AlbumPageViewMode.SELECT_THUMBNAIL}
+                    <!-- Local Omarchy layer: the album's details under the bar, scrolling away with its photos: how a smart,
+                       special or hidden album works, its description, Curator's story, who it is shared with and the
+                       people in it (its name, dates and count are in the bar) -->
+                    <section class="ws-album-details">
+                      <!-- Local Omarchy layer: a smart album says so, with Edit search and Stop updating -->
+                      <SmartAlbumBadge albumId={album.id} />
+
+                      <!-- Local Omarchy layer: a special album says how it works; empty, it says how photos get there
+                         instead (below) -->
+                      {#if special && album.assetCount > 0}
+                        <p class="ws-album-note">{$t(special.words.note)}</p>
+                      {/if}
+                      <!-- Local Omarchy layer: hidden from my timeline (managers/album-folders) says so, with the way back
+                         right beside it -->
+                      {#if !special && albumFolders.hiddenFromTimeline(album.id)}
+                        <p class="ws-album-note ws-album-hidden-note" data-testid="album-hidden-note">
+                          <span class="ws-hidden-mark">
+                            <Icon icon={mdiEyeOffOutline} size="14" aria-hidden={true} />
+                            {$t('album_not_in_photos')}
+                          </span>
+                          {$t('album_not_in_photos_note')}
+                          <button
+                            type="button"
+                            class="ws-empty-link"
+                            onclick={() => albumFolders.toggleTimeline(album)}
+                          >
+                            {$t('album_show_in_photos')}
+                          </button>
+                        </p>
+                      {/if}
+
+                      <!-- rbac-6: owner-only — the server populates album.sharedSpaceLinks only for
+                         the album owner, so this self-hides for every other caller. -->
+                      <AlbumSharedSpaceLinks {album} />
+
+                      <div class="ws-album-description">
+                        <AlbumDescription
+                          id={album.id}
+                          {isEditor}
+                          bind:description={
+                            () => album.description, (description) => (album = { ...album, description })
+                          }
+                        />
+                      </div>
+                      <!-- Local Omarchy layer: the story of the event or trip the album holds -->
+                      <AlbumStory albumId={album.id} description={album.description} />
+
+                      <!-- who it is shared with, people and a link, as one row that opens the Share sheet -->
+                      {#if album.albumUsers.length > 1 || (album.hasSharedLink && isOwned)}
+                        <button
+                          type="button"
+                          class="ws-album-shared"
+                          onclick={(event) => Actions.Share.onAction({ event, action: Actions.Share })}
+                        >
+                          <span>{$t('shared_with')}</span>
+                          <span class="ws-album-shared-people">
+                            {#each album.albumUsers.filter(({ user }) => user.id !== authManager.user.id) as { user } (user.id)}
+                              <UserAvatar {user} size="sm" />
+                            {/each}
+                          </span>
+                          {#if album.hasSharedLink && isOwned}
+                            <span class="ws-album-shared-links">
+                              <Icon icon={mdiLink} size="14" aria-hidden={true} />
+                              {$t('shared_links')}
+                            </span>
+                          {/if}
+                        </button>
+                      {/if}
+
+                      <AlbumPeopleStrip
+                        albumId={album.id}
+                        selected={albumFilters.personIds}
+                        onToggle={toggleAlbumPerson}
+                      />
+                    </section>
+                  {/if}
+
+                  {#if album.assetCount === 0 && special}
+                    <div class="ws-empty">
+                      <h2 class="ws-empty-title">{$t(special.words.emptyTitle)}</h2>
+                      <p class="ws-empty-body">{$t(special.words.emptyBody)}</p>
+                      <div class="ws-empty-actions">
+                        <button
+                          type="button"
+                          class="ws-empty-action"
+                          onclick={() => (viewMode = AlbumPageViewMode.SELECT_ASSETS)}
+                        >
+                          {$t('select_photos')}
+                        </button>
+                      </div>
+                    </div>
+                  {:else if album.assetCount === 0}
+                    <section id="empty-album" class="mt-50 flex place-content-center place-items-center">
+                      <div class="w-75">
+                        <p class="text-xs uppercase dark:text-immich-dark-fg">{$t('add_photos')}</p>
+                        <button
+                          type="button"
+                          onclick={() => (viewMode = AlbumPageViewMode.SELECT_ASSETS)}
+                          class="mt-5 flex w-full place-items-center gap-6 rounded-2xl border bg-subtle p-8 text-immich-fg transition-all hover:bg-gray-100 hover:text-immich-primary dark:border-none dark:text-immich-dark-fg dark:hover:bg-gray-500/20 dark:hover:text-immich-dark-primary"
+                        >
+                          <span class="text-primary">
+                            <Icon icon={mdiPlus} size="24" />
+                          </span>
+                          <span class="text-lg">{$t('select_photos')}</span>
+                        </button>
+                      </div>
+                    </section>
+                  {/if}
+                {/if}
+              </Timeline>
             {/if}
           </div>
         </div>
 
-        <div class="flex flex-1 flex-col overflow-hidden pl-2">
-          {#if viewMode === AlbumPageViewMode.SELECT_ASSETS && getActiveFilterCount(pickerFilters) > 0}
-            <ActiveFiltersBar
-              filters={pickerFilters}
-              resultCount={totalAssetCount}
-              personNames={pickerPersonNames}
-              tagNames={pickerTagNames}
-              onRemoveFilter={(type, id) => {
-                pickerFilters = handlePhotosRemoveFilter(pickerFilters, type, id);
-              }}
-              onClearAll={() => {
-                pickerFilters = clearFilters(pickerFilters);
-              }}
+        {#if showActivityStatus}
+          <div class="absolute inset-e-0 bottom-0 z-2 me-12 mb-6">
+            <ActivityStatus
+              disabled={!album.isActivityEnabled}
+              isLiked={activityManager.isLiked}
+              numberOfComments={activityManager.commentCount}
+              numberOfLikes={undefined}
+              onFavorite={handleFavorite}
             />
-          {:else if viewMode !== AlbumPageViewMode.SELECT_ASSETS}
-            {#snippet albumFiltersBar()}
-              <ActiveFiltersBar
-                embedded
-                filters={albumFilters}
-                resultCount={showSearchResults ? searchTotal : totalAssetCount}
-                personNames={albumPersonNames}
-                tagNames={albumTagNames}
-                ownerNames={albumOwnerNames}
-                onRemoveFilter={(type, id) => {
-                  if (type === 'timeline') {
-                    clearAlbumTemporalFilter();
-                  } else {
-                    albumFilters = handlePhotosRemoveFilter(albumFilters, type, id);
-                    syncAlbumFilterUrl(albumFilters);
-                  }
-                }}
-                onClearAll={() => {
-                  albumFilters = clearFilters(albumFilters);
-                  temporalAnchor = undefined;
-                  syncAlbumFilterUrl(albumFilters);
-                }}
-                searchQuery={committedSearchQuery}
-                onClearSearch={clearAlbumSearch}
-                onAddAllToCollection={handleAddAllToCollection}
-              />
-            {/snippet}
-            <FilterToolbar
-              class="mb-2"
-              grouping={timelineGrouping}
-              onGroupingChange={handleTimelineGroupingChange}
-              showGrouping={isBrowseTimeline && !showSearchResults && !assetMultiSelectManager.selectionActive}
-              showFilters={getActiveFilterCount(albumFilters) > 0 || showSearchResults}
-              filters={albumFiltersBar}
-              showFilterButton={filterCollapsed &&
-                isBrowseTimeline &&
-                !assetMultiSelectManager.selectionActive &&
-                (!isTimelineEmpty || showSearchResults)}
-              filterActive={getActiveFilterCount(albumFilters) > 0}
-              onExpandFilters={() => (filterCollapsed = false)}
-              showSearchButton={isBrowseTimeline && !assetMultiSelectManager.selectionActive}
-              onSearch={() => globalSearchManager.open()}
-            />
-          {/if}
+          </div>
+        {/if}
+      </main>
 
-          {#if showSearchResults && viewMode !== AlbumPageViewMode.SELECT_ASSETS}
-            <SmartSearchResults
-              searchQuery={committedSearchQuery}
-              bind:isLoading={searchIsLoading}
-              bind:results={searchResults}
-              reloadToken={searchReloadToken}
-              filters={albumFilters}
-              albumIds={searchAlbumIds}
-              language={$lang}
-              {isShared}
-              total={searchTotal}
-            />
-          {:else if showFilteredEmptyState}
-            <div class="flex flex-1 flex-col items-center justify-center gap-2" data-testid="empty-state-message">
-              <p class="text-sm text-(--fg-muted)">
-                {viewMode === AlbumPageViewMode.SELECT_ASSETS
-                  ? 'None of the photos you can add match your filters'
-                  : 'No photos match your filters'}
-              </p>
-              <button
-                type="button"
-                class="text-sm text-(--primary)"
-                onclick={() => {
-                  if (viewMode === AlbumPageViewMode.SELECT_ASSETS) {
-                    pickerFilters = clearFilters(pickerFilters);
-                  } else {
-                    albumFilters = clearFilters(albumFilters);
-                    temporalAnchor = undefined;
-                    syncAlbumFilterUrl(albumFilters);
-                  }
-                }}
-              >
-                Clear all filters
-              </button>
-            </div>
-          {:else}
-            <Timeline
-              enableRouting={viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : true}
-              {album}
-              {albumUsers}
-              bind:timelineManager
-              {options}
-              assetInteraction={currentAssetIntersection}
-              {isShared}
-              {isSelectionMode}
-              {singleSelect}
-              {showArchiveIcon}
-              {onSelect}
-              onEscape={handleEscape}
-              withStacked={true}
-              onTimelineBucketActivate={isBrowseTimeline ? handleTimelineBucketActivate : undefined}
-              temporalAnchor={isBrowseTimeline ? temporalAnchor : undefined}
-              onTemporalAnchorResolved={isBrowseTimeline ? () => (temporalAnchor = undefined) : undefined}
-              grouping={isBrowseTimeline ? timelineGrouping : 'day'}
-              onGroupingChange={isBrowseTimeline ? handleTimelineGroupingChange : undefined}
-            >
-              {#if viewMode !== AlbumPageViewMode.SELECT_ASSETS}
-                {#if viewMode !== AlbumPageViewMode.SELECT_THUMBNAIL}
-                  <!-- ALBUM TITLE -->
-                  <section class="pt-8 md:pt-24">
-                    <AlbumTitle
-                      id={album.id}
-                      albumName={album.albumName}
-                      {isEditor}
-                      onUpdate={(albumName) => (album = { ...album, albumName })}
-                    />
-
-                    {#if album.assetCount > 0}
-                      <AlbumSummary {album} />
-                    {/if}
-
-                    <!-- Local Omarchy layer: a smart album says so, with Edit search and Stop updating -->
-                    <SmartAlbumBadge albumId={album.id} />
-
-                    <!-- Local Omarchy layer: a special album says how it works; empty, it says how photos get there
-                         instead (below) -->
-                    {#if special && album.assetCount > 0}
-                      <p class="ws-album-note">{$t(special.words.note)}</p>
-                    {/if}
-                    <!-- Local Omarchy layer: hidden from my timeline (managers/album-folders) says so under the title,
-                         with the way back right beside it -->
-                    {#if !special && albumFolders.hiddenFromTimeline(album.id)}
-                      <p class="ws-album-note ws-album-hidden-note" data-testid="album-hidden-note">
-                        <span class="ws-hidden-mark">
-                          <Icon icon={mdiEyeOffOutline} size="14" aria-hidden={true} />
-                          {$t('album_not_in_photos')}
-                        </span>
-                        {$t('album_not_in_photos_note')}
-                        <button type="button" class="ws-empty-link" onclick={() => albumFolders.toggleTimeline(album)}>
-                          {$t('album_show_in_photos')}
-                        </button>
-                      </p>
-                    {/if}
-
-                    <!-- rbac-6: owner-only — the server populates album.sharedSpaceLinks only for
-                         the album owner, so this self-hides for every other caller. -->
-                    <AlbumSharedSpaceLinks {album} />
-
-                    <!-- ALBUM SHARING -->
-                    {#if album.albumUsers.length > 1 || (album.hasSharedLink && isOwned)}
-                      <div class="my-3 flex gap-x-1">
-                        <button
-                          class="flex gap-x-1"
-                          type="button"
-                          onclick={(event) => Actions.Options.onAction({ event, action: Actions.Options })}
-                        >
-                          <!-- owner & users with write access (collaborators) -->
-                          {#each album.albumUsers.filter(({ role }) => role === AlbumUserRole.Editor || role === AlbumUserRole.Owner) as { user } (user.id)}
-                            <UserAvatar {user} size="md" />
-                          {/each}
-
-                          <!-- display ellipsis if there are readonly users too -->
-                          {#if albumHasViewers}
-                            <IconButton
-                              shape="round"
-                              aria-label={$t('view_all_users')}
-                              color="secondary"
-                              size="medium"
-                              icon={mdiDotsHorizontal}
-                            />
-                          {/if}
-
-                          {#if album.hasSharedLink && isOwned}
-                            <IconButton
-                              aria-label={$t('shared_link_manage_links')}
-                              color="secondary"
-                              size="medium"
-                              shape="round"
-                              icon={mdiLink}
-                            />
-                          {/if}
-                        </button>
-
-                        <ActionButton action={Actions.Share} />
-                      </div>
-                    {/if}
-                    <AlbumDescription
-                      id={album.id}
-                      {isEditor}
-                      bind:description={() => album.description, (description) => (album = { ...album, description })}
-                    />
-                    <!-- Local Omarchy layer: the story of the event or trip the album holds -->
-                    <AlbumStory albumId={album.id} description={album.description} />
-                  </section>
-                {/if}
-
-                {#if album.assetCount === 0 && special}
-                  <div class="ws-empty">
-                    <h2 class="ws-empty-title">{$t(special.words.emptyTitle)}</h2>
-                    <p class="ws-empty-body">{$t(special.words.emptyBody)}</p>
-                    <div class="ws-empty-actions">
-                      <button
-                        type="button"
-                        class="ws-empty-action"
-                        onclick={() => (viewMode = AlbumPageViewMode.SELECT_ASSETS)}
-                      >
-                        {$t('select_photos')}
-                      </button>
-                    </div>
-                  </div>
-                {:else if album.assetCount === 0}
-                  <section id="empty-album" class="mt-50 flex place-content-center place-items-center">
-                    <div class="w-75">
-                      <p class="text-xs uppercase dark:text-immich-dark-fg">{$t('add_photos')}</p>
-                      <button
-                        type="button"
-                        onclick={() => (viewMode = AlbumPageViewMode.SELECT_ASSETS)}
-                        class="mt-5 flex w-full place-items-center gap-6 rounded-2xl border bg-subtle p-8 text-immich-fg transition-all hover:bg-gray-100 hover:text-immich-primary dark:border-none dark:text-immich-dark-fg dark:hover:bg-gray-500/20 dark:hover:text-immich-dark-primary"
-                      >
-                        <span class="text-primary">
-                          <Icon icon={mdiPlus} size="24" />
-                        </span>
-                        <span class="text-lg">{$t('select_photos')}</span>
-                      </button>
-                    </div>
-                  </section>
-                {/if}
-              {/if}
-            </Timeline>
-          {/if}
-        </div>
-      </div>
-
-      {#if showActivityStatus}
-        <div class="absolute inset-e-0 bottom-0 z-2 me-12 mb-6">
-          <ActivityStatus
-            disabled={!album.isActivityEnabled}
-            isLiked={activityManager.isLiked}
-            numberOfComments={activityManager.commentCount}
-            numberOfLikes={undefined}
-            onFavorite={handleFavorite}
-          />
-        </div>
-      {/if}
-    </main>
-
-    <!-- Local Omarchy layer: right-click menu on the album's photos (the owner: "a right click in albums that allows to
+      <!-- Local Omarchy layer: right-click menu on the album's photos (the owner: "a right click in albums that allows to
          reveal original photo in the photo view"), acting on the selection like the bar below; Show in Photos leads -->
-    {#if viewMode === AlbumPageViewMode.VIEW && (showSearchResults || timelineManager)}
-      <TileContextMenu
-        grid={showSearchResults ? '[data-testid="gallery-viewer"]' : '#asset-grid'}
-        findAsset={findMenuAsset}
-        withStackItems={false}
-        reveal
-        assetInteraction={assetMultiSelectManager}
-      >
-        {@const MenuActions = getAssetBulkActions($t, { album })}
-        <FavoriteAction
-          menuItem
-          removeFavorite={assetMultiSelectManager.isAllFavorite}
-          onFavorite={handleBulkFavorite}
-        />
-        {#if special && assetMultiSelectManager.isAllUserOwned}
-          <SpecialAlbumAction {special} done menuItem />
-        {/if}
-        <ActionMenuItem action={MenuActions.AddToAlbum} />
-        <ActionMenuItem action={MenuActions.CreateSharedLink} />
-        <DownloadAction menuItem filename={album.albumName} />
-        {#if isEditor && assetMultiSelectManager.assets.length === 1}
-          <MenuOption
-            text={$t('set_as_album_cover')}
-            icon={mdiImageOutline}
-            onClick={() => updateThumbnailUsingCurrentSelection()}
-          />
-        {/if}
-        {#if assetMultiSelectManager.isAllUserOwned}
-          <hr />
-          <RotateAction />
-          <ActionMenuItem action={MenuActions.Tag} />
-          <ChangeDate menuItem />
-          <ChangeLocation menuItem />
-          <ChangeDescription menuItem />
-        {/if}
-        <hr />
-        <ActionMenuItem action={MenuActions.RemoveFromAlbum} />
-        {#if assetMultiSelectManager.isAllUserOwned}
-          <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
-          {#each specialAlbums as other (other.key)}
-            {#if other !== special}
-              <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
-            {/if}
-          {/each}
-          <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
-          <DeleteAssets menuItem onAssetDelete={handleRemoveAssets} onUndoDelete={handleUndoRemoveAssets} />
-        {/if}
-      </TileContextMenu>
-    {/if}
-
-    {#if assetMultiSelectManager.selectionActive}
-      <AssetSelectControlBar>
-        {@const Actions = getAssetBulkActions($t, { album })}
-        <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
-        <ActionButton action={Actions.CreateSharedLink} />
-        <SelectAllAssets
-          timelineManager={showSearchResults ? undefined : timelineManager}
+      {#if viewMode === AlbumPageViewMode.VIEW && (showSearchResults || timelineManager)}
+        <TileContextMenu
+          grid={showSearchResults ? '[data-testid="gallery-viewer"]' : '#asset-grid'}
+          findAsset={findMenuAsset}
+          withStackItems={false}
+          reveal
           assetInteraction={assetMultiSelectManager}
-          onSelectAll={showSearchResults
-            ? () => selectAllSearchResults(searchResults, assetMultiSelectManager)
-            : undefined}
-        />
-        <ActionButton action={Actions.AddToAlbum} />
-        <!-- #763: no isAllUserOwned gate — a favorite is a per-user overlay row, so any asset the
-             viewer can read is favoritable, including another member's in a shared space. -->
-        <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleBulkFavorite}
-        ></FavoriteAction>
-        <!-- Local Omarchy layer: in a special album its way out (Mark done, Remove from Villa) puts the photos back
-             where they came from; its key does the same -->
-        {#if special && assetMultiSelectManager.isAllUserOwned}
-          <span class="ws-primary-action contents"><SpecialAlbumAction {special} done /></span>
-        {/if}
-        <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')} offset={{ x: 175, y: 25 }}>
-          <DownloadAction menuItem filename={album.albumName} />
-          {#if assetMultiSelectManager.isAllUserOwned}
-            <RotateAction />
-            <ChangeDate menuItem />
-            <ChangeDescription menuItem />
-            <ChangeLocation menuItem />
-            <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
-            {#each specialAlbums as other (other.key)}
-              {#if other !== special}
-                <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
-              {/if}
-            {/each}
-            <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+        >
+          {@const MenuActions = getAssetBulkActions($t, { album })}
+          <FavoriteAction
+            menuItem
+            removeFavorite={assetMultiSelectManager.isAllFavorite}
+            onFavorite={handleBulkFavorite}
+          />
+          {#if special && assetMultiSelectManager.isAllUserOwned}
+            <SpecialAlbumAction {special} done menuItem />
           {/if}
+          <ActionMenuItem action={MenuActions.AddToAlbum} />
+          <ActionMenuItem action={MenuActions.CreateSharedLink} />
+          <DownloadAction menuItem filename={album.albumName} />
           {#if isEditor && assetMultiSelectManager.assets.length === 1}
             <MenuOption
               text={$t('set_as_album_cover')}
@@ -1211,145 +1271,119 @@
               onClick={() => updateThumbnailUsingCurrentSelection()}
             />
           {/if}
-
-          <ActionMenuItem action={Actions.Tag} />
-
-          <ActionMenuItem action={Actions.RemoveFromAlbum} />
           {#if assetMultiSelectManager.isAllUserOwned}
+            <hr />
+            <RotateAction />
+            <ActionMenuItem action={MenuActions.Tag} />
+            <ChangeDate menuItem />
+            <ChangeLocation menuItem />
+            <ChangeDescription menuItem />
+          {/if}
+          <hr />
+          <ActionMenuItem action={MenuActions.RemoveFromAlbum} />
+          {#if assetMultiSelectManager.isAllUserOwned}
+            <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
+            {#each specialAlbums as other (other.key)}
+              {#if other !== special}
+                <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
+              {/if}
+            {/each}
+            <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
             <DeleteAssets menuItem onAssetDelete={handleRemoveAssets} onUndoDelete={handleUndoRemoveAssets} />
           {/if}
-        </ButtonContextMenu>
-      </AssetSelectControlBar>
-    {:else}
-      {#if viewMode === AlbumPageViewMode.VIEW}
-        <ControlAppBar backIcon={mdiArrowLeft} onClose={() => backToAlbums()}>
-          {#snippet trailing()}
-            <ActionButton action={Cast} />
-
-            {#if isEditor}
-              <IconButton
-                variant="ghost"
-                shape="round"
-                color="secondary"
-                aria-label={$t('add_photos')}
-                onclick={async () => {
-                  timelineManager.suspendTransitions = true;
-                  viewMode = AlbumPageViewMode.SELECT_ASSETS;
-                  oldAt = { at: assetViewerManager.gridScrollTarget?.at };
-                  await navigate(
-                    { targetRoute: 'current', assetId: null, assetGridRouteSearchParams: { at: null } },
-                    { replaceState: true },
-                  );
-                }}
-                icon={mdiImagePlusOutline}
-              />
-            {/if}
-
-            <ActionButton action={Actions.Share} />
-
-            {#if featureFlagsManager.value.map}
-              <AlbumMap {album} filters={albumFilters} />
-            {/if}
-
-            {#if album.assetCount > 0}
-              <IconButton
-                shape="round"
-                variant="ghost"
-                color="secondary"
-                aria-label={$t('slideshow')}
-                onclick={handleStartSlideshow}
-                icon={mdiPresentationPlay}
-              />
-            {/if}
-            <ActionButton action={Actions.Download} />
-
-            {#if isOwned || album.albumUsers.length > 1}
-              <ButtonContextMenu
-                icon={mdiDotsVertical}
-                title={$t('album_options')}
-                color="secondary"
-                offset={{ x: 175, y: 25 }}
-              >
-                {#if containsEditors}
-                  <MenuOption
-                    icon={showAlbumUsers ? mdiAccountEye : mdiAccountEyeOutline}
-                    text={showAlbumUsers ? $t('hide_asset_owners') : $t('view_asset_owners')}
-                    onClick={() => timelineManager.toggleShowAssetOwners()}
-                  />
-                {/if}
-                <ActionMenuItem action={Actions.Options} />
-                {#if isOwned && album.assetCount > 0}
-                  <MenuOption
-                    icon={mdiImageOutline}
-                    text={$t('select_album_cover')}
-                    onClick={() => (viewMode = AlbumPageViewMode.SELECT_THUMBNAIL)}
-                  />
-                {/if}
-
-                {#if isOwned}
-                  <MenuOption
-                    icon={mdiLinkVariantPlus}
-                    text={$t('link_album_to_space')}
-                    onClick={async () => {
-                      if (await handleLinkAlbumToSpace(album)) {
-                        await refreshAlbum();
-                      }
-                    }}
-                  />
-                {/if}
-                <ActionMenuItem action={Actions.MoveToFolder} />
-                <ActionMenuItem action={Actions.Merge} />
-                <ActionMenuItem action={Actions.ToggleTimeline} />
-                <ActionMenuItem action={Actions.MakeBook} />
-                <ActionMenuItem action={Actions.Delete} />
-                <ActionMenuItem action={Actions.Leave} />
-              </ButtonContextMenu>
-            {/if}
-          {/snippet}
-        </ControlAppBar>
+        </TileContextMenu>
       {/if}
-
-      {#if viewMode === AlbumPageViewMode.SELECT_ASSETS}
-        <ControlAppBar onClose={handleCloseSelectAssets}>
-          {#snippet leading()}
-            <p class="text-lg dark:text-immich-dark-fg">
-              {#if !timelineMultiSelectManager.selectionActive}
-                {$t('add_to_album')}
-              {:else}
-                {$t('selected_count', { values: { count: timelineMultiSelectManager.assets.length } })}
-              {/if}
-            </p>
-          {/snippet}
-
-          {#snippet trailing()}
-            <HeaderActionButton action={Upload} />
-            <HeaderActionButton action={AddAssets} />
-          {/snippet}
-        </ControlAppBar>
-      {/if}
-
-      {#if viewMode === AlbumPageViewMode.SELECT_THUMBNAIL}
-        <ControlAppBar onClose={() => (viewMode = AlbumPageViewMode.VIEW)}>
-          {#snippet leading()}
-            {$t('select_album_cover')}
-          {/snippet}
-        </ControlAppBar>
-      {/if}
+    </div>
+    {#if album.albumUsers.length > 1 && album && assetViewerManager.isShowActivityPanel && authManager.authenticated && !assetViewerManager.isViewing}
+      <div class="flex">
+        <div
+          transition:fly={{ duration: 150 }}
+          id="activity-panel"
+          class="z-2 w-90 overflow-y-auto transition-all md:w-115 dark:border-l dark:border-s-immich-dark-gray"
+          translate="yes"
+        >
+          <ActivityViewer disabled={!album.isActivityEnabled} albumUsers={album.albumUsers} albumId={album.id} />
+        </div>
+      </div>
     {/if}
   </div>
-  {#if album.albumUsers.length > 1 && album && assetViewerManager.isShowActivityPanel && authManager.authenticated && !assetViewerManager.isViewing}
-    <div class="flex">
-      <div
-        transition:fly={{ duration: 150 }}
-        id="activity-panel"
-        class="z-2 w-90 overflow-y-auto transition-all md:w-115 dark:border-l dark:border-s-immich-dark-gray"
-        translate="yes"
-      >
-        <ActivityViewer disabled={!album.isActivityEnabled} albumUsers={album.albumUsers} albumId={album.id} />
-      </div>
-    </div>
-  {/if}
-</div>
+</UserPageLayout>
+
+{#if assetMultiSelectManager.selectionActive}
+  <AssetSelectControlBar>
+    {@const Actions = getAssetBulkActions($t, { album })}
+    <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
+    <ActionButton action={Actions.CreateSharedLink} />
+    <SelectAllAssets
+      timelineManager={showSearchResults ? undefined : timelineManager}
+      assetInteraction={assetMultiSelectManager}
+      onSelectAll={showSearchResults ? () => selectAllSearchResults(searchResults, assetMultiSelectManager) : undefined}
+    />
+    <ActionButton action={Actions.AddToAlbum} />
+    <!-- #763: no isAllUserOwned gate — a favorite is a per-user overlay row, so any asset the
+             viewer can read is favoritable, including another member's in a shared space. -->
+    <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleBulkFavorite}
+    ></FavoriteAction>
+    <!-- Local Omarchy layer: in a special album its way out (Mark done, Remove from Villa) puts the photos back
+             where they came from; its key does the same -->
+    {#if special && assetMultiSelectManager.isAllUserOwned}
+      <span class="ws-primary-action contents"><SpecialAlbumAction {special} done /></span>
+    {/if}
+    <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')} offset={{ x: 175, y: 25 }}>
+      <DownloadAction menuItem filename={album.albumName} />
+      {#if assetMultiSelectManager.isAllUserOwned}
+        <RotateAction />
+        <ChangeDate menuItem />
+        <ChangeDescription menuItem />
+        <ChangeLocation menuItem />
+        <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
+        {#each specialAlbums as other (other.key)}
+          {#if other !== special}
+            <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
+          {/if}
+        {/each}
+        <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+      {/if}
+      {#if isEditor && assetMultiSelectManager.assets.length === 1}
+        <MenuOption
+          text={$t('set_as_album_cover')}
+          icon={mdiImageOutline}
+          onClick={() => updateThumbnailUsingCurrentSelection()}
+        />
+      {/if}
+
+      <ActionMenuItem action={Actions.Tag} />
+
+      <ActionMenuItem action={Actions.RemoveFromAlbum} />
+      {#if assetMultiSelectManager.isAllUserOwned}
+        <DeleteAssets menuItem onAssetDelete={handleRemoveAssets} onUndoDelete={handleUndoRemoveAssets} />
+      {/if}
+    </ButtonContextMenu>
+  </AssetSelectControlBar>
+{:else if viewMode === AlbumPageViewMode.SELECT_ASSETS}
+  <ControlAppBar onClose={handleCloseSelectAssets} class="ws-select-bar">
+    {#snippet leading()}
+      <p class="text-lg dark:text-immich-dark-fg">
+        {#if !timelineMultiSelectManager.selectionActive}
+          {$t('add_to_album')}
+        {:else}
+          {$t('selected_count', { values: { count: timelineMultiSelectManager.assets.length } })}
+        {/if}
+      </p>
+    {/snippet}
+
+    {#snippet trailing()}
+      <HeaderActionButton action={Upload} />
+      <HeaderActionButton action={AddAssets} />
+    {/snippet}
+  </ControlAppBar>
+{:else if viewMode === AlbumPageViewMode.SELECT_THUMBNAIL}
+  <ControlAppBar onClose={() => (viewMode = AlbumPageViewMode.VIEW)} class="ws-select-bar">
+    {#snippet leading()}
+      {$t('select_album_cover')}
+    {/snippet}
+  </ControlAppBar>
+{/if}
 
 <style>
   ::placeholder {

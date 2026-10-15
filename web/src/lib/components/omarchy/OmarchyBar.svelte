@@ -120,7 +120,13 @@
     <BarViewMenu />
 
     {#if !page.url.pathname.includes('/admin') && onUploadClick}
-      <button type="button" class="ws-bar-icon" aria-label={$t('upload')} title={$t('upload')} onclick={onUploadClick}>
+      <button
+        type="button"
+        class="ws-bar-icon ws-bar-upload"
+        aria-label={$t('upload')}
+        title={$t('upload')}
+        onclick={onUploadClick}
+      >
         <Icon icon={mdiTrayArrowUp} size="20" />
       </button>
     {/if}
@@ -231,6 +237,24 @@
     }
     .ws-bar-end {
       padding-inline: 0.25rem 0.5rem;
+    }
+  }
+  /* a phone keeps the bar for the page: the mark gives its room to the page's name, and upload (the app's job on a
+     phone; Import stays in the sidebar) waits for a wider screen */
+  @media (max-width: 639px) {
+    /* the start column holds the menu button alone (the narrow sidebar's 8rem would keep room for the mark) */
+    .ws-bar[data-column] {
+      --ws-bar-start: auto;
+    }
+    .ws-bar-mark,
+    .ws-bar-upload {
+      display: none;
+    }
+    .ws-bar-end :global(.ws-bar-icon) {
+      width: 2rem;
+    }
+    .ws-bar-avatar {
+      margin-inline-start: 0.25rem;
     }
   }
 </style>

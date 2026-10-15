@@ -61,9 +61,16 @@
 
   // The title row always fits the bar: the title keeps its width and the page's buttons tighten a step at a time until
   // the row fits: 1 drops the description, 2 the button labels (icons keep their tooltips), 3 the wide-screen extras
-  // (an album search field, filter tabs). Re-fitted when the bar resizes or the page adds or removes a control, never
-  // by its own steps (they only flip an attribute), so fitting cannot feed itself.
-  const PAGE_TIGHTEST = 3;
+  // (an album search field, filter tabs), 4 (a phone) lets the page's own buttons scroll sideways rather than run under
+  // the bar's icons. A title row that crowds its own room (the name squeezed by its dates) counts as not fitting too.
+  // Re-fitted when the bar resizes or the page adds or removes a control, never by its own steps (they only flip an
+  // attribute), so fitting cannot feed itself.
+  const PAGE_TIGHTEST = 4;
+  let pageTitleBox = $state<HTMLElement>();
+  const crowded = (box: HTMLElement | undefined) => !!box && box.scrollWidth > box.clientWidth + 1;
+  // a name cut short inside its own room (the title shrinks rather than overflow) is crowding too
+  const squeezed = (box: HTMLElement | undefined) =>
+    !!box && [...box.children].some((child) => child.scrollWidth > child.clientWidth + 1);
   let pageFit = $state(0);
   let pageFitting = false;
   let pageBarBox = $state<HTMLElement>();
@@ -76,7 +83,7 @@
     try {
       pageFit = 0;
       await tick();
-      while (pageFit < PAGE_TIGHTEST && pageBarBox && pageBarBox.scrollWidth > pageBarBox.clientWidth + 1) {
+      while (pageFit < PAGE_TIGHTEST && (crowded(pageBarBox) || crowded(pageTitleBox) || squeezed(pageTitleBox))) {
         pageFit++;
         await tick();
       }
@@ -146,7 +153,7 @@
 {#snippet pageBar()}
   <div class="ws-page-bar" data-fit={pageFit} bind:this={pageBarBox}>
     <!-- upstream's title row (title, description, its trailing control) and its constraints, kept as they were -->
-    <div class="ws-page-bar-title min-w-0 overflow-hidden" data-testid="page-header-title-row">
+    <div class="ws-page-bar-title min-w-0 overflow-hidden" data-testid="page-header-title-row" bind:this={pageTitleBox}>
       {@render leading?.()}
       {#if title}
         <div class="ws-page-title min-w-0 truncate" tabindex="-1" id={headerId} data-testid="page-header">{title}</div>
@@ -251,6 +258,25 @@
     align-items: baseline;
     min-width: 0;
   }
+  @media (max-width: 639px) {
+    .ws-page-bar {
+      gap: 0.25rem;
+    }
+    .ws-page-bar-title {
+      max-width: 60%;
+      gap: 0.375rem;
+    }
+    .ws-page-bar-title :global(button[class~='w-10']) {
+      width: 2rem;
+    }
+    .ws-page-actions :global(:is(button, a):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
+      min-width: 2rem;
+      padding-inline: 0.375rem;
+    }
+    .ws-page-actions :global(button[class~='w-10']) {
+      width: 2rem;
+    }
+  }
   .ws-page-title {
     min-width: 0;
     overflow: hidden;
@@ -312,6 +338,13 @@
   .ws-page-bar :global([class~='-ms-6']) {
     margin-inline-start: 0.25rem;
   }
+  .ws-page-bar[data-fit='4'] .ws-page-actions {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    mask-image: linear-gradient(to right, transparent, #000 0.75rem, #000 calc(100% - 0.75rem), transparent);
+  }
   /* a field among the buttons is its own framed box: it stands a little apart from its neighbours */
   .ws-page-actions :global(:has(> .ws-search-field)) {
     margin-inline: 0.5rem;
@@ -334,12 +367,14 @@
   .ws-page-bar:not([data-fit='0']) .ws-page-description {
     display: none;
   }
-  .ws-page-bar:is([data-fit='2'], [data-fit='3'])
+  .ws-page-bar:is([data-fit='2'], [data-fit='3'], [data-fit='4'])
     .ws-page-actions
     :global(:is(button, a) :is([class~='sm:block'], [class~='md:block'], [class~='lg:block'], .ws-action-label)) {
     display: none;
   }
-  .ws-page-bar[data-fit='3'] .ws-page-actions :global(:is([class~='xl:block'], [class~='xl:flex'])) {
+  .ws-page-bar:is([data-fit='3'], [data-fit='4'])
+    .ws-page-actions
+    :global(:is([class~='xl:block'], [class~='xl:flex'])) {
     display: none;
   }
 </style>
