@@ -130,6 +130,8 @@
       asset.type === AssetTypeEnum.Image,
     onAction: () => removeObjects.open(asset.id),
   });
+  // Local Omarchy layer: each asks Curator only for Curator's owner, and each tool's `available` keeps it to that account
+  // (utils/curator's curatorIsMine), so a family member's own photos offer none of Curator's tools
   $effect(() => {
     if (isOwner && !sharedLink) {
       removeObjects.check();

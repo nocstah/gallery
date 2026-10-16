@@ -18,7 +18,7 @@ import { eventManager } from '$lib/managers/event-manager.svelte';
 import { specialAlbumOf, type SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
 import { undoManager } from '$lib/managers/undo-manager.svelte';
 import { Route } from '$lib/route';
-import { curator, CuratorError, waitForJob, type SavedFrame } from '$lib/utils/curator';
+import { curator, CuratorError, curatorIsMine, waitForJob, type SavedFrame } from '$lib/utils/curator';
 import { navigate } from '$lib/utils/navigation';
 import { undone } from '$lib/utils/undoable';
 
@@ -45,23 +45,28 @@ const DRAWN_TRIES = 20;
 type OnScreen = { element: HTMLVideoElement; assetId: string };
 
 class SaveFrameState {
-  available = $state(false);
   /** the assets whose frame Curator is saving now */
   saving = $state<string[]>([]);
   // raw: the player's own element, and the detach below knows its registration by identity
   #video = $state.raw<OnScreen>();
+  #available = $state(false);
   #checked = false;
 
-  /** Ask Curator once whether it saves frames (an older one does not, and the button stays away). */
+  /** Curator saves frames, and works for whoever is signed in (curatorIsMine): the button and Shift+S go by this */
+  get available() {
+    return this.#available && curatorIsMine();
+  }
+
+  /** Ask Curator once whether it saves frames (an older one does not, and the button stays away); only its owner asks. */
   check() {
-    if (this.#checked) {
+    if (this.#checked || !curatorIsMine()) {
       return;
     }
     this.#checked = true;
     curator
       .kinds()
-      .then((kinds) => (this.available = kinds.some(({ kind }) => kind === 'frame.save')))
-      .catch(() => (this.available = false));
+      .then((kinds) => (this.#available = kinds.some(({ kind }) => kind === 'frame.save')))
+      .catch(() => (this.#available = false));
   }
 
   /** The video on screen; the returned function forgets it again (when its player goes). */
@@ -112,7 +117,7 @@ class SaveFrameState {
 
   /** for tests: forget Curator's answer and the video */
   reset() {
-    this.available = false;
+    this.#available = false;
     this.saving = [];
     this.#video = undefined;
     this.#checked = false;

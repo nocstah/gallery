@@ -1,6 +1,7 @@
 <script lang="ts">
   import Logo from '$lib/components/shared-components/Logo.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { curatorIsMine } from '$lib/utils/curator';
   import { CardTitle, CloseButton, Icon, Modal, ModalBody, ModalHeader } from '@immich/ui';
   import { mdiInformationOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -55,8 +56,9 @@
         { key: ['q'], action: $t('qr_shortcut') },
         { key: ['⇧', 'd'], action: $t('download') },
         { key: ['Space'], action: $t('play_or_pause_video') },
-        // Local Omarchy layer: a video's frame as a new photo (components/curator/save-frame), in the viewer
-        { key: ['⇧', 's'], action: $t('save_frame_as_photo') },
+        // Local Omarchy layer: a video's frame as a new photo (components/curator/save-frame), in the viewer; Curator's,
+        // so only for Curator's owner (curatorIsMine)
+        ...(curatorIsMine() ? [{ key: ['⇧', 's'], action: $t('save_frame_as_photo') }] : []),
         { key: ['Del'], action: $t('trash_delete_asset'), info: $t('shift_to_permanent_delete') },
         ...(authManager.authenticated && authManager.preferences.ratings.enabled
           ? [{ key: ['0-5'], action: $t('rate_asset'), info: $t('rate_asset_description') }]

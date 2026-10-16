@@ -10,7 +10,8 @@ import { userAdminFactory } from '@test-data/factories/user-factory';
 import SaveFrameAction from './SaveFrameAction.svelte';
 
 // Local Omarchy layer: the viewer bar's Save frame as photo: there for the owner's own video on screen once Curator
-// saves frames, a spinner while it works, and Shift+S doing what the button does.
+// saves frames, a spinner while it works, and Shift+S doing what the button does; never for an account Curator does
+// not work for (a family member's, not the admin's).
 
 const { kinds } = vi.hoisted(() => ({ kinds: vi.fn() }));
 
@@ -94,7 +95,8 @@ describe('SaveFrameAction', () => {
     ['in the Locked Folder', () => mine({ visibility: AssetVisibility.Locked }), true],
     ['in the trash', () => mine({ isTrashed: true }), true],
   ])('stays away %s', async (_, asset, onScreen) => {
-    saveFrame.available = true; // Curator saves frames: only the case named keeps the button away
+    saveFrame.check(); // Curator saves frames: only the case named keeps the button away
+    await vi.waitFor(() => expect(saveFrame.available).toBe(true));
     if (onScreen) {
       saveFrame.show(video, 'video-1');
     }
@@ -102,6 +104,19 @@ describe('SaveFrameAction', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(saveFrame.available).toBe(true);
     expect(screen.queryByLabelText('save_frame_as_photo')).not.toBeInTheDocument();
+  });
+
+  it("stays away from a family member's own video, and asks Curator nothing", async () => {
+    authManager.setUser(userAdminFactory.build({ id: 'me', isAdmin: false }));
+    const save = vi.spyOn(saveFrame, 'save').mockResolvedValue();
+    saveFrame.show(video, 'video-1');
+    renderWithTooltips(SaveFrameAction, { asset: mine() });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(kinds).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('save_frame_as_photo')).not.toBeInTheDocument();
+    await fireEvent.keyDown(document, { key: 'S', shiftKey: true });
+    expect(save).not.toHaveBeenCalled();
   });
 
   it('stays away when Curator does not save frames', async () => {

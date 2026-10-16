@@ -22,6 +22,7 @@
   import { goto } from '$app/navigation';
   import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import { copySubject } from '$lib/utils/copy-subject';
+  import { curatorIsMine } from '$lib/utils/curator';
   import { lookUp } from '$lib/components/curator/look-up.svelte';
   import { shareVideos } from '$lib/managers/share-video-manager.svelte';
   import {
@@ -100,8 +101,11 @@
     }
     stackMenu = next;
     const user = authManager.authenticated ? authManager.user : undefined;
+    // subject lift is Curator's, so it is offered to Curator's owner only (curatorIsMine)
     liftAsset =
-      assetInteraction.assets.length === 1 && asset.isImage && user && asset.ownerId === user.id ? asset : undefined;
+      assetInteraction.assets.length === 1 && asset.isImage && user && asset.ownerId === user.id && curatorIsMine()
+        ? asset
+        : undefined;
     revealAsset =
       reveal &&
       assetInteraction.assets.length === 1 &&
@@ -156,9 +160,10 @@
   };
 
   // Local Omarchy layer: the picked videos (and Live Photos' clips) made ready for a chat app by Curator and saved, when
-  // all of them are the owner's and there are few enough to wait for (managers/share-video-manager)
+  // all of them are the owner's and there are few enough to wait for (managers/share-video-manager); lookUp.available
+  // also keeps them for Curator's owner
   const SHARE_AT_MOST = 10;
-  lookUp.check(); // whether Curator answers, asked once for the whole page
+  lookUp.check(); // whether Curator answers, asked once for the whole page and only by Curator's owner
   const shareable = $derived.by(() => {
     if (!lookUp.available || picked.length === 0 || picked.length > SHARE_AT_MOST || !authManager.authenticated) {
       return [];
@@ -285,16 +290,19 @@
       {/if}
       {#if stackMenu}
         {@const menu = stackMenu}
-        <!-- Local Omarchy layer: Curator picks the stack's best photo; the viewer opens on the stack with the card -->
-        <MenuOption
-          icon={mdiStarFourPointsOutline}
-          text={$t('stack_pick')}
-          onClick={() =>
-            onStackAction(async () => {
-              stackPick.open(menu.stackId);
-              await goto(`/photos/${menu.assetId}`);
-            })}
-        />
+        <!-- Local Omarchy layer: Curator picks the stack's best photo, for Curator's owner only (curatorIsMine); the
+           viewer opens on the stack with the card -->
+        {#if curatorIsMine()}
+          <MenuOption
+            icon={mdiStarFourPointsOutline}
+            text={$t('stack_pick')}
+            onClick={() =>
+              onStackAction(async () => {
+                stackPick.open(menu.stackId);
+                await goto(`/photos/${menu.assetId}`);
+              })}
+          />
+        {/if}
         {#if menu.isCover}
           {@const expanded = stackExpandManager.isExpanded(menu.stackId)}
           <MenuOption

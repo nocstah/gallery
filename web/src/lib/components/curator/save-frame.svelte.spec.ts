@@ -13,17 +13,20 @@ import { saveFrame } from './save-frame.svelte';
 // Local Omarchy layer: Save frame as photo against a stand-in Curator: the video on screen stops where it is, that
 // moment goes to /api/frame (with the album the viewer is open in), the job is followed until the new photo's id comes
 // back, and its toast and undo are recorded; the undo trashes the photo with the user's own session and takes it out of
-// the album it joined. View opens it where it is: its album, the Archive, or Photos.
+// the album it joined. View opens it where it is: its album, the Archive, or Photos. Only Curator's owner is offered it
+// (utils/curator's curatorIsMine).
 
-const { curatorMock, waitForJobMock, gotoMock } = vi.hoisted(() => ({
+const { curatorMock, waitForJobMock, gotoMock, mine } = vi.hoisted(() => ({
   curatorMock: { kinds: vi.fn(), saveFrame: vi.fn() },
   waitForJobMock: vi.fn(),
   gotoMock: vi.fn(),
+  mine: { current: true },
 }));
 
 vi.mock('$lib/utils/curator', async (importOriginal) => ({
   ...(await importOriginal<typeof import('$lib/utils/curator')>()),
   curator: curatorMock,
+  curatorIsMine: () => mine.current,
   waitForJob: waitForJobMock,
 }));
 vi.mock('$lib/utils/navigation', () => ({ navigate: vi.fn() }));
@@ -67,6 +70,7 @@ const toastProps = () => vi.mocked(toastManager.custom).mock.calls[0][0].props a
 describe('saveFrame', () => {
   beforeEach(() => {
     saveFrame.reset();
+    mine.current = true;
     undoManager.entries = [];
     assetViewerManager.setAsset({ id: 'video-1' } as AssetResponseDto);
     curatorMock.saveFrame.mockResolvedValue({ job: 7 });
@@ -91,6 +95,20 @@ describe('saveFrame', () => {
     curatorMock.kinds.mockRejectedValue(new Error('Curator is not answering'));
     saveFrame.check();
     await vi.waitFor(() => expect(curatorMock.kinds).toHaveBeenCalledTimes(2));
+    expect(saveFrame.available).toBe(false);
+  });
+
+  it("asks nothing for an account that is not Curator's owner, and is offered to none", async () => {
+    curatorMock.kinds.mockResolvedValue([{ kind: 'frame.save', title: 'Save a video frame as a photo', heavy: false }]);
+    mine.current = false;
+    saveFrame.check();
+    expect(curatorMock.kinds).not.toHaveBeenCalled();
+    expect(saveFrame.available).toBe(false);
+
+    mine.current = true; // the owner's answer stays the owner's
+    saveFrame.check();
+    await vi.waitFor(() => expect(saveFrame.available).toBe(true));
+    mine.current = false;
     expect(saveFrame.available).toBe(false);
   });
 

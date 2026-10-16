@@ -17,6 +17,7 @@
   import StackPick from '$lib/components/curator/StackPick.svelte';
   import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import RemoveObjects from '$lib/components/curator/RemoveObjects.svelte';
+  import { curatorIsMine } from '$lib/utils/curator';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import { AssetAction, ProjectionType } from '$lib/constants';
   import { activityManager } from '$lib/managers/activity-manager.svelte';
@@ -127,12 +128,15 @@
   let previewStackedAsset: AssetResponseDto | undefined = $state();
   let stack: StackResponseDto | undefined = $state();
   const asset = $derived(previewStackedAsset ?? cursor.current);
+  // Local Omarchy layer: Curator's tools and cards open only for Curator's owner (utils/curator's curatorIsMine). The
+  // bar offers them to no one else; this keeps one that the owner's session left open shut for the next account
+  const curatorTools = $derived(curatorIsMine());
   // Local Omarchy layer: Curator's object-removal brush replaces the photo viewer and its controls while it is open
-  const brushing = $derived(removeObjects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
+  const brushing = $derived(curatorTools && removeObjects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
   // Local Omarchy layer: Curator's effects panel (Live Photo effects, cinematic), which holds the viewer like the brush
-  const livening = $derived(liveEffects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
+  const livening = $derived(curatorTools && liveEffects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
   // Local Omarchy layer: Curator's Adjust panel (light, colour, filters, straighten), which holds the viewer the same way
-  const adjusting = $derived(adjustPhoto.assetId === asset.id && asset.type === AssetTypeEnum.Image);
+  const adjusting = $derived(curatorTools && adjustPhoto.assetId === asset.id && asset.type === AssetTypeEnum.Image);
   const inCuratorTool = $derived(brushing || livening || adjusting);
   const ownStack = $derived(authManager.authenticated && asset.ownerId === authManager.user.id);
   const nextAsset = $derived(cursor.nextAsset);
@@ -739,7 +743,7 @@
     {/if}
 
     <!-- Local Omarchy layer: Curator's "Pick the best" for the stack in view -->
-    {#if stack && stackPick.stackId === stack.id && !inCuratorTool && $slideshowState === SlideshowState.None}
+    {#if curatorTools && stack && stackPick.stackId === stack.id && !inCuratorTool && $slideshowState === SlideshowState.None}
       {@const pickedStack = stack}
       <StackPick
         stackId={pickedStack.id}
@@ -752,7 +756,7 @@
           }
         }}
       />
-    {:else if lookUp.on && asset.type === AssetTypeEnum.Image && !inCuratorTool && $slideshowState === SlideshowState.None}
+    {:else if curatorTools && lookUp.on && asset.type === AssetTypeEnum.Image && !inCuratorTool && $slideshowState === SlideshowState.None}
       <LookUpCard assetId={asset.id} onClose={() => (lookUp.on = false)} />
     {/if}
 
