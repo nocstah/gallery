@@ -2,9 +2,11 @@
   // Local Omarchy layer: Save frame as photo in the viewer's bar (components/curator/save-frame.svelte.ts), for the
   // owner's own video, or a Live Photo while its video half plays, once Curator says it saves frames. The button spins
   // while Curator works; Shift+S does the same (VLC's snapshot key; plain S is the photo viewer's slideshow). Inside an
-  // album the photo joins that album too.
+  // album the photo joins that album too. On a phone the bar's extra tools wait in its ⋮, and this is a row there
+  // (`menu`) with the same key and the same save.
   import { shortcut } from '$lib/actions/shortcut';
   import { saveFrame } from '$lib/components/curator/save-frame.svelte';
+  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { getSharedLink } from '$lib/utils';
   import { AssetVisibility, type AlbumResponseDto, type AssetResponseDto } from '@immich/sdk';
@@ -16,9 +18,11 @@
     asset: AssetResponseDto;
     /** the album the viewer is open in */
     album?: AlbumResponseDto;
+    /** a row in a menu (the phone's ⋮) rather than a button in the bar */
+    menu?: boolean;
   }
 
-  let { asset, album }: Props = $props();
+  let { asset, album, menu = false }: Props = $props();
 
   const sharedLink = getSharedLink();
   const isOwner = $derived(authManager.authenticated && asset.ownerId === authManager.user.id && !sharedLink);
@@ -47,7 +51,9 @@
 
 <svelte:document use:shortcut={{ shortcut: { key: 's', shift: true }, onShortcut: save }} />
 
-{#if offered}
+{#if offered && menu}
+  <MenuOption icon={mdiCameraPlusOutline} text={title} onClick={save} />
+{:else if offered}
   <IconButton
     color="secondary"
     variant="ghost"
