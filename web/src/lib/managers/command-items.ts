@@ -32,6 +32,8 @@ import {
   mdiKeyboardOutline,
   mdiLogoutVariant,
   mdiPauseCircleOutline,
+  mdiPinOffOutline,
+  mdiPinOutline,
   mdiPlayCircleOutline,
   mdiPlaylistPlus,
   mdiPlusBoxMultipleOutline,
@@ -64,8 +66,9 @@ import {
   handleFavoriteSelected,
   handleNewAlbumFromSelected,
 } from '$lib/managers/selection-command-handlers';
+import { specialAlbumOf } from '$lib/managers/special-albums.svelte';
 import AlbumEditModal from '$lib/modals/AlbumEditModal.svelte';
-import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
+import AlbumShareModal from '$lib/modals/AlbumShareModal.svelte';
 import ShortcutsModal from '$lib/modals/ShortcutsModal.svelte';
 import SpaceAddMemberModal from '$lib/modals/SpaceAddMemberModal.svelte';
 import SpaceCreateModal from '$lib/modals/SpaceCreateModal.svelte';
@@ -74,6 +77,7 @@ import { Route } from '$lib/route';
 import { handleDeleteAlbum, handleDownloadAlbum } from '$lib/services/album.service';
 import { asQueueItem } from '$lib/services/queue.service';
 import { clearEntries } from '$lib/stores/cmdk-recent';
+import { pinnedAlbums } from '$lib/stores/pinned-albums.svelte';
 import { createAlbumAndRedirect } from '$lib/utils/album-utils';
 import { openFileUploadDialog } from '$lib/utils/file-uploader';
 import { handleError } from '$lib/utils/handle-error';
@@ -280,7 +284,35 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
       if (!ctx?.album) {
         return;
       }
-      return modalManager.show(AlbumOptionsModal, { album: ctx.album.raw });
+      // Local Omarchy layer: the Share sheet (people, links, Spaces), as the album's Share button opens; Options holds
+      // only the album's own settings now
+      return modalManager.show(AlbumShareModal, { album: ctx.album.raw });
+    },
+  },
+  // Local Omarchy layer: Pin to sidebar / Unpin from sidebar (stores/pinned-albums), as the album's ⋮ menu has them;
+  // never To do, Villa or QR, which have rows of their own
+  {
+    id: 'cmd:album_pin',
+    labelKey: 'album_pin_to_sidebar',
+    descriptionKey: 'cmdk_cmd_album_pin_description',
+    icon: mdiPinOutline,
+    isAvailable: (ctx) => ctx.album !== null && !specialAlbumOf(ctx.album.id) && !pinnedAlbums.has(ctx.album.id),
+    handler: (ctx) => {
+      if (ctx?.album) {
+        pinnedAlbums.toggle(ctx.album.id);
+      }
+    },
+  },
+  {
+    id: 'cmd:album_unpin',
+    labelKey: 'album_unpin_from_sidebar',
+    descriptionKey: 'cmdk_cmd_album_unpin_description',
+    icon: mdiPinOffOutline,
+    isAvailable: (ctx) => ctx.album !== null && pinnedAlbums.has(ctx.album.id),
+    handler: (ctx) => {
+      if (ctx?.album) {
+        pinnedAlbums.toggle(ctx.album.id);
+      }
     },
   },
   {

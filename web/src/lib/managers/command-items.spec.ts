@@ -14,7 +14,7 @@ import * as albumUtils from '$lib/utils/album-utils';
 import * as fileUploader from '$lib/utils/file-uploader';
 import * as handleErrorModule from '$lib/utils/handle-error';
 import AlbumEditModal from '../modals/AlbumEditModal.svelte';
-import AlbumOptionsModal from '../modals/AlbumOptionsModal.svelte';
+import AlbumShareModal from '../modals/AlbumShareModal.svelte';
 import ShortcutsModal from '../modals/ShortcutsModal.svelte';
 import SpaceAddMemberModal from '../modals/SpaceAddMemberModal.svelte';
 import SpaceCreateModal from '../modals/SpaceCreateModal.svelte';
@@ -115,8 +115,8 @@ describe('COMMAND_ITEMS', () => {
     expect(COMMAND_ITEMS.find((c) => c.id === 'cmd:theme')).toBeDefined();
   });
 
-  it('has 34 entries (7 v1.3.0 + 8 v1.3.1 + 5 v1.4 album + 6 v1.4 space + 7 v1.5A selection + 1 photo book)', () => {
-    expect(COMMAND_ITEMS).toHaveLength(34);
+  it('has 36 entries (7 v1.3.0 + 8 v1.3.1 + 5 v1.4 album + 2 album pin + 6 v1.4 space + 7 v1.5A selection + 1 photo book)', () => {
+    expect(COMMAND_ITEMS).toHaveLength(36);
   });
 
   it('CommandItem type allows isAvailable and destructive', () => {
@@ -667,9 +667,31 @@ describe('album-context commands', () => {
     it('shows for owner', () => {
       expect(cmd().isAvailable!(makeCtx())).toBe(true);
     });
-    it('handler opens AlbumOptionsModal with raw DTO', async () => {
+    it('handler opens the Share sheet with raw DTO', async () => {
       await cmd().handler(makeCtx());
-      expect(modalManager.show).toHaveBeenCalledWith(AlbumOptionsModal, { album: baseAlbum });
+      expect(modalManager.show).toHaveBeenCalledWith(AlbumShareModal, { album: baseAlbum });
+    });
+  });
+
+  describe('cmd:album_pin / cmd:album_unpin', () => {
+    const pin = () => COMMAND_ITEMS.find((c) => c.id === 'cmd:album_pin')!;
+    const unpin = () => COMMAND_ITEMS.find((c) => c.id === 'cmd:album_unpin')!;
+    afterEach(() => localStorage.clear());
+
+    it('hides both when album is null', () => {
+      expect(pin().isAvailable!(ctxNoAlbum())).toBe(false);
+      expect(unpin().isAvailable!(ctxNoAlbum())).toBe(false);
+    });
+    it('offers Pin for an album not pinned, then Unpin once it is', async () => {
+      expect(pin().isAvailable!(makeCtx())).toBe(true);
+      expect(unpin().isAvailable!(makeCtx())).toBe(false);
+
+      await pin().handler(makeCtx());
+
+      expect(pin().isAvailable!(makeCtx())).toBe(false);
+      expect(unpin().isAvailable!(makeCtx())).toBe(true);
+      await unpin().handler(makeCtx());
+      expect(pin().isAvailable!(makeCtx())).toBe(true);
     });
   });
 
