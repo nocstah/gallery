@@ -18,6 +18,7 @@
   import { sidebarStore } from '$lib/stores/sidebar.svelte';
   import { closeWebsocketConnection, openWebsocketConnection, websocketStore } from '$lib/stores/websocket';
   import { copyToClipboard } from '$lib/utils';
+  import { curatorIsMine } from '$lib/utils/curator';
   import { maintenanceShouldRedirect } from '$lib/utils/maintenance';
   import { searchShortcuts } from '$lib/utils/search-shortcut';
   import { startChrome } from '$lib/theme/chrome.svelte';
@@ -348,11 +349,14 @@
   {/if}
 
   <DownloadPanel />
-  <!-- Local Omarchy layer: what Curator makes on request, one panel above the other in the bottom-left corner -->
-  <div class="fixed inset-s-3 bottom-3 z-60 flex flex-col items-start gap-3">
-    <PhotoBookPanel />
-    <ShareVideoPanel />
-  </div>
+  <!-- Local Omarchy layer: what Curator makes on request, one panel above the other in the bottom-left corner; only
+       for Curator's owner (curatorIsMine), so the next account in the tab never sees the owner's books or videos -->
+  {#if curatorIsMine()}
+    <div class="fixed inset-s-3 bottom-3 z-60 flex flex-col items-start gap-3">
+      <PhotoBookPanel />
+      <ShareVideoPanel />
+    </div>
+  {/if}
   <UploadPanel />
   {#if globalSearchManager.isOpen && globalSearchManager.presentation === 'modal'}
     <GlobalSearch manager={globalSearchManager} />

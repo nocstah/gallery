@@ -3,7 +3,8 @@
   // in the corner above the videos for sharing: each with how far it has got (waiting, choosing the photos, then page
   // by page), then its page count and its three files, each to open in a new tab or to save: the book for the print
   // lab, its cover, and a light preview of the spreads for reading on screen. The close button clears the finished
-  // ones. It also asks Curator, once someone is signed in, whether it makes books at all.
+  // ones. It also asks Curator, once someone is signed in, whether it makes books at all; the layout mounts it for
+  // Curator's owner alone (utils/curator's curatorIsMine).
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { photoBooks, type BookItem } from '$lib/managers/photo-book-manager.svelte';
   import { locale } from '$lib/stores/preferences.store';

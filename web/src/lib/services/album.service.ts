@@ -164,8 +164,8 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
   };
 
   // Local Omarchy layer: Make photo book (managers/photo-book-manager): Curator lays the album's best photos out as a
-  // print-ready book; offered once Curator says it makes books, and never for To do, Villa or QR, which hold photos
-  // set aside
+  // print-ready book; offered once Curator says it makes books, to Curator's owner only (`available` holds
+  // utils/curator's curatorIsMine), and never for To do, Villa or QR, which hold photos set aside
   const MakeBook: ActionItem = {
     title: $t('photo_book_make'),
     icon: mdiBookOpenPageVariantOutline,

@@ -3,17 +3,19 @@ import { CuratorError, type BookJob, type BookResult } from '$lib/utils/curator'
 
 // Local Omarchy layer: photo books on request against a stand-in Curator: the dialog's choice starts book.make, the
 // job is followed through its stages to the files, a failure or a lost Curator says so, and a book already being made
-// is left to finish.
+// is left to finish. Books are offered to Curator's owner only (utils/curator's curatorIsMine).
 
-const { curatorMock, sdkMock, modalMock } = vi.hoisted(() => ({
+const { curatorMock, sdkMock, modalMock, mine } = vi.hoisted(() => ({
   curatorMock: { kinds: vi.fn(), makeBook: vi.fn(), book: vi.fn() },
   sdkMock: { getTimeBuckets: vi.fn() },
   modalMock: { show: vi.fn() },
+  mine: { current: true },
 }));
 
 vi.mock('$lib/utils/curator', async (importOriginal) => ({
   ...(await importOriginal<typeof import('$lib/utils/curator')>()),
   curator: curatorMock,
+  curatorIsMine: () => mine.current,
 }));
 vi.mock('@immich/sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/sdk')>()),
@@ -23,6 +25,10 @@ vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),
   modalManager: modalMock,
 }));
+
+beforeEach(() => {
+  mine.current = true;
+});
 
 // a manager of its own for each test (it is a singleton that remembers asking Curator), with the dialog it shows
 const fresh = async () => {
@@ -130,6 +136,22 @@ describe('asking whether Curator makes books', () => {
     const { photoBooks } = await fresh();
     photoBooks.check();
     await vi.waitFor(() => expect(curatorMock.kinds).toHaveBeenCalled());
+    expect(photoBooks.available).toBe(false);
+  });
+
+  it("asks nothing for an account that is not Curator's owner, and offers it no book", async () => {
+    curatorMock.kinds.mockResolvedValue([{ kind: 'book.make', title: 'Make a photo book', heavy: false }]);
+    const { photoBooks } = await fresh();
+    mine.current = false;
+    photoBooks.check();
+    expect(curatorMock.kinds).not.toHaveBeenCalled();
+    expect(photoBooks.available).toBe(false);
+
+    // the owner's answer, kept for the page, is not the next account's: the album menus and Ctrl+K leave books out
+    mine.current = true;
+    photoBooks.check();
+    await vi.waitFor(() => expect(photoBooks.available).toBe(true));
+    mine.current = false;
     expect(photoBooks.available).toBe(false);
   });
 });

@@ -509,7 +509,8 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   },
 
   // Local Omarchy layer: a year's photo book, from any page (managers/photo-book-manager; an album's is in the album's
-  // own menus). The dialog asks which year. Offered once Curator says it makes books.
+  // own menus). The dialog asks which year. Offered once Curator says it makes books, and to Curator's owner only
+  // (`available` holds utils/curator's curatorIsMine).
   {
     id: 'cmd:photo_book',
     labelKey: 'cmdk_cmd_photo_book_label',

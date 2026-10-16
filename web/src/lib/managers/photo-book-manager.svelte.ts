@@ -12,6 +12,7 @@ import {
   BOOK_PHOTOS,
   curator,
   CuratorError,
+  curatorIsMine,
   type BookJob,
   type BookResult,
   type BookSubject,
@@ -117,20 +118,25 @@ export const bookYear = (years: BookYear[], thisYear?: number) => {
 
 class PhotoBookManager {
   items = $state<BookItem[]>([]);
-  /** Curator answers and makes books: until it says so, the menus and the palette leave them out */
-  available = $state(false);
+  #available = $state(false);
   #checked = false;
 
-  /** Asked once a page load, by the panel once someone is signed in. */
+  /** Curator answers, makes books and works for whoever is signed in (curatorIsMine): until then the menus and the
+   * palette leave them out */
+  get available() {
+    return this.#available && curatorIsMine();
+  }
+
+  /** Asked once a page load, by the panel once Curator's owner is signed in. */
   check() {
-    if (this.#checked) {
+    if (this.#checked || !curatorIsMine()) {
       return;
     }
     this.#checked = true;
     curator
       .kinds()
-      .then((kinds) => (this.available = kinds.some(({ kind }) => kind === 'book.make')))
-      .catch(() => (this.available = false));
+      .then((kinds) => (this.#available = kinds.some(({ kind }) => kind === 'book.make')))
+      .catch(() => (this.#available = false));
   }
 
   /** An album's book: the dialog starts from its name, and from as many photos as it has, up to a book's usual. */
