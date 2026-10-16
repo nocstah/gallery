@@ -64,7 +64,11 @@ export const asUrl = (sharedLink: SharedLinkResponseDto) => {
   return new URL(path, serverConfigManager.value.externalDomain || location.origin).href;
 };
 
-export const handleCreateSharedLink = async (dto: SharedLinkCreateDto) => {
+/**
+ * Local Omarchy layer: makes the link and hands it back, for the Share sheet (components/share/ShareLinkPanel), which
+ * shows it with its QR in place; `handleCreateSharedLink` shows the QR in a dialog of its own instead.
+ */
+export const makeSharedLink = async (dto: SharedLinkCreateDto): Promise<SharedLinkResponseDto | undefined> => {
   const $t = await getFormatter();
 
   try {
@@ -81,14 +85,22 @@ export const handleCreateSharedLink = async (dto: SharedLinkCreateDto) => {
 
     eventManager.emit('SharedLinkCreate', sharedLink);
 
-    // prevent nested modal
-    void handleShowSharedLinkQrCode(sharedLink);
-
-    return true;
+    return sharedLink;
   } catch (error) {
     handleError(error, $t('errors.failed_to_create_shared_link'));
+  }
+};
+
+export const handleCreateSharedLink = async (dto: SharedLinkCreateDto) => {
+  const sharedLink = await makeSharedLink(dto);
+  if (!sharedLink) {
     return false;
   }
+
+  // prevent nested modal
+  void handleShowSharedLinkQrCode(sharedLink);
+
+  return true;
 };
 
 export const handleUpdateSharedLink = async (sharedLink: SharedLinkResponseDto, dto: SharedLinkEditDto) => {

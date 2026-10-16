@@ -1720,23 +1720,24 @@ body.ws-dragging
   outline-offset: -1px;
   border-color: var(--ws-accent);
 }
-/* a switch: an outlined track with a muted thumb when off, inverted (ink track, surface thumb) when on */
-.ws-setting-body [role='switch'] {
+/* a switch: an outlined track with a muted thumb when off, inverted (ink track, surface thumb) when on; the Share
+   sheet's (.ws-sheet, below) and its link options' (.ws-sheet-form) are the same */
+:is(.ws-setting-body, .ws-sheet, .ws-sheet-form) [role='switch'] {
   border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 28%, transparent) !important;
   background: transparent !important;
 }
-.ws-setting-body [role='switch'] > span {
+:is(.ws-setting-body, .ws-sheet, .ws-sheet-form) [role='switch'] > span {
   background: var(--immich-ui-muted) !important;
   scale: 1 !important;
 }
-.ws-setting-body [role='switch'][data-state='checked'] {
+:is(.ws-setting-body, .ws-sheet, .ws-sheet-form) [role='switch'][data-state='checked'] {
   border-color: var(--immich-ui-dark) !important;
   background: var(--immich-ui-dark) !important;
 }
-.ws-setting-body [role='switch'][data-state='checked'] > span {
+:is(.ws-setting-body, .ws-sheet, .ws-sheet-form) [role='switch'][data-state='checked'] > span {
   background: var(--immich-ui-light) !important;
 }
-.ws-setting-body [role='switch']:focus-visible {
+:is(.ws-setting-body, .ws-sheet, .ws-sheet-form) [role='switch']:focus-visible {
   outline: var(--ws-border) solid var(--ws-accent);
   outline-offset: 2px;
 }
@@ -1816,6 +1817,125 @@ body.ws-dragging
 }
 .ws-shared-link :is(img, button, [class*='rounded']) {
   border-radius: var(--ws-radius) !important;
+}
+
+/* ---- the Share sheet (modals/AlbumShareModal): the ways to share in the order the family shares, as sections on the
+   dialog's ground split by hairlines that run edge to edge. A section is a head (its name in ink, its action at the end)
+   over what it holds, or over one muted line while it holds nothing. The Space that leads (utils/share-space) comes
+   first, a switch with one muted line on who sees it; other Spaces follow quietly. Then the link with its QR in place
+   (components/omarchy/ShareLinkPanel), then the album's people. The switches are Settings' (above). ---- */
+.ws-sheet {
+  display: grid;
+  color: var(--immich-ui-dark);
+}
+.ws-sheet-section {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.25rem 1.15rem;
+}
+.ws-sheet-section + .ws-sheet-section {
+  border-top: 1px solid var(--ws-hairline);
+}
+.ws-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.25rem;
+}
+.ws-sheet-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--ws-text-body);
+  font-weight: 650;
+  line-height: 1.3;
+}
+label.ws-sheet-title {
+  cursor: pointer;
+}
+.ws-sheet-note {
+  max-width: 60ch;
+  color: var(--immich-ui-muted);
+  font-size: var(--ws-text-meta);
+  line-height: 1.45;
+}
+/* the other Spaces, quieter than the lead: a row each, the name in muted ui type */
+.ws-sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 2.25rem;
+  color: var(--immich-ui-muted);
+  font-size: var(--ws-text-ui);
+  font-weight: 500;
+}
+.ws-sheet-row label {
+  flex: 1 1 auto;
+  min-width: 0;
+  cursor: pointer;
+}
+.ws-sheet-row:hover {
+  color: var(--immich-ui-dark);
+}
+/* a person the album is shared with: the avatar, the name, the role at the row's end */
+.ws-sheet-person {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.75rem;
+}
+.ws-sheet-person-name {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  font-size: var(--ws-text-ui);
+  font-weight: 500;
+}
+/* the sheet's buttons: the quiet ones outlined in a hairline, the one that matters most in ink */
+.ws-sheet-quiet,
+.ws-sheet-primary {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--ws-radius);
+  font-size: var(--ws-text-ui);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 120ms;
+}
+.ws-sheet-quiet {
+  border: 1px solid var(--ws-hairline);
+  color: var(--immich-ui-dark);
+}
+.ws-sheet-quiet:not(:disabled):hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
+}
+.ws-sheet-primary {
+  justify-self: start;
+  background: var(--immich-ui-dark);
+  color: var(--immich-ui-light);
+}
+.ws-sheet-primary:not(:disabled):hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 85%, var(--ws-accent));
+}
+:is(.ws-sheet-quiet, .ws-sheet-primary):disabled {
+  cursor: progress;
+  opacity: 0.55;
+}
+:is(.ws-sheet-quiet, .ws-sheet-primary):focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-sheet-quiet,
+  .ws-sheet-primary {
+    transition: none;
+  }
 }
 
 /* ---- glass chrome (Settings > Theme > Chrome, lib/theme/chrome.svelte.ts) ----
