@@ -1038,7 +1038,6 @@
   "album_info_updated": "Информация об альбоме обновлена",
   "album_linked_to_space": "Привязан к «{space}»",
   "album_made": "Создан альбом «{name}» ({count, plural, other {# фото}})",
-  "album_made_count": "Создан альбом «{name}»: {count, plural, other {# фото}}",
   "album_made_partial": "Создан альбом «{name}»: {count} из {total} фото",
   "album_merge_confirm": "Объединить «{source}» с «{target}»? {count, plural, one {# фото перейдёт} few {# фото перейдут} many {# фото перейдут} other {# фото перейдут}} в «{target}», затем «{source}» будет удалён. Из раздела «Фото» ничего не пропадёт.",
   "album_merge_failed": "Не удалось объединить «{source}»: не все фото удалось добавить в «{target}», поэтому ничего не изменилось.",

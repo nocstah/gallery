@@ -1038,7 +1038,6 @@
   "album_info_updated": "Albumgegevens bijgewerkt",
   "album_linked_to_space": "Gekoppeld aan \"{space}\"",
   "album_made": "‘{name}’ gemaakt met {count, plural, one {# foto} other {# foto's}}",
-  "album_made_count": "Album ‘{name}’ gemaakt met {count, plural, one {# foto} other {# foto's}}",
   "album_made_partial": "‘{name}’ gemaakt met {count} van {total, plural, one {# foto} other {# foto's}}",
   "album_merge_confirm": "‘{source}’ samenvoegen met ‘{target}’? {count, plural, one {De foto gaat} other {De # foto's gaan}} naar ‘{target}’, daarna wordt ‘{source}’ verwijderd. Er verdwijnt niets uit Foto's.",
   "album_merge_failed": "Kan ‘{source}’ niet samenvoegen: niet alle foto's konden naar ‘{target}’, dus er is niets veranderd.",

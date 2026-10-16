@@ -2,22 +2,14 @@
 // is the one the rest of the app already uses, so a drop toasts, undoes and remembers exactly as the same move by
 // menu or key would: an album takes them through the single-album add (its toast, the bar's Undo, the album the Add to
 // album picker offers first); To do, Villa and QR through their own move, never the toggle that could take photos
-// out; a Space through the Add to album or Space picker's own dispatch; and New album makes an album of them, named by
-// where and when they were taken, which the Undo deletes again (the photos stay where they were).
-import { deleteAlbum } from '@immich/sdk';
-import { t } from 'svelte-i18n';
-import { get } from 'svelte/store';
+// out; a Space through the Add to album or Space picker's own dispatch; and New album through the N key's own album of
+// the selection (utils/album-from-selection: named by where and when, its toast's Open and Undo, the last album).
 import { spaceToCollection } from '$lib/components/shared-components/collection-selection/collection-selection-utils';
-import { eventManager } from '$lib/managers/event-manager.svelte';
 import { mineOf, sidebarDrop, type Carry, type DropTarget } from '$lib/managers/sidebar-drop.svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
 import { addAssetsToAlbumWithOutcome } from '$lib/services/album.service';
 import { addAssetsToCollections } from '$lib/services/collection.service';
-import { locale, recentAlbumsDropdown } from '$lib/stores/preferences.store';
-import { suggestAlbumName } from '$lib/utils/album-naming';
-import { createAlbum } from '$lib/utils/album-utils';
-import { rememberLastAlbum } from '$lib/utils/last-album';
-import { toastUndoable } from '$lib/utils/undoable';
+import { recentAlbumsDropdown } from '$lib/stores/preferences.store';
+import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
 
 /** What the drop changed for the grid: the photos a special album took out of view, and whether the selection
  * that was carried has done its job (it leaves with the photos). */
@@ -47,27 +39,13 @@ export const dropOn = async (target: DropTarget, carry: Carry): Promise<DropResu
   }
 };
 
-/** A new album of the carried photos, lit in the sidebar's tree, with an Undo that deletes it again. */
+/** A new album of the carried photos (the carry holds every one of them: a lift that cannot name its photo offers no
+ * New album), lit in the sidebar's tree. */
 const makeAlbum = async (carry: Carry): Promise<DropResult | undefined> => {
-  const $t = get(t);
-  const album = await createAlbum(suggestAlbumName(carry.assets, get(locale)), carry.ids);
+  const album = await newAlbumFromAssets(carry.assets);
   if (!album) {
     return;
   }
-  rememberLastAlbum(album.id);
-  const label = $t('album_made_count', {
-    values: { name: album.albumName || $t('unnamed_album'), count: album.assetCount },
-  });
-  const entry = undoManager.record(
-    label,
-    async () => {
-      await deleteAlbum({ id: album.id });
-      eventManager.emit('AlbumDelete', album);
-      return $t('album_deleted');
-    },
-    $t('errors.unable_to_delete_album'),
-  );
-  toastUndoable(label, entry);
   // shown where it now lives: the Albums tree opens, and the new row lights for a moment
   recentAlbumsDropdown.set(true);
   sidebarDrop.arrive(album.id);

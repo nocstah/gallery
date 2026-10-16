@@ -1038,7 +1038,6 @@
   "album_info_updated": "Informazioni dell'album aggiornate",
   "album_linked_to_space": "Collegato a \"{space}\"",
   "album_made": "«{name}» creato con {count, plural, other {# foto}}",
-  "album_made_count": "Album «{name}» creato con {count, plural, one {# foto} other {# foto}}",
   "album_made_partial": "«{name}» creato con {count} foto su {total}",
   "album_merge_confirm": "Unire «{source}» a «{target}»? {count, plural, one {La sua foto passa} other {Le sue # foto passano}} in «{target}», poi «{source}» viene eliminato. Nulla esce da Foto.",
   "album_merge_failed": "Impossibile unire «{source}»: non tutte le sue foto sono potute passare in «{target}», quindi non è cambiato nulla.",

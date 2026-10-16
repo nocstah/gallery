@@ -1038,7 +1038,6 @@
   "album_info_updated": "Szczegóły albumu zostały zaktualizowane",
   "album_linked_to_space": "Połączono z \"{space}\"",
   "album_made": "Utworzono „{name}” z {count, plural, one {# zdjęciem} other {# zdjęciami}}",
-  "album_made_count": "Utworzono album „{name}” z {count, plural, one {# zdjęciem} other {# zdjęciami}}",
   "album_made_partial": "Utworzono „{name}”, dodano {count} z {total} zdjęć",
   "album_merge_confirm": "Złączyć „{source}” z „{target}”? {count, plural, one {Jego zdjęcie trafi} few {Jego # zdjęcia trafią} many {Jego # zdjęć trafi} other {Jego # zdjęcia trafi}} do „{target}”, a potem „{source}” zostanie usunięty. Nic nie zniknie ze Zdjęć.",
   "album_merge_failed": "Nie udało się złączyć „{source}”: nie wszystkie zdjęcia mogły trafić do „{target}”, więc nic się nie zmieniło.",

@@ -1038,7 +1038,6 @@
   "album_info_updated": "Album-Infos aktualisiert",
   "album_linked_to_space": "Mit \"{space}\" verknüpft",
   "album_made": "„{name}“ mit {count, plural, one {# Foto} other {# Fotos}} erstellt",
-  "album_made_count": "Album „{name}“ mit {count, plural, one {# Foto} other {# Fotos}} erstellt",
   "album_made_partial": "„{name}“ mit {count} von {total, plural, one {# Foto} other {# Fotos}} erstellt",
   "album_merge_confirm": "„{source}“ mit „{target}“ zusammenführen? {count, plural, one {Sein Foto kommt} other {Seine # Fotos kommen}} zu „{target}“, danach wird „{source}“ gelöscht. Aus Fotos verschwindet nichts.",
   "album_merge_failed": "„{source}“ konnte nicht zusammengeführt werden: Nicht alle Fotos konnten zu „{target}“, deshalb hat sich nichts geändert.",

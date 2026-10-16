@@ -1045,7 +1045,6 @@
   "album_info_updated": "Album info updated",
   "album_linked_to_space": "Linked to \"{space}\"",
   "album_made": "Made “{name}” with {count, plural, one {# photo} other {# photos}}",
-  "album_made_count": "Made album “{name}” with {count, plural, one {# photo} other {# photos}}",
   "album_made_partial": "Made “{name}” with {count} of {total, plural, one {# photo} other {# photos}}",
   "album_merge_confirm": "Merge “{source}” into “{target}”? Its {count, plural, one {photo joins} other {# photos join}} “{target}”, then “{source}” is deleted. Nothing leaves Photos.",
   "album_merge_failed": "Couldn't merge “{source}”: not all of its photos could join “{target}”, so nothing changed.",
