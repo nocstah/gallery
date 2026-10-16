@@ -628,6 +628,59 @@ div[role='dialog'] :is(.border-b, .border-t) {
   background-color: var(--immich-ui-light);
   border-color: var(--ws-hairline);
 }
+/* on a phone the same panel is a sheet over the photos (components/filter-panel, `sheet`): under the bar, from the edge
+   the rail opens at, on the ground with a hairline along its open edge and the popup shadow, since it floats; the photos
+   stay in view beside it under a scrim (black, as everything laid over a photo is), which closes it. Its close button is
+   a whole touch target in ink, and so is the sections cog beside the title */
+.ws-filter-sheet {
+  position: fixed;
+  inset: var(--navbar-height) 0 0;
+  /* the page's own level (its grid is z-0, and this comes later): over the photos and the timeline's floating controls,
+     under the bar's menus and the toasts, so whatever a tap on the bar opens is never under a sheet on its way out */
+  z-index: 0;
+}
+.ws-filter-sheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.5);
+  cursor: default;
+}
+section.ws-filter-sheet-panel {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  display: flex;
+  width: min(18rem, calc(100% - 3.5rem));
+  border: 0;
+  border-inline-end: 1px solid var(--ws-hairline);
+  background: var(--immich-ui-light);
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
+}
+.ws-filter-sheet-panel [data-testid='discovery-panel'] {
+  width: 100%;
+  overscroll-behavior: contain;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.ws-filter-sheet-panel .ws-filter-head {
+  padding: 0.25rem 0.25rem 0.25rem 1rem;
+  border-color: var(--ws-hairline);
+}
+.ws-filter-sheet-panel :is(.ws-filter-close, [data-testid='section-menu-btn']) {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+.ws-filter-sheet-panel .ws-filter-close {
+  color: var(--immich-ui-dark);
+}
+.ws-filter-sheet-panel .ws-filter-close svg {
+  width: 20px;
+  height: 20px;
+}
+/* the cog's dot stays on the cog, not out at the corner of its bigger target */
+.ws-filter-sheet-panel [data-testid='section-menu-dot'] {
+  top: 0.625rem;
+  inset-inline-end: 0.625rem;
+}
 
 /* ---- segmented controls (Years / Months / All): workspace pills, active one inverted ---- */
 [data-testid='timeline-grouping-control'][data-variant='inline'] {

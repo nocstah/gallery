@@ -1,10 +1,17 @@
 <script lang="ts">
   import { Icon } from '@immich/ui';
   import { browser } from '$app/environment';
+  import { clickOutside } from '$lib/actions/click-outside';
+  import { focusTrap } from '$lib/actions/focus-trap';
+  import { portal } from '$lib/elements/Portal.svelte';
+  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
+  import { cubicBezier } from '$lib/utils/desktop-motion';
   import { SvelteSet } from 'svelte/reactivity';
+  import { fade, fly } from 'svelte/transition';
   import { t } from 'svelte-i18n';
   import { mdiClose, mdiTune } from '@mdi/js';
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
+  import { PANEL_DURATION_MS } from './motion';
   import type {
     FilterPanelConfig,
     FilterSection as FilterSectionType,
@@ -72,6 +79,48 @@
   if (collapsed === undefined) {
     collapsed = persistCollapsed ? loadFilterCollapsed() : false;
   }
+
+  // Local Omarchy layer: below 768px a page's filters open as a sheet over its photos, under the bar and from the edge
+  // the rail opens at on a wider screen. The rail would leave the photos a strip a third of a phone wide, so the theme
+  // hook's Custom CSS hid it there, and the bar's filter button then opened nothing at all. The Dell and the AORUS keep
+  // the rail. Only a page that brings its own filter button (externalToggle) gets the sheet: the map's drawer and the
+  // album's photo picker place the panel themselves.
+  const sheet = $derived(externalToggle && mediaQueryManager.maxMd);
+  // a sheet opens when asked, never by itself: a phone always starts on its photos, whatever the rail was left as
+  if (untrack(() => sheet)) {
+    collapsed = true;
+  }
+  // the sheet's own ways out (its close button, the scrim, Escape) hand the focus back to the filter button that
+  // opened it, which comes back as the sheet goes; a tap elsewhere (the bar) leaves the focus where it went
+  const closeSheet = async (refocus: boolean) => {
+    collapsed = true;
+    if (refocus) {
+      await tick();
+      document.querySelector<HTMLElement>('[data-testid="filter-toggle-btn"]')?.focus();
+    }
+  };
+  const collapse = () => {
+    if (sheet) {
+      void closeSheet(true);
+    } else {
+      collapsed = true;
+    }
+  };
+  // it slides in on the rail's own curve and time, and out quicker, so what the person turned to next is not kept
+  // waiting; reduced motion cuts both
+  const SETTLE = cubicBezier(0.22, 1, 0.36, 1);
+  const SHEET_OUT_MS = 200;
+  const sheetEdge = () => (document.documentElement.dir === 'rtl' ? '100%' : '-100%');
+  const sheetIn = () =>
+    mediaQueryManager.reducedMotion
+      ? { duration: 0 }
+      : { x: sheetEdge(), opacity: 1, duration: PANEL_DURATION_MS, easing: SETTLE };
+  const sheetOut = () =>
+    mediaQueryManager.reducedMotion
+      ? { duration: 0 }
+      : { x: sheetEdge(), opacity: 1, duration: SHEET_OUT_MS, easing: SETTLE };
+  const scrimIn = () => ({ duration: mediaQueryManager.reducedMotion ? 0 : PANEL_DURATION_MS });
+  const scrimOut = () => ({ duration: mediaQueryManager.reducedMotion ? 0 : SHEET_OUT_MS });
 
   const providers = config.providers ?? {};
 
@@ -521,7 +570,8 @@
   });
 
   $effect(() => {
-    if (persistCollapsed) {
+    // Local Omarchy layer: a sheet is opened for the moment and never remembered (see `sheet`)
+    if (persistCollapsed && !sheet) {
       // `collapsed` is a bindable with no default (`boolean | undefined`) so the `=== undefined`
       // init above can decide whether to seed from storage; it's always a boolean by here.
       saveFilterCollapsed(collapsed ?? false);
@@ -724,8 +774,237 @@
   let renderableSections = $derived(config.sections.filter((section) => availability.get(section) !== 'unavailable'));
 </script>
 
+<!-- the panel itself, in the rail beside the photos or in the phone's sheet over them -->
+{#snippet panel()}
+  <!-- inert while collapsed: in externalToggle mode the rail stays mounted at w-0 (clipped) so the open/close animates,
+       but its inputs must not be focusable/announced while hidden (a sheet that is closing is on its way out) -->
+  <div
+    class="flex h-full w-64 immich-scrollbar flex-col overflow-y-auto bg-light"
+    data-testid="discovery-panel"
+    inert={collapsed}
+  >
+    <div
+      class="ws-filter-head sticky top-0 z-5 flex items-center justify-between border-b border-gray-200 bg-light px-4 py-2.5 dark:border-gray-700"
+    >
+      <div class="flex items-center gap-1">
+        <span class="text-sm font-medium">{$t('filters')}</span>
+        {#if renderableSections.length > 0}
+          <FilterSectionMenu
+            bind:open={sectionMenuOpen}
+            sections={renderableSections}
+            visible={visibleSections}
+            titles={sectionTitles}
+            toggleLabels={sectionToggleLabels}
+            {hasActiveFilter}
+            onToggle={toggleSection}
+            onShowAll={showAllSections}
+          />
+        {/if}
+      </div>
+      <button
+        type="button"
+        class="ws-filter-close flex size-6 items-center justify-center rounded-full text-gray-500 hover:bg-subtle dark:text-gray-400"
+        onclick={collapse}
+        data-testid="collapse-panel-btn"
+        aria-label={sheet ? $t('close') : $t('collapse')}
+      >
+        <Icon icon={mdiClose} size="16" />
+      </button>
+    </div>
+
+    <div class="pt-4">
+      {#each renderableSections as section (section)}
+        {#if visibleSections.has(section)}
+          <!-- The "(0)" / disable gate answers "has a CROSS-SECTION filter narrowed the panel?",
+                   so the #910 availability verdict is gated on filterContext exactly as the legacy
+                   formula below is: #858 §3.3 decision 3 keeps `state` / `lensModel` / `ownerId`
+                   (and the location/camera/media dimensions) out of it, because those arrive from a
+                   contextual filter or a link rather than the panel's own controls. 'timeline' is
+                   the one exception — its `empty` means "this page has no assets at all", which no
+                   filter is responsible for. Hiding an `unavailable` section is separate and stays
+                   ungated (renderableSections, above). -->
+          <FilterSection
+            title={sectionTitles[section]}
+            testId={section}
+            refetching={isRefetching && section !== 'timeline'}
+            expanded={expandedSections.has(section)}
+            onToggleExpanded={() => toggleSectionExpanded(section)}
+            count={config.suggestionsProvider
+              ? (section === 'timeline' || filterContext) && availability.get(section) === 'empty'
+                ? 0
+                : undefined
+              : filterContext
+                ? section === 'people'
+                  ? people.length
+                  : section === 'location'
+                    ? countries.length
+                    : section === 'camera'
+                      ? cameraMakes.length
+                      : section === 'tags'
+                        ? tags.length
+                        : undefined
+                : undefined}
+          >
+            {#if section === 'timeline'}
+              <TemporalPicker
+                {timeBuckets}
+                dateAfter={filters.dateAfter}
+                dateBefore={filters.dateBefore}
+                selectedYear={filters.selectedYear}
+                selectedMonth={filters.selectedMonth}
+                onCustomRangeChange={handleCustomDateRangeChange}
+                onYearSelect={handleYearSelect}
+                onMonthSelect={handleMonthSelect}
+              />
+            {:else if section === 'people'}
+              <PeopleFilter
+                {people}
+                selectedIds={filters.personIds}
+                selectedNames={personNames}
+                onSelectionChange={handlePeopleChange}
+                emptyText={hasUnnamedPeople ? $t('filter_name_people_hint') : undefined}
+              />
+            {:else if section === 'location'}
+              <LocationFilter
+                {countries}
+                selectedCity={filters.city}
+                selectedCountry={filters.country}
+                selectedState={filters.state}
+                context={locationFilterContext}
+                onCityFetch={async (country, ctx) => {
+                  if (providers.cities) {
+                    return providers.cities(country, ctx);
+                  }
+                  return [];
+                }}
+                onSelectionChange={handleLocationChange}
+              />
+            {:else if section === 'camera'}
+              <CameraFilter
+                makes={cameraMakes}
+                selectedMake={filters.make}
+                selectedModel={filters.model}
+                context={cameraFilterContext}
+                onModelFetch={async (make, ctx) => {
+                  if (providers.cameraModels) {
+                    return providers.cameraModels(make, ctx);
+                  }
+                  return [];
+                }}
+                onSelectionChange={handleCameraChange}
+              />
+            {:else if section === 'tags'}
+              <TagsFilter
+                {tags}
+                selectedIds={filters.tagIds}
+                selectedNames={tagNames}
+                onSelectionChange={handleTagsChange}
+              />
+            {:else if section === 'rating'}
+              <RatingFilter selectedRating={filters.rating} {availableRatings} onRatingChange={handleRatingChange} />
+            {:else if section === 'media'}
+              <MediaTypeFilter
+                selected={filters.mediaType}
+                {availableMediaTypes}
+                onTypeChange={handleMediaTypeChange}
+              />
+            {:else if section === 'favorites'}
+              <FavoritesFilter
+                selected={filters.isFavorite}
+                onToggle={(value) => {
+                  updateFilters({ ...filters, isFavorite: value });
+                }}
+              />
+            {:else if section === 'albums'}
+              <AlbumsFilter
+                selected={filters.isInAlbum ? 'has' : filters.isNotInAlbum ? 'none' : 'all'}
+                onChange={(value) => {
+                  updateFilters({
+                    ...filters,
+                    isInAlbum: value === 'has' ? true : undefined,
+                    isNotInAlbum: value === 'none' ? true : undefined,
+                  });
+                }}
+              />
+            {:else if section === 'text'}
+              <TextFilter
+                description={filters.description}
+                originalFileName={filters.originalFileName}
+                ocr={filters.ocr}
+                onChange={(next) => {
+                  updateFilters({
+                    ...filters,
+                    description: next.description,
+                    originalFileName: next.originalFileName,
+                    ocr: next.ocr,
+                  });
+                }}
+              />
+            {/if}
+          </FilterSection>
+        {/if}
+      {/each}
+
+      <!-- Emptiness is per surface, not per ledger: the set can still hold a section another
+               surface tracks under the same storage key (#797). Gated on renderableSections, not
+               config.sections: an unavailable section still counts as "visible" in the persisted
+               ledger, so a panel rendering nothing could otherwise have no hint (#910). -->
+      {#if renderableSections.every((section) => !visibleSections.has(section))}
+        <div class="flex flex-col items-center gap-2 px-4 py-8 text-center">
+          <p class="text-xs text-gray-500 dark:text-gray-400">{$t('filter_show_sections_hint')}</p>
+          <button
+            type="button"
+            class="text-xs font-medium text-primary hover:underline"
+            onclick={showAllSections}
+            data-testid="show-all-sections"
+          >
+            {$t('filter_show_all_sections')}
+          </button>
+        </div>
+      {/if}
+    </div>
+  </div>
+{/snippet}
+
 {#if hidden}
   <!-- No assets to filter — nothing to render. -->
+{:else if sheet}
+  <!-- Local Omarchy layer: the phone's sheet (see `sheet`), moved to the body so nothing in the page's layout clips it
+       (and the theme hook's narrow-screen rule, which hides the rail's shell, never reaches it). A tap on the scrim or
+       anywhere outside it, Escape and its close button put it away. -->
+  {#if !collapsed}
+    <div
+      class="ws-filter-sheet"
+      data-testid="filter-panel-sheet"
+      use:portal
+      use:clickOutside={{ onOutclick: () => void closeSheet(false), onEscape: () => void closeSheet(true) }}
+    >
+      <button
+        type="button"
+        class="ws-filter-sheet-scrim"
+        tabindex="-1"
+        aria-hidden="true"
+        data-testid="filter-sheet-scrim"
+        onclick={() => void closeSheet(true)}
+        in:fade={scrimIn()}
+        out:fade={scrimOut()}
+      ></button>
+      <!-- a section rather than a div (ARIA in HTML allows it the dialog role): the layer dresses every div[role=dialog]
+           as a modal window, its fields and faces included, and the panel should read here as it does in the rail -->
+      <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
+      <section
+        class="ws-filter-sheet-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={$t('filters')}
+        use:focusTrap
+        in:fly={sheetIn()}
+        out:fly={sheetOut()}
+      >
+        {@render panel()}
+      </section>
+    </div>
+  {/if}
 {:else}
   <!-- The shell stays mounted even when collapsed so the width transition animates open/close. In
        externalToggle mode it collapses to w-0 (space reclaimed, content clipped + inert); otherwise it
@@ -759,198 +1038,7 @@
         </button>
       </div>
     {:else}
-      <!-- inert while collapsed: in externalToggle mode this panel stays mounted at w-0 (clipped) so the
-           open/close animates, but its inputs must not be focusable/announced while hidden. -->
-      <div
-        class="flex h-full w-64 immich-scrollbar flex-col overflow-y-auto bg-light"
-        data-testid="discovery-panel"
-        inert={collapsed}
-      >
-        <div
-          class="sticky top-0 z-5 flex items-center justify-between border-b border-gray-200 bg-light px-4 py-2.5 dark:border-gray-700"
-        >
-          <div class="flex items-center gap-1">
-            <span class="text-sm font-medium">{$t('filters')}</span>
-            {#if renderableSections.length > 0}
-              <FilterSectionMenu
-                bind:open={sectionMenuOpen}
-                sections={renderableSections}
-                visible={visibleSections}
-                titles={sectionTitles}
-                toggleLabels={sectionToggleLabels}
-                {hasActiveFilter}
-                onToggle={toggleSection}
-                onShowAll={showAllSections}
-              />
-            {/if}
-          </div>
-          <button
-            type="button"
-            class="flex size-6 items-center justify-center rounded-full text-gray-500 hover:bg-subtle dark:text-gray-400"
-            onclick={() => (collapsed = true)}
-            data-testid="collapse-panel-btn"
-            aria-label={$t('collapse')}
-          >
-            <Icon icon={mdiClose} size="16" />
-          </button>
-        </div>
-
-        <div class="pt-4">
-          {#each renderableSections as section (section)}
-            {#if visibleSections.has(section)}
-              <!-- The "(0)" / disable gate answers "has a CROSS-SECTION filter narrowed the panel?",
-                   so the #910 availability verdict is gated on filterContext exactly as the legacy
-                   formula below is: #858 §3.3 decision 3 keeps `state` / `lensModel` / `ownerId`
-                   (and the location/camera/media dimensions) out of it, because those arrive from a
-                   contextual filter or a link rather than the panel's own controls. 'timeline' is
-                   the one exception — its `empty` means "this page has no assets at all", which no
-                   filter is responsible for. Hiding an `unavailable` section is separate and stays
-                   ungated (renderableSections, above). -->
-              <FilterSection
-                title={sectionTitles[section]}
-                testId={section}
-                refetching={isRefetching && section !== 'timeline'}
-                expanded={expandedSections.has(section)}
-                onToggleExpanded={() => toggleSectionExpanded(section)}
-                count={config.suggestionsProvider
-                  ? (section === 'timeline' || filterContext) && availability.get(section) === 'empty'
-                    ? 0
-                    : undefined
-                  : filterContext
-                    ? section === 'people'
-                      ? people.length
-                      : section === 'location'
-                        ? countries.length
-                        : section === 'camera'
-                          ? cameraMakes.length
-                          : section === 'tags'
-                            ? tags.length
-                            : undefined
-                    : undefined}
-              >
-                {#if section === 'timeline'}
-                  <TemporalPicker
-                    {timeBuckets}
-                    dateAfter={filters.dateAfter}
-                    dateBefore={filters.dateBefore}
-                    selectedYear={filters.selectedYear}
-                    selectedMonth={filters.selectedMonth}
-                    onCustomRangeChange={handleCustomDateRangeChange}
-                    onYearSelect={handleYearSelect}
-                    onMonthSelect={handleMonthSelect}
-                  />
-                {:else if section === 'people'}
-                  <PeopleFilter
-                    {people}
-                    selectedIds={filters.personIds}
-                    selectedNames={personNames}
-                    onSelectionChange={handlePeopleChange}
-                    emptyText={hasUnnamedPeople ? $t('filter_name_people_hint') : undefined}
-                  />
-                {:else if section === 'location'}
-                  <LocationFilter
-                    {countries}
-                    selectedCity={filters.city}
-                    selectedCountry={filters.country}
-                    selectedState={filters.state}
-                    context={locationFilterContext}
-                    onCityFetch={async (country, ctx) => {
-                      if (providers.cities) {
-                        return providers.cities(country, ctx);
-                      }
-                      return [];
-                    }}
-                    onSelectionChange={handleLocationChange}
-                  />
-                {:else if section === 'camera'}
-                  <CameraFilter
-                    makes={cameraMakes}
-                    selectedMake={filters.make}
-                    selectedModel={filters.model}
-                    context={cameraFilterContext}
-                    onModelFetch={async (make, ctx) => {
-                      if (providers.cameraModels) {
-                        return providers.cameraModels(make, ctx);
-                      }
-                      return [];
-                    }}
-                    onSelectionChange={handleCameraChange}
-                  />
-                {:else if section === 'tags'}
-                  <TagsFilter
-                    {tags}
-                    selectedIds={filters.tagIds}
-                    selectedNames={tagNames}
-                    onSelectionChange={handleTagsChange}
-                  />
-                {:else if section === 'rating'}
-                  <RatingFilter
-                    selectedRating={filters.rating}
-                    {availableRatings}
-                    onRatingChange={handleRatingChange}
-                  />
-                {:else if section === 'media'}
-                  <MediaTypeFilter
-                    selected={filters.mediaType}
-                    {availableMediaTypes}
-                    onTypeChange={handleMediaTypeChange}
-                  />
-                {:else if section === 'favorites'}
-                  <FavoritesFilter
-                    selected={filters.isFavorite}
-                    onToggle={(value) => {
-                      updateFilters({ ...filters, isFavorite: value });
-                    }}
-                  />
-                {:else if section === 'albums'}
-                  <AlbumsFilter
-                    selected={filters.isInAlbum ? 'has' : filters.isNotInAlbum ? 'none' : 'all'}
-                    onChange={(value) => {
-                      updateFilters({
-                        ...filters,
-                        isInAlbum: value === 'has' ? true : undefined,
-                        isNotInAlbum: value === 'none' ? true : undefined,
-                      });
-                    }}
-                  />
-                {:else if section === 'text'}
-                  <TextFilter
-                    description={filters.description}
-                    originalFileName={filters.originalFileName}
-                    ocr={filters.ocr}
-                    onChange={(next) => {
-                      updateFilters({
-                        ...filters,
-                        description: next.description,
-                        originalFileName: next.originalFileName,
-                        ocr: next.ocr,
-                      });
-                    }}
-                  />
-                {/if}
-              </FilterSection>
-            {/if}
-          {/each}
-
-          <!-- Emptiness is per surface, not per ledger: the set can still hold a section another
-               surface tracks under the same storage key (#797). Gated on renderableSections, not
-               config.sections: an unavailable section still counts as "visible" in the persisted
-               ledger, so a panel rendering nothing could otherwise have no hint (#910). -->
-          {#if renderableSections.every((section) => !visibleSections.has(section))}
-            <div class="flex flex-col items-center gap-2 px-4 py-8 text-center">
-              <p class="text-xs text-gray-500 dark:text-gray-400">{$t('filter_show_sections_hint')}</p>
-              <button
-                type="button"
-                class="text-xs font-medium text-primary hover:underline"
-                onclick={showAllSections}
-                data-testid="show-all-sections"
-              >
-                {$t('filter_show_all_sections')}
-              </button>
-            </div>
-          {/if}
-        </div>
-      </div>
+      {@render panel()}
     {/if}
   </div>
 {/if}
