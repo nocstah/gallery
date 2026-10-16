@@ -916,8 +916,8 @@
         <SpecialAlbumAction {special} menuItem onArchive={handleArchive} />
       {/each}
     {/if}
-    <ActionMenuItem action={MenuActions.AddToAlbum} />
-    <ActionMenuItem action={MenuActions.NewAlbum} />
+    <ActionMenuItem action={MenuActions.AddToAlbum} hint />
+    <ActionMenuItem action={MenuActions.NewAlbum} hint />
     <ActionMenuItem action={MenuActions.CreateSharedLink} />
     <DownloadAction menuItem />
     {#if assetMultiSelectManager.isAllUserOwned}
@@ -928,7 +928,7 @@
         <ActionMenuItem action={MenuStackActions.Stack} />
         <ActionMenuItem action={MenuStackActions.Unstack} />
       {/if}
-      <ActionMenuItem action={MenuActions.Tag} />
+      <ActionMenuItem action={MenuActions.Tag} hint />
       <ChangeDate menuItem />
       <ChangeLocation menuItem />
       <ChangeDescription menuItem />

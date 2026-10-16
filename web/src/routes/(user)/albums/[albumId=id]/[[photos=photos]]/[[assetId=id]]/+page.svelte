@@ -1264,8 +1264,8 @@
           {#if special && assetMultiSelectManager.isAllUserOwned}
             <SpecialAlbumAction {special} done menuItem />
           {/if}
-          <ActionMenuItem action={MenuActions.AddToAlbum} />
-          <ActionMenuItem action={MenuActions.NewAlbum} />
+          <ActionMenuItem action={MenuActions.AddToAlbum} hint />
+          <ActionMenuItem action={MenuActions.NewAlbum} hint />
           <ActionMenuItem action={MenuActions.CreateSharedLink} />
           <DownloadAction menuItem filename={album.albumName} />
           {#if isEditor && assetMultiSelectManager.assets.length === 1}
@@ -1278,13 +1278,13 @@
           {#if assetMultiSelectManager.isAllUserOwned}
             <hr />
             <RotateAction />
-            <ActionMenuItem action={MenuActions.Tag} />
+            <ActionMenuItem action={MenuActions.Tag} hint />
             <ChangeDate menuItem />
             <ChangeLocation menuItem />
             <ChangeDescription menuItem />
           {/if}
           <hr />
-          <ActionMenuItem action={MenuActions.RemoveFromAlbum} />
+          <ActionMenuItem action={MenuActions.RemoveFromAlbum} hint />
           {#if assetMultiSelectManager.isAllUserOwned}
             <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
             {#each specialAlbums as other (other.key)}
