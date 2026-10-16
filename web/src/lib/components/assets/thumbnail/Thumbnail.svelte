@@ -11,6 +11,7 @@
   import { moveFocus } from '$lib/utils/focus-util';
   import { currentUrlReplaceAssetId } from '$lib/utils/navigation';
   import { getAltText } from '$lib/utils/thumbnail-util';
+  import { tileDateLabel } from '$lib/utils/timeline-dates';
   import { AssetMediaSize, AssetVisibility, type UserResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import {
@@ -93,20 +94,14 @@
   // Local Omarchy layer: a tile zoomed past what the thumbnail holds (the server thumbnail size, set to
   // 640px here) at this screen's pixel ratio loads the preview rendition instead of upscaling a thumbnail.
   const THUMBNAIL_PX = 640;
-  // Without day labels the date travels on the photo itself, ahead of the place.
-  const tileCaption = $derived.by(() => {
-    const place = [asset.city, asset.country].filter(Boolean).join(', ');
-    if (thumbnailZoomManager.dayLabels || !asset.localDateTime) {
-      return place;
-    }
-    const { year, month, day } = asset.localDateTime;
-    const date = new Date(year, month - 1, day).toLocaleDateString(undefined, {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    });
-    return place ? `${date} · ${place}` : date;
-  });
+  // Without day labels the date travels on the photo itself, in data type ahead of the place, with its year unless it
+  // is this year's (months share rows, and the bar names the month at the top of the view, not the one pointed at). It
+  // comes from one kept formatter (utils/timeline-dates): building one per tile cost ~26µs, a hundred tiles a frame in
+  // a fast scrub.
+  const tilePlace = $derived([asset.city, asset.country].filter(Boolean).join(', '));
+  const tileDate = $derived(
+    thumbnailZoomManager.dayLabels || !asset.localDateTime ? '' : tileDateLabel(asset.localDateTime, $locale),
+  );
   const tileMediaSize = $derived(
     Math.max(Number(width) || 0, Number(height) || 0) * (globalThis.devicePixelRatio ?? 1) > THUMBNAIL_PX * 1.15
       ? AssetMediaSize.Preview
@@ -386,9 +381,11 @@
           ></div>
         {/if}
 
-        <!-- Local Omarchy layer: the place, captioned on the photo while it has focus -->
-        {#if !disabled && tileCaption}
-          <p class={['ws-place', { 'ws-place-fav': asset.isFavorite }]}>{tileCaption}</p>
+        <!-- Local Omarchy layer: the date and the place, captioned on the photo while it has focus -->
+        {#if !disabled && (tileDate || tilePlace)}
+          <p class={['ws-place', { 'ws-place-fav': asset.isFavorite }]}>
+            <span class="ws-place-date">{tileDate}</span>{tileDate && tilePlace ? ' · ' : ''}{tilePlace}
+          </p>
         {/if}
 
         <!-- Favorite asset star -->

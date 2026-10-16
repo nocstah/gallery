@@ -675,6 +675,12 @@ div[role='dialog'] :is(.border-b, .border-t) {
 .ws-place.ws-place-fav {
   padding-inline-start: 2.25rem;
 }
+/* the date is data: the desktop's mono, ahead of the place in the caption's own face */
+.ws-place-date {
+  font-family: var(--ws-font-data);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
 [data-thumbnail-focus-container]:hover .ws-place,
 [data-thumbnail-focus-container]:focus-visible .ws-place {
   opacity: 1;

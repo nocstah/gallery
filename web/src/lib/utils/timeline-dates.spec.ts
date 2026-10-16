@@ -1,4 +1,4 @@
-import { monthMarkLabel } from '$lib/utils/timeline-dates';
+import { monthMarkLabel, tileDateLabel } from '$lib/utils/timeline-dates';
 
 describe('monthMarkLabel', () => {
   it('sets the short month in capitals', () => {
@@ -22,5 +22,19 @@ describe('monthMarkLabel', () => {
       monthMarkLabel({ year: 2026, month: 3 }, false),
     );
     expect(() => monthMarkLabel({ year: 2026, month: 3 }, false, 'en_US')).not.toThrow();
+  });
+});
+
+describe('tileDateLabel', () => {
+  it('leaves the year out for this year', () => {
+    expect(tileDateLabel({ year: 2026, month: 10, day: 11 }, 'en-US', 2026)).toBe('Sun, Oct 11');
+  });
+
+  it('writes the year for any other year', () => {
+    expect(tileDateLabel({ year: 2019, month: 3, day: 2 }, 'en-US', 2026)).toBe('Sat, Mar 2, 2019');
+  });
+
+  it('says nothing for a date it cannot read', () => {
+    expect(tileDateLabel({} as never, 'en-US')).toBe('');
   });
 });

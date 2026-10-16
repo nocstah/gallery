@@ -1,14 +1,17 @@
-import type { TimelineYearMonth } from '$lib/utils/timeline-util';
+import type { TimelineDate, TimelineYearMonth } from '$lib/utils/timeline-util';
 
-// Local Omarchy layer: the dates the timeline writes on its tiles (the month marks), in the reader's locale, each style
-// from one Intl.DateTimeFormat kept per locale. Building a formatter costs about 26µs in Chromium against under 1µs to
-// format with one.
+// Local Omarchy layer: the dates the timeline writes on its tiles (the month marks, the date in the hover caption), in
+// the reader's locale, each style from one Intl.DateTimeFormat kept per locale. Building a formatter costs about 26µs
+// in Chromium against under 1µs to format with one, and Date.toLocaleDateString(locale, options) builds one on every
+// call: a fast scrub makes a hundred tiles a frame.
 
-type Style = 'month' | 'month-year';
+type Style = 'month' | 'month-year' | 'day' | 'day-year';
 
 const OPTIONS: Record<Style, Intl.DateTimeFormatOptions> = {
   month: { month: 'short' },
   'month-year': { month: 'short', year: 'numeric' },
+  day: { weekday: 'short', day: 'numeric', month: 'short' },
+  'day-year': { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' },
 };
 
 const formatters = new Map<string, Intl.DateTimeFormat>();
@@ -49,4 +52,14 @@ export const monthMarkLabel = ({ year, month }: TimelineYearMonth, withYear: boo
     .formatToParts(date)
     .map((part) => (part.type === 'month' ? part.value.toLocaleUpperCase(upper) : part.value))
     .join('');
+};
+
+/** A photo's day as its tile's caption says it: "Sun, Oct 11", with the year when it is not this year's. */
+export const tileDateLabel = (
+  { year, month, day }: TimelineDate,
+  locale?: string,
+  thisYear = new Date().getFullYear(),
+): string => {
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? '' : formatterFor(locale, year === thisYear ? 'day' : 'day-year').format(date);
 };
