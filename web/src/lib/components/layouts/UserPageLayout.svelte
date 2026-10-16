@@ -518,7 +518,7 @@
       min-width: 2rem;
       padding-inline: 0.375rem;
     }
-    .ws-page-actions :global(button[class~='w-10']) {
+    .ws-page-actions :global(button:is([class~='w-10'], [class~='size-9'])) {
       width: 2rem;
     }
   }
@@ -591,15 +591,13 @@
     padding-inline: 0.5rem;
     gap: 0.375rem;
   }
-  .ws-page-actions :global(:is(button, a):not(.ws-search-field *, .ws-seg *, [role='tablist'] *, [class~='w-10']) svg) {
+  .ws-page-actions
+    :global(
+      :is(button, a):not(.ws-search-field *, .ws-seg *, [role='tablist'] *, [class~='w-10'], [class~='size-9']) svg
+    ) {
     flex: none;
     width: 16px;
     height: 16px;
-  }
-  /* upstream pulls a title's trailing button back over the title's own pe-8 pad (-ms-6: the Map's filter toggle); the
-     one bar's title has no such pad, so the pull laid the button over the word "Map" */
-  .ws-page-bar :global([class~='-ms-6']) {
-    margin-inline-start: 0.25rem;
   }
   /* a field among the buttons is its own framed box: it stands a little apart from its neighbours */
   .ws-page-actions :global(:has(> .ws-search-field)) {
@@ -608,13 +606,13 @@
   .ws-page-actions :global([class~='h-10']) {
     height: 2.25rem;
   }
-  /* icon-only buttons (the kit's IconButton, 40px with a 24px icon) are squares like the bar's icons: 36px with a 20px
-     icon, which sits 8px in as a label does */
-  .ws-page-actions :global(button[class~='w-10']) {
+  /* icon-only buttons (the kit's IconButton, 40px with a 24px icon; the filter toggle) are squares like the bar's
+     icons: 36px with a 20px icon, which sits 8px in as a label does */
+  .ws-page-actions :global(button:is([class~='w-10'], [class~='size-9'])) {
     width: 2.25rem;
     padding: 0;
   }
-  .ws-page-actions :global(button[class~='w-10'] svg) {
+  .ws-page-actions :global(button:is([class~='w-10'], [class~='size-9']) svg) {
     flex: none;
     width: 20px;
     height: 20px;

@@ -382,26 +382,21 @@
           icon={mdiArrowLeft}
         />
       {/if}
+    {/snippet}
+    <!-- Local Omarchy layer: the filter toggle is the page's own tool, after the title like every page's (it stood
+         before the title on a phone and was pulled back over it with -ms-6 elsewhere, covering "Map" on the 4K
+         screen). A phone opens the filters as a drawer, a wider screen the rail beside the map. The same component
+         either way, rather than a hand-rolled button: that duplicate had drifted onto a different icon (mdiFilterVariant
+         vs the mdiTune every other filter affordance uses) and carried no accessible name. -->
+    {#snippet buttons()}
       {#if isMobile}
-        <!-- The same component the desktop header uses, rather than a hand-rolled button: that
-             duplicate had drifted onto a different icon (mdiFilterVariant vs the mdiTune every
-             other filter affordance uses) and carried no accessible name. -->
         <FilterToggleButton
           active={getActiveFilterCount(filters) > 0}
           onExpand={() => (showMobileFilters = !showMobileFilters)}
           testId="map-mobile-filter-toggle"
         />
-      {/if}
-    {/snippet}
-    {#snippet descriptionTrailing()}
-      <!-- Filter toggle right after the "Map" title: descriptionTrailing renders inside the title
-           cluster, so the button sits next to the title without shifting it (leading) or drifting to
-           the far right (buttons). -ms-6 pulls it back over the title's built-in pe-8 trailing pad so
-           it sits snug against "Map". -->
-      {#if !isMobile && filterCollapsed}
-        <div class="-ms-6">
-          <FilterToggleButton active={getActiveFilterCount(filters) > 0} onExpand={() => (filterCollapsed = false)} />
-        </div>
+      {:else if filterCollapsed}
+        <FilterToggleButton active={getActiveFilterCount(filters) > 0} onExpand={() => (filterCollapsed = false)} />
       {/if}
     {/snippet}
     <OnEvents
