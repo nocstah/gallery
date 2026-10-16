@@ -63,7 +63,8 @@
       >
         {#if album.albumThumbnailAssetId}
           <span
-            class="size-5.5 shrink-0 rounded-sm bg-cover bg-center"
+            class="size-5.5 shrink-0 bg-cover bg-center"
+            style:border-radius="var(--ws-radius)"
             style:background-image="url('{getAssetMediaUrl({ id: album.albumThumbnailAssetId })}')"
             aria-hidden="true"
           ></span>
