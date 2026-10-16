@@ -2,7 +2,9 @@
   // Local Omarchy layer: the one bar. User pages get this in place of upstream's NavigationBar (which stays for the
   // admin shell): the menu and the mark on the left; the page's own content in the middle (Photos: its month heading
   // and time ruler, lib/managers/bar-slot); and on the right search (an icon that opens into the search field), undo
-  // (the recent actions that can be taken back), the view menu, upload, notifications and the account. One 64px row, so the photos start right under it.
+  // (the recent actions that can be taken back), the view menu, upload, notifications and the account. One 56px row,
+  // so the photos start right under it. On a phone upload waits for a wider screen and notifications move into the
+  // account menu, so the page's title row has the room.
   import { page } from '$app/state';
   import { clickOutside } from '$lib/actions/click-outside';
   import BarSearch from '$lib/components/omarchy/BarSearch.svelte';
@@ -40,6 +42,24 @@
   let showAccount = $state(false);
   let showNotifications = $state(false);
   const unread = $derived(notificationManager.notifications.length);
+  // on a phone the bell lives in the account menu: a row there with what is unread, and a dot on the avatar while
+  // something is; the panel opens from the account in its place
+  const bellInAccount = $derived(mediaQueryManager.isPhone);
+  const closeAccount = () => {
+    showAccount = false;
+    if (bellInAccount) {
+      showNotifications = false;
+    }
+  };
+  const openNotifications = () => {
+    showAccount = false;
+    showNotifications = true;
+  };
+  const accountTitle = $derived(
+    bellInAccount && unread > 0
+      ? `${authManager.user.name} (${authManager.user.email}) · ${$t('notifications_unread_count', { values: { count: unread } })}`
+      : `${authManager.user.name} (${authManager.user.email})`,
+  );
 
   onMount(async () => {
     try {
@@ -131,45 +151,57 @@
       </button>
     {/if}
 
-    <div
-      class="ws-bar-anchor"
-      use:clickOutside={{ onOutclick: () => (showNotifications = false), onEscape: () => (showNotifications = false) }}
-    >
-      <button
-        type="button"
-        class="ws-bar-icon"
-        aria-label={$t('notifications')}
-        title={$t('notifications')}
-        aria-expanded={showNotifications}
-        onclick={() => (showNotifications = !showNotifications)}
+    {#if !bellInAccount}
+      <div
+        class="ws-bar-anchor"
+        use:clickOutside={{
+          onOutclick: () => (showNotifications = false),
+          onEscape: () => (showNotifications = false),
+        }}
       >
-        <Icon icon={unread > 0 ? mdiBellBadgeOutline : mdiBellOutline} size="20" />
-        {#if unread > 0}<span class="ws-bar-dot" aria-hidden="true"></span>{/if}
-      </button>
-      {#if showNotifications}
-        <NotificationPanel />
-      {/if}
-    </div>
+        <button
+          type="button"
+          class="ws-bar-icon"
+          aria-label={$t('notifications')}
+          title={$t('notifications')}
+          aria-expanded={showNotifications}
+          onclick={() => (showNotifications = !showNotifications)}
+        >
+          <Icon icon={unread > 0 ? mdiBellBadgeOutline : mdiBellOutline} size="20" />
+          {#if unread > 0}<span class="ws-bar-dot" aria-hidden="true"></span>{/if}
+        </button>
+        {#if showNotifications}
+          <NotificationPanel />
+        {/if}
+      </div>
+    {/if}
 
     <!-- the account, once someone is signed in (authManager.user throws before) -->
     {#if authManager.authenticated}
-      <div
-        class="ws-bar-anchor"
-        use:clickOutside={{ onOutclick: () => (showAccount = false), onEscape: () => (showAccount = false) }}
-      >
+      <div class="ws-bar-anchor" use:clickOutside={{ onOutclick: closeAccount, onEscape: closeAccount }}>
         <button
           type="button"
           class="ws-bar-avatar"
           onclick={() => (showAccount = !showAccount)}
-          title="{authManager.user.name} ({authManager.user.email})"
+          title={accountTitle}
           aria-expanded={showAccount}
+          data-testid="bar-account"
         >
           {#key authManager.user}
             <UserAvatar user={authManager.user} size="sm" noTitle interactive />
           {/key}
+          {#if bellInAccount && unread > 0}
+            <span class="ws-bar-dot ws-bar-avatar-dot" aria-hidden="true" data-testid="bar-account-unread"></span>
+          {/if}
         </button>
         {#if showAccount}
-          <AccountInfoPanel onClose={() => (showAccount = false)} />
+          <AccountInfoPanel
+            onClose={() => (showAccount = false)}
+            notifications={bellInAccount ? { count: unread, onOpen: openNotifications } : undefined}
+          />
+        {/if}
+        {#if bellInAccount && showNotifications}
+          <NotificationPanel />
         {/if}
       </div>
     {/if}
@@ -224,18 +256,26 @@
     position: relative;
   }
   .ws-bar-avatar {
+    position: relative;
     display: flex;
     margin-inline-start: 0.5rem;
+  }
+  /* unread notifications on a phone, where the bell is in the account menu: the bar's dot, on the ring's corner, cut
+     from the ring by the ground so it reads as its own mark */
+  .ws-bar-avatar-dot {
+    top: -1px;
+    right: -1px;
+    box-shadow: 0 0 0 2px var(--immich-ui-light);
   }
   /* the account as a quiet ring with the initial in ink (a picture still fills it): upstream's colour discs put the
      initial at 2.9:1 under a dark theme's light ink, and the chrome recedes. The ring is filled with the surface, as
      the disc was, so a page's tools that overrun the bar on a phone stay hidden under it */
-  .ws-bar-avatar > :global(*) {
+  .ws-bar-avatar > :global(figure) {
     background: var(--immich-ui-light);
     color: var(--immich-ui-dark);
     box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--immich-ui-dark) 38%, transparent);
   }
-  .ws-bar-avatar:hover > :global(*) {
+  .ws-bar-avatar:hover > :global(figure) {
     background: color-mix(in oklab, var(--immich-ui-dark) 8%, var(--immich-ui-light));
   }
   @media (max-width: 767px) {

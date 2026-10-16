@@ -2832,6 +2832,7 @@
   "notification_toggle_setting_description": "E-mailmeldingen inschakelen",
   "notifications": "Meldingen",
   "notifications_setting_description": "Beheer meldingen",
+  "notifications_unread_count": "{count, plural, one {# ongelezen melding} other {# ongelezen meldingen}}",
   "oauth": "OAuth",
   "obtainium_configurator": "Obtainium instellen",
   "obtainium_configurator_instructions": "Gebruik Obtainium om de Android-app recht­streeks vanuit Immich's GitHub-releases te installeren en bij te werken. Maak een API-sleutel aan en selecteer een variant om je Obtainium-configuratielink te maken",

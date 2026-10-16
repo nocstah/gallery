@@ -2832,6 +2832,7 @@
   "notification_toggle_setting_description": "开启邮件通知",
   "notifications": "通知",
   "notifications_setting_description": "管理通知",
+  "notifications_unread_count": "{count, plural, other {# 条未读通知}}",
   "oauth": "OAuth",
   "obtainium_configurator": "Obtainium 配置器",
   "obtainium_configurator_instructions": "使用 Obtainium 直接从 Immich 的 GitHub 发布页安装和更新 Android 应用。请创建一个 API 密钥并选择一个版本，以生成你的 Obtainium 配置链接",

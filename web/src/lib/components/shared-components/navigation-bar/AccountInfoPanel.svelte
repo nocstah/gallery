@@ -5,10 +5,11 @@
   import AvatarEditModal from '$lib/modals/AvatarEditModal.svelte';
   import HelpAndFeedbackModal from '$lib/modals/HelpAndFeedbackModal.svelte';
   import { Route } from '$lib/route';
+  import { locale } from '$lib/stores/preferences.store';
   import { userInteraction } from '$lib/stores/user.svelte';
   import { getAboutInfo, type ServerAboutResponseDto } from '@immich/sdk';
   import { Button, Icon, IconButton, modalManager } from '@immich/ui';
-  import { mdiCog, mdiLogout, mdiPencil, mdiWrench } from '@mdi/js';
+  import { mdiBellBadgeOutline, mdiBellOutline, mdiCog, mdiLogout, mdiPencil, mdiWrench } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
@@ -16,9 +17,11 @@
 
   type Props = {
     onClose?: () => void;
+    /** Local Omarchy layer: on a phone the bar's bell lives here (components/omarchy/OmarchyBar), with what is unread */
+    notifications?: { count: number; onOpen: () => void };
   };
 
-  let { onClose }: Props = $props();
+  let { onClose, notifications }: Props = $props();
 
   let info: ServerAboutResponseDto | undefined = $state();
 
@@ -61,6 +64,28 @@
     </div>
 
     <div class="flex flex-col gap-1">
+      {#if notifications}
+        <Button
+          onclick={notifications.onOpen}
+          size="small"
+          color="secondary"
+          variant="ghost"
+          shape="round"
+          class="border hover:bg-immich-primary/10 dark:border-immich-dark-gray dark:bg-gray-500 dark:text-white dark:hover:bg-immich-dark-primary/50"
+          aria-label={notifications.count > 0
+            ? `${$t('notifications')}: ${$t('notifications_unread_count', { values: { count: notifications.count } })}`
+            : $t('notifications')}
+          data-testid="account-notifications"
+        >
+          <div class="flex place-content-center place-items-center gap-2 px-2 text-center">
+            <Icon icon={notifications.count > 0 ? mdiBellBadgeOutline : mdiBellOutline} size="18" aria-hidden />
+            {$t('notifications')}
+            {#if notifications.count > 0}
+              <span class="ws-account-unread" aria-hidden="true">{notifications.count.toLocaleString($locale)}</span>
+            {/if}
+          </div>
+        </Button>
+      {/if}
       <Button
         href={Route.userSettings()}
         onclick={onClose}
@@ -118,3 +143,22 @@
     </button>
   </div>
 </div>
+
+<style>
+  /* what is unread, as data: the desktop's mono at the data size, after the accent's dot like the bar's */
+  .ws-account-unread {
+    display: inline-flex;
+    gap: 0.35rem;
+    align-items: center;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .ws-account-unread::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--ws-accent);
+  }
+</style>

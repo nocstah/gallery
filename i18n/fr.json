@@ -2833,6 +2833,7 @@
   "notification_toggle_setting_description": "Activer les notifications par courriel",
   "notifications": "Notifications",
   "notifications_setting_description": "Gérer les notifications",
+  "notifications_unread_count": "{count, plural, one {# notification non lue} other {# notifications non lues}}",
   "oauth": "OAuth",
   "obtainium_configurator": "Configuration pour Obtainium",
   "obtainium_configurator_instructions": "Utilisez Obtainium pour installer et mettre à jour l'application Android directement depuis la version d'Immich sur Github. Créez une clé d'API et sélectionnez une variante pour créer votre lien de configuration pour Obtainium",

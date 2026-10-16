@@ -2832,6 +2832,7 @@
   "notification_toggle_setting_description": "Attiva le notifiche via email",
   "notifications": "Notifiche",
   "notifications_setting_description": "Gestisci notifiche",
+  "notifications_unread_count": "{count, plural, one {# notifica non letta} other {# notifiche non lette}}",
   "oauth": "OAuth",
   "obtainium_configurator": "Configuratore Obtainium",
   "obtainium_configurator_instructions": "Utilizza Obtainium per installare e aggiornare l'app Android direttamente dalla versione rilasciata su GitHub da Immich. Crea una chiave API e seleziona una variante per creare il tuo link di configurazione Obtainium",

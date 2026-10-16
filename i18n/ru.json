@@ -2835,6 +2835,7 @@
   "notification_toggle_setting_description": "Включить уведомления по электронной почте",
   "notifications": "Уведомления",
   "notifications_setting_description": "Управление уведомлениями",
+  "notifications_unread_count": "{count, plural, one {# непрочитанное уведомление} few {# непрочитанных уведомления} many {# непрочитанных уведомлений} other {# непрочитанного уведомления}}",
   "oauth": "OAuth",
   "obtainium_configurator": "Настройка Obtainium",
   "obtainium_configurator_instructions": "Для установки и обновления Android приложения Immich напрямую из источников на GitHub (минуя магазины приложений) можно использовать Obtainium. Создайте новый API ключ и укажите архитектуру приложения для формирования ссылки для Obtainium.",

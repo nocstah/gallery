@@ -2833,6 +2833,7 @@
   "notification_toggle_setting_description": "E-Mail-Benachrichtigungen aktivieren",
   "notifications": "Benachrichtigungen",
   "notifications_setting_description": "Benachrichtigungen verwalten",
+  "notifications_unread_count": "{count, plural, one {# ungelesene Benachrichtigung} other {# ungelesene Benachrichtigungen}}",
   "oauth": "OAuth",
   "obtainium_configurator": "Obtainium Konfigurator",
   "obtainium_configurator_instructions": "Du kannst Obtainium benutzen, um die App direkt aus den Github Releases zu installieren oder zu aktualisieren. Bitte erstelle dazu einen API-Schlüssel und wähle eine Variante aus um einen Obtainium-Konfigurationslink zu erstellen",

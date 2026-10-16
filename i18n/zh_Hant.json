@@ -2813,6 +2813,7 @@
   "notification_toggle_setting_description": "啟用電子郵件通知",
   "notifications": "通知",
   "notifications_setting_description": "管理通知",
+  "notifications_unread_count": "{count, plural, other {# 則未讀通知}}",
   "oauth": "OAuth",
   "obtainium_configurator": "Obtainium 設定工具",
   "obtainium_configurator_instructions": "使用 Obtainium 直接從 Immich GitHub 的發行版本安裝並更新 Android App。建立 API 金鑰並選取版本類型以產生您的 Obtainium 設定連結",
