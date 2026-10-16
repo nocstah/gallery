@@ -26,10 +26,6 @@ vi.mock('@immich/ui', async (importOriginal) => ({
   modalManager: modalMock,
 }));
 
-beforeEach(() => {
-  mine.current = true;
-});
-
 // a manager of its own for each test (it is a singleton that remembers asking Curator), with the dialog it shows
 const fresh = async () => {
   vi.resetModules();
@@ -67,6 +63,7 @@ const album = { id: 'album-1', albumName: 'Vang Vieng, Laos · February – Marc
 beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
+  mine.current = true;
 });
 
 afterEach(() => {
@@ -209,6 +206,26 @@ describe('making a book', () => {
     await vi.advanceTimersByTimeAsync(1500);
     expect(photoBooks.items).toHaveLength(1);
     expect(photoBooks.items[0]).toMatchObject({ status: 'ready', jobId: 42 });
+  });
+
+  it('asks nothing about a book while another account is signed in in the tab, and follows it once the owner is back', async () => {
+    curatorMock.makeBook.mockResolvedValue({ job: 41 });
+    curatorMock.book
+      .mockResolvedValueOnce(job({ status: 'running' }))
+      .mockResolvedValueOnce(job({ status: 'done', result }));
+    const { photoBooks } = await fresh();
+    photoBooks.start({ album_id: 'album-1' }, { title: 'Vang Vieng, Laos', photos: 27 });
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(curatorMock.book).toHaveBeenCalledTimes(1);
+
+    mine.current = false; // the owner signed out and someone else signed in, in the same tab
+    await vi.advanceTimersByTimeAsync(10 * 1500);
+    expect(curatorMock.book).toHaveBeenCalledTimes(1);
+    expect(photoBooks.items[0].status).toBe('making');
+
+    mine.current = true;
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(photoBooks.items[0]).toMatchObject({ status: 'ready', result });
   });
 
   it('rides out a Curator restart but not a Curator that is gone', async () => {

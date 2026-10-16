@@ -208,6 +208,11 @@ class PhotoBookManager {
       let misses = 0;
       for (;;) {
         await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+        // while another account is signed in in the tab, the owner's book is not asked about; it is followed again once
+        // Curator's owner is back (curatorIsMine)
+        if (!curatorIsMine()) {
+          continue;
+        }
         let row: BookJob;
         try {
           row = await curator.book(job);

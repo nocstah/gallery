@@ -626,17 +626,23 @@ export const chatStream = async (
   }
 };
 
-/** Poll a Curator job until it leaves the queue, asking every `every` milliseconds (a quick job wants it sooner). */
+/**
+ * Poll a Curator job until it leaves the queue, asking every `every` milliseconds (a quick job wants it sooner). Local
+ * Omarchy layer: while another account is signed in in the tab, the job its owner started is not asked about
+ * (curatorIsMine); it is followed again once Curator's owner is back.
+ */
 export const waitForJob = async (id: number, onProgress?: (job: JobRow) => void, every = 1500) => {
   for (;;) {
-    const jobs = await curator.jobs(50);
-    const job = jobs.find((row) => row.id === id);
-    if (!job) {
-      return;
-    }
-    onProgress?.(job);
-    if (job.status !== 'queued' && job.status !== 'running') {
-      return job;
+    if (curatorIsMine()) {
+      const jobs = await curator.jobs(50);
+      const job = jobs.find((row) => row.id === id);
+      if (!job) {
+        return;
+      }
+      onProgress?.(job);
+      if (job.status !== 'queued' && job.status !== 'running') {
+        return job;
+      }
     }
     await new Promise((resolve) => setTimeout(resolve, every));
   }
