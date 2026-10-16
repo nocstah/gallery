@@ -97,7 +97,7 @@
   import { ActionButton, CommandPaletteDefaultProvider, Icon, ImageCarousel, modalManager } from '@immich/ui';
   import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
   import SmartAlbumModal from '$lib/components/curator/SmartAlbumModal.svelte';
-  import { curator, type SmartAlbum } from '$lib/utils/curator';
+  import { curator, curatorIsMine, type SmartAlbum } from '$lib/utils/curator';
   import { resolveFilterNames } from '$lib/utils/filter-name-resolution';
   import { filterStateToSearchTerms } from '$lib/utils/filter-search-terms';
   import type { SearchTerms } from '$lib/services/search.service';
@@ -412,13 +412,14 @@
     });
   };
   // Local Omarchy layer: save the search as a smart album (Curator keeps the album filled), or, opened from a smart
-  // album's "Edit search" (?smart=<id>), change the search behind it
+  // album's "Edit search" (?smart=<id>), change the search behind it; Curator's, so only for Curator's owner
+  // (curatorIsMine), who alone is offered Save as smart album and whose ?smart= alone is asked about
   const smartEditingId = $derived(Number(page.url.searchParams.get('smart')) || undefined);
   let smartEditing = $state<SmartAlbum>();
   $effect(() => {
     const id = smartEditingId;
     smartEditing = undefined;
-    if (id) {
+    if (id && curatorIsMine()) {
       curator
         .smartGet(id)
         .then((found) => (smartEditing = found))
@@ -796,7 +797,7 @@
           onRemoveFilter={handleRemoveActiveFilter}
           onClearAll={handleClearAllFilters}
           onAddAllToCollection={handleAddAllToCollection}
-          onSaveSmart={handleSaveSmart}
+          onSaveSmart={curatorIsMine() ? handleSaveSmart : undefined}
           smartEditing={!!smartEditing}
         />
       {/snippet}

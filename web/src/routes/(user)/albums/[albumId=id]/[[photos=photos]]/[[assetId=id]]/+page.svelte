@@ -133,6 +133,7 @@
   import AlbumDescription from '$lib/components/album-page/AlbumDescription.svelte';
   import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
   import SmartAlbumBadge from '$lib/components/curator/SmartAlbumBadge.svelte';
+  import { curatorIsMine } from '$lib/utils/curator';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import AlbumBarTitle from '$lib/components/omarchy/AlbumBarTitle.svelte';
@@ -1122,8 +1123,11 @@
                        special or hidden album works, its description, Curator's story, who it is shared with and the
                        people in it (its name, dates and count are in the bar) -->
                     <section class="ws-album-details">
-                      <!-- Local Omarchy layer: a smart album says so, with Edit search and Stop updating -->
-                      <SmartAlbumBadge albumId={album.id} />
+                      <!-- Local Omarchy layer: a smart album says so, with Edit search and Stop updating; Curator keeps
+                         it, so only for Curator's owner (curatorIsMine) -->
+                      {#if curatorIsMine()}
+                        <SmartAlbumBadge albumId={album.id} />
+                      {/if}
 
                       <!-- Local Omarchy layer: a special album says how it works; empty, it says how photos get there
                          instead (below) -->
@@ -1162,8 +1166,11 @@
                           }
                         />
                       </div>
-                      <!-- Local Omarchy layer: the story of the event or trip the album holds -->
-                      <AlbumStory albumId={album.id} description={album.description} />
+                      <!-- Local Omarchy layer: the story of the event or trip the album holds, Curator's, so only for
+                         Curator's owner (curatorIsMine) -->
+                      {#if curatorIsMine()}
+                        <AlbumStory albumId={album.id} description={album.description} />
+                      {/if}
 
                       <!-- who it is shared with, people and a link, as one row that opens the Share sheet -->
                       {#if album.albumUsers.length > 1 || (album.hasSharedLink && isOwned)}

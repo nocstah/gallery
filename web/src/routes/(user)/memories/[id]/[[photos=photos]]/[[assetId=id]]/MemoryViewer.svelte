@@ -4,6 +4,7 @@
   import { shortcuts } from '$lib/actions/shortcut';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
   import MemoryStory from '$lib/components/curator/MemoryStory.svelte';
+  import { curatorIsMine } from '$lib/utils/curator';
   import BirthdayConfetti from '$lib/components/memories/BirthdayConfetti.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
@@ -595,8 +596,10 @@
               {/if}
             </div>
 
-            <!-- Local Omarchy layer: Curator's story of this memory -->
-            <MemoryStory memoryId={current.memory.id} faded={galleryInView} />
+            <!-- Local Omarchy layer: Curator's story of this memory, only for Curator's owner (curatorIsMine) -->
+            {#if curatorIsMine()}
+              <MemoryStory memoryId={current.memory.id} faded={galleryInView} />
+            {/if}
           </div>
         </div>
 
