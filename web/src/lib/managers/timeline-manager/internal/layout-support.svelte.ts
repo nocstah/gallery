@@ -1,6 +1,6 @@
 import { TimelineManager } from '../timeline-manager.svelte';
 import type { TimelineMonth } from '../timeline-month.svelte';
-import type { UpdateGeometryOptions } from '../types';
+import type { MonthStart, UpdateGeometryOptions } from '../types';
 
 export function updateGeometry(timelineManager: TimelineManager, month: TimelineMonth, options: UpdateGeometryOptions) {
   const { invalidateHeight, noDefer = false } = options;
@@ -95,19 +95,59 @@ function layoutTimelineMonths(timelineManager: TimelineManager, month: TimelineM
   const requested = months.indexOf(month);
   if (requested === -1) {
     layoutTimelineMonth(timelineManager, month, noDefer);
+    markMonthStart(timelineManager, month);
     return;
   }
-  for (
-    let index = requested > 0 && months[requested - 1].isLoaded ? requested - 1 : requested;
-    index < months.length && months[index].isLoaded;
-    index++
-  ) {
+  const from = requested > 0 && months[requested - 1].isLoaded ? requested - 1 : requested;
+  let last = from;
+  for (let index = from; index < months.length && months[index].isLoaded; index++) {
     const current = months[index];
     const before = carried.get(current);
     layoutTimelineMonth(timelineManager, current, noDefer);
+    last = index;
     if (index >= requested && sameCarry(before, carried.get(current))) {
       break;
     }
+  }
+  // only now: a month whose first days were handed on had them placed by the month after it, and a month before these
+  // whose photos all went on (it has no height of its own) may have had them placed again here
+  for (let index = from; index <= last; index++) {
+    markMonthStart(timelineManager, months[index]);
+  }
+  for (let index = from - 1; index >= 0 && months[index].isLoaded && months[index].height === 0; index--) {
+    markMonthStart(timelineManager, months[index]);
+  }
+}
+
+// Local Omarchy layer ("quiet month marks", 2026-10-16): with months sharing rows and no day labels, nothing in the
+// grid said where one month ends and the next begins. Each layout notes where a month starts (its first photo in grid
+// order, that photo's row and the gaps around it); Month.svelte draws the month's mark on that photo and a hairline in
+// the gap before it, and moves no tile for either. Only months laid out in rows here, on the plain grid: day labels
+// date every day already, and upstream's packing (the fallback) leaves no gap between months to draw in.
+const laidOutInRows = new WeakSet<TimelineMonth>();
+
+const sameStart = (a: MonthStart | undefined, b: MonthStart | undefined) =>
+  a === b ||
+  (!!a &&
+    !!b &&
+    a.assetId === b.assetId &&
+    a.start === b.start &&
+    a.top === b.top &&
+    a.height === b.height &&
+    a.gap === b.gap &&
+    a.rowGap === b.rowGap);
+
+function markMonthStart(timelineManager: TimelineManager, month: TimelineMonth) {
+  const first = month.timelineDays[0];
+  const assetId = first?.viewerAssets[0]?.id;
+  const headerHeight = timelineManager.headerHeight;
+  const spacing = timelineManager.justifiedLayoutOptions.spacing;
+  const next: MonthStart | undefined =
+    first && assetId && headerHeight === 0 && laidOutInRows.has(month)
+      ? { assetId, start: first.start, top: first.top, height: first.height, gap: spacing, rowGap: spacing }
+      : undefined;
+  if (!sameStart(month.monthStart, next)) {
+    month.monthStart = next;
   }
 }
 
@@ -192,9 +232,11 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
   // a tile with neither a ratio nor a box to take one from: upstream's packing (and nothing handed on either way)
   if (month.timelineDays.some((day) => !ratiosOf(day))) {
     carried.delete(month);
+    laidOutInRows.delete(month);
     layoutTimelineMonthPacked(timelineManager, month);
     return;
   }
+  laidOutInRows.add(month);
 
   const viewportWidth = timelineManager.viewportWidth;
   const spacing = options.spacing;

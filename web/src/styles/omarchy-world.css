@@ -41,6 +41,9 @@
   --ws-workspace-shift: 20%;
   --ws-workspace-fade: 1;
   --ws-hairline: color-mix(in oklab, var(--immich-ui-dark) 13%, transparent);
+  /* where a month starts in the timeline grid (components/timeline/Month.svelte): a hairline in the gap between photos,
+     a step firmer than a divider on the ground, which in a 10px gap beside bright photos all but vanished */
+  --ws-month-line: color-mix(in oklab, var(--immich-ui-dark) 30%, transparent);
   --ws-accent: var(--omarchy-accent, var(--immich-ui-primary-500));
   --ws-font-data: var(--omarchy-font-mono, 'JetBrainsMono Nerd Font'), 'GoogleSansCode', ui-monospace, monospace;
   /* smoked glass over a photo: bars and pills (thin), cards that hold text (strong) */
@@ -683,6 +686,71 @@ div[role='dialog'] :is(.border-b, .border-t) {
     .ws-place {
       opacity: 1;
     }
+  }
+}
+
+/* ---- the month mark (components/timeline/Month.svelte): the first photo of each month in the grid carries the month
+   as a tag in data type on strong glass, so it reads on any photo, light or dark; the year joins it where the year
+   changes ("DEC 2025") and goes under the month on a tile too narrow for both on one line. The corner is the selection
+   check's while it shows (hover, a selection): the mark steps aside past it, and on a tile too narrow for both it waits
+   until the check goes ---- */
+.ws-month-mark {
+  position: absolute;
+  inset-inline-start: 0.5rem;
+  top: 0.5rem;
+  z-index: 4;
+  width: max-content;
+  min-width: min-content;
+  max-width: 50%;
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--ws-radius);
+  background: var(--ws-glass-strong);
+  -webkit-backdrop-filter: var(--ws-glass-blur);
+  backdrop-filter: var(--ws-glass-blur);
+  color: #fff;
+  font-family: var(--ws-font-data);
+  font-size: var(--ws-text-data);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  transition:
+    inset-inline-start 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 140ms;
+}
+/* past the check: its 24px icon sits 8px in */
+.ws-month-mark[data-aside] {
+  inset-inline-start: 2.25rem;
+}
+/* narrow tiles: the mark sits closer to the corner, clear of a video's time at the other one, a stack's badge beside
+   it keeps its count without the icon, and while the check is there the mark waits */
+@container (max-width: 7.5rem) {
+  .ws-month-mark {
+    inset-inline-start: 0.25rem;
+    top: 0.25rem;
+    padding-inline: 0.3125rem;
+  }
+  .ws-month-mark[data-aside] {
+    inset-inline-start: 0.25rem;
+    opacity: 0;
+  }
+  [data-month-start] .ws-stack-badge svg {
+    display: none;
+  }
+}
+/* small tiles (the smallest sizes, a phone): the mark hugs the corner */
+@container (max-width: 5rem) {
+  .ws-month-mark {
+    inset-inline-start: 0.1875rem;
+    top: 0.1875rem;
+    max-width: calc(100% - 0.375rem);
+    padding: 0 0.25rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-month-mark {
+    transition: none;
   }
 }
 

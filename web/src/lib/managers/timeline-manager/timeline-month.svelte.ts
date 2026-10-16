@@ -25,7 +25,7 @@ import {
 import { GroupInsertionCache } from './group-insertion-cache.svelte';
 import { TimelineDay } from './timeline-day.svelte';
 import type { TimelineManager } from './timeline-manager.svelte';
-import type { AssetDescriptor, Direction, MoveAsset, TimelineAsset } from './types';
+import type { AssetDescriptor, Direction, MonthStart, MoveAsset, TimelineAsset } from './types';
 import { ViewerAsset } from './viewer-asset.svelte';
 
 export class TimelineMonth {
@@ -49,6 +49,8 @@ export class TimelineMonth {
   );
   loader: CancellableTask | undefined;
   isHeightActual: boolean = $state(false);
+  /** Local Omarchy layer: where the month starts in the grid, set by each layout (internal/layout-support) */
+  monthStart: MonthStart | undefined = $state();
 
   readonly title: string;
   readonly yearMonth: TimelineYearMonth;

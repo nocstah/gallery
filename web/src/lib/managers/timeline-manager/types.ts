@@ -90,3 +90,20 @@ export interface UpdateGeometryOptions {
   invalidateHeight: boolean;
   noDefer?: boolean;
 }
+
+/**
+ * Local Omarchy layer: where a month starts in the grid, worked out once per layout (internal/layout-support), for its
+ * month mark and the hairline in the gap before it (components/timeline/Month.svelte). Only on the plain grid, where no
+ * day labels date the days already.
+ */
+export type MonthStart = {
+  /** the month's first photo in grid order, which carries the mark */
+  assetId: string;
+  /** the month's first day on its row: where it begins along the row, the row's top in the month's box, its height */
+  start: number;
+  top: number;
+  height: number;
+  /** the gap between two days on a row, and between two rows */
+  gap: number;
+  rowGap: number;
+};

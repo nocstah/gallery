@@ -46,6 +46,8 @@
     showStackedIcon?: boolean;
     /** Local Omarchy layer: false where the grid cannot expand a stack in place (search results): a plain count */
     stackBadgeExpands?: boolean;
+    /** Local Omarchy layer: the month this photo begins in the timeline grid ("SEP"), set on that photo only */
+    monthMark?: string;
     imageClass?: ClassValue;
     brokenAssetClass?: ClassValue;
     albumUsers?: UserResponseDto[];
@@ -69,6 +71,7 @@
     showArchiveIcon = false,
     showStackedIcon = true,
     stackBadgeExpands = true,
+    monthMark = undefined,
     albumUsers = [],
     onClick = undefined,
     onPreview = undefined,
@@ -289,6 +292,7 @@
   data-stack-member={stackGroup ? true : undefined}
   data-stack-dimmed={stackDimmed ? true : undefined}
   data-selected={selected ? true : undefined}
+  data-month-start={monthMark ? true : undefined}
   data-readonly={readonly ? true : undefined}
   data-disabled={disabled ? true : undefined}
   tabindex={0}
@@ -476,9 +480,18 @@
         </button>
       {/if}
       {#if stackPlace}
-        <span class="ws-stack-place pointer-events-none absolute bottom-0 inset-s-0 z-3" aria-hidden="true">
+        <span class="ws-stack-place pointer-events-none absolute inset-s-0 bottom-0 z-3" aria-hidden="true">
           {stackPlace.index.toLocaleString($locale)} / {stackPlace.total.toLocaleString($locale)}
         </span>
+      {/if}
+      <!-- Local Omarchy layer: the month this photo begins (components/timeline/Month.svelte), over the badges; it steps
+           aside from the corner while the selection check is there -->
+      {#if monthMark}
+        <span
+          class="ws-month-mark"
+          data-aside={!readonly && (mouseOver || selected || selectionCandidate) ? '' : undefined}
+          aria-hidden="true">{monthMark}</span
+        >
       {/if}
     </div>
 

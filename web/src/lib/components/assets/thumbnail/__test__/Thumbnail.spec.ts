@@ -59,4 +59,28 @@ describe('Thumbnail component', () => {
     const thumbhash = sut.getByTestId('thumbhash');
     expect(thumbhash).not.toBeFalsy();
   });
+
+  it('carries the month mark it is given, in the corner while no check is there', () => {
+    const asset = assetFactory.build({ originalPath: 'image.jpg', originalMimeType: 'image/jpeg' });
+    const { baseElement } = render(Thumbnail, { asset, monthMark: 'SEP' });
+
+    const mark = baseElement.querySelector('.ws-month-mark');
+    expect(mark?.textContent).toBe('SEP');
+    expect(mark?.hasAttribute('data-aside')).toBe(false);
+  });
+
+  it('moves the month mark aside for the selection check', () => {
+    const asset = assetFactory.build({ originalPath: 'image.jpg', originalMimeType: 'image/jpeg' });
+    const { baseElement } = render(Thumbnail, { asset, monthMark: 'SEP', selected: true });
+
+    expect(baseElement.querySelector('[role="checkbox"]')).not.toBeNull();
+    expect(baseElement.querySelector('.ws-month-mark')?.hasAttribute('data-aside')).toBe(true);
+  });
+
+  it('shows no month mark on other photos', () => {
+    const asset = assetFactory.build({ originalPath: 'image.jpg', originalMimeType: 'image/jpeg' });
+    const { baseElement } = render(Thumbnail, { asset });
+
+    expect(baseElement.querySelector('.ws-month-mark')).toBeNull();
+  });
 });

@@ -929,7 +929,7 @@
                 manager={timelineManager}
                 onTimelineDaySelect={handleGroupSelect}
               >
-                {#snippet thumbnail({ asset, position, timelineDay, groupIndex })}
+                {#snippet thumbnail({ asset, position, timelineDay, groupIndex, monthMark })}
                   {@const isAssetSelectionCandidate = assetInteraction.hasSelectionCandidate(asset.id)}
                   {@const isAssetSelected =
                     assetInteraction.hasSelectedAsset(asset.id) || timelineManager.albumAssets.has(asset.id)}
@@ -940,6 +940,7 @@
                     {asset}
                     {albumUsers}
                     {groupIndex}
+                    {monthMark}
                     onClick={(asset) => {
                       if (typeof onThumbnailClick === 'function') {
                         onThumbnailClick(asset, timelineManager, timelineDay, _onClick);

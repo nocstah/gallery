@@ -115,6 +115,56 @@ describe('TimelineManager', () => {
     });
   });
 
+  // Local Omarchy layer: each layout notes where a month starts (its first photo, its row, the gaps), for the month mark
+  // and the hairline before it (components/timeline/Month.svelte)
+  describe('month starts', () => {
+    const month = (iso: string) =>
+      timelineAssetFactory
+        .buildList(2)
+        .map((asset) =>
+          deriveLocalDateTimeFromFileCreatedAt({ ...asset, ratio: 1, fileCreatedAt: fromISODateTimeUTCToObject(iso) }),
+        );
+    const buckets: Record<string, TimeBucketAssetResponseDto> = {
+      '2024-03-01': toResponseDto(...month('2024-03-15T12:00:00.000Z')),
+      '2024-02-01': toResponseDto(...month('2024-02-10T12:00:00.000Z')),
+      '2024-01-01': toResponseDto(...month('2024-01-05T12:00:00.000Z')),
+    };
+
+    const load = async (headerHeight: number) => {
+      const timelineManager = new TimelineManager();
+      timelineManager.setLayoutOptions({ headerHeight, rowHeight: 235 });
+      sdkMock.getTimeBuckets.mockResolvedValue([
+        { count: 2, timeBucket: '2024-03-01' },
+        { count: 2, timeBucket: '2024-02-01' },
+        { count: 2, timeBucket: '2024-01-01' },
+      ]);
+      sdkMock.getTimeBucket.mockImplementation(({ timeBucket }) => Promise.resolve(buckets[timeBucket]));
+      await timelineManager.updateViewport({ width: 1588, height: 1000 });
+      await tick();
+      return timelineManager;
+    };
+
+    it('notes each month’s first photo and where its row has it, months sharing a row included', async () => {
+      const { months } = await load(0);
+
+      expect(months.map(({ monthStart }) => monthStart?.assetId)).toEqual(
+        months.map(({ timelineDays }) => timelineDays[0].viewerAssets[0].id),
+      );
+      // three months of two photos fill one row: the first opens it, the others start along it
+      expect(months.map(({ monthStart }) => (monthStart?.start ?? -1) > 0)).toEqual([false, true, true]);
+      for (const { monthStart, timelineDays } of months) {
+        expect(monthStart).toMatchObject({ start: timelineDays[0].start, top: timelineDays[0].top });
+        expect(monthStart?.gap).toBe(monthStart?.rowGap);
+      }
+    });
+
+    it('notes none while day labels date the days', async () => {
+      const { months } = await load(48);
+
+      expect(months.map(({ monthStart }) => monthStart)).toEqual([undefined, undefined, undefined]);
+    });
+  });
+
   describe('isEmptyForOptions', () => {
     it('reports empty only for the options it actually loaded', async () => {
       sdkMock.getTimeBuckets.mockResolvedValue([]);
