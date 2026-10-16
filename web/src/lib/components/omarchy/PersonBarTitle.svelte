@@ -229,6 +229,11 @@
   .ws-person-bar-rename:hover {
     background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
   }
+  /* inside, as the field's below: the title row would clip a ring drawn outside */
+  .ws-person-bar-rename:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+  }
   .ws-person-bar-form {
     display: flex;
     min-width: 0;

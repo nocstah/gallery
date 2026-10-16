@@ -104,13 +104,18 @@
   .ws-album-bar-rename:hover {
     background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
   }
+  /* focus rings are drawn inside, the name's and the field's: upstream takes every input's outline away (app.css), and
+     the bar's title row would clip one drawn outside */
+  .ws-album-bar-rename:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+  }
   .ws-album-bar-field {
     max-width: 40ch;
     padding: 0.125rem 0.25rem;
     border: 0;
     border-radius: var(--ws-radius);
     background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
-    outline: var(--ws-border) solid var(--ws-accent);
-    outline-offset: 0;
+    box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
   }
 </style>
