@@ -967,7 +967,7 @@
               void addAssetsToAlbumWithOutcome(
                 album.id,
                 selected.map(({ id }) => id),
-                { notify: true },
+                { notify: true, albumName: album.albumName },
               ).then(({ ok, addedIds, deniedIds }) => {
                 // The server answers 200 with per-asset outcomes, so only paint in what it
                 // actually accepted — a denied asset would otherwise appear and then vanish on

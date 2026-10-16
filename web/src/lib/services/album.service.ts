@@ -232,7 +232,7 @@ export const getAlbumAssetsActions = ($t: MessageFormatter, album: AlbumResponse
       addAssetsToAlbums(
         [album.id],
         assets.map(({ id }) => id),
-        { notify: true },
+        { notify: true, albumName: album.albumName },
       ).then(() => undefined),
   };
 
@@ -258,7 +258,9 @@ export const getAlbumAssetsActions = ($t: MessageFormatter, album: AlbumResponse
 export const addAssetsToAlbumWithOutcome = async (
   albumId: string,
   assetIds: string[],
-  { notify }: { notify: boolean },
+  // Local Omarchy layer: the album's name, where the caller has it (the picker, a sidebar drop, the album's own page),
+  // for a notice and an undo that say where the photos went
+  { notify, albumName }: { notify: boolean; albumName?: string },
 ): Promise<{ ok: boolean; addedIds: string[]; deniedIds: string[] }> => {
   const $t = await getFormatter();
 
@@ -277,12 +279,12 @@ export const addAssetsToAlbumWithOutcome = async (
   try {
     const results = await addToAlbum({ ...authManager.params, id: albumId, bulkIdsDto: { ids: assetIds } });
     if (notify) {
-      notifyAddToAlbum($t, albumId, assetIds, results);
+      notifyAddToAlbum($t, albumId, assetIds, results, albumName);
     }
     eventManager.emit('AlbumAddAssets', { assetIds, albumIds: [albumId] });
     const addedIds = results.filter(({ success }) => success).map(({ id }) => id);
     // Local Omarchy layer: the photos this added (not those already there) can be taken out again from the bar's undo
-    addedToAlbumDone(albumId, addedIds);
+    addedToAlbumDone(albumId, addedIds, albumName);
     // and a person's add (not an upload's) makes this the album the Add to album picker offers first
     if (notify) {
       rememberLastAlbum(albumId);
@@ -306,13 +308,13 @@ export const addAssetsToAlbumWithOutcome = async (
 export const addAssetsToAlbums = async (
   albumIds: string[],
   assetIds: string[],
-  { notify }: { notify: boolean },
+  { notify, albumName }: { notify: boolean; albumName?: string },
 ): Promise<boolean> => {
   const $t = await getFormatter();
 
   // Delegate the single-album case so both paths share one implementation (and one event emit).
   if (albumIds.length === 1) {
-    const { ok } = await addAssetsToAlbumWithOutcome(albumIds[0], assetIds, { notify });
+    const { ok } = await addAssetsToAlbumWithOutcome(albumIds[0], assetIds, { notify, albumName });
     return ok;
   }
 
@@ -357,27 +359,42 @@ export const notifyAddToAlbum = (
   albumId: string,
   assetIds: string[],
   results: BulkIdResponseDto[],
+  albumName?: string,
 ) => {
   const successCount = results.filter(({ success }) => success).length;
   const duplicateCount = results.filter(({ error }) => error === 'duplicate').length;
   const total = assetIds.length;
   const viewButton = { label: $t('view_album'), onclick: () => goto(Route.viewAlbum({ id: albumId })) };
   const options = { timeout: 5000 };
+  // Local Omarchy layer: photos, in the album the caller named ("Added 3 photos to “Vietnam”"); upstream's "assets"
+  // and "the album" only where no name came with the call
 
   if (successCount === total) {
     toastManager.primary(
-      { description: $t('assets_added_to_album_count', { values: { count: successCount } }), button: viewButton },
+      {
+        description: albumName
+          ? $t('album_add_photos_added', { values: { count: successCount, album: albumName } })
+          : $t('assets_added_to_album_count', { values: { count: successCount } }),
+        button: viewButton,
+      },
       options,
     );
   } else if (duplicateCount === total) {
     toastManager.info(
-      { description: $t('assets_were_part_of_album_count', { values: { count: duplicateCount } }), button: viewButton },
+      {
+        description: albumName
+          ? $t('album_add_photos_already_in', { values: { count: duplicateCount, album: albumName } })
+          : $t('assets_were_part_of_album_count', { values: { count: duplicateCount } }),
+        button: viewButton,
+      },
       options,
     );
   } else if (successCount > 0) {
     toastManager.info(
       {
-        description: $t('assets_added_to_album_partial_count', { values: { successCount, totalCount: total } }),
+        description: albumName
+          ? $t('album_add_photos_partial', { values: { count: successCount, total, album: albumName } })
+          : $t('assets_added_to_album_partial_count', { values: { successCount, totalCount: total } }),
         button: viewButton,
       },
       options,
@@ -385,7 +402,11 @@ export const notifyAddToAlbum = (
   } else {
     // Nothing was added (no_permission and/or a mix that netted zero) — never render as success.
     toastManager.warning(
-      { description: $t('assets_cannot_be_added_to_album_count', { values: { count: total } }) },
+      {
+        description: albumName
+          ? $t('album_add_photos_refused', { values: { count: total, album: albumName } })
+          : $t('assets_cannot_be_added_to_album_count', { values: { count: total } }),
+      },
       options,
     );
   }

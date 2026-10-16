@@ -211,14 +211,16 @@ export const keptThisDone = (stack: StackResponseDto, trashedIds: string[], desc
 };
 
 /** Photos added to an album: taken back by removing just those that were added (not those already in it). */
-export const addedToAlbumDone = (albumId: string, addedIds: string[]) => {
+export const addedToAlbumDone = (albumId: string, addedIds: string[], albumName?: string) => {
   if (addedIds.length === 0) {
     return;
   }
   const $t = get(t);
   const count = addedIds.length;
   undoManager.record(
-    $t('assets_added_to_album_count', { values: { count } }),
+    albumName
+      ? $t('album_add_photos_added', { values: { count, album: albumName } })
+      : $t('assets_added_to_album_count', { values: { count } }),
     async () => {
       await removeAssetFromAlbum({ id: albumId, bulkIdsDto: { ids: addedIds } });
       eventManager.emit('AlbumRemoveAssets', { assetIds: addedIds, albumIds: [albumId] });

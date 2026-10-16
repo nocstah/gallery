@@ -20,7 +20,7 @@ const KEPT: DropResult = { archived: [], clear: false };
 export const dropOn = async (target: DropTarget, carry: Carry): Promise<DropResult | undefined> => {
   switch (target.kind) {
     case 'album': {
-      const { ok } = await addAssetsToAlbumWithOutcome(target.id, carry.ids, { notify: true });
+      const { ok } = await addAssetsToAlbumWithOutcome(target.id, carry.ids, { notify: true, albumName: target.name });
       return ok ? KEPT : undefined;
     }
     case 'special': {

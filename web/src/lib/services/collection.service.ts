@@ -53,7 +53,8 @@ export const addAssetsToCollections = async (
   }
 
   if (total === 1 && albumIds.length === 1) {
-    return addAssetsToAlbums(albumIds, assetIds, { notify: true });
+    const album = collections.find((c) => c.kind === 'album');
+    return addAssetsToAlbums(albumIds, assetIds, { notify: true, albumName: album?.name });
   }
   if (total === 1 && spaces.length === 1) {
     return addAssetsToSpace(spaces[0].id, assetIds, {

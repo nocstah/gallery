@@ -155,6 +155,21 @@ describe('notifyAddToAlbum — truthful severity (#764)', () => {
     expect(primary).not.toHaveBeenCalled();
     expect(warning).toHaveBeenCalledTimes(1);
   });
+
+  // Local Omarchy layer: a caller that knows the album says where the photos went, in photos
+  it('names the album and speaks of photos when the caller knows its name', () => {
+    notifyAddToAlbum($t, 'album-1', ['a', 'b'], [ok('a'), ok('b')], 'Vietnam');
+    expect(primary.mock.calls[0][0].description).toBe('album_add_photos_added:{"count":2,"album":"Vietnam"}');
+
+    notifyAddToAlbum($t, 'album-1', ['a', 'b'], [dup('a'), dup('b')], 'Vietnam');
+    expect(info.mock.calls[0][0].description).toBe('album_add_photos_already_in:{"count":2,"album":"Vietnam"}');
+
+    notifyAddToAlbum($t, 'album-1', ['a', 'b'], [ok('a'), denied('b')], 'Vietnam');
+    expect(info.mock.calls[1][0].description).toBe('album_add_photos_partial:{"count":1,"total":2,"album":"Vietnam"}');
+
+    notifyAddToAlbum($t, 'album-1', ['a', 'b'], [denied('a'), denied('b')], 'Vietnam');
+    expect(warning.mock.calls[0][0].description).toBe('album_add_photos_refused:{"count":2,"album":"Vietnam"}');
+  });
 });
 
 // Commit 93ba61e: the endpoint answers 200 with PER-ASSET outcomes, so the caller needs to know

@@ -41,7 +41,7 @@ beforeEach(() => {
 describe('addAssetsToCollections', () => {
   it('single album → addAssetsToAlbums notify:true, no aggregate toast, returns true', async () => {
     await expect(addAssetsToCollections([albumCol('a1')], ['x'])).resolves.toBe(true);
-    expect(addAssetsToAlbums).toHaveBeenCalledWith(['a1'], ['x'], { notify: true });
+    expect(addAssetsToAlbums).toHaveBeenCalledWith(['a1'], ['x'], { notify: true, albumName: 'a1' });
     expect(primary).not.toHaveBeenCalled();
   });
 
@@ -106,7 +106,7 @@ describe('addAssetsToCollections', () => {
     const assetIds = Array.from({ length: 50_001 }, (_, i) => `x${i}`);
     await expect(addAssetsToCollections([albumCol('a1'), spaceCol('s1')], assetIds)).resolves.toBe(true);
     expect(addAssetsToSpace).not.toHaveBeenCalled();
-    expect(addAssetsToAlbums).toHaveBeenCalledWith(['a1'], assetIds, { notify: true }); // total becomes 1 → single path
+    expect(addAssetsToAlbums).toHaveBeenCalledWith(['a1'], assetIds, { notify: true, albumName: 'a1' }); // total becomes 1 → single path
   });
 
   it('empty selection is a no-op and returns true', async () => {
@@ -142,7 +142,7 @@ describe('addAssetsToCollections — contribution mode', () => {
       addAssetsToCollections([albumCol('a1')], ['mine', 'theirs'], { contributionMode: true }),
     ).resolves.toBe(true);
 
-    expect(addAssetsToAlbums).toHaveBeenCalledWith(['a1'], ['mine', 'theirs'], { notify: true });
+    expect(addAssetsToAlbums).toHaveBeenCalledWith(['a1'], ['mine', 'theirs'], { notify: true, albumName: 'a1' });
     expect(primary).not.toHaveBeenCalled();
   });
 
@@ -152,7 +152,7 @@ describe('addAssetsToCollections — contribution mode', () => {
     ).resolves.toBe(true);
 
     expect(addAssetsToSpace).not.toHaveBeenCalled();
-    expect(addAssetsToAlbums).toHaveBeenCalledWith(['a1'], ['mine', 'theirs'], { notify: true });
+    expect(addAssetsToAlbums).toHaveBeenCalledWith(['a1'], ['mine', 'theirs'], { notify: true, albumName: 'a1' });
   });
 
   it('counts only the albums that succeeded', async () => {
