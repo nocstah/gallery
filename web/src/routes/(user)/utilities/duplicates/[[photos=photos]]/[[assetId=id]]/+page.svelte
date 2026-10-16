@@ -251,7 +251,9 @@
       >
         <Text class="hidden md:block">{$t('keep_all')}</Text>
       </Button>
+      <!-- Local Omarchy layer: no keys to show on a phone, and the bar needs the room -->
       <IconButton
+        class="max-md:hidden"
         shape="round"
         variant="ghost"
         color="secondary"

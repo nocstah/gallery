@@ -377,4 +377,18 @@
     :global(:is([class~='xl:block'], [class~='xl:flex'])) {
     display: none;
   }
+  /* a label upstream left bare in its button (People's Show & hide people) goes the same way, and on a phone every
+     button with an icon is its icon from the start (Spaces' Create Space): the words stay in the accessibility tree */
+  .ws-page-bar:is([data-fit='2'], [data-fit='3'], [data-fit='4'])
+    .ws-page-actions
+    :global(:is(button, a):has(svg):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
+    gap: 0;
+    font-size: 0;
+  }
+  @media (max-width: 639px) {
+    .ws-page-actions :global(:is(button, a):has(svg):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
+      gap: 0;
+      font-size: 0;
+    }
+  }
 </style>
