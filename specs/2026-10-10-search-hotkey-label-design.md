@@ -8,7 +8,7 @@ binding is ⌘K only on Apple platforms and Ctrl+K elsewhere (`global-search.sve
 
 ## Change
 
-- `lib/utils/search-hotkey.ts`: `isApplePlatform(platform?)` and `searchHotkeyLabel(platform?)`, the
+- `lib/gallery/search/search-hotkey.ts`: `isApplePlatform(platform?)` and `searchHotkeyLabel(platform?)`, the
   existing check from `global-search.svelte` moved into one place, which now imports it.
 - `search_legacy_notice` takes a `{hotkey}` value in `en` and the nine maintained locales
   (`de fr it nl pl es ru zh_Hans zh_Hant`). Only the literal `⌘K` was swapped for the placeholder; the

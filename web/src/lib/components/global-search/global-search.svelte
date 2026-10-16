@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isApplePlatform as isApplePlatformFor, searchHotkeyLabel } from '$lib/utils/search-hotkey';
+  import { isApplePlatform as isApplePlatformFor, searchHotkeyLabel } from '$lib/gallery/search/search-hotkey';
   import { Icon, IconButton, Modal, modalManager, ModalBody } from '@immich/ui';
   import { mdiClose, mdiMagnify } from '@mdi/js';
   import { Command } from 'bits-ui';

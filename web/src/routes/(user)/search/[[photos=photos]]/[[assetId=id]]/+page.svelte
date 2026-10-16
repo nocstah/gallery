@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { searchHotkeyLabel } from '$lib/utils/search-hotkey';
   import { afterNavigate, goto } from '$app/navigation';
   import { page } from '$app/state';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
@@ -19,6 +18,7 @@
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import { QueryParameter } from '$lib/constants';
   import { parseSearchTerms } from '$lib/gallery/search/parse-search-terms';
+  import { searchHotkeyLabel } from '$lib/gallery/search/search-hotkey';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
