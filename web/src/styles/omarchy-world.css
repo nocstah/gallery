@@ -78,6 +78,13 @@
   /* upstream's Google Sans wanted 0.1px of tracking on everything (app.css); Mona Sans and the mono want none */
   letter-spacing: normal;
 }
+/* a dark island on a light page (the photo viewer and its menus) draws its lines in the dark face's ink: a token is
+   worked out where it is declared, so from :root alone the viewer's menus took the light page's ink, which vanished on
+   their dark ground */
+.dark {
+  --ws-hairline: color-mix(in oklab, var(--immich-ui-dark) 13%, transparent);
+  --ws-month-line: color-mix(in oklab, var(--immich-ui-dark) 30%, transparent);
+}
 
 /* ---- upstream's roles in this world, as Tailwind theme tokens, so every utility and every @immich/ui component
    follows (these come after @immich/ui's and gallery-theme.css's @theme, so they win) ---- */
