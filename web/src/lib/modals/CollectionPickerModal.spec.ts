@@ -528,3 +528,63 @@ describe('CollectionPickerModal — restricted to a space', () => {
     expect(screen.queryByTestId('new-album-row')).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Local Omarchy layer: the album photos went into last (utils/last-album) leads
+// the Recent rows and carries the caret, so L then Enter adds to it again.
+// ---------------------------------------------------------------------------
+
+describe('CollectionPickerModal — the last album', () => {
+  const datedAlbum = (id: string, name: string, updatedAt: string) =>
+    ({ ...album(id, name), updatedAt }) as unknown as AlbumResponseDto;
+  const albums = () => [
+    datedAlbum('a1', 'Newest', '2024-06-01T00:00:00Z'),
+    datedAlbum('a2', 'Last used', '2020-01-01T00:00:00Z'),
+  ];
+
+  afterEach(() => {
+    localStorage.removeItem('gallery.lastAlbum');
+  });
+
+  it('leads the Recent rows and is the caret’s row, so Enter adds to it', async () => {
+    localStorage.setItem('gallery.lastAlbum', 'a2');
+    sdkMock.getAllAlbums.mockResolvedValue(albums());
+    const onClose = vi.fn();
+    render(CollectionPickerModal, { assetCount: 2, onClose });
+
+    const search = await screen.findByPlaceholderText('search');
+    // Recent comes before All: its first row is the last album, though another changed since
+    const rows = screen.getAllByTestId(/^row-album-/);
+    expect(rows[0]).toHaveAttribute('data-testid', 'row-album-a2');
+    await waitFor(() => expect(within(rows[0]).getAllByRole('button')[0]).toHaveClass('bg-gray-200'));
+
+    await fireEvent.keyDown(search, { key: 'Enter' });
+    expect(onClose).toHaveBeenCalledWith([expect.objectContaining({ kind: 'album', id: 'a2' })]);
+  });
+
+  it('keeps today’s picker when the last album is gone: no caret, Enter does nothing', async () => {
+    localStorage.setItem('gallery.lastAlbum', 'deleted');
+    sdkMock.getAllAlbums.mockResolvedValue(albums());
+    const onClose = vi.fn();
+    render(CollectionPickerModal, { assetCount: 2, onClose });
+
+    const search = await screen.findByPlaceholderText('search');
+    expect(screen.getAllByTestId(/^row-album-/)[0]).toHaveAttribute('data-testid', 'row-album-a1');
+    await fireEvent.keyDown(search, { key: 'Enter' });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('holds an Enter pressed while the albums load, then adds to the last album', async () => {
+    localStorage.setItem('gallery.lastAlbum', 'a2');
+    let loaded!: (value: AlbumResponseDto[]) => void;
+    sdkMock.getAllAlbums.mockReturnValue(new Promise((resolve) => (loaded = resolve)) as never);
+    const onClose = vi.fn();
+    render(CollectionPickerModal, { assetCount: 2, onClose });
+
+    await fireEvent.keyDown(document.body, { key: 'Enter' });
+    expect(onClose).not.toHaveBeenCalled();
+
+    loaded(albums());
+    await waitFor(() => expect(onClose).toHaveBeenCalledWith([expect.objectContaining({ kind: 'album', id: 'a2' })]));
+  });
+});

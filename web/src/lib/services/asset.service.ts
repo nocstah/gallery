@@ -41,6 +41,7 @@ import {
   mdiMotionPauseOutline,
   mdiMotionPlayOutline,
   mdiPlus,
+  mdiPlusBoxMultipleOutline,
   mdiPresentationPlay,
   mdiRotateLeft,
   mdiRotateRight,
@@ -66,6 +67,7 @@ import { Route } from '$lib/route';
 import { SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
 import { getAssetMediaUrl, getSharedLink, sleep } from '$lib/utils';
 import { downloadUrl } from '$lib/utils';
+import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
 import { canEditAsset } from '$lib/utils/asset-editability';
 import { getEditableAssetsWithWarning } from '$lib/utils/asset-utils';
 import { waitForEditRendered } from '$lib/utils/edit-rendered';
@@ -120,6 +122,26 @@ export const getAssetBulkActions = (
     icon: mdiPlus,
     shortcuts: [{ key: 'l' }],
     onAction: () => modalManager.show(AssetAddToCollectionModal, { assetIds, restrictToSpaceId }),
+  };
+
+  // Local Omarchy layer: N makes an album of the selection, named by where and when (utils/album-from-selection), and
+  // the selection's work is done. Not where the picker is narrowed to a Space's albums (a new album of mine could not
+  // take the other members' photos), not over an open photo, and not while typing (a search field is no text field to
+  // the shortcut's own check)
+  const NewAlbum: ActionItem = {
+    title: $t('new_album_from_selection'),
+    icon: mdiPlusBoxMultipleOutline,
+    shortcuts: [{ key: 'n' }],
+    $if: () =>
+      !restrictToSpaceId &&
+      assetMultiSelectManager.selectionActive &&
+      !assetViewerManager.isViewing &&
+      !document.activeElement?.closest('input, textarea, select, [contenteditable]'),
+    onAction: async () => {
+      if (await newAlbumFromAssets(assetMultiSelectManager.assets)) {
+        assetMultiSelectManager.clear();
+      }
+    },
   };
 
   // Gallery (#853): `Permission.AssetShare` is owner ∪ partner only and rejects the ENTIRE request if it
@@ -203,6 +225,7 @@ export const getAssetBulkActions = (
 
   return {
     AddToAlbum,
+    NewAlbum,
     CreateSharedLink,
     RemoveFromAlbum,
     Tag,

@@ -8,6 +8,7 @@ import {
   isWritableSpace,
   pickRecent,
   recencyOf,
+  selectableIndexOf,
   sortByNameAsc,
   spaceToCollection,
 } from './collection-selection-utils';
@@ -66,6 +67,25 @@ describe('collection helpers', () => {
     expect(recencyOf(sActive)).toBeGreaterThan(recencyOf(a));
     expect(recencyOf(a)).toBeGreaterThan(recencyOf(sNoActivity));
     expect(pickRecent([sNoActivity, a, sActive], 2).map((c) => c.id)).toEqual(['s1', 'a']);
+  });
+
+  // Local Omarchy layer: L then Enter adds to the album photos went into last (utils/last-album)
+  it('puts the last album first among the recent ones, however long ago it changed', () => {
+    const old = albumToCollection(album('old', 'Old', '2020-01-01T00:00:00Z'));
+    const newer = albumToCollection(album('newer', 'Newer', '2024-05-01T00:00:00Z'));
+    const newest = albumToCollection(album('newest', 'Newest', '2024-06-01T00:00:00Z'));
+    const other = albumToCollection(album('other', 'Other', '2024-04-01T00:00:00Z'));
+    expect(pickRecent([other, newer, old, newest], 3, 'old').map((c) => c.id)).toEqual(['old', 'newest', 'newer']);
+    // already among the recent ones: it moves to the front, and the count stays
+    expect(pickRecent([other, newer, old, newest], 3, 'newer').map((c) => c.id)).toEqual(['newer', 'newest', 'other']);
+  });
+
+  it('keeps the recency order when the last album is gone, or when only a space has that id', () => {
+    const a = albumToCollection(album('a', 'A', '2024-05-01T00:00:00Z'));
+    const s = spaceToCollection(space('shared', 'S', { lastActivityAt: '2024-01-01T00:00:00Z' }));
+    expect(pickRecent([s, a], 3, 'deleted').map((c) => c.id)).toEqual(['a', 'shared']);
+    expect(pickRecent([s, a], 3, 'shared').map((c) => c.id)).toEqual(['a', 'shared']);
+    expect(pickRecent([s, a], 3, undefined).map((c) => c.id)).toEqual(['a', 'shared']);
   });
 
   it('sorts by name case-insensitively', () => {
@@ -204,6 +224,14 @@ describe('CollectionModalRowConverter', () => {
     expect(isSelectableRowType(CollectionModalRowType.SPACE_POOL_CHILD)).toBe(true);
     expect(isSelectableRowType(CollectionModalRowType.SECTION)).toBe(false);
     expect(isSelectableRowType(CollectionModalRowType.MESSAGE)).toBe(false);
+  });
+
+  it('selectableIndexOf counts only selectable rows, so the index is the caret position', () => {
+    const recent = [a('a2', 'Last')];
+    const rows = conv.toModalRows('', recent, [a('a1', 'A'), a('a2', 'Last')], -1, [], opts);
+    // New Album, New Space, RECENT heading (skipped), Last
+    expect(selectableIndexOf(rows, (row) => row.collection?.id === 'a2')).toBe(2);
+    expect(selectableIndexOf(rows, (row) => row.collection?.id === 'gone')).toBe(-1);
   });
 
   it('excludes space items from the list when showSpaces is false', () => {

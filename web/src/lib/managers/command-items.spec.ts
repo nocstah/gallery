@@ -64,6 +64,7 @@ vi.mock('$lib/managers/selection-command-handlers', async () => {
     handleFavoriteSelected: vi.fn(),
     handleArchiveSelected: vi.fn(),
     handleDeleteSelected: vi.fn(),
+    handleNewAlbumFromSelected: vi.fn(),
   };
 });
 
@@ -114,8 +115,8 @@ describe('COMMAND_ITEMS', () => {
     expect(COMMAND_ITEMS.find((c) => c.id === 'cmd:theme')).toBeDefined();
   });
 
-  it('has 33 entries (7 v1.3.0 + 8 v1.3.1 + 5 v1.4 album + 6 v1.4 space + 6 v1.5A selection + 1 photo book)', () => {
-    expect(COMMAND_ITEMS).toHaveLength(33);
+  it('has 34 entries (7 v1.3.0 + 8 v1.3.1 + 5 v1.4 album + 6 v1.4 space + 7 v1.5A selection + 1 photo book)', () => {
+    expect(COMMAND_ITEMS).toHaveLength(34);
   });
 
   it('CommandItem type allows isAvailable and destructive', () => {
@@ -220,6 +221,7 @@ describe('selection-context commands', () => {
     vi.mocked(selectionHandlers.handleFavoriteSelected).mockClear();
     vi.mocked(selectionHandlers.handleArchiveSelected).mockClear();
     vi.mocked(selectionHandlers.handleDeleteSelected).mockClear();
+    vi.mocked(selectionHandlers.handleNewAlbumFromSelected).mockClear();
   });
 
   it('registers all selection command ids', () => {
@@ -229,6 +231,7 @@ describe('selection-context commands', () => {
     expect(cmd('cmd:selection_favorite')).toBeDefined();
     expect(cmd('cmd:selection_archive')).toBeDefined();
     expect(cmd('cmd:selection_delete')).toBeDefined();
+    expect(cmd('cmd:selection_new_album')).toBeDefined();
   });
 
   it('marks only delete as destructive', () => {
@@ -239,6 +242,7 @@ describe('selection-context commands', () => {
       'cmd:selection_add_to_current_space',
       'cmd:selection_favorite',
       'cmd:selection_archive',
+      'cmd:selection_new_album',
     ]) {
       expect(cmd(id).destructive, id).toBeFalsy();
     }
@@ -251,6 +255,7 @@ describe('selection-context commands', () => {
     ['cmd:selection_favorite', selectionHandlers.handleFavoriteSelected],
     ['cmd:selection_archive', selectionHandlers.handleArchiveSelected],
     ['cmd:selection_delete', selectionHandlers.handleDeleteSelected],
+    ['cmd:selection_new_album', selectionHandlers.handleNewAlbumFromSelected],
   ])('%s delegates to the matching handler', async (id, handler) => {
     const ctx = makeCtx();
     await cmd(id).handler(ctx);

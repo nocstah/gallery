@@ -41,7 +41,10 @@
         { key: ['f'], action: $t('favorite_or_unfavorite_photo') },
         { key: ['i'], action: $t('show_or_hide_info') },
         { key: ['⇧', 's'], action: $t('stack_selected_photos') },
-        { key: ['l'], action: $t('add_to_album') },
+        // Local Omarchy layer: the picker opens on the album photos went into last, so Enter adds to it again
+        // (utils/last-album), and N makes a new album of the selection (utils/album-from-selection)
+        { key: ['l'], action: $t('add_to_album'), info: $t('add_to_album_last_hint') },
+        { key: ['n'], action: $t('new_album_from_selection') },
         { key: ['⇧', 'l'], action: $t('remove_from_album') },
         { key: ['t'], action: $t('tag_assets') },
         { key: ['p'], action: $t('tag_people') },

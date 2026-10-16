@@ -10,6 +10,7 @@ import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.sve
 import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte';
 import { showDeleteModal } from '$lib/stores/preferences.store';
 import { undoDeleteAssets } from '$lib/utils/actions';
+import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
 import { showUndoArchiveToast } from '$lib/utils/asset-utils';
 import { handleError } from '$lib/utils/handle-error';
 import { announceCovers, handOverCovers } from '$lib/utils/stack-covers';
@@ -20,6 +21,14 @@ const getSelection = (ctx?: CommandContext): SelectionCommandContext | null => c
 export const canAddSelectedToAlbum = (ctx: CommandContext) => {
   const selection = getSelection(ctx);
   return selection !== null && selection.canAddToAlbum;
+};
+
+// Local Omarchy layer: N's album from Ctrl+K (utils/album-from-selection), wherever the selection may go into an album,
+// except where the picker would be narrowed to a Space's albums: a new album of mine cannot hold the other members'
+// photos (the same rule as handleAddSelectedToAlbum's restrictToSpaceId)
+export const canMakeAlbumOfSelected = (ctx: CommandContext) => {
+  const selection = getSelection(ctx);
+  return selection !== null && selection.canAddToAlbum && (selection.isAllUserOwned || ctx.space?.canWrite !== true);
 };
 
 export const canAddSelectedToCurrentSpace = (ctx: CommandContext) => {
@@ -69,6 +78,16 @@ export function handleAddSelectedToAlbum(ctx?: CommandContext) {
     assetIds: selection.selectedAssetIds,
     restrictToSpaceId,
   });
+}
+
+export async function handleNewAlbumFromSelected(ctx?: CommandContext) {
+  const selection = getSelection(ctx);
+  if (!ctx || !selection || !canMakeAlbumOfSelected(ctx)) {
+    return;
+  }
+  if (await newAlbumFromAssets(selection.assets)) {
+    selection.clearSelection();
+  }
 }
 
 export function handleAddSelectedToSpace(ctx?: CommandContext) {

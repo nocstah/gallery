@@ -58,8 +58,16 @@ export const recencyOf = (c: PickerCollection): number =>
 export const sortByNameAsc = (collections: PickerCollection[]): PickerCollection[] =>
   [...collections].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
-export const pickRecent = (collections: PickerCollection[], limit = 3): PickerCollection[] =>
-  [...collections].sort((a, b) => recencyOf(b) - recencyOf(a)).slice(0, limit);
+/**
+ * The picker's Recent rows: the most recently changed collections first. Local Omarchy layer: the album photos went
+ * into last (`firstAlbumId`, utils/last-album) leads them however long ago it changed, so the picker can make it the
+ * caret's row and Enter adds to it again; an id that is no longer among the collections changes nothing.
+ */
+export const pickRecent = (collections: PickerCollection[], limit = 3, firstAlbumId?: string): PickerCollection[] => {
+  const first = firstAlbumId ? collections.find((c) => c.kind === 'album' && c.id === firstAlbumId) : undefined;
+  const rest = collections.filter((c) => c !== first).sort((a, b) => recencyOf(b) - recencyOf(a));
+  return (first ? [first, ...rest] : rest).slice(0, limit);
+};
 
 export const isValidNewSpaceName = (name: string): boolean => {
   const trimmed = name.trim();
@@ -108,6 +116,24 @@ export const isSelectableRowType = (type: CollectionModalRowType): boolean =>
     CollectionModalRowType.COLLECTION_ITEM,
     CollectionModalRowType.SPACE_POOL_CHILD,
   ].includes(type);
+
+/**
+ * The caret index of the first row that matches, or -1. The caret (the picker's `selectedRowIndex`) counts only the
+ * selectable rows: section headings and messages are skipped.
+ */
+export const selectableIndexOf = (rows: CollectionModalRow[], match: (row: CollectionModalRow) => boolean): number => {
+  let index = -1;
+  for (const row of rows) {
+    if (!isSelectableRowType(row.type)) {
+      continue;
+    }
+    index++;
+    if (match(row)) {
+      return index;
+    }
+  }
+  return -1;
+};
 
 /**
  * Whether a space row can expand into linked-album children.

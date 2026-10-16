@@ -1265,6 +1265,7 @@
             <SpecialAlbumAction {special} done menuItem />
           {/if}
           <ActionMenuItem action={MenuActions.AddToAlbum} />
+          <ActionMenuItem action={MenuActions.NewAlbum} />
           <ActionMenuItem action={MenuActions.CreateSharedLink} />
           <DownloadAction menuItem filename={album.albumName} />
           {#if isEditor && assetMultiSelectManager.assets.length === 1}

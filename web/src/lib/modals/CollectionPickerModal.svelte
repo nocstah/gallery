@@ -12,6 +12,7 @@
     isValidNewSpaceName,
     isWritableSpace,
     pickRecent,
+    selectableIndexOf,
     spaceToCollection,
     type CollectionModalRow,
     type PickerCollection,
@@ -23,6 +24,7 @@
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { handleError } from '$lib/utils/handle-error';
+  import { lastAlbumId } from '$lib/utils/last-album';
   import {
     createAlbum,
     createSpace,
@@ -71,7 +73,11 @@
   );
   const allCollections = $derived([...albumCollections, ...spaceCollections]);
 
-  const recentCollections = $derived(pickRecent(allCollections, 3));
+  // Local Omarchy layer: the album photos went into last (utils/last-album) leads the Recent rows and is the caret's
+  // row once the albums are in, so L then Enter adds to it again (the Mac's "Add to <last album>"). Read once: the
+  // picker's own add records the next one.
+  const lastAlbum = lastAlbumId();
+  const recentCollections = $derived(pickRecent(allCollections, 3, lastAlbum));
 
   // #965: the linked albums of the one expanded space. Fetched lazily on expand and kept for
   // the life of the modal, so re-opening a space costs nothing and opening the picker still
@@ -105,19 +111,48 @@
       } catch (error) {
         handleError(error, $t('errors.unable_to_load_albums'));
       }
-      loading = false;
-      return;
-    }
-
-    const [albumResult, spaceResult] = await Promise.allSettled([loadAlbums(), loadSpaces()]);
-    if (albumResult.status === 'rejected') {
-      handleError(albumResult.reason, $t('errors.unable_to_load_albums'));
-    }
-    if (spaceResult.status === 'rejected') {
-      handleError(spaceResult.reason, $t('failed_to_load_spaces'));
+    } else {
+      const [albumResult, spaceResult] = await Promise.allSettled([loadAlbums(), loadSpaces()]);
+      if (albumResult.status === 'rejected') {
+        handleError(albumResult.reason, $t('errors.unable_to_load_albums'));
+      }
+      if (spaceResult.status === 'rejected') {
+        handleError(spaceResult.reason, $t('failed_to_load_spaces'));
+      }
     }
     loading = false;
+    await preselectLastAlbum();
   });
+
+  // Local Omarchy layer: an Enter pressed while the albums are still loading (L then Enter in quick succession) waits
+  // for them instead of reaching whatever had focus behind the picker
+  let enterWaiting = false;
+  const onWaitingKeydown = (event: KeyboardEvent) => {
+    if (loading && event.key === 'Enter' && !event.isComposing) {
+      event.preventDefault();
+      event.stopPropagation();
+      enterWaiting = true;
+    }
+  };
+
+  /** The caret on the last album's row (the first of Recent); a waiting Enter then adds to it. */
+  const preselectLastAlbum = async () => {
+    const index = lastAlbum
+      ? selectableIndexOf(
+          rows,
+          (row) => row.type === CollectionModalRowType.COLLECTION_ITEM && row.collection?.id === lastAlbum,
+        )
+      : -1;
+    const waited = enterWaiting;
+    enterWaiting = false;
+    if (index === -1) {
+      return;
+    }
+    selectedRowIndex = index;
+    if (waited) {
+      await onEnter();
+    }
+  };
 
   /**
    * Every album the user can add to: one request, no filters.
@@ -192,18 +227,10 @@
     if (selectedRowIndex === -1) {
       return;
     }
-    let index = -1;
-    for (const row of rows) {
-      if (!isSelectableRowType(row.type)) {
-        continue;
-      }
-      index++;
-      if (row.type === CollectionModalRowType.COLLECTION_ITEM && row.collection?.id === spaceId) {
-        selectedRowIndex = index;
-        return;
-      }
-    }
-    selectedRowIndex = -1;
+    selectedRowIndex = selectableIndexOf(
+      rows,
+      (row) => row.type === CollectionModalRowType.COLLECTION_ITEM && row.collection?.id === spaceId,
+    );
   };
 
   const loadSpaces = async () => {
@@ -351,6 +378,8 @@
     }
   };
 </script>
+
+<svelte:window onkeydowncapture={onWaitingKeydown} />
 
 <Modal title={$t('add_to_album_or_space')} {onClose} size="medium">
   <ModalBody>

@@ -14,6 +14,7 @@ import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.svelte';
 import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte';
 import { showDeleteModal } from '$lib/stores/preferences.store';
+import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
 import * as handleErrorModule from '$lib/utils/handle-error';
 import type { CommandContext, SelectionCommandContext } from './command-context-manager.svelte';
 import {
@@ -23,12 +24,14 @@ import {
   canArchiveSelected,
   canDeleteSelected,
   canFavoriteSelected,
+  canMakeAlbumOfSelected,
   handleAddSelectedToAlbum,
   handleAddSelectedToCurrentSpace,
   handleAddSelectedToSpace,
   handleArchiveSelected,
   handleDeleteSelected,
   handleFavoriteSelected,
+  handleNewAlbumFromSelected,
 } from './selection-command-handlers';
 
 vi.mock('@immich/ui', async (orig) => {
@@ -47,6 +50,9 @@ vi.mock('@immich/sdk', async (orig) => ({
   deleteAssets: vi.fn().mockResolvedValue(undefined),
   restoreAssets: vi.fn().mockResolvedValue(undefined),
 }));
+
+// Local Omarchy layer: N's album (utils/album-from-selection has its own spec)
+vi.mock('$lib/utils/album-from-selection', () => ({ newAlbumFromAssets: vi.fn() }));
 
 vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
   featureFlagsManager: { value: { trash: true } },
@@ -279,6 +285,44 @@ describe('add selected to album', () => {
       assetIds: ['mine'],
       restrictToSpaceId: undefined,
     });
+  });
+});
+
+describe('new album from selected (N)', () => {
+  it('is offered wherever the selection may go into an album, but not on a Space with the other members’ photos', () => {
+    expect(canMakeAlbumOfSelected(makeCtx(makeSelection()))).toBe(true);
+    expect(canMakeAlbumOfSelected(makeCtx(makeSelection({ canAddToAlbum: false })))).toBe(false);
+    expect(canMakeAlbumOfSelected(makeCtx(null))).toBe(false);
+
+    const onSpace = { routeId: '/(user)/spaces/[spaceId]', space: makeWritableSpaceContext() };
+    expect(canMakeAlbumOfSelected(makeCtx(makeSelection(), onSpace))).toBe(true);
+    expect(canMakeAlbumOfSelected(makeCtx(makeSelection({ isAllUserOwned: false }), onSpace))).toBe(false);
+  });
+
+  it('makes the album of the selected photos and clears the selection once it is made', async () => {
+    const assets = [makeAsset({ id: 'asset-1' }), makeAsset({ id: 'asset-2' })];
+    const selection = makeSelection({ assets });
+    vi.mocked(newAlbumFromAssets).mockResolvedValue({ id: 'album-1' } as never);
+
+    await handleNewAlbumFromSelected(makeCtx(selection));
+
+    expect(newAlbumFromAssets).toHaveBeenCalledWith(assets);
+    expect(selection.clearSelection).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the selection when no album was made', async () => {
+    const selection = makeSelection();
+    vi.mocked(newAlbumFromAssets).mockResolvedValue(undefined);
+
+    await handleNewAlbumFromSelected(makeCtx(selection));
+
+    expect(selection.clearSelection).not.toHaveBeenCalled();
+  });
+
+  it('no-ops where it is not offered', async () => {
+    await handleNewAlbumFromSelected(makeCtx(makeSelection({ canAddToAlbum: false })));
+
+    expect(newAlbumFromAssets).not.toHaveBeenCalled();
   });
 });
 

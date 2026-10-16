@@ -34,6 +34,7 @@ import {
   mdiPauseCircleOutline,
   mdiPlayCircleOutline,
   mdiPlaylistPlus,
+  mdiPlusBoxMultipleOutline,
   mdiRenameOutline,
   mdiRestore,
   mdiShareVariantOutline,
@@ -54,12 +55,14 @@ import {
   canArchiveSelected,
   canDeleteSelected,
   canFavoriteSelected,
+  canMakeAlbumOfSelected,
   handleAddSelectedToAlbum,
   handleAddSelectedToCurrentSpace,
   handleAddSelectedToSpace,
   handleArchiveSelected,
   handleDeleteSelected,
   handleFavoriteSelected,
+  handleNewAlbumFromSelected,
 } from '$lib/managers/selection-command-handlers';
 import AlbumEditModal from '$lib/modals/AlbumEditModal.svelte';
 import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
@@ -344,6 +347,15 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
     icon: mdiPlaylistPlus,
     isAvailable: canAddSelectedToAlbum,
     handler: handleAddSelectedToAlbum,
+  },
+  // Local Omarchy layer: the N key's album of the selection, named by where and when (utils/album-from-selection)
+  {
+    id: 'cmd:selection_new_album',
+    labelKey: 'new_album_from_selection',
+    descriptionKey: 'cmdk_cmd_selection_new_album_description',
+    icon: mdiPlusBoxMultipleOutline,
+    isAvailable: canMakeAlbumOfSelected,
+    handler: handleNewAlbumFromSelected,
   },
   {
     id: 'cmd:selection_add_to_space',

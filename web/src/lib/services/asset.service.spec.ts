@@ -22,6 +22,7 @@ import {
   normalizeAngle,
 } from '$lib/services/asset.service';
 import { setSharedLink } from '$lib/utils';
+import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
 import { getFormatter } from '$lib/utils/i18n';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
@@ -42,8 +43,11 @@ vitest.mock('@immich/ui', () => ({
 }));
 
 vitest.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({
-  assetMultiSelectManager: { assets: [{ id: 'x1' }, { id: 'x2' }] },
+  assetMultiSelectManager: { assets: [{ id: 'x1' }, { id: 'x2' }], selectionActive: true, clear: vitest.fn() },
 }));
+
+// Local Omarchy layer: N's album (utils/album-from-selection has its own spec)
+vitest.mock('$lib/utils/album-from-selection', () => ({ newAlbumFromAssets: vitest.fn() }));
 
 vitest.mock('$lib/utils/i18n', () => ({
   getFormatter: vitest.fn(),
@@ -363,6 +367,54 @@ describe('add to album/space entry points', () => {
         restrictToSpaceId: undefined,
       });
     });
+  });
+});
+
+// Local Omarchy layer: N, a new album of the selection (utils/album-from-selection)
+describe('bulk NewAlbum action (N)', () => {
+  const selection = assetMultiSelectManager as unknown as { clear: () => void };
+  const newAlbum = (options?: { restrictToSpaceId?: string }) =>
+    getAssetBulkActions(((k: string) => k) as never, options).NewAlbum;
+
+  beforeEach(() => {
+    vitest.mocked(newAlbumFromAssets).mockReset();
+    vitest.mocked(selection.clear).mockClear();
+    authManager.setPreferences(preferencesFactory.build());
+    authManager.setUser(userAdminFactory.build({ id: 'me' }));
+  });
+  afterEach(() => authManager.reset());
+
+  it('is the N key', () => {
+    expect(newAlbum().shortcuts).toEqual([{ key: 'n' }]);
+    expect(newAlbum().$if?.()).toBe(true);
+  });
+
+  it('is not offered where the picker is narrowed to a Space: a new album could not hold the other members’ photos', () => {
+    expect(newAlbum({ restrictToSpaceId: 'space-1' }).$if?.()).toBe(false);
+  });
+
+  it('is not offered while a field has the keyboard', () => {
+    const field = document.createElement('input');
+    field.type = 'search';
+    document.body.append(field);
+    field.focus();
+    expect(newAlbum().$if?.()).toBe(false);
+    field.remove();
+  });
+
+  it('makes the album of the selection, then clears the selection', async () => {
+    vitest.mocked(newAlbumFromAssets).mockResolvedValue({ id: 'album-1' } as never);
+    const action = newAlbum();
+    await action.onAction({ action, event: new Event('click') });
+    expect(newAlbumFromAssets).toHaveBeenCalledWith([{ id: 'x1' }, { id: 'x2' }]);
+    expect(selection.clear).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the selection when no album was made', async () => {
+    vitest.mocked(newAlbumFromAssets).mockResolvedValue(undefined);
+    const action = newAlbum();
+    await action.onAction({ action, event: new Event('click') });
+    expect(selection.clear).not.toHaveBeenCalled();
   });
 });
 

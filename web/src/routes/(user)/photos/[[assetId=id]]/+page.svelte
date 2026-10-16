@@ -917,6 +917,7 @@
       {/each}
     {/if}
     <ActionMenuItem action={MenuActions.AddToAlbum} />
+    <ActionMenuItem action={MenuActions.NewAlbum} />
     <ActionMenuItem action={MenuActions.CreateSharedLink} />
     <DownloadAction menuItem />
     {#if assetMultiSelectManager.isAllUserOwned}
