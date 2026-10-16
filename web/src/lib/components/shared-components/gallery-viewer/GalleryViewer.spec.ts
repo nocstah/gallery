@@ -12,10 +12,10 @@ import GalleryViewer from './GalleryViewer.svelte';
 
 // Local Omarchy layer: one stand-in special album (To do, key B), so its key can be pressed on the grid
 const { specialDone, specialMove } = vi.hoisted(() => ({ specialDone: vi.fn(), specialMove: vi.fn() }));
-vi.mock('$lib/managers/special-albums.svelte', () => ({
-  specialAlbums: [{ key: 'omarchy-todo', shortcut: 'b', move: specialMove, done: specialDone }],
-  specialAlbumOf: () => undefined,
-}));
+vi.mock('$lib/managers/special-albums.svelte', () => {
+  const specialAlbums = [{ key: 'omarchy-todo', shortcut: 'b', move: specialMove, done: specialDone }];
+  return { specialAlbums, offeredSpecialAlbums: () => specialAlbums, specialAlbumOf: () => undefined };
+});
 
 const { assetViewerPropsCalls, mockAssetInteraction, mockAssetViewerManager } = vi.hoisted(() => {
   // Bound to a local name (not an inline literal) so the accessors reference the

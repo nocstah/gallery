@@ -14,6 +14,10 @@ export const load = (async ({ params, url }) => {
   if (!special) {
     error(404);
   }
+  // Villa and QR are the owner's own: a family account lands on Photos (managers/special-albums, `offered`)
+  if (!special.offered) {
+    redirect(307, Route.photos());
+  }
   const [album] = await getAllAlbums({ name: special.name, isOwned: true });
   if (album) {
     redirect(307, Route.viewAlbum({ id: album.id }));

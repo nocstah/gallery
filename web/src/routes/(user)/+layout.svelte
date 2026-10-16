@@ -9,7 +9,7 @@
   import UploadCover from './DragAndDropUploadOverlay.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { specialAlbums } from '$lib/managers/special-albums.svelte';
+  import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
   import { onMount, type Snippet } from 'svelte';
   interface Props {
     children?: Snippet;
@@ -24,7 +24,7 @@
   // special album knows itself even when opened directly (album pages have no sidebar)
   onMount(() => {
     if (authManager.authenticated) {
-      for (const special of specialAlbums) {
+      for (const special of offeredSpecialAlbums()) {
         void special.ready();
       }
     }

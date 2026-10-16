@@ -26,7 +26,7 @@
   import { registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-  import { specialAlbums } from '$lib/managers/special-albums.svelte';
+  import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
   import type { Viewport } from '$lib/managers/timeline-manager/types';
   import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
   import { Route } from '$lib/route';
@@ -645,7 +645,7 @@
 
     {#if assetMultiSelectManager.isAllUserOwned}
       <!-- Local Omarchy layer: into a special album (To do B, Villa V), as on Photos -->
-      {#each specialAlbums as special (special.key)}
+      {#each offeredSpecialAlbums() as special (special.key)}
         <SpecialAlbumAction {special} {onArchive} />
       {/each}
       <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>

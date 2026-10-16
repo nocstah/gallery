@@ -12,7 +12,7 @@
   import Sidebar from '$lib/components/sidebar/sidebar-shell.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { specialAlbums } from '$lib/managers/special-albums.svelte';
+  import { offeredSpecialAlbums, specialAlbums } from '$lib/managers/special-albums.svelte';
   import { Route } from '$lib/route';
   import { pinnedAlbums } from '$lib/stores/pinned-albums.svelte';
   import { recentAlbumsDropdown, recentSpacesDropdown } from '$lib/stores/preferences.store';
@@ -115,7 +115,7 @@
   <!-- Local Omarchy layer: the special albums, photos kept out of Photos (To do, Villa: managers/special-albums), with
        how many each holds; the album itself lights its row, not Albums. Photos carried to one move there, as its key
        moves them (managers/sidebar-drop) -->
-  {#each specialAlbums as special (special.key)}
+  {#each offeredSpecialAlbums() as special (special.key)}
     <SidebarNavItem
       title={$t(special.words.label)}
       href={special.route}

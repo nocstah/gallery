@@ -16,7 +16,7 @@
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { specialAlbumOf, specialAlbums, type SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
+  import { offeredSpecialAlbums, specialAlbumOf, type SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
   import type {
     TimelineAsset,
     TimelineGrouping,
@@ -395,7 +395,7 @@
 
       // Local Omarchy layer: the special albums' keys, for the selection or the photo under the pointer
       if (!disableAssetSelect && authManager.authenticated) {
-        for (const special of specialAlbums) {
+        for (const special of offeredSpecialAlbums()) {
           shortcuts.push({ shortcut: { key: special.shortcut }, onShortcut: () => toggleSpecial(special) });
         }
       }

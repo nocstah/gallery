@@ -26,7 +26,7 @@
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
   import { albumFolders } from '$lib/managers/album-folders.svelte';
-  import { specialAlbumOf, specialAlbums } from '$lib/managers/special-albums.svelte';
+  import { offeredSpecialAlbums, specialAlbumOf } from '$lib/managers/special-albums.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
   import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
@@ -1294,7 +1294,7 @@
           <ActionMenuItem action={MenuActions.RemoveFromAlbum} hint />
           {#if assetMultiSelectManager.isAllUserOwned}
             <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
-            {#each specialAlbums as other (other.key)}
+            {#each offeredSpecialAlbums() as other (other.key)}
               {#if other !== special}
                 <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
               {/if}
@@ -1348,7 +1348,7 @@
         <ChangeDescription menuItem />
         <ChangeLocation menuItem />
         <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
-        {#each specialAlbums as other (other.key)}
+        {#each offeredSpecialAlbums() as other (other.key)}
           {#if other !== special}
             <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
           {/if}

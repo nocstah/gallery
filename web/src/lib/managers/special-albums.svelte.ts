@@ -88,6 +88,8 @@ type Config = {
   /** the way out */
   doneIcon: string;
   words: Words;
+  /** Local Omarchy layer: the owner's own (the villa, bank slips), never offered to a family account */
+  ownerOnly?: boolean;
 };
 
 const AT_ONCE = 8;
@@ -159,6 +161,7 @@ export class SpecialAlbumManager {
   readonly activeIcon: string;
   readonly doneIcon: string;
   readonly words: Words;
+  readonly ownerOnly: boolean;
   /** the album, once known */
   albumId = $state<string | undefined>();
   /** how many photos it holds (the sidebar shows it) */
@@ -166,7 +169,7 @@ export class SpecialAlbumManager {
   #looking: Promise<string | undefined> | undefined;
   #checked = false;
 
-  constructor({ name, key, slug, shortcut, icon, activeIcon, doneIcon, words }: Config) {
+  constructor({ name, key, slug, shortcut, icon, activeIcon, doneIcon, words, ownerOnly = false }: Config) {
     this.name = name;
     this.key = key;
     this.slug = slug;
@@ -175,6 +178,16 @@ export class SpecialAlbumManager {
     this.activeIcon = activeIcon;
     this.doneIcon = doneIcon;
     this.words = words;
+    this.ownerOnly = ownerOnly;
+  }
+
+  /**
+   * Local Omarchy layer: whether whoever is signed in has this album ("Hide Villa and QR, keep To do"): To do is
+   * everyone's; Villa and QR are the owner's own workflows, the server's admin's. A family account is offered neither,
+   * its keys don't move photos there, and an album of its own that happens to bear the name is just an album.
+   */
+  get offered() {
+    return !this.ownerOnly || (authManager.authenticated && authManager.user.isAdmin);
   }
 
   get route() {
@@ -192,6 +205,11 @@ export class SpecialAlbumManager {
 
   /** The album by its name (the user's own), so a renamed or deleted one is noticed; throws when Gallery can't say. */
   async #fetch() {
+    if (!this.offered) {
+      this.albumId = undefined;
+      this.count = undefined;
+      return;
+    }
     const [album] = await getAllAlbums({ name: this.name, isOwned: true });
     this.albumId = album?.id;
     this.count = album?.assetCount;
@@ -289,6 +307,9 @@ export class SpecialAlbumManager {
    * undo. Resolves with what it did, or undefined when nothing moved.
    */
   async move(assets: SpecialAsset[], { quiet = false }: { quiet?: boolean } = {}) {
+    if (!this.offered) {
+      return;
+    }
     const translate = get(t);
     try {
       const visibility = await this.#visibilities(assets);
@@ -464,6 +485,7 @@ export const todoManager = new SpecialAlbumManager({
 export const villaManager = new SpecialAlbumManager({
   name: 'Villa',
   key: 'omarchy-villa',
+  ownerOnly: true,
   slug: 'villa',
   shortcut: 'v',
   icon: mdiHomeOutline,
@@ -486,6 +508,7 @@ export const villaManager = new SpecialAlbumManager({
 export const qrManager = new SpecialAlbumManager({
   name: 'QR',
   key: 'omarchy-qr',
+  ownerOnly: true,
   slug: 'qr',
   shortcut: 'q',
   icon: mdiQrcode,
@@ -507,6 +530,10 @@ export const qrManager = new SpecialAlbumManager({
 
 /** Every special album, in sidebar order. */
 export const specialAlbums: readonly SpecialAlbumManager[] = [todoManager, villaManager, qrManager];
+
+/** Local Omarchy layer: the special albums whoever is signed in has (`offered`): all three for the owner, To do for a
+ * family account. Rows, buttons, menu items and keys come from this; lookups by id go through every one. */
+export const offeredSpecialAlbums = () => specialAlbums.filter((special) => special.offered);
 
 /** The special album with this id, if it is one. */
 export const specialAlbumOf = (albumId: string | null | undefined) =>

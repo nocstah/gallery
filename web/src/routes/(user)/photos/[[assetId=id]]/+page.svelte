@@ -37,7 +37,7 @@
   import TimelineWorkspaces from '$lib/components/timeline/TimelineWorkspaces.svelte';
   import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
   import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
-  import { specialAlbums } from '$lib/managers/special-albums.svelte';
+  import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
   import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import type { ViewportTopMonth } from '$lib/managers/timeline-manager/types';
   import { AssetAction } from '$lib/constants';
@@ -913,7 +913,7 @@
     {@const MenuActions = getAssetBulkActions($t)}
     <FavoriteAction menuItem removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
     {#if assetMultiSelectManager.isAllUserOwned}
-      {#each specialAlbums as special (special.key)}
+      {#each offeredSpecialAlbums() as special (special.key)}
         <SpecialAlbumAction {special} menuItem onArchive={handleArchive} />
       {/each}
     {/if}
@@ -963,7 +963,7 @@
 
     {#if assetMultiSelectManager.isAllUserOwned}
       <!-- Local Omarchy layer: into a special album (To do B, Villa V), out of Photos until taken out again -->
-      {#each specialAlbums as special (special.key)}
+      {#each offeredSpecialAlbums() as special (special.key)}
         <SpecialAlbumAction {special} onArchive={handleArchive} />
       {/each}
       <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>

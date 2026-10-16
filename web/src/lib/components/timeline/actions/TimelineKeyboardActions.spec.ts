@@ -29,6 +29,7 @@ const { authManagerMock, todo, villa } = vi.hoisted(() => {
 vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: authManagerMock }));
 vi.mock('$lib/managers/special-albums.svelte', () => ({
   specialAlbums: [todo, villa],
+  offeredSpecialAlbums: () => [todo, villa],
   specialAlbumOf: (id?: string | null) => [todo, villa].find((album) => album.isAlbum(id)),
 }));
 

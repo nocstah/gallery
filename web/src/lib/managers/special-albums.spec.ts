@@ -1,5 +1,56 @@
 import { AssetVisibility } from '@immich/sdk';
-import { planDone, planMove, type From } from '$lib/managers/special-albums.svelte';
+import '$lib/__mocks__/sdk.mock';
+import { sdkMock } from '$lib/__mocks__/sdk.mock';
+import {
+  offeredSpecialAlbums,
+  planDone,
+  planMove,
+  qrManager,
+  todoManager,
+  villaManager,
+  type From,
+} from '$lib/managers/special-albums.svelte';
+
+const auth = vi.hoisted(() => ({ authManager: { authenticated: true, user: { isAdmin: true, id: 'me' } } }));
+vi.mock('$lib/managers/auth-manager.svelte', () => auth);
+
+// Local Omarchy layer: To do is everyone's; Villa and QR are the owner's own ("Hide Villa and QR, keep To do")
+describe('special albums offered to the account signed in', () => {
+  afterEach(() => {
+    auth.authManager.user.isAdmin = true;
+  });
+
+  it('offers the owner all three', () => {
+    expect(offeredSpecialAlbums()).toEqual([todoManager, villaManager, qrManager]);
+  });
+
+  it('offers a family account To do alone', () => {
+    auth.authManager.user.isAdmin = false;
+
+    expect(offeredSpecialAlbums()).toEqual([todoManager]);
+    expect(villaManager.offered).toBe(false);
+    expect(qrManager.offered).toBe(false);
+  });
+
+  it('never asks Gallery for Villa or QR on a family account, so an album of theirs by the name stays an album', async () => {
+    auth.authManager.user.isAdmin = false;
+    sdkMock.getAllAlbums.mockClear();
+
+    await villaManager.lookUp();
+    await qrManager.lookUp();
+
+    expect(sdkMock.getAllAlbums).not.toHaveBeenCalled();
+    expect(villaManager.albumId).toBeUndefined();
+    expect(villaManager.isAlbum('villa-of-theirs')).toBe(false);
+  });
+
+  it('moves nothing into Villa for a family account', async () => {
+    auth.authManager.user.isAdmin = false;
+
+    await expect(villaManager.move([{ id: 'photo', visibility: AssetVisibility.Timeline }])).resolves.toBeUndefined();
+    expect(sdkMock.addAssetsToAlbum).not.toHaveBeenCalled();
+  });
+});
 
 // Local Omarchy layer: a special album (To do, Villa) takes photos out of Photos, and taking them out of it puts each
 // back where it came from, unless another special album still holds it
