@@ -58,6 +58,7 @@ import { downloadArchive } from '$lib/utils/asset-utils';
 import { openFileUploadDialog } from '$lib/utils/file-uploader';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
+import { rememberLastAlbum } from '$lib/utils/last-album';
 import { addedToAlbumDone } from '$lib/utils/undoable';
 
 export const isAlbumOwner = (album: AlbumResponseDto) => album.albumUsers[0].user.id === authManager.user.id;
@@ -273,6 +274,10 @@ export const addAssetsToAlbumWithOutcome = async (
     const addedIds = results.filter(({ success }) => success).map(({ id }) => id);
     // Local Omarchy layer: the photos this added (not those already there) can be taken out again from the bar's undo
     addedToAlbumDone(albumId, addedIds);
+    // and a person's add (not an upload's) makes this the album the Add to album picker offers first
+    if (notify) {
+      rememberLastAlbum(albumId);
+    }
     return {
       ok: true,
       addedIds,
