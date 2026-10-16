@@ -15,7 +15,11 @@
 // --viewports aorus,dell,laptop,tablet,phone, --modes dark,light, --all (every viewport and mode),
 // --hidpi (the monitors' real pixel density), --out DIR, --eval JS (no shots: run the expression on each route, after
 // its steps, at the first viewport and mode, and print what it returns, to read the real DOM), --keep-storage (keep what the pages left in the profile's
-// localStorage; by default a run starts from none, so two runs compare: the session cookie is kept either way).
+// localStorage; by default a run starts from none, so two runs compare: the session cookie is kept either way),
+// --curator FILE (answer Curator's requests, port 2290, from FILE instead of Curator: for a dev server on a port
+// Curator's CORS does not let in, or a page in a state Curator is not in now: a JSON map from a path, "*" standing for
+// one segment, to the answer, or to "@name" for a file beside FILE sent as it is, in byte ranges (a song); the first
+// path that matches answers, anything else is a 404).
 //
 // A route can go on into a state before the shot, with steps after ">": key:Control+k, hover:SELECTOR,
 // click:SELECTOR, rclick:SELECTOR (right click), scroll:PX (the wheel over the middle of the page), wait:MS,
@@ -30,9 +34,19 @@
 // The profile (~/.cache/gallery-shots/profile) holds only the Gallery session you log in with; nothing here reads or
 // stores a password. Its colour mode is the page's prefers-color-scheme, which is what "Follow Omarchy" follows.
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, dirname, extname, join, resolve } from 'node:path';
 
 const CHROMIUM = process.env.GALLERY_SHOTS_CHROMIUM || '/usr/bin/chromium';
 const ROOT = join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'gallery-shots');
@@ -331,6 +345,18 @@ async function pageSession(cdp, sessionId) {
   await send('Page.enable');
   await send('Network.enable');
   await send('Runtime.enable');
+  const curator = curatorAnswers();
+  if (curator) {
+    await send('Fetch.enable', { patterns: [{ urlPattern: '*://*:2290/*', requestStage: 'Request' }] });
+    cdp.on((message) => {
+      if (message.sessionId === sessionId && message.method === 'Fetch.requestPaused') {
+        answerCurator(send, message.params, curator).catch((error) => {
+          console.error(`--curator: ${message.params.request.url}: ${error.message}`);
+          return send('Fetch.failRequest', { requestId: message.params.requestId, errorReason: 'Failed' });
+        });
+      }
+    });
+  }
   const inflight = new Set();
   let lastActivity = Date.now();
   cdp.on((message) => {
@@ -559,6 +585,58 @@ function profileInUse() {
   } catch {
     return false;
   }
+}
+
+// ---- --curator: Curator's answers from a file ----
+
+function curatorAnswers() {
+  const file = option('curator', null);
+  if (!file) return null;
+  const path = resolve(file);
+  const routes = Object.entries(JSON.parse(readFileSync(path, 'utf8'))).map(([pattern, answer]) => ({
+    pattern: new RegExp(`^${pattern.split('*').map((part) => part.replaceAll(/[.?+^$()[\]{}|\\]/g, '\\$&')).join('[^/]+')}$`),
+    answer,
+  }));
+  return { dir: dirname(path), routes };
+}
+
+/** One request to Curator, answered as Curator would, with the CORS headers the page's origin needs. */
+async function answerCurator(send, { requestId, request }, { dir, routes }) {
+  const types = { '.json': 'application/json', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.wav': 'audio/wav' };
+  const url = new URL(request.url);
+  const origin = request.headers?.Origin ?? request.headers?.origin ?? `${url.protocol}//${url.hostname}:2284`;
+  const cors = [
+    { name: 'access-control-allow-origin', value: origin },
+    { name: 'access-control-allow-credentials', value: 'true' },
+  ];
+  if (request.method === 'OPTIONS') {
+    return send('Fetch.fulfillRequest', {
+      requestId,
+      responseCode: 204,
+      responseHeaders: [...cors, { name: 'access-control-allow-headers', value: 'content-type' }],
+    });
+  }
+  const route = routes.find(({ pattern }) => pattern.test(url.pathname));
+  const file = typeof route?.answer === 'string' && route.answer.startsWith('@') ? join(dir, route.answer.slice(1)) : null;
+  let body = route ? (file ? readFileSync(file) : Buffer.from(JSON.stringify(route.answer))) : Buffer.from('{"detail":"not in --curator"}');
+  const headers = [
+    ...cors,
+    { name: 'content-type', value: file ? (types[extname(file)] ?? 'application/octet-stream') : 'application/json' },
+    { name: 'accept-ranges', value: 'bytes' },
+  ];
+  // a media element asks for byte ranges, as of Curator's songs
+  const range = /bytes=(\d+)-(\d*)/.exec(request.headers?.Range ?? request.headers?.range ?? '');
+  let code = route ? 200 : 404;
+  if (route && file && range) {
+    const size = body.length;
+    const from = Number(range[1]);
+    const to = range[2] ? Math.min(Number(range[2]), size - 1) : size - 1;
+    body = body.subarray(from, to + 1);
+    headers.push({ name: 'content-range', value: `bytes ${from}-${to}/${size}` });
+    code = 206;
+  }
+  headers.push({ name: 'content-length', value: String(body.length) });
+  return send('Fetch.fulfillRequest', { requestId, responseCode: code, responseHeaders: headers, body: body.toString('base64') });
 }
 
 function slug(route) {
