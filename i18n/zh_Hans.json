@@ -3163,6 +3163,7 @@
   "rotate_left": "向左旋转",
   "rotate_right": "向右旋转",
   "rotated_count": "已旋转 {count, plural, one {# 个资源} other {# 个资源}}",
+  "rounded_corners": "圆角",
   "running": "正在运行",
   "save": "保存",
   "save_frame_as_photo": "将这一帧保存为照片",

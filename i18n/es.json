@@ -3164,6 +3164,7 @@
   "rotate_left": "Girar a la izquierda",
   "rotate_right": "Girar a la derecha",
   "rotated_count": "{count, plural, one {# recurso girado} other {# recursos girados}}",
+  "rounded_corners": "Esquinas redondeadas",
   "running": "En ejecución",
   "save": "Guardar",
   "save_frame_as_photo": "Guardar fotograma como foto",

@@ -21,6 +21,7 @@
   import { maintenanceShouldRedirect } from '$lib/utils/maintenance';
   import { searchShortcuts } from '$lib/utils/search-shortcut';
   import { startChrome } from '$lib/theme/chrome.svelte';
+  import { tileRadius } from '$lib/theme/corners.svelte';
   import { FOLLOW_OMARCHY, galleryThemes } from '$lib/theme/theme-manager.svelte';
   import { getServerConfig } from '@immich/sdk';
   import {
@@ -182,6 +183,17 @@
   });
 
   startChrome();
+
+  // Local Omarchy layer: with rounded corners (the View menu), photo tiles round with the zoom; otherwise they take the
+  // theme's radius
+  $effect(() => {
+    const radius = tileRadius();
+    if (radius === undefined) {
+      document.documentElement.style.removeProperty('--tile-radius');
+    } else {
+      document.documentElement.style.setProperty('--tile-radius', `${radius}px`);
+    }
+  });
 
   onMount(() => {
     const element = document.querySelector('#stencil');

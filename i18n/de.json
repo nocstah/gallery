@@ -3164,6 +3164,7 @@
   "rotate_left": "Nach links drehen",
   "rotate_right": "Nach rechts drehen",
   "rotated_count": "{count, plural, one {# Datei gedreht} other {# Dateien gedreht}}",
+  "rounded_corners": "Abgerundete Ecken",
   "running": "Läuft",
   "save": "Speichern",
   "save_frame_as_photo": "Videobild als Foto speichern",

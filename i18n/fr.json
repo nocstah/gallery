@@ -3164,6 +3164,7 @@
   "rotate_left": "Pivoter à gauche",
   "rotate_right": "Pivoter à droite",
   "rotated_count": "{count, plural, one {# média pivoté} other {# médias pivotés}}",
+  "rounded_corners": "Coins arrondis",
   "running": "En cours",
   "save": "Sauvegarder",
   "save_frame_as_photo": "Sauvegarder l'image comme photo",

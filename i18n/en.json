@@ -3181,6 +3181,7 @@
   "rotate_left": "Rotate left",
   "rotate_right": "Rotate right",
   "rotated_count": "Rotated {count, plural, one {# asset} other {# assets}}",
+  "rounded_corners": "Rounded corners",
   "running": "Running",
   "save": "Save",
   "save_frame_as_photo": "Save frame as photo",

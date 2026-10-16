@@ -234,12 +234,6 @@
     });
   });
 
-  // Tile corners follow the zoom (and Hyprland's rounding when that is larger).
-  $effect(() => {
-    const desktop = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ws-radius')) || 0;
-    document.documentElement.style.setProperty('--tile-radius', `${thumbnailZoomManager.radiusFor(desktop)}px`);
-  });
-
   $effect(() => {
     timelineManager.scrollableElement = scrollableElement;
   });

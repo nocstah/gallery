@@ -1,12 +1,13 @@
 <script lang="ts">
   // Local Omarchy layer: the one bar's view menu. What you set now and then, not every minute, lives here instead of
   // in the bar: the order (on a page that can be sorted), and for photo grids the thumbnail size, day labels,
-  // expanded stacks and the compact grid; then the theme (following Omarchy, the default, or held light or dark) and
-  // Cast (when a cast target is around). Ctrl+wheel and + - 0 still resize the thumbnails directly.
+  // expanded stacks and the compact grid; then the theme (following Omarchy, the default, or held light or dark),
+  // rounded corners and Cast (when a cast target is around). Ctrl+wheel and + - 0 still resize the thumbnails directly.
   import { page } from '$app/state';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
   import { thumbnailZoomManager, ZOOM_MAX, ZOOM_MIN } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { getGlobalActions } from '$lib/services/app.service';
+  import { corners } from '$lib/theme/corners.svelte';
   import { FOLLOW_OMARCHY, galleryThemes } from '$lib/theme/theme-manager.svelte';
   import { getSearchablePageState } from '$lib/utils/searchable-page-search';
   import { Icon, ThemePreference, themeManager } from '@immich/ui';
@@ -47,13 +48,21 @@
   };
 
   const toggles = $derived([
-    { label: $t('day_labels'), on: thumbnailZoomManager.dayLabels, set: (v: boolean) => (thumbnailZoomManager.dayLabels = v) },
+    {
+      label: $t('day_labels'),
+      on: thumbnailZoomManager.dayLabels,
+      set: (v: boolean) => (thumbnailZoomManager.dayLabels = v),
+    },
     {
       label: $t('expand_stacks'),
       on: thumbnailZoomManager.expandStacks,
       set: (v: boolean) => (thumbnailZoomManager.expandStacks = v),
     },
-    { label: $t('compact_view'), on: thumbnailZoomManager.compact, set: (v: boolean) => (thumbnailZoomManager.compact = v) },
+    {
+      label: $t('compact_view'),
+      on: thumbnailZoomManager.compact,
+      set: (v: boolean) => (thumbnailZoomManager.compact = v),
+    },
   ]);
 </script>
 
@@ -98,7 +107,13 @@
           />
         </label>
         {#each toggles as item (item.label)}
-          <button type="button" class="ws-view-row" role="switch" aria-checked={item.on} onclick={() => item.set(!item.on)}>
+          <button
+            type="button"
+            class="ws-view-row"
+            role="switch"
+            aria-checked={item.on}
+            onclick={() => item.set(!item.on)}
+          >
             <span>{item.label}</span>
             <span class="ws-view-switch" aria-hidden="true"></span>
           </button>
@@ -132,6 +147,16 @@
           {$t('dark')}
         </button>
       </div>
+      <button
+        type="button"
+        class="ws-view-row"
+        role="switch"
+        aria-checked={corners.rounded}
+        onclick={() => corners.set(!corners.rounded)}
+      >
+        <span>{$t('rounded_corners')}</span>
+        <span class="ws-view-switch" aria-hidden="true"></span>
+      </button>
       {#if canCast}
         <button
           type="button"

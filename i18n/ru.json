@@ -3166,6 +3166,7 @@
   "rotate_left": "Повернуть влево",
   "rotate_right": "Повернуть вправо",
   "rotated_count": "Повёрнуто {count, plural, one {# объект} few {# объекта} many {# объектов} other {# объекта}}",
+  "rounded_corners": "Скруглённые углы",
   "running": "Выполняется",
   "save": "Сохранить",
   "save_frame_as_photo": "Сохранить кадр как фото",

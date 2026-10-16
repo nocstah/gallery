@@ -142,6 +142,11 @@
   --radius-3xl: var(--ws-radius);
   --radius-4xl: var(--ws-radius);
 }
+/* rounded corners, the View menu's switch (lib/theme/corners.svelte.ts): one rounded radius for every corner whatever
+   the theme's, above a chosen theme's :root:root; photo tiles round with the zoom instead (--tile-radius) */
+:root:root[data-corners='rounded'] {
+  --ws-radius: 8px;
+}
 
 /* a fill in the primary role is ink now, so text that upstream set white or black on it would vanish in one face:
    it takes the surface, as inversion does */

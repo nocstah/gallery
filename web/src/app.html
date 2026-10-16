@@ -82,7 +82,7 @@
       }
     </style>
     <link rel="stylesheet" href="/custom.css" />
-    <!-- Local Omarchy layer: a theme and chrome chosen in Settings go on before the first paint (lib/theme) -->
+    <!-- Local Omarchy layer: a theme, chrome and corners chosen go on before the first paint (lib/theme) -->
     <script>
       try {
         const css = localStorage.getItem('gallery.theme.css');
@@ -95,6 +95,9 @@
         const chrome = localStorage.getItem('gallery.chrome');
         if (chrome) {
           document.documentElement.dataset.chrome = chrome;
+        }
+        if (localStorage.getItem('gallery.corners') === 'rounded') {
+          document.documentElement.dataset.corners = 'rounded';
         }
       } catch {}
     </script>

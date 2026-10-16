@@ -3163,6 +3163,7 @@
   "rotate_left": "Ruota a sinistra",
   "rotate_right": "Ruota a destra",
   "rotated_count": "{count, plural, one {# risorsa ruotata} other {# risorse ruotate}}",
+  "rounded_corners": "Angoli arrotondati",
   "running": "In esecuzione",
   "save": "Salva",
   "save_frame_as_photo": "Salva fotogramma come foto",

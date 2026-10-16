@@ -142,12 +142,6 @@ class ThumbnailZoomManager {
     return this.#compact ? Math.min(auto, COMPACT_SPACING) : auto;
   }
 
-  /** Tile corner radius: the desktop's window radius exactly, at every size (DESIGN.md, Shapes; square on the owner's
-   * theme, 2026-10-15). */
-  radiusFor(desktopRadius: number) {
-    return desktopRadius;
-  }
-
   step(direction: 1 | -1) {
     const current = this.scale;
     const next =

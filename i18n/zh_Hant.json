@@ -3129,6 +3129,7 @@
   "rotate_left": "向左旋轉",
   "rotate_right": "向右旋轉",
   "rotated_count": "已旋轉 {count, plural, one {# 個項目} other {# 個項目}}",
+  "rounded_corners": "圓角",
   "running": "執行中",
   "save": "儲存",
   "save_frame_as_photo": "將這一格儲存為相片",
