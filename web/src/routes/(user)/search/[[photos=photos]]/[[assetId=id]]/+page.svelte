@@ -31,7 +31,7 @@
   import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
-  import { countSearchResults, type SearchTerms } from '$lib/services/search.service';
+  import { countSearchResults, countSmartSearchResults, type SearchTerms } from '$lib/services/search.service';
   import { lang, locale } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl, handlePromiseError } from '$lib/utils';
   import { parseUtcDate } from '$lib/utils/date-time';
@@ -248,14 +248,17 @@
     await loadNextPage(true);
   }
 
-  // Local Omarchy layer: the count of a search the statistics endpoint can count (a place, a description, OCR text);
-  // a smart search ranks every photo instead, so its count is what has loaded, with a + while more follow
+  // Local Omarchy layer: the count of a search the statistics endpoint can count (a place, a description, OCR text),
+  // or of a smart search when the server cuts its ranking off at a distance (smartSearchHasCutoff); without that a
+  // smart search ranks every photo, so its count is what has loaded, with a + while more follow
   const countResults = async (serial: number) => {
-    if (('query' in searchTerms || 'queryAssetId' in searchTerms) && smartSearchEnabled) {
+    const terms = { visibility: AssetVisibility.Timeline, ...searchTerms };
+    const smart = ('query' in searchTerms || 'queryAssetId' in searchTerms) && smartSearchEnabled;
+    if (smart && !featureFlagsManager.value.smartSearchHasCutoff) {
       return;
     }
     try {
-      const total = await countSearchResults({ visibility: AssetVisibility.Timeline, ...searchTerms });
+      const total = smart ? await countSmartSearchResults(terms, { language: $lang }) : await countSearchResults(terms);
       if (serial === searchSerial) {
         searchTotal = total;
       }

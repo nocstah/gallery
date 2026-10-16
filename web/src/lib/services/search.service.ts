@@ -39,6 +39,35 @@ export const collectSearchResultAssetIds = async (
   return ids;
 };
 
+/**
+ * Local Omarchy layer: how many photos a smart search finds when the server cuts its ranking off
+ * (machineLearning.clip.maxDistance, the smartSearchHasCutoff feature): the results end there, so paging their ids
+ * counts them, as Add all collects them. The facets endpoint's total cannot stand in: it counts archived photos too.
+ * Undefined past `cap` photos, where the count would cost more than it says.
+ */
+export const countSmartSearchResults = async (
+  terms: SearchTerms,
+  options: { language: string; signal?: AbortSignal; cap?: number },
+): Promise<number | undefined> => {
+  const { language, signal, cap = 5000 } = options;
+  const ids = new Set<string>();
+  let page: number | undefined = 1;
+
+  while (page) {
+    const smartSearchDto = { ...terms, page, size: COLLECT_PAGE_SIZE, withExif: false, language };
+    const { assets } = await searchSmart({ smartSearchDto }, { signal });
+    for (const asset of assets.items) {
+      ids.add(asset.id);
+    }
+    if (ids.size > cap) {
+      return undefined;
+    }
+    page = assets.items.length > 0 && assets.nextPage ? Number(assets.nextPage) : undefined;
+  }
+
+  return ids.size;
+};
+
 // Local Omarchy layer: the terms the statistics endpoint counts by (StatisticsSearchDto), and those that only page or
 // shape the results. The server drops a term it does not know without a word, so a search by anything else (a file
 // name, a path, a smart query) would be counted as if that term were not there.

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '$lib/__mocks__/sdk.mock';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { collectSearchResultAssetIds, countSearchResults } from './search.service';
+import { collectSearchResultAssetIds, countSearchResults, countSmartSearchResults } from './search.service';
 
 const page = (ids: string[], nextPage: string | null) =>
   ({
@@ -115,4 +115,38 @@ describe('countSearchResults', () => {
       expect(sdkMock.searchAssetStatistics).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('countSmartSearchResults', () => {
+  it('counts a cut-off ranking by paging its ids, each photo once', async () => {
+    sdkMock.searchSmart.mockResolvedValueOnce(page(['a', 'b'], '2')).mockResolvedValueOnce(page(['b', 'c'], null));
+
+    const total = await countSmartSearchResults(
+      { query: 'beach', visibility: 'timeline' as never },
+      { language: 'en' },
+    );
+
+    expect(total).toBe(3);
+    expect(sdkMock.searchSmart).toHaveBeenNthCalledWith(
+      2,
+      {
+        smartSearchDto: {
+          query: 'beach',
+          visibility: 'timeline',
+          page: 2,
+          size: 1000,
+          withExif: false,
+          language: 'en',
+        },
+      },
+      { signal: undefined },
+    );
+  });
+
+  it('gives up past the cap', async () => {
+    sdkMock.searchSmart.mockResolvedValueOnce(page(['a', 'b', 'c'], '2'));
+
+    expect(await countSmartSearchResults({ query: 'photo' }, { language: 'en', cap: 2 })).toBeUndefined();
+    expect(sdkMock.searchSmart).toHaveBeenCalledTimes(1);
+  });
 });
