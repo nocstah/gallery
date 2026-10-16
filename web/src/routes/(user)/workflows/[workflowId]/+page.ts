@@ -7,7 +7,8 @@ import { getFormatter } from '$lib/utils/i18n';
 import type { PageLoad } from './$types';
 
 export const load = (async ({ url, params, depends }) => {
-  await authenticate(url);
+  // Local Omarchy layer: one of the owner's tools ("Owner tools only for me"): a family account lands on Photos
+  await authenticate(url, { admin: true });
   const [[workflow]] = await Promise.all([searchWorkflows({ id: params.workflowId }), pluginManager.ready()]);
   const $t = await getFormatter();
 

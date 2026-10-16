@@ -292,7 +292,9 @@ const USER_PAGES: readonly NavigationItem[] = [
   },
   // Local Omarchy layer: every page in the sidebar is reachable from Ctrl+K, the layer's own (command center, AI inbox
   // and its tabs, chat) and the stock ones the list above leaves out. navigation-items.spec checks the sidebar against
-  // this list, so a page added there and not here fails the tests.
+  // this list, so a page added there and not here fails the tests. The owner's tools (the command center, the AI inbox
+  // and its tabs, chat, Utilities and Duplicates, Import) are adminOnly: the owner is the server's admin, and a family
+  // account neither sees them in the sidebar nor reaches their pages ("Owner tools only for me").
   {
     id: 'nav:userPages:command',
     category: 'userPages',
@@ -300,7 +302,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_command_description',
     icon: mdiViewDashboardOutline,
     route: '/command',
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     id: 'nav:userPages:inbox',
@@ -309,7 +311,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_inbox_description',
     icon: mdiInboxOutline,
     route: '/inbox',
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     id: 'nav:userPages:inbox_jobs',
@@ -318,7 +320,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_curator_jobs_description',
     icon: mdiPlayCircleOutline,
     route: '/inbox?tab=jobs',
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     id: 'nav:userPages:inbox_history',
@@ -327,7 +329,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_curator_history_description',
     icon: mdiUndoVariant,
     route: '/inbox?tab=history',
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     id: 'nav:userPages:inbox_health',
@@ -336,7 +338,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_curator_health_description',
     icon: mdiHeartPulse,
     route: '/inbox?tab=health',
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     id: 'nav:userPages:chat',
@@ -345,7 +347,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_chat_description',
     icon: mdiChatOutline,
     route: '/chat',
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     id: 'nav:userPages:explore',
@@ -373,7 +375,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_duplicates_description',
     icon: mdiContentDuplicate,
     route: Route.duplicatesUtility(),
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     id: 'nav:userPages:utilities',
@@ -382,7 +384,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_utilities_description',
     icon: mdiToolboxOutline,
     route: Route.utilities(),
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     id: 'nav:userPages:import',
@@ -391,7 +393,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_import_description',
     icon: mdiDatabaseImportOutline,
     route: Route.import(),
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     id: 'nav:userPages:recently_added',

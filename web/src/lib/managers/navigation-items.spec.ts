@@ -172,11 +172,24 @@ describe('NAVIGATION_ITEMS schema', () => {
     expect(resolveRoute('/admin/server-status')).toBe(true);
   });
 
-  it('user-pages items are not admin-only', () => {
+  // Local Omarchy layer: the owner's tools are the owner's only ("Owner tools only for me"); every other user page is
+  // for every account
+  it('user-pages items are admin-only exactly for the owner tools', () => {
+    const ownerTools = new Set([
+      'nav:userPages:command',
+      'nav:userPages:inbox',
+      'nav:userPages:inbox_jobs',
+      'nav:userPages:inbox_history',
+      'nav:userPages:inbox_health',
+      'nav:userPages:chat',
+      'nav:userPages:duplicates',
+      'nav:userPages:utilities',
+      'nav:userPages:import',
+    ]);
     const items = NAVIGATION_ITEMS.filter((i) => i.category === 'userPages');
     expect(items).toHaveLength(28);
     for (const item of items) {
-      expect(item.adminOnly).toBe(false);
+      expect(item.adminOnly, item.id).toBe(ownerTools.has(item.id));
     }
   });
 

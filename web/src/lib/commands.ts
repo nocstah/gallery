@@ -155,7 +155,8 @@ export const getPagesProvider = ($t: MessageFormatter) => {
       title: $t('utilities'),
       icon: mdiToolboxOutline,
       onAction: () => goto(Route.utilities()),
-      $if: () => authManager.authenticated,
+      // Local Omarchy layer: an owner tool ("Owner tools only for me")
+      $if: () => authManager.authenticated && authManager.user.isAdmin,
     },
     {
       title: $t('archive'),

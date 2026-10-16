@@ -57,6 +57,11 @@
 
   const collapsed = $derived(sidebarModeStore.layout === 'rail' && !sidebarModeStore.railExpanded);
 
+  // Local Omarchy layer: the owner's tools (the command center, Curator's inbox and chat, Utilities, Import) show for
+  // the owner only, the server's admin ("Owner tools only for me"); a family account sees the library and what is
+  // shared, and those pages send it to Photos (their loaders: authenticate's admin)
+  const ownerTools = $derived(authManager.authenticated && authManager.user.isAdmin);
+
   // Local Omarchy layer: a pinned album on screen lights its row under Pinned, not Albums
   const pinnedOnScreen = () => {
     const id = /^\/albums\/([^/]+)/.exec(page.url.pathname)?.[1];
@@ -66,12 +71,14 @@
 
 <Sidebar ariaLabel={$t('primary')}>
   <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
-  <SidebarNavItem
-    title={$t('command_title')}
-    href="/command"
-    icon={mdiViewDashboardOutline}
-    activeIcon={mdiViewDashboard}
-  />
+  {#if ownerTools}
+    <SidebarNavItem
+      title={$t('command_title')}
+      href="/command"
+      icon={mdiViewDashboardOutline}
+      activeIcon={mdiViewDashboard}
+    />
+  {/if}
 
   <SidebarNavItem
     title={$t('photos')}
@@ -179,15 +186,17 @@
     <SidebarNavItem title={$t('folders')} href={Route.folders()} icon={{ icon: mdiFolderOutline, flipped: true }} />
   {/if}
 
-  <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
-  <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
+  {#if ownerTools}
+    <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
+    <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
 
-  <!-- Local Omarchy layer: a conversation with Curator's local model about the library (routes/(user)/chat) -->
-  <SidebarNavItem title={$t('chat_title')} href="/chat" icon={mdiChatOutline} activeIcon={mdiChat} />
+    <!-- Local Omarchy layer: a conversation with Curator's local model about the library (routes/(user)/chat) -->
+    <SidebarNavItem title={$t('chat_title')} href="/chat" icon={mdiChatOutline} activeIcon={mdiChat} />
 
-  <SidebarNavItem title={$t('utilities')} href={Route.utilities()} icon={mdiToolboxOutline} activeIcon={mdiToolbox} />
+    <SidebarNavItem title={$t('utilities')} href={Route.utilities()} icon={mdiToolboxOutline} activeIcon={mdiToolbox} />
 
-  <SidebarNavItem title={$t('import')} href={Route.import()} icon={mdiDatabaseImportOutline} />
+    <SidebarNavItem title={$t('import')} href={Route.import()} icon={mdiDatabaseImportOutline} />
+  {/if}
 
   <SidebarNavItem
     title={$t('archive')}

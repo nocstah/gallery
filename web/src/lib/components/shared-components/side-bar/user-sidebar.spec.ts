@@ -7,6 +7,8 @@ vi.mock('$app/state', () => ({ page: mockPage }));
 
 const mocks = vi.hoisted(() => ({
   authManager: {
+    authenticated: true,
+    user: { isAdmin: true },
     preferences: {
       folders: { enabled: false, sidebarWeb: false },
       memories: { enabled: true, sidebarWeb: true },
@@ -90,6 +92,7 @@ vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: sidebarMoc
 
 describe('UserSidebar', () => {
   beforeEach(() => {
+    mocks.authManager.user.isAdmin = true;
     mocks.authManager.preferences.memories.enabled = true;
     mocks.authManager.preferences.memories.sidebarWeb = true;
     mockPage.url = new URL('https://gallery.test/photos');
@@ -132,6 +135,34 @@ describe('UserSidebar', () => {
       mockPage.url = new URL('https://gallery.test/shared-links');
       render(UserSidebar);
       expect(sharedLink()).toHaveAttribute('data-active', 'false');
+    });
+  });
+
+  // Local Omarchy layer: the owner's tools are the owner's only ("Owner tools only for me"): a family account (not the
+  // server's admin) sees the library and what is shared
+  describe('owner tools', () => {
+    const tools = ['/command', '/inbox', '/chat', '/utilities', '/import'];
+    const link = (href: string) => document.querySelector(`a[href="${CSS.escape(href)}"]`);
+
+    it('shows the command center, AI inbox, chat, Utilities and Import to the owner', () => {
+      render(UserSidebar);
+
+      for (const href of tools) {
+        expect(link(href), href).toBeInTheDocument();
+      }
+    });
+
+    it('hides them from a family account, which keeps Photos, Albums and Shared', () => {
+      mocks.authManager.user.isAdmin = false;
+
+      render(UserSidebar);
+
+      for (const href of tools) {
+        expect(link(href), href).not.toBeInTheDocument();
+      }
+      expect(screen.getByRole('link', { name: /^photos$/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^albums$/i })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^shared$/i })).toBeInTheDocument();
     });
   });
 
