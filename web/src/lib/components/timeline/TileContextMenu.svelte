@@ -141,9 +141,18 @@
       const [asset] = picked;
       return { title: day(asset), detail: [asset.city, asset.country].filter(Boolean).join(', ') };
     }
-    const times = picked.map((asset) => fromTimelinePlainDateTime(asset.localDateTime));
-    const first = picked[times.indexOf(times.reduce((a, b) => (b < a ? b : a)))];
-    const last = picked[times.indexOf(times.reduce((a, b) => (b > a ? b : a)))];
+    // the earliest and the latest of them, in one pass (a selection can hold the whole library)
+    let [first, last] = [picked[0], picked[0]];
+    let [firstAt, lastAt] = [Infinity, -Infinity];
+    for (const asset of picked) {
+      const at = fromTimelinePlainDateTime(asset.localDateTime).toMillis();
+      if (at < firstAt) {
+        [first, firstAt] = [asset, at];
+      }
+      if (at > lastAt) {
+        [last, lastAt] = [asset, at];
+      }
+    }
     const from = day(first, false);
     const to = day(last);
     return {
@@ -152,7 +161,7 @@
     };
   });
 
-  const onStackAction = (action: () => Promise<void>) => {
+  const onStackAction = (action: () => unknown) => {
     if (selectedByMenu) {
       assetInteraction.clear();
     }
@@ -332,12 +341,12 @@
         <MenuOption
           icon={mdiWhatsapp}
           text={$t('download_for_app', { values: { app: 'WhatsApp' } })}
-          onClick={() => onStackAction(async () => shareClips(clips, 'whatsapp'))}
+          onClick={() => onStackAction(() => shareClips(clips, 'whatsapp'))}
         />
         <MenuOption
           icon={mdiSendOutline}
           text={$t('download_for_app', { values: { app: 'Telegram' } })}
-          onClick={() => onStackAction(async () => shareClips(clips, 'telegram'))}
+          onClick={() => onStackAction(() => shareClips(clips, 'telegram'))}
         />
         <hr />
       {/if}
