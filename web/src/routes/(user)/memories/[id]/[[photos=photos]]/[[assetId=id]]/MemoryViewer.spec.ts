@@ -1,6 +1,6 @@
 import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import type { Component } from 'svelte';
 import { goto } from '$app/navigation';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
@@ -120,16 +120,6 @@ vi.mock('$lib/components/timeline/AssetSelectControlBar.svelte', async () => {
   return { default: MockComponent };
 });
 
-vi.mock('./MemoryPhotoViewer.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
-  return { default: MockComponent };
-});
-
-vi.mock('./MemoryVideoViewer.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
-  return { default: MockComponent };
-});
-
 vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({
   assetMultiSelectManager: mockAssetMultiSelectManager,
 }));
@@ -206,6 +196,12 @@ function renderViewer() {
     componentProps: {},
   });
 }
+
+/** All photos: the memory's photos as a grid, behind the film's button of that name. */
+const openAllPhotos = async () => {
+  await fireEvent.click(await screen.findByRole('button', { name: 'all_photos' }));
+  return screen.findByTestId('gallery-viewer');
+};
 
 describe('MemoryViewer view in timeline (#1047)', () => {
   beforeEach(() => {
@@ -307,7 +303,7 @@ describe('MemoryViewer memory-scoped navigation (#790)', () => {
   it('resolves the viewer position within the memory from the url', async () => {
     const { container } = renderViewer();
 
-    const galleryViewer = await screen.findByTestId('gallery-viewer');
+    const galleryViewer = await openAllPhotos();
 
     // `current.memory.assets` (memoryManager.current, real derivation) feeds the gallery strip.
     // If the url ever resolved `dup-asset` against the wrong memory -- e.g. a regression back to
@@ -325,26 +321,21 @@ describe('MemoryViewer memory-scoped navigation (#790)', () => {
   it('enables asset grouping on the memory gallery strip (#625)', async () => {
     renderViewer();
 
-    const galleryViewer = await screen.findByTestId('gallery-viewer');
+    const galleryViewer = await openAllPhotos();
 
     expect(galleryViewer).toHaveAttribute('data-enable-grouping', 'true');
   });
 
-  it('links progress bar segments to assets scoped to the current memory', async () => {
+  // The film plays the memory the url names, and only it: the photo shared with memory-1 opens it, and the photo
+  // made ready under it is memory-2's next, never memory-1's.
+  it("plays the url's memory and no other's photos", async () => {
     const { container } = renderViewer();
 
-    await screen.findByTestId('gallery-viewer');
-
-    // The progress-bar segments (one `<a class="relative grow py-2">` per asset in
-    // `current.memory.assets`) are built from `current.getAssetHref`, which always routes through
-    // `Route.viewMemory({ id: memory.id, ... })` for the CURRENT memory -- distinct from the
-    // previous/next-memory cards, which legitimately link to an adjacent memory.
-    const hrefs = [...container.querySelectorAll('a.grow.py-2')].map((anchor) => anchor.getAttribute('href'));
-
-    expect(hrefs.length).toBeGreaterThan(0);
-    for (const href of hrefs) {
-      expect(href).toMatch(/^\/memories\/memory-2(\?|$)/);
-    }
+    const film = await screen.findByTestId('memory-film');
+    await waitFor(() => expect(container.querySelector('[data-asset-id="m2-only"]')).toBeInTheDocument());
+    expect(container.querySelector('[data-asset-id="dup-asset"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-asset-id="m1-only"]')).not.toBeInTheDocument();
+    expect(film).toHaveAttribute('data-position', '1');
   });
 });
 
@@ -464,7 +455,7 @@ describe('MemoryViewer bail-out effect', () => {
   it('does not navigate away while the memory resolves', async () => {
     renderViewer();
 
-    await screen.findByTestId('gallery-viewer');
+    await screen.findByTestId('memory-film');
 
     expect(goto).not.toHaveBeenCalled();
   });
@@ -483,5 +474,66 @@ describe('MemoryViewer bail-out effect', () => {
         expect.objectContaining({ replaceState: true, noScroll: true }),
       ),
     );
+  });
+});
+
+// The film's keys, through the page as a person presses them (film-keys.ts has the whole map).
+describe('MemoryViewer film keys', () => {
+  beforeEach(() => {
+    memoryManager.memories = [memory('memory-1', ['memory-asset-1', 'memory-asset-2', 'memory-asset-3'])];
+    mockPage.reset('https://gallery.test/memories/memory-1?assetId=memory-asset-1', {
+      routeId: '/(user)/memories/[id]/[[photos=photos]]/[[assetId=id]]',
+      params: { id: 'memory-1' },
+    });
+    mockGetAssetInfo.mockResolvedValue(memoryManager.memories[0].assets[0]);
+  });
+
+  const started = async () => {
+    const film = await screen.findByTestId('memory-film');
+    await waitFor(() => expect(film).toHaveAttribute('data-playing'));
+    return film;
+  };
+
+  it('pauses and plays with Space', async () => {
+    renderViewer();
+    const film = await started();
+
+    await fireEvent.keyDown(document, { key: ' ' });
+    expect(film).not.toHaveAttribute('data-playing');
+    expect(screen.getByRole('button', { name: 'play_memories' })).toBeInTheDocument();
+
+    await fireEvent.keyDown(document, { key: ' ' });
+    expect(film).toHaveAttribute('data-playing');
+    expect(screen.getByRole('button', { name: 'pause_memories' })).toBeInTheDocument();
+  });
+
+  it('steps a photo on and back with the arrows', async () => {
+    renderViewer();
+    const film = await started();
+
+    await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(film).toHaveAttribute('data-position', '2');
+    await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(film).toHaveAttribute('data-position', '3');
+    await fireEvent.keyDown(document, { key: 'ArrowLeft' });
+    expect(film).toHaveAttribute('data-position', '2');
+  });
+
+  it('closes with Escape', async () => {
+    renderViewer();
+    await started();
+
+    await fireEvent.keyDown(document, { key: 'Escape' });
+    expect(goto).toHaveBeenCalledWith(memoryManager.memoriesHref);
+  });
+
+  it('leaves the keys to All photos while it shows', async () => {
+    renderViewer();
+    const film = await started();
+    await openAllPhotos();
+
+    await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(film).toHaveAttribute('data-position', '1');
+    expect(film).toHaveAttribute('hidden');
   });
 });

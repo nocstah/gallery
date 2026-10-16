@@ -3,9 +3,8 @@
   import { scrollMemoryClearer } from '$lib/actions/scroll-memory';
   import { shortcuts } from '$lib/actions/shortcut';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
-  import MemoryStory from '$lib/components/curator/MemoryStory.svelte';
-  import { curatorIsMine } from '$lib/utils/curator';
   import BirthdayConfetti from '$lib/components/memories/BirthdayConfetti.svelte';
+  import MemoryFilm from '$lib/components/memories/film/MemoryFilm.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import GalleryViewer from '$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte';
@@ -20,74 +19,175 @@
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { memoryFacts } from '$lib/managers/memory-facts.svelte';
   import { memoryManager } from '$lib/managers/memory-manager.svelte';
-  import type { TimelineAsset, Viewport } from '$lib/managers/timeline-manager/types';
+  import type { Viewport } from '$lib/managers/timeline-manager/types';
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
   import { locale } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl, handlePromiseError, memoryLaneTitle } from '$lib/utils';
+  import { handlePromiseError, memoryLaneTitle } from '$lib/utils';
+  import { curator, curatorIsMine, type MemoryTrack } from '$lib/utils/curator';
+  import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
   import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
-  import { AssetMediaSize, type AssetResponseDto, AssetTypeEnum, getAssetInfo, MemoryType } from '@immich/sdk';
-  import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton, Text } from '@immich/ui';
+  import { type AssetResponseDto, AssetTypeEnum, getAssetInfo, MemoryType } from '@immich/sdk';
+  import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton } from '@immich/ui';
   import {
-    mdiCakeVariant,
     mdiCardsOutline,
-    mdiChevronDown,
-    mdiChevronLeft,
-    mdiChevronRight,
-    mdiChevronUp,
     mdiClose,
     mdiDotsVertical,
     mdiHeart,
     mdiHeartOutline,
     mdiImageMinusOutline,
     mdiImageSearch,
-    mdiPause,
     mdiPlay,
     mdiSelectAll,
-    mdiVolumeHigh,
-    mdiVolumeOff,
+    mdiTextBoxOutline,
+    mdiTextBoxRemoveOutline,
   } from '@mdi/js';
-  import { DateTime } from 'luxon';
-  import 'media-chrome/media-mute-button';
   import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
-  import type { Attachment } from 'svelte/attachments';
-  import { Tween } from 'svelte/motion';
-  import MemoryPhotoViewer from './MemoryPhotoViewer.svelte';
-  import MemoryVideoViewer from './MemoryVideoViewer.svelte';
 
-  let memoryGallery: HTMLElement | undefined = $state();
-  let memoryWrapper: HTMLElement | undefined = $state();
-  let galleryInView = $state(false);
-  let galleryFirstLoad = $state(true);
-  let playerInitialized = $state(false);
-  let paused = $state(false);
+  // Local Omarchy layer: a memory's page is its film (MemoryFilm, DESIGN.md, Memories), full screen over the shell
+  // as the photo viewer is, and All photos, its photos as a grid under a slim bar, from which a photo opens in the
+  // viewer. Upstream's framed player (a progress bar of segments, the memories before and after at its sides, the
+  // story in a box over the photo) is gone; its ⋮, its heart and View in timeline stay, in the film's top bar.
+
   const current = $derived(memoryManager.current);
-  const currentAssetId = $derived(current?.asset.id);
-  // where the asset sits in its memory, for the progress bar and counter
-  const assetIndex = $derived(current ? current.memory.assets.findIndex(({ id }) => id === currentAssetId) : -1);
-  const currentMemoryAssetFull = $derived.by(async () =>
-    currentAssetId ? await getAssetInfo({ ...authManager.params, id: currentAssetId }) : undefined,
-  );
-  let currentTimelineAssets = $derived(current?.memory.assets ?? []);
+  const memoryId = $derived(current?.memory.id);
 
-  const birthdayAge = $derived.by(() => {
-    if (current?.memory.type !== MemoryType.Birthday) {
-      return;
-    }
+  // All photos instead of the film: a page opened on the photo viewer goes back to the grid it came from
+  let showGrid = $state(untrack(() => assetViewerManager.isViewing));
+  let film = $state<ReturnType<typeof MemoryFilm>>();
+  // the photo the film shows (it starts on the address's)
+  let filmAsset = $state<string | undefined>(untrack(() => current?.asset.id));
 
-    const age = current.asset.localDateTime.year - current.memory.data.year;
-    return age >= 0 ? age : undefined;
+  let shownMemory = untrack(() => memoryId);
+  $effect(() => {
+    const id = memoryId;
+    untrack(() => {
+      if (id && id !== shownMemory) {
+        // another memory (the next one from the film's end, one removed): its own film, from its start
+        shownMemory = id;
+        showGrid = false;
+        filmAsset = current?.asset.id;
+      }
+    });
   });
 
-  let viewerHeight = $state(0);
+  // ---- what Curator knows of it: the facts, the story, the songs (its owner only: curatorIsMine) ----
 
-  const viewport: Viewport = $state({ width: 0, height: 0 });
-  // need to include padding in the viewport for gallery
-  const galleryViewport: Viewport = $derived({ height: viewport.height, width: viewport.width - 32 });
-  let progressBarController: Tween<number> | undefined = $state(undefined);
-  let videoPlayer: HTMLVideoElement | undefined = $state();
+  $effect(() => {
+    const index = memoryManager.memories.findIndex(({ id }) => id === memoryId);
+    if (index !== -1) {
+      memoryFacts.request(memoryManager.memories.slice(Math.max(0, index - 1), index + 2).map(({ id }) => id));
+    }
+  });
+  const facts = $derived(memoryId ? memoryFacts.get(memoryId) : undefined);
+
+  const STORY_HIDDEN = 'curator-memory-story-hidden';
+  const readStoryHidden = () => {
+    try {
+      return localStorage.getItem(STORY_HIDDEN) === '1';
+    } catch {
+      return false;
+    }
+  };
+  let storyHidden = $state(readStoryHidden());
+  const setStoryHidden = (hidden: boolean) => {
+    storyHidden = hidden;
+    try {
+      if (hidden) {
+        localStorage.setItem(STORY_HIDDEN, '1');
+      } else {
+        localStorage.removeItem(STORY_HIDDEN);
+      }
+    } catch {
+      // storage refused (a private window): the choice lasts while the page is open
+    }
+  };
+
+  // each answer is kept with the memory it answers, so a film never takes the one before's story or songs
+  let told = $state<{ memoryId: string; text: string | null }>();
+  let songs = $state<{ memoryId: string; tracks: MemoryTrack[] }>();
+
+  $effect(() => {
+    const id = memoryId;
+    if (!id || !curatorIsMine()) {
+      return;
+    }
+    let live = true;
+    curator
+      .story({ memory: id })
+      .then((answer) => {
+        if (live) {
+          told = { memoryId: id, text: answer.story?.text ?? null };
+        }
+      })
+      .catch(() => {
+        if (live) {
+          told = { memoryId: id, text: null };
+        }
+      });
+    curator
+      .memoryMusic(id, 3)
+      .then((answer) => {
+        if (live) {
+          songs = { memoryId: id, tracks: Array.isArray(answer.tracks) ? answer.tracks : [] };
+        }
+      })
+      .catch(() => {
+        if (live) {
+          songs = { memoryId: id, tracks: [] };
+        }
+      });
+    return () => {
+      live = false;
+    };
+  });
+
+  const story = $derived(told && told.memoryId === memoryId ? told.text : null);
+  const tracks = $derived(songs && songs.memoryId === memoryId ? songs.tracks : []);
+  const settled = $derived(
+    !memoryId || !curatorIsMine() || (memoryFacts.settled(memoryId) && songs?.memoryId === memoryId),
+  );
+
+  // ---- its title: facts, place and time ----
+
+  const titleParts = $derived(current ? memoryTitle(current.memory, facts, $locale) : undefined);
+  const cardTitle = $derived(current ? (titleParts?.title ?? $memoryLaneTitle(current.memory)) : '');
+  const filmName = $derived(titleParts?.name ?? (titleParts?.time || cardTitle));
+  const count = $derived(current ? memoryCount(current.memory, facts) : 0);
+  const allVideos = $derived(!!current && current.memory.assets.every((asset) => asset.type === AssetTypeEnum.Video));
+  const countText = $derived(
+    $t(allVideos ? 'memory_video_moments_subtitle' : 'memory_assets_count', { values: { count } }),
+  );
+  const filmLine = $derived([titleParts?.name ? titleParts.time : '', countText].filter(Boolean).join(' · '));
+
+  // ---- the photo on screen: where it was taken, and the way to it in the timeline ----
+
+  let filmAssetInfo = $state<AssetResponseDto>();
+  $effect(() => {
+    const id = filmAsset;
+    if (!id) {
+      return;
+    }
+    let live = true;
+    getAssetInfo({ ...authManager.params, id })
+      .then((asset) => {
+        if (live) {
+          filmAssetInfo = asset;
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  });
+  const shownInfo = $derived(filmAssetInfo && filmAssetInfo.id === filmAsset ? filmAssetInfo : undefined);
+  const place = $derived(
+    [shownInfo?.exifInfo?.city, shownInfo?.exifInfo?.country].filter(Boolean).join(', ') || undefined,
+  );
+
   // #1047: a memory can hold a photo the viewer only reaches through a Space. The personal timeline
   // carries such a photo only while that membership is shown in the timeline, so sending every jump
   // to /photos scrolled to the right date and showed nothing. `resolvedSpaceId` is set by the server
@@ -97,160 +197,49 @@
     return asset.resolvedSpaceId ? Route.viewSpace({ id: asset.resolvedSpaceId }, { at }) : Route.photos({ at });
   };
 
-  const handleNavigate = async (href: string | undefined, options?: { replaceState?: boolean }) => {
-    if (assetViewerManager.isViewing || !href) {
+  const birthdayAge = $derived.by(() => {
+    if (current?.memory.type !== MemoryType.Birthday) {
       return;
     }
+    const asset = current.memory.assets.find(({ id }) => id === filmAsset);
+    if (!asset) {
+      return;
+    }
+    const age = fromISODateTimeUTC(asset.localDateTime).year - current.memory.data.year;
+    return age >= 0 ? age : undefined;
+  });
 
-    await goto(href, { noScroll: true, keepFocus: true, ...options });
+  // ---- the memory's own actions ----
+
+  // the actions on "the photo" act on the one the film shows: the address is put on it first
+  const syncTo = async (assetId: string | undefined) => {
+    const href = assetId && current && current.asset.id !== assetId ? current.getAssetHref(assetId) : undefined;
+    if (href) {
+      await goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+    }
   };
 
-  const setProgressDuration = (asset: TimelineAsset) => {
-    progressBarController = new Tween<number>(0, {
-      duration: (from: number, to: number) =>
-        to ? (asset.isVideo ? asset.duration! : authManager.preferences.memories.duration * 1000) * (to - from) : 0,
-    });
+  const removePhoto = async () => {
+    await syncTo(filmAsset);
+    await memoryManager.deleteCurrentAsset();
   };
 
-  const handleEscape = async () => goto(memoryManager.memoriesHref);
+  const close = () => goto(memoryManager.memoriesHref);
+
+  const showAllPhotos = () => {
+    showGrid = true;
+    window.scrollTo({ top: 0 });
+  };
+
   const handleSelectAll = () =>
     assetMultiSelectManager.selectAssets(current?.memory.assets.map((a) => toTimelineAsset(a)) || []);
 
-  const handleAction = async (callingContext: string, action: 'reset' | 'pause' | 'play') => {
-    // leaving these log statements here as comments. Very useful to figure out what's going on during dev!
-    // console.log(`handleAction[${callingContext}] called with: ${action}`);
-    if (!progressBarController) {
-      // console.log(`handleAction[${callingContext}] NOT READY!`);
-      return;
-    }
-
-    switch (action) {
-      case 'play': {
-        try {
-          paused = false;
-          await videoPlayer?.play();
-          await progressBarController.set(1);
-        } catch (error) {
-          // this may happen if browser blocks auto-play of the video on first page load. This can either be a setting
-          // or just default in certain browsers on page load without any DOM interaction by user.
-          console.error(`handleAction[${callingContext}] videoPlayer play problem: ${error}`);
-          paused = true;
-          await progressBarController.set(0);
-        }
-        break;
-      }
-
-      case 'pause': {
-        paused = true;
-        videoPlayer?.pause();
-        await progressBarController.set(progressBarController.current);
-        break;
-      }
-
-      case 'reset': {
-        paused = false;
-        videoPlayer?.pause();
-        await progressBarController.set(0);
-        break;
-      }
-    }
-  };
-
-  const handleProgress = async (progress: number) => {
-    if (!progressBarController) {
-      return;
-    }
-
-    if (progress === 1 && !paused) {
-      if (current?.nextHref) {
-        await handleNavigate(current.nextHref, { replaceState: true });
-      } else {
-        await handleAction('handleProgressLast', 'pause');
-      }
-    }
-  };
-
-  const toProgressPercentage = (index: number) => {
-    if (!progressBarController || assetIndex === -1) {
-      return 0;
-    }
-    if (index < assetIndex) {
-      return 100;
-    }
-    if (index > assetIndex) {
-      return 0;
-    }
-    return progressBarController.current * 100;
-  };
-
   const handleHideAssets = (ids: string[]) => handlePromiseError(memoryManager.hideAssets(ids));
 
-  const handleGalleryScrollsIntoView = () => {
-    galleryInView = true;
-    handlePromiseError(handleAction('galleryInView', 'pause'));
-  };
-
-  const handleGalleryScrollsOutOfView = () => {
-    galleryInView = false;
-    // only call play after the first page load. When page first loads the gallery will not be visible
-    // and calling play here will result in duplicate invocation.
-    // also check if the element is visible to avoid playback in the background
-    if (!galleryFirstLoad && videoPlayer?.checkVisibility()) {
-      handlePromiseError(handleAction('galleryOutOfView', 'play'));
-    }
-    galleryFirstLoad = false;
-  };
-
-  const galleryObserver: Attachment<HTMLElement> = (element) => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          handleGalleryScrollsIntoView();
-        } else {
-          handleGalleryScrollsOutOfView();
-        }
-      },
-      { rootMargin: '0px 0px -200px 0px' },
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  };
-
-  const initCurrent = () => {
-    // Adjust the progress bar duration to the video length
-    if (current) {
-      setProgressDuration(current.asset);
-    }
-    playerInitialized = false;
-    initPlayer();
-  };
-
-  const resetAndPlay = () => {
-    handlePromiseError(handleAction('resetAndPlay', 'reset'));
-    handlePromiseError(handleAction('resetAndPlay', 'play'));
-  };
-
-  const initPlayer = () => {
-    const isVideo = current && current.asset.isVideo;
-    const isVideoAssetButPlayerHasNotLoadedYet = isVideo && !videoPlayer;
-    if (playerInitialized || isVideoAssetButPlayerHasNotLoadedYet) {
-      return;
-    }
-    if (assetViewerManager.isViewing) {
-      handlePromiseError(handleAction('initPlayer[AssetViewOpen]', 'pause'));
-    } else if (isVideo) {
-      // Image assets will start playing when the image is loaded. Only autostart video assets.
-      resetAndPlay();
-    }
-    playerInitialized = true;
-  };
-
-  $effect(() => {
-    // restart playback whenever the current asset changes
-    void currentAssetId;
-    untrack(initCurrent);
-  });
+  let gridWidth = $state(0);
+  let viewportHeight = $state(0);
+  let gridBarHeight = $state(0);
+  const galleryViewport: Viewport = $derived({ height: viewportHeight, width: gridWidth });
 
   $effect(() => {
     if (current) {
@@ -259,78 +248,25 @@
 
     handlePromiseError(goto(memoryManager.memoriesHref, { replaceState: true, noScroll: true }));
   });
-
-  $effect(() => {
-    if (progressBarController) {
-      handlePromiseError(handleProgress(progressBarController.current));
-    }
-  });
-
-  $effect(() => {
-    if (videoPlayer) {
-      initPlayer();
-    }
-  });
 </script>
 
+<svelte:window bind:innerHeight={viewportHeight} />
 <svelte:document
-  use:shortcuts={assetViewerManager.isViewing
-    ? []
-    : [
-        { shortcut: { key: 'ArrowRight' }, onShortcut: () => handleNavigate(current?.nextHref) },
-        { shortcut: { key: 'd' }, onShortcut: () => handleNavigate(current?.nextHref) },
-        { shortcut: { key: 'ArrowLeft' }, onShortcut: () => handleNavigate(current?.previousHref) },
-        { shortcut: { key: 'a' }, onShortcut: () => handleNavigate(current?.previousHref) },
-        { shortcut: { key: 'Escape' }, onShortcut: () => handleEscape() },
-      ]}
+  use:shortcuts={showGrid && !assetViewerManager.isViewing && !assetMultiSelectManager.selectionActive
+    ? [{ shortcut: { key: 'Escape' }, onShortcut: () => close() }]
+    : []}
 />
-
-{#if assetMultiSelectManager.selectionActive}
-  <div class="dark sticky top-0 z-1">
-    <AssetSelectControlBar>
-      {@const Actions = getAssetBulkActions($t)}
-      <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
-
-      <ActionButton action={Actions.CreateSharedLink} />
-      <IconButton
-        shape="round"
-        color="secondary"
-        variant="ghost"
-        aria-label={$t('select_all')}
-        icon={mdiSelectAll}
-        onclick={handleSelectAll}
-      />
-
-      <ActionButton action={Actions.AddToAlbum} />
-
-      <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} />
-
-      <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
-        <DownloadAction menuItem />
-        <ChangeDate menuItem />
-        <ChangeDescription menuItem />
-        <ChangeLocation menuItem />
-        <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleHideAssets} />
-        <ActionMenuItem action={Actions.Tag} />
-        <DeleteAssets menuItem onAssetDelete={handleHideAssets} />
-      </ButtonContextMenu>
-    </AssetSelectControlBar>
-  </div>
-{/if}
 
 <section
   id="memory-viewer"
   data-sveltekit-noscroll
-  class="dark w-full bg-immich-dark-gray text-white"
+  class="dark w-full"
   use:scrollMemoryClearer={{ routeStartsWith: Route.memories() }}
-  bind:this={memoryWrapper}
-  bind:clientHeight={viewport.height}
-  bind:clientWidth={viewport.width}
 >
   {#if current}
     {#key current.memory.id}
-      {#if current.memory.type === MemoryType.Birthday}
-        <div class="pointer-events-none fixed inset-x-0 -top-12 z-1 flex h-screen justify-center overflow-hidden">
+      {#if current.memory.type === MemoryType.Birthday && !showGrid}
+        <div class="pointer-events-none fixed inset-x-0 -top-12 z-50 flex h-screen justify-center overflow-hidden">
           <BirthdayConfetti
             x={[-5, 5]}
             y={[0, 0.1]}
@@ -341,326 +277,224 @@
           />
         </div>
       {/if}
-    {/key}
-    <div class="dark grid grid-cols-[100%] p-2 max-md:h-auto max-md:flex-col md:grid-cols-[25%_50%_25%] md:p-4">
-      {#if current}
-        <div class="flex items-center gap-2 md:gap-6">
+
+      <MemoryFilm
+        bind:this={film}
+        bind:current={filmAsset}
+        memory={current.memory}
+        assetId={current.asset.id}
+        active={!showGrid && !assetViewerManager.isViewing}
+        name={filmName}
+        line={filmLine}
+        title={cardTitle}
+        cover={facts?.cover}
+        focus={facts?.focus}
+        {settled}
+        story={storyHidden ? null : story}
+        {tracks}
+        {place}
+        photoSeconds={authManager.preferences.memories.duration}
+        nextMemory={current.nextMemory}
+        onClose={close}
+        onAllPhotos={showAllPhotos}
+        onNextMemory={current.nextMemory ? () => goto(current.nextMemory!.href) : undefined}
+      >
+        {#snippet actions()}
           <IconButton
+            icon={current.memory.isSaved ? mdiHeart : mdiHeartOutline}
             shape="round"
             variant="ghost"
             color="secondary"
-            icon={mdiClose}
-            aria-label={$t('close')}
-            size="large"
-            onclick={() => goto(memoryManager.memoriesHref)}
+            aria-label={current.memory.isSaved ? $t('unfavorite') : $t('favorite')}
+            onclick={() => memoryManager.toggleCurrentMemorySaved()}
           />
-          <p class="flex items-center gap-2 text-lg">
-            {#if current.memory.type === MemoryType.Birthday}
-              <Icon icon={mdiCakeVariant} size="1.25em" />
-            {/if}
-            {$memoryLaneTitle(current.memory)}
-          </p>
-        </div>
-      {/if}
-
-      <div class="dark flex w-full place-content-center place-items-center gap-2">
-        <IconButton
-          shape="round"
-          variant="ghost"
-          color="secondary"
-          aria-label={paused ? $t('play_memories') : $t('pause_memories')}
-          icon={paused ? mdiPlay : mdiPause}
-          onclick={() => handlePromiseError(handleAction('PlayPauseButtonClick', paused ? 'play' : 'pause'))}
-        />
-
-        {#each current.memory.assets as asset, index (asset.id)}
-          <a class="relative grow py-2" href={current.getAssetHref(asset.id)} aria-label={$t('view')}>
-            <span class="absolute inset-s-0 h-0.5 w-full bg-gray-500"></span>
-            <span class="absolute inset-s-0 h-0.5 bg-white" style:width={`${toProgressPercentage(index)}%`}></span>
-          </a>
-        {/each}
-
-        <Text size="small">
-          {$t('x_of_total', {
-            values: {
-              x: (assetIndex + 1).toLocaleString($locale),
-              total: current.memory.assets.length.toLocaleString($locale),
-            },
-          })}
-        </Text>
-
-        {#if currentTimelineAssets.some((asset) => asset.type === AssetTypeEnum.Video)}
-          <media-mute-button
-            mediacontroller={videoPlayer ? 'memory-video' : ''}
-            disabled={!videoPlayer}
-            class="rounded-full bg-transparent outline-offset-2 outline-dark focus-visible:outline-2"
-            style="--media-focus-box-shadow: none;"
+          {#if shownInfo}
+            <IconButton
+              href={viewInTimelineHref(shownInfo)}
+              icon={mdiImageSearch}
+              aria-label={$t('view_in_timeline')}
+              color="secondary"
+              variant="ghost"
+              shape="round"
+            />
+          {/if}
+          <ButtonContextMenu
+            icon={mdiDotsVertical}
+            title={$t('menu')}
+            onclick={() => {
+              film?.pause();
+              void syncTo(filmAsset);
+            }}
+            direction="left"
+            size="medium"
+            align="bottom-right"
           >
-            <IconButton
-              slot="off"
-              disabled={!videoPlayer}
-              tabindex={-1}
-              shape="round"
-              variant="ghost"
-              color="secondary"
-              aria-label={$t('unmute_memories')}
-              icon={mdiVolumeOff}
-              onclick={() => {}}
+            <MenuOption
+              onClick={() => memoryManager.deleteCurrentMemory()}
+              text={$t('remove_memory')}
+              icon={mdiCardsOutline}
             />
-            <IconButton
-              slot="high"
-              disabled={!videoPlayer}
-              tabindex={-1}
-              shape="round"
-              variant="ghost"
-              color="secondary"
-              aria-label={$t('mute_memories')}
-              icon={mdiVolumeHigh}
-              onclick={() => {}}
+            <MenuOption
+              onClick={() => removePhoto()}
+              text={$t('remove_photo_from_memory')}
+              icon={mdiImageMinusOutline}
             />
-          </media-mute-button>
-        {/if}
-      </div>
-    </div>
+            {#if story}
+              <MenuOption
+                onClick={() => setStoryHidden(!storyHidden)}
+                text={storyHidden ? $t('ai_story_show') : $t('ai_story_hide')}
+                icon={storyHidden ? mdiTextBoxOutline : mdiTextBoxRemoveOutline}
+              />
+            {/if}
+          </ButtonContextMenu>
+        {/snippet}
+        {#snippet extra()}
+          {#if birthdayAge !== undefined}
+            {` · ${$t('birthday_memory_age', { values: { age: birthdayAge } })}`}
+          {/if}
+        {/snippet}
+      </MemoryFilm>
+    {/key}
 
-    {#if galleryInView}
-      <div
-        class="dark fixed inset-s-1/2 top-10 z-1 -translate-x-1/2 transition-opacity"
-        class:opacity-0={!galleryInView}
-        class:opacity-100={galleryInView}
-      >
-        <button
-          type="button"
-          onclick={() => memoryWrapper?.scrollIntoView({ behavior: 'smooth' })}
-          disabled={!galleryInView}
-        >
-          <IconButton
-            shape="round"
-            color="secondary"
-            aria-label={$t('hide_gallery')}
-            icon={mdiChevronUp}
-            onclick={() => {}}
+    {#if showGrid}
+      <!-- All photos: the memory's photos as a grid, under a slim bar with the way back into the film -->
+      <div class="memory-grid">
+        {#if assetMultiSelectManager.selectionActive}
+          <div class="dark sticky top-0 z-1">
+            <AssetSelectControlBar>
+              {@const Actions = getAssetBulkActions($t)}
+              <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
+
+              <ActionButton action={Actions.CreateSharedLink} />
+              <IconButton
+                shape="round"
+                color="secondary"
+                variant="ghost"
+                aria-label={$t('select_all')}
+                icon={mdiSelectAll}
+                onclick={handleSelectAll}
+              />
+
+              <ActionButton action={Actions.AddToAlbum} />
+
+              <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} />
+
+              <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
+                <DownloadAction menuItem />
+                <ChangeDate menuItem />
+                <ChangeDescription menuItem />
+                <ChangeLocation menuItem />
+                <ArchiveAction
+                  menuItem
+                  unarchive={assetMultiSelectManager.isAllArchived}
+                  onArchive={handleHideAssets}
+                />
+                <ActionMenuItem action={Actions.Tag} />
+                <DeleteAssets menuItem onAssetDelete={handleHideAssets} />
+              </ButtonContextMenu>
+            </AssetSelectControlBar>
+          </div>
+        {:else}
+          <header class="memory-grid-bar" bind:clientHeight={gridBarHeight}>
+            <IconButton
+              shape="round"
+              variant="ghost"
+              color="secondary"
+              icon={mdiClose}
+              aria-label={$t('close')}
+              onclick={close}
+            />
+            <div class="memory-grid-title">
+              <h1>{cardTitle}</h1>
+              <p lang={$locale}>{countText}</p>
+            </div>
+            <button type="button" class="memory-grid-play" onclick={() => (showGrid = false)}>
+              <Icon icon={mdiPlay} size="1.25rem" aria-hidden />
+              <span>{$t('play')}</span>
+            </button>
+          </header>
+        {/if}
+
+        <div id="gallery-memory" class="memory-grid-photos" bind:clientWidth={gridWidth}>
+          <GalleryViewer
+            assets={current.memory.assets}
+            viewerAssets={current.viewerAssets}
+            viewport={galleryViewport}
+            assetInteraction={assetMultiSelectManager}
+            slidingWindowOffset={gridBarHeight}
+            arrowNavigation={false}
+            enableGrouping
           />
-        </button>
+        </div>
       </div>
     {/if}
-    <!-- Viewer -->
-    <section class="overflow-hidden pt-6 md:pt-0" bind:clientHeight={viewerHeight}>
-      <div
-        class="ms-[-100%] box-border flex h-[calc(100vh-224px)] w-[300%] items-center justify-center gap-10 overflow-hidden md:h-[calc(100vh-180px)]"
-      >
-        <!-- PREVIOUS MEMORY -->
-        <div class="h-1/2 w-[20vw] rounded-2xl {current.previousMemory ? 'opacity-25 hover:opacity-70' : 'opacity-0'}">
-          {#if current.previousMemory}
-            <a class="relative block size-full rounded-2xl" href={current.previousMemory.href}>
-              <img
-                class="size-full rounded-2xl object-cover"
-                src={getAssetMediaUrl({ id: current.previousMemory.assetId, size: AssetMediaSize.Preview })}
-                alt={$t('previous_memory')}
-                draggable="false"
-              />
-
-              <div class="absolute inset-e-4 bottom-4 text-start text-white">
-                <p class="text-xs font-semibold text-gray-200 uppercase">{$t('previous')}</p>
-                <p class="text-xl">{current.previousMemory.title}</p>
-              </div>
-            </a>
-          {/if}
-        </div>
-
-        <!-- CURRENT MEMORY -->
-        <div
-          class="main-view relative flex h-full w-[70vw] place-content-center place-items-center rounded-2xl bg-black"
-        >
-          <div class="relative size-full rounded-2xl bg-black">
-            {#key current.asset.id}
-              {#if current.asset.isVideo}
-                <MemoryVideoViewer asset={current.asset} bind:videoPlayer />
-              {:else}
-                <MemoryPhotoViewer asset={current.asset} onImageLoad={resetAndPlay} />
-              {/if}
-            {/key}
-
-            <div
-              class="dark absolute inset-e-0 bottom-0 flex h-full flex-col items-end justify-between gap-2 p-2 transition-all"
-              class:opacity-0={galleryInView}
-              class:opacity-100={!galleryInView}
-            >
-              <div class="flex items-center">
-                <IconButton
-                  icon={current.memory.isSaved ? mdiHeart : mdiHeartOutline}
-                  shape="round"
-                  variant="ghost"
-                  color="secondary"
-                  aria-label={current.memory.isSaved ? $t('unfavorite') : $t('favorite')}
-                  onclick={() => memoryManager.toggleCurrentMemorySaved()}
-                />
-                <!-- <IconButton
-                  icon={mdiShareVariantOutline}
-                  shape="round"
-                  variant="ghost"
-                  size="giant"
-                  color="secondary"
-                  aria-label={$t('share')}
-                /> -->
-                <ButtonContextMenu
-                  icon={mdiDotsVertical}
-                  title={$t('menu')}
-                  onclick={() => handlePromiseError(handleAction('ContextMenuClick', 'pause'))}
-                  direction="left"
-                  size="medium"
-                  align="bottom-right"
-                >
-                  <MenuOption
-                    onClick={() => memoryManager.deleteCurrentMemory()}
-                    text={$t('remove_memory')}
-                    icon={mdiCardsOutline}
-                  />
-                  <MenuOption
-                    onClick={() => memoryManager.deleteCurrentAsset()}
-                    text={$t('remove_photo_from_memory')}
-                    icon={mdiImageMinusOutline}
-                  />
-                  <!-- shortcut={{ key: 'l', shift: shared }} -->
-                </ButtonContextMenu>
-              </div>
-
-              <div>
-                {#await currentMemoryAssetFull then asset}
-                  {#if asset}
-                    <IconButton
-                      href={viewInTimelineHref(asset)}
-                      icon={mdiImageSearch}
-                      aria-label={$t('view_in_timeline')}
-                      color="secondary"
-                      variant="ghost"
-                      shape="round"
-                    />
-                  {/if}
-                {/await}
-              </div>
-            </div>
-            <!-- CONTROL BUTTONS -->
-            {#if current.previousHref}
-              <div class="dark absolute inset-s-0 top-1/2 ms-4">
-                <IconButton
-                  shape="round"
-                  aria-label={$t('previous_memory')}
-                  icon={mdiChevronLeft}
-                  variant="ghost"
-                  color="secondary"
-                  size="giant"
-                  href={current.previousHref}
-                />
-              </div>
-            {/if}
-
-            {#if current.nextHref}
-              <div class="dark absolute inset-e-0 top-1/2 me-4">
-                <IconButton
-                  shape="round"
-                  aria-label={$t('next_memory')}
-                  icon={mdiChevronRight}
-                  variant="ghost"
-                  color="secondary"
-                  size="giant"
-                  href={current.nextHref}
-                />
-              </div>
-            {/if}
-
-            <div class="absolute inset-s-8 top-4 text-sm font-medium text-white">
-              <p>
-                <!-- The asset being shown, not the memory's first: a memory can span years (an
-                     `on_this_day_place` card covers every year the place recurs), and the city and
-                     country below already track the current asset. -->
-                {fromISODateTimeUTC(current.memory.assets[assetIndex].localDateTime).toLocaleString(
-                  DateTime.DATE_FULL,
-                  {
-                    locale: $locale,
-                  },
-                )}
-              </p>
-              <p>
-                {#await currentMemoryAssetFull then asset}
-                  {asset?.exifInfo?.city || ''}
-                  {asset?.exifInfo?.country || ''}
-                {/await}
-              </p>
-              {#if birthdayAge !== undefined}
-                <p class="mt-1 flex items-center gap-2">
-                  <span class="rounded-sm bg-logo-yellow px-1.5 py-0.5 whitespace-nowrap text-black">
-                    {$t('birthday_memory_age', { values: { age: birthdayAge } })}
-                  </span>
-                </p>
-              {/if}
-            </div>
-
-            <!-- Local Omarchy layer: Curator's story of this memory, only for Curator's owner (curatorIsMine) -->
-            {#if curatorIsMine()}
-              <MemoryStory memoryId={current.memory.id} faded={galleryInView} />
-            {/if}
-          </div>
-        </div>
-
-        <!-- NEXT MEMORY -->
-        <div class="h-1/2 w-[20vw] rounded-2xl {current.nextMemory ? 'opacity-25 hover:opacity-70' : 'opacity-0'}">
-          {#if current.nextMemory}
-            <a class="relative block size-full rounded-2xl" href={current.nextMemory.href}>
-              <img
-                class="size-full rounded-2xl object-cover"
-                src={getAssetMediaUrl({ id: current.nextMemory.assetId, size: AssetMediaSize.Preview })}
-                alt={$t('next_memory')}
-                draggable="false"
-              />
-
-              <div class="absolute inset-s-4 bottom-4 text-start text-white">
-                <p class="text-xs font-semibold text-gray-200 uppercase">{$t('up_next')}</p>
-                <p class="text-xl">{current.nextMemory.title}</p>
-              </div>
-            </a>
-          {/if}
-        </div>
-      </div>
-    </section>
   {/if}
 </section>
 
-{#if current}
-  <!-- GALLERY VIEWER -->
-  <section class="bg-immich-dark-gray p-4">
-    <div
-      class="dark sticky mb-10 flex place-content-center place-items-center transition-all"
-      class:opacity-0={galleryInView}
-      class:opacity-100={!galleryInView}
-    >
-      <IconButton
-        shape="round"
-        color="secondary"
-        aria-label={$t('show_gallery')}
-        icon={mdiChevronDown}
-        onclick={() => memoryGallery?.scrollIntoView({ behavior: 'smooth' })}
-      />
-    </div>
-
-    <div id="gallery-memory" {@attach galleryObserver} bind:this={memoryGallery}>
-      <GalleryViewer
-        assets={currentTimelineAssets}
-        viewerAssets={current.viewerAssets}
-        viewport={galleryViewport}
-        assetInteraction={assetMultiSelectManager}
-        slidingWindowOffset={viewerHeight}
-        arrowNavigation={false}
-        enableGrouping
-      />
-    </div>
-  </section>
-{/if}
-
 <style>
-  .main-view {
-    box-shadow:
-      0 4px 4px 0 rgba(0, 0, 0, 0.3),
-      0 8px 12px 6px rgba(0, 0, 0, 0.15);
+  /* the theme's own dark ground, as the photo viewer's islands take it */
+  .memory-grid {
+    min-height: 100dvh;
+    background: var(--immich-ui-light);
+    color: var(--immich-ui-dark);
+    padding-inline: max(0.5rem, env(safe-area-inset-left, 0px)) max(0.5rem, env(safe-area-inset-right, 0px));
+  }
+  /* the bar: the way out, the memory's name and count, and Play back into the film (ink inverted: the action) */
+  .memory-grid-bar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+    padding: 0.4rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--ws-hairline);
+    background: var(--immich-ui-light);
+  }
+  .memory-grid-title {
+    flex: 1;
+    min-width: 0;
+  }
+  .memory-grid-title h1 {
+    overflow: hidden;
+    font-family: var(--font-display);
+    font-size: var(--ws-text-bar);
+    font-weight: 650;
+    font-stretch: 75%;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    word-spacing: 0.06em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .memory-grid-title p {
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--immich-ui-muted);
+  }
+  .memory-grid-play {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.95rem 0.5rem 0.75rem;
+    border-radius: var(--ws-radius);
+    background: var(--immich-ui-dark);
+    color: var(--immich-ui-light);
+    font-size: var(--ws-text-ui);
+    font-weight: 600;
+  }
+  .memory-grid-play:hover {
+    background: color-mix(in oklab, var(--immich-ui-dark) 85%, var(--ws-accent));
+  }
+  .memory-grid-play:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: 3px;
+  }
+  .memory-grid-photos {
+    padding-bottom: 2rem;
   }
 </style>

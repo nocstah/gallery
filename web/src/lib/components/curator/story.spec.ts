@@ -1,8 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/svelte';
-import userEvent from '@testing-library/user-event';
 import { init, register, waitLocale } from 'svelte-i18n';
 import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
-import MemoryStory from '$lib/components/curator/MemoryStory.svelte';
 import StoryText from '$lib/components/curator/StoryText.svelte';
 import { curator, type Story } from '$lib/utils/curator';
 
@@ -64,30 +62,6 @@ describe('AlbumStory', () => {
     vi.mocked(curator.story).mockRejectedValue(new Error('offline'));
     const { container } = render(AlbumStory, { albumId: 'a1', description: '' });
     await waitFor(() => expect(curator.story).toHaveBeenCalled());
-    expect(container.textContent?.trim()).toBe('');
-  });
-});
-
-describe('MemoryStory', () => {
-  it('hides the story on request, remembers it, and brings it back', async () => {
-    vi.mocked(curator.story).mockResolvedValue({ story });
-    const user = userEvent.setup();
-    render(MemoryStory, { memoryId: 'm1' });
-    expect(await screen.findByText(story.text)).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Hide the story' }));
-    expect(screen.queryByText(story.text)).not.toBeInTheDocument();
-    expect(localStorage.getItem('curator-memory-story-hidden')).toBe('1');
-
-    await user.click(screen.getByRole('button', { name: 'Show the story' }));
-    expect(screen.getByText(story.text)).toBeInTheDocument();
-    expect(localStorage.getItem('curator-memory-story-hidden')).toBeNull();
-  });
-
-  it('shows nothing for a memory without a story', async () => {
-    vi.mocked(curator.story).mockResolvedValue({ story: null });
-    const { container } = render(MemoryStory, { memoryId: 'm2' });
-    await waitFor(() => expect(curator.story).toHaveBeenCalledWith({ memory: 'm2' }));
     expect(container.textContent?.trim()).toBe('');
   });
 });
