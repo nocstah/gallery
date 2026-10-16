@@ -15,7 +15,9 @@
   // Local Omarchy layer: albums in their folders as a tree, the way the Mac's Photos sidebar shows them ("should be
   // like mac with tree structure thats collapsable.. expandable"). A folder opens and closes on its chevron and opens
   // its page on its name; the open folders are remembered per tree; the folder or album on screen is lit and the
-  // folders above it open so it can be seen.
+  // folders above it open so it can be seen. Photos carried over the tree go into an album row, and a folder row
+  // springs open under them (managers/sidebar-drop); an album a drop just made lights for a moment.
+  import { dropSpring, dropTarget, sidebarDrop } from '$lib/managers/sidebar-drop.svelte';
   import { albumTreeOpen } from '$lib/stores/preferences.store';
   import type { SharedSpaceAlbumFolderDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
@@ -28,7 +30,7 @@
     mdiEyeOffOutline,
     mdiShareVariantOutline,
   } from '@mdi/js';
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
   import { get } from 'svelte/store';
 
@@ -42,9 +44,23 @@
     activeFolderId?: string | null;
     activeAlbumId?: string | null;
     label: string;
+    /** I may add photos to its albums (mine, or a Space I edit): its album rows take photos carried to them */
+    canAdd?: boolean;
   }
 
-  let { scope, folders, albums, folderHref, albumHref, activeFolderId, activeAlbumId, label }: Props = $props();
+  let {
+    scope,
+    folders,
+    albums,
+    folderHref,
+    albumHref,
+    activeFolderId,
+    activeAlbumId,
+    label,
+    canAdd = false,
+  }: Props = $props();
+
+  let tree = $state<HTMLUListElement>();
 
   // by name the way a person numbers them ("2" before "10", years in order), as on the Albums page
   const byName = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
@@ -84,6 +100,25 @@
   const isOpen = (folderId: string) => !!$albumTreeOpen[key(folderId)];
   const toggle = (folderId: string) =>
     albumTreeOpen.update((open) => ({ ...open, [key(folderId)]: !open[key(folderId)] }));
+  const setOpen = (folderId: string, value: boolean) =>
+    albumTreeOpen.update((open) => ({ ...open, [key(folderId)]: value }));
+
+  // a folder springs open under carried photos, and closes again when they go elsewhere
+  const springOf = (folderId: string) => ({
+    isOpen: () => !!get(albumTreeOpen)[key(folderId)],
+    open: () => setOpen(folderId, true),
+    close: () => setOpen(folderId, false),
+  });
+
+  // an album a drop just made is brought into the sidebar's view once its row is there
+  $effect(() => {
+    const arrived = sidebarDrop.arrived;
+    if (arrived && albums.some(({ id }) => id === arrived)) {
+      void tick().then(() =>
+        tree?.querySelector(`[data-testid="tree-album-${CSS.escape(arrived)}"]`)?.scrollIntoView({ block: 'nearest' }),
+      );
+    }
+  });
 
   // What comes on screen is never hidden in a closed folder: the folders above it open, once, when it arrives (a
   // folder closed by hand afterwards stays closed). A chain is never longer than Gallery's depth cap, so a broken
@@ -111,8 +146,13 @@
     {@const open = isOpen(folder.id)}
     {@const filled = (foldersIn[folder.id]?.length ?? 0) + (albumsIn[folder.id]?.length ?? 0) > 0}
     {@const active = folder.id === activeFolderId}
-    <li>
-      <div class="ws-tree-row" style:--depth={depth} data-active={active}>
+    <li data-drop-group>
+      <div
+        class="ws-tree-row"
+        style:--depth={depth}
+        data-active={active}
+        use:dropSpring={filled ? springOf(folder.id) : undefined}
+      >
         {#if filled}
           <button
             type="button"
@@ -153,7 +193,13 @@
   {#each albumsIn[parentId ?? ''] ?? [] as album (album.id)}
     {@const active = album.id === activeAlbumId}
     <li>
-      <div class="ws-tree-row" style:--depth={depth} data-active={active}>
+      <div
+        class="ws-tree-row"
+        style:--depth={depth}
+        data-active={active}
+        data-arrived={album.id === sidebarDrop.arrived ? '' : undefined}
+        use:dropTarget={{ kind: 'album', id: album.id, name: album.name, writable: canAdd }}
+      >
         <span class="ws-tree-toggle" aria-hidden="true"></span>
         <a
           class="ws-tree-link"
@@ -182,7 +228,7 @@
   {/each}
 {/snippet}
 
-<ul class="ws-tree" aria-label={label} data-testid="album-tree-{scope}">
+<ul bind:this={tree} class="ws-tree" aria-label={label} data-testid="album-tree-{scope}">
   {@render level(null, 0)}
 </ul>
 

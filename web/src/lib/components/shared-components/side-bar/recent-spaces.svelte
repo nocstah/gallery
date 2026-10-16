@@ -1,7 +1,10 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { isWritableSpace } from '$lib/components/shared-components/collection-selection/collection-selection-utils';
   import AlbumTree from '$lib/components/sidebar/album-tree.svelte';
   import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
+  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { dropSpring, dropTarget } from '$lib/managers/sidebar-drop.svelte';
   import { Route } from '$lib/route';
   import {
     isSpaceAlbumsExpanded,
@@ -20,6 +23,7 @@
   import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { t } from 'svelte-i18n';
+  import { get } from 'svelte/store';
 
   const sortByActivity = <T extends { lastActivityAt?: string | null }>(a: T, b: T): number => {
     const aTime = a.lastActivityAt ?? '';
@@ -75,6 +79,15 @@
       void loadAlbums(spaceId);
     }
   };
+
+  // Local Omarchy layer: photos carried over a Space go into it, and its tree springs open under them
+  // (managers/sidebar-drop); its albums take them when I may add to the Space (owner or editor)
+  const me = $derived(authManager.authenticated ? authManager.user.id : null);
+  const springOf = (spaceId: string) => ({
+    isOpen: () => isSpaceAlbumsExpanded(get(recentSpaceAlbumsExpanded), spaceId),
+    open: () => toggleAlbums(spaceId),
+    close: () => setSpaceAlbumsExpanded(spaceId, false, topSpaceIds),
+  });
 
   // Re-fetch albums for any currently-shown space whose expansion state was persisted as `true`
   // (e.g. from a prior session) but whose in-memory album cache hasn't been populated yet — covers
@@ -134,7 +147,8 @@
     expanded && page.url.pathname === `${spacePath}/albums` ? page.url.searchParams.get('folder') : null}
   {@const active =
     page.url.pathname.startsWith(spacePath) && !(expanded && !collapsed && (activeAlbumId || activeFolderId))}
-  <div>
+  {@const writable = isWritableSpace(space, me)}
+  <div data-drop-group>
     <!-- The chevron is absolutely positioned against this wrapper, so it must enclose the space row
          alone: with the expanded album rows inside it, `top-1/2` would centre the chevron on the
          whole group instead of on the space it belongs to. -->
@@ -169,6 +183,8 @@
         aria-current={active ? 'page' : undefined}
         data-active={String(active)}
         data-testid="sidebar-space-{space.id}"
+        use:dropTarget={{ kind: 'space', space, writable }}
+        use:dropSpring={hasAlbums ? springOf(space.id) : undefined}
         class="flex place-items-center gap-4 rounded-e-full py-3 transition-[padding,margin,width] delay-100 duration-100 hover:cursor-pointer hover:bg-subtle hover:text-immich-primary dark:text-immich-dark-fg dark:hover:bg-immich-dark-gray dark:hover:text-immich-dark-primary {collapsed
           ? 'ms-4 w-12 ps-3'
           : 'mx-3 w-[calc(100%-1.5rem)] ps-12 group-hover:sm:pe-4 md:pe-4'}"
@@ -210,6 +226,7 @@
         albumHref={(albumId) => Route.viewSpaceAlbum({ spaceId: space.id, albumId })}
         {activeFolderId}
         {activeAlbumId}
+        canAdd={writable}
       />
     {/if}
   </div>

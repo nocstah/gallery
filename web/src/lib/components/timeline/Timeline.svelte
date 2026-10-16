@@ -38,7 +38,8 @@
   import { isAssetViewerRoute, navigate } from '$lib/utils/navigation';
   import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
   import { getTimes, type ScrubberListener } from '$lib/utils/timeline-util';
-  import { type AlbumResponseDto, type PersonResponseDto, type UserResponseDto } from '@immich/sdk';
+  import { eventManager } from '$lib/managers/event-manager.svelte';
+  import { AssetVisibility, type AlbumResponseDto, type PersonResponseDto, type UserResponseDto } from '@immich/sdk';
   import { DateTime } from 'luxon';
   import { onDestroy, onMount, tick, untrack, type Snippet } from 'svelte';
   import type { UpdatePayload } from 'vite';
@@ -823,13 +824,20 @@
 {/if}
 
 <!-- Right margin MUST be equal to the width of scrubber -->
-<!-- Local Omarchy layer: use:marqueeSelect draws a drag-selection box over the grid (lib/actions/marquee-select.ts) -->
+<!-- Local Omarchy layer: use:marqueeSelect draws a drag-selection box over the grid (lib/actions/marquee-select.ts);
+     photos carried to To do, Villa or QR in the sidebar leave it as after their keys (TimelineKeyboardActions) -->
 <section
   use:marqueeSelect={{
     assetInteraction,
     enabled: !singleSelect && !assetViewerManager.isViewing,
     assetFor: (id) => timelineManager.getTimelineMonthByAssetId(id)?.findAssetById({ id }),
     locked: (id) => timelineManager.albumAssets.has(id),
+    onSidebarDrop: ({ archived }) => {
+      if (archived.length > 0) {
+        timelineManager.update(archived, (asset) => (asset.visibility = AssetVisibility.Archive));
+        eventManager.emit('AssetsArchive', archived);
+      }
+    },
   }}
   id="asset-grid"
   class={['h-full scrollbar-hidden overflow-y-auto outline-none', { 'm-0': isEmpty }, { 'ms-0': !isEmpty }]}

@@ -2,7 +2,8 @@ import type { SharedSpaceAlbumFolderDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { get } from 'svelte/store';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { sidebarDrop, SPRING_MS } from '$lib/managers/sidebar-drop.svelte';
 import { albumTreeOpen } from '$lib/stores/preferences.store';
 import AlbumTree from './album-tree.svelte';
 
@@ -82,5 +83,53 @@ describe('album tree', () => {
       expect.stringMatching(/album_not_in_photos|Not in Photos/),
     );
     expect(screen.queryByTestId('tree-album-hidden-highlights')).not.toBeInTheDocument();
+  });
+});
+
+// Local Omarchy layer: photos carried to the tree go into an album row, and a folder row springs open under them
+// (managers/sidebar-drop)
+describe('album tree under carried photos', () => {
+  let nav: HTMLElement;
+
+  beforeEach(() => {
+    albumTreeOpen.set({});
+    vi.useFakeTimers();
+    nav = document.createElement('nav');
+    nav.id = 'sidebar';
+    document.body.append(nav);
+  });
+
+  afterEach(() => {
+    sidebarDrop.end();
+    vi.useRealTimers();
+    nav.remove();
+  });
+
+  const row = (testId: string) => screen.getByTestId(testId).closest('.ws-tree-row')!;
+
+  it('takes photos into an album I may add to', () => {
+    render(AlbumTree, { props: { ...props, canAdd: true }, target: nav });
+    sidebarDrop.begin({ ids: ['a'], assets: [], source: {} });
+    expect(sidebarDrop.hover([row('tree-album-highlights')])).toEqual({ label: 'drop_add_to' });
+    expect(row('tree-album-highlights')).toHaveAttribute('data-drop-target');
+    // a folder takes none
+    expect(sidebarDrop.hover([row('tree-folder-trips')])).toEqual({});
+  });
+
+  it('keeps album rows dark when I may not add to them (a Space I only view)', () => {
+    render(AlbumTree, { props, target: nav });
+    sidebarDrop.begin({ ids: ['a'], assets: [], source: {} });
+    expect(sidebarDrop.hover([row('tree-album-highlights')])).toEqual({});
+  });
+
+  it('springs a folder open under the photos and closes it again when they go elsewhere', () => {
+    render(AlbumTree, { props: { ...props, canAdd: true }, target: nav });
+    expect(row('tree-folder-empty')).not.toHaveAttribute('data-drop-spring');
+    sidebarDrop.begin({ ids: ['a'], assets: [], source: {} });
+    sidebarDrop.hover([row('tree-folder-trips')]);
+    vi.advanceTimersByTime(SPRING_MS);
+    expect(get(albumTreeOpen)).toEqual({ 'albums:trips': true });
+    sidebarDrop.end();
+    expect(get(albumTreeOpen)).toEqual({ 'albums:trips': false });
   });
 });

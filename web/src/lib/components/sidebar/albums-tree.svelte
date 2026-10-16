@@ -76,5 +76,6 @@
     albumHref={(id) => Route.viewAlbum({ id })}
     {activeFolderId}
     {activeAlbumId}
+    canAdd
   />
 {/if}

@@ -1,22 +1,29 @@
 // Local Omarchy layer: Mac-Photos-style marquee selection and drag-to-stack on the timeline, and the same selection
-// box on every other photo grid (search results, folders: GalleryViewer), where a hold only selects. One rule decides
-// what a press on the grid does, and it depends only on timing, never on what is already selected:
+// box on every other photo grid (search results, folders: GalleryViewer). One rule decides what a press on the grid
+// does, and it depends only on timing, never on what is already selected:
 //
 //   press and move right away   a selection box. Every tile it touches is selected live, and tiles it leaves
 //                               again are released. Shift or Ctrl/Cmd adds to the selection instead of replacing it.
 //   press and hold on a photo   the photo lifts out of the grid (with the rest of the selection, when it is part
-//                               of one). Move to carry it and drop it on another photo to stack them there: the
-//                               drop target becomes the cover, and stacks either side already heads fold in.
-//                               Esc or an empty drop puts it back; releasing without moving toggles its selection,
-//                               the way Immich's long-press does. Without stacking (`stacking: false`) nothing
-//                               lifts: releasing toggles the selection and moving draws the box.
+//                               of one). Move to carry it: drop it on another photo to stack them there (the timeline
+//                               only: the drop target becomes the cover, and stacks either side already heads fold
+//                               in), or on the sidebar, into an album, To do, Villa, QR, a Space or a new album
+//                               (managers/sidebar-drop). The carried photo says what a drop would do. Esc or an empty
+//                               drop puts it back; releasing without moving toggles its selection, the way Immich's
+//                               long-press does. Where neither can take it (no stacking, no sidebar on screen)
+//                               nothing lifts: releasing toggles the selection and moving draws the box.
 //   click                       still opens the photo.
 //
-// Dragging near the top or bottom edge scrolls the grid (or the page or pane it scrolls in: `scroller`). Only rendered
-// tiles can be hit, so tiles that scroll out of view keep whatever state the box gave them. Touch keeps Immich's own
-// long-press (Thumbnail.svelte skips mouse and pen holds inside [data-ws-gestures]).
+// Dragging near the top or bottom edge scrolls the grid (or the page or pane it scrolls in: `scroller`), or the
+// sidebar while over it. Only rendered tiles can be hit, so tiles that scroll out of view keep whatever state the box
+// gave them. Touch keeps Immich's own long-press (Thumbnail.svelte skips mouse and pen holds inside
+// [data-ws-gestures]).
+import { t } from 'svelte-i18n';
+import { get } from 'svelte/store';
 import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
+import { sidebarDrop, sourceOf, type Offer } from '$lib/managers/sidebar-drop.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+import type { DropResult } from '$lib/services/sidebar-drop.service';
 
 type Options = {
   assetInteraction: AssetMultiSelectManager;
@@ -25,10 +32,13 @@ type Options = {
   assetFor: (id: string) => TimelineAsset | undefined;
   /** photos a hold may not pick (those already in the album being added to) */
   locked?: (id: string) => boolean;
-  /** hold and drag a photo onto another to stack them (the timeline, the default); elsewhere a hold only selects */
+  /** hold and drag a photo onto another to stack them (the timeline, the default); elsewhere photos only go to the
+   * sidebar */
   stacking?: boolean;
   /** what scrolls, when it is not the grid itself: the pane the grid sits in, or null for the page */
   scroller?: HTMLElement | null;
+  /** a drop on the sidebar is done: the photos To do, Villa or QR took out of view leave the grid */
+  onSidebarDrop?: (result: DropResult) => void;
 };
 type Phase = 'idle' | 'pressed' | 'marquee' | 'held' | 'lifted' | 'dragging';
 type Box = { x: number; y: number; w: number; h: number };
@@ -38,6 +48,7 @@ const THRESHOLD = 6;
 const LIFT_DELAY = 300;
 const EDGE = 56;
 const GHOST_SIZE = 104; // longest side of the carried photo
+const LABEL_ROOM = 60; // what the carried photo says, under it (two lines)
 const SETTLE = 180;
 
 const tileFor = (grid: HTMLElement, id: string) =>
@@ -60,7 +71,10 @@ export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
   let box: HTMLDivElement | undefined;
   // lift and drag
   let dragIds: string[] = [];
+  let carried: TimelineAsset[] = []; // the lifted photos as the grid knows them, for the sidebar
+  let fromSelection = false; // the selection travels, so it goes once a drop has used it up
   let ghost: HTMLDivElement | undefined;
+  let label: HTMLSpanElement | undefined; // what a drop here would do, under the carried photo
   let home: Box | undefined; // where the lifted photo sits in the grid
   let dropTarget: HTMLElement | undefined;
   let scrolling: EventTarget | undefined; // what scrolls under a press, for its listener
@@ -156,16 +170,20 @@ export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
     if (phase !== 'pressed' || !startTile?.isConnected) {
       return;
     }
-    if (options.stacking === false) {
+    if (options.stacking === false && !sidebarDrop.available()) {
       // nothing to carry it to: the hold only selects, and moving on draws the box
       phase = 'held';
       return;
     }
     phase = 'lifted';
     const id = startTile.dataset.asset!;
-    const selection = options.assetInteraction.assets.map((asset) => asset.id);
+    const selected = options.assetInteraction.assets;
+    const selection = selected.map((asset) => asset.id);
     // a photo that is part of the selection carries the selection with it; any other photo travels alone
-    dragIds = selection.includes(id) ? [id, ...selection.filter((other) => other !== id)] : [id];
+    fromSelection = selection.includes(id);
+    dragIds = fromSelection ? [id, ...selection.filter((other) => other !== id)] : [id];
+    const asset = fromSelection ? undefined : options.assetFor(id);
+    carried = fromSelection ? [...selected] : asset ? [asset] : [];
     for (const dragId of dragIds) {
       tileFor(grid, dragId)?.setAttribute('data-dragging', '');
     }
@@ -186,9 +204,14 @@ export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
     }
     if (dragIds.length > 1) {
       const count = document.createElement('span');
+      count.className = 'ws-drag-count';
       count.textContent = String(dragIds.length);
       ghost.append(count);
     }
+    label = document.createElement('span');
+    label.className = 'ws-drag-label';
+    label.hidden = true;
+    ghost.append(label);
     document.body.append(ghost);
     // commit the resting state so the lift animates from it
     void ghost.getBoundingClientRect();
@@ -206,13 +229,16 @@ export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
   const beginDrag = () => {
     phase = 'dragging';
     document.body.classList.replace('ws-lifted', 'ws-dragging');
+    if (sidebarDrop.available()) {
+      sidebarDrop.begin({ ids: [...dragIds], assets: carried, source: sourceOf(location.pathname) });
+    }
     moveGhost();
     // the photo glides from its tile to the cursor, then follows it without easing
-    const carried = ghost;
+    const gliding = ghost;
     setTimeout(
       () => {
-        if (carried && carried === ghost) {
-          carried.classList.add('is-following');
+        if (gliding && gliding === ghost) {
+          gliding.classList.add('is-following');
         }
       },
       reducedMotion() ? 0 : SETTLE,
@@ -229,36 +255,77 @@ export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
     dropTarget?.setAttribute('data-drop-target', '');
   };
 
+  /** What a drop here would do, under the carried photo: "Stack", "Add to Bali", "New album" and its name. */
+  const offer = (next: Offer | undefined) => {
+    const said = `${next?.label ?? ''}\n${next?.detail ?? ''}`;
+    if (!label || label.dataset.said === said) {
+      return;
+    }
+    label.dataset.said = said;
+    label.hidden = !next?.label;
+    label.replaceChildren();
+    if (next?.label) {
+      const what = document.createElement('span');
+      what.textContent = next.label;
+      label.append(what);
+    }
+    if (next?.detail) {
+      const detail = document.createElement('small');
+      detail.textContent = next.detail;
+      label.append(detail);
+    }
+  };
+
   const moveGhost = () => {
     if (!ghost || !home) {
       return;
     }
     const scale = Math.min(1, GHOST_SIZE / Math.max(home.w, home.h));
-    place(ghost, { x: pointer.x + 14, y: pointer.y + 14, w: home.w * scale, h: home.h * scale });
-    const tile = document
-      .elementsFromPoint(pointer.x, pointer.y)
-      .map((element) => element.closest<HTMLElement>(TILE))
-      .find(Boolean);
+    const w = home.w * scale;
+    const h = home.h * scale;
+    // it hangs below and right of the pointer, with what it says under it, unless that would leave the window (New
+    // album sits at the sidebar's foot)
+    const up = pointer.y + 14 + h + LABEL_ROOM > innerHeight;
+    const back = pointer.x + 14 + Math.max(w, LABEL_ROOM * 3) > innerWidth;
+    ghost.classList.toggle('is-up', up);
+    place(ghost, { x: back ? pointer.x - 14 - w : pointer.x + 14, y: up ? pointer.y - 14 - h : pointer.y + 14, w, h });
+    const stack = document.elementsFromPoint(pointer.x, pointer.y);
+    // over the sidebar the rows take the photos, never a photo behind them
+    const sidebar = sidebarDrop.hover(stack);
+    if (sidebar) {
+      setDropTarget(undefined);
+      offer(sidebar);
+      return;
+    }
+    const tile =
+      options.stacking === false ? undefined : stack.map((element) => element.closest<HTMLElement>(TILE)).find(Boolean);
     setDropTarget(tile && !dragIds.includes(tile.dataset.asset!) ? tile : undefined);
+    offer(dropTarget ? { label: get(t)('stack') } : undefined);
   };
 
   const dragFrame = () => {
-    if (autoScroll()) {
+    const overSidebar = !!sidebarDrop.carrying && sidebarDrop.over(pointer);
+    if (overSidebar ? sidebarDrop.scroll(pointer) : autoScroll()) {
       moveGhost();
     }
     frame = requestAnimationFrame(dragFrame);
   };
 
-  /** Animate the carried photo to a tile (or back home) and remove it. */
-  const settleGhost = (into: HTMLElement | undefined) => {
+  /** Animate the carried photo to a tile, into a sidebar row (where the row's icon is), or back home, and remove it. */
+  const settleGhost = (into: HTMLElement | undefined, { row = false } = {}) => {
     const leaving = ghost;
     ghost = undefined;
+    label = undefined;
     if (!leaving) {
       return;
     }
     leaving.classList.remove('is-following', 'is-lifted');
+    leaving.querySelector('.ws-drag-label')?.remove();
     const rect = into?.isConnected ? into.getBoundingClientRect() : undefined;
-    if (rect) {
+    if (rect && row) {
+      const size = Math.min(24, rect.height);
+      place(leaving, { x: rect.left + 16, y: rect.top + (rect.height - size) / 2, w: size, h: size });
+    } else if (rect) {
       place(leaving, { x: rect.left, y: rect.top, w: rect.width, h: rect.height });
     }
     leaving.classList.add('is-settling');
@@ -356,7 +423,26 @@ export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
       }
       case 'dragging': {
         const target = dropTarget?.dataset.asset;
-        if (target) {
+        const row = sidebarDrop.row;
+        const into = sidebarDrop.target;
+        const carry = sidebarDrop.carrying;
+        if (into && carry) {
+          settleGhost(row, { row: true });
+          // the folders on the way to the row stay open; the photos go there once the drop's service has loaded
+          sidebarDrop.end(true);
+          const selection = fromSelection;
+          void import('$lib/services/sidebar-drop.service')
+            .then(({ dropOn }) => dropOn(into, carry))
+            .then((result) => {
+              if (!result) {
+                return;
+              }
+              if (result.clear && selection) {
+                options.assetInteraction.clear();
+              }
+              options.onSidebarDrop?.(result);
+            });
+        } else if (target) {
           settleGhost(dropTarget);
           // the drop target leads, so it becomes the cover; stacks it or the carried photos head merge in. The ids
           // are taken now: finish() below empties dragIds before the service has loaded, and the drop then sent the
@@ -415,12 +501,18 @@ export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
       delete tile.dataset.dragging;
     }
     setDropTarget(undefined);
+    // a drag that ends here without a drop on the sidebar closes the folders it opened there
+    if (sidebarDrop.carrying) {
+      sidebarDrop.end();
+    }
     document.body.classList.remove('ws-marquee-active', 'ws-lifted', 'ws-dragging');
     phase = 'idle';
     start = undefined;
     startTile = undefined;
     home = undefined;
     dragIds = [];
+    carried = [];
+    fromSelection = false;
   };
 
   // native image dragging would hijack the gesture

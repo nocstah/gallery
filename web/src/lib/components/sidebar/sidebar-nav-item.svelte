@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { dropSpring, dropTarget, type DropTarget } from '$lib/managers/sidebar-drop.svelte';
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
   // @immich/ui re-exports its types (dist/index.d.ts: `export * from './types.js'`),
   // so IconLike / IconProps come from the package rather than being redeclared here.
@@ -18,9 +19,16 @@
     items?: Snippet;
     /** Local Omarchy layer: how many wait there (To do), shown at the row's end while the sidebar is expanded */
     count?: number;
+    /** Local Omarchy layer: photos carried to this row go there (To do, Villa, QR: managers/sidebar-drop) */
+    drop?: DropTarget;
   }
 
-  let { title, href, icon, activeIcon, isActive, expanded = $bindable(false), items, count }: Props = $props();
+  let { title, href, icon, activeIcon, isActive, expanded = $bindable(false), items, count, drop }: Props = $props();
+
+  // Local Omarchy layer: a row that opens into a tree (Albums, Shared) springs open under carried photos
+  const spring = $derived(
+    items ? { isOpen: () => expanded, open: () => (expanded = true), close: () => (expanded = false) } : undefined,
+  );
 
   // Rail collapses to icons only; hovering or focusing floats the labels back without
   // touching the grid column, so `collapsed` follows hoverExpanded too.
@@ -80,8 +88,8 @@
   );
 </script>
 
-<div>
-  <div class="relative flex items-center">
+<div data-drop-group>
+  <div class="relative flex items-center" use:dropTarget={drop} use:dropSpring={spring}>
     <!-- Ported from upstream NavbarItem: the sub-tree collapse/expand control. Hidden
          in rail mode - the sub-tree itself is hidden there too (see below), and there is
          nothing to toggle when the label isn't visible. -->

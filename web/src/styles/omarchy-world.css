@@ -1244,7 +1244,7 @@ div.z-70[style*='max-height: 0px']:has(> ul[role='menu']) {
   object-fit: cover;
   border-radius: inherit;
 }
-.ws-drag-ghost span {
+.ws-drag-ghost .ws-drag-count {
   position: absolute;
   top: -8px;
   right: -8px;
@@ -1253,9 +1253,45 @@ div.z-70[style*='max-height: 0px']:has(> ul[role='menu']) {
   padding: 0 6px;
   border-radius: var(--ws-radius);
   background: var(--ws-accent);
-  color: #fff;
+  color: var(--omarchy-on-accent, #fff);
   font: 600 12px/24px var(--ws-font-data);
   text-align: center;
+}
+/* what a drop where the pointer is would do ("Stack", "Add to Bali", "New album" and the name it gets): a small
+   popup under the carried photo, on the ground's own material since it floats */
+.ws-drag-ghost .ws-drag-label {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  width: max-content;
+  max-width: 18rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--ws-hairline);
+  border-radius: var(--ws-radius);
+  background: var(--immich-ui-light);
+  color: var(--immich-ui-dark);
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
+  font-size: var(--ws-text-meta);
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.ws-drag-ghost.is-up .ws-drag-label {
+  top: auto;
+  bottom: calc(100% + 14px);
+}
+.ws-drag-ghost .ws-drag-label[hidden] {
+  display: none;
+}
+.ws-drag-label > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ws-drag-label small {
+  font-size: inherit;
+  font-weight: 400;
+  color: var(--immich-ui-muted);
 }
 @media (prefers-reduced-motion: reduce) {
   .ws-drag-ghost {
@@ -1279,6 +1315,79 @@ body.ws-dragging * {
   box-shadow:
     inset 0 0 0 3px var(--ws-accent),
     inset 0 0 0 9999px color-mix(in oklab, var(--ws-accent) 18%, transparent);
+}
+
+/* ---- carrying photos to the sidebar (managers/sidebar-drop) ----
+   The row that would take the photos lights as the photo they would stack on does: the accent border and a tint of
+   it, the response to where the pointer is (the inverted row stays what is on screen). Nothing else answers the
+   pointer while photos are carried, so a row that takes no photos (a folder, Shared links, the album they come from)
+   never seems to. */
+body.ws-dragging
+  #sidebar
+  :is(a, button, .ws-tree-row):hover:not([data-active='true'], [data-drop-target], [data-drop-target] > a) {
+  background-color: transparent;
+}
+#sidebar :is(a, .ws-tree-row, .ws-drop-new)[data-drop-target],
+#sidebar div[data-drop-target] > a {
+  background-color: color-mix(in oklab, var(--ws-accent) 14%, transparent);
+  box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+  color: var(--immich-ui-dark);
+}
+/* an album a drop just made: lit the same way where it now sits in the tree, then let go */
+#sidebar .ws-tree-row[data-arrived] {
+  animation: ws-arrived 2400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes ws-arrived {
+  0%,
+  55% {
+    background-color: color-mix(in oklab, var(--ws-accent) 14%, transparent);
+    box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 var(--ws-border) transparent;
+  }
+}
+/* New album: at the foot of the sidebar's view while photos are carried, a dashed hairline like Import's drop zone */
+.ws-drop-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: 0.5rem 0.75rem;
+  background: var(--immich-ui-light);
+  box-shadow: inset 0 1px 0 var(--ws-hairline);
+  animation: ws-dock-in 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes ws-dock-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+.ws-drop-new {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-height: 3rem;
+  padding-inline: 1rem;
+  border: 1px dashed color-mix(in oklab, var(--immich-ui-dark) 28%, transparent);
+  border-radius: var(--ws-radius);
+  color: var(--immich-ui-muted);
+  font-size: var(--ws-text-ui);
+  font-weight: 500;
+}
+#sidebar .ws-drop-new[data-drop-target] {
+  border-color: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-drop-dock {
+    animation: none;
+  }
+  #sidebar .ws-tree-row[data-arrived] {
+    animation: none;
+    background-color: color-mix(in oklab, var(--ws-accent) 14%, transparent);
+    box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+  }
 }
 
 /* ---- AI inbox (routes/(user)/inbox, Curator) ----

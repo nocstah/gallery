@@ -603,7 +603,8 @@
 />
 
 <!-- Local Omarchy layer: use:marqueeSelect draws the timeline's drag-selection box here too (lib/actions/marquee-select.ts);
-     a hold only selects, as search results have no stacking -->
+     a hold lifts photos to carry them to the sidebar (no stacking here), and those To do, Villa or QR take out of
+     Photos leave this grid, as after their keys -->
 <div
   bind:this={galleryViewerElement}
   data-testid="gallery-viewer"
@@ -613,6 +614,12 @@
     assetFor: tileAsset,
     stacking: false,
     scroller: scrollElement ?? null,
+    onSidebarDrop: ({ archived }) => {
+      if (archived.length > 0) {
+        const gone = new Set(archived);
+        assets = assets.filter((asset) => !gone.has(asset.id));
+      }
+    },
   }}
 >
   {#if enableGrouping && assets.length > 0}

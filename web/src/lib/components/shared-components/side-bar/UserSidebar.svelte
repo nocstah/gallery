@@ -5,6 +5,7 @@
   import RecentSpaces from '$lib/components/shared-components/side-bar/recent-spaces.svelte';
   import SharedLinksRow from '$lib/components/shared-components/side-bar/shared-links-row.svelte';
   import AlbumsTree from '$lib/components/sidebar/albums-tree.svelte';
+  import NewAlbumDrop from '$lib/components/sidebar/new-album-drop.svelte';
   import SidebarNavGroup from '$lib/components/sidebar/sidebar-nav-group.svelte';
   import SidebarNavItem from '$lib/components/sidebar/sidebar-nav-item.svelte';
   import Sidebar from '$lib/components/sidebar/sidebar-shell.svelte';
@@ -93,7 +94,8 @@
   <SidebarNavItem title={$t('favorites')} href={Route.favorites()} icon={mdiHeartOutline} activeIcon={mdiHeart} />
 
   <!-- Local Omarchy layer: the special albums, photos kept out of Photos (To do, Villa: managers/special-albums), with
-       how many each holds; the album itself lights its row, not Albums -->
+       how many each holds; the album itself lights its row, not Albums. Photos carried to one move there, as its key
+       moves them (managers/sidebar-drop) -->
   {#each specialAlbums as special (special.key)}
     <SidebarNavItem
       title={$t(special.words.label)}
@@ -102,6 +104,7 @@
       icon={special.icon}
       activeIcon={special.activeIcon}
       count={special.count}
+      drop={{ kind: 'special', special, name: $t(special.words.label) }}
     />
   {/each}
 
@@ -200,4 +203,7 @@
       <BottomInfo />
     </div>
   {/if}
+
+  <!-- Local Omarchy layer: New album, at the sidebar's foot while photos are carried (managers/sidebar-drop) -->
+  <NewAlbumDrop />
 </Sidebar>
