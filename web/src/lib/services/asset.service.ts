@@ -63,7 +63,6 @@ import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.sve
 import AssetTagModal from '$lib/modals/AssetTagModal.svelte';
 import ProfileImageCropperModal from '$lib/modals/ProfileImageCropperModal.svelte';
 import SelectionShareModal from '$lib/modals/SelectionShareModal.svelte';
-import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
 import { Route } from '$lib/route';
 import { SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
 import { getAssetMediaUrl, getSharedLink, sleep } from '$lib/utils';
@@ -320,11 +319,18 @@ export const getAssetActions = (
   const canAddToAlbum = isOwner || space === undefined || space.canWrite;
   const restrictToSpaceId = !isOwner && space?.canWrite ? space.id : undefined;
 
+  // Local Omarchy layer: the photo's own Share opens the Share sheet for photos (modals/SelectionShareModal), as a
+  // selection's does: Add to the Space that leads (my own photo only, never the Space it is seen through), then a link
   const Share: ActionItem = {
     title: $t('share'),
     icon: mdiShareVariantOutline,
     $if: () => canShare && !asset.isTrashed && asset.visibility !== AssetVisibility.Locked,
-    onAction: () => modalManager.show(SharedLinkCreateModal, { assetIds: [asset.id] }),
+    onAction: () =>
+      modalManager.show(SelectionShareModal, {
+        assetIds: [asset.id],
+        ownedAssetIds: isOwner ? [asset.id] : [],
+        fromSpaceId: space?.id,
+      }),
   };
 
   const Download: ActionItem = {

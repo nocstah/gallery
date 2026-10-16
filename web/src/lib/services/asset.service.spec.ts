@@ -148,6 +148,21 @@ describe('AssetService', () => {
       const assetActions = getAssetActions(() => '', asset);
       expect(assetActions.Share.$if?.()).toStrictEqual(false);
     });
+
+    // Local Omarchy layer: the photo's Share opens the Share sheet for photos, as a selection's does
+    it('opens the Share sheet for the photo, never offering the Space it is seen through', async () => {
+      vitest.mocked(modalManager.show).mockClear();
+      authManager.setUser(userAdminFactory.build({ id: 'owner' }));
+      setSharedLink(undefined);
+      const asset = assetFactory.build({ id: 'photo-1', ownerId: 'owner' });
+      const { Share } = getAssetActions(() => '', asset, { space: { id: 'space-1', canWrite: true } });
+      await Share.onAction({ action: Share, event: new Event('click') });
+      expect(modalManager.show).toHaveBeenCalledWith(SelectionShareModal, {
+        assetIds: ['photo-1'],
+        ownedAssetIds: ['photo-1'],
+        fromSpaceId: 'space-1',
+      });
+    });
   });
 
   describe('normalizeAngle', () => {
