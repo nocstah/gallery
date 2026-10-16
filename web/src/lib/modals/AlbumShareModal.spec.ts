@@ -29,7 +29,7 @@ vi.mock('$lib/managers/server-config-manager.svelte', () => ({
   serverConfigManager: { value: { externalDomain: 'https://photos.example' } },
 }));
 vi.mock('$lib/services/album.service', () => ({
-  getAlbumActions: () => ({ AddUsers: { title: 'Add user', onAction: addUsers } }),
+  getAlbumActions: () => ({ AddUsers: { title: 'Add people', onAction: addUsers } }),
   handleRemoveUserFromAlbum: vi.fn(),
   handleUpdateUserAlbumRole: vi.fn(),
 }));
@@ -231,7 +231,7 @@ describe('AlbumShareModal', () => {
 
     const people = screen.getByTestId('album-share-people');
     expect(within(people).getByText('Anna')).toBeInTheDocument();
-    await userEvent.click(within(people).getByRole('button', { name: 'Add user' }));
+    await userEvent.click(within(people).getByRole('button', { name: 'Add people' }));
     expect(addUsers).toHaveBeenCalled();
   });
 });

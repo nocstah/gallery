@@ -21,7 +21,6 @@ import { modalManager, toastManager, type ActionItem } from '@immich/ui';
 import {
   mdiDownload,
   mdiImageOutline,
-  mdiLink,
   mdiPlus,
   mdiPlusBoxOutline,
   mdiRenameOutline,
@@ -48,7 +47,6 @@ import AddUsersModal from '$lib/modals/AddUsersModal.svelte';
 import AlbumEditModal from '$lib/modals/AlbumEditModal.svelte';
 import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
 import AlbumShareModal from '$lib/modals/AlbumShareModal.svelte';
-import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
 import SpacePickerModal from '$lib/modals/SpacePickerModal.svelte';
 import { Route } from '$lib/route';
 import { userInteraction } from '$lib/stores/user.svelte';
@@ -82,7 +80,8 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
   const isEditor = isAlbumEditor(album);
 
   const AddUsers: ActionItem = {
-    title: $t('add_user'),
+    // Local Omarchy layer: the Share sheet's People: people with their own Gallery account, not "users"
+    title: $t('album_add_people'),
     icon: mdiPlus,
     color: 'primary',
     onAction: () =>
@@ -91,13 +90,6 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
         // TODO that explicit UserResponseDto[] shouldn't be necessary, but svelte's types seem to be messed up right now and AlbumAddUsersModal has a bad type
         onAddUsers: (users: UserResponseDto[]) => handleAddUsersToAlbum(album, users),
       }),
-  };
-
-  const CreateSharedLink: ActionItem = {
-    title: $t('create_link'),
-    icon: mdiLink,
-    color: 'primary',
-    onAction: () => modalManager.show(SharedLinkCreateModal, { albumId: album.id }),
   };
 
   const Delete: ActionItem = {
@@ -197,7 +189,6 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
 
   return {
     AddUsers,
-    CreateSharedLink,
     Delete,
     Download,
     Edit,
