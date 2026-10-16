@@ -12,6 +12,7 @@
   import { shortcuts } from '$lib/actions/shortcut';
   import { sidebarMedia } from '$lib/stores/sidebar-media.svelte';
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
+  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import type { HeaderButtonActionItem } from '$lib/types';
   import { openFileUploadDialog } from '$lib/utils/file-uploader';
   import { getTabbable } from '$lib/utils/focus-util';
@@ -36,6 +37,11 @@
     /** Local Omarchy layer: the page's selection bar fits the navbar's 4rem, so swapping them moves nothing */
     barFitsNavbar?: boolean;
     title?: string | undefined;
+    /**
+     * Local Omarchy layer: the page heads its body with its name as a poster (the AI inbox, Command center): the bar
+     * leaves the name to it, and carries it only on a phone, where the poster gives way (styles/omarchy-world.css)
+     */
+    titleInBody?: boolean;
     description?: string | undefined;
     scrollbar?: boolean;
     use?: ActionArray;
@@ -51,6 +57,7 @@
     hideNavbar = false,
     barFitsNavbar = false,
     title = undefined,
+    titleInBody = false,
     description = undefined,
     scrollbar = true,
     use = [],
@@ -69,7 +76,8 @@
   );
 
   let scrollbarClass = $derived(scrollbar ? 'immich-scrollbar' : 'scrollbar-hidden');
-  let hasHeaderRow = $derived(!!(title || buttons));
+  const titleInBar = $derived(!!title && (!titleInBody || mediaQueryManager.isPhone));
+  let hasHeaderRow = $derived(titleInBar || !!buttons);
   // Local Omarchy layer: the page's title row lives in the one bar (OmarchyBar, through the bar slot), so the content
   // starts at the top of the panel instead of under a second 64px bar
   let hasTitleClass = 'top-0 h-full';
@@ -142,6 +150,7 @@
   };
   $effect(() => {
     void title;
+    void titleInBar;
     void description;
     void hasHeading;
     if (!pageBarBox) {
@@ -327,7 +336,7 @@
       bind:this={pageTitleBox}
     >
       {@render leading?.()}
-      {#if title}
+      {#if titleInBar}
         <div class="ws-page-title min-w-0 truncate" tabindex="-1" id={headerId} data-testid="page-header">{title}</div>
       {/if}
       {#if description}
@@ -440,7 +449,11 @@
   {/if}
 
   <main class="relative">
-    <div class="{scrollbarClass} absolute {hasTitleClass} w-full overflow-y-auto p-2" use:useActions={use}>
+    <div
+      class="{scrollbarClass} absolute {hasTitleClass} w-full overflow-y-auto p-2"
+      data-title-in-bar={titleInBody && titleInBar ? '' : undefined}
+      use:useActions={use}
+    >
       {@render children?.()}
     </div>
   </main>

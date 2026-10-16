@@ -2378,3 +2378,15 @@ label.ws-sheet-title {
   color: var(--immich-ui-muted);
   font-size: var(--ws-text-body);
 }
+
+/* ---- the one bar on a phone (components/layouts/UserPageLayout): a page that heads its body with its name as a poster
+   (the AI inbox, Command center, Chat, Ask) hands the name to the bar there, so the bar has something to say, and the
+   poster steps aside: one title on screen, still the page's heading for a screen reader; its count and controls stay */
+[data-title-in-bar] .ws-inbox-head > .ws-inbox-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

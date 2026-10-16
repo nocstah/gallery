@@ -740,6 +740,23 @@
     };
   });
 
+  // Local Omarchy layer: the Years and Months overviews name themselves in the bar where the month heading and the
+  // years stood (it was empty on a phone, the wordmark alone on a wider screen), with the span of years they lay out
+  // in data type; the Years / Months / All control above the photos stays the way between them
+  const overviewTitle = $derived(
+    !showSearchResults && timelineManager && timelineGrouping !== 'day'
+      ? $t(timelineGrouping === 'year' ? 'timeline_grouping_years' : 'timeline_grouping_months')
+      : undefined,
+  );
+  const overviewSpan = $derived.by(() => {
+    const years = overviewTitle ? (timelineManager?.timelineBuckets ?? []).map(({ date }) => date.year) : [];
+    if (years.length === 0) {
+      return;
+    }
+    const [first, last] = [Math.min(...years), Math.max(...years)];
+    return first === last ? String(first) : `${first}–${last}`;
+  });
+
   // Local Omarchy layer: with filters on, the grouping row and the filters stand above the photos instead of the year
   // strip, and the bar keeps the month heading alone, so it still follows the photos as they scroll
   const headingAlone = $derived(
@@ -795,7 +812,13 @@
   {/if}
 {/snippet}
 
-<UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} barFitsNavbar scrollbar={false}>
+<UserPageLayout
+  hideNavbar={assetMultiSelectManager.selectionActive}
+  barFitsNavbar
+  scrollbar={false}
+  title={overviewTitle}
+  description={overviewSpan}
+>
   <div class="flex h-full">
     {#key showSearchResults ? `photos-search-${committedQuery.trim()}:${$lang}` : 'photos-browse'}
       <FilterPanel

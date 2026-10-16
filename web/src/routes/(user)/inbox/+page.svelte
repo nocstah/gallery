@@ -57,7 +57,8 @@
   });
 </script>
 
-<UserPageLayout>
+<!-- Local Omarchy layer: the poster heads the page; on a phone its name is the bar's (UserPageLayout titleInBody) -->
+<UserPageLayout title={data.meta.title} titleInBody>
   <div class="ws-inbox">
     <header class="ws-inbox-head">
       <h1 class="ws-inbox-title">{data.meta.title}</h1>

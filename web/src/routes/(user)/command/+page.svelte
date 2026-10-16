@@ -67,9 +67,13 @@
     void searchMemories({ $for: DateTime.now().toISODate() ?? undefined })
       .then((found) => (memory = found.find((m) => m.assets.length > 0)))
       .catch(() => undefined);
-    timers = [setInterval(refreshFast, 5000), setInterval(refreshSlow, 60_000)];
+    timers = [setInterval(() => void refreshFast(), 5000), setInterval(() => void refreshSlow(), 60_000)];
   });
-  onDestroy(() => timers.forEach((timer) => clearInterval(timer)));
+  onDestroy(() => {
+    for (const timer of timers) {
+      clearInterval(timer);
+    }
+  });
 
   const thumb = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
   const topGroups = $derived(
@@ -135,7 +139,8 @@
         : 0;
 </script>
 
-<UserPageLayout hideNavbar={false} scrollbar>
+<!-- Local Omarchy layer: the poster heads the page; on a phone its name is the bar's (UserPageLayout titleInBody) -->
+<UserPageLayout hideNavbar={false} scrollbar title={data.meta.title} titleInBody>
   <div class="ws-inbox command">
     <header class="ws-inbox-head">
       <h1 class="ws-inbox-title">{$t('command_title')}</h1>
@@ -224,9 +229,9 @@
       <section class="command-panel wide">
         <h2>{$t('command_library')}</h2>
         <!-- what needs a look gets a row with room for its sentence; what is fine is one quiet line of counts -->
-        {#if attention.some(shown)}
+        {#if attention.some((entry) => shown(entry))}
           <ul class="command-health">
-            {#each attention.filter(shown) as entry (entry.key)}
+            {#each attention.filter((entry) => shown(entry)) as entry (entry.key)}
               <li>
                 <svelte:element this={entry.link ? 'a' : 'div'} href={entry.link ?? undefined} class="health-row">
                   <span class="health-value">{entry.value === null ? '–' : number(entry.value)}</span>
@@ -239,9 +244,9 @@
             {/each}
           </ul>
         {/if}
-        {#if calm.some(shown)}
+        {#if calm.some((entry) => shown(entry))}
           <ul class="command-calm">
-            {#each calm.filter(shown) as entry (entry.key)}
+            {#each calm.filter((entry) => shown(entry)) as entry (entry.key)}
               <li>
                 <svelte:element
                   this={entry.link ? 'a' : 'span'}
