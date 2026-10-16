@@ -1,6 +1,6 @@
 <script lang="ts">
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import SpaceCard from '$lib/components/spaces/space-card.svelte';
   import SpacesControls from '$lib/components/spaces/spaces-controls.svelte';
   import SpacesTable from '$lib/components/spaces/spaces-table.svelte';
@@ -46,7 +46,11 @@
   {/snippet}
 
   {#if spaces.length === 0}
-    <EmptyPlaceholder text={$t('spaces_empty')} onClick={handleCreate} class="mx-auto mt-10" />
+    <EmptyState
+      title={$t('spaces_empty_title')}
+      body={$t('spaces_empty_subtitle')}
+      action={{ label: $t('create_space'), onclick: handleCreate }}
+    />
   {:else}
     <SpacesControls {spaces} onSorted={(sorted) => (sortedSpaces = sorted)} />
 

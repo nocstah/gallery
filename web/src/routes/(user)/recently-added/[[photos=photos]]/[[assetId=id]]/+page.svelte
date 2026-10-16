@@ -16,7 +16,7 @@
   import SmartSearchResults from '$lib/components/search/smart-search-results.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
@@ -535,10 +535,10 @@
           withStacked
         >
           {#snippet empty()}
-            <EmptyPlaceholder
-              text={$t('no_assets_message')}
-              onClick={() => openFileUploadDialog()}
-              class="mx-auto mt-10"
+            <EmptyState
+              title={$t('nothing_here_yet')}
+              body={$t('timeline_empty_subtitle')}
+              action={{ label: $t('upload'), onclick: () => openFileUploadDialog() }}
             />
           {/snippet}
         </Timeline>

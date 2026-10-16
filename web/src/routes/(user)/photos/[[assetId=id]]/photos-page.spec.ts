@@ -96,13 +96,6 @@ vi.mock('$lib/components/shared-components/context-menu/ButtonContextMenu.svelte
   return { default: MockComponent };
 });
 
-// Surfaces `text`/`onClick` instead of swallowing them: which empty state renders is the assertion
-// in the "#763" tests below, and a noop mock cannot tell them apart.
-vi.mock('$lib/components/shared-components/EmptyPlaceholder.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/empty-placeholder.stub.svelte');
-  return { default: MockComponent };
-});
-
 vi.mock('$lib/components/timeline/Timeline.svelte', async () => {
   const { default: MockComponent } =
     await import('../../albums/[albumId=id]/[[photos=photos]]/[[assetId=id]]/mock-timeline.test-wrapper.svelte');
@@ -1468,10 +1461,10 @@ describe('Photos page — empty state under active filters (#763)', () => {
 
     renderPage();
 
-    const placeholder = await screen.findByTestId('empty-placeholder');
-    expect(screen.getByTestId('empty-placeholder-text')).toHaveTextContent('no_results');
-    // "Click to upload your first photo" is a call to action; a filter that matched nothing is not.
-    expect(placeholder).toHaveAttribute('data-clickable', 'false');
+    expect(await screen.findByRole('heading', { name: 'timeline_empty_filtered_title' })).toBeInTheDocument();
+    // the next step is clearing the filter; an upload is not what a filter that matched nothing asks for
+    expect(screen.getByRole('button', { name: 'timeline_empty_clear_filters' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'upload' })).not.toBeInTheDocument();
   });
 
   it('still invites the first upload when the timeline is empty with no filters', async () => {
@@ -1479,8 +1472,7 @@ describe('Photos page — empty state under active filters (#763)', () => {
 
     renderPage();
 
-    const placeholder = await screen.findByTestId('empty-placeholder');
-    expect(screen.getByTestId('empty-placeholder-text')).toHaveTextContent('no_assets_message');
-    expect(placeholder).toHaveAttribute('data-clickable', 'true');
+    expect(await screen.findByRole('heading', { name: 'timeline_empty_title' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'upload' })).toBeInTheDocument();
   });
 });

@@ -2,7 +2,7 @@
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
@@ -133,7 +133,7 @@
     onGroupingChange={handleTimelineGroupingChange}
   >
     {#snippet empty()}
-      <EmptyPlaceholder text={$t('no_favorites_message')} class="mx-auto mt-10" />
+      <EmptyState title={$t('favorites_empty_title')} body={$t('no_favorites_message')} />
     {/snippet}
   </Timeline>
 </UserPageLayout>

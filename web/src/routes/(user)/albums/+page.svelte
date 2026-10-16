@@ -6,7 +6,7 @@
   import AlbumsControls from './AlbumsControls.svelte';
   import Albums from '$lib/components/album-page/AlbumsList.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import SpaceAlbumFolderBreadcrumb from '$lib/components/spaces/space-album-folder-breadcrumb.svelte';
   import SpaceAlbumFolderCard from '$lib/components/spaces/space-album-folder-card.svelte';
   import GroupTab from '$lib/elements/GroupTab.svelte';
@@ -221,10 +221,10 @@
       {:else if folderId}
         <p class="mt-10 text-center text-sm text-gray-500 dark:text-gray-400">{$t('space_album_folder_empty')}</p>
       {:else}
-        <EmptyPlaceholder
-          text={$t('no_albums_message')}
-          onClick={() => createAlbumAndRedirect()}
-          class="mx-auto mt-10"
+        <EmptyState
+          title={$t('albums_empty_title')}
+          body={$t('no_albums_message')}
+          action={{ label: $t('create_album'), onclick: () => createAlbumAndRedirect() }}
         />
       {/if}
     {/snippet}

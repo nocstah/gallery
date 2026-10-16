@@ -18,7 +18,7 @@
   } from '$lib/components/filter-panel/filter-panel';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
   import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
@@ -876,12 +876,18 @@
                 clearing the filter. The upload call to action belongs to the unfiltered empty only.
               -->
               {#if hasActiveFilters}
-                <EmptyPlaceholder text={$t('no_results')} class="mx-auto mt-10" />
+                <EmptyState
+                  title={$t('timeline_empty_filtered_title')}
+                  body={$t('timeline_empty_filtered_subtitle')}
+                  action={getActiveFilterCount(filters) > 0
+                    ? { label: $t('timeline_empty_clear_filters'), onclick: handleClearAllFilters }
+                    : undefined}
+                />
               {:else}
-                <EmptyPlaceholder
-                  text={$t('no_assets_message')}
-                  onClick={() => openFileUploadDialog()}
-                  class="mx-auto mt-10"
+                <EmptyState
+                  title={$t('timeline_empty_title')}
+                  body={$t('timeline_empty_subtitle')}
+                  action={{ label: $t('upload'), onclick: () => openFileUploadDialog() }}
                 />
               {/if}
             {/snippet}

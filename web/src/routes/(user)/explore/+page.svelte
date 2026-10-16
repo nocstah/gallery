@@ -4,7 +4,7 @@
   import PersonIndicator from '$lib/components/faces-page/PersonIndicator.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
-  import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import SingleGridRow from '$lib/components/shared-components/SingleGridRow.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { Route } from '$lib/route';
@@ -195,7 +195,7 @@
   {/if}
 
   {#if !hasPeople && places.length === 0 && recents.length === 0}
-    <EmptyPlaceholder text={$t('no_explore_results_message')} class="mx-auto mt-10" />
+    <EmptyState title={$t('nothing_here_yet')} body={$t('no_explore_results_message')} />
   {/if}
 </UserPageLayout>
 

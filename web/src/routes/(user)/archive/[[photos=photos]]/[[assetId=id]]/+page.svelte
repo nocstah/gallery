@@ -2,7 +2,7 @@
   import ArchiveCategories from '$lib/components/archive/ArchiveCategories.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import EmptyPlaceholder from '$lib/components/shared-components/EmptyPlaceholder.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
   import DeleteAssets from '$lib/components/timeline/actions/DeleteAssetsAction.svelte';
   import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
@@ -128,7 +128,7 @@
     onGroupingChange={handleTimelineGroupingChange}
   >
     {#snippet empty()}
-      <EmptyPlaceholder text={$t('no_archived_assets_message')} class="mx-auto mt-10" />
+      <EmptyState title={$t('archive_empty_title')} body={$t('no_archived_assets_message')} />
     {/snippet}
   </Timeline>
 </UserPageLayout>

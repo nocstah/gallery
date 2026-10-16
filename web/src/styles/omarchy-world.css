@@ -506,10 +506,11 @@ div[role='dialog'] :is(.border-b, .border-t) {
 }
 
 /* ---- empty states: a sentence of why, one next step ---- */
+/* on the page's gutter, left-aligned under the bar's title like everything else on the page (2026-10-16; centred
+   before) */
 .ws-empty {
   max-width: 34rem;
-  margin: clamp(3rem, 12vh, 8rem) auto 0;
-  padding-inline: 1.5rem;
+  margin: clamp(3rem, 12vh, 8rem) 0 0;
 }
 .ws-empty-title {
   font-family: var(--font-display);
@@ -1981,10 +1982,6 @@ body.ws-dragging * {
 /* a page that is a column of rows (Members, Activity) keeps to Settings' measure, its heading's hairline included */
 .ws-space-column {
   max-width: 60rem;
-}
-.ws-space-pane .ws-empty {
-  margin-inline: 0;
-  padding-inline: 0;
 }
 /* a search or a filter that finds nothing says so in one muted line */
 .ws-space-none {
