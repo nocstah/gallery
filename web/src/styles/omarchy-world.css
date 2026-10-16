@@ -1755,8 +1755,8 @@ body.ws-dragging
   }
 }
 
-/* ---- Sharing (routes/(user)/sharing): sections on the page's gutter, each headed by its name with the count in data
-   type; partners are rows of avatar, name and address on the ground, a hairline between them ---- */
+/* ---- headed sections on the page's gutter, each headed by its name with the count in data type (Bank slips, a Space's
+   own pages, Import; Shared had them until it became a feed, components/omarchy/SharedFeed) ---- */
 .ws-sharing {
   /* one gutter: the column starts where the bar's page title and the photo grids start */
   padding: calc(var(--ws-gap) * 0.6) 0 4rem;
@@ -1776,45 +1776,12 @@ body.ws-dragging
   font-size: var(--ws-text-heading);
   font-weight: 600;
 }
-.ws-sharing-partners {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
-  gap: 0 calc(var(--ws-gap) * 2.4);
-  list-style: none;
-}
-.ws-sharing-partner {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  padding: 0.65rem 0.5rem;
-  border-radius: var(--ws-radius);
-  transition: background-color 140ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.ws-sharing-partner:hover {
-  background: color-mix(in oklab, var(--immich-ui-dark) 5%, transparent);
-}
-.ws-sharing-partner:focus-visible {
-  outline: var(--ws-border) solid var(--ws-accent);
-  outline-offset: calc(var(--ws-border) * -1);
-}
-.ws-sharing-partner-text {
-  display: grid;
-  gap: 0.15rem;
-  min-width: 0;
-}
-.ws-sharing-partner-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--ws-text-ui);
-  font-weight: 600;
-}
 .ws-sharing .ws-inbox-meta {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* (plan A) a section with nothing in it yet says so in a line, and what fills it; a Space's row leads with its cover */
+/* a section with nothing in it yet says so in a line, and what fills it */
 .ws-sharing-none {
   max-width: 60ch;
   color: var(--immich-ui-muted);
@@ -1836,13 +1803,6 @@ body.ws-dragging
   outline: var(--ws-border) solid var(--ws-accent);
   outline-offset: 2px;
 }
-.ws-sharing-space-cover {
-  flex: none;
-  width: 3rem;
-  height: 3rem;
-  border-radius: var(--ws-radius);
-  background: color-mix(in oklab, var(--immich-ui-dark) 10%, transparent) center / cover no-repeat;
-}
 /* a shared link is a row on the ground: a hairline below, its title in ink, the row tinted while pointed at */
 .ws-shared-link {
   border-color: var(--ws-hairline) !important;
@@ -1856,11 +1816,6 @@ body.ws-dragging
 }
 .ws-shared-link :is(img, button, [class*='rounded']) {
   border-radius: var(--ws-radius) !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  .ws-sharing-partner {
-    transition: none;
-  }
 }
 
 /* ---- glass chrome (Settings > Theme > Chrome, lib/theme/chrome.svelte.ts) ----
