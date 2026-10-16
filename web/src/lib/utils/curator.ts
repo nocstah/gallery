@@ -49,6 +49,35 @@ export type Suggestion = {
 /** What stories.write told for an event, a trip or a memory (written by the text model from the captions). */
 export type Story = { text: string; model: string; written_at: string; event_id?: number };
 
+/**
+ * What Curator knows of a memory (GET /api/memories/facts), for its title and its film: the places worth naming (most
+ * photos first, at most two) and the named people (at most three), the first and last day of its photos
+ * ('YYYY-MM-DD'), how many photos it stands for (a trip's whole count, more than the memory shows), the best photo for
+ * its cover, and where the faces are in each photo (normalised centres, 0 to 1), for the film's drift.
+ */
+export type MemoryFacts = {
+  places: string[];
+  people: string[];
+  start: string;
+  end: string;
+  count: number;
+  cover: string | null;
+  focus?: Record<string, [number, number]>;
+};
+
+/**
+ * A song from the owner's own library that Curator picked for a memory (GET /api/memories/{id}/music), best first;
+ * `duration` in seconds, `src` a path on Curator's origin that an <audio> plays with the session cookie.
+ */
+export type MemoryTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  duration: number;
+  bpm: number | null;
+  src: string;
+};
+
 /** A conversation in the library chat (Curator's curator/chat.py), as the chat page lists it. */
 export type ChatSummary = { id: string; title: string | null; updated_at: string };
 
@@ -384,7 +413,12 @@ export class CuratorError extends Error {
   }
 }
 
-const base = () => `${location.protocol}//${location.hostname}:2290/api`;
+const origin = () => `${location.protocol}//${location.hostname}:2290`;
+const base = () => `${origin()}/api`;
+
+/** A song Curator serves (a MemoryTrack's `src`, a path on its origin), for an <audio> element: no crossorigin, so the
+ * session cookie goes with it as with an image. */
+export const musicUrl = (src: string) => (/^https?:\/\//.test(src) ? src : `${origin()}${src}`);
 
 /** subject lift: the photo's main subject on transparency, as a PNG (a few seconds) */
 export const curatorSubject = async (assetId: string): Promise<Blob> => {
@@ -464,6 +498,14 @@ export const curator = {
     call<AskResult>('/ask', { method: 'POST', body: JSON.stringify({ question, size }), signal }),
   /** start loading Ask's language model before the question arrives */
   warmAsk: () => post<{ warming: boolean }>('/ask/warm', {}),
+  /** what Curator knows of these memories (all it knows of without `ids`); a memory it knows nothing of is left out */
+  memoryFacts: (ids?: string[]) =>
+    call<{ memories: Record<string, MemoryFacts> }>(
+      `/memories/facts${ids && ids.length > 0 ? `?ids=${ids.map((id) => encodeURIComponent(id)).join(',')}` : ''}`,
+    ),
+  /** up to `n` songs from the owner's library for a memory's film, best first; none when nothing fits */
+  memoryMusic: (memoryId: string, n = 3) =>
+    call<{ tracks: MemoryTrack[] }>(`/memories/${encodeURIComponent(memoryId)}/music?n=${n}`),
   /** the story of a memory, of an album (by the event its photos come from) or of an event; null until written */
   story: (subject: { memory: string } | { album: string } | { event: number }) =>
     call<{ story: Story | null }>(

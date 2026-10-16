@@ -37,7 +37,7 @@ function memory(overrides: Partial<MemoryResponseDto> = {}): MemoryResponseDto {
   return {
     id: 'memory-1',
     ownerId: 'user-1',
-    assets: [assetFactory.build({ id: 'asset-1' })],
+    assets: [assetFactory.build({ id: 'asset-1', localDateTime: '2015-08-03T10:00:00.000Z' })],
     createdAt: '2020-01-01T00:00:00.000Z',
     updatedAt: '2020-01-01T00:00:00.000Z',
     deletedAt: undefined,
@@ -64,11 +64,32 @@ function renderPage(memories: MemoryResponseDto[]) {
 }
 
 describe('Memories page', () => {
-  it('renders the rule-aware subtitle the server sends with a memory', () => {
+  // Local Omarchy layer: a card is titled by its facts, place and time (utils/memory-title), here the month of its
+  // photo; the line under it is still the one the server sent, or the rule's own.
+  it('titles a card by place and time, and keeps the rule-aware subtitle the server sends', () => {
     renderPage([memory({ type: MemoryType.Rule, subtitle: 'Coastal weekend', title: 'Recent trip to Lisbon' })]);
 
-    expect(screen.getByText('Recent trip to Lisbon')).toBeInTheDocument();
+    expect(screen.getByText('August 2015')).toBeInTheDocument();
     expect(screen.getByText('Coastal weekend')).toBeInTheDocument();
+  });
+
+  it("names the rule's place in the title", () => {
+    renderPage([
+      memory({
+        type: MemoryType.Rule,
+        data: { ruleId: 'trip_anniversary', context: { city: 'Lisbon', placeLabel: 'Lisbon, Portugal' } },
+      }),
+    ]);
+
+    expect(screen.getByText('Lisbon · August 2015')).toBeInTheDocument();
+  });
+
+  // the title says when, so the line under an on-this-day card says how long ago, as its title did before
+  it('says how long ago under an on-this-day card', () => {
+    renderPage([memory()]);
+
+    expect(screen.getByText('August 2015')).toBeInTheDocument();
+    expect(screen.getByText('years_ago')).toBeInTheDocument();
   });
 
   it('derives the recent-trip subtitle from the rule context when the server sends none', () => {
@@ -86,9 +107,11 @@ describe('Memories page', () => {
   });
 
   it('renders no subtitle line for a memory that has none', () => {
-    const { container } = renderPage([memory({ title: 'Years ago' })]);
+    const { container } = renderPage([
+      memory({ type: MemoryType.Rule, data: { ruleId: 'a_rule_without_words', context: {} } }),
+    ]);
 
-    expect(screen.getByText('Years ago')).toBeInTheDocument();
+    expect(screen.getByText('August 2015')).toBeInTheDocument();
     expect(container.querySelectorAll(':scope a[href] p')).toHaveLength(1);
   });
 });

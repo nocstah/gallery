@@ -13,6 +13,8 @@
   import { getAssetInfo, AssetMediaSize, type PersonResponseDto, type SearchExploreResponseDto } from '@immich/sdk';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import MemoryCard from '$lib/components/memories/MemoryCard.svelte';
+  import { memoryFacts } from '$lib/managers/memory-facts.svelte';
+  import { memoryCover } from '$lib/utils/memory-title';
   import { ImageCarousel } from '@immich/ui';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
@@ -36,15 +38,26 @@
     getFieldItems(data.explore, 'createdAt').sort((a, b) => new Date(b.value).getTime() - new Date(a.value).getTime()),
   );
   let people = $state(data.people.people);
+  // Local Omarchy layer: the cards are titled by their facts and show Curator's cover when it has one (memoryFacts)
+  $effect(() => {
+    memoryFacts.request(data.memories.map(({ id }) => id));
+  });
   let memories = $derived(
-    data.memories.map((memory) => ({
-      id: memory.id,
-      title: $memoryLaneTitle(memory),
-      href: Route.viewMemory({ id: memory.id, assetId: memory.assets[0].id }),
-      alt: $t('memory_lane_title', { values: { title: $getAltText(toTimelineAsset(memory.assets[0])) } }),
-      src: getAssetMediaUrl({ id: memory.assets[0].id }),
-      type: memory.type,
-    })),
+    data.memories.map((memory) => {
+      // a card waits for Curator's facts before it shows its cover and title (memoryFacts), as on Memories
+      const ready = memoryFacts.settled(memory.id);
+      const cover = memoryCover(memory, memoryFacts.get(memory.id));
+      return {
+        id: memory.id,
+        title: ready ? $memoryLaneTitle(memory) : '',
+        href: Route.viewMemory({ id: memory.id, assetId: memory.assets[0].id }),
+        alt: $t('memory_lane_title', {
+          values: { title: $getAltText(toTimelineAsset(cover.asset ?? memory.assets[0])) },
+        }),
+        src: ready ? getAssetMediaUrl({ id: cover.id, cacheKey: cover.asset?.thumbhash }) : '',
+        type: memory.type,
+      };
+    }),
   );
 
   let hasPeople = $derived(data.people.total > 0);

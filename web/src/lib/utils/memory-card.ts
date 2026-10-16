@@ -282,3 +282,36 @@ export const getMemorySubtitle = (memory: MemoryResponseDto, translate: MessageF
 
   return build(memory, SUBTITLE_BUILDERS, translate, locale) ?? '';
 };
+
+/**
+ * Local Omarchy layer: the line under a card titled by its facts (utils/memory-title: "Siem Reap · October 2025"). The
+ * title says when, so an on-this-day memory's line says how long ago, which was its title before ("1 year ago"), and
+ * the two rules whose line repeated the month (people together, a person's throwback) count their photos alone.
+ */
+export const getMemoryCardSubtitle = (
+  memory: MemoryResponseDto,
+  translate: MessageFormatter,
+  locale?: string,
+  now = new Date(),
+) => {
+  if (memory.subtitle) {
+    return memory.subtitle;
+  }
+
+  const data = (memory.data ?? {}) as Record<string, unknown>;
+  if (memory.type === MemoryType.OnThisDay && typeof data.year === 'number') {
+    return translate('years_ago', { values: { years: now.getFullYear() - data.year } });
+  }
+
+  const context = (data.context ?? {}) as RuleContext;
+  const count = asNumber(context, 'count');
+  if (
+    memory.type === MemoryType.Rule &&
+    (data.ruleId === 'people_together' || data.ruleId === 'person_throwback') &&
+    count !== undefined
+  ) {
+    return translate('memory_assets_count', { values: { count } });
+  }
+
+  return getMemorySubtitle(memory, translate, locale);
+};

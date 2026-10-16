@@ -9,7 +9,9 @@
   import MemoriesSettingsModal from '$lib/modals/MemoriesSettingsModal.svelte';
   import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl, getMemorySubtitle, memoryLaneTitle } from '$lib/utils';
+  import { memoryFacts } from '$lib/managers/memory-facts.svelte';
+  import { getAssetMediaUrl, getMemoryCardSubtitle, memoryLaneTitle } from '$lib/utils';
+  import { memoryCover } from '$lib/utils/memory-title';
   import { getAltText } from '$lib/utils/thumbnail-util';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import type { MemoryResponseDto } from '@immich/sdk';
@@ -29,6 +31,11 @@
   const isUpcoming = (memory: MemoryResponseDto) => !!memory.showAt && new Date(memory.showAt).getTime() > Date.now();
   const upcomingCount = $derived(memoryManager.memories.filter((memory) => isUpcoming(memory)).length);
   const hasUpcoming = $derived(upcomingCount > 0);
+
+  // Local Omarchy layer: Curator's facts title the cards and pick their covers (memoryFacts: once per memory, owner only)
+  $effect(() => {
+    memoryFacts.request(memoryManager.memories.map(({ id }) => id));
+  });
 
   const handleSettings = async () => {
     const settings = await modalManager.show(MemoriesSettingsModal);
@@ -68,19 +75,23 @@
         {#if hasUpcoming && index === upcomingCount}
           <div class="col-span-full outline-none">{$t('memories_current')}</div>
         {/if}
+        <!-- Local Omarchy layer: a card waits for Curator's facts (a moment, memoryFacts) before it shows its cover and
+             title, so it never swaps them under the reader's eyes -->
+        {@const ready = memoryFacts.settled(memory.id)}
+        {@const cover = memoryCover(memory, memoryFacts.get(memory.id))}
         <MemoryCard
           class="size-full"
           item={{
             id: memory.id,
-            title: $memoryLaneTitle(memory),
-            subtitle: getMemorySubtitle(memory, $t),
+            title: ready ? $memoryLaneTitle(memory) : '',
+            subtitle: ready ? getMemoryCardSubtitle(memory, $t, $locale) : '',
             href: Route.viewMemory({
               id: memory.id,
               assetId: memory.assets[0].id,
               isSaved: userPreferencesManager.memories.onlyFavorites || undefined,
             }),
-            src: getAssetMediaUrl({ id: memory.assets[0].id, cacheKey: memory.assets[0].thumbhash }),
-            alt: $getAltText(toTimelineAsset(memory.assets[0])),
+            src: ready ? getAssetMediaUrl({ id: cover.id, cacheKey: cover.asset?.thumbhash }) : '',
+            alt: $getAltText(toTimelineAsset(cover.asset ?? memory.assets[0])),
             isSaved: memory.isSaved,
             type: memory.type,
           }}

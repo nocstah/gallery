@@ -23,11 +23,13 @@ import { init, register, t } from 'svelte-i18n';
 import { derived, get } from 'svelte/store';
 import { defaultLang, locales } from '$lib/constants';
 import { authManager } from '$lib/managers/auth-manager.svelte';
+import { memoryFacts } from '$lib/managers/memory-facts.svelte';
 import { alwaysLoadOriginalFile, lang, locale } from '$lib/stores/preferences.store';
 import { isWebCompatibleImage } from '$lib/utils/asset-utils';
 import { handleError } from '$lib/utils/handle-error';
 import { convertBCP47, langs } from '$lib/utils/i18n';
 import { getMemoryTitle } from '$lib/utils/memory-card';
+import { memoryTitle } from '$lib/utils/memory-title';
 
 interface DownloadRequestOptions<T = unknown> {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -402,10 +404,14 @@ export const handlePromiseError = <T>(promise: Promise<T>): void => {
   promise.catch((error) => console.error(`[utils.ts]:handlePromiseError ${error}`, error));
 };
 
-export { getMemorySubtitle, getMemoryTitle } from '$lib/utils/memory-card';
+export { getMemoryCardSubtitle, getMemorySubtitle, getMemoryTitle } from '$lib/utils/memory-card';
 
+// Local Omarchy layer: a memory is titled by its facts, place and time ("Siem Reap · October 2025",
+// utils/memory-title), from Curator's facts once they are in (memoryFacts) and else from the memory itself; the old
+// title is left for a memory with nothing to go on. Reading the facts here keeps every card and the film in step.
 export const memoryLaneTitle = derived([t, locale], ([$t, $locale]) => {
-  return (memory: MemoryResponseDto) => getMemoryTitle(memory, $t, new Date(), $locale);
+  return (memory: MemoryResponseDto) =>
+    memoryTitle(memory, memoryFacts.get(memory.id), $locale)?.title ?? getMemoryTitle(memory, $t, new Date(), $locale);
 });
 
 export const withError = async <T>(fn: () => Promise<T>): Promise<[undefined, T] | [unknown, undefined]> => {
