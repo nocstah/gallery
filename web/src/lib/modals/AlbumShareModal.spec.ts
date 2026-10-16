@@ -12,7 +12,11 @@ import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
 import { userFactory } from '@test-data/factories/user-factory';
 import AlbumShareModal from './AlbumShareModal.svelte';
 
-const { makeSharedLink, addUsers } = vi.hoisted(() => ({ makeSharedLink: vi.fn(), addUsers: vi.fn() }));
+const { makeSharedLink, handleUpdateSharedLink, addUsers } = vi.hoisted(() => ({
+  makeSharedLink: vi.fn(),
+  handleUpdateSharedLink: vi.fn(),
+  addUsers: vi.fn(),
+}));
 
 vi.mock('$lib/managers/auth-manager.svelte', () => ({
   authManager: { authenticated: true, user: { id: 'me', isAdmin: false } },
@@ -31,6 +35,8 @@ vi.mock('$lib/services/album.service', () => ({
 }));
 vi.mock('$lib/services/shared-link.service', () => ({
   makeSharedLink,
+  handleUpdateSharedLink,
+  shareLinkExpiry: () => '2026-11-15T00:00:00.000Z',
   asUrl: ({ key }: { key: string }) => `https://photos.example/share/${key}`,
   getSharedLinkActions: () => ({
     Copy: { title: 'Copy link', onAction: vi.fn() },
@@ -192,7 +198,7 @@ describe('AlbumShareModal', () => {
       allowDownload: true,
       allowUpload: false,
       showMetadata: false,
-      expiresAt: null,
+      expiresAt: '2026-11-15T00:00:00.000Z',
     });
   });
 

@@ -12,7 +12,7 @@
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { getAlbumActions, handleRemoveUserFromAlbum, handleUpdateUserAlbumRole } from '$lib/services/album.service';
-  import { makeSharedLink } from '$lib/services/shared-link.service';
+  import { makeSharedLink, shareLinkExpiry } from '$lib/services/shared-link.service';
   import { lang } from '$lib/stores/preferences.store';
   import { handleError } from '$lib/utils/handle-error';
   import { leadSpace, rememberShareSpace, shareableSpaces, spaceAudience } from '$lib/utils/share-space';
@@ -108,7 +108,8 @@
     }
   };
 
-  // one press makes the link, with a new link's own defaults (downloads on, the place left out: SharedLinkFormFields);
+  // one press makes the link, with a new link's own defaults (downloads on, the place left out: SharedLinkFormFields) and
+  // open for 30 days (shareLinkExpiry);
   // it arrives through SharedLinkCreate like a link made anywhere else, and its options are a press away on it
   const makeLink = async () => {
     making = true;
@@ -118,7 +119,7 @@
       allowDownload: true,
       allowUpload: false,
       showMetadata: false,
-      expiresAt: null,
+      expiresAt: shareLinkExpiry(),
     });
     making = false;
   };

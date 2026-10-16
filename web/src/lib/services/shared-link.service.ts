@@ -65,6 +65,15 @@ export const asUrl = (sharedLink: SharedLinkResponseDto) => {
 };
 
 /**
+ * Local Omarchy layer: how long a link the Share sheet makes in one press stays open (the owner, 2026-10-16: "30 days",
+ * as iCloud's links do, so a forwarded link doesn't live forever); the link's panel removes the expiry in one press
+ * (components/omarchy/ShareLinkPanel), and its options set any other.
+ */
+export const SHARE_LINK_DAYS = 30;
+export const shareLinkExpiry = (now = Date.now()) =>
+  new Date(now + SHARE_LINK_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+/**
  * Local Omarchy layer: makes the link and hands it back, for the Share sheet (components/share/ShareLinkPanel), which
  * shows it with its QR in place; `handleCreateSharedLink` shows the QR in a dialog of its own instead.
  */

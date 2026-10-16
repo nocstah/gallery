@@ -10,8 +10,9 @@ import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
 import SelectionShareModal from './SelectionShareModal.svelte';
 
-const { makeSharedLink, addAssetsToCollections } = vi.hoisted(() => ({
+const { makeSharedLink, handleUpdateSharedLink, addAssetsToCollections } = vi.hoisted(() => ({
   makeSharedLink: vi.fn(),
+  handleUpdateSharedLink: vi.fn(),
   addAssetsToCollections: vi.fn(),
 }));
 
@@ -29,6 +30,8 @@ vi.mock('$lib/managers/server-config-manager.svelte', () => ({
 vi.mock('$lib/services/collection.service', () => ({ addAssetsToCollections }));
 vi.mock('$lib/services/shared-link.service', () => ({
   makeSharedLink,
+  handleUpdateSharedLink,
+  shareLinkExpiry: () => '2026-11-15T00:00:00.000Z',
   asUrl: ({ key }: { key: string }) => `https://photos.example/share/${key}`,
   getSharedLinkActions: () => ({
     Copy: { title: 'Copy link', onAction: vi.fn() },
@@ -178,11 +181,26 @@ describe('SelectionShareModal', () => {
       allowDownload: true,
       allowUpload: false,
       showMetadata: false,
-      expiresAt: null,
+      expiresAt: '2026-11-15T00:00:00.000Z',
     });
     const panel = await screen.findByTestId('share-link');
     expect(within(panel).getByTestId('share-link-url')).toHaveTextContent('https://photos.example/share/made');
+    expect(within(panel).getByText('Never expires')).toBeInTheDocument();
+    expect(within(panel).queryByRole('button', { name: 'Remove expiry' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Make a link' })).not.toBeInTheDocument();
+  });
+
+  it('says when a link expires, and removes the expiry in one press', async () => {
+    const made = sharedLinkFactory.build({ key: 'made', expiresAt: '2026-11-15T00:00:00.000Z' });
+    makeSharedLink.mockResolvedValue(made);
+    await open({ assetIds: ['a1'], ownedAssetIds: ['a1'] });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Make a link' }));
+    const panel = await screen.findByTestId('share-link');
+    expect(within(panel).getByText('Expires Nov 15, 2026')).toBeInTheDocument();
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Remove expiry' }));
+    expect(handleUpdateSharedLink).toHaveBeenCalledWith(made, { expiresAt: null });
   });
 
   // #1018: on a Space that scopes the link to itself, other members' photos become public through it

@@ -7,7 +7,7 @@
   // contrast, and a dark theme would otherwise run into the code's edge.
   import SharedLinkEditModal from '$lib/modals/SharedLinkEditModal.svelte';
   import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
-  import { asUrl, getSharedLinkActions } from '$lib/services/shared-link.service';
+  import { asUrl, getSharedLinkActions, handleUpdateSharedLink } from '$lib/services/shared-link.service';
   import { locale } from '$lib/stores/preferences.store';
   import type { SharedLinkResponseDto } from '@immich/sdk';
   import { Icon, modalManager } from '@immich/ui';
@@ -31,26 +31,29 @@
   );
   const homeOnly = $derived(!serverConfigManager.value.externalDomain);
 
-  // what the link allows, in the Shared links page's words: when it expires, then download, upload, password, place
-  const details = $derived.by(() => {
-    const expiresAt = sharedLink.expiresAt ? DateTime.fromISO(sharedLink.expiresAt) : undefined;
-    const now = DateTime.now();
-    const expiry = expiresAt
-      ? expiresAt < now
-        ? $t('expired')
-        : $t('expires_date', { values: { date: expiresAt.toRelative({ base: now, locale: $locale }) } })
-      : $t('expires_date', { values: { date: '∞' } });
-    return [
-      expiry,
+  // what the link allows, in the Shared links page's words: when it expires (a date: the locales' "Expires {date}"
+  // reads "Expire le …", "Scade il …"), then download, upload, password, place
+  const expired = $derived(!!sharedLink.expiresAt && DateTime.fromISO(sharedLink.expiresAt) < DateTime.now());
+  const expiry = $derived.by(() => {
+    if (!sharedLink.expiresAt) {
+      return $t('share_link_expires_never');
+    }
+    const date = DateTime.fromISO(sharedLink.expiresAt).setLocale($locale).toLocaleString(DateTime.DATE_MED);
+    return expired ? $t('expired') : $t('expires_date', { values: { date } });
+  });
+  const allows = $derived(
+    [
       sharedLink.allowDownload && $t('download'),
       sharedLink.allowUpload && $t('upload'),
       sharedLink.password && $t('password'),
       sharedLink.showMetadata && $t('location'),
     ]
       .filter(Boolean)
-      .join(' · ');
-  });
-  const expired = $derived(!!sharedLink.expiresAt && DateTime.fromISO(sharedLink.expiresAt) < DateTime.now());
+      .join(' · '),
+  );
+  // a link made in one press is open for 30 days (shareLinkExpiry); one more press keeps it open, or opens an expired
+  // one again
+  const removeExpiry = () => handleUpdateSharedLink(sharedLink, { expiresAt: null });
 
   const { Copy, Delete } = $derived(getSharedLinkActions($t, sharedLink));
   const edit = () => modalManager.show(SharedLinkEditModal, { sharedLink });
@@ -64,7 +67,14 @@
   </div>
   <div class="ws-share-link-text">
     <p class="ws-share-url" title={url} data-testid="share-link-url">{url}</p>
-    <p class={['ws-sheet-note', { 'ws-share-expired': expired }]}>{details}</p>
+    <p class="ws-sheet-note">
+      <span class={{ 'ws-share-expired': expired }}>{expiry}</span>{#if allows}&nbsp;· {allows}{/if}
+      {#if sharedLink.expiresAt}
+        <button type="button" class="ws-share-remove-expiry" onclick={removeExpiry}
+          >{$t('share_link_remove_expiry')}</button
+        >
+      {/if}
+    </p>
     {#if homeOnly}
       <p class="ws-sheet-note">{$t('share_link_home_only')}</p>
     {/if}
@@ -131,6 +141,22 @@
   }
   .ws-share-expired {
     color: var(--immich-ui-danger-500);
+  }
+  /* the expiry's one-press way out, a quiet underlined word at the line's end like Show selected's Put them back */
+  .ws-share-remove-expiry {
+    margin-inline-start: 0.5rem;
+    color: var(--immich-ui-dark);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
+    text-decoration-color: var(--ws-hairline);
+  }
+  .ws-share-remove-expiry:hover {
+    text-decoration-color: var(--ws-accent);
+  }
+  .ws-share-remove-expiry:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: 2px;
   }
   /* Copy link in ink, then the link's options and Delete, one under the other beside the code */
   .ws-share-link-actions {

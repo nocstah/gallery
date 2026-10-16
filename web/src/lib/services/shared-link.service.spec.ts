@@ -3,7 +3,7 @@ import { modalManager } from '@immich/ui';
 import '$lib/__mocks__/sdk.mock';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import { eventManager } from '$lib/managers/event-manager.svelte';
-import { asUrl, handleCreateSharedLink, makeSharedLink } from '$lib/services/shared-link.service';
+import { asUrl, handleCreateSharedLink, makeSharedLink, shareLinkExpiry } from '$lib/services/shared-link.service';
 import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 
 vi.mock(import('$lib/managers/server-config-manager.svelte'), () => ({
@@ -26,6 +26,13 @@ describe('SharedLinkService', () => {
   describe('asUrl', () => {
     it('should properly encode characters in slug', () => {
       expect(asUrl(sharedLinkFactory.build({ slug: 'foo/bar' }))).toBe('http://localhost:2283/s/foo%2Fbar');
+    });
+  });
+
+  // Local Omarchy layer: a link made in one press is open for 30 days (the owner's default)
+  describe('shareLinkExpiry', () => {
+    it('is 30 days on', () => {
+      expect(shareLinkExpiry(Date.UTC(2026, 9, 16))).toBe('2026-11-15T00:00:00.000Z');
     });
   });
 

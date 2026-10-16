@@ -12,7 +12,7 @@
   import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { addAssetsToCollections } from '$lib/services/collection.service';
-  import { makeSharedLink } from '$lib/services/shared-link.service';
+  import { makeSharedLink, shareLinkExpiry } from '$lib/services/shared-link.service';
   import { lang } from '$lib/stores/preferences.store';
   import { handleError } from '$lib/utils/handle-error';
   import { leadSpace, rememberShareSpace, shareableSpaces, spaceAudience } from '$lib/utils/share-space';
@@ -99,7 +99,8 @@
     }
   };
 
-  // one press makes the link, with a new link's own defaults (downloads on, the place left out: SharedLinkFormFields)
+  // one press makes the link, with a new link's own defaults (downloads on, the place left out: SharedLinkFormFields) and
+  // open for 30 days (shareLinkExpiry)
   const makeLink = async () => {
     making = true;
     link = await makeSharedLink({
@@ -109,7 +110,7 @@
       allowDownload: true,
       allowUpload: false,
       showMetadata: false,
-      expiresAt: null,
+      expiresAt: shareLinkExpiry(),
     });
     making = false;
   };
