@@ -17,6 +17,7 @@
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import { QueryParameter } from '$lib/constants';
+  import { parseSearchTerms } from '$lib/gallery/search/parse-search-terms';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
@@ -66,22 +67,7 @@
   type SearchTerms = MetadataSearchDto & Pick<SmartSearchDto, 'query' | 'queryAssetId'>;
   let searchQuery = $derived(page.url.searchParams.get(QueryParameter.QUERY));
   let smartSearchEnabled = $derived(featureFlagsManager.value.smartSearch);
-  // `query` normally carries JSON-encoded search terms, but a hand-typed, bookmarked or shared
-  // `/search?query=beach` is plain text. JSON.parse throws on it (and on non-object JSON such as
-  // `42` it yields a non-object), which used to take the whole page down; read those as a text query.
-  const parseSearchTerms = (raw: string): SearchTerms => {
-    try {
-      const parsed: unknown = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed as SearchTerms;
-      }
-    } catch {
-      // fall through: not JSON
-    }
-    return { query: raw };
-  };
-
-  let terms = $derived<SearchTerms>(searchQuery ? parseSearchTerms(searchQuery) : {});
+  let terms = $derived<SearchTerms>(searchQuery ? parseSearchTerms<SearchTerms>(searchQuery) : {});
   let searchTermKeys = $derived(getVisibleSearchKeys(terms));
 
   $effect(() => {
