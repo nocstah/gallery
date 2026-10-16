@@ -5,8 +5,8 @@
   type Props = {
     title: string;
     body?: string;
-    /** the one next step, in ink */
-    action?: { label: string; onclick: () => unknown };
+    /** the one next step, in ink: something to do (onclick), or somewhere to go (href, a real link) */
+    action?: { label: string; onclick?: () => unknown; href?: string };
     /** a way elsewhere, as a quiet link */
     link?: { label: string; href: string };
   };
@@ -21,8 +21,10 @@
   {/if}
   {#if action || link}
     <div class="ws-empty-actions">
-      {#if action}
-        <button type="button" class="ws-empty-action" onclick={() => action.onclick()}>{action.label}</button>
+      {#if action?.href}
+        <a class="ws-empty-action" href={action.href} onclick={() => action.onclick?.()}>{action.label}</a>
+      {:else if action}
+        <button type="button" class="ws-empty-action" onclick={() => action.onclick?.()}>{action.label}</button>
       {/if}
       {#if link}
         <a class="ws-empty-link" href={link.href}>{link.label}</a>
