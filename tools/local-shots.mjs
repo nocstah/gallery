@@ -18,8 +18,11 @@
 // localStorage; by default a run starts from none, so two runs compare: the session cookie is kept either way).
 //
 // A route can go on into a state before the shot, with steps after ">": key:Control+k, hover:SELECTOR,
-// click:SELECTOR, rclick:SELECTOR (right click), scroll:PX (the wheel over the middle of the page), wait:MS; and it can
-// be named with "name=" in front, e.g. --routes 'menu=/photos>rclick:[data-asset]'. Steps are real input events, so the
+// click:SELECTOR, rclick:SELECTOR (right click), scroll:PX (the wheel over the middle of the page), wait:MS,
+// press:SELECTOR (the button held down there for --hold MS, 450 by default: a photo lifts), drag:SELECTOR (the held
+// pointer glides there), release: (let go: a drop); and it can be named with "name=" in front, e.g. --routes
+// 'menu=/photos>rclick:[data-asset]'. A shot taken with the button still held is cancelled with Escape before the
+// button is let go, so a carried photo is put back, never dropped. Steps are real input events, so the
 // page reacts as to a person (hover shows a tile's checkbox, a right click opens Gallery's own menu). A selector cannot
 // hold "," or ">". What a stepped shot leaves in localStorage or sessionStorage (an opened filter rail, a grouping) is
 // put back after it, so it cannot carry into the shots that follow.
@@ -356,6 +359,17 @@ async function pageSession(cdp, sessionId) {
     return evaluate('location.pathname + location.search');
   };
   const mouse = (type, x, y, extra = {}) => send('Input.dispatchMouseEvent', { type, x, y, ...extra });
+  // where the pointer is, and whether its button is held (press:, drag:, release:)
+  let pointerAt = { x: 0, y: 0 };
+  let held = false;
+  /** The middle of the first element matching the selector, where it is now (a drag must not scroll the page). */
+  const middle = (selector) =>
+    evaluate(`(() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    })()`);
   /** The middle of the first element matching the selector, brought into view if it is outside it. */
   const centre = (selector) =>
     evaluate(`(() => {
@@ -411,6 +425,30 @@ async function pageSession(cdp, sessionId) {
         const { w, h } = await evaluate('({ w: innerWidth, h: innerHeight })');
         await mouse('mouseWheel', w / 2, h / 2, { deltaX: 0, deltaY: Number(arg) || 0 });
         await sleep(1200);
+      } else if (kind === 'press') {
+        // a held press: long enough for a press-and-hold to lift the photo under it
+        const point = await centre(arg);
+        if (!point) return `press: nothing matches ${arg}`;
+        await mouse('mouseMoved', point.x, point.y);
+        await mouse('mousePressed', point.x, point.y, { button: 'left', buttons: 1, clickCount: 1 });
+        pointerAt = point;
+        held = true;
+        await sleep(Number(option('hold', 450)));
+      } else if (kind === 'drag') {
+        // the held pointer glides to the element in small steps, as a hand moves it
+        const point = await middle(arg);
+        if (!point) return `drag: nothing matches ${arg}`;
+        const steps = 12;
+        for (let step = 1; step <= steps; step++) {
+          const x = pointerAt.x + ((point.x - pointerAt.x) * step) / steps;
+          const y = pointerAt.y + ((point.y - pointerAt.y) * step) / steps;
+          await mouse('mouseMoved', x, y, { button: held ? 'left' : 'none', buttons: held ? 1 : 0 });
+          await sleep(16);
+        }
+        pointerAt = point;
+      } else if (kind === 'release') {
+        await mouse('mouseReleased', pointerAt.x, pointerAt.y, { button: 'left', buttons: 0, clickCount: 1 });
+        held = false;
       } else if (kind === 'hover' || kind === 'click' || kind === 'rclick') {
         const point = await centre(arg);
         if (!point) return `${kind}: nothing matches ${arg}`;
@@ -426,8 +464,17 @@ async function pageSession(cdp, sessionId) {
       await sleep(350);
       return null;
     },
-    /** Takes the pointer off the page, so a hover does not carry into the next shot. */
-    pointerAway: () => mouse('mouseMoved', -10, -10),
+    /** Takes the pointer off the page, so a hover does not carry into the next shot; a button still held is let go
+     * after Escape, so what it carries is put back, never dropped. */
+    async pointerAway() {
+      if (held) {
+        await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Escape', windowsVirtualKeyCode: 27 });
+        await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', windowsVirtualKeyCode: 27 });
+        await mouse('mouseReleased', -10, -10, { button: 'left', buttons: 0, clickCount: 1 });
+        held = false;
+      }
+      await mouse('mouseMoved', -10, -10);
+    },
     /** Without an argument, the page's localStorage and sessionStorage; with one, puts them back as they were. */
     storage: (saved) =>
       saved
