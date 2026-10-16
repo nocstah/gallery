@@ -350,9 +350,10 @@
 
   <DownloadPanel />
   <!-- Local Omarchy layer: what Curator makes on request, one panel above the other in the bottom-left corner; only
-       for Curator's owner (curatorIsMine), so the next account in the tab never sees the owner's books or videos -->
+       for Curator's owner (curatorIsMine), so the next account in the tab never sees the owner's books or videos.
+       ws-curator-corner: on a phone the photo viewer lifts them over its bottom bar (AssetViewer) -->
   {#if curatorIsMine()}
-    <div class="fixed inset-s-3 bottom-3 z-60 flex flex-col items-start gap-3">
+    <div class="ws-curator-corner fixed inset-s-3 bottom-3 z-60 flex flex-col items-start gap-3">
       <PhotoBookPanel />
       <ShareVideoPanel />
     </div>

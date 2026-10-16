@@ -8,6 +8,7 @@
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { mediaCapabilitiesManager } from '$lib/managers/media-capabilities-manager.svelte';
+  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import {
     autoPlayVideo,
     lang,
@@ -108,6 +109,12 @@
   });
   let isScrubbing = $state(false);
   const aspectRatio = $derived(asset.width && asset.height ? `${asset.width} / ${asset.height}` : undefined);
+  // Local Omarchy layer: on a phone the viewer's everyday actions run along the bottom edge (AssetViewerNavBar). There
+  // the player fills the stage, the video centred in it as the photo is (a Live Photo's clip plays where its still
+  // was), and its controls sit along the stage's foot, lifted over that bar and a stack's strip (--ws-viewer-foot,
+  // AssetViewer), as a phone's photo app puts a video's scrubber above its toolbar; framed by the video they would
+  // run under the bar wherever a tall video meets the bottom of the screen
+  const fillStage = $derived(mediaQueryManager.maxMd);
   let showVideo = $state(false);
   let hasFocused = $state(false);
   let activeSession: { assetId: string; id: string } | undefined;
@@ -414,7 +421,8 @@
         lang={$lang}
         nohotkeys
         class="dark h-full max-w-full"
-        style:aspect-ratio={aspectRatio}
+        class:ws-video-stage={fillStage}
+        style:aspect-ratio={fillStage ? undefined : aspectRatio}
         defaultduration={asset.duration! / 1000}
       >
         {#if featureFlagsManager.value.realtimeTranscoding}
@@ -500,7 +508,10 @@
           </media-settings-menu>
         {/if}
 
-        <div class="flex h-32 w-full flex-col justify-end bg-linear-to-b to-black/80 px-4">
+        <div
+          class="flex h-32 w-full flex-col justify-end bg-linear-to-b to-black/80 px-4"
+          class:ws-video-foot={fillStage}
+        >
           <media-control-bar part="bottom" class="flex h-10 w-full gap-2">
             <media-play-button class="shrink-0 rounded-full p-2 outline-none">
               <Icon slot="play" icon={mdiPlay} />
@@ -556,6 +567,16 @@
 {/if}
 
 <style>
+  /* Local Omarchy layer: the phone's player (see fillStage): the stage's width, its glow showing round the video */
+  media-controller.ws-video-stage {
+    width: 100%;
+    --media-background-color: transparent;
+  }
+  .ws-video-foot {
+    height: calc(8rem + var(--ws-viewer-foot, 0px));
+    padding-bottom: var(--ws-viewer-foot, 0px);
+  }
+
   media-controller {
     --media-control-background: none;
     --media-control-hover-background: var(--immich-ui-light-100);

@@ -28,6 +28,7 @@
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import { getAssetActions } from '$lib/services/asset.service';
   import { faceManager } from '$lib/stores/face.svelte';
+  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { ocrManager } from '$lib/stores/ocr.svelte';
   import { alwaysLoadOriginalVideo } from '$lib/stores/preferences.store';
   import { SlideshowNavigation, SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
@@ -568,6 +569,10 @@
       !inCuratorTool,
   );
 
+  // Local Omarchy layer: a phone (below 768px), where the bar's actions are split between the top and the bottom edge
+  // (AssetViewerNavBar): what else sits at the bottom stands on that bar (the rules under `data-phone` below)
+  const phone = $derived(mediaQueryManager.maxMd);
+
   const onSwipe = (event: SwipeCustomEvent) => {
     if (assetViewerManager.zoom > 1) {
       return;
@@ -606,6 +611,7 @@
 <section
   id="immich-asset-viewer"
   class="fixed inset-s-0 top-0 grid size-full grid-cols-4 grid-rows-[64px_1fr] overflow-hidden bg-black"
+  data-phone={phone || undefined}
   use:focusTrap
   bind:this={assetViewerHtmlElement}
 >
@@ -731,7 +737,7 @@
     {/if}
 
     {#if showActivityStatus}
-      <div class="absolute inset-e-0 bottom-0 me-8 mb-20">
+      <div class="ws-viewer-foot absolute inset-e-0 bottom-0 me-8 mb-20">
         <ActivityStatus
           disabled={!album?.isActivityEnabled}
           isLiked={activityManager.isLiked}
@@ -761,7 +767,7 @@
     {/if}
 
     {#if showOcrButton}
-      <div class="absolute inset-e-0 bottom-0 me-6 mb-6 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)]">
+      <div class="ws-viewer-foot absolute inset-e-0 bottom-0 me-6 mb-6 drop-shadow-[0_0_1px_rgba(0,0,0,0.4)]">
         <OcrButton />
       </div>
     {/if}
@@ -865,6 +871,37 @@
 <style>
   #immich-asset-viewer {
     contain: layout;
+  }
+
+  /* Local Omarchy layer: a phone (see `phone`). What sits at the bottom stands on the bottom bar: the stack's strip on
+     it, and over both the text-in-photo button, an album's hearts and comments and a video's controls
+     (VideoNativeViewer), each lifted by --ws-viewer-foot, what the bar and the strip take of the screen's foot */
+  #immich-asset-viewer[data-phone] {
+    --ws-viewer-bar-h: 0px;
+    --ws-viewer-strip-h: 0px;
+    --ws-viewer-foot: calc(var(--ws-viewer-bar-h) + var(--ws-viewer-strip-h));
+  }
+  :global(#immich-asset-viewer[data-phone]:has(.ws-viewer-bottom)) {
+    --ws-viewer-bar-h: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* the strip's tallest photo (the one on screen) with its dot under it */
+  #immich-asset-viewer[data-phone]:has(> #stack-slideshow) {
+    --ws-viewer-strip-h: 5.25rem;
+  }
+  #immich-asset-viewer[data-phone] > #stack-slideshow {
+    bottom: var(--ws-viewer-bar-h);
+  }
+  #immich-asset-viewer[data-phone] .ws-viewer-foot {
+    bottom: var(--ws-viewer-foot);
+  }
+  /* Curator's cards hang from under the top bar: they end above the foot */
+  #immich-asset-viewer[data-phone] :global(:is(.lookup, .pick)) {
+    max-height: calc(100% - 5.75rem - var(--ws-viewer-foot));
+  }
+  /* what Curator makes on request waits in the bottom-left corner of the window (routes/+layout): over the bottom
+     bar it would hide share and favourite, so while the viewer is open on a phone it waits above them */
+  :global(body:has(#immich-asset-viewer[data-phone]) .ws-curator-corner) {
+    bottom: calc(0.75rem + 3.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   .horizontal-scrollbar::-webkit-scrollbar {
