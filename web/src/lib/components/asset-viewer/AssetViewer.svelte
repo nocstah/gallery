@@ -59,6 +59,7 @@
   import { onDestroy, onMount, untrack } from 'svelte';
   import type { SwipeCustomEvent } from 'svelte-gestures';
   import { t } from 'svelte-i18n';
+  import { cubicOut } from 'svelte/easing';
   import { fade, fly } from 'svelte/transition';
   import Thumbnail from '../assets/thumbnail/Thumbnail.svelte';
   import ActivityStatus from './ActivityStatus.svelte';
@@ -226,6 +227,13 @@
     faceManager.clear();
     await faceManager.getAssetFaces(asset.id);
   };
+
+  // Local Omarchy layer: on a phone Info is a sheet over most of the screen (see `sheet`), so a photo opens on its own
+  // there, as a phone's photo app opens it, whatever the panel was left at (before the first paint, so it never shows);
+  // moving on from photo to photo keeps it
+  if (mediaQueryManager.maxMd) {
+    assetViewerManager.closeDetailPanel();
+  }
 
   onMount(() => {
     syncAssetViewerOpenClass(true);
@@ -569,9 +577,20 @@
       !inCuratorTool,
   );
 
+  const showActivityPanel = $derived(
+    isShared && !!album && assetViewerManager.isShowActivityPanel && authManager.authenticated,
+  );
+
   // Local Omarchy layer: a phone (below 768px), where the bar's actions are split between the top and the bottom edge
-  // (AssetViewerNavBar): what else sits at the bottom stands on that bar (the rules under `data-phone` below)
+  // (AssetViewerNavBar): what else sits at the bottom stands on that bar (the rules under `data-phone` below). A panel
+  // there (Info, the editor, an album's comments) is a sheet: the photo keeps the top of the screen, the sheet the rest
+  // below it, as Adjust's panel sits below the photo, and none of the viewer's chrome stays over it (hidden, not
+  // unmounted, so the keys still work). The sheet rises into place; reduced motion fades it.
   const phone = $derived(mediaQueryManager.maxMd);
+  const sheet = $derived(phone && (showDetailPanel || assetViewerManager.isShowEditor || showActivityPanel));
+  const panelFly = $derived(
+    phone && !mediaQueryManager.reducedMotion ? { duration: 220, y: 48, easing: cubicOut } : { duration: 150 },
+  );
 
   const onSwipe = (event: SwipeCustomEvent) => {
     if (assetViewerManager.zoom > 1) {
@@ -612,6 +631,7 @@
   id="immich-asset-viewer"
   class="fixed inset-s-0 top-0 grid size-full grid-cols-4 grid-rows-[64px_1fr] overflow-hidden bg-black"
   data-phone={phone || undefined}
+  data-sheet={sheet || undefined}
   use:focusTrap
   bind:this={assetViewerHtmlElement}
 >
@@ -631,7 +651,7 @@
   {/key}
   <!-- Top navigation bar -->
   {#if $slideshowState === SlideshowState.None && !assetViewerManager.isShowEditor && !inCuratorTool}
-    <div class="col-span-4 col-start-1 row-span-1 row-start-1 transition-transform">
+    <div class="col-span-4 col-start-1 row-span-1 row-start-1 transition-transform" data-viewer-chrome>
       <AssetViewerNavBar
         {asset}
         {album}
@@ -662,7 +682,7 @@
   {/if}
 
   {#if $slideshowState === SlideshowState.None && showNavigation && !assetViewerManager.isShowEditor && !assetViewerManager.isFaceEditMode && !inCuratorTool && previousAsset}
-    <div class="col-span-1 col-start-1 row-span-full row-start-1 my-auto justify-self-start">
+    <div class="col-span-1 col-start-1 row-span-full row-start-1 my-auto justify-self-start" data-viewer-chrome>
       <PreviousAssetAction onPreviousAsset={() => navigateAsset('previous')} />
     </div>
   {/if}
@@ -778,14 +798,14 @@
   </div>
 
   {#if $slideshowState === SlideshowState.None && showNavigation && !assetViewerManager.isShowEditor && !assetViewerManager.isFaceEditMode && !inCuratorTool && nextAsset}
-    <div class="col-span-1 col-start-4 row-span-full row-start-1 my-auto justify-self-end">
+    <div class="col-span-1 col-start-4 row-span-full row-start-1 my-auto justify-self-end" data-viewer-chrome>
       <NextAssetAction onNextAsset={() => navigateAsset('next')} />
     </div>
   {/if}
 
   {#if showDetailPanel || assetViewerManager.isShowEditor}
     <div
-      transition:fly={{ duration: 150 }}
+      transition:fly={panelFly}
       id="detail-panel"
       class={[
         'row-span-4 row-start-1 overflow-y-auto bg-light transition-all dark:border-l dark:border-s-immich-dark-gray',
@@ -803,7 +823,7 @@
 
   {#if stack && withStacked && !assetViewerManager.isShowEditor && !inCuratorTool && $slideshowState === SlideshowState.None}
     {@const stackedAssets = stack.assets}
-    <div id="stack-slideshow" class="absolute bottom-0 col-span-4 col-start-1 w-fit max-w-full">
+    <div id="stack-slideshow" class="absolute bottom-0 col-span-4 col-start-1 w-fit max-w-full" data-viewer-chrome>
       <div class="no-wrap horizontal-scrollbar relative flex flex-row overflow-x-auto overflow-y-hidden">
         <!-- Local Omarchy layer: ask Curator for the stack's best photo -->
         {#if ownStack && lookUp.available}
@@ -850,9 +870,9 @@
     </div>
   {/if}
 
-  {#if isShared && album && assetViewerManager.isShowActivityPanel && authManager.authenticated}
+  {#if showActivityPanel && album}
     <div
-      transition:fly={{ duration: 150 }}
+      transition:fly={panelFly}
       id="activity-panel"
       class="row-span-5 row-start-1 w-90 overflow-y-auto transition-all md:w-115 dark:border-l dark:border-s-immich-dark-gray"
       translate="yes"
@@ -881,11 +901,11 @@
     --ws-viewer-strip-h: 0px;
     --ws-viewer-foot: calc(var(--ws-viewer-bar-h) + var(--ws-viewer-strip-h));
   }
-  :global(#immich-asset-viewer[data-phone]:has(.ws-viewer-bottom)) {
+  :global(#immich-asset-viewer[data-phone]:not([data-sheet]):has(.ws-viewer-bottom)) {
     --ws-viewer-bar-h: calc(3.5rem + env(safe-area-inset-bottom, 0px));
   }
   /* the strip's tallest photo (the one on screen) with its dot under it */
-  #immich-asset-viewer[data-phone]:has(> #stack-slideshow) {
+  #immich-asset-viewer[data-phone]:not([data-sheet]):has(> #stack-slideshow) {
     --ws-viewer-strip-h: 5.25rem;
   }
   #immich-asset-viewer[data-phone] > #stack-slideshow {
@@ -902,6 +922,39 @@
      bar it would hide share and favourite, so while the viewer is open on a phone it waits above them */
   :global(body:has(#immich-asset-viewer[data-phone]) .ws-curator-corner) {
     bottom: calc(0.75rem + 3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* the sheet: the photo on top, the panel below it on the theme's ground behind one hairline, clear of the home
+     indicator; the viewer's chrome is off the screen meanwhile */
+  #immich-asset-viewer[data-sheet] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
+  }
+  #immich-asset-viewer[data-sheet] > [data-viewer-chrome] {
+    display: none;
+  }
+  #immich-asset-viewer[data-sheet] > [data-viewer-content] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  #immich-asset-viewer[data-sheet] > :is(#detail-panel, #activity-panel) {
+    grid-column: 1;
+    grid-row: 2;
+    width: auto;
+    border-inline-start: 0;
+    border-top: 1px solid var(--ws-hairline);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overscroll-behavior: contain;
+  }
+  /* the sheet's own close and name stay at its top, over one hairline, while what it says scrolls under them */
+  #immich-asset-viewer[data-sheet] > #detail-panel :global(.ws-detail-head) {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: -0.5rem -0.5rem 0;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--ws-hairline);
+    background: var(--immich-ui-light);
   }
 
   .horizontal-scrollbar::-webkit-scrollbar {

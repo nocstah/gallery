@@ -233,7 +233,8 @@
 
 {#if !assetViewerManager.isEditFacesPanelOpen}
   <section class="relative p-2">
-    <div class="flex place-items-center gap-2">
+    <!-- Local Omarchy layer: ws-detail-head, the hook by which the phone's sheet (AssetViewer) keeps its close in reach -->
+    <div class="ws-detail-head flex place-items-center gap-2">
       <IconButton
         icon={mdiClose}
         aria-label={$t('close')}
