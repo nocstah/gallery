@@ -1,6 +1,6 @@
 // Local Omarchy layer: the sidebar as a place to carry photos to, as on the Mac ("I want what Mac photos has… easy
 // album management"). Photos lifted out of a grid (actions/marquee-select) can be dropped on an album row (the Albums
-// tree, a Space's tree), on To do, Villa or QR, on a Space, or on the New album zone that shows at
+// tree, a Space's tree, the pinned albums), on To do, Villa or QR, on a Space, or on the New album zone that shows at
 // the sidebar's foot while photos are carried. A folder row springs open after a short hover, as Finder's
 // spring-loaded folders do, and the folders a drag opened close again when it leaves the sidebar or ends without a
 // drop there (a drop keeps the ones on the way to where the photos went open). Near the sidebar's top or bottom edge

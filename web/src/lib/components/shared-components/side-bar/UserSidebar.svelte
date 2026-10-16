@@ -6,6 +6,7 @@
   import SharedLinksRow from '$lib/components/shared-components/side-bar/shared-links-row.svelte';
   import AlbumsTree from '$lib/components/sidebar/albums-tree.svelte';
   import NewAlbumDrop from '$lib/components/sidebar/new-album-drop.svelte';
+  import PinnedAlbums from '$lib/components/sidebar/pinned-albums.svelte';
   import SidebarNavGroup from '$lib/components/sidebar/sidebar-nav-group.svelte';
   import SidebarNavItem from '$lib/components/sidebar/sidebar-nav-item.svelte';
   import Sidebar from '$lib/components/sidebar/sidebar-shell.svelte';
@@ -13,6 +14,7 @@
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { specialAlbums } from '$lib/managers/special-albums.svelte';
   import { Route } from '$lib/route';
+  import { pinnedAlbums } from '$lib/stores/pinned-albums.svelte';
   import { recentAlbumsDropdown, recentSpacesDropdown } from '$lib/stores/preferences.store';
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
   import {
@@ -54,6 +56,12 @@
   import { fly } from 'svelte/transition';
 
   const collapsed = $derived(sidebarModeStore.layout === 'rail' && !sidebarModeStore.railExpanded);
+
+  // Local Omarchy layer: a pinned album on screen lights its row under Pinned, not Albums
+  const pinnedOnScreen = () => {
+    const id = /^\/albums\/([^/]+)/.exec(page.url.pathname)?.[1];
+    return !!id && pinnedAlbums.has(id);
+  };
 </script>
 
 <Sidebar ariaLabel={$t('primary')}>
@@ -89,6 +97,10 @@
     <SidebarNavItem title={$t('people')} href={Route.people()} icon={mdiAccountOutline} activeIcon={mdiAccount} />
   {/if}
 
+  <!-- Local Omarchy layer: the albums pinned to the sidebar, first after the views as the Mac puts Pinned, and above
+       Library so a long Albums tree never pushes them out of sight (components/sidebar/pinned-albums) -->
+  <PinnedAlbums />
+
   <SidebarNavGroup title={$t('library')} />
 
   <SidebarNavItem title={$t('favorites')} href={Route.favorites()} icon={mdiHeartOutline} activeIcon={mdiHeart} />
@@ -117,6 +129,7 @@
     isActive={() =>
       page.url.pathname.startsWith(Route.albums()) &&
       specialAlbums.every((special) => !special.isAlbumPath(page.url.pathname)) &&
+      !pinnedOnScreen() &&
       (!$recentAlbumsDropdown ||
         collapsed ||
         (page.url.pathname === Route.albums() && !page.url.searchParams.get('folder')))}

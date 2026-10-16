@@ -8,6 +8,7 @@
   import { albumFolders } from '$lib/managers/album-folders.svelte';
   import { specialAlbums } from '$lib/managers/special-albums.svelte';
   import { Route } from '$lib/route';
+  import { pinnedAlbums } from '$lib/stores/pinned-albums.svelte';
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
   import { handleError } from '$lib/utils/handle-error';
   import { getAllAlbums, type AlbumResponseDto } from '@immich/sdk';
@@ -51,7 +52,12 @@
   });
 
   const activeFolderId = $derived(page.url.pathname === Route.albums() ? page.url.searchParams.get('folder') : null);
-  const activeAlbumId = $derived(/^\/albums\/([^/]+)/.exec(page.url.pathname)?.[1] ?? null);
+  // a pinned album lights its row under Pinned instead (components/sidebar/pinned-albums), so one row reads as on
+  // screen, and its folders here stay as they were
+  const activeAlbumId = $derived.by(() => {
+    const id = /^\/albums\/([^/]+)/.exec(page.url.pathname)?.[1] ?? null;
+    return id && pinnedAlbums.has(id) ? null : id;
+  });
 
   // the rail shows icons only: the tree waits for the sidebar to open
   const collapsed = $derived(sidebarModeStore.layout === 'rail' && !sidebarModeStore.railExpanded);
@@ -77,5 +83,6 @@
     {activeFolderId}
     {activeAlbumId}
     canAdd
+    pinnable
   />
 {/if}

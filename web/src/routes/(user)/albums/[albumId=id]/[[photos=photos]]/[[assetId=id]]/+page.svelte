@@ -902,7 +902,9 @@
     <ActionButton action={Actions.Download} />
   {/if}
 
-  {#if isOwned || album.albumUsers.length > 1 || narrowBar.current}
+  <!-- Local Omarchy layer: there for every album but To do, Villa and QR, since any other can be pinned to the
+       sidebar (stores/pinned-albums) -->
+  {#if isOwned || album.albumUsers.length > 1 || narrowBar.current || Actions.Pin.$if?.()}
     <ButtonContextMenu icon={mdiDotsVertical} title={$t('album_options')} color="secondary" offset={{ x: 175, y: 25 }}>
       {#if narrowBar.current}
         {#if isEditor}
@@ -940,6 +942,7 @@
           }}
         />
       {/if}
+      <ActionMenuItem action={Actions.Pin} />
       <ActionMenuItem action={Actions.MoveToFolder} />
       <ActionMenuItem action={Actions.Merge} />
       <ActionMenuItem action={Actions.ToggleTimeline} />

@@ -7,6 +7,9 @@ import { sidebarDrop, SPRING_MS } from '$lib/managers/sidebar-drop.svelte';
 import { albumTreeOpen } from '$lib/stores/preferences.store';
 import AlbumTree from './album-tree.svelte';
 
+const mocks = vi.hoisted(() => ({ showPinMenu: vi.fn() }));
+vi.mock('$lib/utils/pin-menu', () => ({ showPinMenu: mocks.showPinMenu }));
+
 // Local Omarchy layer: albums in their folders as a Mac-like tree in the sidebar (components/sidebar/album-tree)
 const folder = (id: string, name: string, parentId: string | null = null) =>
   ({ id, name, parentId, spaceId: 'library' }) as SharedSpaceAlbumFolderDto;
@@ -131,5 +134,11 @@ describe('album tree under carried photos', () => {
     expect(get(albumTreeOpen)).toEqual({ 'albums:trips': true });
     sidebarDrop.end();
     expect(get(albumTreeOpen)).toEqual({ 'albums:trips': false });
+  });
+
+  it('offers to pin an album from its row when the tree pins', async () => {
+    render(AlbumTree, { props: { ...props, pinnable: true }, target: nav });
+    await fireEvent.contextMenu(row('tree-album-highlights'));
+    expect(mocks.showPinMenu).toHaveBeenCalledWith(expect.any(MouseEvent), 'highlights');
   });
 });

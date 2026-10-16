@@ -19,6 +19,7 @@
   // springs open under them (managers/sidebar-drop); an album a drop just made lights for a moment.
   import { dropSpring, dropTarget, sidebarDrop } from '$lib/managers/sidebar-drop.svelte';
   import { albumTreeOpen } from '$lib/stores/preferences.store';
+  import { showPinMenu } from '$lib/utils/pin-menu';
   import type { SharedSpaceAlbumFolderDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import {
@@ -46,6 +47,8 @@
     label: string;
     /** I may add photos to its albums (mine, or a Space I edit): its album rows take photos carried to them */
     canAdd?: boolean;
+    /** its album rows' right-click pins them to the sidebar (the Albums tree: stores/pinned-albums) */
+    pinnable?: boolean;
   }
 
   let {
@@ -58,6 +61,7 @@
     activeAlbumId,
     label,
     canAdd = false,
+    pinnable = false,
   }: Props = $props();
 
   let tree = $state<HTMLUListElement>();
@@ -193,12 +197,15 @@
   {#each albumsIn[parentId ?? ''] ?? [] as album (album.id)}
     {@const active = album.id === activeAlbumId}
     <li>
+      <!-- the right-click menu is a shortcut: the album's own menus carry the same item for the keyboard -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="ws-tree-row"
         style:--depth={depth}
         data-active={active}
         data-arrived={album.id === sidebarDrop.arrived ? '' : undefined}
         use:dropTarget={{ kind: 'album', id: album.id, name: album.name, writable: canAdd }}
+        oncontextmenu={pinnable ? (event) => showPinMenu(event, album.id) : undefined}
       >
         <span class="ws-tree-toggle" aria-hidden="true"></span>
         <a

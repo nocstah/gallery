@@ -59,6 +59,7 @@ import { openFileUploadDialog } from '$lib/utils/file-uploader';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
 import { rememberLastAlbum } from '$lib/utils/last-album';
+import { getPinAction } from '$lib/utils/pin-menu';
 import { addedToAlbumDone } from '$lib/utils/undoable';
 
 export const isAlbumOwner = (album: AlbumResponseDto) => album.albumUsers[0].user.id === authManager.user.id;
@@ -179,6 +180,13 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     onAction: () => modalManager.show(AlbumOptionsModal, { album, readOnly: !isOwned }),
   };
 
+  // Local Omarchy layer: Pin to sidebar / Unpin from sidebar (stores/pinned-albums), for any album I can open; never
+  // To do, Villa or QR, which have rows of their own
+  const Pin: ActionItem = {
+    ...getPinAction($t, album.id),
+    $if: () => !specialAlbumOf(album.id),
+  };
+
   const Share: ActionItem = {
     title: $t('share'),
     icon: mdiShareVariantOutline,
@@ -198,6 +206,7 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     Merge,
     MoveToFolder,
     Options,
+    Pin,
     Share,
     ToggleTimeline,
   };
