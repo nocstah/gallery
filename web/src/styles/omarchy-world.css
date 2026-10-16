@@ -1032,6 +1032,21 @@ div[role='dialog'] :is(.border-b, .border-t) {
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
+/* the count is a button that opens Show selected (modals/SelectionReviewModal), a muted chevron after it saying so;
+   pointing at it tints it like the bar's icons */
+.ws-select-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.4rem 0.3rem 0.5rem;
+  transition: background-color 120ms;
+}
+.ws-select-count:hover {
+  background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
+}
+.ws-select-count-more {
+  color: var(--immich-ui-muted);
+}
 .ws-select-bar button {
   border-radius: var(--ws-radius);
 }

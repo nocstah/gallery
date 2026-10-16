@@ -237,10 +237,22 @@
   // they are a space Owner/Editor, the link is created against the space instead of being narrowed
   // to the owned subset. `caps` encodes the role check; `space` is non-null whenever it is set.
   const shareSpaceId = $derived(caps.shareScopedToSpace ? space?.id : undefined);
+
+  // Local Omarchy layer: Show selected (AssetSelectControlBar) offers what this bar offers, gated the same way: Share
+  // (against the space where the bar's own does), and New album with Add to album or space where adding is allowed (New
+  // album stays out where the picker is narrowed to the space's albums)
+  const reviewActions = () => {
+    const { CreateSharedLink, NewAlbum, AddToAlbum } = getAssetBulkActions($t, {
+      restrictToSpaceId,
+      editableSelectedAssetIds,
+      shareSpaceId,
+    });
+    return [...(caps.canShare ? [CreateSharedLink] : []), ...(caps.canAddToAlbum ? [NewAlbum, AddToAlbum] : [])];
+  };
 </script>
 
 {#if assetInteraction.selectionActive}
-  <AssetSelectControlBar>
+  <AssetSelectControlBar {reviewActions}>
     {@const Actions = getAssetBulkActions($t, { restrictToSpaceId, editableSelectedAssetIds })}
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
     {#if caps.canShare}

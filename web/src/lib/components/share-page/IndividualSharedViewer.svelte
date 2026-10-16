@@ -99,7 +99,8 @@
 
   <header class="fixed inset-s-0 top-0 w-full">
     {#if assetMultiSelectManager.selectionActive}
-      <AssetSelectControlBar>
+      <!-- Local Omarchy layer: no Share or Add to album here, so Show selected offers only Done -->
+      <AssetSelectControlBar reviewActions={() => []}>
         <IconButton
           shape="round"
           color="secondary"

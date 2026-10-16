@@ -119,7 +119,8 @@
 
 <!-- Multi-selection mode app bar -->
 {#if assetMultiSelectManager.selectionActive}
-  <AssetSelectControlBar>
+  <!-- Local Omarchy layer: no Share or Add to album here, so Show selected offers only Done -->
+  <AssetSelectControlBar reviewActions={() => []}>
     <SelectAllAssets withText {timelineManager} assetInteraction={assetMultiSelectManager} />
     <SetVisibilityAction unlock onVisibilitySet={handleMoveOffLockedFolder} />
     <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>

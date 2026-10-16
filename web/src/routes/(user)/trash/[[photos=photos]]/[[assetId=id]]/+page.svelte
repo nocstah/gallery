@@ -112,7 +112,8 @@
 {/if}
 
 {#if assetMultiSelectManager.selectionActive}
-  <AssetSelectControlBar>
+  <!-- Local Omarchy layer: no Share or Add to album here, so Show selected offers only Done -->
+  <AssetSelectControlBar reviewActions={() => []}>
     <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
     <DeleteAssets force onAssetDelete={(assetIds) => timelineManager.removeAssets(assetIds)} />
     <RestoreAssets onRestore={(assetIds) => timelineManager.removeAssets(assetIds)} />

@@ -99,7 +99,8 @@
 
 <header>
   {#if assetMultiSelectManager.selectionActive}
-    <AssetSelectControlBar>
+    <!-- Local Omarchy layer: no Share or Add to album here, so Show selected offers only Done -->
+    <AssetSelectControlBar reviewActions={() => []}>
       <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
       {#if sharedLink.allowDownload}
         <DownloadAction filename={album.albumName} />

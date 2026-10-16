@@ -441,6 +441,18 @@ describe('bulk CreateSharedLink action', () => {
     expect(modalManager.show).toHaveBeenCalledWith(SharedLinkCreateModal, { assetIds: ['x1'], excludedCount: 1 });
   });
 
+  // Local Omarchy layer: Show selected on a space surface offers the toolbar's own space-scoped link
+  it('shares the whole selection against the space when the toolbar scopes the link there (#1018)', async () => {
+    selection.ownedAssets = [{ id: 'x1' }];
+    const action = getAssetBulkActions(((k: string) => k) as never, { shareSpaceId: 'space-1' }).CreateSharedLink;
+    await action.onAction({ action, event: new Event('click') });
+    expect(modalManager.show).toHaveBeenCalledWith(SharedLinkCreateModal, {
+      assetIds: ['x1', 'x2'],
+      spaceId: 'space-1',
+      contributedCount: 1,
+    });
+  });
+
   it('warns instead of opening the modal when nothing in the selection is owned', async () => {
     selection.ownedAssets = [];
     const action = getAssetBulkActions(((k: string) => k) as never).CreateSharedLink;

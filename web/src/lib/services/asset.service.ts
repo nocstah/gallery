@@ -88,6 +88,7 @@ export const getAssetBulkActions = (
     restrictToSpaceId,
     album,
     editableSelectedAssetIds,
+    shareSpaceId,
   }: {
     /**
      * Set when the selection contains assets the user does not own: the add-to-collection
@@ -106,6 +107,12 @@ export const getAssetBulkActions = (
      * omitted on every other surface, which keeps upstream's all-owned behaviour.
      */
     editableSelectedAssetIds?: string[];
+    /**
+     * Local Omarchy layer: #1018, set where `SelectionToolbar` creates links against its space (a space Owner/Editor
+     * whose selection reaches past what they own): Share then sends the whole selection against the space, as the
+     * toolbar's own CreateSharedLinkAction does, for Show selected to offer the same link.
+     */
+    shareSpaceId?: string;
   } = {},
 ) => {
   const assetIds = assetMultiSelectManager.assets.map((asset) => asset.id);
@@ -153,6 +160,14 @@ export const getAssetBulkActions = (
     icon: mdiShareVariantOutline,
     onAction: async () => {
       const ownedAssetIds = authManager.authenticated ? assetMultiSelectManager.ownedAssets.map(({ id }) => id) : [];
+      if (shareSpaceId) {
+        await modalManager.show(SharedLinkCreateModal, {
+          assetIds,
+          spaceId: shareSpaceId,
+          contributedCount: assetIds.length - ownedAssetIds.length,
+        });
+        return;
+      }
       if (ownedAssetIds.length === 0) {
         toastManager.warning($t('shared_link_nothing_owned_to_share'));
         return;
