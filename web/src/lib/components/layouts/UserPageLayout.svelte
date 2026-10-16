@@ -5,7 +5,9 @@
 <script lang="ts">
   import { useActions, type ActionArray } from '$lib/actions/use-actions';
   import OmarchyBar from '$lib/components/omarchy/OmarchyBar.svelte';
+  import TimelineMonthHeading from '$lib/components/timeline/TimelineMonthHeading.svelte';
   import { barSlot } from '$lib/managers/bar-slot.svelte';
+  import { monthInView, timelineHeading } from '$lib/managers/timeline-heading.svelte';
   import UserSidebar from '$lib/components/shared-components/side-bar/UserSidebar.svelte';
   import { shortcuts } from '$lib/actions/shortcut';
   import { sidebarMedia } from '$lib/stores/sidebar-media.svelte';
@@ -73,6 +75,14 @@
     !!box && [...box.children].some((child) => child.scrollWidth > child.clientWidth + 1);
   let pageFit = $state(0);
   let pageFitting = false;
+  // Local Omarchy layer: the month in view of the page's timeline (Favorites, an album, a person, Archive, a Space's
+  // photos...), kept at the end of the title row as Photos keeps its own heading: muted behind a hairline, the short
+  // month name once the description has gone, and gone itself with the wide-screen extras
+  const headingSource = $derived(timelineHeading.current);
+  const headingMonth = $derived(
+    headingSource ? monthInView(headingSource.timelineManager, headingSource.month) : undefined,
+  );
+  const hasHeading = $derived(!!headingMonth);
   let pageBarBox = $state<HTMLElement>();
   let pageActionsBox = $state<HTMLElement>();
   const refitPage = async () => {
@@ -94,6 +104,7 @@
   $effect(() => {
     void title;
     void description;
+    void hasHeading;
     if (!pageBarBox) {
       return;
     }
@@ -153,7 +164,12 @@
 {#snippet pageBar()}
   <div class="ws-page-bar" data-fit={pageFit} bind:this={pageBarBox}>
     <!-- upstream's title row (title, description, its trailing control) and its constraints, kept as they were -->
-    <div class="ws-page-bar-title min-w-0 overflow-hidden" data-testid="page-header-title-row" bind:this={pageTitleBox}>
+    <div
+      class="ws-page-bar-title min-w-0 overflow-hidden"
+      data-testid="page-header-title-row"
+      data-now={headingMonth ? '' : undefined}
+      bind:this={pageTitleBox}
+    >
       {@render leading?.()}
       {#if title}
         <div class="ws-page-title min-w-0 truncate" tabindex="-1" id={headerId} data-testid="page-header">{title}</div>
@@ -166,6 +182,12 @@
       {#if descriptionTrailing}
         <div class="shrink-0" data-testid="page-header-description-trailing">
           {@render descriptionTrailing()}
+        </div>
+      {/if}
+      {#if headingMonth}
+        <!-- Local Omarchy layer: in the title row, so it stands on the title's baseline (a back button sets that low) -->
+        <div class="ws-page-now">
+          <TimelineMonthHeading month={headingMonth} onGrouping={headingSource?.onGrouping} short={pageFit > 0} quiet />
         </div>
       {/if}
     </div>
@@ -258,6 +280,14 @@
     align-items: baseline;
     min-width: 0;
   }
+  /* the month in view is the title row's last item: while it shows, the row's share of the bar grows by its room (the
+     long month name, then the short one), so the title keeps what it had */
+  .ws-page-bar[data-fit='0'] .ws-page-bar-title[data-now] {
+    max-width: calc(45% + 11rem);
+  }
+  .ws-page-bar:is([data-fit='1'], [data-fit='2']) .ws-page-bar-title[data-now] {
+    max-width: calc(45% + 6rem);
+  }
   @media (max-width: 639px) {
     .ws-page-bar {
       gap: 0.25rem;
@@ -265,6 +295,9 @@
     .ws-page-bar-title {
       max-width: 60%;
       gap: 0.375rem;
+    }
+    .ws-page-bar:is([data-fit='0'], [data-fit='1'], [data-fit='2']) .ws-page-bar-title[data-now] {
+      max-width: calc(60% + 6rem);
     }
     .ws-page-bar-title :global(button[class~='w-10']) {
       width: 2rem;
@@ -308,6 +341,18 @@
     flex: none;
     gap: 0.25rem;
     align-items: center;
+  }
+  /* the month in view of the page's timeline ends the title row behind a hairline, on the title's baseline */
+  .ws-page-now {
+    display: flex;
+    flex: none;
+    padding-block: 0.125rem;
+    padding-inline-start: 0.75rem;
+    margin-inline-start: 0.15rem;
+    border-inline-start: 1px solid var(--ws-hairline);
+  }
+  .ws-page-bar:is([data-fit='3'], [data-fit='4']) .ws-page-now {
+    display: none;
   }
   /* the page's own controls take the desktop's corners in the bar */
   .ws-page-actions :global(:is(button, a, input, [class*='rounded'])) {

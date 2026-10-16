@@ -35,6 +35,8 @@
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import { barSlot } from '$lib/managers/bar-slot.svelte';
   import TimelineWorkspaces from '$lib/components/timeline/TimelineWorkspaces.svelte';
+  import TimelineMonthHeading from '$lib/components/timeline/TimelineMonthHeading.svelte';
+  import { monthInView } from '$lib/managers/timeline-heading.svelte';
   import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
   import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
   import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
@@ -737,6 +739,23 @@
       }
     };
   });
+
+  // Local Omarchy layer: with filters on, the grouping row and the filters stand above the photos instead of the year
+  // strip, and the bar keeps the month heading alone, so it still follows the photos as they scroll
+  const headingAlone = $derived(
+    !showSearchResults && timelineGrouping === 'day' && !!timelineManager && hasActiveFilters && !workspacesShown,
+  );
+  $effect(() => {
+    if (!headingAlone) {
+      return;
+    }
+    barSlot.content = monthBar;
+    return () => {
+      if (barSlot.content === monthBar) {
+        barSlot.content = undefined;
+      }
+    };
+  });
 </script>
 
 {#snippet timeBar()}
@@ -744,6 +763,16 @@
     <TimelineWorkspaces
       {timelineManager}
       {viewportMonth}
+      onGrouping={assetMultiSelectManager.selectionActive ? undefined : handleTimelineGroupingChange}
+    />
+  {/if}
+{/snippet}
+
+{#snippet monthBar()}
+  {@const month = timelineManager ? monthInView(timelineManager, viewportMonth) : undefined}
+  {#if month}
+    <TimelineMonthHeading
+      {month}
       onGrouping={assetMultiSelectManager.selectionActive ? undefined : handleTimelineGroupingChange}
     />
   {/if}

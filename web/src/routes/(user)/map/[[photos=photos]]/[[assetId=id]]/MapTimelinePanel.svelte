@@ -168,6 +168,7 @@
     <Timeline
       bind:timelineManager
       enableRouting={false}
+      barHeading={false}
       options={timelineOptions}
       onEscape={handleEscape}
       assetInteraction={assetMultiSelectManager}

@@ -6,16 +6,15 @@
   // year switches to it the way SUPER+<n> switches Hyprland workspaces. The months are left to the scrubber and the
   // Months overview: a row of twelve took the room the years need in a narrower window. A narrower bar shows fewer
   // years and a shorter month name; nothing folds, moves or opens over the photos.
+  import TimelineMonthHeading from '$lib/components/timeline/TimelineMonthHeading.svelte';
+  import { monthInView } from '$lib/managers/timeline-heading.svelte';
   import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineGrouping, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
-  import { locale } from '$lib/stores/preferences.store';
   import { desktopMotion } from '$lib/utils/desktop-motion';
   import { Icon } from '@immich/ui';
   import { mdiChevronLeft, mdiChevronRight } from '@mdi/js';
   import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
-  import { cubicOut } from 'svelte/easing';
-  import { fly } from 'svelte/transition';
 
   interface Props {
     timelineManager: TimelineManager;
@@ -26,7 +25,7 @@
 
   let { timelineManager, viewportMonth, onGrouping }: Props = $props();
 
-  const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reducedMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // months come in timeline order (newest first unless the timeline runs oldest first); fold them into years
   const years = $derived.by(() => {
@@ -42,42 +41,11 @@
     return out;
   });
 
-  const current = $derived.by(() => {
-    if (viewportMonth && typeof viewportMonth === 'object') {
-      return viewportMonth;
-    }
-    const first = timelineManager.scrubberMonths[0];
-    if (viewportMonth === 'lead-out') {
-      const last = timelineManager.scrubberMonths.at(-1);
-      return last ? { year: last.year, month: last.month } : undefined;
-    }
-    return first ? { year: first.year, month: first.month } : undefined;
-  });
+  // the month heading (TimelineMonthHeading) holds the width of its longest month name, so the years beside it stay put
+  // as the photos scroll from May to September
+  const current = $derived(monthInView(timelineManager, viewportMonth));
 
   const itemsLabel = (count: number) => $t('items_count', { values: { count } });
-  const monthLabel = (year: number, month: number, style: 'long' | 'short' = 'long') =>
-    new Intl.DateTimeFormat($locale, { month: style }).format(new Date(year, month - 1, 1));
-
-  // the heading holds the width of its longest month name (all twelve laid invisibly in the same cell), so the
-  // years beside it stay put as the photos scroll from May to September
-  const ghosts = $derived(
-    Array.from({ length: 12 }, (_, index) => ({
-      long: monthLabel(2000, index + 1),
-      short: monthLabel(2000, index + 1, 'short'),
-    })),
-  );
-
-  // Direction of travel: older months arrive from the right, newer from the left, like moving to a
-  // higher or lower workspace. Read at transition time so it never lags a switch behind.
-  let lastKey = 0;
-  const travel = () => {
-    const key = current ? current.year * 12 + current.month : 0;
-    const direction = key < lastKey ? 1 : -1;
-    lastKey = key;
-    return direction;
-  };
-  const slide = (node: Element) =>
-    fly(node, { x: reducedMotion ? 0 : travel() * 16, duration: reducedMotion ? 0 : 220, easing: cubicOut });
 
   // Where a month's top must go so it starts just below the chrome: the month's own position (logical, not the
   // scrubber's percentage scale), less whatever floats over the top of the grid (the glass bar; nothing when solid)
@@ -138,7 +106,9 @@
         { duration: workspace.duration * 0.6, easing: workspace.ease },
       ).finished;
     } finally {
-      layer.getAnimations().forEach((animation) => animation.cancel());
+      for (const animation of layer.getAnimations()) {
+        animation.cancel();
+      }
       switching = false;
     }
   };
@@ -174,7 +144,7 @@
       if (centred && (hovering || Date.now() - touched < HANDS_OFF)) {
         return;
       }
-      const item = track?.querySelector<HTMLElement>(`[data-year="${year}"]`);
+      const item = track?.querySelector<HTMLElement>(`[data-year="${CSS.escape(String(year))}"]`);
       if (!track || !item) {
         return;
       }
@@ -229,7 +199,7 @@
     track.scrollLeft = drag.left - dx;
   };
   const dragEnd = () => {
-    window.removeEventListener('pointermove', dragMove);
+    removeEventListener('pointermove', dragMove);
     if (drag?.moved && track) {
       const strip = track;
       strip.addEventListener('click', swallowClick, { capture: true, once: true });
@@ -242,8 +212,8 @@
       return;
     }
     drag = { x: event.clientX, left: track.scrollLeft, moved: false };
-    window.addEventListener('pointermove', dragMove);
-    window.addEventListener('pointerup', dragEnd, { once: true });
+    addEventListener('pointermove', dragMove);
+    addEventListener('pointerup', dragEnd, { once: true });
   };
 
   // the years are a toolbar: one tab stop, arrow keys (and Home, End) move along it
@@ -318,37 +288,7 @@
 
 {#if current && years.length > 0}
   <div class="ws-time" data-testid="timeline-workspaces">
-    <div class="ws-now" aria-live="polite">
-      {#each ghosts as ghost (ghost.long)}
-        <span class="ws-now-label ws-ghost" aria-hidden="true">
-          <span class="ws-now-link ws-month"
-            ><span class="ws-long">{ghost.long}</span><span class="ws-short">{ghost.short}</span></span
-          >
-          <span class="ws-now-link ws-year">{current.year}</span>
-        </span>
-      {/each}
-      {#key `${current.year}-${current.month}`}
-        <div class="ws-now-label" in:slide>
-          <button
-            type="button"
-            class="ws-month ws-now-link"
-            title={$t('timeline_grouping_months')}
-            disabled={!onGrouping}
-            onclick={() => onGrouping?.('month')}
-            ><span class="ws-long">{monthLabel(current.year, current.month)}</span><span class="ws-short"
-              >{monthLabel(current.year, current.month, 'short')}</span
-            ></button
-          >
-          <button
-            type="button"
-            class="ws-year ws-now-link"
-            title={$t('timeline_grouping_years')}
-            disabled={!onGrouping}
-            onclick={() => onGrouping?.('year')}>{current.year}</button
-          >
-        </div>
-      {/key}
-    </div>
+    <TimelineMonthHeading month={current} {onGrouping} />
 
     <span class="ws-split" aria-hidden="true"></span>
 
@@ -407,67 +347,6 @@
     align-items: center;
     min-width: 0;
     height: 100%;
-  }
-
-  /* the heading: the month in view in the display face, condensed, the month at 500 against the year at 750; the
-     title role's size, so it reads as the bar's label and not a headline over the photos */
-  .ws-now {
-    display: grid;
-    flex: none;
-    overflow: hidden;
-  }
-  .ws-now > * {
-    grid-area: 1 / 1;
-  }
-  .ws-ghost {
-    visibility: hidden;
-    pointer-events: none;
-  }
-  .ws-now-label {
-    display: flex;
-    gap: 0.28em;
-    align-items: baseline;
-    white-space: nowrap;
-  }
-  .ws-now-link {
-    padding: 0;
-    background: none;
-    font-family: var(--font-display);
-    font-size: var(--ws-text-bar);
-    font-stretch: 75%;
-    font-variation-settings:
-      'wdth' 75,
-      'opsz' 32;
-    line-height: 1;
-    letter-spacing: -0.015em;
-    color: var(--immich-ui-dark);
-    transition: color 120ms;
-  }
-  button.ws-now-link {
-    cursor: pointer;
-  }
-  .ws-month {
-    font-weight: 500;
-  }
-  .ws-month::first-letter {
-    text-transform: uppercase;
-  }
-  .ws-year {
-    font-weight: 750;
-    font-variant-numeric: tabular-nums;
-  }
-  .ws-short {
-    display: none;
-  }
-  button.ws-now-link:not(:disabled):hover {
-    color: var(--ws-accent);
-  }
-  button.ws-now-link:disabled {
-    cursor: default;
-  }
-  .ws-now-link:focus-visible {
-    outline: var(--ws-border) solid var(--ws-accent);
-    outline-offset: 2px;
   }
 
   /* the years: one row of mono numerals; the one in view inverted, like the Omarchy bar's active workspace */
@@ -578,16 +457,8 @@
     visibility: hidden;
   }
 
-  /* narrower bars keep the same line: a short month name first, and only where not even a year fits beside it the
-     heading alone (a phone) */
-  @container (max-width: 380px) {
-    .ws-long {
-      display: none;
-    }
-    .ws-short {
-      display: inline;
-    }
-  }
+  /* narrower bars keep the same line: a short month name first (TimelineMonthHeading), and only where not even a year
+     fits beside it the heading alone (a phone) */
   @container (max-width: 190px) {
     .ws-split,
     .ws-years {

@@ -32,6 +32,7 @@
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { attachThumbnailZoom, thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
+  import { timelineHeading, type TimelineHeadingSource } from '$lib/managers/timeline-heading.svelte';
   import { takeReveal, type Reveal } from '$lib/utils/reveal';
   import { marqueeSelect } from '$lib/actions/marquee-select';
   import { lang } from '$lib/stores/preferences.store';
@@ -78,6 +79,11 @@
     onTemporalAnchorResolved?: () => void;
     /** Local Omarchy layer: reports the month at the top of the viewport (drives TimelineWorkspaces). */
     onViewportMonthChange?: (month: ViewportTopMonth) => void;
+    /**
+     * Local Omarchy layer: the one bar keeps this timeline's month in view as a heading beside the page's title
+     * (managers/timeline-heading); false for a timeline that is not the page's own (the map's photo panel).
+     */
+    barHeading?: boolean;
     children?: Snippet;
     empty?: Snippet;
     customThumbnailLayout?: Snippet<[TimelineAsset]>;
@@ -119,6 +125,7 @@
     temporalAnchor,
     onTemporalAnchorResolved,
     onViewportMonthChange,
+    barHeading = true,
     children,
     empty,
     customThumbnailLayout,
@@ -146,6 +153,26 @@
   const maxMd = $derived(mediaQueryManager.maxMd);
   const usingMobileDevice = $derived(mediaQueryManager.pointerCoarse);
   const activeGrouping = $derived(options?.grouping ?? timelineManager.grouping ?? grouping);
+
+  // Local Omarchy layer: while it shows a plain grid of days, the bar keeps this timeline's month in view as a heading
+  // beside the page's title (managers/timeline-heading, layouts/UserPageLayout); Photos keeps its own heading
+  const headingSource: TimelineHeadingSource = {
+    get timelineManager() {
+      return timelineManager;
+    },
+    get month() {
+      return viewportTopMonth;
+    },
+    get onGrouping() {
+      return onGroupingChange;
+    },
+  };
+  $effect(() => {
+    if (!barHeading || activeGrouping !== 'day' || !timelineManager.isInitialized || isEmpty) {
+      return;
+    }
+    return timelineHeading.show(headingSource);
+  });
   // Suspend layout transitions the instant the grouping changes — before the day/grouped views swap.
   // Otherwise the outgoing day thumbnails play their scale-out exit animation (a delayed "collapse to
   // the inside") because updateOptions() only sets suspendTransitions from a post-render effect, after
