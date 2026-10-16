@@ -37,6 +37,30 @@
   const base = $derived(`/spaces/${spaceId}`);
   const path = $derived(page.url.pathname);
 
+  // Local Omarchy layer: where the bar has no room for every section they scroll sideways (layouts/UserPageLayout gives
+  // them way before the Space's name); the one on screen is kept in the middle of what shows as the room changes and as
+  // the page moves on
+  let nav = $state<HTMLElement>();
+  const showCurrent = () => {
+    const current = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !current || nav.scrollWidth <= nav.clientWidth) {
+      return;
+    }
+    const box = nav.getBoundingClientRect();
+    const tab = current.getBoundingClientRect();
+    nav.scrollBy({ left: tab.left + tab.width / 2 - (box.left + box.width / 2) });
+  };
+  $effect(() => {
+    void path;
+    if (!nav) {
+      return;
+    }
+    const resized = new ResizeObserver(() => showCurrent());
+    resized.observe(nav);
+    showCurrent();
+    return () => resized.disconnect();
+  });
+
   interface Tab {
     key: string;
     label: string;
@@ -132,7 +156,7 @@
 
 <!-- Local Omarchy layer: the Space's sections as one segmented control in the bar beside its name (the AI inbox's
      tabs), the one on screen inverted; a count is data, in mono after its label -->
-<nav class="ws-seg ws-space-tabs" aria-label={$t('spaces')} data-testid="space-tabs">
+<nav class="ws-seg ws-space-tabs" aria-label={$t('spaces')} data-testid="space-tabs" bind:this={nav}>
   {#each tabs as tab (tab.key)}
     <a
       href={tab.href}

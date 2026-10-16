@@ -96,7 +96,18 @@
 
 <div use:clickOutside={{ onOutclick: handleClickOutside, onEscape: handleClickOutside }} class="relative">
   <!-- BUTTON TITLE -->
-  <Button onclick={() => (showMenu = true)} fullWidth {title} variant="ghost" color="secondary" size="small">
+  <!-- Local Omarchy layer: the button says it opens a list, so the bar's fold keeps its sheet open under that list
+       (utils/page-bar-fit) and a screen reader announces it -->
+  <Button
+    onclick={() => (showMenu = true)}
+    fullWidth
+    {title}
+    variant="ghost"
+    color="secondary"
+    size="small"
+    aria-haspopup="true"
+    aria-expanded={showMenu}
+  >
     {#if renderedSelectedOption?.icon}
       <Icon icon={renderedSelectedOption.icon} />
     {/if}

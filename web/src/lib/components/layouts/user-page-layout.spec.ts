@@ -1,10 +1,11 @@
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
 import UserPageLayoutDescriptionTrailingTestWrapper from './user-page-layout-description-trailing.test-wrapper.svelte';
+import UserPageLayoutFoldTestWrapper from './user-page-layout-fold.test-wrapper.svelte';
 
 const layoutMocks = vi.hoisted(() => ({
   sidebarModeStore: { layout: 'expanded' as 'overlay' | 'rail' | 'expanded' },
@@ -163,5 +164,130 @@ describe('UserPageLayout chrome above the content panel', () => {
     const grid = screen.getByTestId('user-page-grid');
     expect(grid.className).toContain(`pt-[calc(var(--control-bar-height)+${gutter})]`);
     expect(grid.className).toContain(`max-md:pt-[calc(var(--control-bar-height-md)+${gutter})]`);
+  });
+});
+
+// Local Omarchy layer: at the tightest step the page's own buttons fold into one ⋮ (utils/page-bar-fit). happy-dom
+// lays nothing out, so the bar is made to crowd here: wider than its room at every step before the fold.
+describe('UserPageLayout fold', () => {
+  const ownDescriptors = {
+    scrollWidth: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth'),
+    clientWidth: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth'),
+  };
+  const isBar = (element: HTMLElement) => element.classList.contains('ws-page-bar');
+
+  beforeEach(() => {
+    layoutMocks.sidebarModeStore.layout = 'expanded';
+    Object.defineProperties(HTMLElement.prototype, {
+      scrollWidth: {
+        configurable: true,
+        get(this: HTMLElement) {
+          return isBar(this) && this.dataset.fit !== '4' ? 500 : 0;
+        },
+      },
+      clientWidth: {
+        configurable: true,
+        get(this: HTMLElement) {
+          return isBar(this) ? 300 : 0;
+        },
+      },
+    });
+  });
+
+  afterEach(() => {
+    for (const [name, descriptor] of Object.entries(ownDescriptors)) {
+      if (descriptor) {
+        Object.defineProperty(HTMLElement.prototype, name, descriptor);
+      } else {
+        Reflect.deleteProperty(HTMLElement.prototype, name);
+      }
+    }
+  });
+
+  const bar = () => document.querySelector<HTMLElement>('.ws-page-bar')!;
+  const tightest = () => waitFor(() => expect(bar()).toHaveAttribute('data-fit', '4'));
+
+  it('folds two or more of the page buttons into the ⋮, rendered once', async () => {
+    render(UserPageLayoutFoldTestWrapper, { props: { count: 2 } });
+    await tightest();
+
+    expect(bar()).toHaveAttribute('data-fold');
+    // the name gets the room the buttons gave up
+    expect(bar()).not.toHaveAttribute('data-capped');
+    const fold = screen.getByTestId('page-fold');
+    expect(fold).toHaveAttribute('aria-expanded', 'false');
+    expect(fold).toHaveAttribute('aria-controls', screen.getByTestId('page-actions').id);
+    // one render of the page's buttons: inline or in the sheet, never both
+    expect(document.querySelectorAll('button[aria-label="Tool 1"]')).toHaveLength(1);
+    expect(screen.getByTestId('page-actions')).toContainElement(document.querySelector('[aria-label="Tool 2"]'));
+  });
+
+  it('opens the sheet with the labels back and closes it behind an action', async () => {
+    const onPress = vi.fn();
+    render(UserPageLayoutFoldTestWrapper, { props: { count: 2, onPress } });
+    await tightest();
+
+    await fireEvent.click(screen.getByTestId('page-fold'));
+    expect(bar()).toHaveAttribute('data-open');
+    expect(screen.getByTestId('page-fold')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('group', { name: 'more' })).toBe(screen.getByTestId('page-actions'));
+    // an icon alone shows its name in the sheet
+    const tool = document.querySelector<HTMLElement>('button[aria-label="Tool 2"]')!;
+    expect(tool).toHaveAttribute('data-fold-label', 'Tool 2');
+
+    await fireEvent.click(tool);
+    expect(onPress).toHaveBeenCalledWith('Tool 2');
+    expect(bar()).not.toHaveAttribute('data-open');
+    expect(screen.getByTestId('page-fold')).toHaveFocus();
+  });
+
+  it('keeps the sheet open under a control that opens a list of its own', async () => {
+    render(UserPageLayoutFoldTestWrapper, { props: { count: 1, withSort: true } });
+    await tightest();
+
+    await fireEvent.click(screen.getByTestId('page-fold'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Sort' }));
+
+    expect(bar()).toHaveAttribute('data-open');
+  });
+
+  it('closes the sheet on Escape before the page hears it', async () => {
+    const pageEscape = vi.fn();
+    document.body.addEventListener('keydown', pageEscape);
+    render(UserPageLayoutFoldTestWrapper, { props: { count: 3 } });
+    await tightest();
+
+    await fireEvent.click(screen.getByTestId('page-fold'));
+    await fireEvent.keyDown(document.body, { key: 'Escape' });
+
+    expect(bar()).not.toHaveAttribute('data-open');
+    expect(pageEscape).not.toHaveBeenCalled();
+    document.body.removeEventListener('keydown', pageEscape);
+  });
+
+  it('closes the sheet on a press outside it', async () => {
+    render(UserPageLayoutFoldTestWrapper, { props: { count: 2 } });
+    await tightest();
+
+    await fireEvent.click(screen.getByTestId('page-fold'));
+    await fireEvent.pointerDown(document.body);
+
+    expect(bar()).not.toHaveAttribute('data-open');
+  });
+
+  it('keeps a single control inline', async () => {
+    render(UserPageLayoutFoldTestWrapper, { props: { count: 1 } });
+    await tightest();
+
+    expect(bar()).not.toHaveAttribute('data-fold');
+    expect(screen.getByTestId('page-actions')).not.toHaveAttribute('role');
+  });
+
+  it('gives a page without buttons of its own the whole bar from the start', async () => {
+    render(UserPageLayoutFoldTestWrapper, { props: { count: 0 } });
+    await tightest();
+
+    expect(bar()).not.toHaveAttribute('data-capped');
+    expect(bar()).not.toHaveAttribute('data-fold');
   });
 });

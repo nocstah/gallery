@@ -14,7 +14,20 @@
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
   import type { HeaderButtonActionItem } from '$lib/types';
   import { openFileUploadDialog } from '$lib/utils/file-uploader';
-  import { Button, ContextMenuButton, HStack, isMenuItemType, type MenuItemType } from '@immich/ui';
+  import { getTabbable } from '$lib/utils/focus-util';
+  import { generateId } from '$lib/utils/generate-id';
+  import {
+    countPageControls,
+    foldsPageButtons,
+    keepsSheetOpen,
+    PAGE_FIT_FOLD,
+    POPUP,
+    POPUP_CHOICE,
+    sheetOffset,
+    tightensFurther,
+  } from '$lib/utils/page-bar-fit';
+  import { Button, ContextMenuButton, HStack, Icon, isMenuItemType, type MenuItemType } from '@immich/ui';
+  import { mdiDotsVertical } from '@mdi/js';
   import { tick, untrack, type Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
 
@@ -61,13 +74,15 @@
   // starts at the top of the panel instead of under a second 64px bar
   let hasTitleClass = 'top-0 h-full';
 
-  // The title row always fits the bar: the title keeps its width and the page's buttons tighten a step at a time until
-  // the row fits: 1 drops the description, 2 the button labels (icons keep their tooltips), 3 the wide-screen extras
-  // (an album search field, filter tabs), 4 (a phone) lets the page's own buttons scroll sideways rather than run under
-  // the bar's icons. A title row that crowds its own room (the name squeezed by its dates) counts as not fitting too.
-  // Re-fitted when the bar resizes or the page adds or removes a control, never by its own steps (they only flip an
-  // attribute), so fitting cannot feed itself.
-  const PAGE_TIGHTEST = 4;
+  // The title row always fits the bar: the title keeps its width and the page's own buttons tighten a step at a time
+  // until the row fits (utils/page-bar-fit): 1 drops the description, 2 the button labels (icons keep their tooltips),
+  // 3 the wide-screen extras (an album search field, filter tabs) and the month in view, 4 folds the buttons into one
+  // ⋮ whose sheet lists them with their labels, where that takes more than one control off the bar. A title row that
+  // crowds its own room (the name squeezed by its dates) counts as not fitting too, so the fold comes before the name
+  // is cut. Re-fitted when the bar resizes or the page adds or removes a control, never by its own steps (they only
+  // flip attributes, and the fold moves nothing: the buttons stay where they are rendered, the sheet is their box
+  // drawn under the ⋮), so fitting cannot feed itself.
+  const PAGE_TIGHTEST = PAGE_FIT_FOLD;
   let pageTitleBox = $state<HTMLElement>();
   const crowded = (box: HTMLElement | undefined) => !!box && box.scrollWidth > box.clientWidth + 1;
   // a name cut short inside its own room (the title shrinks rather than overflow) is crowding too
@@ -75,6 +90,17 @@
     !!box && [...box.children].some((child) => child.scrollWidth > child.clientWidth + 1);
   let pageFit = $state(0);
   let pageFitting = false;
+  // how many controls the page's own buttons show, counted while they stand in the bar, and the room they take there
+  // at the step before the fold (rem)
+  let pageControls = $state(0);
+  let pageActionsWidth = $state(0);
+  // a segmented control beside the title (a Space's sections) gives way first, so the row is not capped for it
+  let segmentedTitle = $state(false);
+  const folded = $derived(foldsPageButtons(pageFit, pageControls, pageActionsWidth));
+  // the title row's share of the bar is capped while the page's own buttons share it, so they tighten before the name
+  // is cut; nothing caps it on a page without buttons, at the fold (the buttons are one ⋮ then) or beside a
+  // segmented control
+  const capped = $derived(pageControls > 0 && pageFit < PAGE_TIGHTEST && !segmentedTitle);
   // Local Omarchy layer: the month in view of the page's timeline (Favorites, an album, a person, Archive, a Space's
   // photos...), kept at the end of the title row as Photos keeps its own heading: muted behind a hairline, the short
   // month name once the description has gone, and gone itself with the wide-screen extras
@@ -84,6 +110,7 @@
   );
   const hasHeading = $derived(!!headingMonth);
   let pageBarBox = $state<HTMLElement>();
+  let pageToolsBox = $state<HTMLElement>();
   let pageActionsBox = $state<HTMLElement>();
   const refitPage = async () => {
     if (!pageBarBox || pageFitting) {
@@ -93,12 +120,24 @@
     try {
       pageFit = 0;
       await tick();
-      while (pageFit < PAGE_TIGHTEST && (crowded(pageBarBox) || crowded(pageTitleBox) || squeezed(pageTitleBox))) {
+      pageControls = pageActionsBox ? countPageControls(pageActionsBox) : 0;
+      segmentedTitle = !!pageTitleBox?.querySelector('.ws-seg');
+      await tick();
+      while (tightensFurther(pageFit, crowded(pageBarBox) || crowded(pageTitleBox) || squeezed(pageTitleBox))) {
+        if (pageFit === PAGE_TIGHTEST - 1 && pageActionsBox) {
+          const rem = Number(getComputedStyle(document.documentElement).fontSize.replace('px', '')) || 16;
+          pageActionsWidth = pageActionsBox.getBoundingClientRect().width / rem;
+        }
         pageFit++;
         await tick();
       }
     } finally {
       pageFitting = false;
+    }
+    if (!folded) {
+      sheetOpen = false;
+    } else if (sheetOpen) {
+      showSheet();
     }
   };
   $effect(() => {
@@ -132,6 +171,115 @@
     };
   });
 
+  // Local Omarchy layer: the fold's sheet, under the bar's ⋮ like the View menu's. It opens on a click (on Enter or
+  // Space with the first control focused); a press on one of its buttons or a choice in a menu or list one of them
+  // opened, a click outside, Escape or the focus moving on closes it, and the ⋮ takes the focus back where the sheet
+  // had it
+  const sheetId = `page-tools-${generateId()}`;
+  let sheetOpen = $state(false);
+  const sheetShown = $derived(folded && sheetOpen);
+  let foldButton = $state<HTMLButtonElement>();
+  let sheetLeft = $state<number>();
+  // an icon alone shows its name beside it in the sheet (its aria-label, drawn by the styles below)
+  const labelIcons = () => {
+    for (const control of pageActionsBox?.querySelectorAll<HTMLElement>('button, a[href]') ?? []) {
+      const label =
+        control.closest('[role="menu"]') || control.textContent?.trim() ? null : control.getAttribute('aria-label');
+      if (label) {
+        control.dataset.foldLabel = label;
+      } else {
+        delete control.dataset.foldLabel;
+      }
+    }
+  };
+  const showSheet = () => {
+    labelIcons();
+    if (pageToolsBox && pageActionsBox) {
+      const rtl = getComputedStyle(pageToolsBox).direction === 'rtl';
+      const anchor = pageToolsBox.getBoundingClientRect();
+      sheetLeft = sheetOffset(anchor, pageActionsBox.offsetWidth, innerWidth, rtl);
+    }
+  };
+  const openSheet = async (fromKeyboard: boolean) => {
+    sheetOpen = true;
+    await tick();
+    showSheet();
+    if (fromKeyboard && pageActionsBox) {
+      getTabbable(pageActionsBox)[0]?.focus();
+    }
+  };
+  const closeSheet = (refocus: boolean) => {
+    if (!sheetOpen) {
+      return;
+    }
+    const focus = document.activeElement;
+    sheetOpen = false;
+    // not from where an action took it (a dialog it opened)
+    if (refocus && (!focus || focus === document.body || pageActionsBox?.contains(focus))) {
+      foldButton?.focus();
+    }
+  };
+  const onSheetClick = (event: MouseEvent) => {
+    const control = (event.target as Element | null)?.closest('button, a[href], input, select, textarea, label');
+    if (sheetShown && control && !keepsSheetOpen(control)) {
+      closeSheet(true);
+    }
+  };
+  const onSheetFocusOut = (event: FocusEvent) => {
+    const next = event.relatedTarget;
+    if (
+      sheetShown &&
+      next instanceof Element &&
+      !pageActionsBox?.contains(next) &&
+      !foldButton?.contains(next) &&
+      !next.closest(POPUP)
+    ) {
+      closeSheet(false);
+    }
+  };
+  $effect(() => {
+    if (!sheetShown) {
+      return;
+    }
+    // a press outside closes it, but not one in a menu or list a control of the sheet opened at the end of <body> (a
+    // select's options): a choice there closes it once the choice has run
+    const outside = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      if (!pageActionsBox?.contains(target) && !foldButton?.contains(target) && !target?.closest?.(POPUP)) {
+        closeSheet(false);
+      }
+    };
+    const chosen = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (!pageActionsBox?.contains(target) && target?.closest?.(POPUP_CHOICE)) {
+        setTimeout(() => closeSheet(true), 0);
+      }
+    };
+    // Escape closes the sheet before the page hears it (an album's Escape goes back to Albums); a menu or list of its
+    // own, open with the focus in it, closes first
+    const escape = (event: KeyboardEvent) => {
+      const focus = document.activeElement;
+      if (
+        event.key !== 'Escape' ||
+        focus?.closest(POPUP) ||
+        (pageActionsBox?.contains(focus) && pageActionsBox.querySelector('[aria-expanded="true"]'))
+      ) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      closeSheet(true);
+    };
+    addEventListener('pointerdown', outside, { capture: true });
+    addEventListener('click', chosen, { capture: true });
+    addEventListener('keydown', escape, { capture: true });
+    return () => {
+      removeEventListener('pointerdown', outside, { capture: true });
+      removeEventListener('click', chosen, { capture: true });
+      removeEventListener('keydown', escape, { capture: true });
+    };
+  });
+
   // /tags and /folders supply a tree explorer wrapping upstream Sidebar.svelte, which is
   // always 16rem above 850px. Collapsing their grid column to the rail width would clip it,
   // and a tag tree has no meaningful icon-only form, so those pages opt out of the rail.
@@ -160,9 +308,17 @@
 
 <!-- Local Omarchy layer: the page's title row, set into the middle of the one bar: its leading control (a back
      button), the title in the bar's heading face, the description in mono, then the page's own buttons and actions
-     at the end. In a tight bar the buttons drop their labels (icons keep their tooltips) and the wide-screen extras go -->
+     at the end. In a tight bar the buttons drop their labels (icons keep their tooltips), the wide-screen extras go,
+     and at the last they fold into the ⋮ -->
 {#snippet pageBar()}
-  <div class="ws-page-bar" data-fit={pageFit} bind:this={pageBarBox}>
+  <div
+    class="ws-page-bar"
+    data-fit={pageFit}
+    data-capped={capped ? '' : undefined}
+    data-fold={folded ? '' : undefined}
+    data-open={sheetShown ? '' : undefined}
+    bind:this={pageBarBox}
+  >
     <!-- upstream's title row (title, description, its trailing control) and its constraints, kept as they were -->
     <div
       class="ws-page-bar-title min-w-0 overflow-hidden"
@@ -180,7 +336,7 @@
         </p>
       {/if}
       {#if descriptionTrailing}
-        <div class="shrink-0" data-testid="page-header-description-trailing">
+        <div class="ws-page-trailing shrink-0" data-testid="page-header-description-trailing">
           {@render descriptionTrailing()}
         </div>
       {/if}
@@ -192,29 +348,58 @@
       {/if}
     </div>
 
-    <div class="ws-page-actions" bind:this={pageActionsBox}>
-      {@render buttons?.()}
+    <div class="ws-page-tools" bind:this={pageToolsBox}>
+      <!-- the fold: the page's own buttons behind one ⋮ in the bar's icons' language, shown at the tightest step -->
+      <button
+        type="button"
+        class="ws-bar-icon ws-page-fold"
+        aria-label={$t('more')}
+        title={$t('more')}
+        aria-haspopup="true"
+        aria-expanded={sheetShown}
+        aria-controls={sheetId}
+        data-testid="page-fold"
+        bind:this={foldButton}
+        onclick={(event) => (sheetOpen ? closeSheet(false) : openSheet(event.detail === 0))}
+      >
+        <Icon icon={mdiDotsVertical} size="20" />
+      </button>
+      <!-- the page's buttons are rendered once, here: inline in the bar, or (folded) drawn as the sheet under the ⋮ -->
+      <div
+        class="ws-page-actions"
+        id={sheetId}
+        role={folded ? 'group' : undefined}
+        aria-label={folded ? $t('more') : undefined}
+        data-testid="page-actions"
+        style:left={sheetShown && sheetLeft !== undefined ? `${sheetLeft}px` : undefined}
+        style:right={sheetShown && sheetLeft !== undefined ? 'auto' : undefined}
+        bind:this={pageActionsBox}
+        onclick={onSheetClick}
+        onfocusout={onSheetFocusOut}
+      >
+        {@render buttons?.()}
 
-      {#if enabledActions.length > 0}
-        <div class="hidden md:block">
-          <HStack gap={0}>
-            {#each enabledActions as action, i (i)}
-              <Button
-                variant="ghost"
-                size="small"
-                color={action.color ?? 'secondary'}
-                leadingIcon={action.icon}
-                onclick={(event: MouseEvent) => action.onAction({ event, action })}
-                title={action.data?.title ?? action.title}
-              >
-                <span class="ws-action-label">{action.title}</span>
-              </Button>
-            {/each}
-          </HStack>
-        </div>
+        {#if enabledActions.length > 0}
+          <div class="hidden md:block">
+            <HStack gap={0}>
+              {#each enabledActions as action, i (i)}
+                <Button
+                  variant="ghost"
+                  size="small"
+                  color={action.color ?? 'secondary'}
+                  leadingIcon={action.icon}
+                  onclick={(event: MouseEvent) => action.onAction({ event, action })}
+                  title={action.data?.title ?? action.title}
+                >
+                  <span class="ws-action-label">{action.title}</span>
+                </Button>
+              {/each}
+            </HStack>
+          </div>
 
-        <ContextMenuButton aria-label={$t('open')} items={actions} class="md:hidden" />
-      {/if}
+          <ContextMenuButton aria-label={$t('open')} items={actions} class="md:hidden" />
+        {/if}
+      </div>
     </div>
   </div>
 {/snippet}
@@ -272,31 +457,45 @@
     height: 100%;
     padding-inline-end: 0.5rem;
   }
+  /* the title row takes the room it needs, the name shrinking inside it only at the last; while the page's own buttons
+     share the bar its share is capped (refitPage), so they tighten before the name is cut */
   .ws-page-bar-title {
     display: flex;
-    flex: none;
-    max-width: 45%;
+    flex: 0 1 auto;
     gap: 0.6rem;
     align-items: baseline;
     min-width: 0;
   }
+  .ws-page-bar[data-capped] .ws-page-bar-title {
+    flex: none;
+    max-width: 45%;
+  }
   /* the month in view is the title row's last item: while it shows, the row's share of the bar grows by its room (the
      long month name, then the short one), so the title keeps what it had */
-  .ws-page-bar[data-fit='0'] .ws-page-bar-title[data-now] {
+  .ws-page-bar[data-capped][data-fit='0'] .ws-page-bar-title[data-now] {
     max-width: calc(45% + 11rem);
   }
-  .ws-page-bar:is([data-fit='1'], [data-fit='2']) .ws-page-bar-title[data-now] {
+  .ws-page-bar[data-capped]:is([data-fit='1'], [data-fit='2']) .ws-page-bar-title[data-now] {
     max-width: calc(45% + 6rem);
+  }
+  /* a segmented control beside the title (a Space's sections) scrolls sideways before it crowds the name: it gives
+     way first, down to about a section (it keeps the one on screen in view). Flex shares a shrink out by weight, so
+     its weight is high enough that the name's share stays under a pixel's fraction: any share at all cut it */
+  .ws-page-trailing:has(:global(.ws-seg)) {
+    flex: 0 100000 auto;
+    min-width: 3.5rem;
   }
   @media (max-width: 639px) {
     .ws-page-bar {
       gap: 0.25rem;
     }
     .ws-page-bar-title {
-      max-width: 60%;
       gap: 0.375rem;
     }
-    .ws-page-bar:is([data-fit='0'], [data-fit='1'], [data-fit='2']) .ws-page-bar-title[data-now] {
+    .ws-page-bar[data-capped] .ws-page-bar-title {
+      max-width: 60%;
+    }
+    .ws-page-bar[data-capped]:is([data-fit='0'], [data-fit='1'], [data-fit='2']) .ws-page-bar-title[data-now] {
       max-width: calc(60% + 6rem);
     }
     .ws-page-bar-title :global(button[class~='w-10']) {
@@ -335,6 +534,12 @@
     font-variant-numeric: tabular-nums;
     color: var(--immich-ui-muted);
     white-space: nowrap;
+  }
+  .ws-page-tools {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: center;
   }
   .ws-page-actions {
     display: flex;
@@ -383,13 +588,6 @@
   .ws-page-bar :global([class~='-ms-6']) {
     margin-inline-start: 0.25rem;
   }
-  .ws-page-bar[data-fit='4'] .ws-page-actions {
-    flex: 0 1 auto;
-    min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-    mask-image: linear-gradient(to right, transparent, #000 0.75rem, #000 calc(100% - 0.75rem), transparent);
-  }
   /* a field among the buttons is its own framed box: it stands a little apart from its neighbours */
   .ws-page-actions :global(:has(> .ws-search-field)) {
     margin-inline: 0.5rem;
@@ -412,28 +610,159 @@
   .ws-page-bar:not([data-fit='0']) .ws-page-description {
     display: none;
   }
-  .ws-page-bar:is([data-fit='2'], [data-fit='3'], [data-fit='4'])
+  .ws-page-bar:is([data-fit='2'], [data-fit='3'], [data-fit='4']):not([data-fold])
     .ws-page-actions
     :global(:is(button, a) :is([class~='sm:block'], [class~='md:block'], [class~='lg:block'], .ws-action-label)) {
     display: none;
   }
-  .ws-page-bar:is([data-fit='3'], [data-fit='4'])
+  .ws-page-bar:is([data-fit='3'], [data-fit='4']):not([data-fold])
     .ws-page-actions
     :global(:is([class~='xl:block'], [class~='xl:flex'])) {
     display: none;
   }
   /* a label upstream left bare in its button (People's Show & hide people) goes the same way, and on a phone every
      button with an icon is its icon from the start (Spaces' Create Space): the words stay in the accessibility tree */
-  .ws-page-bar:is([data-fit='2'], [data-fit='3'], [data-fit='4'])
+  .ws-page-bar:is([data-fit='2'], [data-fit='3'], [data-fit='4']):not([data-fold])
     .ws-page-actions
     :global(:is(button, a):has(svg):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
     gap: 0;
     font-size: 0;
   }
   @media (max-width: 639px) {
-    .ws-page-actions :global(:is(button, a):has(svg):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
+    .ws-page-bar:not([data-fold])
+      .ws-page-actions
+      :global(:is(button, a):has(svg):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
       gap: 0;
       font-size: 0;
+    }
+  }
+
+  /* ---- the fold (the tightest step): the page's own buttons behind one ⋮, the bar's own icon; the sheet under it is
+     their box, drawn like the View menu's: one frame on the ground, the theme's corners, the popup shadow, rows ---- */
+  .ws-page-fold {
+    display: none;
+  }
+  .ws-page-bar[data-fold] .ws-page-fold {
+    display: grid;
+  }
+  .ws-page-bar[data-fold] .ws-page-actions {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    z-index: 60;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    width: max-content;
+    min-width: 13rem;
+    max-width: min(20rem, calc(100vw - 1rem));
+    padding: 6px;
+    border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);
+    border-radius: var(--ws-radius);
+    background: var(--immich-ui-light);
+    box-shadow:
+      0 4px 12px -4px rgb(0 0 0 / 0.25),
+      0 24px 48px -12px rgb(0 0 0 / 0.45);
+  }
+  .ws-page-bar[data-fold][data-open] .ws-page-actions {
+    display: flex;
+  }
+  /* the page's own wrappers lay their controls out as one list (a wrapper upstream hides at this width stays hidden) */
+  .ws-page-bar[data-fold]
+    .ws-page-actions
+    :global(
+      :is(div, span):not(
+        .fixed,
+        .absolute,
+        .ws-search-field,
+        .ws-seg,
+        fieldset,
+        :is(.fixed, .absolute, .ws-search-field, .ws-seg, fieldset, button, a, [role='menu']) *
+      )
+    ) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    width: 100%;
+  }
+  .ws-page-bar[data-fold]
+    .ws-page-actions
+    :global(
+      :is(div, span):not(
+        .hidden,
+        .fixed,
+        .absolute,
+        .ws-search-field,
+        .ws-seg,
+        fieldset,
+        :is(.fixed, .absolute, .ws-search-field, .ws-seg, fieldset, button, a, [role='menu']) *
+      )
+    ) {
+    display: flex;
+  }
+  .ws-page-bar[data-fold] .ws-page-actions :global(:has(> .ws-search-field)) {
+    margin-inline: 0;
+  }
+  /* a row: the icon, then the label the bar dropped (an icon alone shows its name, labelIcons) */
+  .ws-page-bar[data-fold]
+    .ws-page-actions
+    :global(:is(button, a):not(:is(.fixed, .absolute, .ws-search-field, .ws-seg, fieldset, [role='menu']) *)) {
+    justify-content: flex-start;
+    width: 100%;
+    height: auto;
+    min-width: 0;
+    min-height: 2.1rem;
+    padding: 0.3rem 0.55rem;
+    gap: 0.6rem;
+    font-size: var(--ws-text-meta);
+    font-weight: 500;
+    text-align: start;
+    white-space: nowrap;
+  }
+  .ws-page-bar[data-fold]
+    .ws-page-actions
+    :global(:is(button, a):not(:is(.fixed, .absolute, .ws-search-field, .ws-seg, fieldset, [role='menu']) *) svg) {
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+  .ws-page-bar[data-fold]
+    .ws-page-actions
+    :global(
+      :is(button, a):not(
+          .bg-primary,
+          .bg-dark,
+          .bg-danger,
+          :is(.fixed, .absolute, .ws-search-field, .ws-seg, fieldset, [role='menu']) *
+        ):not(:disabled):hover
+    ) {
+    background: color-mix(in oklab, var(--ws-accent) 16%, transparent);
+  }
+  .ws-page-bar[data-fold] .ws-page-actions :global(:is(button, a):focus-visible) {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: -2px;
+  }
+  .ws-page-bar[data-fold] .ws-page-actions :global([data-fold-label]::after) {
+    content: attr(data-fold-label);
+  }
+  .ws-page-bar[data-fold]
+    .ws-page-actions
+    :global(:is(button, a) :is([class~='sm:block'], [class~='md:block'], [class~='lg:block'], .ws-action-label)) {
+    display: block;
+  }
+  .ws-page-bar[data-fold] .ws-page-actions :global(:is(button, a) :is([class~='sm:inline'], [class~='md:inline'])) {
+    display: inline;
+  }
+  @media (max-width: 639px) {
+    .ws-page-fold {
+      width: 2rem;
+    }
+  }
+  @media (pointer: coarse) {
+    .ws-page-bar[data-fold]
+      .ws-page-actions
+      :global(:is(button, a):not(:is(.fixed, .absolute, .ws-search-field, .ws-seg, fieldset, [role='menu']) *)) {
+      min-height: 2.75rem;
     }
   }
 </style>
