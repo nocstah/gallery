@@ -2,6 +2,7 @@ import { AssetVisibility, getFilterSuggestions, getMlHealth, searchAssets, searc
 import { modalManager } from '@immich/ui';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { goto } from '$app/navigation';
 import { commandContextManager } from '$lib/managers/command-context-manager.svelte';
@@ -58,7 +59,7 @@ vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 // svelte/reactivity's MediaQuery captures matchMedia at module load time — mocking
 // window.matchMedia in a test doesn't retroactively update existing instances.
 // Mock the manager module directly and expose a mutable flag.
-const { mediaState } = vi.hoisted(() => ({ mediaState: { minLg: false } }));
+const { mediaState } = vi.hoisted(() => ({ mediaState: { minLg: false, maxMd: false } }));
 vi.mock('$lib/stores/media-query-manager.svelte', () => ({
   mediaQueryManager: {
     get minLg() {
@@ -68,7 +69,7 @@ vi.mock('$lib/stores/media-query-manager.svelte', () => ({
       return false;
     },
     get maxMd() {
-      return false;
+      return mediaState.maxMd;
     },
     get isFullSidebar() {
       return true;
@@ -160,6 +161,7 @@ describe('global-search root', () => {
     localStorage.clear();
     resetRecentStore();
     mediaState.minLg = false;
+    mediaState.maxMd = false;
     mockPage.url = new URL('https://gallery.test/photos');
     mockPage.route.id = null;
     mockPage.params = {};
@@ -1853,6 +1855,46 @@ describe('prefix scoping — scoped rendering', () => {
     const input = document.querySelector('input[role="combobox"], input[type="text"]') as HTMLInputElement | null;
     expect(input).not.toBeNull();
     expect(input?.placeholder).toMatch(/^(cmdk_placeholder|Search Gallery|Search\.\.\.)$/);
+  });
+
+  // Local Omarchy layer: a phone's field holds about 314px of the hint and the full ones need more (English ran out
+  // at "/ albums,"), so below 768px the palette shows the short hints, in search and in Ask; its label stays full.
+  // Ask is its owner's, the admin's.
+  describe('hints by width', () => {
+    beforeEach(() => {
+      mockUser.current = { id: 'test-user', isAdmin: true };
+    });
+    afterEach(() => {
+      mediaState.maxMd = false;
+      mockUser.current = { id: 'test-user', isAdmin: false };
+    });
+
+    it('gives a narrow screen the short hints, and keeps the full one as the label', async () => {
+      mediaState.maxMd = true;
+      const manager = new GlobalSearchManager();
+      manager.open();
+      render(GlobalSearch, { props: { manager } });
+      const input = screen.getByRole('combobox') as HTMLInputElement;
+
+      expect(input.placeholder).toBe('cmdk_placeholder_short');
+      expect(screen.getByRole('combobox', { name: 'cmdk_placeholder' })).toBe(input);
+
+      manager.mode = 'ask';
+      await tick();
+      expect(input.placeholder).toBe('cmdk_ask_placeholder_short');
+    });
+
+    it('keeps the full hints on a wide screen', async () => {
+      const manager = new GlobalSearchManager();
+      manager.open();
+      render(GlobalSearch, { props: { manager } });
+      const input = screen.getByRole('combobox') as HTMLInputElement;
+
+      expect(input.placeholder).toBe('cmdk_placeholder');
+      manager.mode = 'ask';
+      await tick();
+      expect(input.placeholder).toBe('cmdk_ask_placeholder');
+    });
   });
 
   it('scope all with mlHealthy=false shows ML banner', () => {

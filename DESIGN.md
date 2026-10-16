@@ -208,7 +208,7 @@ display `clamp(2.25rem, 1rem + 3vw, 4rem)` · title 1.25rem · heading 1.125rem 
 
 **One gutter.** Every page starts on the same line, 0.5rem in from the sidebar: the bar's page part (a title, a back arrow, Photos' month heading), the photo grids (no extra inset of their own) and the text columns (Shared, Settings, the AI inbox, Utilities; no side padding of their own). The bar's own icons stand behind a full-height hairline with 0.5rem on each side, apart from the page's tools (2026-10-15; the owner saw "spacing inconsistency at the command bar").
 
-**Responsive.** Below 768px: header stacks, day labels shorten to weekday + date, the grouping control floats at the bottom, and the filters open as a sheet over the photos (Filter Rail). Below 640px the bar keeps the menu button without the mark, and upload waits for a wider screen (a phone uploads through the app; Import stays in the sidebar). On coarse pointers, tiles at least 200px wide show their place caption permanently.
+**Responsive.** Below 768px: header stacks, day labels shorten to weekday + date, the grouping control floats at the bottom, the filters open as a sheet over the photos (Filter Rail), and Ctrl+K's field takes its short hints, the four scopes alone ("@ people, # tags, / albums, > pages") and Ask's lead without its example ("Ask about your photos"): a phone's field holds about 314px of hint, and the full ones need 316 to 530 (2026-10-16). Below 640px the bar keeps the menu button without the mark, and upload waits for a wider screen (a phone uploads through the app; Import stays in the sidebar). On coarse pointers, tiles at least 200px wide show their place caption permanently.
 
 ## Elevation & Depth
 

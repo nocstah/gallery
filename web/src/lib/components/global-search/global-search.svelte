@@ -316,6 +316,14 @@
     return { status: 'ok' as const, items, total: items.length };
   });
   const showPreview = $derived(mediaQueryManager.minLg);
+  // Local Omarchy layer: a phone's field holds about 314px of the hint, and the full ones need 316 to 530 (English ran out
+  // at "/ albums,"), so below 768px the hints are the short ones: the four scopes alone, and Ask's lead without its
+  // example. The palette's label, the field's accessible name, stays the full search hint.
+  const placeholder = $derived(
+    manager.mode === 'ask'
+      ? $t(mediaQueryManager.maxMd ? 'cmdk_ask_placeholder_short' : 'cmdk_ask_placeholder')
+      : $t(mediaQueryManager.maxMd ? 'cmdk_placeholder_short' : 'cmdk_placeholder'),
+  );
   // Progress stripe: only show after a 200ms grace window. A clean setTimeout
   // pattern — the effect fires on every batchInFlight transition and the cleanup
   // cancels any pending stripe when the batch settles before the 200ms mark.
@@ -659,7 +667,7 @@
         <Command.Input
           bind:value={inputValue}
           aria-label={$t('cmdk_placeholder')}
-          placeholder={manager.mode === 'ask' ? $t('cmdk_ask_placeholder') : $t('cmdk_placeholder')}
+          {placeholder}
           maxlength={256}
           onfocus={openDropdown}
           onpointerdown={openModalOnTouch}
@@ -1057,7 +1065,7 @@
             bind:ref={modalInput}
             bind:value={inputValue}
             autofocus
-            placeholder={manager.mode === 'ask' ? $t('cmdk_ask_placeholder') : $t('cmdk_placeholder')}
+            {placeholder}
             maxlength={256}
             oninput={(event) => {
               inputEditRevision++;
