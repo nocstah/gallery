@@ -2,7 +2,7 @@ import { render } from '@testing-library/svelte';
 import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
 import Thumbnail from '$lib/components/assets/thumbnail/Thumbnail.svelte';
 import { getTabbable } from '$lib/utils/focus-util';
-import { assetFactory } from '@test-data/factories/asset-factory';
+import { assetFactory, timelineAssetFactory } from '@test-data/factories/asset-factory';
 
 vi.mock('$lib/utils/navigation', () => ({
   currentUrlReplaceAssetId: vi.fn(),
@@ -82,5 +82,33 @@ describe('Thumbnail component', () => {
     const { baseElement } = render(Thumbnail, { asset });
 
     expect(baseElement.querySelector('.ws-month-mark')).toBeNull();
+  });
+
+  // Local Omarchy layer: on a tile too narrow for both (under 5rem, omarchy-world.css), what sits at the top corner
+  // gives way to the month mark. The hook has to be on exactly those badges: a video's stack sits lower and stays.
+  describe('the top corner beside a month mark', () => {
+    const stack = { id: 'stack-1', assetCount: 3, primaryAssetId: 'cover' };
+
+    it("marks a video's play icon", () => {
+      const asset = timelineAssetFactory.build({ isImage: false, isVideo: true, duration: 15_000 });
+      const { baseElement } = render(Thumbnail, { asset, monthMark: 'SEP' });
+
+      const tile = baseElement.querySelector('[data-month-start]');
+      expect(tile?.querySelector('.ws-tile-corner')?.querySelector('svg')).not.toBeNull();
+    });
+
+    it("marks a photo stack's badge", () => {
+      const asset = timelineAssetFactory.build({ livePhotoVideoId: null, stack });
+      const { baseElement } = render(Thumbnail, { asset, monthMark: 'SEP' });
+
+      expect(baseElement.querySelector('.ws-stack-badge')?.classList.contains('ws-tile-corner')).toBe(true);
+    });
+
+    it("leaves a video's stack badge, which sits under the play icon, where it is", () => {
+      const asset = timelineAssetFactory.build({ isImage: false, isVideo: true, duration: 15_000, stack });
+      const { baseElement } = render(Thumbnail, { asset, monthMark: 'SEP' });
+
+      expect(baseElement.querySelector('.ws-stack-badge')?.classList.contains('ws-tile-corner')).toBe(false);
+    });
   });
 });

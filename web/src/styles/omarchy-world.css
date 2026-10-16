@@ -752,13 +752,19 @@ div[role='dialog'] :is(.border-b, .border-t) {
     display: none;
   }
 }
-/* small tiles (the smallest sizes, a phone): the mark hugs the corner */
+/* small tiles (the smallest sizes, a phone): the mark hugs the corner, and the tile is too narrow for it and anything at
+   the other top corner (they met on a phone's portrait videos): the mark keeps the top edge to itself, and a video's or
+   live photo's play icon, a GIF's or 360° photo's mark and a photo stack's count give way on this one tile, as a stack's
+   icon does under 7.5rem. A video's stack sits lower and stays */
 @container (max-width: 5rem) {
   .ws-month-mark {
     inset-inline-start: 0.1875rem;
     top: 0.1875rem;
     max-width: calc(100% - 0.375rem);
     padding: 0 0.25rem;
+  }
+  [data-month-start] .ws-tile-corner {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

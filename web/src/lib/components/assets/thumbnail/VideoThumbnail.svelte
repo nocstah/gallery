@@ -93,8 +93,10 @@
   ></video>
 {/if}
 
+<!-- Local Omarchy layer: ws-tile-corner, what sits at the tile's top corner, which gives way to a month mark on a tile too
+     narrow for both (omarchy-world.css) -->
 <div
-  class="@container absolute inset-x-0 top-0 flex place-items-center justify-end gap-1 text-xs font-medium text-white text-shadow-[1px_1px_6px_rgb(0_0_0)]"
+  class="ws-tile-corner @container absolute inset-x-0 top-0 flex place-items-center justify-end gap-1 text-xs font-medium text-white text-shadow-[1px_1px_6px_rgb(0_0_0)]"
 >
   {#if showTime}
     <span class="hidden pt-2 tabular-nums @min-[100px]:inline">

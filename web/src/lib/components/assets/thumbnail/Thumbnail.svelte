@@ -412,8 +412,12 @@
           </div>
         {/if}
 
+        <!-- Local Omarchy layer: ws-tile-corner (here, on a video's play icon and on a photo stack's badge) is what sits
+             at the top corner, which gives way to the month mark on a tile too narrow for both (omarchy-world.css) -->
         {#if asset.isImage && asset.projectionType === ProjectionType.EQUIRECTANGULAR}
-          <div class="absolute inset-e-0 top-0 z-2 flex place-items-center gap-1 text-xs font-medium text-white">
+          <div
+            class="ws-tile-corner absolute inset-e-0 top-0 z-2 flex place-items-center gap-1 text-xs font-medium text-white"
+          >
             <span class="pe-2 pt-2">
               <Icon icon={mdiRotate360} size="24" />
             </span>
@@ -421,7 +425,9 @@
         {/if}
 
         {#if asset.isImage && asset.duration}
-          <div class="absolute inset-e-0 top-0 z-2 flex place-items-center gap-1 text-xs font-medium text-white">
+          <div
+            class="ws-tile-corner absolute inset-e-0 top-0 z-2 flex place-items-center gap-1 text-xs font-medium text-white"
+          >
             <span class="pe-2 pt-2">
               <Icon icon={mouseOver ? mdiMotionPauseOutline : mdiFileGifBox} size="24" />
             </span>
@@ -448,7 +454,7 @@
         <div
           class={[
             'ws-stack-badge pointer-events-none absolute z-3 flex place-items-center gap-1 text-xs font-medium text-white',
-            asset.isImage && !asset.livePhotoVideoId ? 'inset-e-0 top-0' : 'inset-e-1 top-7',
+            asset.isImage && !asset.livePhotoVideoId ? 'ws-tile-corner inset-e-0 top-0' : 'inset-e-1 top-7',
           ]}
         >
           <p>{asset.stack.assetCount.toLocaleString($locale)}</p>
@@ -461,7 +467,7 @@
           type="button"
           class={[
             'ws-stack-badge absolute z-3 flex place-items-center gap-1 text-xs font-medium text-white',
-            asset.isImage && !asset.livePhotoVideoId ? 'inset-e-0 top-0' : 'inset-e-1 top-7',
+            asset.isImage && !asset.livePhotoVideoId ? 'ws-tile-corner inset-e-0 top-0' : 'inset-e-1 top-7',
           ]}
           aria-expanded={expanded}
           aria-label={expanded ? $t('collapse_stack') : $t('expand_stack')}
