@@ -37,7 +37,10 @@
 
 <div class="mt-4">
   {#if !isCollapsed}
-    <div class="flex flex-row flex-wrap gap-4">
+    <!-- Local Omarchy layer: the places fill the width at every width, as Albums and People do: square tiles at least
+         9rem wide on the desktop's gap, two to a row on a phone. Upstream sized each tile from the window and capped it
+         at 156px, which left a third of a phone's row and the end of every wider one empty -->
+    <div class="grid grid-auto-fill-36 gap-(--ws-gap)" data-testid="places-grid">
       {#each places as item (item.id)}
         {@const city = item.exifInfo?.city}
         <a
@@ -45,13 +48,11 @@
           href={Route.photos({ city: city ?? undefined, country: item.exifInfo?.country ?? undefined })}
           draggable="false"
         >
-          <div
-            class="flex w-[calc((100vw-(72px+5rem))/2)] max-w-39 justify-center overflow-hidden rounded-xl brightness-75 filter"
-          >
+          <div class="flex aspect-square w-full justify-center overflow-hidden rounded-xl brightness-75 filter">
             <img
               src={getAssetMediaUrl({ id: item.id, size: AssetMediaSize.Thumbnail })}
               alt={city}
-              class="size-39 object-cover"
+              class="size-full object-cover"
               loading="lazy"
             />
           </div>

@@ -288,6 +288,9 @@ Tags and Folders keep upstream's sidebar of their own, the Explorer (836 tags un
 - **Bar:** the level on screen is the page's title (Tags or Folders at the top, with the count in data type: "836 tags", "355 folders"), an arrow up a level leads it as the album page's back arrow does, and below the first levels the full path follows in data type ("Auto/Receipts", "/mnt/archive/iCloud/2014/03").
 - **Structural departure:** these pages no longer use upstream's breadcrumb slab (`tree/TreeBreadcrumbs`), icon grid (`tree/TreeItemThumbnails`) or mono tree (`tree/TreeItems`, `tree/Tree`); the bar's up arrow, the tree and the list carry the navigation.
 
+### Places
+The Places page (`routes/(user)/places`) fills the width at every width, as the Albums and People grids do (2026-10-16): square tiles at least 9rem wide on the desktop's gap, as many to a row as fit (two on a phone, five on a tablet, six on the Dell, fourteen on the AORUS), with or without the country groups. Upstream sized each tile from the window and capped it at 156px, which left a third of a phone's row, and the end of every wider one, empty. Structural departure: `PlacesCardGroup` lays the tiles in a grid (`grid-auto-fill-36`) where upstream wrapped fixed-width ones.
+
 ### Buttons and Links (empty states)
 - **Primary action:** ink fill, surface text, 600 at 0.9rem, `0.55rem 1rem`, the window radius; hover mixes 15% accent into the ink.
 - **Text link:** ink, 500 at 0.9rem, underline in hairline at 0.25em offset; the underline takes the accent on hover.

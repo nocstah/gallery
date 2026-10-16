@@ -40,4 +40,16 @@ describe('PlacesCardGroup', () => {
 
     expect(screen.getByRole('link', { name: /Cape Town/ })).toHaveAttribute('href', '/photos?city=Cape%20Town');
   });
+
+  // Local Omarchy layer: the places fill the width at every width, as Albums and People do. Upstream sized each tile
+  // from the window and capped it at 156px, which left a third of a phone's row, and the end of every wider one, empty.
+  it('lays the places out in columns that fill the width, each tile a square as wide as its column', () => {
+    renderGroup('Cape Town');
+
+    const grid = screen.getByTestId('places-grid');
+    expect(grid).toHaveClass('grid', 'grid-auto-fill-36');
+    const tile = screen.getByRole('link', { name: /Cape Town/ }).firstElementChild;
+    expect(tile).toHaveClass('aspect-square', 'w-full');
+    expect(tile?.className).not.toMatch(/max-w-|100vw/);
+  });
 });
