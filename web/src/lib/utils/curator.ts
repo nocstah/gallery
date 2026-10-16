@@ -1,9 +1,19 @@
 import type { AssetResponseDto } from '@immich/sdk';
 import type { AdjustSettings } from '$lib/components/curator/adjust-math';
+import { authManager } from '$lib/managers/auth-manager.svelte';
 
 // Local Omarchy layer: client for Curator (~/code/curator), the local AI service behind the AI inbox. Curator runs
 // beside Gallery on port 2290 of the same host and authenticates the browser's Gallery session cookie, so every call
 // goes out with credentials. Nothing here writes to Gallery directly: accepting a suggestion asks Curator to apply it.
+
+/**
+ * Local Omarchy layer: whether Curator works for whoever is signed in. Curator acts for its owner only (curator/api.py
+ * answers every other Gallery user 403 "Curator acts for its owner only"), and its owner is the owner of its API key,
+ * this server's one admin, so the admin flag says it without asking Curator. Every Curator tool outside the owner's
+ * own pages asks this first: a family member's account is offered none of them, and nothing asks Curator anything for
+ * it. Read in a template, a $derived or an effect, it follows a sign-out and the next sign-in in the same tab.
+ */
+export const curatorIsMine = (): boolean => authManager.authenticated && authManager.user.isAdmin;
 
 export type SuggestionStatus = 'pending' | 'rejected' | 'applied' | 'failed' | 'undone' | 'superseded';
 
