@@ -146,8 +146,10 @@ vi.mock('$app/navigation', () => ({
   goto: vi.fn(),
 }));
 
-// Local Omarchy layer: the palette's Ask mode puts questions to Curator
-vi.mock('$lib/utils/curator', () => ({
+// Local Omarchy layer: the palette's Ask mode puts questions to Curator, for Curator's owner only (the real
+// curatorIsMine, which reads the mocked authManager: the admin by default)
+vi.mock('$lib/utils/curator', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
   curator: { ask: vi.fn(), warmAsk: vi.fn(() => Promise.resolve({ warming: true })) },
 }));
 
@@ -646,6 +648,38 @@ describe('real providers', () => {
     const m = new GlobalSearchManager();
     await m.activateSearch('when were we last in Bali?');
     expect(goto).toHaveBeenCalledWith('/ask?q=when%20were%20we%20last%20in%20Bali%3F');
+  });
+
+  it('offers Ask to the admin, who owns Curator, last of the modes, and warms its model', () => {
+    vi.mocked(curator.warmAsk).mockResolvedValue({ warming: true });
+    const m = new GlobalSearchManager();
+    expect(m.modes).toEqual(['smart', 'metadata', 'description', 'ocr', 'ask']);
+    m.setMode('ask');
+    expect(m.mode).toBe('ask');
+    expect(curator.warmAsk).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks Curator nothing for a family member's account: an Ask left in the browser reads as a smart search", async () => {
+    mockUser.current = { id: 'family-member', isAdmin: false };
+    vi.mocked(curator.warmAsk).mockResolvedValue({ warming: true });
+    localStorage.setItem('searchQueryType', 'ask');
+    const m = new GlobalSearchManager();
+    expect(m.mode).toBe('smart');
+    expect(m.modes).toEqual(['smart', 'metadata', 'description', 'ocr']);
+
+    m.open();
+    m.setMode('ask');
+    expect(m.mode).toBe('smart');
+    expect(localStorage.getItem('searchQueryType')).toBe('ask'); // the owner's choice, kept for the owner
+
+    m.setQuery('Mamma at christmas');
+    await vi.advanceTimersByTimeAsync(200);
+    mockResolvedTypedSearch('when were we last in Bali?');
+    await m.activateSearch('when were we last in Bali?');
+    expect(curator.ask).not.toHaveBeenCalled();
+    expect(curator.warmAsk).not.toHaveBeenCalled();
+    expect(searchSmart).toHaveBeenCalled();
+    expect(vi.mocked(goto).mock.calls.some(([url]) => String(url).startsWith('/ask'))).toBe(false);
   });
 
   it('photos uses searchAssets with ocr field in ocr mode', async () => {

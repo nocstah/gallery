@@ -4,7 +4,7 @@
   import { Command } from 'bits-ui';
   import { t } from 'svelte-i18n';
   import { clickOutside } from '$lib/actions/click-outside';
-  import { monthJumpId, type GlobalSearchManager, type SearchMode } from '$lib/managers/global-search-manager.svelte';
+  import { monthJumpId, type GlobalSearchManager } from '$lib/managers/global-search-manager.svelte';
   import GlobalSearchSection from './global-search-section.svelte';
   import LiveTypedFilterSection from './live-typed-filter-section.svelte';
   import GlobalSearchNavigationSections from './global-search-navigation-sections.svelte';
@@ -547,8 +547,9 @@
       // The layout-level use:shortcuts binding for Ctrl+/ has ignoreInputFields=true
       // by default (the @immich/ui shortcut action skips events whose target is an
       // input), so it won't fire while the palette's Command.Input is focused. Handle
-      // the cycle here instead — same behavior, different listener.
-      const order: SearchMode[] = ['smart', 'metadata', 'description', 'ocr', 'ask'];
+      // the cycle here instead — same behavior, different listener. Local Omarchy layer: through the manager's
+      // modes, which hold Ask for Curator's owner only.
+      const order = manager.modes;
       const next = order[(order.indexOf(manager.mode) + 1) % order.length];
       manager.setMode(next);
       e.preventDefault();
@@ -680,6 +681,7 @@
         <SearchModeControl
           variant="chip"
           mode={manager.mode}
+          modes={manager.modes}
           onSelect={(next) => manager.setMode(next)}
           scoped={manager.scope !== 'all'}
           smartUnavailable={!manager.mlHealthy}
@@ -1086,6 +1088,7 @@
         <SearchModeControl
           variant="rail"
           mode={manager.mode}
+          modes={manager.modes}
           onSelect={(next) => manager.setMode(next)}
           scoped={manager.scope !== 'all'}
           smartUnavailable={!manager.mlHealthy}

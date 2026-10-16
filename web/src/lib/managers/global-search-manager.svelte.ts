@@ -37,9 +37,9 @@ import { authManager } from '$lib/managers/auth-manager.svelte';
 import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
 import { Route } from '$lib/route';
 import { addEntry, getEntries, makePlaceId, removeEntry, type RecentEntry } from '$lib/stores/cmdk-recent';
-import { curator } from '$lib/utils/curator';
+import { curator, curatorIsMine } from '$lib/utils/curator';
 import { getPhotosPersonFilterId, type PhotosPersonFilterReference } from '$lib/utils/photos-filter-options';
-import { fieldSearchTerms } from '$lib/utils/search-mode-terms';
+import { fieldSearchTerms, textSearchModes } from '$lib/utils/search-mode-terms';
 import {
   buildSearchablePageUrl,
   getSearchablePageBasePath,
@@ -147,6 +147,8 @@ function selectedChoiceFromLiveChoice(
 type TopSearchMatch = { id: 'top-search'; query: string; rawQuery: string };
 
 const VALID_MODES: ReadonlySet<SearchMode> = new Set(['smart', 'metadata', 'description', 'ocr', 'ask']);
+// Local Omarchy layer: the palette's modes in its order, Ask last (Curator's owner's only: see `modes`)
+const PALETTE_MODES: readonly SearchMode[] = [...textSearchModes, 'ask'];
 // Slice size for the albums section. Kept as a named constant so the buildProviders
 // `topN: 5` and the runAlbums slice cannot drift apart silently.
 const ALBUMS_TOP_N = 5;
@@ -323,7 +325,22 @@ export class GlobalSearchManager {
   presentation = $state<SearchPresentation>('modal');
   query = $state('');
   searchSortOrder = $state<SearchablePageSortOrder>('relevance');
-  mode = $state<SearchMode>(loadSearchQueryType());
+  #mode = $state<SearchMode>(loadSearchQueryType());
+  /**
+   * Local Omarchy layer: Ask puts the question to Curator, which works for its owner only (utils/curator's
+   * curatorIsMine). For any other account an Ask left in this browser reads as a smart search, so its palette never
+   * asks Curator, warms its model or opens the answer page.
+   */
+  get mode(): SearchMode {
+    return this.#mode === 'ask' && !curatorIsMine() ? 'smart' : this.#mode;
+  }
+  set mode(mode: SearchMode) {
+    this.#mode = mode;
+  }
+  /** Local Omarchy layer: the modes the palette offers and Ctrl+/ steps through; Ask only for Curator's owner. */
+  get modes(): readonly SearchMode[] {
+    return curatorIsMine() ? PALETTE_MODES : textSearchModes;
+  }
   parsedQuery = $derived<ParsedQuery>(parseScope(this.query));
   scope = $derived<Scope>(this.parsedQuery.scope);
   payload = $derived<string>(this.parsedQuery.payload);
@@ -2167,7 +2184,7 @@ export class GlobalSearchManager {
   }
 
   setMode(newMode: SearchMode) {
-    if (newMode === this.mode) {
+    if (newMode === this.mode || !this.modes.includes(newMode)) {
       return;
     }
     this.mode = newMode;
