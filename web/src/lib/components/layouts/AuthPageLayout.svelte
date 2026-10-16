@@ -26,7 +26,8 @@
     </div>
   {/if}
 
-  <Card color="secondary" class="m-2 w-full max-w-xl border">
+  <!-- Local Omarchy layer: ws-auth-card, the hook by which omarchy-world.css makes the card a window on the theme -->
+  <Card color="secondary" class="ws-auth-card m-2 w-full max-w-xl border">
     {#if withHeader}
       <CardHeader class="mt-6">
         <VStack>

@@ -279,6 +279,9 @@ A sentence of why and one next step: headline title, body copy in muted ink (max
 
 Every empty state stands on the page's gutter, left-aligned under the bar's title, as the one gutter asks (the Space pages first, 2026-10-15; every page since 2026-10-16). Upstream's `EmptyPlaceholder`, a grey slab with a cartoon that was itself the button, is gone from the user pages: `EmptyState` (`lib/components/omarchy`) draws the same grammar from a title, a body, one action and one link (Photos filtered: No matching photos and Clear filters; Photos and Recently added empty: Upload; Albums: Create album; Spaces: Create shared space; Favorites, Archive, Locked Folder, Trash and Explore say why, with no button). The admin pages keep upstream's.
 
+### Sign-in pages
+Login, register, change password, the PIN prompt and maintenance (`AuthPageLayout`) keep upstream's blurred logo behind one centred card, and the card is a window as a modal's panel is: the theme's surface in one hairline frame with the modal's shadow, its fields the modals' (a faint fill, a hairline, the accent when focused; `.ws-auth-card`, 2026-10-16). Before, it was a fixed grey of its own with grey slab fields and an ink focus ring.
+
 ### Inputs / Fields (person name)
 Transparent with no border at rest, ink 600, the window radius. The placeholder appears on the card under the pointer or on focus (140ms). Focus: ink tint 6% and `--ws-border` accent outline.
 

@@ -455,6 +455,27 @@ div[role='dialog'] button.bg-dark {
 div[role='dialog'] button.bg-dark:not(:disabled):hover {
   background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
 }
+/* ---- the sign-in pages (AuthPageLayout's .ws-auth-card): the card is a window as a modal's panel is, the theme's
+   surface in one hairline frame with the shadow (it was a fixed grey of its own), and its fields are the modals' (a
+   faint fill, a hairline, the accent when focused) instead of grey slabs with an ink ring. @immich/ui draws a field's
+   fill and ring on the wrapper around the input, so that is what takes them. ---- */
+.ws-auth-card {
+  border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 14%, transparent);
+  box-shadow:
+    0 4px 12px -4px rgb(0 0 0 / 0.3),
+    0 28px 64px -16px rgb(0 0 0 / 0.55);
+}
+.ws-auth-card > div {
+  background: var(--immich-ui-light);
+  color: var(--immich-ui-dark);
+}
+.ws-auth-card div:has(> input:not([type='checkbox'], [type='radio'])) {
+  background: color-mix(in oklab, var(--immich-ui-dark) 5%, transparent);
+  --tw-ring-color: color-mix(in oklab, var(--immich-ui-dark) 16%, transparent);
+}
+.ws-auth-card div:has(> input):focus-within {
+  --tw-ring-color: var(--ws-accent);
+}
 /* the header and footer rules run edge to edge in the theme's hairline */
 div[role='dialog'] :is(.border-b, .border-t) {
   border-color: var(--ws-hairline) !important;
