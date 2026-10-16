@@ -47,6 +47,7 @@ describe('CreateSharedLinkAction', () => {
 
       expect(modalManager.show).toHaveBeenCalledWith(expect.anything(), {
         assetIds: ['mine', 'theirs'],
+        ownedAssetIds: ['mine'],
         spaceId: 'space-1',
         contributedCount: 1,
       });
@@ -60,6 +61,7 @@ describe('CreateSharedLinkAction', () => {
 
       expect(modalManager.show).toHaveBeenCalledWith(expect.anything(), {
         assetIds: ['theirs-1', 'theirs-2'],
+        ownedAssetIds: [],
         spaceId: 'space-1',
         contributedCount: 2,
       });
@@ -74,6 +76,7 @@ describe('CreateSharedLinkAction', () => {
 
       expect(modalManager.show).toHaveBeenCalledWith(expect.anything(), {
         assetIds: ['a1', 'a2'],
+        ownedAssetIds: ['a1', 'a2'],
         spaceId: 'space-1',
         contributedCount: 0,
       });
@@ -90,13 +93,30 @@ describe('CreateSharedLinkAction', () => {
     });
   });
 
+  // Local Omarchy layer: the Share sheet for photos does not offer the Space whose page the photos are selected on
+  it('tells the Share sheet which Space the photos are seen in', async () => {
+    assetMultiSelectManager.selectAssets([asset('a1', 'me')]);
+    render(CreateSharedLinkAction, { fromSpaceId: 'space-1' });
+
+    await clickShare();
+
+    expect(modalManager.show).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ fromSpaceId: 'space-1' }),
+    );
+  });
+
   it('shares every asset when the whole selection is the user’s own', async () => {
     assetMultiSelectManager.selectAssets([asset('a1', 'me'), asset('a2', 'me')]);
     render(CreateSharedLinkAction);
 
     await clickShare();
 
-    expect(modalManager.show).toHaveBeenCalledWith(expect.anything(), { assetIds: ['a1', 'a2'], excludedCount: 0 });
+    expect(modalManager.show).toHaveBeenCalledWith(expect.anything(), {
+      assetIds: ['a1', 'a2'],
+      ownedAssetIds: ['a1', 'a2'],
+      excludedCount: 0,
+    });
   });
 
   it('sends only the owned subset on a mixed selection — Permission.AssetShare rejects the whole request otherwise', async () => {
@@ -105,7 +125,11 @@ describe('CreateSharedLinkAction', () => {
 
     await clickShare();
 
-    expect(modalManager.show).toHaveBeenCalledWith(expect.anything(), { assetIds: ['mine'], excludedCount: 1 });
+    expect(modalManager.show).toHaveBeenCalledWith(expect.anything(), {
+      assetIds: ['mine'],
+      ownedAssetIds: ['mine'],
+      excludedCount: 1,
+    });
   });
 
   it('reports how many assets were left out so the subsetting is visible before the link is made', async () => {
@@ -118,7 +142,11 @@ describe('CreateSharedLinkAction', () => {
 
     await clickShare();
 
-    expect(modalManager.show).toHaveBeenCalledWith(expect.anything(), { assetIds: ['mine'], excludedCount: 2 });
+    expect(modalManager.show).toHaveBeenCalledWith(expect.anything(), {
+      assetIds: ['mine'],
+      ownedAssetIds: ['mine'],
+      excludedCount: 2,
+    });
   });
 
   // Surfaces that render this action WITHOUT a capability gate (the partner page, the regular

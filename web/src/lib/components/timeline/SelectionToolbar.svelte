@@ -246,6 +246,7 @@
       restrictToSpaceId,
       editableSelectedAssetIds,
       shareSpaceId,
+      fromSpaceId: space?.id,
     });
     return [...(caps.canShare ? [CreateSharedLink] : []), ...(caps.canAddToAlbum ? [NewAlbum, AddToAlbum] : [])];
   };
@@ -253,10 +254,15 @@
 
 {#if assetInteraction.selectionActive}
   <AssetSelectControlBar {reviewActions}>
-    {@const Actions = getAssetBulkActions($t, { restrictToSpaceId, editableSelectedAssetIds })}
+    {@const Actions = getAssetBulkActions($t, {
+      restrictToSpaceId,
+      editableSelectedAssetIds,
+      shareSpaceId,
+      fromSpaceId: space?.id,
+    })}
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
     {#if caps.canShare}
-      <CreateSharedLink spaceId={shareSpaceId} />
+      <CreateSharedLink spaceId={shareSpaceId} fromSpaceId={space?.id} />
     {/if}
     {#if caps.canSelectAll}
       <SelectAllAssets {timelineManager} {assetInteraction} {onSelectAll} />

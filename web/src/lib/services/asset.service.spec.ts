@@ -13,13 +13,14 @@ import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.svelte';
 import AssetTagModal from '$lib/modals/AssetTagModal.svelte';
-import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
+import SelectionShareModal from '$lib/modals/SelectionShareModal.svelte';
 import {
   getAssetActions,
   getAssetBulkActions,
   handleDownloadAsset,
   mergeRotation,
   normalizeAngle,
+  shareSelection,
 } from '$lib/services/asset.service';
 import { setSharedLink } from '$lib/utils';
 import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
@@ -419,7 +420,8 @@ describe('bulk NewAlbum action (N)', () => {
 });
 
 // #853: the bulk share action (immich-31976 turned it into an ActionItem) must send only the owned
-// subset — the server rejects the whole request if it names one asset the caller does not own.
+// subset — the server rejects the whole request if it names one asset the caller does not own. Local Omarchy layer:
+// it opens the Share sheet for photos, whose Space and link both take the owned subset.
 describe('bulk CreateSharedLink action', () => {
   const selection = assetMultiSelectManager as unknown as { ownedAssets?: { id: string }[] };
 
@@ -438,7 +440,11 @@ describe('bulk CreateSharedLink action', () => {
     selection.ownedAssets = [{ id: 'x1' }];
     const action = getAssetBulkActions(((k: string) => k) as never).CreateSharedLink;
     await action.onAction({ action, event: new Event('click') });
-    expect(modalManager.show).toHaveBeenCalledWith(SharedLinkCreateModal, { assetIds: ['x1'], excludedCount: 1 });
+    expect(modalManager.show).toHaveBeenCalledWith(SelectionShareModal, {
+      assetIds: ['x1'],
+      ownedAssetIds: ['x1'],
+      excludedCount: 1,
+    });
   });
 
   // Local Omarchy layer: Show selected on a space surface offers the toolbar's own space-scoped link
@@ -446,19 +452,41 @@ describe('bulk CreateSharedLink action', () => {
     selection.ownedAssets = [{ id: 'x1' }];
     const action = getAssetBulkActions(((k: string) => k) as never, { shareSpaceId: 'space-1' }).CreateSharedLink;
     await action.onAction({ action, event: new Event('click') });
-    expect(modalManager.show).toHaveBeenCalledWith(SharedLinkCreateModal, {
+    expect(modalManager.show).toHaveBeenCalledWith(SelectionShareModal, {
       assetIds: ['x1', 'x2'],
+      ownedAssetIds: ['x1'],
       spaceId: 'space-1',
       contributedCount: 1,
     });
   });
 
-  it('warns instead of opening the modal when nothing in the selection is owned', async () => {
+  // Local Omarchy layer: the photos are in the Space whose page they are selected on, so the sheet leaves it out
+  it('tells the sheet which Space the photos are seen in', async () => {
+    selection.ownedAssets = [{ id: 'x1' }, { id: 'x2' }];
+    const action = getAssetBulkActions(((k: string) => k) as never, { fromSpaceId: 'space-9' }).CreateSharedLink;
+    await action.onAction({ action, event: new Event('click') });
+    expect(modalManager.show).toHaveBeenCalledWith(SelectionShareModal, {
+      assetIds: ['x1', 'x2'],
+      ownedAssetIds: ['x1', 'x2'],
+      excludedCount: 0,
+      fromSpaceId: 'space-9',
+    });
+  });
+
+  it('warns instead of opening the sheet when nothing in the selection is owned', async () => {
     selection.ownedAssets = [];
     const action = getAssetBulkActions(((k: string) => k) as never).CreateSharedLink;
     await action.onAction({ action, event: new Event('click') });
     expect(modalManager.show).not.toHaveBeenCalled();
     expect(toastManager.warning).toHaveBeenCalledWith('shared_link_nothing_owned_to_share');
+  });
+
+  it('opens nothing for a viewer who is not signed in, though ownedAssets would fall back to every asset', async () => {
+    authManager.reset();
+    selection.ownedAssets = [{ id: 'x1' }, { id: 'x2' }];
+    await shareSelection(((k: string) => k) as never);
+    expect(modalManager.show).not.toHaveBeenCalled();
+    expect(toastManager.warning).not.toHaveBeenCalled();
   });
 });
 

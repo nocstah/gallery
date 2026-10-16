@@ -62,6 +62,7 @@ import { specialAlbumOf } from '$lib/managers/special-albums.svelte';
 import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.svelte';
 import AssetTagModal from '$lib/modals/AssetTagModal.svelte';
 import ProfileImageCropperModal from '$lib/modals/ProfileImageCropperModal.svelte';
+import SelectionShareModal from '$lib/modals/SelectionShareModal.svelte';
 import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
 import { Route } from '$lib/route';
 import { SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
@@ -89,6 +90,7 @@ export const getAssetBulkActions = (
     album,
     editableSelectedAssetIds,
     shareSpaceId,
+    fromSpaceId,
   }: {
     /**
      * Set when the selection contains assets the user does not own: the add-to-collection
@@ -113,6 +115,8 @@ export const getAssetBulkActions = (
      * toolbar's own CreateSharedLinkAction does, for Show selected to offer the same link.
      */
     shareSpaceId?: string;
+    /** Local Omarchy layer: the Space whose page shows this selection, which the Share sheet does not offer to add to. */
+    fromSpaceId?: string;
   } = {},
 ) => {
   const assetIds = assetMultiSelectManager.assets.map((asset) => asset.id);
@@ -151,32 +155,11 @@ export const getAssetBulkActions = (
     },
   };
 
-  // Gallery (#853): `Permission.AssetShare` is owner ∪ partner only and rejects the ENTIRE request if it
-  // names one asset the caller does not own, so share the owned subset and surface what was left out.
-  // `ownedAssets` falls back to the full selection when unauthenticated, so gate on that too. Space
-  // surfaces keep the fork's CreateSharedLinkAction, which shares the whole selection against the space.
+  // Local Omarchy layer: Share opens the Share sheet for photos (shareSelection, below), with the same guards
   const CreateSharedLink: ActionItem = {
     title: $t('share'),
     icon: mdiShareVariantOutline,
-    onAction: async () => {
-      const ownedAssetIds = authManager.authenticated ? assetMultiSelectManager.ownedAssets.map(({ id }) => id) : [];
-      if (shareSpaceId) {
-        await modalManager.show(SharedLinkCreateModal, {
-          assetIds,
-          spaceId: shareSpaceId,
-          contributedCount: assetIds.length - ownedAssetIds.length,
-        });
-        return;
-      }
-      if (ownedAssetIds.length === 0) {
-        toastManager.warning($t('shared_link_nothing_owned_to_share'));
-        return;
-      }
-      await modalManager.show(SharedLinkCreateModal, {
-        assetIds: ownedAssetIds,
-        excludedCount: assetIds.length - ownedAssetIds.length,
-      });
-    },
+    onAction: () => shareSelection($t, { shareSpaceId, fromSpaceId }),
   };
 
   const RemoveFromAlbum: ActionItem = {
@@ -249,6 +232,47 @@ export const getAssetBulkActions = (
     RegenerateThumbnailJob,
     TranscodeVideoJob,
   };
+};
+
+/**
+ * Local Omarchy layer: Share on a selection, from every selection bar, the photos' right-click menu, Ctrl+K and Show
+ * selected's foot, opens the Share sheet for photos (modals/SelectionShareModal): Add to the Space that leads, then a
+ * link. Gallery (#853): `Permission.AssetShare` is owner ∪ partner only and rejects the ENTIRE request if it names one
+ * asset the caller does not own, so the link and the Space take the owned subset and the sheet says what was left out;
+ * with nothing of mine selected there is nothing to share, which a toast says instead. `ownedAssets` falls back to the
+ * full selection when unauthenticated, so that is refused first. On a space surface the selection bar may scope the
+ * link to the space (#1018, `shareSpaceId`): the link then takes the whole selection, against the space, and the sheet
+ * warns before other members' photos become public; a Space still takes only my own.
+ */
+export const shareSelection = async (
+  $t: MessageFormatter,
+  { shareSpaceId, fromSpaceId }: { shareSpaceId?: string; fromSpaceId?: string } = {},
+) => {
+  if (!authManager.authenticated) {
+    return;
+  }
+  const assetIds = assetMultiSelectManager.assets.map(({ id }) => id);
+  const ownedAssetIds = assetMultiSelectManager.ownedAssets.map(({ id }) => id);
+  if (shareSpaceId) {
+    await modalManager.show(SelectionShareModal, {
+      assetIds,
+      ownedAssetIds,
+      spaceId: shareSpaceId,
+      contributedCount: assetIds.length - ownedAssetIds.length,
+      fromSpaceId,
+    });
+    return;
+  }
+  if (ownedAssetIds.length === 0) {
+    toastManager.warning($t('shared_link_nothing_owned_to_share'));
+    return;
+  }
+  await modalManager.show(SelectionShareModal, {
+    assetIds: ownedAssetIds,
+    ownedAssetIds,
+    excludedCount: assetIds.length - ownedAssetIds.length,
+    fromSpaceId,
+  });
 };
 
 export const getAssetActions = (

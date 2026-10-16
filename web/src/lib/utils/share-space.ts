@@ -1,9 +1,9 @@
-// Local Omarchy layer: the Spaces the Share sheet offers (modals/AlbumShareModal) and the one that leads it. The owner
-// shares with the family first ("Family default target"), but no Space is known here by its name. The lead is, in this
-// order: a Space the album already shows in; the Space the last share went to in this browser (an album shown there);
-// else the oldest Space offered, which is the family's own as a rule, since it is made first and stays. Only Spaces I
-// can add to are offered (owner or editor), never Library, the album folders' engine (managers/album-folders), and the
-// rest follow the lead quietly, oldest first.
+// Local Omarchy layer: the Spaces a Share sheet offers (modals/AlbumShareModal, modals/SelectionShareModal) and the one
+// that leads it. The owner shares with the family first ("Family default target"), but no Space is known here by its
+// name. The lead is, in this order: a Space the album already shows in; the Space the last share went to in this
+// browser (an album shown there, photos added to it); else the oldest Space offered, which is the family's own as a
+// rule, since it is made first and stays. Only Spaces I can add to are offered (owner or editor), never Library, the
+// album folders' engine (managers/album-folders), and the rest follow the lead quietly, oldest first.
 import type { SharedSpaceResponseDto } from '@immich/sdk';
 import type { MessageFormatter } from 'svelte-i18n';
 import { isWritableSpace } from '$lib/components/shared-components/collection-selection/collection-selection-utils';

@@ -4,9 +4,9 @@
   import CreateSharedLinkAction from './CreateSharedLinkAction.svelte';
   import { TooltipProvider } from '@immich/ui';
 
-  let { spaceId }: { spaceId?: string } = $props();
+  let { spaceId, fromSpaceId }: { spaceId?: string; fromSpaceId?: string } = $props();
 </script>
 
 <TooltipProvider>
-  <CreateSharedLinkAction {spaceId} />
+  <CreateSharedLinkAction {spaceId} {fromSpaceId} />
 </TooltipProvider>

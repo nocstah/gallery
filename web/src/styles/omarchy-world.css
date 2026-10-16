@@ -1819,11 +1819,12 @@ body.ws-dragging
   border-radius: var(--ws-radius) !important;
 }
 
-/* ---- the Share sheet (modals/AlbumShareModal): the ways to share in the order the family shares, as sections on the
-   dialog's ground split by hairlines that run edge to edge. A section is a head (its name in ink, its action at the end)
-   over what it holds, or over one muted line while it holds nothing. The Space that leads (utils/share-space) comes
-   first, a switch with one muted line on who sees it; other Spaces follow quietly. Then the link with its QR in place
-   (components/omarchy/ShareLinkPanel), then the album's people. The switches are Settings' (above). ---- */
+/* ---- the Share sheet (modals/AlbumShareModal for an album, modals/SelectionShareModal for photos): the ways to share
+   in the order the family shares, as sections on the dialog's ground split by hairlines that run edge to edge. A
+   section is a head (its name in ink, its action at the end) over what it holds, or over one muted line while it holds
+   nothing. The Space that leads (utils/share-space) comes first, with one muted line on who sees it: an album's is a
+   switch, photos' an ink action; other Spaces follow quietly. Then the link with its QR in place
+   (components/omarchy/ShareLinkPanel), then an album's people. The switches are Settings' (above). ---- */
 .ws-sheet {
   display: grid;
   color: var(--immich-ui-dark);
@@ -1858,6 +1859,19 @@ label.ws-sheet-title {
   font-size: var(--ws-text-meta);
   line-height: 1.45;
 }
+/* said before other members' photos become public (#1018): ink, marked by the warning colour's icon */
+.ws-sheet-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  max-width: 60ch;
+  font-size: var(--ws-text-meta);
+  line-height: 1.45;
+}
+.ws-sheet-warning svg {
+  flex: none;
+  color: var(--immich-ui-warning-500);
+}
 /* the other Spaces, quieter than the lead: a row each, the name in muted ui type */
 .ws-sheet-row {
   display: flex;
@@ -1875,6 +1889,20 @@ label.ws-sheet-title {
 }
 .ws-sheet-row:hover {
   color: var(--immich-ui-dark);
+}
+.ws-sheet-others {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+/* what has gone where (photos added to a Space): a check in ink, not a button any more */
+.ws-sheet-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  font-size: var(--ws-text-ui);
+  font-weight: 600;
 }
 /* a person the album is shared with: the avatar, the name, the role at the row's end */
 .ws-sheet-person {
