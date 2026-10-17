@@ -7,6 +7,7 @@
   import { photoTransition } from '$lib/utils/photo-transition';
   import { onPageKey } from '$lib/utils/page-keys';
   import UploadCover from './DragAndDropUploadOverlay.svelte';
+  import InspectorFeed from '$lib/components/inspector/InspectorFeed.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
@@ -64,6 +65,8 @@
   {@render children?.()}
 </div>
 <UploadCover />
+<!-- Local Omarchy layer: tells an open inspector window what is pointed at, selected or open; Shift+I opens it -->
+<InspectorFeed />
 
 <style>
   :root {

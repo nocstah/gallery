@@ -2,9 +2,12 @@
   // Local Omarchy layer: the one bar's view menu. What you set now and then, not every minute, lives here instead of
   // in the bar: the order (on a page that can be sorted), and for photo grids the thumbnail size, day labels,
   // expanded stacks and the compact grid; then the theme (following Omarchy, the default, or held light or dark),
-  // rounded corners and Cast (when a cast target is around). Ctrl+wheel and + - 0 still resize the thumbnails directly.
+  // rounded corners, the inspector window and Cast (when a cast target is around). Ctrl+wheel and + - 0 still resize
+  // the thumbnails directly.
   import { page } from '$app/state';
+  import { authManager } from '$lib/managers/auth-manager.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
+  import { inspectorFeed } from '$lib/managers/inspector-link.svelte';
   import { thumbnailZoomManager, ZOOM_MAX, ZOOM_MIN } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { getGlobalActions } from '$lib/services/app.service';
   import { corners } from '$lib/theme/corners.svelte';
@@ -22,6 +25,7 @@
   const order = $derived(searchable.sortOrder === 'asc' ? 'asc' : 'desc');
   const { Cast } = $derived(getGlobalActions($t));
   const canCast = $derived(Cast.$if?.() ?? true);
+  const canInspect = $derived(authManager.authenticated && !authManager.isSharedLink);
   // the default: Omarchy's palette in the desktop's light or dark; Light or Dark hold that face whatever the desktop does
   const followsOmarchy = $derived(
     galleryThemes.current === FOLLOW_OMARCHY && themeManager.preference === ThemePreference.System,
@@ -29,6 +33,8 @@
 
   const toggle = () => {
     hasGrid = document.querySelector('#asset-grid') !== null;
+    // an inspector not heard from lately is gone, so the switch says what is there
+    inspectorFeed.refresh();
     open = !open;
   };
 
@@ -157,6 +163,27 @@
         <span>{$t('rounded_corners')}</span>
         <span class="ws-view-switch" aria-hidden="true"></span>
       </button>
+      <!-- the inspector, a window of its own for a second screen (managers/inspector-link), for a signed-in account;
+           like Cast it opens something else, so the menu closes behind it -->
+      {#if canInspect}
+        <button
+          type="button"
+          class="ws-view-row"
+          role="switch"
+          aria-checked={inspectorFeed.listening}
+          aria-keyshortcuts="Shift+I"
+          onclick={() => {
+            open = false;
+            inspectorFeed.toggle();
+          }}
+        >
+          <span>{$t('inspector_window')}</span>
+          <span class="ws-view-end">
+            <kbd class="ws-view-key" aria-hidden="true">⇧I</kbd>
+            <span class="ws-view-switch" aria-hidden="true"></span>
+          </span>
+        </button>
+      {/if}
       {#if canCast}
         <button
           type="button"
@@ -278,12 +305,26 @@
       translate 160ms cubic-bezier(0.22, 1, 0.36, 1),
       background-color 140ms;
   }
-  [aria-checked='true'] > .ws-view-switch {
+  [aria-checked='true'] > .ws-view-switch,
+  [aria-checked='true'] > .ws-view-end > .ws-view-switch {
     border-color: var(--ws-accent);
     background: color-mix(in oklab, var(--ws-accent) 22%, transparent);
   }
-  [aria-checked='true'] > .ws-view-switch::after {
+  [aria-checked='true'] > .ws-view-switch::after,
+  [aria-checked='true'] > .ws-view-end > .ws-view-switch::after {
     translate: calc(1.9rem - 1.05rem) 0;
     background: var(--ws-accent);
+  }
+  /* a row's key, in data type before its switch */
+  .ws-view-end {
+    display: inline-flex;
+    gap: 0.6rem;
+    align-items: center;
+  }
+  .ws-view-key {
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    color: var(--immich-ui-muted);
   }
 </style>

@@ -2388,6 +2388,8 @@
   "info": "信息",
   "inspector_point_at_photo": "在 Gallery 中指向一张照片",
   "inspector_unnamed": "{count, plural, other {# 人未命名}}",
+  "inspector_window": "检查器窗口",
+  "inspector_window_shortcut": "打开或关闭检查器窗口",
   "install": "安装",
   "install_app_title": "安装应用",
   "integrity_checks": "完整性检查",

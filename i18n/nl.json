@@ -2388,6 +2388,8 @@
   "info": "Info",
   "inspector_point_at_photo": "Wijs een foto aan in Gallery",
   "inspector_unnamed": "{count, plural, other {# zonder naam}}",
+  "inspector_window": "Inspectorvenster",
+  "inspector_window_shortcut": "Open of sluit het inspectorvenster",
   "install": "Installeren",
   "install_app_title": "Installeer de app",
   "integrity_checks": "Integriteitscontroles",

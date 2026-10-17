@@ -2390,6 +2390,8 @@
   "info": "Информация",
   "inspector_point_at_photo": "Наведите указатель на фото в Gallery",
   "inspector_unnamed": "{count, plural, other {# без имени}}",
+  "inspector_window": "Окно инспектора",
+  "inspector_window_shortcut": "Открыть или закрыть окно инспектора",
   "install": "Установить",
   "install_app_title": "Установите приложение",
   "integrity_checks": "Проверка целостности",

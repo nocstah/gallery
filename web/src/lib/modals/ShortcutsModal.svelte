@@ -37,6 +37,10 @@
         { key: ['/'], action: $t('shortcut_open_global_search') },
         { key: ['Ctrl', '/'], action: $t('shortcut_cycle_search_mode') },
         { key: ['Ctrl', '⇧', 'k'], action: $t('open_the_search_filters') },
+        // Local Omarchy layer: the inspector window, for a second screen (managers/inspector-link)
+        ...(authManager.authenticated && !authManager.isSharedLink
+          ? [{ key: ['⇧', 'i'], action: $t('inspector_window_shortcut') }]
+          : []),
       ],
       actions: [
         { key: ['f'], action: $t('favorite_or_unfavorite_photo') },

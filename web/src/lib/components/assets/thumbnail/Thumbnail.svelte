@@ -4,6 +4,7 @@
   import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { ProjectionType } from '$lib/constants';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { inspectorFeed } from '$lib/managers/inspector-link.svelte';
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { locale, playVideoThumbnailOnHover } from '$lib/stores/preferences.store';
@@ -150,6 +151,9 @@
     mouseOver = true;
     stackExpandManager.spotlight = stackGroup;
     onMouseEvent?.({ isMouseOver: true, selectedGroupIndex: groupIndex });
+    // Local Omarchy layer: the photo under the pointer (or with the keyboard focus, onfocus below) is the one the
+    // inspector shows (managers/inspector-link); with no inspector open this only remembers it
+    inspectorFeed.point(asset);
   };
 
   const onMouseLeave = () => {
@@ -158,6 +162,7 @@
       stackExpandManager.spotlight = undefined;
     }
     onMouseEvent?.({ isMouseOver: false, selectedGroupIndex: groupIndex });
+    inspectorFeed.unpoint(asset.id);
   };
 
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -269,6 +274,8 @@
   style:height="{height}px"
   onmouseenter={onMouseEnter}
   onmouseleave={onMouseLeave}
+  onfocus={() => inspectorFeed.point(asset)}
+  onblur={() => inspectorFeed.unpoint(asset.id)}
   use:longPress={{ onLongPress: () => onSelect?.($state.snapshot(asset)) }}
   onkeydown={(evt) => {
     if (evt.key === 'Enter') {

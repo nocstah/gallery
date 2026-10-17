@@ -2400,6 +2400,8 @@
   "info": "Info",
   "inspector_point_at_photo": "Point at a photo in Gallery",
   "inspector_unnamed": "{count, plural, other {# unnamed}}",
+  "inspector_window": "Inspector window",
+  "inspector_window_shortcut": "Open or close the inspector window",
   "install": "Install",
   "install_app_title": "Install the app",
   "integrity_checks": "Integrity Checks",

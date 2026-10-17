@@ -2388,6 +2388,8 @@
   "info": "Information",
   "inspector_point_at_photo": "Pointez une photo dans Gallery",
   "inspector_unnamed": "{count, plural, other {# sans nom}}",
+  "inspector_window": "Fenêtre de l'inspecteur",
+  "inspector_window_shortcut": "Ouvrir ou fermer la fenêtre de l'inspecteur",
   "install": "Installer",
   "install_app_title": "Installer l'application",
   "integrity_checks": "Détections d'intégrité",

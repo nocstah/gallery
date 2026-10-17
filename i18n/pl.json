@@ -2404,6 +2404,8 @@
   "info": "Informacje",
   "inspector_point_at_photo": "Wskaż zdjęcie w Gallery",
   "inspector_unnamed": "{count, plural, other {# bez imienia}}",
+  "inspector_window": "Okno inspektora",
+  "inspector_window_shortcut": "Otwórz lub zamknij okno inspektora",
   "install": "Zainstaluj",
   "install_app_title": "Zainstaluj aplikację",
   "integrity_checks": "Kontrole integralności",
