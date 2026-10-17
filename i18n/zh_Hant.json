@@ -2372,6 +2372,8 @@
   "individual_share": "個別分享",
   "individual_shares": "個別分享",
   "info": "資訊",
+  "inspector_point_at_photo": "在 Gallery 中指向一張相片",
+  "inspector_unnamed": "{count, plural, other {# 人未命名}}",
   "install": "安裝",
   "install_app_title": "安裝應用程式",
   "integrity_checks": "完整性檢查",

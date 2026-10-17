@@ -2386,6 +2386,8 @@
   "individual_share": "Partage d'un média unique",
   "individual_shares": "Partages d'un média unique",
   "info": "Information",
+  "inspector_point_at_photo": "Pointez une photo dans Gallery",
+  "inspector_unnamed": "{count, plural, other {# sans nom}}",
   "install": "Installer",
   "install_app_title": "Installer l'application",
   "integrity_checks": "Détections d'intégrité",

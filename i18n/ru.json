@@ -2388,6 +2388,8 @@
   "individual_share": "Индивидуальная подборка",
   "individual_shares": "Подборки",
   "info": "Информация",
+  "inspector_point_at_photo": "Наведите указатель на фото в Gallery",
+  "inspector_unnamed": "{count, plural, other {# без имени}}",
   "install": "Установить",
   "install_app_title": "Установите приложение",
   "integrity_checks": "Проверка целостности",

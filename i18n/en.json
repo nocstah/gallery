@@ -2398,6 +2398,8 @@
   "individual_share": "Individual share",
   "individual_shares": "Individual shares",
   "info": "Info",
+  "inspector_point_at_photo": "Point at a photo in Gallery",
+  "inspector_unnamed": "{count, plural, other {# unnamed}}",
   "install": "Install",
   "install_app_title": "Install the app",
   "integrity_checks": "Integrity Checks",

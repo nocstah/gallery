@@ -2402,6 +2402,8 @@
   "individual_share": "Udostępniony zasób",
   "individual_shares": "Indywidualne udziały",
   "info": "Informacje",
+  "inspector_point_at_photo": "Wskaż zdjęcie w Gallery",
+  "inspector_unnamed": "{count, plural, other {# bez imienia}}",
   "install": "Zainstaluj",
   "install_app_title": "Zainstaluj aplikację",
   "integrity_checks": "Kontrole integralności",

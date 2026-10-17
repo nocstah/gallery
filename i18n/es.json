@@ -2386,6 +2386,8 @@
   "individual_share": "Compartir individualmente",
   "individual_shares": "Acciones individuales",
   "info": "Información",
+  "inspector_point_at_photo": "Señala una foto en Gallery",
+  "inspector_unnamed": "{count, plural, other {# sin nombre}}",
   "install": "Instalar",
   "install_app_title": "Instala la aplicación",
   "integrity_checks": "Verificaciones de integridad",

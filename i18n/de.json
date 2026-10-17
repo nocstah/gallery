@@ -2386,6 +2386,8 @@
   "individual_share": "Individuelle Freigabe",
   "individual_shares": "Individuelles Teilen",
   "info": "Info",
+  "inspector_point_at_photo": "Zeig in Gallery auf ein Foto",
+  "inspector_unnamed": "{count, plural, other {# ohne Namen}}",
   "install": "Installieren",
   "install_app_title": "App installieren",
   "integrity_checks": "Integritätsprüfungen",

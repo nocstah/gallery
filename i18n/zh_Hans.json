@@ -2386,6 +2386,8 @@
   "individual_share": "单独分享",
   "individual_shares": "单独分享",
   "info": "信息",
+  "inspector_point_at_photo": "在 Gallery 中指向一张照片",
+  "inspector_unnamed": "{count, plural, other {# 人未命名}}",
   "install": "安装",
   "install_app_title": "安装应用",
   "integrity_checks": "完整性检查",
