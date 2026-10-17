@@ -1,5 +1,6 @@
 import type { AssetResponseDto } from '@immich/sdk';
 import type { AdjustSettings } from '$lib/components/curator/adjust-math';
+import type { FilmPlan } from '$lib/components/memories/film/film-plan';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 
 // Local Omarchy layer: client for Curator (~/code/curator), the local AI service behind the AI inbox. Curator runs
@@ -273,6 +274,33 @@ export type BookJob = {
   error: string | null;
 };
 
+/** A memory's film saved as video (Curator's curator/film.py): the plan the film plays, the song playing, and the
+ * title the file is named after. Curator takes five minutes of film at most. */
+export type FilmRequest = { memoryId: string; plan: FilmPlan; trackId?: string; title?: string };
+export const FILM_MOST_SECONDS = 300;
+
+/** What film.render made: the film as an MP4, 1080p at 30 fps, kept a week. */
+export type FilmResult = {
+  /** the file's name, the memory's title ("Siem Reap · October 2025.mp4") */
+  name: string;
+  size: number;
+  seconds: number;
+  width: number;
+  height: number;
+  /** no longer kept (a week has gone): saving it again means making it again */
+  missing?: boolean;
+};
+
+/** A film being saved as video: reading its photos, then frame by frame. */
+export type FilmJob = {
+  id: number;
+  status: JobRow['status'];
+  progress: { done?: number; total?: number; note?: 'reading' | 'frames' } | null;
+  result: FilmResult | null;
+  /** the error's first line */
+  error: string | null;
+};
+
 /** What needs attention in the library, from Curator's /api/library-health. */
 export type LibraryHealth = {
   checked_at: string;
@@ -445,6 +473,8 @@ export const shareVideoUrl = (assetId: string, app: ShareApp) => `${base()}/shar
 /** One of a photo book's PDFs: shown by the browser, or with `download` saved under its own name. */
 export const bookFileUrl = (jobId: number, part: BookPart, download = false) =>
   `${base()}/books/${jobId}/${part}.pdf${download ? '?download=true' : ''}`;
+/** A memory's film saved as video, sent as an attachment under the memory's title, so the browser saves it. */
+export const filmFileUrl = (jobId: number) => `${base()}/films/${jobId}/film.mp4`;
 /** A pending highlight reel, streamed by Curator (byte ranges, so the player can seek). */
 export const reelUrl = (suggestionId: number) => `${base()}/reels/${suggestionId}.mp4`;
 /** a restore suggestion's original ('before') or restored version ('after'): a photo `width` pixels across, or a clip */
@@ -553,6 +583,10 @@ export const curator = {
     post<{ job: number }>('/books', { ...subject, title, photos }),
   /** a photo book being made, or made */
   book: (jobId: number) => call<BookJob>(`/books/${jobId}`),
+  /** a memory's film saved as video (film.render on Curator's applier); follow it with film() */
+  saveFilm: (request: FilmRequest) => post<{ job: number }>('/films', request),
+  /** a film being saved as video, or saved */
+  film: (jobId: number) => call<FilmJob>(`/films/${jobId}`),
   /** Look Up: what the photo shows that has a name (the kept answer unless `again`) */
   lookUp: (assetId: string, again = false, signal?: AbortSignal) =>
     call<LookUpAnswer>('/lookup', { method: 'POST', body: JSON.stringify({ asset_id: assetId, again }), signal }),
