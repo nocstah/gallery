@@ -704,6 +704,12 @@
     }
   };
 
+  /** What a key does, from outside: a host's own button (Room's Up next) hands on through the film's fade. */
+  export const control = (action: FilmAction) => {
+    poke();
+    run(action);
+  };
+
   // ---- the controls: there with the pointer, a touch or a key, gone after a few quiet seconds ----
 
   let overControls = false;
@@ -1833,8 +1839,13 @@
   }
   .film[data-dress='room'] .film-song {
     height: var(--room-control);
-    max-width: min(36rem, 38vw);
     padding-inline: 0.9em;
+  }
+  /* beside the transport on a wide screen; a phone gives the song a row of its own */
+  @media (min-width: 768px) {
+    .film[data-dress='room'] .film-song {
+      max-width: min(36rem, 38vw);
+    }
   }
   .film[data-dress='room'] .film-song :global(svg) {
     width: 1.2em;

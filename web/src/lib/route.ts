@@ -148,6 +148,10 @@ export const Route = {
   viewTrashedAsset: ({ id }: { id: string }) => `/trash/photos/${id}`,
   recentlyAdded: () => '/recently-added',
 
+  // Local Omarchy layer: Room, the archive across the room (DESIGN.md, Room): today's films, or one album, or one year
+  room: (params?: { album?: string; year?: number | string }) =>
+    '/room' + asQueryString({ album: params?.album, year: params?.year }),
+
   // search
   search: (dto?: MetadataSearchDto | SmartSearchDto) => {
     const metadata = omitBy(dto ?? {}, (value) => value === undefined);
