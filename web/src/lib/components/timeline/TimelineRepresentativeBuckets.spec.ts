@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { tick } from 'svelte';
+import { createRawSnippet, tick } from 'svelte';
 import TimelineRepresentativeBuckets from '$lib/components/timeline/TimelineRepresentativeBuckets.svelte';
 import type { TimelineGrouping } from '$lib/managers/timeline-manager/types';
 import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
@@ -238,5 +238,28 @@ describe('TimelineRepresentativeBuckets', () => {
     });
 
     expect(screen.getByTestId('timeline-bucket-shell-2016-01-01')).toHaveStyle('transform: translateY(170px)');
+  });
+
+  // Local Omarchy layer: a page's own action beside a period's card (Photos: a year in Room), the card still its own
+  it("puts the page's own action beside each period's card, and the card still opens it", async () => {
+    const onTimelineBucketActivate = vi.fn();
+    const bucketAction = createRawSnippet((period: () => RepresentativeTimelineBucket) => ({
+      render: () => `<a data-testid="period-action" href="/room?year=${period().date.year}">Room</a>`,
+    }));
+
+    render(TimelineRepresentativeBuckets, {
+      grouping: 'year',
+      buckets: [bucket(2016, 120), bucket(2015, 460)],
+      visibleWindow: { top: 100, bottom: 600 },
+      bucketAction,
+      onTimelineBucketActivate,
+    });
+
+    const frame = within(screen.getByTestId('timeline-bucket-shell-2015-01-01')).getByTestId('timeline-bucket-frame');
+    expect(within(frame).getByTestId('period-action')).toHaveAttribute('href', '/room?year=2015');
+    expect(screen.getAllByTestId('period-action')).toHaveLength(2);
+
+    await userEvent.click(within(frame).getByTestId('timeline-bucket-card'));
+    expect(onTimelineBucketActivate).toHaveBeenCalledWith({ grouping: 'year', date: { year: 2015 } });
   });
 });

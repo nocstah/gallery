@@ -163,6 +163,8 @@ describe('UserSidebar', () => {
       expect(screen.getByRole('link', { name: /^photos$/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /^albums$/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /^shared$/i })).toBeInTheDocument();
+      // Room is for everyone: a family account's plays without Curator's music
+      expect(screen.getByRole('link', { name: /^room$/i })).toBeInTheDocument();
     });
   });
 
@@ -191,6 +193,15 @@ describe('UserSidebar', () => {
     render(UserSidebar);
 
     expect(screen.queryByRole('link', { name: /^memories$/i })).not.toBeInTheDocument();
+  });
+
+  // Local Omarchy layer: Room plays memories, albums and years, so it is there with memories off too
+  it('opens Room from its own row, memories or not', () => {
+    mocks.authManager.preferences.memories.enabled = false;
+
+    render(UserSidebar);
+
+    expect(screen.getByRole('link', { name: /^room$/i })).toHaveAttribute('href', '/room');
   });
 
   // Rail mode collapses to icons only, so BottomInfo's full storage bar is swapped for the

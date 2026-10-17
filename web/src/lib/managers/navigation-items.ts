@@ -40,6 +40,7 @@ import {
   mdiShareVariantOutline,
   mdiSync,
   mdiTagMultipleOutline,
+  mdiTelevisionPlay,
   mdiToolboxOutline,
   mdiTrashCanOutline,
   mdiUndoVariant,
@@ -288,6 +289,16 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_memories_description',
     icon: mdiHistory,
     route: Route.memories(),
+    adminOnly: false,
+  },
+  // Local Omarchy layer: Room, the archive across the room (components/room), for every account
+  {
+    id: 'nav:userPages:room',
+    category: 'userPages',
+    labelKey: 'room',
+    descriptionKey: 'cmdk_nav_room_description',
+    icon: mdiTelevisionPlay,
+    route: Route.room(),
     adminOnly: false,
   },
   // Local Omarchy layer: every page in the sidebar is reachable from Ctrl+K, the layer's own (command center, AI inbox

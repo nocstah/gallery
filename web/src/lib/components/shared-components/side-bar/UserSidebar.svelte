@@ -44,6 +44,7 @@
     mdiShareVariant,
     mdiShareVariantOutline,
     mdiTagMultipleOutline,
+    mdiTelevisionPlay,
     mdiToolbox,
     mdiToolboxOutline,
     mdiTrashCan,
@@ -99,6 +100,10 @@
   {#if authManager.preferences.memories.enabled && authManager.preferences.memories.sidebarWeb}
     <SidebarNavItem title={$t('memories')} href={Route.memories()} icon={mdiCardsOutline} activeIcon={mdiCards} />
   {/if}
+
+  <!-- Local Omarchy layer: Room, the archive across the room, full screen without the shell (components/room): today's
+       memories, then the albums Curator keeps for the TV -->
+  <SidebarNavItem title={$t('room')} href={Route.room()} icon={mdiTelevisionPlay} />
 
   {#if authManager.preferences.people.enabled && authManager.preferences.people.sidebarWeb}
     <SidebarNavItem title={$t('people')} href={Route.people()} icon={mdiAccountOutline} activeIcon={mdiAccount} />

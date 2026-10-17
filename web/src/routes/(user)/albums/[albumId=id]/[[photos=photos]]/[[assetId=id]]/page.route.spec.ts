@@ -3,12 +3,13 @@ import { modalManager } from '@immich/ui';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAnimateMock } from '$lib/__mocks__/animate.mock';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
 import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
+import { qrManager } from '$lib/managers/special-albums.svelte';
 import { albumFactory } from '@test-data/factories/album-factory';
 import { timelineAssetFactory } from '@test-data/factories/asset-factory';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
@@ -1000,6 +1001,29 @@ describe('album detail filter panel route', () => {
         expect(screen.getByTestId('smart-search-results')).toHaveAttribute('data-search-query', 'mountain'),
       );
       expect(screen.getByTestId('smart-search-results')).toHaveAttribute('data-total', '');
+    });
+  });
+
+  // Local Omarchy layer: the album across the room (components/room), from its bar beside Slideshow
+  describe('Room', () => {
+    afterEach(() => {
+      qrManager.albumId = undefined;
+    });
+
+    it('plays the album in Room', async () => {
+      const album = albumFactory.build({ assetCount: 2 });
+      renderPage(album);
+
+      expect(await screen.findByTestId('album-room')).toHaveAttribute('href', `/room?album=${album.id}`);
+    });
+
+    it('is not offered for QR, whose bank slips stay out of sight', async () => {
+      const album = albumFactory.build({ assetCount: 2 });
+      qrManager.albumId = album.id;
+      renderPage(album);
+
+      await waitFor(() => expect(screen.getByLabelText('slideshow')).toBeInTheDocument());
+      expect(screen.queryByTestId('album-room')).not.toBeInTheDocument();
     });
   });
 });

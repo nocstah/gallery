@@ -104,8 +104,8 @@ function paramAccepts(name: string, segment: string): boolean {
 }
 
 describe('NAVIGATION_ITEMS schema', () => {
-  it('has exactly 55 items', () => {
-    expect(NAVIGATION_ITEMS).toHaveLength(55);
+  it('has exactly 56 items', () => {
+    expect(NAVIGATION_ITEMS).toHaveLength(56);
   });
 
   it('every item has non-empty required fields', () => {
@@ -187,7 +187,7 @@ describe('NAVIGATION_ITEMS schema', () => {
       'nav:userPages:import',
     ]);
     const items = NAVIGATION_ITEMS.filter((i) => i.category === 'userPages');
-    expect(items).toHaveLength(28);
+    expect(items).toHaveLength(29);
     for (const item of items) {
       expect(item.adminOnly, item.id).toBe(ownerTools.has(item.id));
     }

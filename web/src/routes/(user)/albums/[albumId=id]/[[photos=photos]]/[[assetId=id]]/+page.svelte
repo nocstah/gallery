@@ -124,6 +124,7 @@
     mdiLinkVariantPlus,
     mdiPlus,
     mdiPresentationPlay,
+    mdiTelevisionPlay,
   } from '@mdi/js';
   import { onDestroy, onMount, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -899,6 +900,20 @@
         onclick={handleStartSlideshow}
         icon={mdiPresentationPlay}
       />
+      <!-- Local Omarchy layer: the album across the room, full screen (components/room); To do, Villa and QR keep
+           their photos out of sight, so not for them -->
+      {#if !special}
+        <IconButton
+          shape="round"
+          variant="ghost"
+          color="secondary"
+          aria-label={$t('room_play')}
+          title={$t('room_play')}
+          href={Route.room({ album: album.id })}
+          icon={mdiTelevisionPlay}
+          data-testid="album-room"
+        />
+      {/if}
     {/if}
     <ActionButton action={Actions.Download} />
   {/if}
@@ -913,6 +928,13 @@
         {/if}
         {#if album.assetCount > 0}
           <MenuOption icon={mdiPresentationPlay} text={$t('slideshow')} onClick={handleStartSlideshow} />
+          {#if !special}
+            <MenuOption
+              icon={mdiTelevisionPlay}
+              text={$t('room_play')}
+              onClick={() => goto(Route.room({ album: album.id }))}
+            />
+          {/if}
         {/if}
         <ActionMenuItem action={Actions.Download} />
       {/if}

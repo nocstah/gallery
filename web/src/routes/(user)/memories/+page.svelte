@@ -15,8 +15,8 @@
   import { getAltText } from '$lib/utils/thumbnail-util';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import type { MemoryResponseDto } from '@immich/sdk';
-  import { IconButton, modalManager } from '@immich/ui';
-  import { mdiTune } from '@mdi/js';
+  import { Button, IconButton, modalManager } from '@immich/ui';
+  import { mdiTelevisionPlay, mdiTune } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -55,6 +55,19 @@
 >
   {#snippet buttons()}
     <div class="flex place-items-center gap-2">
+      <!-- Local Omarchy layer: today's memories across the room, full screen (components/room) -->
+      <Button
+        href={Route.room()}
+        leadingIcon={mdiTelevisionPlay}
+        variant="ghost"
+        size="small"
+        color="secondary"
+        title={$t('room_play')}
+        aria-label={$t('room_play')}
+        data-testid="memories-room"
+      >
+        <span class="ws-action-label">{$t('room')}</span>
+      </Button>
       <IconButton
         shape="round"
         color="secondary"

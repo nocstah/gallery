@@ -103,7 +103,7 @@
   import { resolveFilterNames } from '$lib/utils/filter-name-resolution';
   import { filterStateToSearchTerms } from '$lib/utils/filter-search-terms';
   import type { SearchTerms } from '$lib/services/search.service';
-  import { mdiDotsVertical, mdiTune } from '@mdi/js';
+  import { mdiDotsVertical, mdiTelevisionPlay, mdiTune } from '@mdi/js';
   import { DateTime } from 'luxon';
   import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -812,6 +812,24 @@
   {/if}
 {/snippet}
 
+<!-- Local Omarchy layer: a year in Room (components/room), its favourites or a sample of it across the room, from its
+     card in the Years overview; the card itself still opens the year's months -->
+{#snippet yearRoom(bucket: ActivatableTimelineBucket & { count: number })}
+  {#if bucket.grouping === 'year' && bucket.count > 0}
+    {@const year = String(bucket.date.year)}
+    <a
+      class="ws-bucket-room"
+      href={Route.room({ year })}
+      aria-label={$t('room_play_year', { values: { year } })}
+      title={$t('room_play_year', { values: { year } })}
+      data-testid="year-room"
+    >
+      <Icon icon={mdiTelevisionPlay} size="1.125rem" aria-hidden />
+      <span>{$t('room')}</span>
+    </a>
+  {/if}
+{/snippet}
+
 <UserPageLayout
   hideNavbar={assetMultiSelectManager.selectionActive}
   barFitsNavbar
@@ -896,6 +914,7 @@
             removeAction={AssetAction.ARCHIVE}
             onEscape={handleEscape}
             onTimelineBucketActivate={handleTimelineBucketActivate}
+            bucketAction={yearRoom}
             {temporalAnchor}
             onTemporalAnchorResolved={() => (temporalAnchor = undefined)}
             onViewportMonthChange={(month) => (viewportMonth = month)}

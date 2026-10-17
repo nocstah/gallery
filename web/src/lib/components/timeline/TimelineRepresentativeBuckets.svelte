@@ -2,6 +2,7 @@
   import TimelineBucketCard from '$lib/components/timeline/TimelineBucketCard.svelte';
   import type { TimelineGrouping } from '$lib/managers/timeline-manager/types';
   import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
+  import type { Snippet } from 'svelte';
 
   const OVERSCAN_PX = 900;
 
@@ -34,6 +35,8 @@
     renderOffset?: number;
     onTimelineBucketActivate?: (bucket: ActivatableTimelineBucket) => void;
     onRequestCovers?: (timeBuckets: string[]) => void;
+    /** Local Omarchy layer: a page's own action on a period's card, beside it (Photos: a year in Room) */
+    bucketAction?: Snippet<[RepresentativeTimelineBucket]>;
   }
 
   let {
@@ -45,6 +48,7 @@
     renderOffset = 0,
     onTimelineBucketActivate,
     onRequestCovers,
+    bucketAction,
   }: Props = $props();
 
   const intersectsVisibleWindow = (bucket: RepresentativeTimelineBucket, window: VisibleWindow) =>
@@ -71,7 +75,7 @@
 {#if grouping !== 'day'}
   <div data-testid="timeline-representative-buckets" data-grouping={grouping}>
     {#each visibleBuckets as bucket (bucket.viewId)}
-      {#if bucket.size != null && bucket.left != null}
+      {#if typeof bucket.size === 'number' && typeof bucket.left === 'number'}
         <!-- Local Omarchy layer: a square tile in the month grid -->
         <div
           style={`position: absolute; left: ${bucket.left}px; width: ${bucket.size}px; height: ${bucket.size}px; transform: translateY(${bucket.top + renderOffset}px);`}
@@ -79,14 +83,16 @@
           class="ws-month-tile"
         >
           <TimelineBucketCard {bucket} {locale} loading={!bucket.isLoaded} {disabled} onActivate={activate} />
+          {@render bucketAction?.(bucket)}
         </div>
       {:else}
         <div
           style={`position: absolute; height: ${bucket.height}px; width: 100%; transform: translateY(${bucket.top + renderOffset}px);`}
           data-testid={`timeline-bucket-shell-${bucket.timeBucket}`}
         >
-          <div class="mx-auto h-full max-w-5xl px-4" data-testid="timeline-bucket-frame">
+          <div class="relative mx-auto h-full max-w-5xl px-4" data-testid="timeline-bucket-frame">
             <TimelineBucketCard {bucket} {locale} loading={!bucket.isLoaded} {disabled} onActivate={activate} />
+            {@render bucketAction?.(bucket)}
           </div>
         </div>
       {/if}

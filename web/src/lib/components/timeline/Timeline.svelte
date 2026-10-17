@@ -73,6 +73,8 @@
     onEscape?: () => void;
     onScroll?: (scrollTop: number) => void;
     onTimelineBucketActivate?: (bucket: ActivatableTimelineBucket) => void;
+    /** Local Omarchy layer: a page's own action on each period's card in the Years and Months overviews */
+    bucketAction?: Snippet<[ActivatableTimelineBucket & { count: number }]>;
     grouping?: TimelineGrouping;
     onGroupingChange?: (grouping: TimelineGrouping) => void;
     temporalAnchor?: TimelineTemporalAnchor;
@@ -120,6 +122,7 @@
     onEscape = () => {},
     onScroll,
     onTimelineBucketActivate,
+    bucketAction,
     grouping = 'day',
     onGroupingChange,
     temporalAnchor,
@@ -917,6 +920,7 @@
         locale={$lang}
         disabled={isSelectionMode || assetInteraction.selectionActive}
         {onTimelineBucketActivate}
+        {bucketAction}
         onRequestCovers={(timeBuckets) => void timelineManager.loadCoversForBuckets(timeBuckets)}
       />
     {:else if !isEmpty}
