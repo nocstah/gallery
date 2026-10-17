@@ -222,6 +222,29 @@
       reducedMotion,
     });
 
+  /** The film as "Save as video" hands it to Curator, which draws the same film into a 16:9 MP4: the shots planned
+   * for that frame from what this film was planned from (its cover and faces, its photos' time), the songs from the
+   * one playing, from the film's start, and the cuts on that song's beat. Nothing until the film has begun. */
+  export const videoPlan = (): { plan: FilmPlan; trackId?: string } | undefined => {
+    if (!plan) {
+      return undefined;
+    }
+    const songs = music?.available ? [...music.tracks.slice(music.index), ...music.tracks.slice(0, music.index)] : [];
+    const saved = buildFilmPlan({
+      memoryId: memory.id,
+      assets: filmAssets,
+      aspect: 16 / 9,
+      cover: frozen?.cover ?? cover,
+      focus: frozen?.focus ?? focus,
+      title: { text: name, line },
+      sentences,
+      tracks: songs,
+      photoSeconds: frozen?.photoSeconds ?? photoSeconds,
+      reducedMotion,
+    });
+    return { plan: saved, trackId: saved.music[0]?.trackId };
+  };
+
   // a photo shown whole lies on its own colours, drawn from its thumbhash (film-backdrop.ts: no CSS blur under a drift)
   const backdropOf = (id: string) => thumbhashBackdrop(assetsById.get(id)?.thumbhash);
 

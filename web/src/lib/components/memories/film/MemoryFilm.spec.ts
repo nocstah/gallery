@@ -181,6 +181,20 @@ describe('MemoryFilm', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('hands Save as video its plan for a 16:9 frame, the song playing first', async () => {
+    const { component } = renderFilm({ tracks: [track('a'), { ...track('b'), bpm: 96 }] });
+    await started();
+    await fireEvent.keyDown(document, { key: 'n' });
+
+    const saved = component.videoPlan();
+    expect(saved?.trackId).toBe('b');
+    expect(saved?.plan).toMatchObject({ memoryId: 'memory-1', aspect: 1.7778 });
+    expect(saved?.plan.music[0]).toMatchObject({ trackId: 'b', start: 0 });
+    // the cuts on the beat of the song it goes with (96 BPM: a beat is 0.625 s; the title card's 5 s is 8 of them)
+    expect(saved?.plan.shots[1].start).toBeCloseTo(0.625 * Math.round(10 / 0.625), 3);
+    expect(saved?.plan.texts[0]).toMatchObject({ kind: 'title', text: 'Siem Reap', line: 'October 2025 · 3 photos' });
+  });
+
   it('pauses while it is off screen and plays on when it is back', async () => {
     const { rerender } = renderFilm();
     const film = await started();

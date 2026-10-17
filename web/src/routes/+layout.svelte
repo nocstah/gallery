@@ -40,6 +40,7 @@
   import { t } from 'svelte-i18n';
   import { get } from 'svelte/store';
   import DownloadPanel from './DownloadPanel.svelte';
+  import FilmVideoPanel from '$lib/components/omarchy/FilmVideoPanel.svelte';
   import PhotoBookPanel from '$lib/components/omarchy/PhotoBookPanel.svelte';
   import ShareVideoPanel from '$lib/components/omarchy/ShareVideoPanel.svelte';
   import ErrorLayout from './ErrorLayout.svelte';
@@ -349,12 +350,14 @@
   {/if}
 
   <DownloadPanel />
-  <!-- Local Omarchy layer: what Curator makes on request, one panel above the other in the bottom-left corner; only
-       for Curator's owner (curatorIsMine), so the next account in the tab never sees the owner's books or videos.
+  <!-- Local Omarchy layer: what Curator makes on request (photo books, memories' films, videos for chat apps), one
+       panel above the other in the bottom-left corner; only for Curator's owner (curatorIsMine), so the next account
+       in the tab never sees the owner's books or videos.
        ws-curator-corner: on a phone the photo viewer lifts them over its bottom bar (AssetViewer) -->
   {#if curatorIsMine()}
     <div class="ws-curator-corner fixed inset-s-3 bottom-3 z-60 flex flex-col items-start gap-3">
       <PhotoBookPanel />
+      <FilmVideoPanel />
       <ShareVideoPanel />
     </div>
   {/if}

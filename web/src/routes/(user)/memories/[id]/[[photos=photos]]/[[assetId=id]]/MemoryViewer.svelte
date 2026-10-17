@@ -19,6 +19,7 @@
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { filmVideos } from '$lib/managers/film-video-manager.svelte';
   import { memoryFacts } from '$lib/managers/memory-facts.svelte';
   import { memoryManager } from '$lib/managers/memory-manager.svelte';
   import type { Viewport } from '$lib/managers/timeline-manager/types';
@@ -39,6 +40,7 @@
     mdiHeartOutline,
     mdiImageMinusOutline,
     mdiImageSearch,
+    mdiMovieOpenOutline,
     mdiPlay,
     mdiSelectAll,
     mdiTextBoxOutline,
@@ -50,7 +52,8 @@
   // Local Omarchy layer: a memory's page is its film (MemoryFilm, DESIGN.md, Memories), full screen over the shell
   // as the photo viewer is, and All photos, its photos as a grid under a slim bar, from which a photo opens in the
   // viewer. Upstream's framed player (a progress bar of segments, the memories before and after at its sides, the
-  // story in a box over the photo) is gone; its ⋮, its heart and View in timeline stay, in the film's top bar.
+  // story in a box over the photo) is gone; its ⋮, its heart and View in timeline stay, in the film's top bar, and the
+  // ⋮ adds Save as video for Curator's owner.
 
   const current = $derived(memoryManager.current);
   const memoryId = $derived(current?.memory.id);
@@ -224,6 +227,15 @@
     await memoryManager.deleteCurrentAsset();
   };
 
+  // Save as video (Curator's owner, once Curator says it saves films): the film's own plan and the song playing, drawn
+  // into an MP4 by Curator; the corner panel follows it and the browser saves "<title>.mp4" (managers/film-video-manager)
+  const saveAsVideo = () => {
+    const saved = film?.videoPlan();
+    if (current && saved) {
+      filmVideos.start({ memoryId: current.memory.id, ...saved, title: cardTitle }, cardTitle);
+    }
+  };
+
   const close = () => goto(memoryManager.memoriesHref);
 
   const showAllPhotos = () => {
@@ -339,6 +351,13 @@
               text={$t('remove_photo_from_memory')}
               icon={mdiImageMinusOutline}
             />
+            {#if filmVideos.available}
+              <MenuOption
+                onClick={() => saveAsVideo()}
+                text={$t('memory_film_save_video')}
+                icon={mdiMovieOpenOutline}
+              />
+            {/if}
             {#if story}
               <MenuOption
                 onClick={() => setStoryHidden(!storyHidden)}
