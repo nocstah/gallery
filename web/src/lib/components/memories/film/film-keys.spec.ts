@@ -21,6 +21,8 @@ describe(filmKeyAction.name, () => {
     expect(filmKeyAction(key('a'))).toBeUndefined();
     expect(filmKeyAction(key('ArrowUp'))).toBeUndefined();
     expect(filmKeyAction(key('Enter'))).toBeUndefined();
+    expect(filmKeyAction(key('GoBack'))).toBeUndefined();
+    expect(filmKeyAction(key('a'), 'room')).toBeUndefined();
   });
 
   it("leaves a key held with Ctrl, Alt or Meta to someone else's shortcut", () => {
@@ -39,8 +41,36 @@ describe(filmKeyAction.name, () => {
 
     expect(filmKeyAction(key(' ', { target: field }))).toBeUndefined();
     expect(filmKeyAction(key('ArrowRight', { target: item }))).toBeUndefined();
+    expect(filmKeyAction(key('Enter', { target: field }), 'room')).toBeUndefined();
 
     field.remove();
     menu.remove();
+  });
+
+  describe('dressed for Room', () => {
+    it.each([
+      [' ', 'toggle'],
+      ['Enter', 'toggle'],
+      ['ArrowLeft', 'previous'],
+      ['ArrowRight', 'next'],
+      ['ArrowUp', 'previous-film'],
+      ['ArrowDown', 'next-film'],
+      ['m', 'mute'],
+      ['N', 'next-song'],
+      ['Escape', 'close'],
+      ['GoBack', 'close'],
+      ['BrowserBack', 'close'],
+      ['XF86Back', 'close'],
+      ['MediaPlayPause', 'toggle'],
+      ['MediaTrackNext', 'next-film'],
+      ['MediaTrackPrevious', 'previous-film'],
+    ])('a remote or keyboard %j does %s', (value, action) => {
+      expect(filmKeyAction(key(value), 'room')).toBe(action);
+    });
+
+    it('still leaves keys held with Ctrl, Alt or Meta alone', () => {
+      expect(filmKeyAction(key('ArrowDown', { ctrlKey: true }), 'room')).toBeUndefined();
+      expect(filmKeyAction(key('Enter', { altKey: true }), 'room')).toBeUndefined();
+    });
   });
 });

@@ -6,6 +6,11 @@
   // and the next, made ready while the first one plays), so however long the memory, two photos are in the page. The
   // drift and the fades are transforms and opacity on the GPU; the script wakes only when something changes. The
   // controls fade after a few seconds and come back with the pointer, a touch or a key.
+  //
+  // Room (DESIGN.md, Room) plays the same film across the room, one after another: `dress="room"` sets it for three
+  // metres (a far bigger title, the photo's "names · place · date" caption at the foot, bigger controls, the pointer
+  // hidden, a remote's OK and Back), and `onNextFilm`/`onPreviousFilm` chain it: its end, ↓ and ↑ hand on to the film
+  // after or before, the picture and the music fading to black first, where a lone film offers what to do next.
   import { locale } from '$lib/stores/preferences.store';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
@@ -32,7 +37,7 @@
   import { t } from 'svelte-i18n';
   import { fade, fly } from 'svelte/transition';
   import { thumbhashBackdrop } from './film-backdrop';
-  import { filmKeyAction, type FilmAction } from './film-keys';
+  import { filmKeyAction, type FilmAction, type FilmDress } from './film-keys';
   import { FilmMusic } from './film-music.svelte';
   import {
     buildFilmPlan,
@@ -48,7 +53,8 @@
   } from './film-plan';
 
   interface Props {
-    memory: MemoryResponseDto;
+    /** a memory, or any run of photos with an id of its own (Room's albums and years) */
+    memory: Pick<MemoryResponseDto, 'id' | 'assets'>;
     /** the photo the address names: the film starts there (on the first photo, with its title card) and goes there
      * when the address moves on (back from the photo viewer, a photo taken out of the memory) */
     assetId: string;
@@ -78,9 +84,20 @@
     actions?: Snippet;
     /** a line of the top bar's own, after the date (a birthday's age) */
     extra?: Snippet;
+    /** 'room': dressed for a screen across the room (Room) */
+    dress?: FilmDress;
+    /** the photo on screen in words, "names · place · date": the room dress's caption at the foot */
+    caption?: string;
+    /** paused by a person (or by the tab being hidden), not before the film starts or once it has ended: Room keeps
+     * the screen awake while this is false */
+    paused?: boolean;
     onClose: () => void;
-    onAllPhotos: () => void;
+    /** All photos (the memory's grid); without it the film has no way there */
+    onAllPhotos?: () => void;
     onNextMemory?: () => void;
+    /** a film in a chain (Room): its end and ↓ hand on to the next film, ↑ to the one before */
+    onNextFilm?: () => void;
+    onPreviousFilm?: () => void;
   }
 
   let {
@@ -101,9 +118,14 @@
     current = $bindable(),
     actions,
     extra,
+    dress = 'screen',
+    caption,
+    paused = $bindable(false),
     onClose,
     onAllPhotos,
     onNextMemory,
+    onNextFilm,
+    onPreviousFilm,
   }: Props = $props();
 
   /** seconds: a step by hand crossfades quickly; the controls rest this long before they fade */
@@ -113,6 +135,8 @@
   const WAIT_MS = 1200;
   /** the film waits this long at most for a photo to decode, then shows it as it is */
   const READY_MS = 6000;
+  /** a film in a chain fades its picture and its music to black over this before the next one takes over */
+  const HAND_ON_MS = 650;
 
   const reducedMotion = $derived(mediaQueryManager.reducedMotion);
 
@@ -168,6 +192,12 @@
 
   let wakeTimer: ReturnType<typeof setTimeout> | undefined;
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  // a film in a chain, fading to black before the next one takes over
+  let leaving = $state(false);
+  let handOnTimer: ReturnType<typeof setTimeout> | undefined;
+  // the room dress shows the pointer while the mouse moves, and hides it again once it rests
+  let pointerSeen = $state(false);
+  let pointerTimer: ReturnType<typeof setTimeout> | undefined;
   let musicFading = false;
   let autoPaused = false;
   let began = false;
@@ -473,7 +503,29 @@
       musicFading = true;
       music?.fadeOut(1500);
     }
+    if (onNextFilm) {
+      handOn(onNextFilm);
+      return;
+    }
     showControls();
+  };
+
+  /** A film in a chain hands on: the picture and the music fade to black, then the next film (or the one before)
+   * takes over. */
+  const handOn = (to: (() => void) | undefined) => {
+    if (!to || leaving) {
+      return;
+    }
+    leaving = true;
+    music?.fadeOut(HAND_ON_MS);
+    handOnTimer = setTimeout(
+      () => {
+        if (!destroyed) {
+          to();
+        }
+      },
+      reducedMotion ? 150 : HAND_ON_MS,
+    );
   };
 
   const pauseLayers = () => {
@@ -641,6 +693,14 @@
         onClose();
         break;
       }
+      case 'previous-film': {
+        handOn(onPreviousFilm);
+        break;
+      }
+      case 'next-film': {
+        handOn(onNextFilm);
+        break;
+      }
     }
   };
 
@@ -676,12 +736,24 @@
 
   const poke = () => showControls();
 
+  // Enter on a control a person reached with the keys (Tab, a remote moving the focus) presses that control
+  const pressesControl = (target: EventTarget | null) => {
+    if (!(target instanceof Element) || !target.closest('button, a[href], [role="button"]')) {
+      return false;
+    }
+    try {
+      return target.matches(':focus-visible');
+    } catch {
+      return false;
+    }
+  };
+
   const onKeyDown = (event: KeyboardEvent) => {
     if (!active || isModalOpen()) {
       return;
     }
-    const action = filmKeyAction(event);
-    if (!action) {
+    const action = filmKeyAction(event, dress);
+    if (!action || (event.key === 'Enter' && pressesControl(event.target))) {
       if (!event.ctrlKey && !event.metaKey && !event.altKey) {
         poke();
       }
@@ -692,12 +764,20 @@
     }
     event.preventDefault();
     poke();
+    // across the room the sound a browser held back starts with the first key (a key is a press), and a remote's OK
+    // does only that
+    if (dress === 'room' && soundBlocked && action !== 'close') {
+      startSound();
+      if (action === 'toggle') {
+        return;
+      }
+    }
     run(action);
   };
 
   // Space on a focused button would press it as well when the key comes up
   const onKeyUp = (event: KeyboardEvent) => {
-    if (active && event.key === ' ' && filmKeyAction(event) === 'toggle') {
+    if (active && event.key === ' ' && filmKeyAction(event, dress) === 'toggle') {
       event.preventDefault();
     }
   };
@@ -735,9 +815,24 @@
     }
   };
 
+  const restPointer = () => {
+    clearTimeout(pointerTimer);
+    pointerTimer = setTimeout(() => {
+      if (overControls) {
+        restPointer();
+        return;
+      }
+      pointerSeen = false;
+    }, IDLE_MS);
+  };
+
   const onPointerMove = (event: PointerEvent) => {
     if (active && event.pointerType === 'mouse' && (event.movementX !== 0 || event.movementY !== 0)) {
       poke();
+      if (dress === 'room') {
+        pointerSeen = true;
+        restPointer();
+      }
     }
   };
 
@@ -783,6 +878,8 @@
       clearTimeout(wakeTimer);
       clearTimeout(idleTimer);
       clearTimeout(reshapeTimer);
+      clearTimeout(handOnTimer);
+      clearTimeout(pointerTimer);
       stopLayer(0);
       stopLayer(1);
       music?.destroy();
@@ -935,6 +1032,14 @@
   });
 
   const controlsHidden = $derived(!controlsShown && playing && !ended);
+
+  // paused by a person (or a hidden tab): Room lets the screen sleep then, and keeps it awake otherwise
+  $effect(() => {
+    const now = !!plan && !playing && !ended && !leaving;
+    if (untrack(() => paused) !== now) {
+      paused = now;
+    }
+  });
 </script>
 
 <svelte:window bind:innerWidth={frameWidth} bind:innerHeight={frameHeight} onpointermove={onPointerMove} />
@@ -952,6 +1057,9 @@
   data-playing={playing || undefined}
   data-ended={ended || undefined}
   data-sound={music?.available ? (music.playing ? 'on' : music.blocked ? 'blocked' : 'off') : undefined}
+  data-dress={dress === 'room' ? 'room' : undefined}
+  data-pointer={pointerSeen || undefined}
+  data-leaving={leaving || undefined}
 >
   <div
     class="film-stage"
@@ -1008,7 +1116,14 @@
     {/each}
   </div>
 
-  <div class="film-scrim film-scrim-foot" class:is-lit={titleShown || !!storyText || ended || !controlsHidden}></div>
+  <div
+    class="film-scrim film-scrim-foot"
+    class:is-lit={titleShown ||
+      !!storyText ||
+      ended ||
+      !controlsHidden ||
+      (dress === 'room' && !!caption && !!shot && !shot.opening)}
+  ></div>
   <div class="film-scrim film-scrim-head" class:is-lit={!controlsHidden}></div>
 
   <header class="film-head film-chrome" class:is-hidden={controlsHidden}>
@@ -1024,9 +1139,12 @@
     </div>
     <div class="film-where">
       <p class="film-where-name">{title}</p>
-      <p class="film-where-data" lang={$locale}>
-        <span>{shownDate}{@render extra?.()}</span>{#if place}<span class="film-where-place">{place}</span>{/if}
-      </p>
+      <!-- across the room the photo's date and place are its caption, at the foot -->
+      {#if dress !== 'room'}
+        <p class="film-where-data" lang={$locale}>
+          <span>{shownDate}{@render extra?.()}</span>{#if place}<span class="film-where-place">{place}</span>{/if}
+        </p>
+      {/if}
     </div>
     {#if actions}
       <div
@@ -1042,7 +1160,7 @@
 
   <div class="film-foot">
     <div class="film-words">
-      {#if ended}
+      {#if ended && !onNextFilm}
         <div class="film-end" in:fade={{ duration: 400 }}>
           <p class="film-end-name">{name}</p>
           <div class="film-end-choices">
@@ -1059,13 +1177,15 @@
                 </span>
               </button>
             {/if}
-            <button type="button" class="film-choice" onclick={onAllPhotos}>
-              <Icon icon={mdiImageMultipleOutline} size="1.25rem" aria-hidden />
-              <span>{$t('all_photos')}</span>
-            </button>
+            {#if onAllPhotos}
+              <button type="button" class="film-choice" onclick={onAllPhotos}>
+                <Icon icon={mdiImageMultipleOutline} size="1.25rem" aria-hidden />
+                <span>{$t('all_photos')}</span>
+              </button>
+            {/if}
           </div>
         </div>
-      {:else}
+      {:else if !ended}
         {#if titleShown}
           <div
             class="film-title"
@@ -1078,13 +1198,30 @@
             {/if}
           </div>
         {/if}
-        {#key storyIndex}
-          {#if storyText && !titleShown}
-            <p class="film-story" lang={$locale} in:fade={{ duration: 600 }} out:fade={{ duration: 350 }}>
-              {storyText}
-            </p>
+        <!-- the story a sentence at a time, and across the room the photo's caption under it -->
+        <div class="film-lines">
+          {#key storyIndex}
+            {#if storyText && !titleShown}
+              <p class="film-story" lang={$locale} in:fade={{ duration: 600 }} out:fade={{ duration: 350 }}>
+                {storyText}
+              </p>
+            {/if}
+          {/key}
+          <!-- the title card's photo is named by the title card; the caption comes with the next -->
+          {#if dress === 'room' && caption && !titleShown && shot && !shot.opening}
+            {#key caption}
+              <p
+                class="film-caption"
+                lang={$locale}
+                data-testid="memory-film-caption"
+                in:fade={{ duration: 600, delay: reducedMotion ? 0 : 450 }}
+                out:fade={{ duration: 300 }}
+              >
+                {caption}
+              </p>
+            {/key}
           {/if}
-        {/key}
+        </div>
       {/if}
     </div>
 
@@ -1161,19 +1298,24 @@
             <Icon icon={music?.muted ? mdiVolumeOff : mdiVolumeHigh} size="1.375rem" aria-hidden />
           </button>
         {/if}
-        <span class="film-rule" aria-hidden="true"></span>
-        <button
-          type="button"
-          class="film-button"
-          aria-label={$t('all_photos')}
-          title={$t('all_photos')}
-          onclick={onAllPhotos}
-        >
-          <Icon icon={mdiImageMultipleOutline} size="1.375rem" aria-hidden />
-        </button>
+        {#if onAllPhotos}
+          <span class="film-rule" aria-hidden="true"></span>
+          <button
+            type="button"
+            class="film-button"
+            aria-label={$t('all_photos')}
+            title={$t('all_photos')}
+            onclick={onAllPhotos}
+          >
+            <Icon icon={mdiImageMultipleOutline} size="1.375rem" aria-hidden />
+          </button>
+        {/if}
       </div>
     </div>
   </div>
+
+  <!-- a film in a chain goes to black before the next one takes over -->
+  <div class="film-veil" class:is-on={leaving} aria-hidden="true"></div>
 </section>
 
 <style>
@@ -1479,6 +1621,17 @@
     text-transform: uppercase;
     color: rgb(255 255 255 / 0.84);
   }
+  /* the story's sentences cross-fade in one place; across the room the photo's caption sits on the line under them */
+  .film-lines {
+    display: grid;
+    align-items: end;
+  }
+  .film-lines > .film-story {
+    grid-area: 1 / 1;
+  }
+  .film-lines > .film-caption {
+    grid-area: 2 / 1;
+  }
   .film-story {
     max-width: 44ch;
     font-size: clamp(1.0625rem, 0.85rem + 0.62vw, 1.625rem);
@@ -1486,6 +1639,32 @@
     line-height: 1.4;
     text-wrap: pretty;
     color: rgb(255 255 255 / 0.94);
+  }
+  .film-caption {
+    max-width: 60ch;
+    font-weight: 560;
+    line-height: 1.25;
+    letter-spacing: 0.005em;
+    font-variant-numeric: tabular-nums;
+    text-wrap: balance;
+    color: rgb(255 255 255 / 0.9);
+  }
+  .film-lines > .film-caption:not(:first-child) {
+    margin-top: 0.55em;
+  }
+
+  /* ---- a film in a chain goes to black before the next one takes over ---- */
+  .film-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background: #000;
+    opacity: 0;
+    transition: opacity 650ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .film-veil.is-on {
+    opacity: 1;
   }
 
   /* ---- the end: start over, the next memory, all its photos ---- */
@@ -1584,6 +1763,96 @@
     box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.4);
   }
 
+  /* ---- Room: the same film for a screen across the room, read from three metres (DESIGN.md, Room). Sizes follow
+     the screen's shorter side (vmin), so a 1080p TV, the AORUS and a 4K TV read alike: the caption is 32px at 1080p,
+     the title about 150px; the margins keep to a TV's title-safe area. The pointer is hidden until the mouse moves. */
+  .film[data-dress='room'] {
+    --film-gutter: clamp(1.25rem, 4.8vmin, 6.5rem);
+    --room-caption: clamp(1rem, 3vmin, 4rem);
+    --room-control: clamp(2.75rem, 6vmin, 8rem);
+    --room-icon: clamp(1.375rem, 3.2vmin, 4.25rem);
+  }
+  .film[data-dress='room']:not([data-pointer]) {
+    cursor: none;
+  }
+  .film[data-dress='room'] .film-scrim-foot {
+    height: min(66%, 60rem);
+    background: linear-gradient(to top, rgb(0 0 0 / 0.62), rgb(0 0 0 / 0.36) 38%, rgb(0 0 0 / 0.12) 72%, transparent);
+  }
+  .film[data-dress='room'] .film-scrim-head {
+    height: max(9rem, 24vmin);
+  }
+  .film[data-dress='room'] .film-head {
+    align-items: center;
+    gap: clamp(0.75rem, 1.6vmin, 2rem);
+  }
+  .film[data-dress='room'] .film-where {
+    padding-top: 0;
+  }
+  .film[data-dress='room'] .film-where-name {
+    font-size: clamp(1.25rem, 3.4vmin, 4.5rem);
+  }
+  .film[data-dress='room'] .film-title-name {
+    max-width: 15ch;
+    font-size: clamp(3.25rem, 14vmin, 19rem);
+    line-height: 0.88;
+  }
+  .film[data-dress='room'] .film-title-line {
+    margin-top: 0.7em;
+    font-size: var(--room-caption);
+    letter-spacing: 0.08em;
+  }
+  .film[data-dress='room'] .film-story {
+    max-width: 34ch;
+    font-size: clamp(1.125rem, 3.9vmin, 5.25rem);
+    line-height: 1.3;
+  }
+  .film[data-dress='room'] .film-caption {
+    font-size: var(--room-caption);
+  }
+  .film[data-dress='room'] .film-pill {
+    gap: clamp(2px, 0.3vmin, 6px);
+    padding: clamp(3px, 0.4vmin, 8px);
+  }
+  .film[data-dress='room'] .film-button,
+  .film[data-dress='room'] .film-actions :global(button),
+  .film[data-dress='room'] .film-actions :global(a) {
+    min-width: var(--room-control);
+    height: var(--room-control);
+  }
+  .film[data-dress='room'] .film-pill :global(svg) {
+    width: var(--room-icon);
+    height: var(--room-icon);
+  }
+  .film[data-dress='room'] .film-rule {
+    margin-block: clamp(0.4rem, 1.2vmin, 1.5rem);
+  }
+  .film[data-dress='room'] .film-position,
+  .film[data-dress='room'] .film-song {
+    font-size: clamp(0.75rem, 2.3vmin, 3rem);
+  }
+  .film[data-dress='room'] .film-song {
+    height: var(--room-control);
+    max-width: min(36rem, 38vw);
+    padding-inline: 0.9em;
+  }
+  .film[data-dress='room'] .film-song :global(svg) {
+    width: 1.2em;
+    height: 1.2em;
+  }
+  .film[data-dress='room'] .film-position {
+    min-width: 5em;
+  }
+  .film[data-dress='room'] .film-sound-on {
+    min-height: var(--room-control);
+    padding-inline: 0.9em 1.1em;
+    font-size: clamp(0.875rem, 2.6vmin, 3.25rem);
+  }
+  .film[data-dress='room'] .film-sound-on :global(svg) {
+    width: var(--room-icon);
+    height: var(--room-icon);
+  }
+
   /* a phone: the words over the whole width, the controls in a row of their own under them, thumb-sized */
   @media (max-width: 767px) {
     .film-foot {
@@ -1643,7 +1912,8 @@
   @media (prefers-reduced-motion: reduce) {
     .film-scrim,
     .film-chrome,
-    .film-pill {
+    .film-pill,
+    .film-veil {
       transition-duration: 150ms;
     }
   }

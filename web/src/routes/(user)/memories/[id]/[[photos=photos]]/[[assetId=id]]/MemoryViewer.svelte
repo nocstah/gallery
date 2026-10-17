@@ -28,9 +28,9 @@
   import { locale } from '$lib/stores/preferences.store';
   import { handlePromiseError, memoryLaneTitle } from '$lib/utils';
   import { curator, curatorIsMine, type MemoryTrack } from '$lib/utils/curator';
-  import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
+  import { memoryFilmWords } from '$lib/utils/memory-title';
   import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
-  import { type AssetResponseDto, AssetTypeEnum, getAssetInfo, MemoryType } from '@immich/sdk';
+  import { type AssetResponseDto, getAssetInfo, MemoryType } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton } from '@immich/ui';
   import {
     mdiCardsOutline,
@@ -154,17 +154,21 @@
     !memoryId || !curatorIsMine() || (memoryFacts.settled(memoryId) && songs?.memoryId === memoryId),
   );
 
-  // ---- its title: facts, place and time ----
+  // ---- its title: facts, place and time (utils/memory-title, as Room says them) ----
 
-  const titleParts = $derived(current ? memoryTitle(current.memory, facts, $locale) : undefined);
-  const cardTitle = $derived(current ? (titleParts?.title ?? $memoryLaneTitle(current.memory)) : '');
-  const filmName = $derived(titleParts?.name ?? (titleParts?.time || cardTitle));
-  const count = $derived(current ? memoryCount(current.memory, facts) : 0);
-  const allVideos = $derived(!!current && current.memory.assets.every((asset) => asset.type === AssetTypeEnum.Video));
-  const countText = $derived(
-    $t(allVideos ? 'memory_video_moments_subtitle' : 'memory_assets_count', { values: { count } }),
+  const words = $derived(
+    current
+      ? memoryFilmWords(current.memory, facts, $locale, {
+          fallbackTitle: $memoryLaneTitle,
+          count: (count, videos) =>
+            $t(videos ? 'memory_video_moments_subtitle' : 'memory_assets_count', { values: { count } }),
+        })
+      : undefined,
   );
-  const filmLine = $derived([titleParts?.name ? titleParts.time : '', countText].filter(Boolean).join(' · '));
+  const cardTitle = $derived(words?.title ?? '');
+  const filmName = $derived(words?.name ?? '');
+  const countText = $derived(words?.count ?? '');
+  const filmLine = $derived(words?.line ?? '');
 
   // ---- the photo on screen: where it was taken, and the way to it in the timeline ----
 

@@ -1,4 +1,4 @@
-import { MemoryType, type MemoryResponseDto } from '@immich/sdk';
+import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import type { MemoryFacts } from '$lib/utils/curator';
 
 // Local Omarchy layer: a memory's title from facts, place and time (2026-10-16, the owner's choice for "Memories worth
@@ -243,4 +243,28 @@ export const memoryCount = (memory: MemoryResponseDto, facts: MemoryFacts | null
   const context = memory.type === MemoryType.Rule && data.context ? (data.context as RuleContext) : {};
   const kept = number(context, 'assetCount') ?? number(context, 'count');
   return kept && kept >= memory.assets.length ? kept : memory.assets.length;
+};
+
+/** What a memory's film says (the memory's page and Room alike): the card's title for its top bar, the title card's
+ * name (the places or people, else the time) and the line under it ("October 2025 · 192 photos": the time when the
+ * name is not it, then the count the memory stands for). `count` words the count; `fallbackTitle` titles a memory
+ * with nothing to go on, as its card does. */
+export type MemoryFilmWords = { title: string; name: string; line: string; count: string };
+
+export const memoryFilmWords = (
+  memory: MemoryResponseDto,
+  facts: MemoryFacts | null | undefined,
+  locale: string | undefined,
+  words: { fallbackTitle: (memory: MemoryResponseDto) => string; count: (count: number, videos: boolean) => string },
+): MemoryFilmWords => {
+  const parts = memoryTitle(memory, facts, locale);
+  const title = parts?.title ?? words.fallbackTitle(memory);
+  const videos = memory.assets.every((asset) => asset.type === AssetTypeEnum.Video);
+  const count = words.count(memoryCount(memory, facts), videos);
+  return {
+    title,
+    name: parts?.name ?? (parts?.time || title),
+    line: [parts?.name ? parts.time : '', count].filter(Boolean).join(' · '),
+    count,
+  };
 };

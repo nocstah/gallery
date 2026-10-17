@@ -3,6 +3,7 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import type { MemoryTrack } from '$lib/utils/curator';
 import { assetFactory } from '@test-data/factories/asset-factory';
+import { reactiveProps } from '@test-data/reactive-props.svelte';
 import MemoryFilm from './MemoryFilm.svelte';
 
 vi.mock('$lib/managers/auth-manager.svelte', () => ({
@@ -42,20 +43,36 @@ const track = (id: string): MemoryTrack => ({
 const onClose = vi.fn();
 const onAllPhotos = vi.fn();
 
-const renderFilm = (props: { tracks?: MemoryTrack[]; active?: boolean } = {}) =>
-  render(MemoryFilm, {
-    memory: memory(),
-    assetId: 'asset-0',
-    active: props.active ?? true,
-    name: 'Siem Reap',
-    line: 'October 2025 · 3 photos',
-    title: 'Siem Reap · October 2025',
-    settled: true,
-    story: 'Temples at dawn. Then lunch by the river.',
-    tracks: props.tracks ?? [],
-    onClose,
-    onAllPhotos,
-  });
+type FilmProps = {
+  tracks?: MemoryTrack[];
+  active?: boolean;
+  dress?: 'screen' | 'room';
+  caption?: string;
+  story?: string | null;
+  allPhotos?: boolean;
+  onNextFilm?: () => void;
+  onPreviousFilm?: () => void;
+};
+
+const filmProps = (props: FilmProps = {}) => ({
+  memory: memory(),
+  assetId: 'asset-0',
+  active: props.active ?? true,
+  name: 'Siem Reap',
+  line: 'October 2025 · 3 photos',
+  title: 'Siem Reap · October 2025',
+  settled: true,
+  story: props.story === undefined ? 'Temples at dawn. Then lunch by the river.' : props.story,
+  tracks: props.tracks ?? [],
+  dress: props.dress,
+  caption: props.caption,
+  onClose,
+  onAllPhotos: props.allPhotos === false ? undefined : onAllPhotos,
+  onNextFilm: props.onNextFilm,
+  onPreviousFilm: props.onPreviousFilm,
+});
+
+const renderFilm = (props: FilmProps = {}) => render(MemoryFilm, filmProps(props));
 
 const started = async () => {
   const film = await screen.findByTestId('memory-film');
@@ -204,5 +221,106 @@ describe('MemoryFilm', () => {
 
     await rerender({ active: true });
     expect(film).toHaveAttribute('data-playing');
+  });
+
+  it('leaves Enter, ↑ and ↓ alone on a screen, and shows no caption there', async () => {
+    renderFilm({ caption: 'Anna · Siem Reap, Cambodia · October 16, 2025' });
+    const film = await started();
+
+    await fireEvent.keyDown(document, { key: 'Enter' });
+    await fireEvent.keyDown(document, { key: 'ArrowDown' });
+    expect(film).toHaveAttribute('data-playing');
+    expect(film).not.toHaveAttribute('data-dress');
+    expect(screen.queryByTestId('memory-film-caption')).not.toBeInTheDocument();
+  });
+
+  describe('dressed for Room', () => {
+    it('pauses and plays with a remote’s OK', async () => {
+      renderFilm({ dress: 'room', allPhotos: false });
+      const film = await started();
+      expect(film).toHaveAttribute('data-dress', 'room');
+
+      await fireEvent.keyDown(document, { key: 'Enter' });
+      expect(film).not.toHaveAttribute('data-playing');
+      await fireEvent.keyDown(document, { key: 'Enter' });
+      expect(film).toHaveAttribute('data-playing');
+    });
+
+    it('captions the photo on screen at its foot once the title card has gone, and has no way to All photos', async () => {
+      renderFilm({ dress: 'room', allPhotos: false, story: null, caption: 'Anna · Siem Reap, Cambodia' });
+      await started();
+
+      expect(screen.queryByRole('button', { name: 'all_photos' })).not.toBeInTheDocument();
+      // the title card first: the caption waits for it to go
+      expect(screen.queryByTestId('memory-film-caption')).not.toBeInTheDocument();
+      await fireEvent.keyDown(document, { key: 'ArrowRight' });
+      expect(await screen.findByTestId('memory-film-caption')).toHaveTextContent('Anna · Siem Reap, Cambodia');
+    });
+
+    it('starts the sound a browser held back with the first key, and OK does only that', async () => {
+      let refuse = true;
+      vi.mocked(HTMLMediaElement.prototype.play).mockImplementation(function (this: HTMLMediaElement) {
+        if (refuse) {
+          return Promise.reject(new DOMException('no gesture', 'NotAllowedError'));
+        }
+        played.push(this.src);
+        return Promise.resolve();
+      });
+      renderFilm({ dress: 'room', tracks: [track('a')] });
+      const film = await started();
+      await screen.findByRole('button', { name: 'memory_film_sound_on' });
+
+      refuse = false;
+      await fireEvent.keyDown(document, { key: 'Enter' });
+      await waitFor(() => expect(film).toHaveAttribute('data-sound', 'on'));
+      expect(film).toHaveAttribute('data-playing');
+    });
+  });
+
+  describe('in a chain', () => {
+    it('hands on to the next film at its end, through black, instead of offering what to do next', async () => {
+      const onNextFilm = vi.fn();
+      renderFilm({ dress: 'room', onNextFilm });
+      const film = await started();
+
+      for (let step = 0; step < 3; step++) {
+        await fireEvent.keyDown(document, { key: 'ArrowRight' });
+      }
+      expect(film).toHaveAttribute('data-leaving');
+      expect(screen.queryByRole('button', { name: 'memories_start_over' })).not.toBeInTheDocument();
+      await waitFor(() => expect(onNextFilm).toHaveBeenCalledOnce());
+    });
+
+    it('goes to the film before with ↑ and the one after with ↓, once', async () => {
+      const onNextFilm = vi.fn();
+      const onPreviousFilm = vi.fn();
+      const first = renderFilm({ dress: 'room', onNextFilm, onPreviousFilm });
+      await started();
+
+      await fireEvent.keyDown(document, { key: 'ArrowDown' });
+      await fireEvent.keyDown(document, { key: 'ArrowDown' });
+      await waitFor(() => expect(onNextFilm).toHaveBeenCalledOnce());
+      expect(onPreviousFilm).not.toHaveBeenCalled();
+      first.unmount();
+
+      renderFilm({ dress: 'room', onNextFilm, onPreviousFilm });
+      await started();
+      await fireEvent.keyDown(document, { key: 'ArrowUp' });
+      await waitFor(() => expect(onPreviousFilm).toHaveBeenCalledOnce());
+    });
+
+    it('says it is paused once a person pauses it, and not while it plays or hands on', async () => {
+      const props = reactiveProps({ ...filmProps({ dress: 'room', onNextFilm: vi.fn() }), paused: false });
+      render(MemoryFilm, props);
+      await started();
+      expect(props.paused).toBe(false);
+
+      await fireEvent.keyDown(document, { key: ' ' });
+      await waitFor(() => expect(props.paused).toBe(true));
+      await fireEvent.keyDown(document, { key: ' ' });
+      await waitFor(() => expect(props.paused).toBe(false));
+      await fireEvent.keyDown(document, { key: 'ArrowDown' });
+      expect(props.paused).toBe(false);
+    });
   });
 });

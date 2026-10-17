@@ -1,4 +1,4 @@
-import { MemoryType, type MemoryResponseDto } from '@immich/sdk';
+import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import type { MemoryFacts } from '$lib/utils/curator';
 import {
   composeMemoryTitle,
@@ -6,6 +6,7 @@ import {
   joinNames,
   memoryCount,
   memoryCover,
+  memoryFilmWords,
   memoryOwnFacts,
   memoryTitle,
 } from '$lib/utils/memory-title';
@@ -243,5 +244,46 @@ describe(memoryCount.name, () => {
     expect(memoryCount(rule('recent_trip', { assetCount: 104 }), undefined)).toBe(104);
     expect(memoryCount(rule('favorites_throwback', { count: 0 }, ['2025-10-16', '2025-10-17']), undefined)).toBe(2);
     expect(memoryCount(memory({ days: ['2025-10-16', '2025-10-16', '2025-10-16'] }), undefined)).toBe(3);
+  });
+});
+
+describe(memoryFilmWords.name, () => {
+  const words = {
+    fallbackTitle: () => 'Old title',
+    count: (count: number, videos: boolean) => `${count} ${videos ? 'videos' : 'photos'}`,
+  };
+  /** the factory picks an asset's type at random: these are photos */
+  const photos = () => {
+    const made = memory();
+    made.assets = made.assets.map((asset) => ({ ...asset, type: AssetTypeEnum.Image }));
+    return made;
+  };
+
+  it('names the place on the title card and says when and how many under it', () => {
+    expect(plain(memoryFilmWords(photos(), facts({ places: ['Siem Reap'] }), 'en', words))).toEqual({
+      title: 'Siem Reap · October 2025',
+      name: 'Siem Reap',
+      line: 'October 2025 · 192 photos',
+      count: '192 photos',
+    });
+  });
+
+  it('puts the time on the title card when there is nothing to name, and does not say it twice', () => {
+    expect(memoryFilmWords(photos(), undefined, 'en', words)).toMatchObject({
+      title: 'October 2025',
+      name: 'October 2025',
+      line: '1 photos',
+    });
+  });
+
+  it('counts videos as videos, and titles a memory with nothing to go on as its card does', () => {
+    const empty = { ...memory(), data: {} } as MemoryResponseDto;
+    empty.assets = empty.assets.map((asset) => ({ ...asset, type: AssetTypeEnum.Video, localDateTime: '' }));
+    expect(memoryFilmWords(empty, undefined, 'en', words)).toEqual({
+      title: 'Old title',
+      name: 'Old title',
+      line: '1 videos',
+      count: '1 videos',
+    });
   });
 });
