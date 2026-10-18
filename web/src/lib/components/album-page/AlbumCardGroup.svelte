@@ -66,7 +66,8 @@
 
 <div class="mt-4">
   {#if !isCollapsed}
-    <div class="grid grid-auto-fill-56 gap-y-4" transition:slide={{ duration: 300 }}>
+    <!-- Local Omarchy layer: the albums share the folders' grid on the Albums page (.ws-album-grid, omarchy-world.css) -->
+    <div class="ws-album-grid grid grid-auto-fill-56 gap-y-4" transition:slide={{ duration: 300 }}>
       {#each albums as album, index (album.id)}
         {@const { Edit, Pin, MoveToFolder, Merge, ToggleTimeline, Share, Download, MakeBook, Leave, Delete } =
           getAlbumActions($t, album)}

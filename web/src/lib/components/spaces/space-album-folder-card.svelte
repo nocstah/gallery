@@ -134,7 +134,7 @@
     onclick={() => onOpen?.(folder)}
     data-testid="space-album-folder-card-open"
   >
-    <div class="relative aspect-square w-full overflow-hidden rounded-xl">
+    <div class="ws-folder-cover relative aspect-square w-full overflow-hidden rounded-xl">
       {#if looking}
         <!-- Local Omarchy layer: the quiet ground while the folder's photos are chosen, with no glyph to swap out -->
         <div

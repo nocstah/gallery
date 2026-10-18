@@ -216,7 +216,8 @@
   {/if}
 
   {#if subfolders.length > 0}
-    <div class="mt-4 grid grid-auto-fill-56 gap-y-4" role="list" data-testid="album-folders">
+    <!-- Local Omarchy layer: the folders and the albums below them share one grid (.ws-album-grid) -->
+    <div class="ws-album-grid mt-4" role="list" data-testid="album-folders">
       {#each subfolders as folder, index (folder.id)}
         {@const summary = summaries.get(folder.id) ?? EMPTY_FOLDER_SUMMARY}
         {@const faces = levelFaces[index]}
