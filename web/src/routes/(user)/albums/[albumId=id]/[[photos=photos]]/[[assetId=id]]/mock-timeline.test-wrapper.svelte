@@ -14,6 +14,7 @@
     onTemporalAnchorResolved?: () => void;
     grouping?: TimelineGrouping;
     onGroupingChange?: (grouping: TimelineGrouping) => void;
+    onEscape?: () => void;
     children?: Snippet;
     empty?: Snippet;
   }
@@ -29,6 +30,7 @@
     onTemporalAnchorResolved,
     grouping = 'day',
     onGroupingChange,
+    onEscape,
   }: Props = $props();
 
   const mountId = nextTimelineMountId();
@@ -102,6 +104,17 @@
 <div data-testid="timeline-mobile-grouping-props">
   {JSON.stringify({ grouping, hasHandler: Boolean(onGroupingChange) })}
 </div>
+<!-- one Escape heard twice, as the page's Close shortcut and the real timeline's own Escape both hear it -->
+<button
+  type="button"
+  data-testid="timeline-escape-twice"
+  onclick={() => {
+    onEscape?.();
+    onEscape?.();
+  }}
+>
+  Escape
+</button>
 <div data-testid="mock-disabled-asset" data-asset="asset-in-album" data-disabled="true"></div>
 <div data-testid="mock-timeline-asset-count">{timelineManager?.assetCount ?? 0}</div>
 {#if renderEmptySnippet}

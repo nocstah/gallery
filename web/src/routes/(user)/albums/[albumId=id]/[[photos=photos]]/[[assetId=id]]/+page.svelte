@@ -232,7 +232,15 @@
     }
   };
 
+  // Local Omarchy layer: the bar's Close (its Escape shortcut) and the timeline's own Escape both hear one press, and
+  // each would take one step (clear the selection, then go back to Albums): one press takes one step
+  let escapeTaken = false;
   const handleEscape = async () => {
+    if (escapeTaken) {
+      return;
+    }
+    escapeTaken = true;
+    setTimeout(() => (escapeTaken = false), 0);
     // Search mode unmounts <Timeline>, so `timelineManager` is undefined here on a directly-loaded
     // `?q=` URL — dereferencing it below would throw before anything else ran. Escape clears the
     // search instead, matching the space timeline's handler.

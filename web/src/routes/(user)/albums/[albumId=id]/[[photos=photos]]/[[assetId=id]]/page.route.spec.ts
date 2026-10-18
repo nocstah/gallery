@@ -447,6 +447,18 @@ describe('album detail filter panel route', () => {
     expect(screen.getByTestId('timeline-anchor')).toHaveTextContent(JSON.stringify({ year: 2015 }));
   });
 
+  // Local Omarchy layer: the bar's Close and the timeline both answer Escape
+  it('takes one step per Escape: a selection is cleared without leaving the album', async () => {
+    renderPage();
+    assetMultiSelectManager.selectAsset(timelineAssetFactory.build({ id: 'selected-asset' }));
+    gotoMock.mockClear();
+
+    await userEvent.setup().click(await screen.findByTestId('timeline-escape-twice'));
+
+    await waitFor(() => expect(assetMultiSelectManager.selectionActive).toBe(false));
+    expect(gotoMock).not.toHaveBeenCalled();
+  });
+
   it('ignores album bucket activation while selection mode is active', async () => {
     renderPage();
     assetMultiSelectManager.selectAsset(timelineAssetFactory.build({ id: 'selected-asset' }));
