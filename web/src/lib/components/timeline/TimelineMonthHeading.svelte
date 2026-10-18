@@ -103,14 +103,24 @@
 </svelte:element>
 
 <style>
-  /* the cell clips a new month sliding in, half a rem out from the words, so their focus rings show whole (the clip had
-     cut them at the words' edge); the margin gives the room back, so nothing beside it moves */
+  /* the cell clips a new month sliding in, half a rem out from the words, so their focus rings and 24px targets show
+     whole (the clip had cut them at the words' edge); the box keeps its size, so nothing beside it moves and a title row
+     that measures its children (UserPageLayout's fit) sees the width it saw */
   .ws-now {
     display: grid;
     flex: none;
     overflow: hidden;
-    padding: 0.5rem;
-    margin: -0.5rem;
+    overflow: clip;
+    overflow-clip-margin: 0.5rem;
+  }
+  /* where the clip cannot reach past the box (Safari), Photos' bar gives it the room as padding, taken back in margin;
+     beside a page's title the cell stays as it was, since there a box larger than its place reads as a row too full */
+  @supports not (overflow-clip-margin: 1px) {
+    .ws-now:not([data-quiet]) {
+      overflow: hidden;
+      padding: 0.5rem;
+      margin: -0.5rem;
+    }
   }
   .ws-now > * {
     grid-area: 1 / 1;
