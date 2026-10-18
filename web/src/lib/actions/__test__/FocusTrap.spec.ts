@@ -15,6 +15,15 @@ describe('focusTrap action', () => {
     expect(document.activeElement).toEqual(screen.getByTestId('one'));
   });
 
+  it('lands on the start it is given, and Tab goes on from there', async () => {
+    render(FocusTrapTest, { show: true, landing: true });
+    await tick();
+    await tick();
+    expect(document.activeElement).toEqual(screen.getByTestId('landing'));
+    await user.keyboard('{Tab}');
+    expect(document.activeElement).toEqual(screen.getByTestId('one'));
+  });
+
   it('should not set focus if inactive', async () => {
     render(FocusTrapTest, { show: true, active: false });
     await tick();

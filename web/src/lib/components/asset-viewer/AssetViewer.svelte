@@ -43,6 +43,7 @@
   } from '$lib/utils/asset-editability';
   import { InvocationTracker } from '$lib/utils/invocationTracker';
   import { SlideshowHistory } from '$lib/utils/slideshow-history';
+  import { getAltText } from '$lib/utils/thumbnail-util';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import {
     AssetMediaSize,
@@ -369,6 +370,11 @@
    */
 
   let assetViewerHtmlElement = $state<HTMLElement>();
+  // Local Omarchy layer: the focus lands on the viewer's own start (the photo named, out of sight, before the controls)
+  // rather than on its first control: focused there with nothing pressed (a photo opened cold), Go back drew its focus
+  // ring and its tooltip over the photo. A screen reader hears which photo it is; the first Tab reaches Go back.
+  let viewerStart = $state<HTMLElement>();
+  const trapOptions = { initialFocus: () => viewerStart };
 
   const slideshowHistory = new SlideshowHistory((asset) => {
     handlePromiseError(assetViewerManager.setAssetId(asset.id, spaceId).then(() => ($restartSlideshowProgress = true)));
@@ -632,9 +638,12 @@
   class="fixed inset-s-0 top-0 grid size-full grid-cols-4 grid-rows-[64px_1fr] overflow-hidden bg-black"
   data-phone={phone || undefined}
   data-sheet={sheet || undefined}
-  use:focusTrap
+  use:focusTrap={trapOptions}
   bind:this={assetViewerHtmlElement}
 >
+  <h2 class="sr-only" tabindex="-1" bind:this={viewerStart} data-viewer-start>
+    {$getAltText(toTimelineAsset(asset))}
+  </h2>
   <!-- Local Omarchy layer: the photo lights the room. Its thumbnail, blurred far past recognition and dimmed, fills the
        space around it, and crossfades as you move on (omarchy-world.css .ws-ambient). -->
   {#key asset.id}
