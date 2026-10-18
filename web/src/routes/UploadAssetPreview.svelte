@@ -108,9 +108,8 @@
 
   {#if uploadAsset.state === UploadState.ERROR}
     <div class="flex flex-row justify-between">
-      <p class="w-full rounded-md text-justify text-danger">
-        {uploadAsset.error}
-      </p>
+      <!-- Local Omarchy layer: what failed, and the server's reason on the line under it (utils/handle-error) -->
+      <p class="w-full rounded-md text-justify whitespace-pre-line text-danger">{uploadAsset.error}</p>
     </div>
   {/if}
 </div>
