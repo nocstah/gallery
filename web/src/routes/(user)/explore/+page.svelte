@@ -29,6 +29,9 @@
   import { memoryCover } from '$lib/utils/memory-title';
   import { sortPeople } from '$lib/utils/people-utils';
   import { rankPlaces, type PlaceKey } from '$lib/utils/place-stats';
+  import { workspaceGap } from '$lib/managers/VirtualScrollManager/VirtualScrollManager.svelte';
+  import { pxOf } from '$lib/utils/review-grid';
+  import { tileRowColumns } from '$lib/utils/tile-row';
   import { weekSpread, weekYearDays } from '$lib/utils/week-across-years';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -95,6 +98,14 @@
   let weekSlots = $state(1);
   let weekOpen = $state(false);
   const weekShown = $derived(weekOpen ? data.week : weekSpread(data.week, weekSlots, new Date().getFullYear()));
+
+  // recently added: square tiles of at least 9rem (the Places tiles'), as many as fit one row; fewer than it holds are
+  // widened a little to fill it (utils/tile-row: the server sends twelve, the AORUS's row holds fourteen)
+  let recentWidth = $state(0);
+  const recentColumns = $derived.by(() => {
+    const rem = typeof document === 'undefined' ? 16 : pxOf(getComputedStyle(document.documentElement).fontSize, 16);
+    return tileRowColumns(recentWidth, recents.length, { min: 9 * rem, gap: workspaceGap() });
+  });
 
   let hasPeople = $derived(data.people.total > 0);
 
@@ -279,19 +290,20 @@
           {$t('recently_added')}
           <a class="ws-sharing-heading-action" href={Route.recentlyAdded()} draggable="false">{$t('view_all')}</a>
         </h2>
-        <!-- Local Omarchy layer: the photos on the desktop's gap, as every row of tiles here (upstream: 4px) -->
-        <div class="flex h-24 max-w-fit flex-wrap gap-x-(--ws-gap) overflow-hidden md:h-42">
-          {#each recents as item (item.data.id)}
-            <button
-              type="button"
-              class="relative h-full flex-auto"
-              onclick={() => onViewAsset(item.data.id)}
-              draggable="false"
-            >
+        <!-- Local Omarchy layer: square window tiles of at least the Places tiles' size on the desktop's gap, one row,
+             as every row here (upstream: a collage of strips wrapped at uneven widths, 4px apart) -->
+        <div
+          bind:clientWidth={recentWidth}
+          class="grid gap-(--ws-gap)"
+          style:grid-template-columns={`repeat(${recentColumns}, minmax(0, 1fr))`}
+        >
+          {#each recents.slice(0, recentColumns) as item (item.data.id)}
+            <button type="button" class="ws-explore-tile" onclick={() => onViewAsset(item.data.id)} draggable="false">
               <img
                 src={getAssetMediaUrl({ id: item.data.id, size: AssetMediaSize.Thumbnail })}
                 alt={$getAltText(toTimelineAsset(item.data))}
-                class="size-full min-w-max rounded-xl object-cover"
+                loading="lazy"
+                draggable="false"
               />
             </button>
           {/each}
