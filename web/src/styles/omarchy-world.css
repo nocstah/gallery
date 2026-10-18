@@ -993,10 +993,12 @@ section.ws-filter-sheet-panel {
    3.3:1 over bright photos. Closer to the corner on narrow tiles as the month mark is; under 5rem a stack keeps its
    count without the icon ---- */
 .ws-tile-badge {
+  /* how far in from the tile's edges it sits (a stack's badge reads it for its target, below) */
+  --ws-tile-badge-inset: 0.5rem;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  margin: 0.5rem;
+  margin: var(--ws-tile-badge-inset);
   padding: 0.125rem 0.25rem;
   border-radius: var(--ws-radius);
   background: var(--ws-glass-strong);
@@ -1061,12 +1063,12 @@ section.ws-filter-sheet-panel {
 }
 @container (max-width: 7.5rem) {
   .ws-tile-badge {
-    margin: 0.25rem;
+    --ws-tile-badge-inset: 0.25rem;
   }
 }
 @container (max-width: 5rem) {
   .ws-tile-badge {
-    margin: 0.1875rem;
+    --ws-tile-badge-inset: 0.1875rem;
     padding: 0 0.1875rem;
   }
   .ws-tile-badge-low {
@@ -1665,12 +1667,22 @@ ul[role='menu'] > hr:last-child {
   outline: var(--ws-border) solid var(--ws-accent);
   outline-offset: 1px;
 }
-/* the chip is the month mark's height (about 20px); the button it is keeps a 24px target past its edges, so the stack
-   still opens under a finger or a quick pointer */
+/* the chip is the month mark's height (about 20px; 16px, the count alone, under 5rem); the button it is keeps a target
+   of at least 24px each way (WCAG 2.5.8), so the stack still opens under a finger or a quick pointer: a transparent box
+   2px past the chip, or as much more as 24px needs, centred on it, but never past the tile's edge, which the chip
+   sits 3 to 8px in from (--ws-tile-badge-inset): what a short side cannot take there goes to the tile's side. So the
+   target covers the tile's corner and no more, and every tap beyond it stays the tile's. A percentage here is of the
+   chip's own height (block) or width (inline). Before (2026-10-18) the 2px alone left a phone's 15x16 chips a 19x20
+   target */
 button.ws-stack-badge::before {
+  --ws-hit-half: max(0.125rem, (1.5rem - 100%) / 2);
+  --ws-hit-edge: min(var(--ws-tile-badge-inset), var(--ws-hit-half));
   content: '';
   position: absolute;
-  inset: -0.125rem;
+  inset-block-start: calc(-1 * var(--ws-hit-edge));
+  inset-inline-end: calc(-1 * var(--ws-hit-edge));
+  inset-block-end: calc(var(--ws-hit-edge) - 2 * var(--ws-hit-half));
+  inset-inline-start: calc(var(--ws-hit-edge) - 2 * var(--ws-hit-half));
 }
 /* an expanded stack, its cover included, reads as one set: an accent ring on every photo of it with a thin dark
    keyline inside (so it holds over bright photos), a "2 / 5" chip, and while the pointer is on one of them the rest of
