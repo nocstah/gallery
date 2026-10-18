@@ -1,7 +1,7 @@
 import { AlbumUserRole, AssetOrder } from '@immich/sdk';
 import { modalManager } from '@immich/ui';
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAnimateMock } from '$lib/__mocks__/animate.mock';
@@ -202,6 +202,19 @@ describe('album detail filter panel route', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Koh Kradan' })).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(document.querySelectorAll('main')).toHaveLength(1);
+  });
+
+  it('keeps the name the h1 while it is renamed in place, and saves nothing unchanged', async () => {
+    renderPage(albumFactory.build({ assetCount: 2, albumName: 'Koh Kradan' }));
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Koh Kradan' });
+    await fireEvent.click(within(heading).getByRole('button', { name: 'Koh Kradan' }));
+    const field = within(heading).getByRole('textbox');
+    expect(field).toHaveValue('Koh Kradan');
+
+    await fireEvent.blur(field);
+    expect(sdkMock.updateAlbumInfo).not.toHaveBeenCalled();
+    expect(within(heading).getByRole('button', { name: 'Koh Kradan' })).toBeInTheDocument();
   });
 
   it('hides the filter panel when the active dataset is empty and no filters are active', async () => {
