@@ -2,8 +2,8 @@
   // Local Omarchy layer: review mode. One kind (all its batches, utils/curator-inbox), one suggestion at a time, full
   // screen and large, decided from the keyboard: A or → does what the kind's button says (Archive, Publish, Make album:
   // kindAction), R or ← rejects, S or Space skips, U takes back the last decision (an accepted change is undone and
-  // waits again, a rejection is reopened), Esc closes; the arrows belong to a slider while it has focus. The next
-  // suggestion's photos load while this one is on screen.
+  // waits again, a rejection is reopened), Esc closes; the arrows belong to a slider while it has focus. A held key
+  // acts once (its repeats are ignored). The next suggestion's photos load while this one is on screen.
   import ReviewStage from '$lib/components/curator/ReviewStage.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
@@ -100,6 +100,9 @@
     }
   };
 
+  // every key that decides, skips or takes back; a held one does it once (its repeats would run through the queue)
+  const DECISION_KEYS = new Set(['a', 'arrowright', 'r', 'arrowleft', 's', ' ', 'u', 'backspace']);
+
   const onKeydown = (event: KeyboardEvent) => {
     if (event.ctrlKey || event.metaKey || event.altKey) {
       return;
@@ -111,6 +114,12 @@
       return; // so do the before/after divider and a clip's position
     }
     const key = event.key.toLowerCase();
+    if (event.repeat && DECISION_KEYS.has(key)) {
+      // swallowed, so a held → neither decides the next suggestion nor scrolls or presses what is under it
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     switch (key) {
       case 'escape': {
         onClose();

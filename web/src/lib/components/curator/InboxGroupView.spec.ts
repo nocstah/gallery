@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, screen, waitFor, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { init, register, waitLocale } from 'svelte-i18n';
 import type { GroupPage, JobRow, Suggestion } from '$lib/utils/curator';
@@ -171,6 +171,28 @@ describe('InboxGroupView', () => {
     expect(curatorMock.decide).toHaveBeenCalledWith([102], 'accept');
     // decided, it sinks to the bottom with its Undo
     await waitFor(() => expect(within(screen.getAllByRole('article')[2]).getByText('Applied')).toBeInTheDocument());
+  });
+
+  // a held A had accepted card after card: each decided card moves the next one up under the focus
+  it('acts once for a held A, R or D, and keeps J repeating', async () => {
+    waiting([clip(1), clip(2), clip(3), clip(4)]);
+    curatorMock.decide.mockImplementation((ids: number[]) => Promise.resolve({ applied: ids }));
+    await renderKind();
+    const cards = await screen.findAllByRole('article');
+    cards[0].focus();
+
+    await fireEvent.keyDown(document.activeElement!, { key: 'a' });
+    await waitFor(() => expect(curatorMock.decide).toHaveBeenCalledTimes(1));
+    for (const key of ['a', 'r', 'x', 'd', 'u']) {
+      await fireEvent.keyDown(document.activeElement!, { key, repeat: true });
+    }
+    expect(curatorMock.decide).toHaveBeenCalledTimes(1);
+    expect(curatorMock.undo).not.toHaveBeenCalled();
+
+    const first = screen.getAllByRole('article')[0];
+    first.focus();
+    await fireEvent.keyDown(document.activeElement!, { key: 'j', repeat: true });
+    expect(screen.getAllByRole('article')[1]).toHaveFocus();
   });
 
   it('leaves a receipt after Archive all, and Undo all takes exactly that back in one call', async () => {

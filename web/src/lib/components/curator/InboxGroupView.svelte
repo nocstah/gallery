@@ -10,10 +10,11 @@
   // The cards are a list of articles, each named by its title. The keys (one quiet line above the cards says them, and
   // each button names its own in aria-keyshortcuts): J/K or the arrows move from card to card, A does what the card's
   // first button says, R rejects, D sends a one-photo card's photo to the Trash, U takes back the last word on a card
-  // (an accepted change undone and waiting again, a rejection put back, a photo back from the Trash). A decided card
-  // sinks to the bottom of the list at once, so the next one to decide is always where the last was; its buttons sit
-  // under its words, beside its photos. A card about one photo also has Delete, in the danger role: the photo goes to
-  // Gallery's Trash and the card is set aside; its Undo restores the photo and puts the card back.
+  // (an accepted change undone and waiting again, a rejection put back, a photo back from the Trash); a held one acts
+  // once. A decided card sinks to the bottom of the list at once, so the next one to decide is always where the last
+  // was; its buttons sit under its words, beside its photos. A card about one photo also has Delete, in the danger
+  // role: the photo goes to Gallery's Trash and the card is set aside; its Undo restores the photo and puts the card
+  // back.
   import ReviewMode from '$lib/components/curator/ReviewMode.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
@@ -410,7 +411,9 @@
     }
     const item = items[index];
     const move = (to: number) => rows[Math.max(0, Math.min(rows.length - 1, to))]?.focus();
-    const open = item && item.status === 'pending' && !deciding.has(item.id) && !busy;
+    // a held A, R, D or U acts once: the next card moves up into this place, and a repeat would decide it too (J, K
+    // and the arrows keep repeating, moving on)
+    const open = item && item.status === 'pending' && !deciding.has(item.id) && !busy && !event.repeat;
     if (key === 'j' || key === 'ArrowDown') {
       move(index + 1);
     } else if (key === 'k' || key === 'ArrowUp') {
@@ -424,7 +427,7 @@
     } else if (open && key === 'd' && deletable(item)) {
       void trash(item);
       void tick().then(() => move(index));
-    } else if (!(item && key === 'u' && !busy && takeBack(item))) {
+    } else if (!(item && key === 'u' && !busy && !event.repeat && takeBack(item))) {
       return;
     }
     event.preventDefault();
