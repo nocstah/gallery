@@ -30,6 +30,8 @@
   import { assetsSnapshot } from '$lib/managers/timeline-manager/utils.svelte';
   import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
+  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
+  import { sidebarStore } from '$lib/stores/sidebar.svelte';
   import { attachThumbnailZoom, thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
   import { timelineHeading, type TimelineHeadingSource } from '$lib/managers/timeline-heading.svelte';
@@ -190,12 +192,15 @@
     lastActiveGrouping = activeGrouping;
     timelineManager.suspendTransitions = true;
   });
+  // Local Omarchy layer: nor while a phone's sidebar drawer is open, which it stood over (its AI inbox row)
+  const drawerOpen = $derived(sidebarModeStore.layout === 'overlay' && sidebarStore.isOpen);
   const showMobileGroupingControl = $derived(
     Boolean(onGroupingChange) &&
       (maxMd || usingMobileDevice) &&
       !isSelectionMode &&
       !assetInteraction.selectionActive &&
-      !assetViewerManager.isViewing,
+      !assetViewerManager.isViewing &&
+      !drawerOpen,
   );
 
   // Local Omarchy layer: the base row height is scaled by the thumbnail zoom (Ctrl+wheel / pinch,
