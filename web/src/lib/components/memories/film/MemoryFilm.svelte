@@ -513,9 +513,14 @@
       const media = mediaOf(slot);
       if (media instanceof HTMLImageElement) {
         await withTimeout(typeof media.decode === 'function' ? media.decode() : Promise.resolve(), READY_MS);
-        // decoded, the photo itself says how bright it is under the words, better than its thumbhash did
-        if (layers[slot].key === key) {
-          Object.assign(layers[slot], lookOf(layers[slot].shot ?? next, media));
+        // decoded, the photo itself says how bright it is under the words, better than its thumbhash did (a film
+        // closed in the meantime has nothing to show it on)
+        if (!destroyed && layers[slot].key === key) {
+          try {
+            Object.assign(layers[slot], lookOf(layers[slot].shot ?? next, media));
+          } catch {
+            // the film's memory went with its page: the thumbhash's look stays
+          }
         }
       } else if (media instanceof HTMLVideoElement) {
         await withTimeout(videoReady(media), READY_MS / 2);
