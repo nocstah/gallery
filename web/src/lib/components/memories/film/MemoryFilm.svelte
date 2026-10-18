@@ -468,20 +468,25 @@
     const now = clockTime();
     const next = filmChanges(plan).find((at) => at > now + 0.005);
     if (next !== undefined) {
-      wakeTimer = setTimeout(wake, Math.max(0, (next - now) * 1000));
+      wakeTimer = setTimeout(() => wake(next), Math.max(0, (next - now) * 1000));
     }
   };
 
-  const wake = () => {
+  /** The film as it stands at its clock's time. Woken by the clock for the change at `due`, it stands at that change
+   * at least: a timer may fire a moment early (its delay goes in whole milliseconds, and a busy event loop's own clock
+   * lags), and a change read as still to come would be skipped by the next schedule, which looks past the few
+   * milliseconds ahead; a story's sentence was lost so, never shown, under load. */
+  const wake = (due?: number) => {
     if (!plan || destroyed) {
       return;
     }
-    const moment = filmMomentAt(plan, clockTime());
+    const time = due !== undefined && clockRunning ? Math.max(clockTime(), due) : clockTime();
+    const moment = filmMomentAt(plan, time);
     titleShown = moment.title;
     storyIndex = moment.story;
     if (moment.fading && !musicFading) {
       musicFading = true;
-      music?.fadeOut(Math.max(0, (plan.duration - clockTime()) * 1000));
+      music?.fadeOut(Math.max(0, (plan.duration - time) * 1000));
     }
     if (moment.ended) {
       finish();
