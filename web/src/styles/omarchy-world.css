@@ -2617,6 +2617,38 @@ label.ws-sheet-title {
     transparent
   );
 }
+/* a tile whose name is under WCAG's large size needs 4.5:1 of it, so the floor rises to small type's 55% there (as on
+   Places' tiles): a year's numeral, 800, under 18.66px (24% of a tile under 4.86rem: a phone's), a month's name, 500,
+   under 24px (20% of a tile under 7.5rem: a phone's and a laptop's). The wider tiles keep the 48% their large numerals
+   need (2026-10-18: a phone's 16px years and a laptop's 16px months came to 4.2:1 and 3.6:1 over bright covers). The
+   floor holds a little above the words' box, as high as the name's glyphs come on its 0.9 line. A cover still loading
+   keeps the ground and no scrim */
+@container (max-width: 4.86rem) {
+  .ws-period-tile [data-state='image'] [data-testid='timeline-bucket-card-overlay'] {
+    background: linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.66),
+      rgb(0 0 0 / 0.55) calc(100% - 2rem),
+      rgb(0 0 0 / 0.39) calc(100% - 1.45rem),
+      rgb(0 0 0 / 0.19) calc(100% - 0.85rem),
+      rgb(0 0 0 / 0.06) calc(100% - 0.35rem),
+      transparent
+    );
+  }
+}
+@container (max-width: 7.5rem) {
+  .ws-period-tile [data-short][data-state='image'] [data-testid='timeline-bucket-card-overlay'] {
+    background: linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.66),
+      rgb(0 0 0 / 0.55) calc(100% - 2rem),
+      rgb(0 0 0 / 0.39) calc(100% - 1.45rem),
+      rgb(0 0 0 / 0.19) calc(100% - 0.85rem),
+      rgb(0 0 0 / 0.06) calc(100% - 0.35rem),
+      transparent
+    );
+  }
+}
 .ws-period-tile [data-testid='timeline-bucket-card-title'] {
   font-size: clamp(1rem, 24cqi, 3.5rem);
   line-height: 0.9;
