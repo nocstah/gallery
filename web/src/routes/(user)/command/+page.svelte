@@ -494,7 +494,7 @@
     margin-top: 0.75rem;
     font-size: var(--ws-text-meta);
     font-weight: 600;
-    color: var(--immich-ui-danger, var(--immich-ui-danger-700));
+    color: var(--ws-danger);
   }
   .command-alert:hover span {
     text-decoration: underline;
@@ -587,7 +587,7 @@
     gap: 0.3rem;
   }
   .command-facts dd.attention {
-    color: var(--immich-ui-danger, var(--immich-ui-danger-700));
+    color: var(--ws-danger);
     font-weight: 600;
   }
   .command-memory {

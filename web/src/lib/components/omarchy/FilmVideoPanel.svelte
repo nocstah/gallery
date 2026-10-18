@@ -139,7 +139,7 @@
     color: var(--immich-ui-muted);
   }
   .ws-films-failed {
-    color: var(--immich-ui-danger-500);
+    color: var(--ws-danger);
   }
   .ws-films-note {
     margin-top: 0.25rem;

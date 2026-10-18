@@ -146,7 +146,7 @@
     min-height: 1.25rem;
   }
   .error {
-    color: var(--immich-ui-danger-500);
+    color: var(--ws-danger);
     font-weight: 500;
   }
   .strip-label {
