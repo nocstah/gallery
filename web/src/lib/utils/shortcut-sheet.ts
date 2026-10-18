@@ -33,13 +33,16 @@ export type SheetAccount = {
   ratings: boolean;
   /** tags are on in this account's preferences */
   tags: boolean;
+  /** the inspector window is offered here (managers/inspector-link's inspectorFits): not on a phone or a touch screen,
+   * which has no second screen to put it on; offered when not said */
+  inspector?: boolean;
 };
 
 const row = (keys: KeyCombo[], action: string, note?: string): ShortcutRow => ({ keys, action, note });
 const only = (shown: boolean, ...rows: ShortcutRow[]) => (shown ? rows : []);
 
 export const shortcutSections = ($t: MessageFormatter, account: SheetAccount): ShortcutSection[] => {
-  const { signedIn, owner, curator, ratings, tags } = account;
+  const { signedIn, owner, curator, ratings, tags, inspector = true } = account;
   const sections: ShortcutSection[] = [
     {
       // routes/+layout.svelte, routes/(user)/+layout.svelte, utils/page-keys, layouts/UserPageLayout,
@@ -54,7 +57,7 @@ export const shortcutSections = ($t: MessageFormatter, account: SheetAccount): S
           signedIn,
           row([['Ctrl', 'Z']], $t('shortcut_undo')),
           row([['Ctrl', 'B']], $t('shortcut_sidebar')),
-          row([['Shift', 'I']], $t('inspector_window_shortcut')),
+          ...only(inspector, row([['Shift', 'I']], $t('inspector_window_shortcut'))),
           row([['Ctrl', 'V']], $t('shortcut_paste')),
         ),
         row([['Shift', 'T']], $t('toggle_theme_description')),

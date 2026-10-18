@@ -1,6 +1,7 @@
 <script lang="ts">
   import Logo from '$lib/components/shared-components/Logo.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { inspectorFits } from '$lib/managers/inspector-link.svelte';
   import { curatorIsMine } from '$lib/utils/curator';
   import { shortcutSections, type KeyCombo, type ShortcutSection } from '$lib/utils/shortcut-sheet';
   import { CardTitle, CloseButton, Modal, ModalBody, ModalHeader } from '@immich/ui';
@@ -26,6 +27,7 @@
         curator: curatorIsMine(),
         ratings: signedIn && authManager.preferences.ratings.enabled,
         tags: signedIn && authManager.preferences.tags.enabled,
+        inspector: inspectorFits(),
       }),
   );
   // the search palette's prefixes, with the whole sheet

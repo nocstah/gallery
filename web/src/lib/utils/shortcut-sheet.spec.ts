@@ -60,6 +60,11 @@ describe('shortcutSections', () => {
     expect(actions(family, 'film')).not.toContain('shortcut_sound');
   });
 
+  it('offers ⇧I only where the inspector window is offered, not on a phone or a touch screen', () => {
+    expect(actions({ ...owner, inspector: false }, 'everywhere')).not.toContain('inspector_window_shortcut');
+    expect(actions({ ...owner, inspector: true }, 'everywhere')).toContain('inspector_window_shortcut');
+  });
+
   it("leaves an account's own actions out for a visitor on a shared link", () => {
     expect(actions(visitor, 'everywhere')).toEqual([
       'shortcut_open_global_search',
