@@ -2146,6 +2146,7 @@
   "filter_people": "Personen filtern",
   "filter_people_by": "Personen filtern nach",
   "filter_places": "Orte filtern",
+  "filter_rating_at_least": "{rating, plural, one {# Stern oder mehr} other {# Sterne oder mehr}}",
   "filter_remove_chip": "Filter {label} entfernen",
   "filter_result_count": "{count, plural, one {# Ergebnis} other {# Ergebnisse}}",
   "filter_search_locations": "Standorte suchen...",

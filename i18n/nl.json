@@ -2146,6 +2146,7 @@
   "filter_people": "Filteren op persoon",
   "filter_people_by": "Personen filteren op",
   "filter_places": "Filteren op locatie",
+  "filter_rating_at_least": "{rating, plural, one {# ster of meer} other {# sterren of meer}}",
   "filter_remove_chip": "Filter {label} verwijderen",
   "filter_result_count": "{count, plural, one {# resultaat} other {# resultaten}}",
   "filter_search_locations": "Locaties zoeken...",

@@ -41,13 +41,13 @@
   } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, Tooltip, type ActionItem } from '@immich/ui';
   import {
+    mdiAnimationPlayOutline,
     mdiArrowLeft,
     mdiArrowRight,
     mdiContentCut,
     mdiCreationOutline,
     mdiDotsVertical,
     mdiEraser,
-    mdiMotionPlayOutline,
     mdiPencilOutline,
     mdiSendOutline,
     mdiTuneVariant,
@@ -191,10 +191,11 @@
     $if: () => shareable,
     onAction: () => shareVideos.start(asset.id, 'telegram', asset.originalFileName),
   });
-  // Local Omarchy layer: Curator's effects: a Live Photo's loop, bounce, long exposure, key photo; cinematic for any
+  // Local Omarchy layer: Curator's effects: a Live Photo's loop, bounce, long exposure, key photo; cinematic for any.
+  // Frames with a play mark, as Play motion photo has the motion mark: two things, so two glyphs
   const LiveEffects: ActionItem = $derived({
     title: $t('live_effects'),
-    icon: mdiMotionPlayOutline,
+    icon: mdiAnimationPlayOutline,
     $if: () =>
       liveEffects.available &&
       isOwner &&

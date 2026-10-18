@@ -10,7 +10,7 @@
   import { curator, restoredUrl, type JobRow, type Suggestion } from '$lib/utils/curator';
   import { AssetMediaSize, getAssetInfo, getStack, type AssetResponseDto } from '@immich/sdk';
   import { Icon, toastManager } from '@immich/ui';
-  import { mdiClose, mdiMotionPlayOutline } from '@mdi/js';
+  import { mdiAnimationPlayOutline, mdiClose } from '@mdi/js';
   import { onDestroy } from 'svelte';
   import { t } from 'svelte-i18n';
 
@@ -49,7 +49,7 @@
     getAssetMediaUrl({ id: asset.id, size: AssetMediaSize.Preview, cacheKey: asset.thumbhash }),
   );
   const effectName = (chosen: Effect | undefined) => (chosen ? $t(`live_effect_${chosen.replace('-', '_')}`) : '');
-  const resultIsClip = $derived(effect === 'loop' || effect === 'bounce' || effect === 'cinematic');
+  const resultIsClip = $derived(['loop', 'bounce', 'cinematic'].includes(effect ?? ''));
   const resultSrc = $derived.by(() => {
     if (!suggestion) {
       return '';
@@ -218,7 +218,7 @@
 <div class="live dark" role="dialog" aria-modal="true" aria-label={$t('live_effects')}>
   <header class="live-head">
     <span class="live-pill live-title">
-      <Icon icon={mdiMotionPlayOutline} size="18" />
+      <Icon icon={mdiAnimationPlayOutline} size="18" />
       {$t('live_effects')}
     </span>
     <button type="button" class="live-pill live-icon" aria-label={$t('close')} title={$t('close')} onclick={close}>
@@ -231,7 +231,6 @@
       <img src={stillSrc} alt="" draggable="false" />
     {:else if phase === 'result' && suggestion}
       {#if resultIsClip}
-        <!-- svelte-ignore a11y_media_has_caption -->
         <video src={resultSrc} autoplay loop muted playsinline></video>
       {:else}
         <img src={resultSrc} alt="" draggable="false" />
@@ -240,7 +239,6 @@
       {#if !isLive}
         <img src={stillSrc} alt="" draggable="false" />
       {:else}
-        <!-- svelte-ignore a11y_media_has_caption -->
         <video
           bind:this={video}
           src={clipSrc}

@@ -2146,6 +2146,7 @@
   "filter_people": "筛选人物",
   "filter_people_by": "筛选人物依据",
   "filter_places": "筛选地点",
+  "filter_rating_at_least": "{rating} 星及以上",
   "filter_remove_chip": "移除“{label}”筛选条件",
   "filter_result_count": "{count, plural, one {# 个结果} other {# 个结果}}",
   "filter_search_locations": "搜索位置...",

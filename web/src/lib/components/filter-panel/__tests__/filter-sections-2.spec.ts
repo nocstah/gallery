@@ -90,17 +90,35 @@ describe('RatingFilter', () => {
       },
     });
 
-    // Stars 1-3 should be filled (amber), stars 4-5 should be unfilled
+    // Local Omarchy layer: stars 1-3 are filled in ink, 4-5 outlined in muted ink (the viewer's rating's look; the
+    // pale grey of the empty ones was 1.4:1 on a light ground)
     for (const star of [1, 2, 3]) {
       const starButton = getByTestId(`rating-star-${star}`);
-      const icon = starButton.querySelector('[class*="text-amber-400"]');
+      const icon = starButton.querySelector('[class*="text-dark"]');
       expect(icon).toBeTruthy();
     }
 
     for (const star of [4, 5]) {
       const starButton = getByTestId(`rating-star-${star}`);
-      const icon = starButton.querySelector('[class*="text-gray-300"]');
+      const icon = starButton.querySelector('[class*="text-muted"]');
       expect(icon).toBeTruthy();
+    }
+  });
+
+  // Local Omarchy layer: the five stars were unnamed buttons
+  it('names each star by what it picks and marks the one picked', () => {
+    const { getByTestId, getByRole } = render(RatingFilter, {
+      props: {
+        selectedRating: 3,
+        onRatingChange: () => {},
+      },
+    });
+
+    expect(getByRole('group')).toHaveAttribute('aria-label', 'Star rating');
+    expect(getByTestId('rating-star-1')).toHaveAttribute('aria-label', '1 star or more');
+    expect(getByTestId('rating-star-3')).toHaveAttribute('aria-label', '3 stars or more');
+    for (const star of [1, 2, 3, 4, 5]) {
+      expect(getByTestId(`rating-star-${star}`)).toHaveAttribute('aria-pressed', String(star === 3));
     }
   });
 

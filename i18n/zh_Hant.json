@@ -2134,6 +2134,7 @@
   "filter_people": "篩選人物",
   "filter_people_by": "篩選人物依據",
   "filter_places": "篩選地點",
+  "filter_rating_at_least": "{rating} 星以上",
   "filter_remove_chip": "移除「{label}」篩選條件",
   "filter_result_count": "{count, plural, one {# 個結果} other {# 個結果}}",
   "filter_search_locations": "搜尋位置...",

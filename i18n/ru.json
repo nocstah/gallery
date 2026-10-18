@@ -2146,6 +2146,7 @@
   "filter_people": "Фильтр по людям",
   "filter_people_by": "Фильтровать людей по",
   "filter_places": "Фильтр по местам",
+  "filter_rating_at_least": "{rating, plural, one {# звезда и больше} few {# звезды и больше} many {# звёзд и больше} other {# звезды и больше}}",
   "filter_remove_chip": "Удалить фильтр «{label}»",
   "filter_result_count": "{count, plural, one {# результат} few {# результата} many {# результатов} other {# результата}}",
   "filter_search_locations": "Поиск мест...",
