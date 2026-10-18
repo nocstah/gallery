@@ -5,17 +5,31 @@
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
+  import PlaceTile from '$lib/components/places/PlaceTile.svelte';
   import SingleGridRow from '$lib/components/shared-components/SingleGridRow.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
+  import { memoryManager } from '$lib/managers/memory-manager.svelte';
+  import { placeStats } from '$lib/managers/place-stats.svelte';
   import { Route } from '$lib/route';
+  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
+  import { locale, peopleViewSettings } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl, memoryLaneTitle } from '$lib/utils';
   import { getGlobalPersonHref, getGlobalPersonThumbnailUrl } from '$lib/utils/global-person-route';
-  import { getAssetInfo, AssetMediaSize, type PersonResponseDto, type SearchExploreResponseDto } from '@immich/sdk';
+  import {
+    getAssetInfo,
+    AssetMediaSize,
+    type AssetResponseDto,
+    type PersonResponseDto,
+    type SearchExploreResponseDto,
+  } from '@immich/sdk';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import MemoryCard from '$lib/components/memories/MemoryCard.svelte';
   import { memoryFacts } from '$lib/managers/memory-facts.svelte';
+  import { memoryCardLine, type MemoryCard as MemoryCardModel } from '$lib/utils/memory-cards';
   import { memoryCover } from '$lib/utils/memory-title';
-  import { ImageCarousel } from '@immich/ui';
+  import { sortPeople } from '$lib/utils/people-utils';
+  import { rankPlaces, type PlaceKey } from '$lib/utils/place-stats';
+  import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
@@ -33,32 +47,47 @@
     return targetField?.items || [];
   };
 
-  let places = $derived(getFieldItems(data.explore, 'exifInfo.city'));
   let recents = $derived(
     getFieldItems(data.explore, 'createdAt').sort((a, b) => new Date(b.value).getTime() - new Date(a.value).getTime()),
   );
-  let people = $state(data.people.people);
-  // Local Omarchy layer: the cards are titled by their facts and show Curator's cover when it has one (memoryFacts)
-  $effect(() => {
-    memoryFacts.request(data.memories.map(({ id }) => id));
+
+  // Local Omarchy layer: Explore's rows in the Places, People and Memories pages' own order (DESIGN.md, Explore), each
+  // on the page's one gutter under a heading of the section-label style with View all at its end. Upstream listed the
+  // people by name and the places by the first twelve names with five photos, dimmed, and the memories as the server
+  // made them, one card per rule and day.
+
+  // the people as the People page orders them (its sort: favourites first, then the most photos by default)
+  let people = $state(sortPeople(data.people.people, $peopleViewSettings.sortBy));
+
+  // the places that hold the most photos, as the Places page orders them (managers/place-stats, which the two share):
+  // the row waits for the counts (a moment at most) and keeps the order it first took
+  type City = AssetResponseDto & { exifInfo: { city: string } };
+  const PLACES_PATIENCE_MS = 2000;
+  const cities = $derived(data.cities.filter((item): item is City => !!item.exifInfo?.city));
+  const keyOf = (item: City): PlaceKey => ({ city: item.exifInfo.city, country: item.exifInfo.country });
+  let places = $state<City[]>();
+  onMount(() => {
+    const items = cities;
+    void placeStats
+      .settle(
+        items.map((item) => keyOf(item)),
+        PLACES_PATIENCE_MS,
+      )
+      .then(() => {
+        places = rankPlaces(items, keyOf, (place) => placeStats.get(place), $locale).filter(
+          (item) => placeStats.get(keyOf(item))?.count !== 0,
+        );
+      });
   });
-  let memories = $derived(
-    data.memories.map((memory) => {
-      // a card waits for Curator's facts before it shows its cover and title (memoryFacts), as on Memories
-      const ready = memoryFacts.settled(memory.id);
-      const cover = memoryCover(memory, memoryFacts.get(memory.id));
-      return {
-        id: memory.id,
-        title: ready ? $memoryLaneTitle(memory) : '',
-        href: Route.viewMemory({ id: memory.id, assetId: memory.assets[0].id }),
-        alt: $t('memory_lane_title', {
-          values: { title: $getAltText(toTimelineAsset(cover.asset ?? memory.assets[0])) },
-        }),
-        src: ready ? getAssetMediaUrl({ id: cover.id, cacheKey: cover.asset?.thumbhash }) : '',
-        type: memory.type,
-      };
-    }),
-  );
+
+  // the memories as the Memories page shows them (memoryManager.cards): those that read the same as one card, today's
+  // first, each with its kind; the upcoming ones wait for their day. The cards wait for Curator's facts (a moment at
+  // most), which title them, pick their covers and tell which read the same.
+  $effect(() => {
+    memoryFacts.request(memoryManager.memories.map(({ id }) => id));
+  });
+  const memoriesReady = $derived(memoryFacts.settledAll(memoryManager.memories.map(({ id }) => id)));
+  const cards = $derived(memoriesReady ? memoryManager.cards.filter(({ section }) => section !== 'upcoming') : []);
 
   let hasPeople = $derived(data.people.total > 0);
 
@@ -91,125 +120,138 @@
 <OnEvents {onPersonThumbnailReady} />
 
 <UserPageLayout title={data.meta.title}>
-  {#if hasPeople}
-    <div class="mt-2 mb-6 px-2 md:px-4">
-      <div class="flex justify-between">
-        <p class="mb-4 font-medium dark:text-immich-dark-fg">{$t('people')}</p>
-        <a
-          href={Route.people()}
-          class="pe-4 text-sm font-medium hover:text-immich-primary dark:text-immich-dark-fg dark:hover:text-immich-dark-primary"
-          draggable="false">{$t('view_all')}</a
-        >
-      </div>
-      <SingleGridRow class="grid grid-flow-col grid-auto-fill-20 gap-x-4 md:grid-auto-fill-28">
-        {#snippet children({ itemCount })}
-          {#each people.slice(0, itemCount) as person (person.id)}
-            <a href={getPersonHref(person)} class="text-center">
-              <div class="@container relative">
-                <ImageThumbnail
-                  circle
-                  shadow
-                  url={getPersonThumbnail(person)}
-                  altText={person.name}
-                  widthStyle="100%"
-                />
-                <PersonIndicator {person} />
-              </div>
-              <p class="mt-2 text-sm font-medium text-ellipsis dark:text-white">{person.name}</p>
-            </a>
-          {/each}
-        {/snippet}
-      </SingleGridRow>
-    </div>
-  {/if}
+  <div class="ws-sharing ws-explore">
+    {#if hasPeople}
+      <section class="ws-sharing-section" aria-labelledby="explore-people">
+        <h2 class="ws-sharing-heading" id="explore-people">
+          {$t('people')}
+          <a class="ws-sharing-heading-action" href={Route.people()} draggable="false">{$t('view_all')}</a>
+        </h2>
+        <SingleGridRow class="grid grid-flow-col grid-auto-fill-20 gap-x-4 md:grid-auto-fill-28">
+          {#snippet children({ itemCount })}
+            {#each people.slice(0, itemCount) as person (person.id)}
+              <a href={getPersonHref(person)} class="text-center">
+                <div class="@container relative">
+                  <ImageThumbnail
+                    circle
+                    shadow
+                    url={getPersonThumbnail(person)}
+                    altText={person.name}
+                    widthStyle="100%"
+                  />
+                  <PersonIndicator {person} />
+                </div>
+                <p class="mt-2 text-sm font-medium text-ellipsis dark:text-white">{person.name}</p>
+              </a>
+            {/each}
+          {/snippet}
+        </SingleGridRow>
+      </section>
+    {/if}
 
-  {#if places.length > 0}
-    <div class="mt-2 mb-6 px-2 md:px-4">
-      <div class="flex justify-between">
-        <p class="mb-4 font-medium dark:text-immich-dark-fg">{$t('places')}</p>
-        <a
-          href={Route.places()}
-          class="pe-4 text-sm font-medium hover:text-immich-primary dark:text-immich-dark-fg dark:hover:text-immich-dark-primary"
-          draggable="false">{$t('view_all')}</a
-        >
-      </div>
-      <SingleGridRow class="grid grid-flow-col grid-auto-fill-28 gap-x-4 md:grid-auto-fill-36">
-        {#snippet children({ itemCount })}
-          {#each places.slice(0, itemCount) as item (item.data.id)}
-            <a
-              class="relative"
-              href={Route.photos({ city: item.value, country: item.data.exifInfo?.country ?? undefined })}
+    {#if cities.length > 0}
+      <section class="ws-sharing-section" aria-labelledby="explore-places">
+        <h2 class="ws-sharing-heading" id="explore-places">
+          {$t('places')}
+          <a class="ws-sharing-heading-action" href={Route.places()} draggable="false">{$t('view_all')}</a>
+        </h2>
+        <!-- the Places page's tiles at its size, on the desktop's gap; until the counts are in, their frames hold
+             the row's place so nothing below it moves -->
+        <SingleGridRow class="grid grid-flow-col grid-auto-fill-36 gap-(--ws-gap)">
+          {#snippet children({ itemCount })}
+            {#if places}
+              {#each places.slice(0, itemCount) as item (item.id)}
+                <PlaceTile
+                  assetId={item.id}
+                  city={item.exifInfo.city}
+                  country={item.exifInfo.country}
+                  stats={placeStats.get(keyOf(item))}
+                />
+              {/each}
+            {:else}
+              {#each cities.slice(0, itemCount) as item (item.id)}
+                <div class="ws-explore-waiting" aria-hidden="true"></div>
+              {/each}
+            {/if}
+          {/snippet}
+        </SingleGridRow>
+      </section>
+    {/if}
+
+    {#if cards.length > 0}
+      <section class="ws-sharing-section" aria-labelledby="explore-memories">
+        <h2 class="ws-sharing-heading" id="explore-memories">
+          {$t('memories')}
+          <a class="ws-sharing-heading-action" href={Route.memories()} draggable="false">{$t('view_all')}</a>
+        </h2>
+        <!-- the Memories page's cards, as many as fit one row; on a phone its first two, one under the other at the full
+             width as there, so a title and its line keep to a line each (upstream's carousel set them in portrait,
+             four lines a title, its arrow on the third card) -->
+        {#snippet memoryCard(card: MemoryCardModel)}
+          {@const cover = memoryCover(card.lead, memoryFacts.get(card.lead.id))}
+          <MemoryCard
+            class="size-full"
+            item={{
+              id: card.lead.id,
+              title: $memoryLaneTitle(card.lead),
+              subtitle: memoryCardLine(card, $t, $locale),
+              href: Route.viewMemory({ id: card.lead.id, assetId: card.assets[0].id }),
+              alt: $t('memory_lane_title', {
+                values: { title: $getAltText(toTimelineAsset(cover.asset ?? card.assets[0])) },
+              }),
+              src: getAssetMediaUrl({ id: cover.id, cacheKey: cover.asset?.thumbhash }),
+              isSaved: card.isSaved,
+              type: card.lead.type,
+            }}
+          />
+        {/snippet}
+        {#if mediaQueryManager.maxMd}
+          <div class="grid grid-cols-1 gap-(--ws-gap)">
+            {#each cards.slice(0, 2) as card (card.lead.id)}
+              {@render memoryCard(card)}
+            {/each}
+          </div>
+        {:else}
+          <SingleGridRow class="grid grid-flow-col grid-auto-fill-72 gap-(--ws-gap)">
+            {#snippet children({ itemCount })}
+              {#each cards.slice(0, itemCount) as card (card.lead.id)}
+                {@render memoryCard(card)}
+              {/each}
+            {/snippet}
+          </SingleGridRow>
+        {/if}
+      </section>
+    {/if}
+
+    {#if recents.length > 0}
+      <section class="ws-sharing-section" aria-labelledby="explore-recent">
+        <h2 class="ws-sharing-heading" id="explore-recent">
+          {$t('recently_added')}
+          <a class="ws-sharing-heading-action" href={Route.recentlyAdded()} draggable="false">{$t('view_all')}</a>
+        </h2>
+        <div class="flex h-24 max-w-fit flex-wrap gap-x-1 overflow-hidden md:h-42">
+          {#each recents as item (item.data.id)}
+            <button
+              type="button"
+              class="relative h-full flex-auto"
+              onclick={() => onViewAsset(item.data.id)}
               draggable="false"
             >
-              <div class="flex justify-center overflow-hidden rounded-xl brightness-75 filter">
-                <img
-                  src={getAssetMediaUrl({ id: item.data.id, size: AssetMediaSize.Thumbnail })}
-                  alt={item.value}
-                  class="aspect-square w-full object-cover"
-                />
-              </div>
-              <span
-                class="absolute bottom-2 w-full px-1 text-center text-sm font-medium text-ellipsis text-white capitalize backdrop-blur-[1px] hover:cursor-pointer"
-              >
-                {item.value}
-              </span>
-            </a>
+              <img
+                src={getAssetMediaUrl({ id: item.data.id, size: AssetMediaSize.Thumbnail })}
+                alt={$getAltText(toTimelineAsset(item.data))}
+                class="size-full min-w-max rounded-xl object-cover"
+              />
+            </button>
           {/each}
-        {/snippet}
-      </SingleGridRow>
-    </div>
-  {/if}
+        </div>
+      </section>
+    {/if}
 
-  {#if memories.length > 0}
-    <div class="mt-2 mb-6">
-      <div class="flex justify-between">
-        <p class="mb-4 font-medium dark:text-immich-dark-fg">{$t('memories')}</p>
-        <a
-          href={Route.memories()}
-          class="pe-4 text-sm font-medium hover:text-immich-primary dark:text-immich-dark-fg dark:hover:text-immich-dark-primary"
-          draggable="false">{$t('view_all')}</a
-        >
-      </div>
-      <ImageCarousel items={memories}>
-        {#snippet child(item)}
-          <MemoryCard {item} />
-        {/snippet}
-      </ImageCarousel>
-    </div>
-  {/if}
-
-  {#if recents.length > 0}
-    <div class="mt-2 mb-6 px-2 md:px-4">
-      <div class="flex justify-between">
-        <p class="mb-4 font-medium dark:text-immich-dark-fg">{$t('recently_added')}</p>
-        <a
-          href={Route.recentlyAdded()}
-          class="pe-4 text-sm font-medium hover:text-immich-primary dark:text-immich-dark-fg dark:hover:text-immich-dark-primary"
-          draggable="false">{$t('view_all')}</a
-        >
-      </div>
-      <div class="flex h-24 max-w-fit flex-wrap gap-x-1 overflow-hidden md:h-42">
-        {#each recents as item (item.data.id)}
-          <button
-            type="button"
-            class="relative h-full flex-auto"
-            onclick={() => onViewAsset(item.data.id)}
-            draggable="false"
-          >
-            <img
-              src={getAssetMediaUrl({ id: item.data.id, size: AssetMediaSize.Thumbnail })}
-              alt={$getAltText(toTimelineAsset(item.data))}
-              class="size-full min-w-max rounded-xl object-cover"
-            />
-          </button>
-        {/each}
-      </div>
-    </div>
-  {/if}
-
-  {#if !hasPeople && places.length === 0 && recents.length === 0}
-    <EmptyState title={$t('nothing_here_yet')} body={$t('no_explore_results_message')} />
-  {/if}
+    {#if !hasPeople && cities.length === 0 && recents.length === 0}
+      <EmptyState title={$t('nothing_here_yet')} body={$t('no_explore_results_message')} />
+    {/if}
+  </div>
 </UserPageLayout>
 
 {#if assetViewerManager.isViewing}
@@ -224,3 +266,13 @@
     </Portal>
   {/if}
 {/if}
+
+<style>
+  /* a place tile's frame while the counts come in */
+  .ws-explore-waiting {
+    aspect-ratio: 1;
+    border-radius: var(--ws-radius);
+    background: color-mix(in oklab, var(--immich-ui-dark) 6%, var(--immich-ui-light));
+    box-shadow: inset 0 0 0 1px var(--ws-hairline);
+  }
+</style>

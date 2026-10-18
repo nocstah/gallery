@@ -1,4 +1,4 @@
-import { Type, type PersonResponseDto, type SearchExploreResponseDto } from '@immich/sdk';
+import { Type, type AssetResponseDto, type PersonResponseDto, type SearchExploreResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
@@ -6,6 +6,12 @@ import TestWrapper from '$lib/components/TestWrapper.svelte';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { personFactory } from '@test-data/factories/person-factory';
 import ExplorePage from './+page.svelte';
+
+// Local Omarchy layer: the places row ranks every place by its photos (managers/place-stats); here nothing is counted,
+// so the places keep the order they came in
+vi.mock('$lib/managers/place-stats.svelte', () => ({
+  placeStats: { settle: () => Promise.resolve(), get: () => undefined },
+}));
 
 vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
   const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
@@ -23,7 +29,11 @@ function makePerson(overrides: Partial<PersonResponseDto> = {}): PersonResponseD
   });
 }
 
-function renderPage(people: PersonResponseDto[] = [makePerson()], items: SearchExploreResponseDto[] = []) {
+function renderPage(
+  people: PersonResponseDto[] = [makePerson()],
+  items: SearchExploreResponseDto[] = [],
+  cities: AssetResponseDto[] = [],
+) {
   const props = {
     data: {
       explore: items,
@@ -33,7 +43,7 @@ function renderPage(people: PersonResponseDto[] = [makePerson()], items: SearchE
         hidden: 0,
         hasNextPage: false,
       },
-      memories: [],
+      cities,
       meta: { title: 'Explore' },
     },
   };
@@ -96,64 +106,65 @@ describe('Explore page', () => {
     expect(screen.queryByTitle('shared_with_me')).toBeNull();
   });
 
+  // Local Omarchy layer: people in the People page's order (most photos first by default, favourites before them);
+  // upstream listed them by name
+  // (a row without layout in a test holds one face: the first in that order)
+  it('puts the person with the most photos first', () => {
+    renderPage([
+      makePerson({ id: 'a', name: 'Alice', numberOfAssets: 3 }),
+      makePerson({ id: 'b', name: 'Bob', numberOfAssets: 300 }),
+    ]);
+
+    expect(screen.getByRole('link', { name: /Bob/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Alice/ })).not.toBeInTheDocument();
+  });
+
+  it('puts a favourite before the people with more photos', () => {
+    renderPage([
+      makePerson({ id: 'b', name: 'Bob', numberOfAssets: 300 }),
+      makePerson({ id: 'c', name: 'Cleo', numberOfAssets: 30, isFavorite: true }),
+    ]);
+
+    expect(screen.getByRole('link', { name: /Cleo/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Bob/ })).not.toBeInTheDocument();
+  });
+
+  it('heads each row in the section-label style, with the way to all of it', () => {
+    renderPage();
+
+    expect(screen.getByRole('heading', { level: 2, name: /people/ })).toContainElement(
+      screen.getByRole('link', { name: 'view_all' }),
+    );
+  });
+
   // #867: place tiles used to open the deprecated /search view, which is owner-scoped and cannot
   // show shared-space assets. Send them to the filtered /photos timeline instead.
-  it('links a place tile to the photos timeline filtered by that city', () => {
-    renderPage(
-      [],
-      [
-        {
-          fieldName: 'exifInfo.city',
-          items: [{ value: 'Cape Town', data: assetFactory.build({ id: 'asset-1' }) }],
-        },
-      ],
-    );
+  it('links a place tile to the photos timeline filtered by that city', async () => {
+    renderPage([], [], [assetFactory.build({ id: 'asset-1', exifInfo: { city: 'Cape Town' } })]);
 
-    const link = screen.getByRole('link', { name: /Cape Town/ });
+    const link = await screen.findByRole('link', { name: /Cape Town/ });
     expect(link).toHaveAttribute('href', '/photos?city=Cape%20Town');
   });
 
   // #989: the tile linked with `city` alone, so the location filter had no country to nest the
   // city under and rendered it flat beside the country list. The country is already on the
   // representative asset the strip renders — carry it through.
-  it('scopes a place tile to the country of its representative asset', () => {
+  it('scopes a place tile to the country of its representative asset', async () => {
     renderPage(
       [],
-      [
-        {
-          fieldName: 'exifInfo.city',
-          items: [
-            {
-              value: 'Cape Town',
-              data: assetFactory.build({ id: 'asset-1', exifInfo: { city: 'Cape Town', country: 'South Africa' } }),
-            },
-          ],
-        },
-      ],
+      [],
+      [assetFactory.build({ id: 'asset-1', exifInfo: { city: 'Cape Town', country: 'South Africa' } })],
     );
 
-    const link = screen.getByRole('link', { name: /Cape Town/ });
+    const link = await screen.findByRole('link', { name: /Cape Town/ });
     expect(link).toHaveAttribute('href', '/photos?city=Cape%20Town&country=South%20Africa');
   });
 
   // Reverse geocoding can resolve a city without a country. Falling back to the city-only link
   // keeps the tile working (as an orphaned selection) rather than emitting `country=`.
-  it('falls back to a city-only link when the asset has no country', () => {
-    renderPage(
-      [],
-      [
-        {
-          fieldName: 'exifInfo.city',
-          items: [
-            {
-              value: 'Cape Town',
-              data: assetFactory.build({ id: 'asset-1', exifInfo: { city: 'Cape Town', country: null } }),
-            },
-          ],
-        },
-      ],
-    );
+  it('falls back to a city-only link when the asset has no country', async () => {
+    renderPage([], [], [assetFactory.build({ id: 'asset-1', exifInfo: { city: 'Cape Town', country: null } })]);
 
-    expect(screen.getByRole('link', { name: /Cape Town/ })).toHaveAttribute('href', '/photos?city=Cape%20Town');
+    expect(await screen.findByRole('link', { name: /Cape Town/ })).toHaveAttribute('href', '/photos?city=Cape%20Town');
   });
 });

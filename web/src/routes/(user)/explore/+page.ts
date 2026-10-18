@@ -1,4 +1,4 @@
-import { getAllPeople, getExploreData, MemorySearchOrder } from '@immich/sdk';
+import { getAllPeople, getAssetsByCity, getExploreData, MemorySearchOrder } from '@immich/sdk';
 import { memoryManager } from '$lib/managers/memory-manager.svelte';
 import { authenticate } from '$lib/utils/auth';
 import { getFormatter } from '$lib/utils/i18n';
@@ -9,9 +9,12 @@ export const load = (async ({ url }) => {
   memoryManager.setFilters({ size: 12, order: MemorySearchOrder.Desc });
   await memoryManager.applyPreferences();
 
-  const [explore, people] = await Promise.all([
+  const [explore, people, cities] = await Promise.all([
     getExploreData(),
     getAllPeople({ withHidden: false, withSharedSpaces: true }),
+    // Local Omarchy layer: every place, for the row of those that hold the most photos (managers/place-stats); a
+    // failure leaves the row out rather than the page
+    getAssetsByCity().catch(() => []),
     memoryManager.refresh(),
   ]);
   const $t = await getFormatter();
@@ -19,7 +22,7 @@ export const load = (async ({ url }) => {
   return {
     explore,
     people,
-    memories: memoryManager.memories,
+    cities,
     meta: {
       title: $t('explore'),
     },

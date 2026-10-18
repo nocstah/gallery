@@ -20,6 +20,7 @@ describe('explore page load', () => {
     getFormatter.mockResolvedValue((key: string) => key);
     sdkMock.getExploreData.mockResolvedValue([]);
     sdkMock.getAllPeople.mockResolvedValue({ people: [], total: 0, hidden: 0, hasNextPage: false });
+    sdkMock.getAssetsByCity.mockResolvedValue([]);
     sdkMock.searchMemories.mockResolvedValue([]);
     sdkMock.memoriesStatistics.mockResolvedValue({ total: 0 });
   });
@@ -32,5 +33,15 @@ describe('explore page load', () => {
     expect(authenticate).toHaveBeenCalledWith(url);
     expect(sdkMock.getExploreData).toHaveBeenCalledWith();
     expect(sdkMock.getAllPeople).toHaveBeenCalledWith({ withHidden: false, withSharedSpaces: true });
+  });
+
+  // Local Omarchy layer: every place, so the row can show those that hold the most photos (managers/place-stats)
+  it('loads every place for the places row, and leaves the row out when they fail', async () => {
+    sdkMock.getAssetsByCity.mockRejectedValue(new Error('down'));
+
+    const data = await load({ url: new URL('https://gallery.test/explore') } as never);
+
+    expect(sdkMock.getAssetsByCity).toHaveBeenCalledWith();
+    expect(data?.cities).toEqual([]);
   });
 });
