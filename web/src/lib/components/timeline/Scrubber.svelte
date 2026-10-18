@@ -4,6 +4,7 @@
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { getTabbable } from '$lib/utils/focus-util';
   import { type ScrubberListener } from '$lib/utils/timeline-util';
+  import { pickYearLabels } from './scrubber-labels';
   import { Icon } from '@immich/ui';
   import { mdiPlay } from '@mdi/js';
   import { clamp } from 'lodash-es';
@@ -73,7 +74,6 @@
   const HOVER_DATE_HEIGHT = 31.75;
   const PADDING_TOP = $derived(usingMobileDevice ? 25 : HOVER_DATE_HEIGHT);
   const PADDING_BOTTOM = $derived(usingMobileDevice ? 25 : 10);
-  const MIN_YEAR_LABEL_DISTANCE = 16;
   const MIN_DOT_DISTANCE = 8;
 
   const width = $derived.by(() => {
@@ -149,14 +149,19 @@
   // MIN_YEAR_HEIGHT and never takes more than about 60% of the bar between all the years.
   const MIN_YEAR_HEIGHT = 18;
   const warpByYear = (heights: number[], years: number[]) => {
+    // bookkeeping for one layout, nothing renders from these
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const natural = new Map<number, number>();
-    years.forEach((year, index) => natural.set(year, (natural.get(year) ?? 0) + heights[index]));
+    for (const [index, year] of years.entries()) {
+      natural.set(year, (natural.get(year) ?? 0) + heights[index]);
+    }
     const total = heights.reduce((sum, value) => sum + value, 0);
     if (natural.size < 2 || total <= 0) {
       return heights;
     }
     const floor = Math.min(MIN_YEAR_HEIGHT, total / (natural.size * 1.6));
     // years at the floor; the rest are scaled to fill what is left, which may push another under it: repeat
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const raised = new Set<number>();
     let scale = 1;
     for (;;) {
@@ -179,11 +184,12 @@
   };
 
   const calculateSegments = (months: ScrubberMonth[]) => {
-    let verticalSpanWithoutLabel = 0;
     let verticalSpanWithoutDot = 0;
 
     let segments: Segment[] = [];
-    let previousLabeledSegment: Segment | undefined;
+    // Local Omarchy layer: each year's oldest month, where its name would sit (its foot, `top` from the bar's foot)
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
+    const yearFoot = new Map<number, Segment & { top: number }>();
 
     let top = 0;
 
@@ -206,24 +212,21 @@
         hasDot: false,
       };
       top += segment.height;
-      if (previousLabeledSegment) {
-        if (previousLabeledSegment.year !== segment.year && verticalSpanWithoutLabel > MIN_YEAR_LABEL_DISTANCE) {
-          verticalSpanWithoutLabel = 0;
-          segment.hasLabel = true;
-          previousLabeledSegment = segment;
-        }
-        if (segment.height > 5 && verticalSpanWithoutDot > MIN_DOT_DISTANCE) {
-          segment.hasDot = true;
-          verticalSpanWithoutDot = 0;
-        }
-      } else {
-        segment.hasDot = true;
-        segment.hasLabel = true;
-        previousLabeledSegment = segment;
+      if (!yearFoot.has(segment.year)) {
+        yearFoot.set(segment.year, segment);
       }
-      verticalSpanWithoutLabel += segment.height;
+      if (index === 0 || (segment.height > 5 && verticalSpanWithoutDot > MIN_DOT_DISTANCE)) {
+        segment.hasDot = true;
+        verticalSpanWithoutDot = 0;
+      }
       verticalSpanWithoutDot += segment.height;
       segments.push(segment);
+    }
+    // Local Omarchy layer: the years' names are thinned where they would run into each other, keeping the ones that
+    // tell the most (scrubber-labels: the newest and the oldest, the decades, every fifth year...)
+    const named = pickYearLabels([...yearFoot.values()].map(({ year, top: at }) => ({ year, at })));
+    for (const foot of yearFoot.values()) {
+      foot.hasLabel = named.has(foot.year);
     }
     segments.reverse();
 
