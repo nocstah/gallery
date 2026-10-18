@@ -1292,46 +1292,55 @@
           reveal
           assetInteraction={assetMultiSelectManager}
         >
+          <!-- Local Omarchy layer: what a person does most leads (Favorite, Add to album, New album, Share, then the
+               special albums: a special album's way out, or the others); the menu puts its own downloads and copies
+               with Download, and the edits and the ways out of the album come last -->
           {@const MenuActions = getAssetBulkActions($t, { album })}
           <FavoriteAction
             menuItem
             removeFavorite={assetMultiSelectManager.isAllFavorite}
             onFavorite={handleBulkFavorite}
           />
-          {#if special && assetMultiSelectManager.isAllUserOwned}
-            <SpecialAlbumAction {special} done menuItem />
-          {/if}
           <ActionMenuItem action={MenuActions.AddToAlbum} hint />
           <ActionMenuItem action={MenuActions.NewAlbum} hint />
           <ActionMenuItem action={MenuActions.CreateSharedLink} />
-          <DownloadAction menuItem filename={album.albumName} />
-          {#if isEditor && assetMultiSelectManager.assets.length === 1}
-            <MenuOption
-              text={$t('set_as_album_cover')}
-              icon={mdiImageOutline}
-              onClick={() => updateThumbnailUsingCurrentSelection()}
-            />
-          {/if}
           {#if assetMultiSelectManager.isAllUserOwned}
-            <hr />
-            <RotateAction />
-            <ActionMenuItem action={MenuActions.Tag} hint />
-            <ChangeDate menuItem />
-            <ChangeLocation menuItem />
-            <ChangeDescription menuItem />
-          {/if}
-          <hr />
-          <ActionMenuItem action={MenuActions.RemoveFromAlbum} hint />
-          {#if assetMultiSelectManager.isAllUserOwned}
-            <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
+            {#if special}
+              <SpecialAlbumAction {special} done menuItem />
+            {/if}
             {#each offeredSpecialAlbums() as other (other.key)}
               {#if other !== special}
                 <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
               {/if}
             {/each}
-            <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
-            <DeleteAssets menuItem onAssetDelete={handleRemoveAssets} onUndoDelete={handleUndoRemoveAssets} />
           {/if}
+          {#snippet downloads()}
+            <DownloadAction menuItem filename={album.albumName} />
+          {/snippet}
+          {#snippet more()}
+            {@const Edits = getAssetBulkActions($t, { album })}
+            {#if isEditor && assetMultiSelectManager.assets.length === 1}
+              <MenuOption
+                text={$t('set_as_album_cover')}
+                icon={mdiImageOutline}
+                onClick={() => updateThumbnailUsingCurrentSelection()}
+              />
+            {/if}
+            {#if assetMultiSelectManager.isAllUserOwned}
+              <RotateAction />
+              <ActionMenuItem action={Edits.Tag} hint />
+              <ChangeDate menuItem />
+              <ChangeLocation menuItem />
+              <ChangeDescription menuItem />
+            {/if}
+            <hr />
+            <ActionMenuItem action={Edits.RemoveFromAlbum} hint />
+            {#if assetMultiSelectManager.isAllUserOwned}
+              <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
+              <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+              <DeleteAssets menuItem onAssetDelete={handleRemoveAssets} onUndoDelete={handleUndoRemoveAssets} />
+            {/if}
+          {/snippet}
         </TileContextMenu>
       {/if}
     </div>

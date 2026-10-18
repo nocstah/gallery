@@ -981,34 +981,40 @@
     reveal={showSearchResults}
     assetInteraction={assetMultiSelectManager}
   >
+    <!-- Local Omarchy layer: what a person does most leads (Favorite, Add to album, New album, Share, then the special
+         albums); the menu puts its own downloads and copies with Download, and the edits and ways out come last -->
     {@const MenuActions = getAssetBulkActions($t)}
     <FavoriteAction menuItem removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
+    <ActionMenuItem action={MenuActions.AddToAlbum} hint />
+    <ActionMenuItem action={MenuActions.NewAlbum} hint />
+    <ActionMenuItem action={MenuActions.CreateSharedLink} />
     {#if assetMultiSelectManager.isAllUserOwned}
       {#each offeredSpecialAlbums() as special (special.key)}
         <SpecialAlbumAction {special} menuItem onArchive={handleArchive} />
       {/each}
     {/if}
-    <ActionMenuItem action={MenuActions.AddToAlbum} hint />
-    <ActionMenuItem action={MenuActions.NewAlbum} hint />
-    <ActionMenuItem action={MenuActions.CreateSharedLink} />
-    <DownloadAction menuItem />
-    {#if assetMultiSelectManager.isAllUserOwned}
-      {@const MenuStackActions = getStackBulkActions($t)}
-      <hr />
-      <RotateAction />
-      {#if !showSearchResults}
-        <ActionMenuItem action={MenuStackActions.Stack} />
-        <ActionMenuItem action={MenuStackActions.Unstack} />
+    {#snippet downloads()}
+      <DownloadAction menuItem />
+    {/snippet}
+    {#snippet more()}
+      {#if assetMultiSelectManager.isAllUserOwned}
+        {@const Edits = getAssetBulkActions($t)}
+        {@const MenuStackActions = getStackBulkActions($t)}
+        <RotateAction />
+        {#if !showSearchResults}
+          <ActionMenuItem action={MenuStackActions.Stack} />
+          <ActionMenuItem action={MenuStackActions.Unstack} />
+        {/if}
+        <ActionMenuItem action={Edits.Tag} hint />
+        <ChangeDate menuItem />
+        <ChangeLocation menuItem />
+        <ChangeDescription menuItem />
+        <hr />
+        <ArchiveAction menuItem onArchive={handleArchive} />
+        <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+        <DeleteAssets menuItem onAssetDelete={handleAssetDelete} onUndoDelete={handleUndoDelete} />
       {/if}
-      <ActionMenuItem action={MenuActions.Tag} hint />
-      <ChangeDate menuItem />
-      <ChangeLocation menuItem />
-      <ChangeDescription menuItem />
-      <hr />
-      <ArchiveAction menuItem onArchive={handleArchive} />
-      <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
-      <DeleteAssets menuItem onAssetDelete={handleAssetDelete} onUndoDelete={handleUndoDelete} />
-    {/if}
+    {/snippet}
   </TileContextMenu>
 {/if}
 

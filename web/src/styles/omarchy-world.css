@@ -1510,6 +1510,14 @@ ul[role='menu'] > hr {
   margin: 4px -6px;
   border-color: var(--ws-hairline);
 }
+/* a group with nothing in it leaves no rule: a menu never starts or ends on one, nor draws two in a row (the photos'
+   right-click menu draws its groups' rules whatever a page or a selection fills them with) */
+ul[role='menu'] > hr:first-child,
+ul[role='menu'] > .ws-menu-head + hr,
+ul[role='menu'] > hr + hr,
+ul[role='menu'] > hr:last-child {
+  display: none;
+}
 
 /* ---- stacks expanded in place: the badge is a button; the inserted frames carry a quiet ink ring ---- */
 .ws-stack-badge {

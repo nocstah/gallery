@@ -5,6 +5,9 @@
   // belongs to a stack also gets the stack's own items: its cover expands or collapses it, any other photo
   // can become the cover or collapse it (timeline only). Works on any photo grid: the page says where the grid is and how to
   // find a photo by id, so search results get it too. Shift+right-click falls through to the browser's own menu.
+  // The menu leads with what a person does most (the page's own: Favorite, Add to album, New album, Share, the special
+  // albums), then where to go (Show in Photos, a stack's items), the downloads and copies in one group, and the page's
+  // edits and ways out last; it had opened on Download for WhatsApp, Download for Telegram and Copy subject.
   import { contextMenuNavigation } from '$lib/actions/context-menu-navigation';
   import ContextMenu from '$lib/components/shared-components/context-menu/ContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
@@ -47,10 +50,24 @@
     /** Show in Photos for one photo (utils/reveal): grids other than Photos' own timeline, an album or search results */
     reveal?: boolean;
     assetInteraction: AssetMultiSelectManager;
+    /** what a person does most, first: Favorite, Add to album, New album, Share, the special albums */
     children: Snippet;
+    /** the page's downloads, which open the group of downloads and copies */
+    downloads?: Snippet;
+    /** the rest, after them: the edits, then the ways out (archive, the Locked Folder, delete) */
+    more?: Snippet;
   }
 
-  let { grid, findAsset, withStackItems = true, reveal = false, assetInteraction, children }: Props = $props();
+  let {
+    grid,
+    findAsset,
+    withStackItems = true,
+    reveal = false,
+    assetInteraction,
+    children,
+    downloads,
+    more,
+  }: Props = $props();
 
   let isOpen = $state(false);
   let position = $state({ x: 0, y: 0 });
@@ -287,6 +304,9 @@
           </span>
         </li>
       {/if}
+      <!-- what a person does most -->
+      {@render children()}
+      <hr />
       {#if revealAsset}
         {@const shown = revealAsset}
         <!-- Local Omarchy layer: the photo in Photos (or Archive), selected there and ready to act on (utils/reveal) -->
@@ -295,7 +315,6 @@
           text={shown.visibility === AssetVisibility.Archive ? $t('show_in_archive') : $t('show_in_photos')}
           onClick={() => onStackAction(() => revealInPhotos(shown.id))}
         />
-        <hr />
       {/if}
       {#if stackMenu}
         {@const menu = stackMenu}
@@ -334,8 +353,10 @@
             />
           {/if}
         {/if}
-        <hr />
       {/if}
+      <hr />
+      <!-- the downloads and the copies, together -->
+      {@render downloads?.()}
       {#if shareable.length > 0}
         {@const clips = shareable}
         <MenuOption
@@ -348,7 +369,6 @@
           text={$t('download_for_app', { values: { app: 'Telegram' } })}
           onClick={() => onStackAction(() => shareClips(clips, 'telegram'))}
         />
-        <hr />
       {/if}
       {#if liftAsset}
         {@const lifted = liftAsset}
@@ -357,9 +377,9 @@
           text={$t('copy_subject')}
           onClick={() => onStackAction(() => copySubject(lifted.id, 'photo'))}
         />
-        <hr />
       {/if}
-      {@render children()}
+      <hr />
+      {@render more?.()}
     </ContextMenu>
   {/if}
 </div>
