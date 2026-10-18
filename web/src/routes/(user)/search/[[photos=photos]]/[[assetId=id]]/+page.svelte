@@ -397,7 +397,8 @@
       originalFileName: $t('file_name_text'),
       originalPath: $t('full_path_or_folder'),
       description: $t('description'),
-      queryAssetId: $t('query_asset_id'),
+      // Local Omarchy layer: the chip's own words ("Similar to"), not upstream's "Query Asset ID"
+      queryAssetId: $t('search_similar_to'),
       ocr: $t('ocr'),
     };
     return keyMap[key] || key;

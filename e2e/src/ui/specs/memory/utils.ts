@@ -72,11 +72,11 @@ export const memoryAssetViewerUtils = {
   },
 
   nextButton(page: Page) {
-    return page.getByLabel('View next asset');
+    return page.getByLabel('Next photo');
   },
 
   previousButton(page: Page) {
-    return page.getByLabel('View previous asset');
+    return page.getByLabel('Previous photo');
   },
 
   async expectNextButtonVisible(page: Page) {

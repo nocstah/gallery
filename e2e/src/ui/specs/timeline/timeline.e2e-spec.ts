@@ -110,7 +110,7 @@ test.describe('Timeline', () => {
       await thumbnailUtils.clickAssetId(page, asset.id);
       await assetViewerUtils.waitForViewerLoad(page, asset);
       await expect.poll(() => new URL(page.url()).pathname).toBe(`/photos/${asset.id}`);
-      await page.getByLabel('View next asset').click();
+      await page.getByLabel('Next photo').click();
       await assetViewerUtils.waitForViewerLoad(page, nextAsset);
       await expect.poll(() => new URL(page.url()).pathname).toBe(`/photos/${nextAsset.id}`);
       await page.goBack();
@@ -125,7 +125,7 @@ test.describe('Timeline', () => {
       await thumbnailUtils.clickAssetId(page, assets[0].id);
       await assetViewerUtils.waitForViewerLoad(page, assets[0]);
       for (let i = 1; i <= 15; i++) {
-        await page.getByLabel('View next asset').click();
+        await page.getByLabel('Next photo').click();
         await assetViewerUtils.waitForViewerLoad(page, assets[i]);
       }
       await page.getByLabel('Go back').click();
@@ -139,7 +139,7 @@ test.describe('Timeline', () => {
       await thumbnailUtils.clickAssetId(page, lastAsset.id);
       await assetViewerUtils.waitForViewerLoad(page, lastAsset);
       for (let i = 1; i <= 15; i++) {
-        await page.getByLabel('View previous asset').click();
+        await page.getByLabel('Previous photo').click();
         await assetViewerUtils.waitForViewerLoad(page, assets.at(-1 - i)!);
       }
       await page.getByLabel('Go back').click();
@@ -462,7 +462,7 @@ test.describe('Timeline', () => {
         });
         changes.albumAdditions.push(...requestJson.ids);
       });
-      await page.getByText('Add assets').click();
+      await page.getByText('Add photos', { exact: true }).click();
       await expect(put).resolves.toEqual({
         ids: [
           'c077ea7b-cfa1-45e4-8554-f86c00ee5658',
