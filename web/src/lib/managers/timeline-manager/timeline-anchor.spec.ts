@@ -12,7 +12,9 @@ describe('scrollTimelineToTemporalAnchor', () => {
     let scrollTop = 0;
     const timelineManager = buildManager({
       grouping: 'month',
-      timelineBuckets: [{ date: { year: 2015 }, top: 120, height: 296 }] as TimelineManager['timelineBuckets'],
+      timelineBuckets: [
+        { date: { year: 2015 }, top: 120, height: 296, rowTop: 120, rowHeight: 296 },
+      ] as TimelineManager['timelineBuckets'],
       viewportHeight: 600,
       maxScroll: 1200,
       get scrollTop() {
@@ -36,7 +38,7 @@ describe('scrollTimelineToTemporalAnchor', () => {
     const timelineManager = buildManager({
       grouping: 'month',
       timelineBuckets: [
-        { date: { year: 2015, month: 8 }, top: 240, height: 296 },
+        { date: { year: 2015, month: 8 }, top: 240, height: 296, rowTop: 240, rowHeight: 296 },
       ] as TimelineManager['timelineBuckets'],
       viewportHeight: 600,
       maxScroll: 1200,
@@ -114,7 +116,9 @@ describe('scrollTimelineToTemporalAnchor', () => {
     let scrollTop = 0;
     const timelineManager = buildManager({
       grouping: 'year',
-      timelineBuckets: [{ date: { year: 2017 }, top: 480, height: 296 }] as TimelineManager['timelineBuckets'],
+      timelineBuckets: [
+        { date: { year: 2017 }, top: 480, height: 296, rowTop: 480, rowHeight: 296 },
+      ] as TimelineManager['timelineBuckets'],
       viewportHeight: 600,
       maxScroll: 2000,
       get scrollTop() {
@@ -130,6 +134,31 @@ describe('scrollTimelineToTemporalAnchor', () => {
 
     expect(didScroll).toBe(true);
     expect(scrollTo).toHaveBeenCalledWith(480);
+  });
+
+  it("scrolls a year opened into its months to the top of the year's row, its name included", () => {
+    // a phone: the year's months on three lines under its name, December (first in the timeline's order) on the last
+    const scrollTo = vi.fn();
+    let scrollTop = 0;
+    const timelineManager = buildManager({
+      grouping: 'month',
+      timelineBuckets: [
+        { date: { year: 2015, month: 12 }, top: 900, height: 86, rowTop: 696, rowHeight: 310 },
+        { date: { year: 2015, month: 1 }, top: 732, height: 86, rowTop: 696, rowHeight: 310 },
+      ] as TimelineManager['timelineBuckets'],
+      viewportHeight: 700,
+      maxScroll: 4000,
+      get scrollTop() {
+        return scrollTop;
+      },
+      scrollTo: vi.fn((top: number) => {
+        scrollTo(top);
+        scrollTop = top;
+      }),
+    });
+
+    expect(scrollTimelineToTemporalAnchor(timelineManager, { year: 2015 })).toBe(true);
+    expect(scrollTo).toHaveBeenCalledWith(696);
   });
 });
 
@@ -204,6 +233,38 @@ describe('getTimelineTopVisibleAnchor', () => {
     });
 
     expect(getTimelineTopVisibleAnchor(timelineManager)).toBeUndefined();
+  });
+
+  it('returns the topmost period still in view in the Years grid, past a gap between rows', () => {
+    // newest first, each decade a row: 2026 and 2020 share the first row, 2019 and 2010 the second
+    const timelineManager = buildManager({
+      isInitialized: true,
+      grouping: 'year',
+      scrollTop: 205,
+      timelineBuckets: [
+        { date: { year: 2026 }, top: 0, height: 200 },
+        { date: { year: 2020 }, top: 0, height: 200 },
+        { date: { year: 2019 }, top: 210, height: 200 },
+        { date: { year: 2010 }, top: 210, height: 200 },
+      ] as TimelineManager['timelineBuckets'],
+    });
+
+    expect(getTimelineTopVisibleAnchor(timelineManager)).toEqual({ year: 2019 });
+  });
+
+  it('returns the line above when a row breaks into lines and the newest stands on the later one', () => {
+    // a phone: 2020 to 2024 on the first line of the 2020s, 2025 and 2026 on the second
+    const timelineManager = buildManager({
+      isInitialized: true,
+      grouping: 'year',
+      scrollTop: 40,
+      timelineBuckets: [
+        { date: { year: 2026 }, top: 112, height: 66 },
+        { date: { year: 2024 }, top: 36, height: 66 },
+      ] as TimelineManager['timelineBuckets'],
+    });
+
+    expect(getTimelineTopVisibleAnchor(timelineManager)).toEqual({ year: 2024 });
   });
 
   it('returns undefined when the timeline is not initialized', () => {

@@ -2467,22 +2467,179 @@ label.ws-sheet-title {
   background: radial-gradient(ellipse at center, transparent 30%, rgb(0 0 0 / 0.75) 85%);
 }
 
-/* ---- Months as square tiles (TimelineRepresentativeBuckets .ws-month-tile): the caption scales with the tile ---- */
-.ws-month-tile {
+/* ---- Years and Months as the archive's shape (TimelineRepresentativeBuckets .ws-period-grid, utils/period-grid): a row
+   per decade or year on the one gutter and the desktop's gap, its name in a column before it (above it on a phone);
+   each period a window tile at its place, its count and a bar of its weight against the busiest one under its name;
+   a period without photos a quiet gap there; a run of rows without any one slim line. The caption scales with the
+   tile ---- */
+.ws-period-tile {
   container-type: inline-size;
 }
-.ws-month-tile [data-testid='timeline-bucket-card'] {
+.ws-period-tile [data-testid='timeline-bucket-card'] {
   min-height: 0;
 }
-.ws-month-tile [data-testid='timeline-bucket-card-overlay'] {
-  padding: 2rem 0.8rem 0.7rem;
+/* the scrim holds at least 48% black behind every word (the numeral over a white wall stays above 3:1, the count above
+   4.5:1) and eases out in the band above them, as Explore's week does */
+.ws-period-tile [data-testid='timeline-bucket-card-overlay'] {
+  padding: 2.25rem clamp(0.4rem, 6cqi, 0.9rem) clamp(0.4rem, 5.5cqi, 0.85rem);
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.66),
+    rgb(0 0 0 / 0.48) calc(100% - 2.25rem),
+    rgb(0 0 0 / 0.34) calc(100% - 1.6rem),
+    rgb(0 0 0 / 0.17) calc(100% - 0.95rem),
+    rgb(0 0 0 / 0.05) calc(100% - 0.4rem),
+    transparent
+  );
 }
-.ws-month-tile [data-testid='timeline-bucket-card-title'] {
-  font-size: clamp(1.1rem, 10.5cqi, 1.9rem);
+.ws-period-tile [data-testid='timeline-bucket-card-title'] {
+  font-size: clamp(1rem, 24cqi, 3.5rem);
+  line-height: 0.9;
 }
-.ws-month-tile [data-testid='timeline-bucket-card-count'] {
-  margin-top: 0.35rem;
-  font-size: var(--ws-text-micro);
+.ws-period-tile [data-short] [data-testid='timeline-bucket-card-title'] {
+  font-size: clamp(1rem, 20cqi, 2.75rem);
+}
+.ws-period-tile [data-testid='timeline-bucket-card-count'] {
+  margin-top: 0.4rem;
+  color: rgb(255 255 255 / 0.95);
+}
+.ws-bucket-count-short {
+  display: none;
+}
+/* a narrow tile says the number alone, a tile too small for it the bar alone (the card's label says both) */
+@container (max-width: 8.5rem) {
+  .ws-bucket-count-long {
+    display: none;
+  }
+  .ws-bucket-count-short {
+    display: inline;
+  }
+}
+@container (max-width: 5.5rem) {
+  .ws-period-tile [data-testid='timeline-bucket-card-count'] {
+    display: none;
+  }
+}
+.ws-bucket-density {
+  position: relative;
+  height: 2px;
+  margin-top: 0.45rem;
+  background: rgb(255 255 255 / 0.25);
+}
+.ws-bucket-density > span {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  min-width: 2px;
+  background: rgb(255 255 255 / 0.92);
+}
+/* no cover yet: the period and its bar sit on the ground in ink */
+[data-testid='timeline-bucket-card']:is([data-state='loading'], [data-state='fallback']) .ws-bucket-density {
+  background: var(--ws-hairline);
+}
+[data-testid='timeline-bucket-card']:is([data-state='loading'], [data-state='fallback']) .ws-bucket-density > span {
+  background: var(--immich-ui-dark);
+}
+/* the row's name: the decade or the year in the bar heading's voice, at the top of its column (above the row on a
+   phone) */
+.ws-period-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--ws-text-title);
+  font-weight: 750;
+  font-variation-settings:
+    'wdth' 75,
+    'opsz' 72;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+  color: var(--immich-ui-dark);
+  text-wrap: balance;
+}
+.ws-period-grid[data-names='above'] .ws-period-name {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: calc(var(--ws-gap) * 0.8);
+}
+/* a period without photos: its year or month in muted data type where its tile would be, inside a hairline frame */
+.ws-period-gap {
+  display: flex;
+  align-items: flex-end;
+  padding: 0.55rem 0.6rem;
+  border-radius: var(--tile-radius, var(--ws-radius));
+  box-shadow: inset 0 0 0 1px var(--ws-hairline);
+  color: var(--immich-ui-muted);
+  font-family: var(--ws-font-data);
+  font-size: var(--ws-text-data);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-transform: capitalize;
+  pointer-events: none;
+}
+/* a run of decades or years without photos: its span in muted data type and a hairline on to the grid's edge */
+.ws-period-run {
+  display: flex;
+  gap: var(--ws-gap);
+  align-items: center;
+  color: var(--immich-ui-muted);
+  font-family: var(--ws-font-data);
+  font-size: var(--ws-text-data);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ws-period-run::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--ws-hairline);
+}
+.ws-period-run-name {
+  flex: none;
+}
+/* a year in Room on its tile: the corner opposite the year, shown while the tile is pointed at or holds the focus (on
+   a touch screen always); the icon alone on a narrow tile */
+.ws-period-tile .ws-bucket-room {
+  top: clamp(0.3rem, 4cqi, 0.6rem);
+  right: clamp(0.3rem, 4cqi, 0.6rem);
+  bottom: auto;
+  padding: 0.3rem 0.55rem 0.3rem 0.45rem;
+  font-size: var(--ws-text-meta);
+  opacity: 0;
+  transition: opacity 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ws-period-tile:hover .ws-bucket-room,
+.ws-period-tile:focus-within .ws-bucket-room {
+  opacity: 1;
+}
+@media (pointer: coarse) {
+  .ws-period-tile .ws-bucket-room {
+    opacity: 1;
+  }
+}
+@container (max-width: 8.5rem) {
+  .ws-period-tile .ws-bucket-room {
+    padding: 0.25rem;
+  }
+  .ws-period-tile .ws-bucket-room span {
+    display: none;
+  }
+}
+/* a phone's tile is a fifth of the row: the icon smaller and closer to the corner, clear of the year at the foot */
+@container (max-width: 5.5rem) {
+  .ws-period-tile .ws-bucket-room {
+    top: 0.2rem;
+    right: 0.2rem;
+    padding: 0.15rem;
+  }
+  .ws-period-tile .ws-bucket-room svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-period-tile .ws-bucket-room {
+    transition: none;
+  }
 }
 
 /* ---- a heart given while the photo is on screen pops in on the window-open curve (Thumbnail.svelte); a favourite

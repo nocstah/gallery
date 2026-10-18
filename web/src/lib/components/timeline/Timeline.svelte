@@ -854,6 +854,8 @@
 {/if}
 
 <!-- Right margin MUST be equal to the width of scrubber -->
+<!-- Local Omarchy layer: and none where no scrubber is drawn (the Years and Months overviews), whose grid keeps the
+     page's own gutter at its right edge instead of the width the day view's scrubber left behind -->
 <!-- Local Omarchy layer: use:marqueeSelect draws a drag-selection box over the grid (lib/actions/marquee-select.ts);
      photos carried to To do, Villa or QR in the sidebar leave it as after their keys (TimelineKeyboardActions) -->
 <section
@@ -871,7 +873,7 @@
   }}
   id="asset-grid"
   class={['h-full scrollbar-hidden overflow-y-auto outline-none', { 'm-0': isEmpty }, { 'ms-0': !isEmpty }]}
-  style:margin-inline-end={(usingMobileDevice ? 0 : scrubberWidth) + 'px'}
+  style:margin-inline-end={(usingMobileDevice || timelineManager.months.length === 0 ? 0 : scrubberWidth) + 'px'}
   tabindex="-1"
   bind:clientHeight={timelineManager.viewportHeight}
   bind:clientWidth={timelineManager.viewportWidth}
@@ -912,6 +914,7 @@
     </section>
 
     {#if activeGrouping !== 'day'}
+      <!-- Local Omarchy layer: the Years and Months overviews as the archive's shape (utils/period-grid) -->
       <TimelineRepresentativeBuckets
         grouping={activeGrouping}
         buckets={timelineManager.timelineBuckets}
@@ -922,6 +925,8 @@
         {onTimelineBucketActivate}
         {bucketAction}
         onRequestCovers={(timeBuckets) => void timelineManager.loadCoversForBuckets(timeBuckets)}
+        grid={timelineManager.periodGrid}
+        topOffset={timelineManager.topSectionHeight}
       />
     {:else if !isEmpty}
       <!-- Guard with `!isEmpty` (so the block unmounts when a filter empties the timeline) and

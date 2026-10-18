@@ -1,13 +1,9 @@
 import { AssetOrder, TimeBucketSize, type TimeBucketsResponseDto } from '@immich/sdk';
+import { layoutPeriodGrid, periodSlot, type PeriodGrid } from '$lib/utils/period-grid';
 import type { TimelineBucketDate, TimelineGrouping } from './types';
 
 export const REPRESENTATIVE_TIMELINE_BUCKET_HEIGHT = 296;
 export const REPRESENTATIVE_TIMELINE_BUCKET_GAP = 32;
-// Local Omarchy layer: months are square tiles in a grid (a wide banner per month read as a mess of stretched crops);
-// as many columns of about MONTH_TILE px as fit, MONTH_GAP between them, MONTH_INSET at the sides
-export const MONTH_TILE = 240;
-export const MONTH_GAP = 12;
-export const MONTH_INSET = 16;
 
 type TimelineBucketManager = {
   topSectionHeight: number;
@@ -67,16 +63,42 @@ export function aggregateDayBucketsByMonth(
   );
 }
 
-export function layoutTimelineBuckets(buckets: TimelineBucket[], width = 0) {
-  if (buckets[0]?.grouping === 'month' && width > 0) {
-    const inner = width - 2 * MONTH_INSET;
-    const columns = Math.max(2, Math.floor((inner + MONTH_GAP) / (MONTH_TILE + MONTH_GAP)));
-    const size = Math.floor((inner - MONTH_GAP * (columns - 1)) / columns);
-    for (const [index, bucket] of buckets.entries()) {
-      const row = Math.floor(index / columns);
-      bucket.place(row * (size + MONTH_GAP), MONTH_INSET + (index % columns) * (size + MONTH_GAP), size);
+/** Local Omarchy layer: how the Years and Months overviews are laid out besides their width */
+export type TimelineBucketsLayout = {
+  /** the desktop's gap between tiles (--ws-gap) */
+  gap?: number;
+  newestFirst?: boolean;
+  /** the room in view under the timeline's top section, so a short archive fits it */
+  viewportHeight?: number;
+};
+
+/**
+ * Lays the buckets out. Local Omarchy layer: with a width, years and months are the archive's shape (utils/period-grid:
+ * a row per decade or year, its periods at their places in it, the periods without photos as gaps), on the one gutter
+ * and the desktop's gap, and the grid is returned for the gaps and the rows' names; without one, upstream's banners.
+ */
+export function layoutTimelineBuckets(
+  buckets: TimelineBucket[],
+  width = 0,
+  { gap = 10, newestFirst = true, viewportHeight }: TimelineBucketsLayout = {},
+): PeriodGrid | undefined {
+  const grouping = buckets[0]?.grouping;
+  if ((grouping === 'year' || grouping === 'month') && width > 0) {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- a lookup for this layout only
+    const bySlot = new Map(buckets.map((bucket) => [periodSlot(grouping, bucket.date), bucket]));
+    const grid = layoutPeriodGrid(
+      buckets.map((bucket) => ({ slot: periodSlot(grouping, bucket.date), count: bucket.count })),
+      { kind: grouping, width, gap, newestFirst, viewportHeight },
+    );
+    for (const row of grid?.rows ?? []) {
+      if (row.kind !== 'period') {
+        continue;
+      }
+      for (const cell of row.cells) {
+        bySlot.get(cell.slot)?.place(cell.top, cell.left, cell.width, cell.height, row);
+      }
     }
-    return;
+    return grid;
   }
   let top = 0;
 
@@ -105,11 +127,14 @@ export class TimelineBucket {
   readonly date: TimelineBucketDate;
   readonly isLoaded = true;
   height = $state(REPRESENTATIVE_TIMELINE_BUCKET_HEIGHT);
-  /** in the month grid: the tile's left edge and side; null for a full-width banner */
+  /** Local Omarchy layer: in the Years and Months grid, the tile's left edge and width; null for a full-width banner */
   left = $state<number | null>(null);
   size = $state<number | null>(null);
 
   #top = $state(0);
+  /** the row the tile stands in (its decade or year, the row's name included), where a jump to it scrolls */
+  #rowTop = $state(0);
+  #rowHeight = $state(REPRESENTATIVE_TIMELINE_BUCKET_HEIGHT);
   #manager: TimelineBucketManager;
 
   constructor(manager: TimelineBucketManager, grouping: TimelineGrouping, timeBucket: TimeBucketsResponseDto) {
@@ -142,17 +167,29 @@ export class TimelineBucket {
     return this.#top;
   }
 
+  get rowTop() {
+    return this.#rowTop + this.#manager.topSectionHeight;
+  }
+
+  get rowHeight() {
+    return this.#rowHeight;
+  }
+
   setTop(top: number) {
     this.#top = top;
     this.height = REPRESENTATIVE_TIMELINE_BUCKET_HEIGHT;
     this.left = null;
     this.size = null;
+    this.#rowTop = top;
+    this.#rowHeight = this.height;
   }
 
-  place(top: number, left: number, size: number) {
+  place(top: number, left: number, width: number, height = width, row?: { top: number; height: number }) {
     this.#top = top;
-    this.height = size;
+    this.height = height;
     this.left = left;
-    this.size = size;
+    this.size = width;
+    this.#rowTop = row?.top ?? top;
+    this.#rowHeight = row?.height ?? height;
   }
 }

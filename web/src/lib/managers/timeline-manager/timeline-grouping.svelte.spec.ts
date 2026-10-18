@@ -349,9 +349,21 @@ describe('TimelineManager grouping metadata', () => {
     expect(timelineManager.grouping).toBe('year');
     expect(timelineManager.months).toEqual([]);
     expect(timelineManager.assetCount).toBe(450);
-    expect(timelineManager.bodySectionHeight).toBe(
-      2 * REPRESENTATIVE_TIMELINE_BUCKET_HEIGHT + REPRESENTATIVE_TIMELINE_BUCKET_GAP,
-    );
+    // Local Omarchy layer: with a width the years are the decade grid (utils/period-grid), the 2010s over the 2000s,
+    // each bucket placed at its year's cell
+    const grid = timelineManager.periodGrid!;
+    expect(grid.rows.map((row) => row.kind === 'period' && row.unit)).toEqual([201, 200]);
+    expect(timelineManager.bodySectionHeight).toBe(grid.height);
+    const cells = grid.rows.flatMap((row) => (row.kind === 'period' ? row.cells : []));
+    for (const bucket of timelineManager.timelineBuckets) {
+      const cell = cells.find(({ slot }) => slot === bucket.date.year)!;
+      expect([bucket.left, bucket.layoutTop, bucket.size, bucket.height]).toEqual([
+        cell.left,
+        cell.top,
+        cell.width,
+        cell.height,
+      ]);
+    }
     expect(timelineManager.timelineBuckets.map((bucket) => bucket.viewId)).toEqual([
       'year:2015-01-01',
       'year:2007-01-01',

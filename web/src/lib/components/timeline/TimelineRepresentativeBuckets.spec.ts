@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createRawSnippet, tick } from 'svelte';
 import TimelineRepresentativeBuckets from '$lib/components/timeline/TimelineRepresentativeBuckets.svelte';
 import type { TimelineGrouping } from '$lib/managers/timeline-manager/types';
+import { layoutPeriodGrid } from '$lib/utils/period-grid';
 import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
 
 type RepresentativeTimelineBucket = ActivatableTimelineBucket & {
@@ -261,5 +262,103 @@ describe('TimelineRepresentativeBuckets', () => {
 
     await userEvent.click(within(frame).getByTestId('timeline-bucket-card'));
     expect(onTimelineBucketActivate).toHaveBeenCalledWith({ grouping: 'year', date: { year: 2015 } });
+  });
+
+  // Local Omarchy layer: the Years and Months overviews as the archive's shape (utils/period-grid)
+  describe('in the decade grid', () => {
+    // 2026 and 2024 in the 2020s, 1989 alone in the 1980s, nothing from 1979 to 1988, 1977 and 1978 in the 1970s
+    const years = [2026, 2024, 1989, 1978, 1977].map((year) => bucket(year, 0, { count: year === 2024 ? 1000 : 250 }));
+    const grid = layoutPeriodGrid(
+      years.map(({ date, count }) => ({ slot: date.year, count })),
+      { kind: 'year', width: 2287, gap: 10 },
+    )!;
+    const renderGrid = (props: Record<string, unknown> = {}) =>
+      render(TimelineRepresentativeBuckets, {
+        grouping: 'year',
+        buckets: years,
+        grid,
+        visibleWindow: { top: 0, bottom: 2000 },
+        ...props,
+      });
+
+    it('names each decade and draws its years in reading order, the years without photos as gaps', () => {
+      renderGrid();
+
+      expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(3);
+      const order = screen
+        .getAllByTestId(/^timeline-bucket-shell-/)
+        .map((shell) => shell.dataset.testid?.replace('timeline-bucket-shell-', ''));
+      expect(order).toEqual(['2024-01-01', '2026-01-01', '1989-01-01', '1977-01-01', '1978-01-01']);
+      // 2020 to 2023, 2025 and 1979 to 1988 are gaps, out of a screen reader's way; 2027 and 1976 are not drawn
+      const gaps = document.querySelectorAll('.ws-period-gap');
+      expect([...gaps].map((gap) => gap.textContent?.trim())).toEqual([
+        '2020',
+        '2021',
+        '2022',
+        '2023',
+        '2025',
+        '1980',
+        '1981',
+        '1982',
+        '1983',
+        '1984',
+        '1985',
+        '1986',
+        '1987',
+        '1988',
+        '1979',
+      ]);
+      expect([...gaps].every((gap) => gap.getAttribute('aria-hidden') === 'true')).toBe(true);
+    });
+
+    it('places each year at its cell and draws its weight against the busiest year', () => {
+      renderGrid({ renderOffset: 5 });
+
+      const cell = grid.rows
+        .flatMap((row) => (row.kind === 'period' ? row.cells : []))
+        .find(({ slot }) => slot === 1977)!;
+      const shell = screen.getByTestId('timeline-bucket-shell-1977-01-01');
+      expect(shell).toHaveStyle({ left: `${cell.left}px`, width: `${cell.width}px`, height: `${cell.height}px` });
+      expect(shell).toHaveStyle(`transform: translateY(${cell.top + 5}px)`);
+      const bar = within(shell).getByTestId('timeline-bucket-card-density');
+      expect(bar.firstElementChild).toHaveStyle({ width: '25%' });
+    });
+
+    it('moves the focus with the arrows along the reading order, and Home and End to the ends', async () => {
+      renderGrid();
+      const cards = screen.getAllByTestId('timeline-bucket-card');
+      cards[1].focus();
+
+      await userEvent.keyboard('{ArrowRight}');
+      expect(document.activeElement).toBe(cards[2]);
+      await userEvent.keyboard('{ArrowLeft}{ArrowLeft}');
+      expect(document.activeElement).toBe(cards[0]);
+      await userEvent.keyboard('{End}');
+      expect(document.activeElement).toBe(cards.at(-1));
+      await userEvent.keyboard('{Home}');
+      expect(document.activeElement).toBe(cards[0]);
+    });
+  });
+
+  it('says a run of years without photos to a screen reader as one line', () => {
+    const months = [monthBucket(2026, 3, 0), monthBucket(2024, 7, 0)];
+    const grid = layoutPeriodGrid(
+      months.map(({ date, count }) => ({ slot: date.year * 12 + date.month! - 1, count })),
+      { kind: 'month', width: 2287, gap: 10 },
+    )!;
+    render(TimelineRepresentativeBuckets, {
+      grouping: 'month',
+      buckets: months,
+      grid,
+      visibleWindow: { top: 0, bottom: 3000 },
+    });
+
+    const run = document.querySelector('.ws-period-run');
+    expect(run).toHaveTextContent('2025');
+    expect(run).toHaveTextContent('timeline_overview_no_photos');
+    // a month named alone, its row naming the year
+    expect(
+      within(screen.getByTestId('timeline-bucket-shell-2026-03-01')).getByTestId('timeline-bucket-card-title'),
+    ).toHaveTextContent('Mar');
   });
 });

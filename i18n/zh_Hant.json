@@ -4050,6 +4050,8 @@
   "timeline_grouping_years": "依年份",
   "timeline_grouping_years_short": "年",
   "timeline_overview_card_semantics": "{period}，{countLabel}，{action}",
+  "timeline_overview_decade": "{decade}年代",
+  "timeline_overview_no_photos": "沒有相片",
   "timeline_overview_photo_count": "{count, plural, one {# 張相片} other {# 張相片}}",
   "timeline_overview_show_all_photos": "顯示自此處起的所有相片",
   "timeline_overview_show_days": "依日顯示",

@@ -1,5 +1,6 @@
-import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
 import { debounce } from 'lodash-es';
+import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
+import { pxOf } from '$lib/utils/review-grid';
 
 // Largest *scrollable range* the engine will actually deliver. This is not the same as the
 // largest element it will lay out, and the two engines differ in both value and unit:
@@ -50,13 +51,10 @@ type LayoutOptions = {
 };
 // Local Omarchy layer: photo tiles sit on the desktop's tiling gap (--ws-gap, set from Hyprland by the
 // theme hook's Custom CSS; see styles/omarchy-world.css). Falls back to upstream's 2px.
-const workspaceGap = () => {
-  if (typeof document === 'undefined') {
-    return 2;
-  }
-  const value = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ws-gap'));
-  return Number.isFinite(value) && value >= 0 ? value : 2;
-};
+export const workspaceGap = () =>
+  typeof document === 'undefined'
+    ? 2
+    : pxOf(getComputedStyle(document.documentElement).getPropertyValue('--ws-gap'), 2);
 
 export abstract class VirtualScrollManager {
   topSectionHeight = $state(0);

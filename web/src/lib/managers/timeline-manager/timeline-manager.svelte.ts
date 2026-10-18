@@ -10,7 +10,7 @@ import {
 } from '@immich/sdk';
 import { clamp, isEqual } from 'lodash-es';
 import { SvelteDate, SvelteSet } from 'svelte/reactivity';
-import { VirtualScrollManager } from '$lib/managers/VirtualScrollManager/VirtualScrollManager.svelte';
+import { VirtualScrollManager, workspaceGap } from '$lib/managers/VirtualScrollManager/VirtualScrollManager.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { GroupInsertionCache } from '$lib/managers/timeline-manager/group-insertion-cache.svelte';
@@ -34,6 +34,7 @@ import { WebsocketSupport } from '$lib/managers/timeline-manager/internal/websoc
 import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
 import { updateStackedAssetInTimeline } from '$lib/utils/actions';
 import { CancellableTask } from '$lib/utils/cancellable-task';
+import type { PeriodGrid } from '$lib/utils/period-grid';
 import {
   getOrderingDate,
   isAssetResponseDto,
@@ -85,7 +86,7 @@ export class TimelineManager extends VirtualScrollManager {
         return 0;
       }
 
-      return timelineBucketsHeight(this.timelineBuckets);
+      return this.periodGrid?.height ?? timelineBucketsHeight(this.timelineBuckets);
     }
 
     let height = 0;
@@ -117,6 +118,8 @@ export class TimelineManager extends VirtualScrollManager {
   isScrollingOnLoad = false;
   grouping: TimelineGrouping = $state(DEFAULT_TIMELINE_GROUPING);
   timelineBuckets: TimelineBucket[] = $state([]);
+  /** Local Omarchy layer: the Years and Months overviews' grid (utils/period-grid), for its gaps and its rows' names */
+  periodGrid: PeriodGrid | undefined = $state();
   months: TimelineMonth[] = $state([]);
   albumAssets: Set<string> = new SvelteSet();
   scrubberMonths: ScrubberMonth[] = $state([]);
@@ -374,10 +377,20 @@ export class TimelineManager extends VirtualScrollManager {
 
     this.#coverRequested.clear();
     this.timelineBuckets = mergedTimebuckets.map((timeBucket) => new TimelineBucket(this, grouping, timeBucket));
-    layoutTimelineBuckets(this.timelineBuckets, this.viewportWidth);
+    this.#layoutBuckets();
     this.months = grouping === 'day' ? this.#createTimelineMonthsFromDayBuckets(mergedTimebuckets) : [];
     this.albumAssets.clear();
     this.updateViewportGeometry(false);
+  }
+
+  // Local Omarchy layer: the Years and Months overviews on the desktop's gap, in the timeline's order, a short archive
+  // fitted to the room under the top section (utils/period-grid)
+  #layoutBuckets() {
+    this.periodGrid = layoutTimelineBuckets(this.timelineBuckets, this.viewportWidth, {
+      gap: workspaceGap(),
+      newestFirst: this.#options.order !== AssetOrder.Asc,
+      viewportHeight: this.viewportHeight - this.topSectionHeight,
+    });
   }
 
   #createTimelineMonthsFromDayBuckets(timeBuckets: TimeBucketsResponseDto[]) {
@@ -445,6 +458,7 @@ export class TimelineManager extends VirtualScrollManager {
     this.grouping = options.grouping ?? DEFAULT_TIMELINE_GROUPING;
     this.months = [];
     this.timelineBuckets = [];
+    this.periodGrid = undefined;
     this.albumAssets.clear();
     const status = await this.initTask.execute(async (signal) => {
       this.#options = options;
@@ -472,6 +486,7 @@ export class TimelineManager extends VirtualScrollManager {
     this.isInitialized = false;
     this.months = [];
     this.timelineBuckets = [];
+    this.periodGrid = undefined;
 
     for (const unsubscribe of this.#unsubscribes) {
       unsubscribe();
@@ -504,7 +519,7 @@ export class TimelineManager extends VirtualScrollManager {
       return;
     }
     if (this.grouping !== 'day') {
-      layoutTimelineBuckets(this.timelineBuckets, this.viewportWidth);
+      this.#layoutBuckets();
       this.resyncScrollMapping();
       return;
     }
@@ -872,7 +887,7 @@ export class TimelineManager extends VirtualScrollManager {
 
   override refreshLayout() {
     if (!this.#isDetailedTimeline()) {
-      layoutTimelineBuckets(this.timelineBuckets, this.viewportWidth);
+      this.#layoutBuckets();
       this.updateViewportProximities();
       return;
     }

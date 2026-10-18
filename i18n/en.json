@@ -4125,6 +4125,8 @@
   "timeline_grouping_years": "Years",
   "timeline_grouping_years_short": "Y",
   "timeline_overview_card_semantics": "{period}, {countLabel}, {action}",
+  "timeline_overview_decade": "{decade}s",
+  "timeline_overview_no_photos": "no photos",
   "timeline_overview_photo_count": "{count, plural, one {# photo} other {# photos}}",
   "timeline_overview_show_all_photos": "show all photos from this point",
   "timeline_overview_show_days": "show days",

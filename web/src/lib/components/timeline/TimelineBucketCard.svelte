@@ -18,9 +18,22 @@
     loading?: boolean;
     disabled?: boolean;
     onActivate: (bucket: ActivatableTimelineBucket) => void;
+    /** Local Omarchy layer: in the Years and Months grid, how full the period is against the busiest one (0 to 1),
+     * drawn as a bar under its count */
+    density?: number;
+    /** Local Omarchy layer: a month named alone ("Oct"), where its row in the Months grid names the year */
+    short?: boolean;
   }
 
-  let { bucket, locale = 'en-US', loading = false, disabled = false, onActivate }: Props = $props();
+  let {
+    bucket,
+    locale = 'en-US',
+    loading = false,
+    disabled = false,
+    onActivate,
+    density,
+    short = false,
+  }: Props = $props();
 
   let loadedImageKey: string | undefined = $state();
   let failedImageKey: string | undefined = $state();
@@ -48,12 +61,14 @@
 
     const date = new Date(bucket.timeBucket);
     return {
-      month: new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' }).format(date),
-      year: new Intl.DateTimeFormat(locale, { year: 'numeric', timeZone: 'UTC' }).format(date),
+      month: new Intl.DateTimeFormat(locale, { month: short ? 'short' : 'long', timeZone: 'UTC' }).format(date),
+      year: short ? undefined : new Intl.DateTimeFormat(locale, { year: 'numeric', timeZone: 'UTC' }).format(date),
     };
   });
 
   let countLabel = $derived($t('timeline_overview_photo_count', { values: { count: bucket.count } }));
+  // Local Omarchy layer: a tile too narrow for "1,468 photos" says the number alone (the card's label says it all)
+  let countNumber = $derived(new Intl.NumberFormat(locale).format(bucket.count));
 
   let actionLabel = $derived.by(() => {
     if (bucket.grouping === 'year') {
@@ -123,6 +138,7 @@
   {disabled}
   data-state={renderState}
   data-testid="timeline-bucket-card"
+  data-short={short ? '' : undefined}
   onclick={activate}
 >
   <div class="absolute inset-0 overflow-hidden bg-gray-200 dark:bg-gray-800" data-testid="timeline-bucket-card-media">
@@ -175,7 +191,7 @@
         <span class="sr-only">{title}</span>
         <span aria-hidden="true"
           ><span class="ws-bucket-month">{titleParts.month}</span>
-          <span class="ws-bucket-year">{titleParts.year}</span></span
+          {#if titleParts.year}<span class="ws-bucket-year">{titleParts.year}</span>{/if}</span
         >
       {:else}
         <span class="ws-bucket-year">{title}</span>
@@ -185,7 +201,19 @@
       class="mt-2 inline-flex max-w-full rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-gray-900 shadow-sm"
       data-testid="timeline-bucket-card-count"
     >
-      {countLabel}
+      {#if density === undefined}
+        {countLabel}
+      {:else}
+        <span class="ws-bucket-count-long">{countLabel}</span><span class="ws-bucket-count-short" aria-hidden="true"
+          >{countNumber}</span
+        >
+      {/if}
     </div>
+    {#if density !== undefined}
+      <!-- Local Omarchy layer: the period's weight against the busiest one, a bar the count already says in words -->
+      <div class="ws-bucket-density" aria-hidden="true" data-testid="timeline-bucket-card-density">
+        <span style:width={`${Math.round(density * 1000) / 10}%`}></span>
+      </div>
+    {/if}
   </div>
 </button>

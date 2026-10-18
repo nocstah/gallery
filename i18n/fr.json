@@ -4105,6 +4105,8 @@
   "timeline_grouping_years": "Années",
   "timeline_grouping_years_short": "A",
   "timeline_overview_card_semantics": "{period}, {countLabel}, {action}",
+  "timeline_overview_decade": "années {decade}",
+  "timeline_overview_no_photos": "aucune photo",
   "timeline_overview_photo_count": "{count, plural, one {# photo} other {# photos}}",
   "timeline_overview_show_all_photos": "afficher toutes les photos à partir d'ici",
   "timeline_overview_show_days": "afficher les jours",

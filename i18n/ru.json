@@ -4107,6 +4107,8 @@
   "timeline_grouping_years": "Годы",
   "timeline_grouping_years_short": "Г",
   "timeline_overview_card_semantics": "{period}, {countLabel}, {action}",
+  "timeline_overview_decade": "{decade}-е",
+  "timeline_overview_no_photos": "нет фото",
   "timeline_overview_photo_count": "{count, plural, one {# фото} few {# фото} many {# фото} other {# фото}}",
   "timeline_overview_show_all_photos": "показать все фото с этого момента",
   "timeline_overview_show_days": "показать дни",

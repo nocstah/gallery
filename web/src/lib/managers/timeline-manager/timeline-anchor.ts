@@ -42,12 +42,15 @@ export function getTimelineTemporalAnchorTarget(
     return { top: month.top, height: month.height };
   }
 
+  // Local Omarchy layer: in the Years and Months grid a period's tile shares a row (its decade or year) with others,
+  // which may break into lines on a narrow screen; a jump goes to the top of the row, its name included, so a year
+  // opened into its months shows January's line first
   const bucket = timelineManager.timelineBuckets.find((bucket) => matchesAnchorDate(bucket.date, anchor));
   if (!bucket) {
     return;
   }
 
-  return { top: bucket.top, height: bucket.height };
+  return { top: bucket.rowTop, height: bucket.rowHeight };
 }
 
 /**
@@ -84,12 +87,25 @@ export function getTimelineTopVisibleAnchor(timelineManager: TimelineManager): T
   if (!buckets || buckets.length === 0) {
     return undefined;
   }
-  const bucket =
-    buckets.find((bucket) => scrollTop >= bucket.top && scrollTop < bucket.top + bucket.height) ??
-    (scrollTop < buckets[0].top ? undefined : buckets[0]);
-  if (!bucket) {
+  // Local Omarchy layer: the topmost period still in view (past the last one, the last). In the Years and Months grid
+  // several share a row, a row may break into lines and gaps and rows' names lie between them, so neither the first in
+  // the timeline's order nor one under the very top edge is always the one at the top
+  let bucket: TimelineManager['timelineBuckets'][number] | undefined;
+  let lowest = buckets[0];
+  let firstTop = Infinity;
+  for (const candidate of buckets) {
+    firstTop = Math.min(firstTop, candidate.top);
+    if (candidate.top > lowest.top) {
+      lowest = candidate;
+    }
+    if (candidate.top + candidate.height > scrollTop && (!bucket || candidate.top < bucket.top)) {
+      bucket = candidate;
+    }
+  }
+  if (scrollTop < firstTop) {
     return undefined;
   }
+  bucket ??= lowest;
 
   return bucket.date.month === undefined
     ? { year: bucket.date.year }
