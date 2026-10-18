@@ -1,7 +1,8 @@
 <script lang="ts">
   // Local Omarchy layer: an album's name in the one bar, in the bar's heading face (the album page lives in the shell
   // since 2026-10-15). An editor renames it in place: a click makes it a field, Enter or leaving it saves, Escape keeps
-  // the old name.
+  // the old name. The name is the page's h1 (DESIGN.md, One heading), whichever of the three it is: the heading holds
+  // it and draws nothing of its own.
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { handleError } from '$lib/utils/handle-error';
   import { updateAlbumInfo, type AlbumResponseDto } from '@immich/sdk';
@@ -57,34 +58,31 @@
   };
 </script>
 
-{#if editing}
-  <input
-    bind:this={field}
-    bind:value={draft}
-    class="ws-album-bar-title ws-album-bar-field"
-    aria-label={$t('rename')}
-    size={Math.max(4, draft.length)}
-    onblur={save}
-    onkeydown={onKeydown}
-  />
-{:else if isEditor}
-  <button type="button" class="ws-album-bar-title ws-album-bar-rename" title={$t('rename')} onclick={edit}>
-    {album.albumName}
-  </button>
-{:else}
-  <div class="ws-album-bar-title">{album.albumName}</div>
-{/if}
+<h1 class="ws-album-bar-heading">
+  {#if editing}
+    <input
+      bind:this={field}
+      bind:value={draft}
+      class="ws-album-bar-title ws-album-bar-field"
+      aria-label={$t('rename')}
+      size={Math.max(4, draft.length)}
+      onblur={save}
+      onkeydown={onKeydown}
+    />
+  {:else if isEditor}
+    <button type="button" class="ws-album-bar-title ws-album-bar-rename" title={$t('rename')} onclick={edit}>
+      {album.albumName}
+    </button>
+  {:else}
+    <span class="ws-album-bar-title">{album.albumName}</span>
+  {/if}
+</h1>
 
 <style>
-  /* the bar's heading role, as UserPageLayout sets a page's title */
-  /* the name gives way last: the dates ellipsize first, then the name, never below a few letters */
+  /* the bar's heading role, as UserPageLayout sets a page's title; the h1 around the name takes the same face, so the
+     name's few letters (ch) measure alike in both */
+  .ws-album-bar-heading,
   .ws-album-bar-title {
-    flex: 0 1 auto;
-    min-width: 5ch;
-    max-width: 32ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     font-family: var(--font-display);
     font-size: var(--ws-text-bar);
     font-weight: 750;
@@ -93,6 +91,22 @@
     letter-spacing: -0.01em;
     word-spacing: 0.06em;
     color: var(--immich-ui-dark);
+  }
+  /* the name gives way last: the dates ellipsize first, then the name, never below a few letters. The h1 is the title
+     row's item, the name its one box inside it, on the name's baseline (UserPageLayout's fitting reads the name in it) */
+  .ws-album-bar-heading {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: baseline;
+    min-width: 5ch;
+  }
+  .ws-album-bar-title {
+    flex: 0 1 auto;
+    min-width: 5ch;
+    max-width: 32ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* no negative margins: the bar's fitting reads them as the name overflowing its room */
   .ws-album-bar-rename {

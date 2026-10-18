@@ -3440,6 +3440,7 @@
   "search_people": "搜尋人物",
   "search_places": "搜尋地點",
   "search_rating": "按評分搜尋...",
+  "search_results_for": "「{query}」的結果",
   "search_settings": "搜尋設定",
   "search_similar_to": "相似於",
   "search_sort_newest": "最新優先",

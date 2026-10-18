@@ -105,9 +105,10 @@
 {:else}
   <ControlAppBar backIcon={mdiArrowLeft} onClose={() => goto(Route.sharing())}>
     {#snippet leading()}
-      <p class="whitespace-nowrap text-immich-fg dark:text-immich-dark-fg">
+      <!-- Local Omarchy layer: the page's name is its h1 (DESIGN.md, One heading), in the words' own weight as before -->
+      <h1 class="font-normal whitespace-nowrap text-immich-fg dark:text-immich-dark-fg">
         {$t('partner_list_user_photos', { values: { user: data.partner.name } })}
-      </p>
+      </h1>
     {/snippet}
   </ControlAppBar>
 {/if}

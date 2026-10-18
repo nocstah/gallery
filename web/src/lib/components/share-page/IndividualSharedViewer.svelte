@@ -88,6 +88,9 @@
     bind:clientHeight={viewport.height}
     bind:clientWidth={viewport.width}
   >
+    <!-- Local Omarchy layer: the page's h1 (DESIGN.md, One heading), unseen, since the bar shows only the mark: the
+         link's own words, else that it is a public share, as its tab says -->
+    <h1 class="sr-only" data-testid="shared-link-heading">{sharedLink.description || $t('public_share')}</h1>
     <GalleryViewer
       {assets}
       assetInteraction={assetMultiSelectManager}

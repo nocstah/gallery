@@ -42,6 +42,11 @@
      * leaves the name to it, and carries it only on a phone, where the poster gives way (styles/omarchy-world.css)
      */
     titleInBody?: boolean;
+    /**
+     * Local Omarchy layer: the page heads its body with a name of its own, its h1 (a Space's album: the album's name,
+     * where the bar names the Space it is in), so the bar's title is text
+     */
+    headingInBody?: boolean;
     description?: string | undefined;
     scrollbar?: boolean;
     use?: ActionArray;
@@ -58,6 +63,7 @@
     barFitsNavbar = false,
     title = undefined,
     titleInBody = false,
+    headingInBody = false,
     description = undefined,
     scrollbar = true,
     use = [],
@@ -93,9 +99,13 @@
   const PAGE_TIGHTEST = PAGE_FIT_FOLD;
   let pageTitleBox = $state<HTMLElement>();
   const crowded = (box: HTMLElement | undefined) => !!box && box.scrollWidth > box.clientWidth + 1;
-  // a name cut short inside its own room (the title shrinks rather than overflow) is crowding too
+  // a name cut short inside its own room (the title shrinks rather than overflow) is crowding too; a name that comes
+  // through `leading` sits in its own h1 (AlbumBarTitle, PersonBarTitle), which is read inside
   const squeezed = (box: HTMLElement | undefined) =>
-    !!box && [...box.children].some((child) => child.scrollWidth > child.clientWidth + 1);
+    !!box &&
+    [...box.children]
+      .flatMap((child) => (child.localName === 'h1' ? [child, ...child.children] : [child]))
+      .some((child) => child.scrollWidth > child.clientWidth + 1);
   let pageFit = $state(0);
   let pageFitting = false;
   // how many controls the page's own buttons show, counted while they stand in the bar, and the room they take there
@@ -338,9 +348,10 @@
       {@render leading?.()}
       {#if titleInBar}
         <!-- Local Omarchy layer: the bar's title is the page's heading, its h1 (the look is the class's alone); a page
-             that heads its body with its name as a poster keeps the h1 there, and the bar carries the name as text -->
+             that heads its body with its name as a poster keeps the h1 there, and the bar carries the name as text, as
+             it carries the Space a Space's album is in -->
         <svelte:element
-          this={titleInBody ? 'div' : 'h1'}
+          this={titleInBody || headingInBody ? 'div' : 'h1'}
           class="ws-page-title min-w-0 truncate"
           tabindex="-1"
           id={headerId}

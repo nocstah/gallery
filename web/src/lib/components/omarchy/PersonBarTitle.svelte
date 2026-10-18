@@ -164,21 +164,31 @@
       {/if}
     </div>
   {/if}
-{:else if editable}
-  <button
-    type="button"
-    class="ws-person-bar-title ws-person-bar-rename"
-    class:ws-person-bar-unnamed={!person.name}
-    class:ws-person-bar-short={shortName}
-    title={$t('edit_name')}
-    onclick={edit}
-  >
-    {person.name || $t('add_a_name')}
-  </button>
 {:else}
-  <div class="ws-person-bar-title" class:ws-person-bar-unnamed={!person.name} class:ws-person-bar-short={shortName}>
-    {person.name || $t('unknown')}
-  </div>
+  <!-- the name is the page's h1 (DESIGN.md, One heading), the face beside it; while it is a field (a form, which a
+       heading cannot hold) the page goes without one -->
+  <h1 class="ws-person-bar-heading" class:ws-person-bar-short={shortName}>
+    {#if editable}
+      <button
+        type="button"
+        class="ws-person-bar-title ws-person-bar-rename"
+        class:ws-person-bar-unnamed={!person.name}
+        class:ws-person-bar-short={shortName}
+        title={$t('edit_name')}
+        onclick={edit}
+      >
+        {person.name || $t('add_a_name')}
+      </button>
+    {:else}
+      <span
+        class="ws-person-bar-title"
+        class:ws-person-bar-unnamed={!person.name}
+        class:ws-person-bar-short={shortName}
+      >
+        {person.name || $t('unknown')}
+      </span>
+    {/if}
+  </h1>
 {/if}
 
 <style>
@@ -193,16 +203,11 @@
       display: none;
     }
   }
-  /* the bar's heading role, as UserPageLayout sets a page's title and AlbumBarTitle an album's name; the description
-     ellipsizes first, then the name, never below a few letters */
+  /* the bar's heading role, as UserPageLayout sets a page's title and AlbumBarTitle an album's name; the h1 around the
+     name takes the same face, so the name's few letters (ch) measure alike in both */
+  .ws-person-bar-heading,
   .ws-person-bar-title,
   .ws-person-bar-form :global(.ws-person-bar-title) {
-    flex: 0 1 auto;
-    min-width: 5ch;
-    max-width: 32ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     font-family: var(--font-display);
     font-size: var(--ws-text-bar);
     font-weight: 750;
@@ -211,6 +216,23 @@
     letter-spacing: -0.01em;
     word-spacing: 0.06em;
     color: var(--immich-ui-dark);
+  }
+  /* the description ellipsizes first, then the name, never below a few letters. The h1 is the title row's item, the
+     name its one box inside it, on the name's baseline (UserPageLayout's fitting reads the name in it) */
+  .ws-person-bar-heading {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: baseline;
+    min-width: 5ch;
+  }
+  .ws-person-bar-title,
+  .ws-person-bar-form :global(.ws-person-bar-title) {
+    flex: 0 1 auto;
+    min-width: 5ch;
+    max-width: 32ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .ws-person-bar-short {
     flex-shrink: 0;

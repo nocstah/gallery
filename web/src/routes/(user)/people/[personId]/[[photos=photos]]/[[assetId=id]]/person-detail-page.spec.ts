@@ -344,6 +344,16 @@ describe('Person detail page', () => {
     });
   });
 
+  // Local Omarchy layer: the person's name, which comes through the bar's leading, is the page's one h1; their face
+  // stands beside it, outside the heading
+  it("names the person as the page's one h1", () => {
+    renderPage({ person: makePerson({ name: 'Alice' }) });
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading).toHaveAccessibleName('Alice');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
   it('puts the photo and face counts in the bar, worded as photos', () => {
     renderPage({
       person: makePerson({ name: 'Alice' }),

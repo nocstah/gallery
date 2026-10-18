@@ -612,8 +612,10 @@
 {/snippet}
 
 <!-- Header shows the space (context/breadcrumb); the album name lives in the editable AlbumTitle in the
-     timeline below, mirroring the regular album page (which has no page-header title). -->
-<UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} title={space.name}>
+     timeline below, mirroring the regular album page (which has no page-header title).
+     Local Omarchy layer: the album's name is the page's h1 (DESIGN.md, One heading), so the Space's in the bar is text
+     (headingInBody) -->
+<UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} title={space.name} headingInBody>
   {#snippet leading()}
     <IconButton
       variant="ghost"
@@ -764,12 +766,16 @@
                  album page and the server's Permission.AlbumUpdate; a Space role alone does not grant it. Unlike that
                  page, the header + period control already sit above, so it needs almost no top padding. -->
             <section class="pt-2">
-              <AlbumTitle
-                id={album.id}
-                albumName={album.albumName}
-                isEditor={isAlbumEditor}
-                onUpdate={(albumName) => (album = { ...album, albumName })}
-              />
+              <!-- Local Omarchy layer: the page's h1, as a role: the editable name is a field in a box of its own, which
+                   an h1 element may not hold -->
+              <div role="heading" aria-level={1} data-testid="space-album-heading">
+                <AlbumTitle
+                  id={album.id}
+                  albumName={album.albumName}
+                  isEditor={isAlbumEditor}
+                  onUpdate={(albumName) => (album = { ...album, albumName })}
+                />
+              </div>
               {#if album.assetCount > 0}
                 <AlbumSummary {album} />
               {/if}

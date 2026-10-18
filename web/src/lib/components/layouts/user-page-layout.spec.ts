@@ -52,6 +52,16 @@ describe('UserPageLayout header', () => {
     expect(screen.getAllByRole('heading')).toHaveLength(1);
   });
 
+  // Local Omarchy layer: a page that heads its body with a name of its own (a Space's album) keeps the bar's title,
+  // the Space it is in, as text, so the album's name is the page's one h1
+  it("keeps the bar's title as text where the page's heading is in its body", () => {
+    render(UserPageLayout, { props: { title: 'Library', headingInBody: true } });
+
+    expect(screen.getByTestId('page-header')).toHaveTextContent('Library');
+    expect(screen.getByTestId('page-header').localName).toBe('div');
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
+  });
+
   it('renders a non-collapsing description trailing action beside the description', () => {
     render(UserPageLayoutDescriptionTrailingTestWrapper);
 

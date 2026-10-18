@@ -3479,6 +3479,7 @@
   "search_people": "Cerca persone",
   "search_places": "Cerca luoghi",
   "search_rating": "Cerca per valutazione...",
+  "search_results_for": "Risultati per «{query}»",
   "search_settings": "Cerca Impostazioni",
   "search_similar_to": "Simile a",
   "search_sort_newest": "Prima i più recenti",

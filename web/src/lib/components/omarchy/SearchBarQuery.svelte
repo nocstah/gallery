@@ -4,7 +4,7 @@
   // Ctrl+/ steps through the modes as it does in the palette, whose mode control sits at the field's end. The count
   // follows in data type while the bar has room for it (`roomy`; the page shows it under the bar otherwise), and what
   // acts on the count right after it (the page's Add all). On a phone the field keeps the bar: the back arrow goes, and
-  // the mode shows as its icon.
+  // the mode shows as its icon. The page's h1 is here too, unseen: what the results are for.
   import SearchModeControl from '$lib/components/global-search/search-mode-control.svelte';
   import { isTextSearchMode, textSearchModes, type TextSearchMode } from '$lib/utils/search-mode-terms';
   import { Icon } from '@immich/ui';
@@ -102,6 +102,11 @@
 </script>
 
 <div class="ws-search-query" data-compact={compact ? '' : undefined} bind:clientWidth={width}>
+  <!-- the page's h1 (DESIGN.md, One heading): the query is its title, but a field, which a heading cannot be, so the
+       heading says it in words for a screen reader and draws nothing -->
+  <h1 class="sr-only" data-testid="search-heading">
+    {committed ? $t('search_results_for', { values: { query: committed } }) : $t('search')}
+  </h1>
   {#if onBack && !narrow}
     <button type="button" class="ws-bar-icon" aria-label={$t('back')} title={$t('back')} onclick={onBack}>
       <Icon icon={mdiArrowLeft} size="20" />

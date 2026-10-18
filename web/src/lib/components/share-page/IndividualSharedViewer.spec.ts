@@ -129,6 +129,18 @@ describe('IndividualSharedViewer GalleryViewer grouping', () => {
     expect(screen.getByTestId('gallery-viewer')).toHaveAttribute('data-enable-grouping', 'true');
   });
 
+  // Local Omarchy layer: the page has one h1 for a screen reader (its bar shows only the mark): the link's own words,
+  // else that it is a public share
+  it("heads the page with the link's words, else that it is a public share", () => {
+    const assets = [assetFactory.build({ id: 'shared-1' }), assetFactory.build({ id: 'shared-2' })];
+    const { unmount } = renderViewer({ assets, description: 'From the party' });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('From the party');
+    unmount();
+
+    renderViewer({ assets, description: null });
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('public_share');
+  });
+
   it('keeps the existing single-asset shared-link viewer path out of GalleryViewer grouping', async () => {
     renderViewer({ assets: [assetFactory.build({ id: 'single-asset' })], allowUpload: false });
 

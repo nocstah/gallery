@@ -3498,6 +3498,7 @@
   "search_people": "Search people",
   "search_places": "Search places",
   "search_rating": "Search by rating...",
+  "search_results_for": "Results for “{query}”",
   "search_settings": "Search settings",
   "search_similar_to": "Similar to",
   "search_sort_newest": "Newest first",

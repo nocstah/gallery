@@ -3480,6 +3480,7 @@
   "search_people": "Rechercher une personne",
   "search_places": "Rechercher un lieu",
   "search_rating": "Recherche par évaluation...",
+  "search_results_for": "Résultats pour « {query} »",
   "search_settings": "Rechercher dans les paramètres",
   "search_similar_to": "Similaire à",
   "search_sort_newest": "Plus récents d'abord",

@@ -511,6 +511,21 @@ describe('Search page in the shell', () => {
     });
   });
 
+  // Local Omarchy layer: the page's one h1 says what the results are for, unseen (the query in the bar is a field,
+  // which a heading cannot be); a bare search is headed Search
+  it('heads the page with what the results are for', () => {
+    mockPage.url = searchUrl({ query: 'beach', city: 'Berlin' });
+    const { unmount } = renderPage();
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Results for “beach”');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    unmount();
+
+    mockPage.url = new URL('https://gallery.test/search');
+    renderPage();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveAccessibleName('Search');
+  });
+
   it('puts the text in the field and every other term in a chip', async () => {
     mockPage.url = searchUrl({ query: 'beach', city: 'Berlin' });
 

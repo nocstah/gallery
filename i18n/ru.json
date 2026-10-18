@@ -3482,6 +3482,7 @@
   "search_people": "Поиск людей",
   "search_places": "Поиск мест",
   "search_rating": "Поиск по рейтингу...",
+  "search_results_for": "Результаты по запросу «{query}»",
   "search_settings": "Поиск настроек",
   "search_similar_to": "Похожие на",
   "search_sort_newest": "Сначала новые",
