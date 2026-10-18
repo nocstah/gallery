@@ -208,11 +208,13 @@ const USER_PAGES: readonly NavigationItem[] = [
     adminOnly: false,
     featureFlag: 'map',
   },
+  // Local Omarchy layer: the page is Shared, by the sidebar's name and its own title (Ctrl+K said "Sharing"), and its
+  // description says what it is now, a feed
   {
     id: 'nav:userPages:sharing',
     category: 'userPages',
-    labelKey: 'sharing',
-    descriptionKey: 'sharing_page_description',
+    labelKey: 'shared',
+    descriptionKey: 'cmdk_nav_shared_description',
     icon: mdiShareVariantOutline,
     route: '/sharing',
     adminOnly: false,

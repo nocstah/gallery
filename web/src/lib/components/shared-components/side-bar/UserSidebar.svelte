@@ -70,16 +70,12 @@
   };
 </script>
 
+<!-- Local Omarchy layer: the rows in four groups, each headed as Library is: Browse (the views to wander in), Pinned and
+     Library (what the library holds), Manage (the owner's tools, the owner's only) and Hidden and deleted (where photos
+     go out of sight) at the end. One "Library" had headed fifteen rows of the library, the owner's tools and the bins
+     alike, and the first six had none -->
 <Sidebar ariaLabel={$t('primary')}>
-  <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
-  {#if ownerTools}
-    <SidebarNavItem
-      title={$t('command_title')}
-      href="/command"
-      icon={mdiViewDashboardOutline}
-      activeIcon={mdiViewDashboard}
-    />
-  {/if}
+  <SidebarNavGroup title={$t('sidebar_browse')} first />
 
   <SidebarNavItem
     title={$t('photos')}
@@ -192,6 +188,16 @@
   {/if}
 
   {#if ownerTools}
+    <SidebarNavGroup title={$t('sidebar_manage')} />
+
+    <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
+    <SidebarNavItem
+      title={$t('command_title')}
+      href="/command"
+      icon={mdiViewDashboardOutline}
+      activeIcon={mdiViewDashboard}
+    />
+
     <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
     <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
 
@@ -202,6 +208,8 @@
 
     <SidebarNavItem title={$t('import')} href={Route.import()} icon={mdiDatabaseImportOutline} />
   {/if}
+
+  <SidebarNavGroup title={$t('sidebar_hidden_deleted')} />
 
   <SidebarNavItem
     title={$t('archive')}

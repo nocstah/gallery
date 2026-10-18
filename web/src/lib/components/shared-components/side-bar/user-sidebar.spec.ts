@@ -168,6 +168,61 @@ describe('UserSidebar', () => {
     });
   });
 
+  // Local Omarchy layer: the rows stand in groups under headings (Browse, Library, Manage, Hidden and deleted), where one
+  // Library had headed the library, the owner's tools and the bins alike, and the first rows had none
+  describe('groups', () => {
+    const headings = new Set([
+      'sidebar_browse',
+      'sidebar_pinned',
+      'library',
+      'sidebar_manage',
+      'sidebar_hidden_deleted',
+    ]);
+    const outline = () =>
+      [...document.body.querySelectorAll('a, div')]
+        .filter((element) =>
+          element.tagName === 'A' ? true : element.children.length === 0 && headings.has(element.textContent ?? ''),
+        )
+        .map((element) => (element.tagName === 'A' ? element.getAttribute('href') : `# ${element.textContent}`));
+    const groupOf = (rows: (string | null)[], href: string) =>
+      rows.slice(0, rows.indexOf(href)).findLast((row) => row?.startsWith('# '));
+
+    it('heads the views, the library, the owner tools and the bins, in that order', () => {
+      render(UserSidebar);
+
+      const rows = outline();
+      expect(rows.filter((row) => row?.startsWith('# '))).toEqual([
+        '# sidebar_browse',
+        '# library',
+        '# sidebar_manage',
+        '# sidebar_hidden_deleted',
+      ]);
+      expect(rows[0]).toBe('# sidebar_browse');
+      expect(groupOf(rows, '/photos')).toBe('# sidebar_browse');
+      expect(groupOf(rows, '/room')).toBe('# sidebar_browse');
+      expect(groupOf(rows, '/favorites')).toBe('# library');
+      expect(groupOf(rows, '/albums')).toBe('# library');
+      expect(groupOf(rows, '/sharing')).toBe('# library');
+      for (const href of ['/command', '/inbox', '/chat', '/utilities', '/import']) {
+        expect(groupOf(rows, href), href).toBe('# sidebar_manage');
+      }
+      expect(groupOf(rows, '/archive')).toBe('# sidebar_hidden_deleted');
+      expect(groupOf(rows, '/locked')).toBe('# sidebar_hidden_deleted');
+    });
+
+    it("gives a family account no Manage group, as it has none of the owner's tools", () => {
+      mocks.authManager.user.isAdmin = false;
+
+      render(UserSidebar);
+
+      expect(outline().filter((row) => row?.startsWith('# '))).toEqual([
+        '# sidebar_browse',
+        '# library',
+        '# sidebar_hidden_deleted',
+      ]);
+    });
+  });
+
   it('shows a memories link under Library when memories are enabled and the sidebar is on', () => {
     mocks.authManager.preferences.memories.enabled = true;
     mocks.authManager.preferences.memories.sidebarWeb = true;

@@ -40,9 +40,27 @@ describe('sidebar-nav-group', () => {
     render(SidebarNavGroup, { title: 'Library' });
 
     expect(screen.getByTestId('sidebar-group-divider')).toBeInTheDocument();
-    const reserved = screen.getByText('Library').closest('[aria-hidden="true"]');
+    const reserved = screen
+      .getAllByText('Library')
+      .map((text) => text.closest('[aria-hidden="true"]'))
+      .find(Boolean);
     // Hidden from sight and from assistive tech, but still occupying its box.
     expect(reserved).toHaveClass('invisible');
+  });
+
+  // Local Omarchy layer: the group's title is a heading, so a screen reader moves by the sidebar's groups
+  it('names its group as a level 2 heading', () => {
+    render(SidebarNavGroup, { title: 'Library' });
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Library' })).toBeInTheDocument();
+  });
+
+  it('keeps the heading for a screen reader in the rail, where the words give way to a rule', () => {
+    mocks.sidebarModeStore.layout = 'rail';
+
+    render(SidebarNavGroup, { title: 'Library' });
+
+    expect(screen.getByRole('heading', { level: 2, name: 'Library' })).toHaveClass('sr-only');
   });
 
   it('restores the header while hover-expanded', () => {
