@@ -1713,6 +1713,8 @@
   "command_actions": "操作",
   "command_ask": "询问图库",
   "command_backup_none": "暂无",
+  "command_calm_photos": "照片",
+  "command_calm_work": "任务与导入",
   "command_curator_offline": "Curator 没有响应；它在本页的部分会在恢复后回来。",
   "command_db_backup": "数据库备份",
   "command_decided_today": "今天已处理",

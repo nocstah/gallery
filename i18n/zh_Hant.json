@@ -1698,6 +1698,8 @@
   "command_actions": "操作",
   "command_ask": "詢問圖庫",
   "command_backup_none": "暫無",
+  "command_calm_photos": "相片",
+  "command_calm_work": "工作與匯入",
   "command_curator_offline": "Curator 沒有回應；它在本頁的部分會在恢復後回來。",
   "command_db_backup": "資料庫備份",
   "command_decided_today": "今天已處理",

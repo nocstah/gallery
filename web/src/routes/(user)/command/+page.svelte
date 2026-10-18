@@ -3,8 +3,12 @@
   // (by kind, as the inbox lists it: utils/curator-inbox), what Curator is doing and will do tonight, the library's
   // health, the machine (GPU, local models, disk, backups), today's memory, and the actions used most. Read from
   // Curator (~/code/curator: /api/overview, /api/inbox, /api/jobs, /api/library-health) and Gallery (today's
-  // memories); refreshed while open. Counts are ink; what went wrong (failed runs, a backup in trouble) takes the
-  // danger tone, never the accent, which stays for focus and response.
+  // memories); refreshed while open. It opens on one thing to look at: how many wait in the inbox, with the way to
+  // review them beside it; the day's other numbers follow in one quiet line, a zero in muted data type. Counts are ink;
+  // the danger tone is only for real trouble, never the accent, which stays for focus and response: a job still
+  // failing or stuck (Curator's health says which; a week's failures of jobs that have run fine since are said
+  // calmly), a backup that failed or is old. An off-site copy not set up yet is a fact, not trouble. What is
+  // fine in the library reads as two short lists, its photos and the work, not one run-on line.
   import { goto } from '$app/navigation';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
@@ -95,8 +99,29 @@
   const gpuShare = $derived(overview?.gpu ? overview.gpu.used_mib / overview.gpu.total_mib : 0);
   const nextNight = $derived(overview ? DateTime.fromISO(overview.schedule.next_night) : undefined);
   const item = (key: string): HealthItem | undefined => health?.items.find((i) => i.key === key);
-  // Curator's runs that failed this week or are stuck (its health report says which, and links to them)
+  // Curator's runs that failed this week or are stuck (its health report says which, and links to them): trouble while
+  // a job is still failing or stuck; failures of jobs that have run fine since, a quiet line that still leads to them
   const jobsAlert = $derived(item('curator_jobs')?.attention ? item('curator_jobs') : undefined);
+  const jobsPast = $derived.by(() => {
+    const entry = item('curator_jobs');
+    return entry && !entry.attention && (entry.value ?? 0) > 0 ? entry : undefined;
+  });
+  // what is fine in the library, in two short lists: the photos, and the work (jobs, last night, the archive's arrivals)
+  const WORK = new Set(['gallery_jobs', 'night', 'archive', 'curator_jobs']);
+  const calmGroups = $derived(
+    [
+      {
+        name: 'photos',
+        label: $t('command_calm_photos'),
+        items: calm.filter((entry) => shown(entry) && !WORK.has(entry.key)),
+      },
+      {
+        name: 'work',
+        label: $t('command_calm_work'),
+        items: calm.filter((entry) => shown(entry) && WORK.has(entry.key)),
+      },
+    ].filter((group) => group.items.length > 0),
+  );
   const number = (value: number) => value.toLocaleString();
   // a backup's last good run, short ("13 Oct, 07:37"); three days without one is worth a look (curator-health says so)
   const when = (iso: string | null) =>
@@ -155,27 +180,40 @@
       <p class="command-note">{$t('command_curator_offline')}</p>
     {/if}
 
-    <!-- the four numbers -->
-    <section class="command-numbers">
-      <a class="command-number" href="/inbox">
-        <span class="value">{overview ? number(overview.pending) : '–'}</span>
-        <span class="label">{$t('command_waiting')}</span>
-      </a>
-      <div class="command-number">
+    <!-- the one thing to look at first: what waits in the inbox, and the way to review it -->
+    {#if !overview || overview.pending > 0}
+      <section class="command-lead">
+        <a class="command-lead-count" href="/inbox">
+          <span class="value">{overview ? number(overview.pending) : '–'}</span>
+          <span class="label">{$t('command_waiting')}</span>
+        </a>
+        <button type="button" class="ws-btn" onclick={() => goto('/inbox')}>
+          <Icon icon={mdiInboxOutline} size="16" />{$t('command_review')}
+        </button>
+      </section>
+    {/if}
+
+    <!-- the day's other numbers in one quiet line: a zero in muted data type, the rest in ink -->
+    <p class="command-day">
+      {#if overview && overview.pending === 0}
+        <a class="command-fact" href="/inbox" data-zero>
+          <span class="value">0</span>
+          {$t('command_waiting')}
+        </a>
+      {/if}
+      <span class="command-fact" data-zero={overview?.decided_today === 0 || undefined}>
         <span class="value">{overview ? number(overview.decided_today) : '–'}</span>
-        <span class="label">{$t('command_decided_today')}</span>
-      </div>
-      <a class="command-number" href="/inbox?tab=jobs">
+        {$t('command_decided_today')}
+      </span>
+      <a class="command-fact" href="/inbox?tab=jobs" data-zero={active.length === 0 || undefined}>
         <span class="value">{active.length}</span>
-        <span class="label">{$t('command_jobs_active')}</span>
+        {$t('command_jobs_active')}
       </a>
-      <div class="command-number">
+      <span class="command-fact">
         <span class="value">{nextNight ? nextNight.toFormat('HH:mm') : '–'}</span>
-        <span class="label">
-          {$t('command_next_night', { values: { count: overview?.schedule.jobs.length ?? 0 } })}
-        </span>
-      </div>
-    </section>
+        {$t('command_next_night', { values: { count: overview?.schedule.jobs.length ?? 0 } })}
+      </span>
+    </p>
 
     <div class="command-grid">
       <!-- the inbox's biggest batches -->
@@ -219,11 +257,14 @@
           {/each}
         </ul>
         {#if jobsAlert}
-          <!-- Curator's words ("9 failed in the last 7 days."), leading to the failures in the Jobs tab -->
+          <!-- Curator's words ("1 failed in the last 7 days; still failing: kiosk.sync."), leading to the failures -->
           <a class="command-alert" href={jobsAlert.link ?? '/inbox?tab=jobs#failed'}>
             <Icon icon={mdiAlertCircleOutline} size="16" />
             <span>{jobsAlert.detail}</span>
           </a>
+        {:else if jobsPast}
+          <!-- failures behind it ("9 failed in the last 7 days; all have run fine since."): said, calmly -->
+          <a class="command-past" href={jobsPast.link ?? '/inbox?tab=jobs#failed'}>{jobsPast.detail}</a>
         {/if}
         <button type="button" class="ws-btn-quiet command-run" onclick={runTonightNow}>
           <Icon icon={mdiPlayCircleOutline} size="16" />
@@ -250,22 +291,30 @@
             {/each}
           </ul>
         {/if}
-        {#if calm.some((entry) => shown(entry))}
-          <ul class="command-calm">
-            {#each calm.filter((entry) => shown(entry)) as entry (entry.key)}
-              <li>
-                <svelte:element
-                  this={entry.link ? 'a' : 'span'}
-                  href={entry.link ?? undefined}
-                  title={entry.detail}
-                  class="calm-item"
-                >
-                  <span class="calm-value">{entry.value === null ? '–' : number(entry.value)}</span>
-                  {entry.title}
-                </svelte:element>
-              </li>
+        {#if calmGroups.length > 0}
+          <div class="command-calm">
+            {#each calmGroups as group (group.name)}
+              <section class="calm-group" aria-labelledby="calm-{group.name}">
+                <h3 class="calm-title" id="calm-{group.name}">{group.label}</h3>
+                <ul>
+                  {#each group.items as entry (entry.key)}
+                    <li>
+                      <svelte:element
+                        this={entry.link ? 'a' : 'span'}
+                        href={entry.link ?? undefined}
+                        title={entry.detail}
+                        class="calm-item"
+                        data-zero={entry.value === 0 || undefined}
+                      >
+                        <span class="calm-value">{entry.value === null ? '–' : number(entry.value)}</span>
+                        <span>{entry.title}</span>
+                      </svelte:element>
+                    </li>
+                  {/each}
+                </ul>
+              </section>
             {/each}
-          </ul>
+          </div>
         {/if}
       </section>
 
@@ -292,7 +341,8 @@
           {/if}
           {#if item('backup')}
             <dt>{$t('command_db_backup')}</dt>
-            <dd>{item('backup')?.detail}</dd>
+            <!-- none, or none for a day and a half (Curator's health says when): real trouble -->
+            <dd class:attention={item('backup')?.attention}>{item('backup')?.detail}</dd>
           {/if}
           {#if overview?.backups}
             {@const { mybook, b2 } = overview.backups}
@@ -306,7 +356,8 @@
               {/if}
             </dd>
             <dt>{$t('command_offsite')}</dt>
-            <dd class:attention={!b2.configured || b2.ok === false}>
+            <!-- not set up yet is a fact, not trouble; a copy that failed is -->
+            <dd class:attention={b2.configured && b2.ok === false} class:quiet={!b2.configured}>
               {#if !b2.configured}
                 {$t('command_offsite_not_set_up')}
               {:else if !b2.last_ok && b2.ok === null}
@@ -340,10 +391,8 @@
       <!-- the actions used most -->
       <section class="command-panel">
         <h2>{$t('command_actions')}</h2>
+        <!-- Review the inbox leads the page, beside the inbox's count -->
         <div class="command-actions">
-          <button type="button" class="ws-btn" onclick={() => goto('/inbox')}>
-            <Icon icon={mdiInboxOutline} size="16" />{$t('command_review')}
-          </button>
           <button type="button" class="ws-btn-quiet" onclick={() => goto('/chat')}>
             <Icon icon={mdiChatOutline} size="16" />{$t('command_ask')}
           </button>
@@ -371,25 +420,21 @@
     color: var(--immich-ui-muted);
     font-size: var(--ws-text-meta);
   }
-  .command-numbers {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-    border-bottom: 1px solid var(--ws-hairline);
+  /* the one thing to look at first: the inbox's count as the page's one display numeral, its review beside it */
+  .command-lead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem calc(var(--ws-gap) * 2.4);
   }
-  .command-number {
+  .command-lead-count {
     display: grid;
     gap: 0.2rem;
-    padding: calc(var(--ws-gap) * 0.8) 0;
-    padding-inline-end: var(--ws-gap);
   }
-  .command-number + .command-number {
-    padding-inline-start: calc(var(--ws-gap) * 1.2);
-    border-inline-start: 1px solid var(--ws-hairline);
-  }
-  a.command-number:hover .value {
+  .command-lead-count:hover .value {
     color: var(--ws-accent);
   }
-  .command-number .value {
+  .command-lead-count .value {
     font-family: var(--font-display);
     font-size: var(--ws-text-display);
     font-weight: 800;
@@ -400,10 +445,41 @@
     font-variant-numeric: tabular-nums;
     transition: color 0.15s;
   }
-  .command-number .label {
+  .command-lead-count .label {
     font-family: var(--ws-font-data);
     font-size: var(--ws-text-data);
     color: var(--immich-ui-muted);
+  }
+  .command-lead .ws-btn {
+    margin-bottom: 0.15rem;
+  }
+  /* the day's other numbers, quiet, in data type: the value in ink, a zero muted like its words */
+  .command-day {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.75rem;
+    padding-bottom: calc(var(--ws-gap) * 0.8);
+    border-bottom: 1px solid var(--ws-hairline);
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    color: var(--immich-ui-muted);
+  }
+  .command-fact {
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: baseline;
+  }
+  .command-fact .value {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--immich-ui-dark);
+  }
+  .command-fact[data-zero] .value {
+    font-weight: 400;
+    color: var(--immich-ui-muted);
+  }
+  a.command-fact:hover {
+    color: var(--immich-ui-dark);
   }
   .command-grid {
     display: grid;
@@ -500,6 +576,19 @@
     text-decoration: underline;
     text-underline-offset: 0.25em;
   }
+  /* failures behind it: Curator's words in muted meta, still the way to them */
+  .command-past {
+    display: inline-block;
+    margin-top: 0.75rem;
+    font-size: var(--ws-text-meta);
+    color: var(--immich-ui-muted);
+  }
+  .command-past:hover {
+    color: var(--immich-ui-dark);
+    text-decoration: underline;
+    text-decoration-color: var(--ws-accent);
+    text-underline-offset: 0.25em;
+  }
   .command-run {
     display: inline-flex;
     gap: 0.4rem;
@@ -549,18 +638,31 @@
     line-height: 1.45;
     color: var(--immich-ui-muted);
   }
+  /* what is fine, in short lists side by side (the photos, the work), each row its number in data type and its words
+     in muted meta; a zero is muted too, so the numbers that are something stand out */
   .command-calm {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    gap: 1rem calc(var(--ws-gap) * 2.4);
     padding-top: 0.8rem;
+  }
+  .calm-title {
+    margin-bottom: 0.35rem;
     font-size: var(--ws-text-meta);
-    color: var(--immich-ui-muted);
+    font-weight: 600;
+    color: var(--immich-ui-dark);
+  }
+  .calm-group ul {
+    display: grid;
+    gap: 0.3rem;
   }
   .calm-item {
-    display: inline-flex;
-    gap: 0.4rem;
+    display: grid;
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    gap: 0.75rem;
     align-items: baseline;
+    font-size: var(--ws-text-meta);
+    color: var(--immich-ui-muted);
   }
   a.calm-item:hover {
     color: var(--immich-ui-dark);
@@ -569,7 +671,13 @@
     font-family: var(--ws-font-data);
     font-size: var(--ws-text-data);
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: end;
     color: var(--immich-ui-dark);
+  }
+  .calm-item[data-zero] .calm-value {
+    font-weight: 400;
+    color: var(--immich-ui-muted);
   }
   .command-facts {
     display: grid;
@@ -589,6 +697,9 @@
   .command-facts dd.attention {
     color: var(--ws-danger);
     font-weight: 600;
+  }
+  .command-facts dd.quiet {
+    color: var(--immich-ui-muted);
   }
   .command-memory {
     display: grid;

@@ -1709,6 +1709,8 @@
   "command_actions": "Acciones",
   "command_ask": "Preguntar a la biblioteca",
   "command_backup_none": "Aún ninguna",
+  "command_calm_photos": "Fotos",
+  "command_calm_work": "Tareas e importaciones",
   "command_curator_offline": "Curator no responde; su parte de esta página volverá cuando responda.",
   "command_db_backup": "Copia de la base de datos",
   "command_decided_today": "decididas hoy",

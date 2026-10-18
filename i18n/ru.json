@@ -1709,6 +1709,8 @@
   "command_actions": "Действия",
   "command_ask": "Спросить библиотеку",
   "command_backup_none": "Пока нет",
+  "command_calm_photos": "Фото",
+  "command_calm_work": "Задачи и импорт",
   "command_curator_offline": "Curator не отвечает; его часть страницы вернётся, когда он ответит.",
   "command_db_backup": "Резервная копия базы",
   "command_decided_today": "решено сегодня",

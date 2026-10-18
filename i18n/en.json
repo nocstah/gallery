@@ -1717,6 +1717,8 @@
   "command_actions": "Actions",
   "command_ask": "Ask the library",
   "command_backup_none": "None yet",
+  "command_calm_photos": "Photos",
+  "command_calm_work": "Jobs and imports",
   "command_curator_offline": "Curator isn't answering; its part of this page comes back when it does.",
   "command_db_backup": "Database backup",
   "command_decided_today": "decided today",

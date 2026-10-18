@@ -1709,6 +1709,8 @@
   "command_actions": "Acties",
   "command_ask": "De bibliotheek vragen",
   "command_backup_none": "Nog geen",
+  "command_calm_photos": "Foto's",
+  "command_calm_work": "Taken en imports",
   "command_curator_offline": "Curator antwoordt niet; zijn deel van deze pagina komt terug zodra hij dat doet.",
   "command_db_backup": "Databaseback-up",
   "command_decided_today": "vandaag beslist",
