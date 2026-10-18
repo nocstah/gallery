@@ -12,9 +12,12 @@ import {
   descriptionOf,
   exposureOf,
   fileFactsOf,
+  fitYearTiles,
   InspectorDayLoader,
   InspectorDetailsLoader,
   InspectorStories,
+  InspectorYearsLoader,
+  MONTHS_KEPT_MS,
   peopleOf,
   placeOf,
   takenOf,
@@ -164,6 +167,108 @@ describe('the day around the photo', () => {
     await loader.load('2026-10-13');
     await loader.load('2026-10-12');
     expect(fetchDay).toHaveBeenCalledTimes(5);
+  });
+});
+
+describe('the day across the years', () => {
+  const months = [
+    { timeBucket: '2026-10-01', count: 18 },
+    { timeBucket: '2019-10-01', count: 40 },
+    { timeBucket: '2013-10-01', count: 9 },
+  ];
+  const coverOf = (timeBucket: string) => ({
+    timeBucket,
+    representativeAssetId: `cover-${timeBucket}`,
+    representativeThumbhash: null,
+    representativeRatio: 1.5,
+  });
+
+  it('asks for the months once and a day once, cancels a day for the next, and keeps the days seen last', async () => {
+    let now = 0;
+    const signals: AbortSignal[] = [];
+    const fetchers = {
+      months: vi.fn(() => Promise.resolve(months)),
+      covers: vi.fn(
+        (days: string[], signal: AbortSignal) =>
+          new Promise<ReturnType<typeof coverOf>[]>((resolve, reject) => {
+            signals.push(signal);
+            const timer = setTimeout(
+              () => resolve(days.filter((day) => day.endsWith('-12')).map((day) => coverOf(day))),
+              5,
+            );
+            signal.addEventListener('abort', () => {
+              clearTimeout(timer);
+              reject(new DOMException('The operation was aborted.', 'AbortError'));
+            });
+          }),
+      ),
+    };
+    const loader = new InspectorYearsLoader(fetchers, () => now, 2);
+
+    const first = loader.load('2026-10-11');
+    const second = loader.load('2026-10-12');
+    await expect(first).resolves.toBeUndefined();
+    expect(signals[0]?.aborted).toBe(true);
+    const found = await second;
+    // the other years with photos in October, the newest first, each its photo nearest the 12th
+    expect(found?.years.map(({ year, assetId }) => [year, assetId])).toEqual([
+      [2019, 'cover-2019-10-12'],
+      [2013, 'cover-2013-10-12'],
+    ]);
+    expect(fetchers.covers.mock.lastCall?.[0]).toHaveLength(14);
+    expect(fetchers.months).toHaveBeenCalledTimes(1);
+
+    // back to a day seen lately: nothing asked
+    await loader.load('2026-10-12');
+    expect(fetchers.covers).toHaveBeenCalledTimes(2);
+    // the months are trusted a while, then asked again
+    now = MONTHS_KEPT_MS + 1;
+    await loader.load('2026-10-20');
+    expect(fetchers.months).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks nothing more for a day whose months hold no photos in other years', async () => {
+    const fetchers = { months: vi.fn(() => Promise.resolve([months[0]])), covers: vi.fn() };
+    const loader = new InspectorYearsLoader(fetchers);
+
+    await expect(loader.load('2026-10-11')).resolves.toEqual({ key: '2026-10-11', years: [] });
+    expect(fetchers.covers).not.toHaveBeenCalled();
+  });
+
+  it('asks for the months again after they failed', async () => {
+    const fetchers = {
+      months: vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(months),
+      covers: vi.fn(() => Promise.resolve([])),
+    };
+    const loader = new InspectorYearsLoader(fetchers);
+
+    await expect(loader.load('2026-10-11')).rejects.toThrow('offline');
+    await expect(loader.load('2026-10-11')).resolves.toMatchObject({ key: '2026-10-11' });
+    expect(fetchers.months).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe(fitYearTiles.name, () => {
+  // the Dell's room under a landscape photo's details: 1264px wide, 900px left, the desktop's gap, 7.5rem at least
+  const room = { width: 1264, height: 900, gap: 10, min: 120 };
+
+  it('takes the columns that give the largest tiles still filling the room', () => {
+    const fit = fitYearTiles(19, room);
+    expect(fit.columns).toBe(5);
+    expect(4 * fit.tileHeight + 3 * room.gap).toBeLessThanOrEqual(room.height);
+    expect(fit.tileHeight).toBe(Math.floor((900 - 30) / 4));
+  });
+
+  it('never lets a tile be wider than half the room, nor taller than 4:3', () => {
+    const fit = fitYearTiles(2, room);
+    expect(fit.columns).toBe(2);
+    expect(fit.tileHeight).toBe(Math.floor(((1264 - 10) / 2) * (4 / 3)));
+  });
+
+  it('keeps the smallest tiles where none fit, and leaves the rest to scrolling', () => {
+    const fit = fitYearTiles(30, { ...room, height: 200 });
+    expect(fit.columns).toBe(Math.floor((1264 + 10) / (120 + 10)));
+    expect(fit.tileHeight).toBe(Math.floor((1264 - (fit.columns - 1) * 10) / fit.columns));
   });
 });
 

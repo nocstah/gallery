@@ -4,12 +4,16 @@ import {
   getAllAlbums,
   getAssetInfo,
   getTimeBucket,
+  getTimeBucketCovers,
+  getTimeBuckets,
   TimeBucketSize,
   type AlbumResponseDto,
   type AssetResponseDto,
   type ExifResponseDto,
   type PersonResponseDto,
   type TimeBucketAssetResponseDto,
+  type TimeBucketCoverResponseDto,
+  type TimeBucketsResponseDto,
 } from '@immich/sdk';
 import { DateTime } from 'luxon';
 import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -18,6 +22,7 @@ import { getAssetMediaUrl } from '$lib/utils';
 import { getByteUnitString } from '$lib/utils/byte-units';
 import { curator, type Story } from '$lib/utils/curator';
 import { fromISODateTime, fromISODateTimeUTC, fromISODateTimeUTCToObject, getTimes } from '$lib/utils/timeline-util';
+import { weekAround, weekDaysAcrossYears, weekYears, type WeekYear } from '$lib/utils/week-across-years';
 
 // Local Omarchy layer: what the inspector window (Inspector.svelte) asks Gallery and Curator about the photo a main
 // window points at, and how it says it. A sweep over the grid reaches the inspector only as the photos the pointer
@@ -110,19 +115,17 @@ export type InspectorDay = { key: string; photos: TimelineAsset[] };
 
 type DayFetcher = (day: string, signal: AbortSignal) => Promise<TimeBucketAssetResponseDto>;
 
+/** The Photos page's own timeline: its visibility, a partner's and the Spaces' photos, a stack as its cover. */
+const photosScope = () => ({
+  userId: authManager.user.id,
+  visibility: AssetVisibility.Timeline,
+  withStacked: true,
+  withPartners: true,
+  withSharedSpaces: true,
+});
+
 const galleryDay: DayFetcher = (day, signal) =>
-  getTimeBucket(
-    {
-      timeBucket: day,
-      bucketSize: TimeBucketSize.Day,
-      userId: authManager.user.id,
-      visibility: AssetVisibility.Timeline,
-      withStacked: true,
-      withPartners: true,
-      withSharedSpaces: true,
-    },
-    { signal },
-  );
+  getTimeBucket({ ...photosScope(), timeBucket: day, bucketSize: TimeBucketSize.Day }, { signal });
 
 /** The day a photo was taken on its own clock ("2026-10-11"): its day in the timeline. */
 export const dayKeyOf = (asset: Pick<AssetResponseDto, 'localDateTime'> | undefined) =>
@@ -230,6 +233,153 @@ export class InspectorDayLoader {
     }
   }
 }
+
+/**
+ * A day with no other photo, across the years: the seven days around it in every other year whose months hold photos,
+ * one photo a year, the one of its day nearest the photo's (utils/week-across-years, as Explore's week). `years` are
+ * the other years, the newest first.
+ */
+export type InspectorYears = { key: string; years: WeekYear[] };
+
+/** how many days' years are kept */
+export const YEARS_KEPT = 40;
+/** how long the timeline's months are trusted (the inspector stays open for hours while photos come in) */
+export const MONTHS_KEPT_MS = 10 * 60_000;
+
+type YearsFetchers = {
+  months: (signal: AbortSignal) => Promise<TimeBucketsResponseDto[]>;
+  covers: (days: string[], signal: AbortSignal) => Promise<TimeBucketCoverResponseDto[]>;
+};
+
+const galleryYears: YearsFetchers = {
+  months: (signal) => getTimeBuckets({ ...photosScope(), bucketSize: TimeBucketSize.Month }, { signal }),
+  covers: (days, signal) =>
+    getTimeBucketCovers({ ...photosScope(), bucketSize: TimeBucketSize.Day, timeBuckets: days }, { signal }),
+};
+
+/**
+ * A day's years: the timeline's months once (kept a while, shared by every day), then one request for the covers of
+ * the day's seven days in the years that hold photos in their months, cancelled when another day is asked for first;
+ * the last days are kept, so going back to one asks nothing again.
+ */
+export class InspectorYearsLoader {
+  #kept = new Map<string, InspectorYears>();
+  #months?: { at: number; promise: Promise<TimeBucketsResponseDto[]> };
+  #pending?: { key: string; controller: AbortController; promise: Promise<InspectorYears | undefined> };
+
+  constructor(
+    private fetchers: YearsFetchers = galleryYears,
+    private now: () => number = Date.now,
+    private size = YEARS_KEPT,
+  ) {}
+
+  /** The other years of the day `key` ('YYYY-MM-DD'); undefined when another day was asked for before these came. */
+  load(key: string): Promise<InspectorYears | undefined> {
+    const kept = this.#kept.get(key);
+    if (kept) {
+      this.cancel();
+      this.#keep(key, kept);
+      return Promise.resolve(kept);
+    }
+    if (this.#pending?.key === key) {
+      return this.#pending.promise;
+    }
+    this.cancel();
+    const controller = new AbortController();
+    const promise = (async () => {
+      try {
+        const months = await this.#allMonths();
+        const [year, month, date] = key.split('-').map(Number);
+        const day = new Date(year, month - 1, date);
+        const days = weekDaysAcrossYears(day, months, { week: weekAround(day), later: true });
+        const covers =
+          days.length > 0
+            ? await this.fetchers.covers(
+                days.map(({ key }) => key),
+                controller.signal,
+              )
+            : [];
+        if (controller.signal.aborted) {
+          return undefined;
+        }
+        const found = { key, years: weekYears(day, days, covers, 3) };
+        this.#keep(key, found);
+        return found;
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return undefined;
+        }
+        throw error;
+      } finally {
+        if (this.#pending?.controller === controller) {
+          this.#pending = undefined;
+        }
+      }
+    })();
+    this.#pending = { key, controller, promise };
+    return promise;
+  }
+
+  /** Stop asking for the day being loaded (the months, shared by every day, come in all the same). */
+  cancel() {
+    this.#pending?.controller.abort();
+    this.#pending = undefined;
+  }
+
+  #allMonths() {
+    if (!this.#months || this.now() - this.#months.at > MONTHS_KEPT_MS) {
+      const promise = this.fetchers.months(new AbortController().signal);
+      const entry = { at: this.now(), promise };
+      this.#months = entry;
+      // a failure is asked again by the next day
+      promise.catch(() => {
+        if (this.#months === entry) {
+          this.#months = undefined;
+        }
+      });
+    }
+    return this.#months.promise;
+  }
+
+  #keep(key: string, found: InspectorYears) {
+    this.#kept.delete(key);
+    this.#kept.set(key, found);
+    while (this.#kept.size > this.size) {
+      this.#kept.delete(this.#kept.keys().next().value!);
+    }
+  }
+}
+
+/**
+ * The years' tiles laid out to fill the room left under the details: as many columns as give the largest tiles that
+ * still fit it, each tile between 3:4 and 3:2 and at least `min` wide, never a tile wider than half the room; where
+ * even the smallest do not fit (a short window), tiles of `min` in as many columns as hold them, and the details
+ * scroll.
+ */
+export const fitYearTiles = (
+  count: number,
+  { width, height, gap, min }: { width: number; height: number; gap: number; min: number },
+): { columns: number; tileHeight: number } => {
+  let best: { columns: number; tileHeight: number; area: number } | undefined;
+  for (let columns = 2; columns <= Math.max(2, count); columns++) {
+    const tileWidth = (width - (columns - 1) * gap) / columns;
+    if (tileWidth < min) {
+      break;
+    }
+    const rows = Math.ceil(count / columns);
+    const room = (height - (rows - 1) * gap) / rows;
+    const tileHeight = Math.floor(Math.min(Math.max(room, tileWidth / 1.5), tileWidth / 0.75));
+    const area = tileWidth * tileHeight;
+    if (rows * tileHeight + (rows - 1) * gap <= height && (!best || area > best.area)) {
+      best = { columns, tileHeight, area };
+    }
+  }
+  if (best) {
+    return { columns: best.columns, tileHeight: best.tileHeight };
+  }
+  const columns = Math.max(1, Math.floor((width + gap) / (min + gap)));
+  return { columns, tileHeight: Math.floor((width - (columns - 1) * gap) / columns) };
+};
 
 /** how many of a photo's albums are asked for a story */
 export const STORY_ALBUMS = 4;

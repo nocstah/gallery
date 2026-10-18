@@ -3,10 +3,11 @@
   // that holds the grid: the photo a main window points at (managers/inspector-link), large and whole at the top, and
   // under it when and where it was taken, who is in it, the albums it is in (each opens in the main window), its
   // description and Curator's story, and the camera and file; then the day around it, its other photos as a strip of
-  // square tiles (a click shows one here, never in the main window). Read-only. A new photo replaces the one on screen
-  // only once its details are in and its preview is decoded (or after a short wait, over its thumbhash), so a pointer
-  // moving on never leaves a blank or half-changed window; pointing at nothing leaves the last photo where it is. In a
-  // window wider than tall the details go beside the photo.
+  // square tiles (a click shows one here, never in the main window), or, on a day with no other photo, that day across
+  // the years, a photo a year filling the room left (a click shows it here too). Read-only. A new photo replaces the
+  // one on screen only once its details are in and its preview is decoded (or after a short wait, over its thumbhash),
+  // so a pointer moving on never leaves a blank or half-changed window; pointing at nothing leaves the last photo where
+  // it is. In a window wider than tall the details go beside the photo.
   import Thumbhash from '$lib/components/Thumbhash.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
@@ -16,6 +17,7 @@
     type InspectorSubject,
   } from '$lib/managers/inspector-link.svelte';
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+  import { workspaceGap } from '$lib/managers/VirtualScrollManager/VirtualScrollManager.svelte';
   import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
@@ -23,8 +25,10 @@
   import { getGlobalPersonHref } from '$lib/utils/global-person-route';
   import { lazyComponent } from '$lib/utils/lazy-component.svelte';
   import { getRepresentativeThumbnailUrl } from '$lib/utils/person-avatar';
+  import { pxOf } from '$lib/utils/review-grid';
   import { getAltText } from '$lib/utils/thumbnail-util';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
+  import { weekYearDays, type WeekYear } from '$lib/utils/week-across-years';
   import { AssetMediaSize, AssetTypeEnum, type AlbumResponseDto, type PersonResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiImageBrokenVariant, mdiMapMarkerOutline, mdiPlay } from '@mdi/js';
@@ -38,15 +42,18 @@
     descriptionOf,
     exposureOf,
     fileFactsOf,
+    fitYearTiles,
     InspectorDayLoader,
     InspectorDetailsLoader,
     InspectorStories,
+    InspectorYearsLoader,
     peopleOf,
     placeOf,
     previewUrlOf,
     takenOf,
     type InspectorDay,
     type InspectorDetails,
+    type InspectorYears,
   } from './inspector-details';
 
   interface Props {
@@ -65,6 +72,7 @@
   const loader = new InspectorDetailsLoader();
   const stories = new InspectorStories();
   const days = new InspectorDayLoader();
+  const acrossYears = new InspectorYearsLoader();
 
   // a main window closes the inspector (Shift+I again): a window opened by a script may close itself
   const follow = () => follower.start({ onClose: () => window.close() });
@@ -73,6 +81,7 @@
     return () => {
       follower.stop();
       days.cancel();
+      acrossYears.cancel();
     };
   });
 
@@ -83,8 +92,10 @@
   // a photo of the day chosen here: the inspector shows it (the main window stays where it is) until a main window
   // points at something new
   let chosen = $state.raw<{ subject: InspectorSubject; over: string }>();
+  /** a photo chosen here is on screen, or on its way */
+  const choosing = $derived(!!chosen && chosen.over === latestKey(follower.latest));
   const subject = $derived<InspectorSubject | undefined>(
-    chosen && chosen.over === latestKey(follower.latest)
+    choosing && chosen
       ? chosen.subject
       : (pick?.subject ?? (assetId ? { id: assetId, thumbhash: null, ratio: null, video: false } : undefined)),
   );
@@ -214,9 +225,28 @@
   });
 
   // the day around the photo: its photos as Photos shows them, asked once a day (inspector-details' InspectorDayLoader:
-  // cancelled by the next day, the last days kept); a day with no other photo has no strip
+  // cancelled by the next day, the last days kept); a day with no other photo has no strip. One that could not be
+  // loaded says so in a quiet line, with Retry
   let day = $state.raw<InspectorDay>();
+  /** the day whose photos could not be loaded */
+  let dayFailed = $state<string>();
   const dayKey = $derived(dayKeyOf(asset));
+  const loadDay = (key: string) => {
+    days
+      .load(key)
+      .then((found) => {
+        if (found && found.key === dayKey) {
+          day = found;
+          dayFailed = undefined;
+        }
+      })
+      .catch((error: unknown) => {
+        if (key === dayKey) {
+          dayFailed = key;
+        }
+        console.warn('[inspector] could not load the day', error);
+      });
+  };
   $effect(() => {
     const key = dayKey;
     if (!key) {
@@ -226,19 +256,128 @@
       if (day?.key === key) {
         return;
       }
-      days
-        .load(key)
-        .then((found) => {
-          if (found && found.key === dayKey) {
-            day = found;
-          }
-        })
-        .catch((error: unknown) => console.warn('[inspector] could not load the day', error));
+      loadDay(key);
     });
   });
   const dayShown = $derived(
     day && day.key === dayKey && day.photos.some((photo) => photo.id !== asset?.id) ? day : undefined,
   );
+  const retryDay = () => {
+    if (dayKey) {
+      dayFailed = undefined;
+      loadDay(dayKey);
+    }
+  };
+
+  // this day across the years, for a day with no other photo: the day the main window points at (the photo shown for
+  // it, not one chosen here), its seven days in every other year that has photos then, a photo a year
+  // (inspector-details' InspectorYearsLoader: the timeline's months once, then one request a day). They stay while the
+  // reader goes through them here, the year on screen in an ink frame, the day's own year among them the way back
+  let anchor = $state.raw<{ id: string; key: string; thumbhash: string | null; single?: boolean }>();
+  $effect(() => {
+    const details = shown?.details;
+    untrack(() => {
+      const key = dayKeyOf(details?.asset);
+      if (details && key && !choosing && anchor?.id !== details.asset.id) {
+        anchor = { id: details.asset.id, key, thumbhash: details.asset.thumbhash };
+      }
+    });
+  });
+  $effect(() => {
+    const found = day;
+    const current = anchor;
+    if (found && current && current.single === undefined && found.key === current.key) {
+      anchor = { ...current, single: found.photos.every((photo) => photo.id === current.id) };
+    }
+  });
+  let years = $state.raw<InspectorYears>();
+  $effect(() => {
+    const current = anchor;
+    if (!current?.single) {
+      return;
+    }
+    untrack(() => {
+      if (years?.key === current.key) {
+        return;
+      }
+      acrossYears
+        .load(current.key)
+        .then((found) => {
+          if (found && found.key === anchor?.key) {
+            years = found;
+          }
+        })
+        .catch((error: unknown) => console.warn('[inspector] could not load the day across the years', error));
+    });
+  });
+  const yearTiles = $derived.by((): WeekYear[] => {
+    const current = anchor;
+    if (!current?.single || years?.key !== current.key || years.years.length === 0) {
+      return [];
+    }
+    const own = { year: Number(current.key.slice(0, 4)), assetId: current.id, thumbhash: current.thumbhash };
+    return [...years.years, { ...own, first: current.key, last: current.key }].sort((a, b) => b.year - a.year);
+  });
+  const yearsShown = $derived(yearTiles.length > 0 && (asset?.id === anchor?.id || choosing));
+  /** the year of the photo on screen: its own tile, or the year of the day it was taken on */
+  const onScreen = (tile: WeekYear) =>
+    tile.assetId === asset?.id ||
+    (!!dayKey && Number(dayKey.slice(0, 4)) === tile.year && dayKey >= tile.first && dayKey <= tile.last);
+  /** A year's photo becomes the inspector's own, as a photo of the day does; the main window is not told. */
+  const chooseYear = (tile: WeekYear) => {
+    if (tile.assetId !== asset?.id) {
+      chosen = {
+        subject: { id: tile.assetId, thumbhash: tile.thumbhash, ratio: null, video: false },
+        over: latestKey(follower.latest),
+      };
+    }
+  };
+
+  // the years fill the room left under the details (inspector-details' fitYearTiles), measured from the details' own
+  // height and where the years start, so the tiles never size what measures them
+  let detailsElement = $state<HTMLElement>();
+  let yearsGrid = $state<HTMLElement>();
+  let room = $state({ width: 0, height: 0 });
+  $effect(() => {
+    const details = detailsElement;
+    const grid = yearsGrid;
+    // a strip or a quiet line coming or going above the years moves them
+    void dayShown;
+    void dayFailed;
+    if (!details || !grid) {
+      return;
+    }
+    const measure = () => {
+      const bottom = details.clientHeight - pxOf(getComputedStyle(details).paddingBottom, 0);
+      room = { width: grid.clientWidth, height: Math.max(0, bottom - grid.offsetTop) };
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(details);
+    for (const child of details.children) {
+      if (!child.contains(grid)) {
+        observer.observe(child);
+      }
+    }
+    measure();
+    return () => observer.disconnect();
+  });
+  const fit = $derived.by(() => {
+    const rem = typeof document === 'undefined' ? 16 : pxOf(getComputedStyle(document.documentElement).fontSize, 16);
+    return fitYearTiles(yearTiles.length, { ...room, gap: workspaceGap(), min: 7.5 * rem });
+  });
+  // a year's thumbnail first; where it would be enlarged on its tile (a few years, large tiles), the preview, as the
+  // photo above takes
+  let sharper = $state.raw(new Set<string>());
+  const yearSize = (tile: WeekYear) => (sharper.has(tile.assetId) ? AssetMediaSize.Preview : AssetMediaSize.Thumbnail);
+  const checkSharpness = (image: EventTarget, tile: WeekYear) => {
+    if (!(image instanceof HTMLImageElement) || !image.naturalWidth || !image.naturalHeight) {
+      return;
+    }
+    const scale = Math.max(image.clientWidth / image.naturalWidth, image.clientHeight / image.naturalHeight);
+    if (!sharper.has(tile.assetId) && scale * devicePixelRatio > 1.15) {
+      sharper = new Set([...sharper, tile.assetId]);
+    }
+  };
   const timeOf = (photo: TimelineAsset) =>
     DateTime.fromObject(photo.localDateTime, { zone: 'UTC' }).toLocaleString(DateTime.TIME_SIMPLE, {
       locale: $locale,
@@ -371,7 +510,7 @@
       </div>
     </figure>
 
-    <div class="ins-details">
+    <div class="ins-details" bind:this={detailsElement}>
       <header class="ins-when">
         <div class="ins-when-text">
           {#if taken}
@@ -469,6 +608,53 @@
                   {#if photo.isVideo}
                     <span class="ins-day-video" aria-hidden="true"><Icon icon={mdiPlay} size="0.875rem" /></span>
                   {/if}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {:else if dayKey && dayFailed === dayKey}
+        <p class="ins-day ins-quiet" role="status">
+          {$t('inspector_day_failed')}
+          <button type="button" class="ins-link" onclick={retryDay}>{$t('retry')}</button>
+        </p>
+      {/if}
+
+      <!-- a day with no other photo, across the years: a photo a year, the newest first, filling the room left; a click
+           shows that photo here, as the day's photos do -->
+      {#if yearsShown}
+        <section class="ins-years" aria-labelledby="ins-years-label" data-testid="inspector-years">
+          <h2 class="ins-label" id="ins-years-label">
+            {$t('inspector_across_years')}<span class="ins-day-count"
+              >{$t('inspector_years_count', { values: { count: yearTiles.length } })}</span
+            >
+          </h2>
+          <ul
+            class="ins-years-grid"
+            bind:this={yearsGrid}
+            style:grid-template-columns="repeat({fit.columns}, minmax(0, 1fr))"
+            style:grid-auto-rows="{fit.tileHeight}px"
+          >
+            {#each yearTiles as tile (tile.year)}
+              <li>
+                <button
+                  type="button"
+                  class="ins-year-tile"
+                  aria-current={onScreen(tile) ? 'true' : undefined}
+                  onclick={() => chooseYear(tile)}
+                >
+                  <img
+                    src={getAssetMediaUrl({ id: tile.assetId, size: yearSize(tile), cacheKey: tile.thumbhash })}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    draggable="false"
+                    onload={(event) => checkSharpness(event.currentTarget, tile)}
+                  />
+                  <span class="ins-year-caption">
+                    <span class="ins-year-number">{tile.year}</span>
+                    <span class="ins-year-days" lang={$locale}>{weekYearDays(tile, $locale)}</span>
+                  </span>
                 </button>
               </li>
             {/each}
@@ -655,6 +841,7 @@
   /* ---- the details: when and where as the heading, then two columns as the width allows ---- */
   .ins-details {
     container-type: inline-size;
+    position: relative;
     display: grid;
     gap: 1.25rem;
     align-content: start;
@@ -937,6 +1124,125 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .ins-day-photo::after {
+      transition: none;
+    }
+  }
+
+  /* a day that could not be loaded: a quiet line where its photos would be, with Retry */
+  .ins-quiet {
+    display: block;
+    font-size: var(--ws-text-meta);
+    color: var(--immich-ui-muted);
+  }
+  .ins-quiet .ins-link {
+    margin-inline-start: 0.4rem;
+    font-size: inherit;
+    color: var(--immich-ui-dark);
+  }
+
+  /* ---- this day across the years: a window tile a year, as Explore's week row (the year in display numerals on the
+     caption scrim, its days in data type), on the desktop's gap, sized to fill the room left under the details; the
+     year on screen in an ink frame, the accent for the pointer and the keys ---- */
+  .ins-years {
+    display: grid;
+    gap: 0.6rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--ws-hairline);
+  }
+  .ins-years-grid {
+    display: grid;
+    gap: var(--ws-gap);
+  }
+  .ins-years-grid > li {
+    min-width: 0;
+  }
+  .ins-year-tile {
+    container-type: inline-size;
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: var(--ws-radius);
+    background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
+    text-align: start;
+  }
+  .ins-year-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .ins-year-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--ws-hairline);
+    pointer-events: none;
+    transition: box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .ins-year-tile[aria-current='true']::after {
+    box-shadow: inset 0 0 0 var(--ws-border) var(--immich-ui-dark);
+  }
+  .ins-year-tile:hover::after,
+  .ins-year-tile:focus-visible::after {
+    box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+  }
+  .ins-year-tile:focus-visible {
+    outline: none;
+  }
+  /* Explore's scrim: at least 48% black behind the numeral and the days (3:1 for the numeral, 4.5:1 for the days over a
+     white wall), easing out in the band above them */
+  .ins-year-caption {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 2.25rem clamp(0.35rem, 5cqi, 0.7rem) clamp(0.35rem, 5cqi, 0.6rem);
+    background: linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.66),
+      rgb(0 0 0 / 0.48) calc(100% - 2.25rem),
+      rgb(0 0 0 / 0.34) calc(100% - 1.6rem),
+      rgb(0 0 0 / 0.17) calc(100% - 0.95rem),
+      rgb(0 0 0 / 0.05) calc(100% - 0.4rem),
+      transparent
+    );
+    color: #fff;
+  }
+  .ins-year-number {
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 30cqi, var(--ws-text-display));
+    font-weight: 800;
+    font-variation-settings:
+      'wdth' 75,
+      'opsz' 96;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.035em;
+    line-height: 0.85;
+  }
+  .ins-year-days {
+    margin-top: 0.4rem;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: rgb(255 255 255 / 0.95);
+    white-space: nowrap;
+  }
+  @container (max-width: 6.5rem) {
+    .ins-year-days {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ins-year-tile::after {
       transition: none;
     }
   }
