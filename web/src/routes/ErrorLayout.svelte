@@ -3,9 +3,9 @@
   // red siren, "Validation failed (HTTP 400)", a stack trace and links to Immich's Discord, releases and Docker docs.
   // It says in plain words what failed (an album, a person, a photo, a Space, a shared link: utils/error-page), offers
   // a way back (or Retry, when something failed rather than went missing), and keeps the status, message and stack in
-  // a collapsed Details for the server's admin only. Someone signed in keeps the shell (bar and sidebar) around it,
-  // so the rest of the archive is one click away; anyone else, and a Gallery that is not answering, gets the page on
-  // its own.
+  // a collapsed Details for the server's admin only. Someone signed in keeps the shell (bar and sidebar) around what
+  // is missing, so the rest of the archive is one click away; anyone else, and a page that failed or a Gallery that
+  // is not answering, gets the page on its own.
   import { afterNavigate } from '$app/navigation';
   import { page } from '$app/state';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
