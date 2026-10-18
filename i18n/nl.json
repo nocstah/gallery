@@ -1178,6 +1178,7 @@
   "album_not_in_photos_note": "De foto's ervan verschijnen niet in Foto's.",
   "album_options": "Albumopties",
   "album_options_sharing_note": "Mensen, links en Spaces staan allemaal onder ‘Delen’.",
+  "album_people_more": "{count, plural, one {Nog # persoon} other {Nog # mensen}}",
   "album_pin_to_sidebar": "Vastzetten in de zijbalk",
   "album_remove_user": "Gebruiker verwijderen?",
   "album_remove_user_confirmation": "Weet je zeker dat je {user} wilt verwijderen?",

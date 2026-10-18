@@ -1178,6 +1178,7 @@
   "album_not_in_photos_note": "Ses photos n'apparaissent pas dans Photos.",
   "album_options": "Options de l'album",
   "album_options_sharing_note": "Les personnes, les liens et les Espaces se trouvent tous dans « Partager ».",
+  "album_people_more": "{count, plural, one {# autre personne} other {# autres personnes}}",
   "album_pin_to_sidebar": "Épingler dans la barre latérale",
   "album_remove_user": "Supprimer l'utilisateur ?",
   "album_remove_user_confirmation": "Êtes-vous sûr de vouloir supprimer {user} ?",

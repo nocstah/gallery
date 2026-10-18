@@ -1178,6 +1178,7 @@
   "album_not_in_photos_note": "Jego zdjęcia nie pojawiają się w Zdjęciach.",
   "album_options": "Opcje albumu",
   "album_options_sharing_note": "Osoby, linki i Spaces znajdziesz w „Udostępnij”.",
+  "album_people_more": "{count, plural, one {Jeszcze # osoba} few {Jeszcze # osoby} many {Jeszcze # osób} other {Jeszcze # osoby}}",
   "album_pin_to_sidebar": "Przypnij w panelu bocznym",
   "album_remove_user": "Usunąć użytkownika?",
   "album_remove_user_confirmation": "Na pewno chcesz usunąć {user}?",

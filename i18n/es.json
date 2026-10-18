@@ -1178,6 +1178,7 @@
   "album_not_in_photos_note": "Sus fotos no aparecen en Fotos.",
   "album_options": "Opciones del álbum",
   "album_options_sharing_note": "Personas, enlaces y Spaces están todos en «Compartir».",
+  "album_people_more": "{count, plural, one {# persona más} other {# personas más}}",
   "album_pin_to_sidebar": "Fijar en la barra lateral",
   "album_remove_user": "¿Eliminar usuario?",
   "album_remove_user_confirmation": "¿Estás seguro de que quieres eliminar a {user}?",

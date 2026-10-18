@@ -1183,6 +1183,7 @@
   "album_not_in_photos_note": "此相册的照片不会出现在照片中。",
   "album_options": "相册选项",
   "album_options_sharing_note": "人物、链接和 Spaces 都在“分享”中。",
+  "album_people_more": "还有 {count} 人",
   "album_pin_to_sidebar": "固定到侧边栏",
   "album_remove_user": "移除用户？",
   "album_remove_user_confirmation": "确定要移除 “{user}” 吗？",

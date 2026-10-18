@@ -1185,6 +1185,7 @@
   "album_not_in_photos_note": "Its photos don't show in Photos.",
   "album_options": "Album options",
   "album_options_sharing_note": "People, links and Spaces are all in Share.",
+  "album_people_more": "{count, plural, one {# more person} other {# more people}}",
   "album_pin_to_sidebar": "Pin to sidebar",
   "album_remove_user": "Remove user?",
   "album_remove_user_confirmation": "Are you sure you want to remove {user}?",

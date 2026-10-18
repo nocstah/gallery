@@ -1178,6 +1178,7 @@
   "album_not_in_photos_note": "Его фото не показываются в разделе «Фото».",
   "album_options": "Параметры альбома",
   "album_options_sharing_note": "Люди, ссылки и Spaces — всё в разделе «Поделиться».",
+  "album_people_more": "{count, plural, one {Ещё # человек} few {Ещё # человека} many {Ещё # человек} other {Ещё # человека}}",
   "album_pin_to_sidebar": "Закрепить в боковой панели",
   "album_remove_user": "Удалить пользователя?",
   "album_remove_user_confirmation": "Вы уверены, что хотите удалить пользователя {user}?",

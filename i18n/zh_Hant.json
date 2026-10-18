@@ -1176,6 +1176,7 @@
   "album_not_in_photos_note": "此相簿的相片不會出現在相片中。",
   "album_options": "相簿選項",
   "album_options_sharing_note": "人物、連結和 Spaces 都在「分享」中。",
+  "album_people_more": "還有 {count} 人",
   "album_pin_to_sidebar": "釘選到側邊欄",
   "album_remove_user": "移除使用者？",
   "album_remove_user_confirmation": "確定要移除 {user} 嗎？",

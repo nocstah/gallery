@@ -1178,6 +1178,7 @@
   "album_not_in_photos_note": "Seine Fotos erscheinen nicht in Fotos.",
   "album_options": "Albumoptionen",
   "album_options_sharing_note": "Personen, Links und Spaces findest du alle unter „Teilen“.",
+  "album_people_more": "{count, plural, one {# weitere Person} other {# weitere Personen}}",
   "album_pin_to_sidebar": "An die Seitenleiste anheften",
   "album_remove_user": "Nutzer entfernen?",
   "album_remove_user_confirmation": "Bist du sicher, dass du {user} entfernen willst?",

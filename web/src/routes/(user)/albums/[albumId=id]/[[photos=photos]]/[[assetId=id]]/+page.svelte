@@ -1233,6 +1233,7 @@
                         albumId={album.id}
                         selected={albumFilters.personIds}
                         onToggle={toggleAlbumPerson}
+                        onMore={() => (filterCollapsed = false)}
                       />
                     </section>
                   {/if}
