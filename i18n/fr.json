@@ -2047,6 +2047,7 @@
   "expired": "Expiré",
   "expires_date": "Expire le {date}",
   "explore": "Explorer",
+  "explore_week_across_years": "Cette semaine, au fil des ans",
   "explorer": "Explorateur",
   "export": "Exporter",
   "export_as_json": "Exporter en JSON",

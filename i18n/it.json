@@ -2047,6 +2047,7 @@
   "expired": "Scaduto",
   "expires_date": "Scade il {date}",
   "explore": "Esplora",
+  "explore_week_across_years": "Questa settimana, negli anni",
   "explorer": "Esplora",
   "export": "Esporta",
   "export_as_json": "Esporta come JSON",

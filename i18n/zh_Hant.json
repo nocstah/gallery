@@ -2035,6 +2035,7 @@
   "expired": "已過期",
   "expires_date": "失效於 {date}",
   "explore": "探索",
+  "explore_week_across_years": "歷年的這一週",
   "explorer": "總覽",
   "export": "匯出",
   "export_as_json": "匯出為 JSON",

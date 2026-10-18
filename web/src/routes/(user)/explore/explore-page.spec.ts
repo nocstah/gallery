@@ -44,6 +44,7 @@ function renderPage(
         hasNextPage: false,
       },
       cities,
+      week: [],
       meta: { title: 'Explore' },
     },
   };

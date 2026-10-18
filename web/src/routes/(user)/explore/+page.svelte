@@ -29,6 +29,7 @@
   import { memoryCover } from '$lib/utils/memory-title';
   import { sortPeople } from '$lib/utils/people-utils';
   import { rankPlaces, type PlaceKey } from '$lib/utils/place-stats';
+  import { weekYearDays } from '$lib/utils/week-across-years';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
@@ -121,6 +122,35 @@
 
 <UserPageLayout title={data.meta.title}>
   <div class="ws-sharing ws-explore">
+    {#if data.week.length > 0}
+      <!-- this week in every past year with photos in it, newest first, each year's numeral in the display face over
+           the photo of its day nearest today's (utils/week-across-years); a year opens Photos at that photo -->
+      <section class="ws-sharing-section" aria-labelledby="explore-week">
+        <h2 class="ws-sharing-heading" id="explore-week">{$t('explore_week_across_years')}</h2>
+        <SingleGridRow class="grid grid-flow-col grid-auto-fill-28 gap-(--ws-gap) md:grid-auto-fill-48">
+          {#snippet children({ itemCount })}
+            {#each data.week.slice(0, itemCount) as year (year.year)}
+              <a class="ws-week-year" href={Route.photos({ at: year.assetId })} draggable="false">
+                <img
+                  src={getAssetMediaUrl({
+                    id: year.assetId,
+                    size: AssetMediaSize.Thumbnail,
+                    cacheKey: year.thumbhash ?? undefined,
+                  })}
+                  alt=""
+                  loading="lazy"
+                />
+                <span class="ws-week-year-caption">
+                  <span class="ws-week-year-number">{year.year}</span>
+                  <span class="ws-week-year-days" lang={$locale}>{weekYearDays(year, $locale)}</span>
+                </span>
+              </a>
+            {/each}
+          {/snippet}
+        </SingleGridRow>
+      </section>
+    {/if}
+
     {#if hasPeople}
       <section class="ws-sharing-section" aria-labelledby="explore-people">
         <h2 class="ws-sharing-heading" id="explore-people">
@@ -268,6 +298,72 @@
 {/if}
 
 <style>
+  /* a year of this week: a window tile, as Years and Months are, the year in display numerals on the caption scrim
+     and its days in data type */
+  .ws-week-year {
+    position: relative;
+    display: block;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: var(--ws-radius);
+    background: color-mix(in oklab, var(--immich-ui-dark) 6%, var(--immich-ui-light));
+  }
+  .ws-week-year img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .ws-week-year::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--ws-hairline);
+    pointer-events: none;
+    transition: box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .ws-week-year:hover::after,
+  .ws-week-year:focus-visible::after {
+    box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+  }
+  .ws-week-year:focus-visible {
+    outline: none;
+  }
+  .ws-week-year-caption {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 2.5rem 0.7rem 0.6rem;
+    background: linear-gradient(to top, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0.2) 60%, transparent);
+    color: #fff;
+  }
+  .ws-week-year-number {
+    font-family: var(--font-display);
+    font-size: var(--ws-text-display);
+    font-weight: 800;
+    font-variation-settings:
+      'wdth' 75,
+      'opsz' 96;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.035em;
+    line-height: 0.85;
+  }
+  .ws-week-year-days {
+    margin-top: 0.4rem;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: rgb(255 255 255 / 0.85);
+    white-space: nowrap;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ws-week-year::after {
+      transition: none;
+    }
+  }
   /* a place tile's frame while the counts come in */
   .ws-explore-waiting {
     aspect-ratio: 1;

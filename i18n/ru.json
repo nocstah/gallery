@@ -2047,6 +2047,7 @@
   "expired": "Срок действия истёк",
   "expires_date": "Срок действия до {date}",
   "explore": "Поиск",
+  "explore_week_across_years": "Эта неделя в разные годы",
   "explorer": "Проводник",
   "export": "Экспортировать",
   "export_as_json": "Экспорт в JSON",
