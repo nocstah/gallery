@@ -1000,7 +1000,8 @@
 >
   <div class="flex h-full overflow-hidden" use:scrollMemoryClearer={{ routeStartsWith: Route.albums() }}>
     <div class="relative w-full shrink">
-      <main class="relative h-full overflow-hidden">
+      <!-- Local Omarchy layer: a box, not a second <main>: the album lives in the shell, whose main holds it -->
+      <div class="relative h-full overflow-hidden">
         <div class="flex h-full" data-testid="discovery-timeline">
           <div class="h-full shrink-0">
             <div class="h-full overflow-hidden" data-testid="album-filter-panel-surface">
@@ -1280,7 +1281,7 @@
             />
           </div>
         {/if}
-      </main>
+      </div>
 
       <!-- Local Omarchy layer: right-click menu on the album's photos (the owner: "a right click in albums that allows to
          reveal original photo in the photo view"), acting on the selection like the bar below; Show in Photos leads -->

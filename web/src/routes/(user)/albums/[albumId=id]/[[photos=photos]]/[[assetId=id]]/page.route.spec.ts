@@ -194,6 +194,16 @@ describe('album detail filter panel route', () => {
     await waitFor(() => expect(screen.getByTestId('discovery-panel')).toBeInTheDocument());
   });
 
+  // Local Omarchy layer: the album's name, which comes through the bar's leading, is the page's one h1, and the page
+  // has the one main, the shell's: the album's own box had been a second <main>
+  it("names the album as the page's one h1, inside the shell's one main", async () => {
+    renderPage(albumFactory.build({ assetCount: 2, albumName: 'Koh Kradan' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Koh Kradan' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(document.querySelectorAll('main')).toHaveLength(1);
+  });
+
   it('hides the filter panel when the active dataset is empty and no filters are active', async () => {
     renderPage(albumFactory.build({ assetCount: 0 }));
 

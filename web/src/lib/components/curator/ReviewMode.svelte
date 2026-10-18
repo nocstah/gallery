@@ -177,7 +177,8 @@
     </button>
   </header>
 
-  <main class="review-stage">
+  <!-- a box, not a <main>: review mode is a dialog over the inbox, whose page holds the one main -->
+  <div class="review-stage">
     {#if current}
       {#key current.id}
         <ReviewStage suggestion={current} />
@@ -190,7 +191,7 @@
         </div>
       </div>
     {/if}
-  </main>
+  </div>
 
   {#if current}
     <footer class="review-foot">

@@ -860,14 +860,20 @@
 {/if}
 
 {#if mode === 'add'}
-  <section class="fixed inset-0 z-40 bg-immich-bg dark:bg-immich-dark-bg" data-testid="add-photos-overlay">
+  <!-- Local Omarchy layer: a region named for what it does, and its timeline in a box rather than a second <main>
+       (the page under it keeps the one main) -->
+  <section
+    class="fixed inset-0 z-40 bg-immich-bg dark:bg-immich-dark-bg"
+    aria-label={$t('add_to_album')}
+    data-testid="add-photos-overlay"
+  >
     <!--
-      The sidebar + picker Timeline live inside <main>; the ControlAppBar is rendered AFTER it. The
+      The sidebar + picker Timeline live inside the timeline box; the ControlAppBar is rendered AFTER it. The
       bar is `position: absolute` with auto z-index, so it would be painted under the full-height
-      <main> (swallowing clicks on the trailing Upload/Add buttons) if it came first. Keeping it last
+      box (swallowing clicks on the trailing Upload/Add buttons) if it came first. Keeping it last
       — as the global album page does — lets it paint on top while staying pinned to the top.
     -->
-    <main class="relative h-dvh overflow-hidden pt-(--control-bar-height)" data-testid="add-photos-timeline-main">
+    <div class="relative h-dvh overflow-hidden pt-(--control-bar-height)" data-testid="add-photos-timeline-main">
       <div class="flex h-full">
         {#key `space-album-picker-${album.id}`}
           <FilterPanel
@@ -956,7 +962,7 @@
           {/if}
         </div>
       </div>
-    </main>
+    </div>
     <ControlAppBar onClose={handleExitAddMode}>
       {#snippet leading()}
         <p class="text-lg dark:text-immich-dark-fg">
