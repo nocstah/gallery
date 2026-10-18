@@ -1156,6 +1156,7 @@
   "album_delete_confirmation": "Czy na pewno chcesz usunąć album {album}?",
   "album_delete_confirmation_description": "Jeżeli album jest udostępniany, inny stracą do niego dostęp.",
   "album_deleted": "Album usunięty",
+  "album_empty_body": "Wybierz ze swojej osi czasu zdjęcia, które mają się w nim znaleźć.",
   "album_folder_delete_confirm": "Usunąć \"{name}\"? Albumy w tym folderze przejdą o jeden poziom wyżej. Żaden album nie zostanie usunięty.",
   "album_folder_empty_body": "Albumy trafiają tu przez „Przenieś do folderu” w menu albumu albo przeciągnięcie na ten folder. Album utworzony tutaj trafi do niego.",
   "album_info_updated": "Szczegóły albumu zostały zaktualizowane",

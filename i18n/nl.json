@@ -1156,6 +1156,7 @@
   "album_delete_confirmation": "Weet je zeker dat je het album {album} wilt verwijderen?",
   "album_delete_confirmation_description": "Als dit album gedeeld is, zullen andere gebruikers geen toegang meer hebben.",
   "album_deleted": "Album verwijderd",
+  "album_empty_body": "Kies foto's uit je tijdlijn om erin te zetten.",
   "album_folder_delete_confirm": "\"{name}\" verwijderen? Albums erin gaan één niveau omhoog. Er wordt geen album verwijderd.",
   "album_folder_empty_body": "Albums komen erin met “Verplaatsen naar map” in het menu van een album, of door ze naar deze map te slepen. Een album dat je hier maakt, komt erin.",
   "album_info_updated": "Albumgegevens bijgewerkt",

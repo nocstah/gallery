@@ -321,10 +321,12 @@ describe('album detail filter panel route', () => {
     expect(screen.getByTestId('timeline-options').textContent).toContain('"timelineAlbumId"');
 
     await user.click(screen.getByTestId('tags-item-tag-no-match'));
-    expect(screen.getByText('None of the photos you can add match your filters')).toBeInTheDocument();
-    await user.click(screen.getByText('Clear all filters'));
+    // Local Omarchy layer: the Empty State in Photos' words (translated now; upstream's English was hard-coded)
+    expect(screen.getByTestId('empty-state-message')).toHaveTextContent('timeline_empty_filtered_title');
+    expect(screen.getByText('space_album_no_photos_to_add_match_filters')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'timeline_empty_clear_filters' }));
     await waitFor(() =>
-      expect(screen.queryByText('None of the photos you can add match your filters')).not.toBeInTheDocument(),
+      expect(screen.queryByText('space_album_no_photos_to_add_match_filters')).not.toBeInTheDocument(),
     );
   });
 
@@ -1038,6 +1040,16 @@ describe('album detail filter panel route', () => {
 
       await waitFor(() => expect(screen.getByRole('menuitem', { name: 'slideshow' })).toBeInTheDocument());
       expect(screen.queryByTestId('album-room')).not.toBeInTheDocument();
+    });
+
+    // Local Omarchy layer: an empty album says so on the gutter, with Select photos for whoever may add
+    it('says an empty album is empty, with Select photos for an editor', async () => {
+      renderPage(albumFactory.build({ assetCount: 0 }));
+
+      const empty = await screen.findByText('space_album_empty_title');
+      expect(empty.closest('#empty-album')).toBeInTheDocument();
+      expect(screen.getByText('album_empty_body')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'select_photos' })).toBeInTheDocument();
     });
 
     it('offers nothing to play in an empty album', async () => {

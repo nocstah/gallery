@@ -124,7 +124,6 @@
     mdiLink,
     mdiLinkVariantPlus,
     mdiPlayOutline,
-    mdiPlus,
     mdiPresentationPlay,
     mdiTelevisionPlay,
   } from '@mdi/js';
@@ -140,6 +139,7 @@
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import AlbumBarTitle from '$lib/components/omarchy/AlbumBarTitle.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import AlbumPeopleStrip from '$lib/components/omarchy/AlbumPeopleStrip.svelte';
   import { getAlbumDateRange } from '$lib/utils/date-time';
 
@@ -1107,16 +1107,18 @@
                 total={searchTotal}
               />
             {:else if showFilteredEmptyState}
-              <div class="flex flex-1 flex-col items-center justify-center gap-2" data-testid="empty-state-message">
-                <p class="text-sm text-(--fg-muted)">
-                  {viewMode === AlbumPageViewMode.SELECT_ASSETS
-                    ? 'None of the photos you can add match your filters'
-                    : 'No photos match your filters'}
-                </p>
-                <button
-                  type="button"
-                  class="text-sm text-(--primary)"
-                  onclick={() => {
+              <!-- Local Omarchy layer: Photos' own words for a filter that finds nothing, in the Empty State's grammar on
+                   the gutter, as a Space's album says it; upstream centred an English line and a link -->
+              <EmptyState
+                title={$t('timeline_empty_filtered_title')}
+                body={$t(
+                  viewMode === AlbumPageViewMode.SELECT_ASSETS
+                    ? 'space_album_no_photos_to_add_match_filters'
+                    : 'timeline_empty_filtered_subtitle',
+                )}
+                action={{
+                  label: $t('timeline_empty_clear_filters'),
+                  onclick: () => {
                     if (viewMode === AlbumPageViewMode.SELECT_ASSETS) {
                       pickerFilters = clearFilters(pickerFilters);
                     } else {
@@ -1124,11 +1126,10 @@
                       temporalAnchor = undefined;
                       syncAlbumFilterUrl(albumFilters);
                     }
-                  }}
-                >
-                  Clear all filters
-                </button>
-              </div>
+                  },
+                }}
+                testId="empty-state-message"
+              />
             {:else}
               <Timeline
                 enableRouting={viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : true}
@@ -1250,21 +1251,17 @@
                       </div>
                     </div>
                   {:else if album.assetCount === 0}
-                    <section id="empty-album" class="mt-50 flex place-content-center place-items-center">
-                      <div class="w-75">
-                        <p class="text-xs uppercase dark:text-immich-dark-fg">{$t('add_photos')}</p>
-                        <button
-                          type="button"
-                          onclick={() => (viewMode = AlbumPageViewMode.SELECT_ASSETS)}
-                          class="mt-5 flex w-full place-items-center gap-6 rounded-2xl border bg-subtle p-8 text-immich-fg transition-all hover:bg-gray-100 hover:text-immich-primary dark:border-none dark:text-immich-dark-fg dark:hover:bg-gray-500/20 dark:hover:text-immich-dark-primary"
-                        >
-                          <span class="text-primary">
-                            <Icon icon={mdiPlus} size="24" />
-                          </span>
-                          <span class="text-lg">{$t('select_photos')}</span>
-                        </button>
-                      </div>
-                    </section>
+                    <!-- Local Omarchy layer: the Empty State on the gutter, as a Space's album and the special albums
+                         say it; upstream centred "ADD PHOTOS" over a rounded grey slab that was the button -->
+                    <div id="empty-album">
+                      <EmptyState
+                        title={$t('space_album_empty_title')}
+                        body={$t(isEditor ? 'album_empty_body' : 'space_album_empty_subtitle_viewer')}
+                        action={isEditor
+                          ? { label: $t('select_photos'), onclick: () => (viewMode = AlbumPageViewMode.SELECT_ASSETS) }
+                          : undefined}
+                      />
+                    </div>
                   {/if}
                 {/if}
               </Timeline>

@@ -1156,6 +1156,7 @@
   "album_delete_confirmation": "Êtes-vous sûr de vouloir supprimer l'album {album} ?",
   "album_delete_confirmation_description": "Si cet album est partagé, les autres utilisateurs ne pourront plus y accéder.",
   "album_deleted": "Album supprimé",
+  "album_empty_body": "Choisissez dans votre chronologie les photos à y mettre.",
   "album_folder_delete_confirm": "Supprimer \"{name}\" ? Les albums qu'il contient remonteront d'un niveau. Aucun album n'est supprimé.",
   "album_folder_empty_body": "Les albums y entrent avec « Déplacer vers un dossier », dans le menu d'un album, ou en les faisant glisser sur ce dossier. Un album créé ici y est rangé.",
   "album_info_updated": "Détails de l'album mis à jour",

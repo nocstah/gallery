@@ -1154,6 +1154,7 @@
   "album_delete_confirmation": "你確定要刪除相簿 {album} 嗎？",
   "album_delete_confirmation_description": "如果此相簿已被共享，其他使用者將無法再存取。",
   "album_deleted": "相簿已刪除",
+  "album_empty_body": "從您的時間軸中挑選要放進去的相片。",
   "album_folder_delete_confirm": "要刪除「{name}」嗎？其中的相簿將上移一層。不會刪除任何相簿。",
   "album_folder_empty_body": "在相簿的選單中選擇「移動到資料夾」，或把相簿拖到這個資料夾上，即可放入。在這裡建立的相簿也會放在其中。",
   "album_info_updated": "已更新相簿資訊",

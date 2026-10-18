@@ -1156,6 +1156,7 @@
   "album_delete_confirmation": "Bist du sicher, dass du das Album {album} löschen willst?",
   "album_delete_confirmation_description": "Falls dieses Album geteilt wurde, können andere Benutzer nicht mehr darauf zugreifen.",
   "album_deleted": "Album gelöscht",
+  "album_empty_body": "Wähl Fotos aus deiner Zeitleiste aus, die hinein sollen.",
   "album_folder_delete_confirm": "\"{name}\" löschen? Alben darin rücken eine Ebene nach oben. Kein Album wird gelöscht.",
   "album_folder_empty_body": "Alben kommen mit „In Ordner verschieben“ aus dem Menü eines Albums hinein oder indem du sie auf diesen Ordner ziehst. Ein hier erstelltes Album landet darin.",
   "album_info_updated": "Album-Infos aktualisiert",

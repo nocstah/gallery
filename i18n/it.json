@@ -1156,6 +1156,7 @@
   "album_delete_confirmation": "Sei sicuro di voler eliminare l'album {album}?",
   "album_delete_confirmation_description": "Se l'album è condiviso gli altri utenti perderanno l'accesso.",
   "album_deleted": "Album eliminato",
+  "album_empty_body": "Scegli dalla tua timeline le foto da metterci.",
   "album_folder_delete_confirm": "Eliminare \"{name}\"? Gli album al suo interno saliranno di un livello. Nessun album viene eliminato.",
   "album_folder_empty_body": "Gli album entrano con «Sposta in una cartella», dal menu di un album, o trascinandoli su questa cartella. Un album creato qui finisce qui.",
   "album_info_updated": "Informazioni dell'album aggiornate",
