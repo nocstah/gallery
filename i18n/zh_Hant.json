@@ -2391,6 +2391,7 @@
   "individual_shares": "個別分享",
   "info": "資訊",
   "inspector_point_at_photo": "在 Gallery 中指向一張相片",
+  "inspector_that_day": "當天",
   "inspector_unnamed": "{count, plural, other {# 人未命名}}",
   "inspector_window": "檢查器視窗",
   "inspector_window_shortcut": "開啟或關閉檢查器視窗",

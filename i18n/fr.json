@@ -2405,6 +2405,7 @@
   "individual_shares": "Partages d'un média unique",
   "info": "Information",
   "inspector_point_at_photo": "Pointez une photo dans Gallery",
+  "inspector_that_day": "Ce jour-là",
   "inspector_unnamed": "{count, plural, other {# sans nom}}",
   "inspector_window": "Fenêtre de l'inspecteur",
   "inspector_window_shortcut": "Ouvrir ou fermer la fenêtre de l'inspecteur",

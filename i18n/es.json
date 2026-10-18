@@ -2405,6 +2405,7 @@
   "individual_shares": "Acciones individuales",
   "info": "Información",
   "inspector_point_at_photo": "Señala una foto en Gallery",
+  "inspector_that_day": "Ese día",
   "inspector_unnamed": "{count, plural, other {# sin nombre}}",
   "inspector_window": "Ventana del inspector",
   "inspector_window_shortcut": "Abrir o cerrar la ventana del inspector",

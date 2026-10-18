@@ -1,17 +1,23 @@
 import {
   AssetMediaSize,
+  AssetVisibility,
   getAllAlbums,
   getAssetInfo,
+  getTimeBucket,
+  TimeBucketSize,
   type AlbumResponseDto,
   type AssetResponseDto,
   type ExifResponseDto,
   type PersonResponseDto,
+  type TimeBucketAssetResponseDto,
 } from '@immich/sdk';
 import { DateTime } from 'luxon';
+import { authManager } from '$lib/managers/auth-manager.svelte';
+import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import { getAssetMediaUrl } from '$lib/utils';
 import { getByteUnitString } from '$lib/utils/byte-units';
 import { curator, type Story } from '$lib/utils/curator';
-import { fromISODateTime, fromISODateTimeUTC } from '$lib/utils/timeline-util';
+import { fromISODateTime, fromISODateTimeUTC, fromISODateTimeUTCToObject, getTimes } from '$lib/utils/timeline-util';
 
 // Local Omarchy layer: what the inspector window (Inspector.svelte) asks Gallery and Curator about the photo a main
 // window points at, and how it says it. A sweep over the grid reaches the inspector only as the photos the pointer
@@ -86,6 +92,139 @@ export class InspectorDetailsLoader {
     // a Map keeps the order things went in: the first is the one used longest ago
     this.#kept.delete(id);
     this.#kept.set(id, details);
+    while (this.#kept.size > this.size) {
+      this.#kept.delete(this.#kept.keys().next().value!);
+    }
+  }
+}
+
+/** how many days' photos are kept */
+export const DAYS_KEPT = 40;
+
+/**
+ * The photos of one day as Photos shows them (the timeline's day: its visibility, a partner's and the Spaces' photos
+ * in it, a stack as its cover), in the order they were taken: the strip under the details, which adds the day around
+ * the photo on screen.
+ */
+export type InspectorDay = { key: string; photos: TimelineAsset[] };
+
+type DayFetcher = (day: string, signal: AbortSignal) => Promise<TimeBucketAssetResponseDto>;
+
+const galleryDay: DayFetcher = (day, signal) =>
+  getTimeBucket(
+    {
+      timeBucket: day,
+      bucketSize: TimeBucketSize.Day,
+      userId: authManager.user.id,
+      visibility: AssetVisibility.Timeline,
+      withStacked: true,
+      withPartners: true,
+      withSharedSpaces: true,
+    },
+    { signal },
+  );
+
+/** The day a photo was taken on its own clock ("2026-10-11"): its day in the timeline. */
+export const dayKeyOf = (asset: Pick<AssetResponseDto, 'localDateTime'> | undefined) =>
+  asset ? /^\d{4}-\d{2}-\d{2}/.exec(asset.localDateTime)?.[0] : undefined;
+
+/** The timeline's columns for a day, as the photos they describe, from the first taken to the last. */
+export const dayPhotosOf = (bucket: TimeBucketAssetResponseDto): TimelineAsset[] => {
+  const photos: TimelineAsset[] = [];
+  for (let index = 0; index < bucket.id.length; index++) {
+    const { localDateTime, fileCreatedAt } = getTimes(bucket.fileCreatedAt[index], bucket.localOffsetHours[index]);
+    const stack = bucket.stack?.at(index);
+    photos.push({
+      id: bucket.id[index],
+      ownerId: bucket.ownerId[index],
+      ratio: bucket.ratio[index],
+      thumbhash: bucket.thumbhash[index],
+      localDateTime,
+      createdAt: fromISODateTimeUTCToObject(bucket.createdAt[index]),
+      fileCreatedAt,
+      visibility: bucket.visibility[index],
+      isFavorite: bucket.isFavorite[index],
+      isTrashed: bucket.isTrashed[index],
+      isVideo: !bucket.isImage[index],
+      isImage: bucket.isImage[index],
+      // a stack with one photo left out of the trash is no stack (as the timeline has it)
+      stack:
+        stack && Number.parseInt(stack[1]) > 1
+          ? { id: stack[0], primaryAssetId: bucket.id[index], assetCount: Number.parseInt(stack[1]) }
+          : null,
+      duration: bucket.duration[index],
+      projectionType: bucket.projectionType[index],
+      livePhotoVideoId: bucket.livePhotoVideoId[index],
+      city: bucket.city?.[index] ?? null,
+      country: bucket.country?.[index] ?? null,
+      people: null,
+    });
+  }
+  const instant = ({ fileCreatedAt: at }: TimelineAsset) =>
+    Date.UTC(at.year, at.month - 1, at.day, at.hour, at.minute, at.second, at.millisecond);
+  return photos.sort((a, b) => instant(a) - instant(b) || a.id.localeCompare(b.id));
+};
+
+/**
+ * A photo's day for the strip: one request for a day not seen lately (the timeline's day bucket, one request
+ * however many photos it holds), cancelled when another day is asked for first; the last days are kept, so moving
+ * along one day, or back to it, asks nothing again.
+ */
+export class InspectorDayLoader {
+  #kept = new Map<string, InspectorDay>();
+  #pending?: { key: string; controller: AbortController; promise: Promise<InspectorDay | undefined> };
+
+  constructor(
+    private fetchDay: DayFetcher = galleryDay,
+    private size = DAYS_KEPT,
+  ) {}
+
+  /** The day's photos; undefined when another day was asked for before these came. */
+  load(key: string): Promise<InspectorDay | undefined> {
+    const kept = this.#kept.get(key);
+    if (kept) {
+      this.cancel();
+      this.#keep(key, kept);
+      return Promise.resolve(kept);
+    }
+    if (this.#pending?.key === key) {
+      return this.#pending.promise;
+    }
+    this.cancel();
+    const controller = new AbortController();
+    const promise = (async () => {
+      try {
+        const bucket = await this.fetchDay(key, controller.signal);
+        if (controller.signal.aborted) {
+          return undefined;
+        }
+        const day = { key, photos: dayPhotosOf(bucket) };
+        this.#keep(key, day);
+        return day;
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return undefined;
+        }
+        throw error;
+      } finally {
+        if (this.#pending?.controller === controller) {
+          this.#pending = undefined;
+        }
+      }
+    })();
+    this.#pending = { key, controller, promise };
+    return promise;
+  }
+
+  /** Stop asking for the day being loaded. */
+  cancel() {
+    this.#pending?.controller.abort();
+    this.#pending = undefined;
+  }
+
+  #keep(key: string, day: InspectorDay) {
+    this.#kept.delete(key);
+    this.#kept.set(key, day);
     while (this.#kept.size > this.size) {
       this.#kept.delete(this.#kept.keys().next().value!);
     }

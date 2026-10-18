@@ -2417,6 +2417,7 @@
   "individual_shares": "Individual shares",
   "info": "Info",
   "inspector_point_at_photo": "Point at a photo in Gallery",
+  "inspector_that_day": "That day",
   "inspector_unnamed": "{count, plural, other {# unnamed}}",
   "inspector_window": "Inspector window",
   "inspector_window_shortcut": "Open or close the inspector window",

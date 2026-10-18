@@ -1,4 +1,4 @@
-import { AssetTypeEnum } from '@immich/sdk';
+import { AssetTypeEnum, AssetVisibility, TimeBucketSize, type TimeBucketAssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
@@ -51,6 +51,33 @@ const asset = assetFactory.build({
   people: [personFactory.build({ name: 'Ann', isHidden: false }), personFactory.build({ name: '', isHidden: false })],
 });
 const album = albumFactory.build({ albumName: 'Phuket', assetCount: 212 });
+const later = assetFactory.build({
+  ...asset,
+  id: '6b8f2a52-3c1d-4e0f-9a7b-2d4c6e8f0a1b',
+  originalFileName: 'IMG_0002.JPG',
+  localDateTime: '2009-03-14T16:05:00.000Z',
+});
+
+/** the photo's day as the timeline sends it: newest first, in columns */
+const dayBucket = (ids: string[], times: string[]) =>
+  ({
+    id: ids,
+    ownerId: ids.map(() => 'owner'),
+    ratio: ids.map(() => 4 / 3),
+    thumbhash: ids.map(() => null),
+    fileCreatedAt: times,
+    localOffsetHours: ids.map(() => 7),
+    createdAt: times,
+    visibility: ids.map(() => AssetVisibility.Timeline),
+    isFavorite: ids.map(() => false),
+    isTrashed: ids.map(() => false),
+    isImage: ids.map(() => true),
+    duration: ids.map(() => null),
+    projectionType: ids.map(() => null),
+    livePhotoVideoId: ids.map(() => null),
+    city: ids.map(() => 'Riverton'),
+    country: ids.map(() => 'Thailand'),
+  }) as unknown as TimeBucketAssetResponseDto;
 
 let feed: InspectorFeed;
 const navigate = vi.fn();
@@ -58,7 +85,8 @@ const navigate = vi.fn();
 beforeEach(() => {
   mocks.owner = true;
   mocks.story.mockResolvedValue({ story: { text: 'A slow day by the sea.', model: 'text', written_at: '' } });
-  sdkMock.getAssetInfo.mockResolvedValue(asset);
+  sdkMock.getAssetInfo.mockImplementation(({ id }) => Promise.resolve(id === later.id ? later : { ...asset, id }));
+  sdkMock.getTimeBucket.mockResolvedValue(dayBucket([asset.id], ['2009-03-14T07:32:05.000Z']));
   sdkMock.getAllAlbums.mockResolvedValue([album]);
   feed = new InspectorFeed();
   feed.start({ navigate, timing: { settleMs: 5, ackMs: 200 } });
@@ -127,6 +155,52 @@ describe('Inspector', () => {
     expect(screen.getByText('Two boats on a beach.')).toBeInTheDocument();
     expect(mocks.story).not.toHaveBeenCalled();
     expect(screen.queryByText('A slow day by the sea.')).not.toBeInTheDocument();
+  });
+
+  it('lays out the day around the photo, and shows one of them here, never in the main window', async () => {
+    sdkMock.getTimeBucket.mockResolvedValue(
+      dayBucket([later.id, asset.id], ['2009-03-14T09:05:00.000Z', '2009-03-14T07:32:05.000Z']),
+    );
+    render(Inspector, {});
+    await pointAtThePhoto();
+
+    const day = await screen.findByTestId('inspector-day');
+    expect(sdkMock.getTimeBucket).toHaveBeenCalledWith(
+      {
+        timeBucket: '2009-03-14',
+        bucketSize: TimeBucketSize.Day,
+        userId: 'owner',
+        visibility: AssetVisibility.Timeline,
+        withStacked: true,
+        withPartners: true,
+        withSharedSpaces: true,
+      },
+      expect.objectContaining({ signal: expect.anything() }),
+    );
+    // in the order taken, the photo on screen marked
+    const [first, second] = day.querySelectorAll('button');
+    expect(first).toHaveAttribute('aria-current', 'true');
+    expect(second).not.toHaveAttribute('aria-current');
+
+    await fireEvent.click(second);
+    expect(await screen.findByText('IMG_0002.JPG')).toBeInTheDocument();
+    expect(screen.getByTestId('inspector-day').querySelectorAll('button')[1]).toHaveAttribute('aria-current', 'true');
+    expect(navigate).not.toHaveBeenCalled();
+    // the day was asked for once
+    expect(sdkMock.getTimeBucket).toHaveBeenCalledTimes(1);
+
+    // the main window pointing somewhere new takes the inspector back
+    const elsewhere = timelineAssetFactory.build({ thumbhash: null, ratio: 4 / 3, isVideo: false });
+    feed.point(elsewhere);
+    await waitFor(() => expect(sdkMock.getAssetInfo).toHaveBeenLastCalledWith({ id: elsewhere.id }, expect.anything()));
+    expect(await screen.findByText('IMG_0001.JPG')).toBeInTheDocument();
+  });
+
+  it('has no strip for a day with no other photo', async () => {
+    render(Inspector, {});
+    await pointAtThePhoto();
+    await waitFor(() => expect(sdkMock.getTimeBucket).toHaveBeenCalled());
+    expect(screen.queryByTestId('inspector-day')).not.toBeInTheDocument();
   });
 
   it('shows the count while a selection holds', async () => {

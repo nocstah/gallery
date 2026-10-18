@@ -1,10 +1,18 @@
-import type { AlbumResponseDto, AssetResponseDto } from '@immich/sdk';
+import {
+  AssetVisibility,
+  type AlbumResponseDto,
+  type AssetResponseDto,
+  type TimeBucketAssetResponseDto,
+} from '@immich/sdk';
 import {
   albumYearsOf,
   cameraOf,
+  dayKeyOf,
+  dayPhotosOf,
   descriptionOf,
   exposureOf,
   fileFactsOf,
+  InspectorDayLoader,
   InspectorDetailsLoader,
   InspectorStories,
   peopleOf,
@@ -76,6 +84,86 @@ describe('InspectorDetailsLoader', () => {
       albums: () => Promise.resolve([]),
     });
     await expect(loader.load('one')).rejects.toThrow('gone');
+  });
+});
+
+/** a day as the timeline sends it: newest first, in columns */
+const dayBucket = (ids: string[], times: string[]): TimeBucketAssetResponseDto =>
+  ({
+    id: ids,
+    ownerId: ids.map(() => 'me'),
+    ratio: ids.map(() => 1.5),
+    thumbhash: ids.map((id) => `hash-${id}`),
+    fileCreatedAt: times,
+    localOffsetHours: ids.map(() => 7),
+    createdAt: times,
+    visibility: ids.map(() => AssetVisibility.Timeline),
+    isFavorite: ids.map(() => false),
+    isTrashed: ids.map(() => false),
+    isImage: ids.map((id) => id !== 'clip'),
+    duration: ids.map((id) => (id === 'clip' ? 12_000 : null)),
+    projectionType: ids.map(() => null),
+    livePhotoVideoId: ids.map(() => null),
+    city: ids.map(() => 'Riverton'),
+    country: ids.map(() => 'Thailand'),
+    stack: ids.map((id) => (id === 'burst' ? ['stack-1', '3'] : id === 'lone' ? ['stack-2', '1'] : null)),
+  }) as TimeBucketAssetResponseDto;
+
+describe('the day around the photo', () => {
+  it("names a photo's day on its own clock", () => {
+    expect(dayKeyOf({ localDateTime: '2026-10-11T09:23:13.681Z' })).toBe('2026-10-11');
+    expect(dayKeyOf({ localDateTime: '' })).toBeUndefined();
+    expect(dayKeyOf(undefined)).toBeUndefined();
+  });
+
+  it('lays the day out from the first photo taken to the last, a stack as its cover', () => {
+    const photos = dayPhotosOf(
+      dayBucket(
+        ['clip', 'burst', 'lone'],
+        ['2026-10-11T12:00:00.000Z', '2026-10-11T03:10:00.000Z', '2026-10-11T02:00:00.000Z'],
+      ),
+    );
+    expect(photos.map(({ id }) => id)).toEqual(['lone', 'burst', 'clip']);
+    expect(photos[0].stack).toBeNull();
+    expect(photos[1].stack).toEqual({ id: 'stack-1', primaryAssetId: 'burst', assetCount: 3 });
+    expect(photos[2]).toMatchObject({ isVideo: true, duration: 12_000 });
+    // on the camera's clock, seven hours ahead
+    expect(photos[0].localDateTime).toMatchObject({ day: 11, hour: 9 });
+  });
+
+  it('asks for a day once, cancels it for the next one, and keeps the days seen last', async () => {
+    const signals: AbortSignal[] = [];
+    const fetchDay = vi.fn(
+      (day: string, signal: AbortSignal) =>
+        new Promise<TimeBucketAssetResponseDto>((resolve, reject) => {
+          signals.push(signal);
+          const timer = setTimeout(() => resolve(dayBucket([`${day}-a`], [`${day}T05:00:00.000Z`])), 5);
+          signal.addEventListener('abort', () => {
+            clearTimeout(timer);
+            reject(new DOMException('The operation was aborted.', 'AbortError'));
+          });
+        }),
+    );
+    const loader = new InspectorDayLoader(fetchDay, 2);
+
+    // two photos of one day share the request; a photo of another day cancels it
+    const first = loader.load('2026-10-10');
+    const again = loader.load('2026-10-10');
+    expect(fetchDay).toHaveBeenCalledTimes(1);
+    const second = loader.load('2026-10-11');
+    await expect(first).resolves.toBeUndefined();
+    await expect(again).resolves.toBeUndefined();
+    expect(signals[0].aborted).toBe(true);
+    await expect(second).resolves.toMatchObject({ key: '2026-10-11', photos: [{ id: '2026-10-11-a' }] });
+
+    // back to a day seen lately: nothing asked
+    await loader.load('2026-10-12');
+    await loader.load('2026-10-11');
+    expect(fetchDay).toHaveBeenCalledTimes(3);
+    // past its size the day used longest ago goes
+    await loader.load('2026-10-13');
+    await loader.load('2026-10-12');
+    expect(fetchDay).toHaveBeenCalledTimes(5);
   });
 });
 

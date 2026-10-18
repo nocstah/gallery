@@ -2,14 +2,20 @@
   // Local Omarchy layer: the inspector window (routes/inspector), made for the owner's portrait Dell beside the AORUS
   // that holds the grid: the photo a main window points at (managers/inspector-link), large and whole at the top, and
   // under it when and where it was taken, who is in it, the albums it is in (each opens in the main window), its
-  // description and Curator's story, and the camera and file. Read-only. A new photo replaces the one on screen only
-  // once its details are in and its preview is decoded (or after a short wait, over its thumbhash), so a pointer moving
-  // on never leaves a blank or half-changed window; pointing at nothing leaves the last photo where it is. In a window
-  // wider than tall the details go beside the photo.
+  // description and Curator's story, and the camera and file; then the day around it, its other photos as a strip of
+  // square tiles (a click shows one here, never in the main window). Read-only. A new photo replaces the one on screen
+  // only once its details are in and its preview is decoded (or after a short wait, over its thumbhash), so a pointer
+  // moving on never leaves a blank or half-changed window; pointing at nothing leaves the last photo where it is. In a
+  // window wider than tall the details go beside the photo.
   import Thumbhash from '$lib/components/Thumbhash.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { InspectorFollower, type InspectorSubject } from '$lib/managers/inspector-link.svelte';
+  import {
+    InspectorFollower,
+    subjectOfTimelineAsset,
+    type InspectorSubject,
+  } from '$lib/managers/inspector-link.svelte';
+  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
   import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
@@ -22,20 +28,24 @@
   import { AssetMediaSize, AssetTypeEnum, type AlbumResponseDto, type PersonResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiImageBrokenVariant, mdiMapMarkerOutline, mdiPlay } from '@mdi/js';
+  import { DateTime } from 'luxon';
   import { onMount, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
   import {
     albumYearsOf,
     cameraOf,
+    dayKeyOf,
     descriptionOf,
     exposureOf,
     fileFactsOf,
+    InspectorDayLoader,
     InspectorDetailsLoader,
     InspectorStories,
     peopleOf,
     placeOf,
     previewUrlOf,
     takenOf,
+    type InspectorDay,
     type InspectorDetails,
   } from './inspector-details';
 
@@ -54,17 +64,29 @@
   const follower = new InspectorFollower();
   const loader = new InspectorDetailsLoader();
   const stories = new InspectorStories();
+  const days = new InspectorDayLoader();
 
   // a main window closes the inspector (Shift+I again): a window opened by a script may close itself
   const follow = () => follower.start({ onClose: () => window.close() });
   onMount(() => {
     follow();
-    return () => follower.stop();
+    return () => {
+      follower.stop();
+      days.cancel();
+    };
   });
 
   const pick = $derived(follower.latest?.pick);
+  /** a main window's pick, as it said it: what it points at, and since when */
+  const latestKey = (latest = follower.latest) =>
+    latest ? `${latest.source}:${latest.at}:${latest.pick.kind}:${latest.pick.subject.id}` : '';
+  // a photo of the day chosen here: the inspector shows it (the main window stays where it is) until a main window
+  // points at something new
+  let chosen = $state.raw<{ subject: InspectorSubject; over: string }>();
   const subject = $derived<InspectorSubject | undefined>(
-    pick?.subject ?? (assetId ? { id: assetId, thumbhash: null, ratio: null, video: false } : undefined),
+    chosen && chosen.over === latestKey(follower.latest)
+      ? chosen.subject
+      : (pick?.subject ?? (assetId ? { id: assetId, thumbhash: null, ratio: null, video: false } : undefined)),
   );
 
   type Shown = { details: InspectorDetails; url: string };
@@ -190,6 +212,43 @@
       }
     });
   });
+
+  // the day around the photo: its photos as Photos shows them, asked once a day (inspector-details' InspectorDayLoader:
+  // cancelled by the next day, the last days kept); a day with no other photo has no strip
+  let day = $state.raw<InspectorDay>();
+  const dayKey = $derived(dayKeyOf(asset));
+  $effect(() => {
+    const key = dayKey;
+    if (!key) {
+      return;
+    }
+    untrack(() => {
+      if (day?.key === key) {
+        return;
+      }
+      days
+        .load(key)
+        .then((found) => {
+          if (found && found.key === dayKey) {
+            day = found;
+          }
+        })
+        .catch((error: unknown) => console.warn('[inspector] could not load the day', error));
+    });
+  });
+  const dayShown = $derived(
+    day && day.key === dayKey && day.photos.some((photo) => photo.id !== asset?.id) ? day : undefined,
+  );
+  const timeOf = (photo: TimelineAsset) =>
+    DateTime.fromObject(photo.localDateTime, { zone: 'UTC' }).toLocaleString(DateTime.TIME_SIMPLE, {
+      locale: $locale,
+    });
+  /** A photo of the strip becomes the inspector's own; the main window is not told. */
+  const choose = (photo: TimelineAsset) => {
+    if (photo.id !== asset?.id) {
+      chosen = { subject: subjectOfTimelineAsset(photo), over: latestKey(follower.latest) };
+    }
+  };
 
   const faceOf = (person: PersonResponseDto) =>
     asset ? getRepresentativeThumbnailUrl(person, { isOwner, spaceId: asset.resolvedSpaceId }) : undefined;
@@ -380,6 +439,42 @@
           </section>
         </div>
       </div>
+
+      <!-- the day around the photo, in the order taken: a click shows that photo here, never in the main window -->
+      {#if dayShown}
+        <section class="ins-day" aria-labelledby="ins-day-label" data-testid="inspector-day">
+          <h2 class="ins-label" id="ins-day-label">
+            {$t('inspector_that_day')}<span class="ins-day-count"
+              >{$t('space_album_photo_count', { values: { count: dayShown.photos.length } })}</span
+            >
+          </h2>
+          <ul class="ins-day-photos">
+            {#each dayShown.photos as photo (photo.id)}
+              {@const time = timeOf(photo)}
+              <li>
+                <button
+                  type="button"
+                  class="ins-day-photo"
+                  aria-current={photo.id === asset.id ? 'true' : undefined}
+                  title={time}
+                  onclick={() => choose(photo)}
+                >
+                  <img
+                    src={getAssetMediaUrl({ id: photo.id, cacheKey: photo.thumbhash })}
+                    alt="{$getAltText(photo)}, {time}"
+                    loading="lazy"
+                    decoding="async"
+                    draggable="false"
+                  />
+                  {#if photo.isVideo}
+                    <span class="ins-day-video" aria-hidden="true"><Icon icon={mdiPlay} size="0.875rem" /></span>
+                  {/if}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
     </div>
   {:else}
     <p class="ins-empty">{$t('inspector_point_at_photo')}</p>
@@ -773,6 +868,77 @@
   .ins-file {
     margin-top: 0.35rem;
     overflow-wrap: anywhere;
+  }
+
+  /* ---- the day around the photo: square tiles in the order taken, the hairline inside, the accent for the pointer
+     and the keys, the photo on screen in an ink frame as a selected photo's ---- */
+  .ins-day {
+    display: grid;
+    gap: 0.6rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--ws-hairline);
+  }
+  .ins-day-count {
+    margin-inline-start: 0.6rem;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .ins-day-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+    gap: var(--ws-gap);
+  }
+  .ins-day-photo {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: var(--ws-radius);
+    background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
+  }
+  .ins-day-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .ins-day-photo::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--ws-hairline);
+    pointer-events: none;
+    transition: box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .ins-day-photo[aria-current='true']::after {
+    box-shadow: inset 0 0 0 var(--ws-border) var(--immich-ui-dark);
+  }
+  .ins-day-photo:hover::after,
+  .ins-day-photo:focus-visible::after {
+    box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+  }
+  .ins-day-photo:focus-visible {
+    outline: none;
+  }
+  .ins-day-video {
+    position: absolute;
+    top: 0.25rem;
+    inset-inline-end: 0.25rem;
+    display: grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: var(--ws-radius);
+    background: var(--ws-glass-strong);
+    color: #fff;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ins-day-photo::after {
+      transition: none;
+    }
   }
 
   .ins-empty {

@@ -2407,6 +2407,7 @@
   "individual_shares": "Подборки",
   "info": "Информация",
   "inspector_point_at_photo": "Наведите указатель на фото в Gallery",
+  "inspector_that_day": "В тот день",
   "inspector_unnamed": "{count, plural, other {# без имени}}",
   "inspector_window": "Окно инспектора",
   "inspector_window_shortcut": "Открыть или закрыть окно инспектора",
