@@ -4259,6 +4259,8 @@
   "timeline_grouping_selector": "时间线分组方式",
   "timeline_grouping_years": "按年",
   "timeline_grouping_years_short": "年",
+  "timeline_heading_show_months": "{date}，按月显示全部",
+  "timeline_heading_show_years": "{year}，按年显示全部",
   "timeline_overview_card_semantics": "{period}，{countLabel}，{action}",
   "timeline_overview_decade": "{decade}年代",
   "timeline_overview_no_photos": "没有照片",

@@ -4260,6 +4260,8 @@
   "timeline_grouping_selector": "Agrupación de la línea de tiempo",
   "timeline_grouping_years": "Años",
   "timeline_grouping_years_short": "A",
+  "timeline_heading_show_months": "{date}, mostrar todos los meses",
+  "timeline_heading_show_years": "{year}, mostrar todos los años",
   "timeline_overview_card_semantics": "{period}, {countLabel}, {action}",
   "timeline_overview_decade": "años {decade}",
   "timeline_overview_no_photos": "sin fotos",

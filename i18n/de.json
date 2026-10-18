@@ -4260,6 +4260,8 @@
   "timeline_grouping_selector": "Gruppierung der Zeitleiste",
   "timeline_grouping_years": "Jahre",
   "timeline_grouping_years_short": "J",
+  "timeline_heading_show_months": "{date}, alle Monate anzeigen",
+  "timeline_heading_show_years": "{year}, alle Jahre anzeigen",
   "timeline_overview_card_semantics": "{period}, {countLabel}, {action}",
   "timeline_overview_decade": "{decade}er",
   "timeline_overview_no_photos": "keine Fotos",

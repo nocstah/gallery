@@ -27,6 +27,16 @@
   const monthLabel = (year: number, month: number, style: 'long' | 'short' = 'long') =>
     new Intl.DateTimeFormat($locale, { month: style }).format(new Date(year, month - 1, 1));
 
+  // the words are buttons named by what they do ("October 2026, show all months"; a tooltip alone had said so), and the
+  // heading is named by its date alone, so it does not read out its buttons' actions
+  const date = $derived(
+    new Intl.DateTimeFormat($locale, { month: 'long', year: 'numeric' }).format(
+      new Date(current.year, current.month - 1, 1),
+    ),
+  );
+  const monthsAction = $derived($t('timeline_heading_show_months', { values: { date } }));
+  const yearsAction = $derived($t('timeline_heading_show_years', { values: { year: current.year } }));
+
   const ghosts = $derived(
     Array.from({ length: 12 }, (_, index) => ({
       long: monthLabel(2000, index + 1),
@@ -49,14 +59,15 @@
   };
 </script>
 
-<!-- Photos' heading is the month in view, so it is that page's h1; beside a page's own title (quiet) it is a note -->
+<!-- Photos' heading is the month in view, so it is that page's h1; beside a page's own title (quiet) it is a note. It is
+     no live region: it follows the scroll, and read out it named every month the photos passed -->
 <svelte:element
   this={quiet ? 'div' : 'h1'}
   class="ws-now"
   data-short={short ? '' : undefined}
   data-quiet={quiet ? '' : undefined}
   data-testid="timeline-month-heading"
-  aria-live="polite"
+  aria-label={quiet ? undefined : date}
 >
   {#each ghosts as ghost (ghost.long)}
     <span class="ws-now-label ws-ghost" aria-hidden="true">
@@ -71,7 +82,8 @@
       <button
         type="button"
         class="ws-month ws-now-link"
-        title={$t('timeline_grouping_months')}
+        aria-label={monthsAction}
+        title={monthsAction}
         disabled={!onGrouping}
         onclick={() => onGrouping?.('month')}
         ><span class="ws-long">{monthLabel(current.year, current.month)}</span><span class="ws-short"
@@ -81,7 +93,8 @@
       <button
         type="button"
         class="ws-year ws-now-link"
-        title={$t('timeline_grouping_years')}
+        aria-label={yearsAction}
+        title={yearsAction}
         disabled={!onGrouping}
         onclick={() => onGrouping?.('year')}>{current.year}</button
       >
@@ -90,10 +103,14 @@
 </svelte:element>
 
 <style>
+  /* the cell clips a new month sliding in, half a rem out from the words, so their focus rings show whole (the clip had
+     cut them at the words' edge); the margin gives the room back, so nothing beside it moves */
   .ws-now {
     display: grid;
     flex: none;
     overflow: hidden;
+    padding: 0.5rem;
+    margin: -0.5rem;
   }
   .ws-now > * {
     grid-area: 1 / 1;
@@ -125,7 +142,11 @@
   .ws-now[data-quiet] .ws-now-link {
     color: var(--immich-ui-muted);
   }
+  /* 24px tall targets around words set 20px high: the padding is the press's, the margin keeps the line where it was */
   button.ws-now-link {
+    padding: 0.125rem;
+    margin: -0.125rem;
+    border-radius: var(--ws-radius);
     cursor: pointer;
   }
   .ws-month {

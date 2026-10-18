@@ -4280,6 +4280,8 @@
   "timeline_grouping_selector": "Timeline grouping",
   "timeline_grouping_years": "Years",
   "timeline_grouping_years_short": "Y",
+  "timeline_heading_show_months": "{date}, show all months",
+  "timeline_heading_show_years": "{year}, show all years",
   "timeline_overview_card_semantics": "{period}, {countLabel}, {action}",
   "timeline_overview_decade": "{decade}s",
   "timeline_overview_no_photos": "no photos",

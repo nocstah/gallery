@@ -4205,6 +4205,8 @@
   "timeline_grouping_selector": "時間軸分組方式",
   "timeline_grouping_years": "依年份",
   "timeline_grouping_years_short": "年",
+  "timeline_heading_show_months": "{date}，依月顯示全部",
+  "timeline_heading_show_years": "{year}，依年顯示全部",
   "timeline_overview_card_semantics": "{period}，{countLabel}，{action}",
   "timeline_overview_decade": "{decade}年代",
   "timeline_overview_no_photos": "沒有相片",

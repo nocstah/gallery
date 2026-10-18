@@ -4259,6 +4259,8 @@
   "timeline_grouping_selector": "Raggruppamento della timeline",
   "timeline_grouping_years": "Anni",
   "timeline_grouping_years_short": "A",
+  "timeline_heading_show_months": "{date}, mostra tutti i mesi",
+  "timeline_heading_show_years": "{year}, mostra tutti gli anni",
   "timeline_overview_card_semantics": "{period}, {countLabel}, {action}",
   "timeline_overview_decade": "anni {decade}",
   "timeline_overview_no_photos": "nessuna foto",

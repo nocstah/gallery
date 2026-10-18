@@ -4259,6 +4259,8 @@
   "timeline_grouping_selector": "Tijdlijngroepering",
   "timeline_grouping_years": "Jaren",
   "timeline_grouping_years_short": "J",
+  "timeline_heading_show_months": "{date}, alle maanden tonen",
+  "timeline_heading_show_years": "{year}, alle jaren tonen",
   "timeline_overview_card_semantics": "{period}, {countLabel}, {action}",
   "timeline_overview_decade": "jaren {decade}",
   "timeline_overview_no_photos": "geen foto's",
