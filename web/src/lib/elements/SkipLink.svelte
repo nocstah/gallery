@@ -16,13 +16,21 @@
      * Breakpoint at which the skip link is visible. Defaults to always being visible.
      */
     breakpoint?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+    /**
+     * Local Omarchy layer: lands the focus itself (the bar's: on the page's photo grid, utils/skip-to-content), true
+     * when it did; otherwise the focus goes to the first control of the target
+     */
+    onSkip?: () => boolean;
   }
 
-  let { target = 'main', text = $t('skip_to_content'), breakpoint }: Props = $props();
+  let { target = 'main', text = $t('skip_to_content'), breakpoint, onSkip }: Props = $props();
 
   let isFocused = $state(false);
 
   const moveFocus = () => {
+    if (onSkip?.()) {
+      return;
+    }
     const targetEl = document.querySelector<HTMLElement>(target);
     if (targetEl) {
       const element = getTabbable(targetEl)[0];

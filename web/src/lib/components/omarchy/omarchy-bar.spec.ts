@@ -4,6 +4,7 @@ import type { Component } from 'svelte';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
 import OmarchyBar from '$lib/components/omarchy/OmarchyBar.svelte';
+import { setDefaultTabbleOptions } from '$lib/utils/focus-util';
 
 // Local Omarchy layer: on a phone the one bar's bell moves into the account menu (a row with what is unread, a dot on
 // the avatar while something is); a wider bar keeps the bell.
@@ -103,5 +104,41 @@ describe('OmarchyBar notifications', () => {
     await fireEvent.click(screen.getByTestId('bar-account'));
     expect(screen.queryByTestId('account-notifications')).not.toBeInTheDocument();
     expect(document.querySelector('#account-info-panel')).toBeInTheDocument();
+  });
+});
+
+// Local Omarchy layer: the bar's Skip to content lands on the page's photo grid (utils/skip-to-content), where it had
+// gone to the first control of the first main (a scrubber, an album's filter button)
+describe('OmarchyBar skip link', () => {
+  afterEach(() => {
+    document.querySelector('main')?.remove();
+  });
+
+  it("lands on the page's photo grid", async () => {
+    sdkMock.getAboutInfo.mockResolvedValue({} as never);
+    renderBar();
+    const main = document.createElement('main');
+    main.innerHTML = '<button type="button">Filters</button><section id="asset-grid" tabindex="-1"></section>';
+    document.body.append(main);
+    const grid = main.querySelector<HTMLElement>('#asset-grid')!;
+    grid.getClientRects = () => [{}] as unknown as DOMRectList;
+
+    await fireEvent.click(screen.getByRole('button', { name: 'skip_to_content' }));
+
+    expect(grid).toHaveFocus();
+  });
+
+  it('goes to the first control of the main on a page without photos', async () => {
+    // happy-dom lays nothing out, so tabbable is told not to judge by layout
+    setDefaultTabbleOptions({ displayCheck: 'none' });
+    sdkMock.getAboutInfo.mockResolvedValue({} as never);
+    renderBar();
+    const main = document.createElement('main');
+    main.innerHTML = '<button type="button">New album</button>';
+    document.body.append(main);
+
+    await fireEvent.click(screen.getByRole('button', { name: 'skip_to_content' }));
+
+    expect(screen.getByRole('button', { name: 'New album' })).toHaveFocus();
   });
 });
