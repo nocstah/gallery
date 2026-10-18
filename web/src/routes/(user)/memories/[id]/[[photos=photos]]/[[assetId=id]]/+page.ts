@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { QueryParameter, UUID_REGEX } from '$lib/constants';
+import { memoryFacts } from '$lib/managers/memory-facts.svelte';
 import { memoryManager } from '$lib/managers/memory-manager.svelte';
 import { Route } from '$lib/route';
 import { authenticate } from '$lib/utils/auth';
@@ -21,6 +22,11 @@ export const load = (async ({ url, params }) => {
     redirect(307, memoryManager.memoriesHref);
   }
 
+  // Local Omarchy layer: memories that read the same are one card and play as one film (utils/memory-cards). What
+  // titles them is Curator's facts, so they are waited for (a moment at most, memoryFacts) before the photo in the
+  // address is checked against the card's photos
+  await memoryFacts.settle(memoryManager.memories.map(({ id }) => id));
+
   if (params.assetId) {
     const targetMemory = memoryManager.getMemoryWithAsset(params.assetId, memory.id);
     if (targetMemory && targetMemory.id !== memory.id) {
@@ -28,10 +34,11 @@ export const load = (async ({ url, params }) => {
     }
   }
 
-  const assetIds = new Set(memory.assets.map((asset) => asset.id));
+  const photos = memoryManager.cardOf(memory.id)?.assets ?? memory.assets;
+  const assetIds = new Set(photos.map((asset) => asset.id));
   const assetId =
     [params.assetId, url.searchParams.get(QueryParameter.ASSET_ID)].find((id) => id && assetIds.has(id)) ??
-    memory.assets[0]?.id;
+    photos[0]?.id;
 
   if (!assetId) {
     redirect(307, memoryManager.memoriesHref);

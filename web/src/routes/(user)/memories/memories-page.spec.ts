@@ -1,8 +1,10 @@
 import { MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import type { Component } from 'svelte';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
+import { memoryCards } from '$lib/utils/memory-cards';
+import { memoryTitle } from '$lib/utils/memory-title';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import MemoriesPage from './+page.svelte';
 
@@ -10,18 +12,31 @@ import MemoriesPage from './+page.svelte';
 // emits a subtitle alongside it (`mapMemory` -> `getMemoryDisplay`; the recent-trip rule's
 // "12 photos over 3 days"). Dropping the subtitle from the card orphans both
 // `getMemorySubtitle` and the `recent_trip_subtitle` i18n key, with nothing else failing.
-const { mockMemoryManager, mockUserPreferencesManager } = vi.hoisted(() => ({
-  mockMemoryManager: {
+const { mockMemoryManager, mockUserPreferencesManager } = vi.hoisted(() => {
+  const manager = {
     memories: [] as MemoryResponseDto[],
     total: 0 as number | undefined,
     loading: undefined as Promise<void> | undefined,
+    hasNextPage: false,
     applyPreferences: vi.fn(),
-  },
-  mockUserPreferencesManager: {
-    hasMemoryPreferences: () => false,
-    memories: { onlyFavorites: false, showUpcoming: true },
-  },
-}));
+    // Local Omarchy layer: the cards as the real manager makes them (utils/memory-cards), titled by what the memories
+    // say of themselves (no Curator in a test), on the day the fixtures are set
+    get cards() {
+      return memoryCards(
+        manager.memories,
+        (memory) => memoryTitle(memory, undefined, 'en-US')?.title,
+        Date.UTC(2026, 9, 18, 10),
+      );
+    },
+  };
+  return {
+    mockMemoryManager: manager,
+    mockUserPreferencesManager: {
+      hasMemoryPreferences: () => false,
+      memories: { onlyFavorites: false, showUpcoming: true },
+    },
+  };
+});
 
 vi.mock('$lib/managers/memory-manager.svelte', () => ({ memoryManager: mockMemoryManager }));
 vi.mock('$lib/managers/user-preferences-manager.svelte', () => ({
@@ -84,15 +99,17 @@ describe('Memories page', () => {
     expect(screen.getByText('Lisbon · August 2015')).toBeInTheDocument();
   });
 
-  // the title says when, so the line under an on-this-day card says how long ago, as its title did before
+  // the title says when, so the line under an on-this-day card says what kind it is and how long ago (utils/memory-cards)
   it('says how long ago under an on-this-day card', () => {
     renderPage([memory()]);
 
     expect(screen.getByText('August 2015')).toBeInTheDocument();
-    expect(screen.getByText('years_ago')).toBeInTheDocument();
+    // svelte-i18n is initialised without messages in tests, so `$t` echoes the key back
+    expect(screen.getByText('memory_kind_on_this_day · years_ago')).toBeInTheDocument();
   });
 
-  it('derives the recent-trip subtitle from the rule context when the server sends none', () => {
+  // a trip's line says it is one, and for how many days, from the rule context the server sends
+  it("says a trip's kind and days from the rule context", () => {
     renderPage([
       memory({
         type: MemoryType.Rule,
@@ -100,10 +117,56 @@ describe('Memories page', () => {
       }),
     ]);
 
-    // svelte-i18n is initialised without messages in tests, so `$t` echoes the key back. The
-    // point of the assertion is that the recent-trip branch of `getMemorySubtitle` is reached
-    // and rendered at all — it renders nothing when the fork delta is dropped.
-    expect(screen.getByText('memory_recent_trip_subtitle')).toBeInTheDocument();
+    expect(screen.getByText('memory_kind_trip · years_ago · memory_kind_days')).toBeInTheDocument();
+  });
+
+  // Local Omarchy layer: memories that read the same are one card (utils/memory-cards), today's first under a
+  // heading of their own; upstream put the upcoming ones first under a body-size label
+  it('shows memories that read the same as one card', () => {
+    renderPage([
+      memory({ id: 'day-1', showAt: '2026-10-18T00:00:00.000Z', hideAt: '2026-10-18T23:59:59.999Z' }),
+      memory({
+        id: 'day-2',
+        showAt: '2026-10-17T00:00:00.000Z',
+        hideAt: '2026-10-17T23:59:59.999Z',
+        assets: [assetFactory.build({ id: 'asset-2', localDateTime: '2015-08-02T10:00:00.000Z' })],
+      }),
+    ]);
+
+    expect(screen.getAllByText('August 2015')).toHaveLength(1);
+    expect(screen.getByRole('link', { name: /August 2015/ })).toHaveAttribute(
+      'href',
+      '/memories/day-1?assetId=asset-2',
+    );
+  });
+
+  it("heads today's, the earlier and the upcoming ones, in that order", () => {
+    renderPage([
+      memory({
+        id: 'upcoming',
+        showAt: '2026-10-20T00:00:00.000Z',
+        hideAt: '2026-10-20T23:59:59.999Z',
+        data: { year: 2019 },
+        assets: [assetFactory.build({ id: 'asset-3', localDateTime: '2019-10-20T10:00:00.000Z' })],
+      }),
+      memory({ id: 'today', showAt: '2026-10-18T00:00:00.000Z', hideAt: '2026-10-18T23:59:59.999Z' }),
+      memory({
+        id: 'earlier',
+        showAt: '2026-10-16T00:00:00.000Z',
+        hideAt: '2026-10-16T23:59:59.999Z',
+        data: { year: 2013 },
+        assets: [assetFactory.build({ id: 'asset-4', localDateTime: '2013-10-16T10:00:00.000Z' })],
+      }),
+    ]);
+
+    const headings = screen.getAllByRole('heading', { level: 2 });
+    expect(headings.map((heading) => heading.textContent?.replaceAll(/\s+/g, ' ').trim())).toEqual([
+      'memories_today 1',
+      'memories_earlier 1',
+      'memories_upcoming 1',
+    ]);
+    expect(within(screen.getByTestId('memories-today')).getByText('August 2015')).toBeInTheDocument();
+    expect(within(screen.getByTestId('memories-upcoming')).getByText('October 2019')).toBeInTheDocument();
   });
 
   it('renders no subtitle line for a memory that has none', () => {

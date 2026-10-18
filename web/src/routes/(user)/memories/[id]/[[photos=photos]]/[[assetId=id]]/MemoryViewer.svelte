@@ -28,7 +28,8 @@
   import { locale } from '$lib/stores/preferences.store';
   import { handlePromiseError, memoryLaneTitle } from '$lib/utils';
   import { curator, curatorIsMine, type MemoryTrack } from '$lib/utils/curator';
-  import { memoryFilmWords } from '$lib/utils/memory-title';
+  import { memoryCardCount } from '$lib/utils/memory-cards';
+  import { memoryCount, memoryFilmWords } from '$lib/utils/memory-title';
   import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
   import { type AssetResponseDto, getAssetInfo, MemoryType } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton } from '@immich/ui';
@@ -79,13 +80,22 @@
 
   // ---- what Curator knows of it: the facts, the story, the songs (its owner only: curatorIsMine) ----
 
+  // every memory's facts: they tell which memories share a card (utils/memory-cards), and one batch asks for them all
   $effect(() => {
-    const index = memoryManager.memories.findIndex(({ id }) => id === memoryId);
-    if (index !== -1) {
-      memoryFacts.request(memoryManager.memories.slice(Math.max(0, index - 1), index + 2).map(({ id }) => id));
-    }
+    memoryFacts.request(memoryManager.memories.map(({ id }) => id));
   });
   const facts = $derived(memoryId ? memoryFacts.get(memoryId) : undefined);
+  // Local Omarchy layer: a card of several memories plays their photos as one film, which drifts toward the faces in
+  // all of them and stands for what they stand for together
+  const members = $derived(current?.card.members ?? []);
+  const focus = $derived(
+    members.length > 1 ? Object.assign({}, ...members.map(({ id }) => memoryFacts.get(id)?.focus ?? {})) : facts?.focus,
+  );
+  const total = $derived(
+    current && members.length > 1
+      ? memoryCardCount(current.card, (memory) => memoryCount(memory, memoryFacts.get(memory.id)))
+      : undefined,
+  );
 
   const STORY_HIDDEN = 'curator-memory-story-hidden';
   const readStoryHidden = () => {
@@ -151,7 +161,11 @@
   const story = $derived(told && told.memoryId === memoryId ? told.text : null);
   const tracks = $derived(songs && songs.memoryId === memoryId ? songs.tracks : []);
   const settled = $derived(
-    !memoryId || !curatorIsMine() || (memoryFacts.settled(memoryId) && songs?.memoryId === memoryId),
+    !memoryId ||
+      !curatorIsMine() ||
+      (memoryFacts.settledAll(members.map(({ id }) => id)) &&
+        memoryFacts.settled(memoryId) &&
+        songs?.memoryId === memoryId),
   );
 
   // ---- its title: facts, place and time (utils/memory-title, as Room says them) ----
@@ -162,6 +176,7 @@
           fallbackTitle: $memoryLaneTitle,
           count: (count, videos) =>
             $t(videos ? 'memory_video_moments_subtitle' : 'memory_assets_count', { values: { count } }),
+          total,
         })
       : undefined,
   );
@@ -304,7 +319,7 @@
         line={filmLine}
         title={cardTitle}
         cover={facts?.cover}
-        focus={facts?.focus}
+        {focus}
         {settled}
         story={storyHidden ? null : story}
         {tracks}

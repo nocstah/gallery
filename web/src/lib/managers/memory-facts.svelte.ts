@@ -20,6 +20,8 @@ class MemoryFactsManager {
   #queued = false;
   // the sign-out that forgets them is listened for from the first request on, so importing this costs nothing
   #listening = false;
+  // who waits for answers (settle): woken whenever a batch is answered or given up on, and on sign-out
+  #waiters = new Set<() => void>();
 
   /** A memory's facts once Curator has told them; undefined before, without them, and for anyone but its owner. */
   get(memoryId: string): MemoryFacts | undefined {
@@ -29,6 +31,30 @@ class MemoryFactsManager {
   /** Whether Curator has answered for the memory, either way (a film waits for that before it plans its opening). */
   settled(memoryId: string): boolean {
     return !curatorIsMine() || this.#facts.has(memoryId);
+  }
+
+  /** Whether Curator has answered for all of these memories: the Memories page lays out its cards once it has, since
+   * the facts tell which memories read the same (utils/memory-cards). */
+  settledAll(memoryIds: Iterable<string>): boolean {
+    if (!curatorIsMine()) {
+      return true;
+    }
+    for (const id of memoryIds) {
+      if (!this.#facts.has(id)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Ask for these memories' facts and wait until Curator has answered for all of them, or its patience is up (a
+   * memory's page waits so before it checks which card the photo in its address belongs to). */
+  async settle(memoryIds: string[]): Promise<void> {
+    while (!this.settledAll(memoryIds)) {
+      const answered = new Promise<void>((resolve) => this.#waiters.add(resolve));
+      this.request(memoryIds);
+      await answered;
+    }
   }
 
   /** Ask Curator for these memories' facts: once each, in one batch per tick. */
@@ -83,12 +109,22 @@ class MemoryFactsManager {
       .catch(unknown);
     await Promise.race([answered, new Promise((resolve) => setTimeout(resolve, PATIENCE_MS))]);
     unknown();
+    this.#wake();
+  }
+
+  #wake() {
+    const waiters = [...this.#waiters];
+    this.#waiters.clear();
+    for (const wake of waiters) {
+      wake();
+    }
   }
 
   #clear() {
     this.#facts.clear();
     this.#asked.clear();
     this.#queue.clear();
+    this.#wake();
   }
 }
 

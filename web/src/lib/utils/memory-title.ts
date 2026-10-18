@@ -46,8 +46,18 @@ const parseDay = (value: unknown): Day | undefined => {
 
 const monthStart = ({ year, month }: Day) => new Date(Date.UTC(year, month - 1, 1));
 
-const formatter = (locale: string | undefined, options: Intl.DateTimeFormatOptions) =>
-  new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' });
+// one formatter per locale and shape: the Memories page titles every memory again whenever Curator's facts come in, to
+// tell which read the same (utils/memory-cards), and building a formatter costs far more than using one
+const formatters = new Map<string, Intl.DateTimeFormat>();
+const formatter = (locale: string | undefined, options: Intl.DateTimeFormatOptions) => {
+  const key = `${locale ?? ''}\u{0}${JSON.stringify(options)}`;
+  let format = formatters.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' });
+    formatters.set(key, format);
+  }
+  return format;
+};
 
 /** A locale's own range ("März–Mai 2021", "2019–2021"), or both ends with a dash where formatRange is missing. */
 const formatRange = (format: Intl.DateTimeFormat, from: Date, to: Date) =>
@@ -248,19 +258,24 @@ export const memoryCount = (memory: MemoryResponseDto, facts: MemoryFacts | null
 /** What a memory's film says (the memory's page and Room alike): the card's title for its top bar, the title card's
  * name (the places or people, else the time) and the line under it ("October 2025 · 192 photos": the time when the
  * name is not it, then the count the memory stands for). `count` words the count; `fallbackTitle` titles a memory
- * with nothing to go on, as its card does. */
+ * with nothing to go on, as its card does; `total`, when given, is the count to say (a card of several memories says
+ * what they stand for together, utils/memory-cards). */
 export type MemoryFilmWords = { title: string; name: string; line: string; count: string };
 
 export const memoryFilmWords = (
   memory: MemoryResponseDto,
   facts: MemoryFacts | null | undefined,
   locale: string | undefined,
-  words: { fallbackTitle: (memory: MemoryResponseDto) => string; count: (count: number, videos: boolean) => string },
+  words: {
+    fallbackTitle: (memory: MemoryResponseDto) => string;
+    count: (count: number, videos: boolean) => string;
+    total?: number;
+  },
 ): MemoryFilmWords => {
   const parts = memoryTitle(memory, facts, locale);
   const title = parts?.title ?? words.fallbackTitle(memory);
   const videos = memory.assets.every((asset) => asset.type === AssetTypeEnum.Video);
-  const count = words.count(memoryCount(memory, facts), videos);
+  const count = words.count(words.total ?? memoryCount(memory, facts), videos);
   return {
     title,
     name: parts?.name ?? (parts?.time || title),

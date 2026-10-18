@@ -20,10 +20,13 @@ import { page } from '$app/state';
 import { QueryParameter } from '$lib/constants';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
+import { memoryFacts } from '$lib/managers/memory-facts.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
 import { Route } from '$lib/route';
 import { memoryLaneTitle } from '$lib/utils';
+import { cardOfMemory, memoryCards, wallClockAsUtc, type MemoryCard } from '$lib/utils/memory-cards';
+import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
 import { toTimelineAsset } from '$lib/utils/timeline-util';
 
 type MemoriesSearchDto = Parameters<typeof searchMemories>[0];
@@ -36,7 +39,11 @@ type AdjacentMemory = {
 
 /** Everything the memory viewer renders, for the position currently in the url. */
 export type MemoryState = {
+  /** Local Omarchy layer: the url's memory, holding the photos of every memory on its card (utils/memory-cards) when
+   * several read the same, so the film plays them as one */
   memory: MemoryResponseDto;
+  /** Local Omarchy layer: the card the url's memory is shown on, with the memories it holds */
+  card: MemoryCard;
   asset: TimelineAsset;
   /** The assets the asset viewer can navigate through, spanning the adjacent memories. */
   viewerAssets: AssetResponseDto[];
@@ -109,6 +116,26 @@ class MemoryManager {
 
   memoriesHref = $derived(Route.memories({ isSaved: this.#url.isSaved }));
 
+  // Local Omarchy layer: the cards the memories are shown as (utils/memory-cards, DESIGN.md Memories): memories that
+  // read the same (one place and month, by the title of facts, utils/memory-title) are one card, today's first, then
+  // the earlier days', then the upcoming ones. The Memories page and Explore show them, and the film plays a card's
+  // photos as one, steps to the card before or after it and acts on all its memories (the heart, Remove memory,
+  // Remove photo). The key is titled in one locale, so it does not move with the reader's; Curator's count of a
+  // memory weighs which of one kind leads its card.
+  cards = $derived(
+    memoryCards(
+      this.memories,
+      (memory) => memoryTitle(memory, memoryFacts.get(memory.id), 'en-US')?.title,
+      wallClockAsUtc(),
+      (memory) => memoryCount(memory, memoryFacts.get(memory.id)),
+    ),
+  );
+
+  /** Local Omarchy layer: the card a memory is shown on (by any of its memories' ids). */
+  cardOf(memoryId: string): MemoryCard | undefined {
+    return cardOfMemory(this.cards, memoryId);
+  }
+
   #lookup = $derived.by(() => {
     const lookup = new SvelteMap<string, { memoryIndex: number; assetIndexes: Map<string, number> }>();
 
@@ -131,30 +158,40 @@ class MemoryManager {
       return;
     }
 
-    const { memoryIndex, assetIndexes } = location;
-    const assetIndex = assetIndexes.get(assetId);
-    if (assetIndex === undefined) {
+    // Local Omarchy layer: the url's memory on its card, which may hold others that read the same: the film plays
+    // their photos as one, and steps to the cards next to it
+    const cards = this.cards;
+    const cardIndex = cards.findIndex(({ members }) => members.some(({ id }) => id === memoryId));
+    const card = cards[cardIndex];
+    if (!card) {
       return;
     }
 
-    const memory = this.memories[memoryIndex];
-    const previousMemory = this.memories[memoryIndex - 1];
-    const nextMemory = this.memories[memoryIndex + 1];
+    const own = this.memories[location.memoryIndex];
+    const memory = card.members.length > 1 ? { ...own, assets: card.assets, isSaved: card.isSaved } : own;
+    const assetIndex = memory.assets.findIndex(({ id }) => id === assetId);
+    if (assetIndex === -1) {
+      return;
+    }
+
+    const previousCard = cards[cardIndex - 1];
+    const nextCard = cards[cardIndex + 1];
 
     return {
       memory,
+      card,
       asset: toTimelineAsset(memory.assets[assetIndex]),
-      viewerAssets: [...(previousMemory?.assets ?? []), ...memory.assets, ...(nextMemory?.assets ?? [])],
-      previousMemory: this.#toAdjacentMemory(previousMemory),
-      nextMemory: this.#toAdjacentMemory(nextMemory),
+      viewerAssets: [...(previousCard?.assets ?? []), ...memory.assets, ...(nextCard?.assets ?? [])],
+      previousMemory: this.#toAdjacentMemory(previousCard),
+      nextMemory: this.#toAdjacentMemory(nextCard),
       previousHref:
         assetIndex > 0
           ? this.#toHref(memory, memory.assets[assetIndex - 1])
-          : this.#toHref(previousMemory, previousMemory?.assets.at(-1)),
+          : this.#toHref(previousCard?.lead, previousCard?.assets.at(-1)),
       nextHref:
         assetIndex < memory.assets.length - 1
           ? this.#toHref(memory, memory.assets[assetIndex + 1])
-          : this.#toHref(nextMemory, nextMemory?.assets[0]),
+          : this.#toHref(nextCard?.lead, nextCard?.assets[0]),
       getAssetHref: (assetId: string) => this.#toHref(memory, { id: assetId }),
     };
   });
@@ -165,31 +202,38 @@ class MemoryManager {
       : undefined;
   }
 
-  #toAdjacentMemory(memory: MemoryResponseDto | undefined): AdjacentMemory | undefined {
-    if (!memory) {
+  #toAdjacentMemory(card: MemoryCard | undefined): AdjacentMemory | undefined {
+    if (!card) {
       return;
     }
 
-    const asset = memory.assets[0];
-    const href = this.#toHref(memory, asset);
+    const asset = card.assets[0];
+    const href = this.#toHref(card.lead, asset);
     if (!href) {
       return;
     }
 
-    return { href, assetId: asset.id, title: this.#memoryLaneTitle.current(memory) };
+    return { href, assetId: asset.id, title: this.#memoryLaneTitle.current(card.lead) };
   }
 
-  // the memory holding an asset, checking the given memory first, then the ones next to it
+  // the memory holding an asset, checking the given memory first, then the ones next to it. Local Omarchy layer: by
+  // cards, so a photo of another memory on the same card is the given memory's own (its film plays it)
   getMemoryWithAsset(assetId: string, memoryId: string) {
-    const location = this.#lookup.get(memoryId);
-    if (!location) {
+    if (!this.#lookup.has(memoryId)) {
       return;
     }
 
-    const { memoryIndex } = location;
-    return [memoryIndex, memoryIndex - 1, memoryIndex + 1]
-      .map((index) => this.memories[index])
-      .find((memory) => memory && this.#lookup.get(memory.id)?.assetIndexes.has(assetId));
+    const cards = this.cards;
+    const index = cards.findIndex(({ members }) => members.some(({ id }) => id === memoryId));
+    if (index === -1) {
+      return;
+    }
+
+    const holds = (card: MemoryCard | undefined) => !!card?.assets.some(({ id }) => id === assetId);
+    if (holds(cards[index])) {
+      return this.#getMemory(memoryId);
+    }
+    return [cards[index - 1], cards[index + 1]].find((card) => holds(card))?.lead;
   }
 
   #getMemory(id: string) {
@@ -229,39 +273,51 @@ class MemoryManager {
     this.memories = this.memories.filter((memory) => memory.assets.length > 0);
   }
 
+  // Local Omarchy layer: the photo leaves every memory of the card that holds it, since the film plays them as one
   async deleteCurrentAsset() {
     const current = this.current;
     if (!current) {
       return;
     }
 
-    const memoryId = current.memory.id;
     const assetId = current.asset.id;
+    const holders = current.card.members
+      .filter(({ assets }) => assets.some(({ id }) => id === assetId))
+      .map(({ id }) => id);
     await this.#leaveCurrentAsset();
-    await this.#deleteAsset(memoryId, assetId);
+    for (const memoryId of holders) {
+      await this.#deleteAsset(memoryId, assetId);
+    }
   }
 
+  // Local Omarchy layer: a card is one memory to its reader, so Remove memory removes every memory it holds
   async deleteCurrentMemory() {
     const current = this.current;
     if (!current) {
       return;
     }
 
-    const { id } = current.memory;
+    const ids = current.card.members.map(({ id }) => id);
     await this.#goto(current.nextMemory?.href ?? current.previousMemory?.href ?? this.memoriesHref);
-    await this.#deleteMemory(id);
+    for (const id of ids) {
+      await this.#deleteMemory(id);
+    }
     toastManager.primary(get(t)('removed_memory'));
   }
 
+  // Local Omarchy layer: the heart keeps, or lets go of, every memory on the card
   async toggleCurrentMemorySaved() {
-    const memory = this.current?.memory;
-    if (!memory) {
+    const current = this.current;
+    if (!current) {
       return;
     }
 
-    const isSaved = !memory.isSaved;
-    await updateMemory({ id: memory.id, memoryUpdateDto: { isSaved } });
-    memory.isSaved = isSaved;
+    const isSaved = !current.card.isSaved;
+    const members = current.card.members;
+    await Promise.all(members.map(({ id }) => updateMemory({ id, memoryUpdateDto: { isSaved } })));
+    for (const member of members) {
+      member.isSaved = isSaved;
+    }
     toastManager.primary(get(t)(isSaved ? 'added_to_favorites' : 'removed_from_favorites'));
   }
 

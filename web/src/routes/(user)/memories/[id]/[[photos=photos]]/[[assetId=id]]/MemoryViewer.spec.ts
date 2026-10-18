@@ -16,7 +16,14 @@ import MemoryViewer from './MemoryViewer.svelte';
 // mocked here: only its real lookup logic (keyed first by `page.params.id`, then narrowed to that
 // memory's own assets) can prove the scoping still holds. Mocking `current` by hand would just
 // assert whatever the test wrote into the mock.
-const { mockAssetMultiSelectManager, mockAssetViewerManager, mockAuthManager, mockGetAssetInfo } = vi.hoisted(() => ({
+const {
+  mockAssetMultiSelectManager,
+  mockAssetViewerManager,
+  mockAuthManager,
+  mockGetAssetInfo,
+  mockRemoveMemoryAssets,
+  mockUpdateMemory,
+} = vi.hoisted(() => ({
   mockAssetMultiSelectManager: {
     selectionActive: false,
     assets: [],
@@ -39,6 +46,8 @@ const { mockAssetMultiSelectManager, mockAssetViewerManager, mockAuthManager, mo
     preferences: { memories: { duration: 5 }, tags: { enabled: true } },
   },
   mockGetAssetInfo: vi.fn(),
+  mockRemoveMemoryAssets: vi.fn(() => Promise.resolve([])),
+  mockUpdateMemory: vi.fn(() => Promise.resolve({})),
 }));
 
 // Must RESOLVE, not return undefined. The bail-out $effect below wraps its `goto` in
@@ -143,6 +152,8 @@ vi.mock('@immich/sdk', async () => {
   return {
     ...actual,
     getAssetInfo: mockGetAssetInfo,
+    removeMemoryAssets: mockRemoveMemoryAssets,
+    updateMemory: mockUpdateMemory,
   };
 });
 
@@ -276,8 +287,11 @@ describe('MemoryViewer memory-scoped navigation (#790)', () => {
     // The same asset id appears in two memories (e.g. a birthday memory and an on-this-day
     // memory). This duplication is the only reason memory-scoped navigation is observable at
     // all -- without it, any implementation (correct or regressed) resolves the same way.
+    //
+    // Local Omarchy layer: memory-1 is the birthday, so the two do not read the same; memories that do are one card
+    // and play as one film (utils/memory-cards, the describe block below).
     memoryManager.memories = [
-      memory('memory-1', ['dup-asset', 'm1-only']),
+      { ...memory('memory-1', ['dup-asset', 'm1-only']), type: MemoryType.Birthday, data: { year: 1990 } },
       memory('memory-2', ['dup-asset', 'm2-only']),
     ];
 
@@ -535,5 +549,82 @@ describe('MemoryViewer film keys', () => {
     await fireEvent.keyDown(document, { key: 'ArrowRight' });
     expect(film).toHaveAttribute('data-position', '1');
     expect(film).toHaveAttribute('hidden');
+  });
+});
+
+// Local Omarchy layer: memories that read the same are one card (utils/memory-cards), and the film plays their photos
+// as one, each once, in the order they were taken; the heart and Remove photo act on every memory of the card.
+describe('MemoryViewer card of several memories', () => {
+  const dated = (id: string, photos: [string, string][]): MemoryResponseDto => ({
+    ...memory(
+      id,
+      photos.map(([assetId]) => assetId),
+    ),
+    assets: photos.map(([assetId, day]) =>
+      assetFactory.build({
+        id: assetId,
+        type: AssetTypeEnum.Image,
+        localDateTime: `${day}T10:00:00.000Z`,
+        fileCreatedAt: `${day}T10:00:00.000Z`,
+      }),
+    ),
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // two days of the same August, so both read "August 2015"
+    memoryManager.memories = [
+      dated('day-3', [
+        ['b', '2015-08-03'],
+        ['c', '2015-08-03'],
+      ]),
+      dated('day-2', [
+        ['a', '2015-08-02'],
+        ['b', '2015-08-03'],
+      ]),
+    ];
+    mockPage.reset('https://gallery.test/memories/day-3?assetId=a', {
+      routeId: '/(user)/memories/[id]/[[photos=photos]]/[[assetId=id]]',
+      params: { id: 'day-3' },
+    });
+    mockGetAssetInfo.mockResolvedValue(memoryManager.memories[1].assets[0]);
+  });
+
+  it('plays the photos of both, each once, in the order they were taken', async () => {
+    const { container } = renderViewer();
+
+    const grid = await openAllPhotos();
+    expect(grid).toHaveAttribute('data-asset-count', '3');
+    expect([...container.querySelectorAll('[data-testid^="asset-row-"]')].map((row) => row.textContent)).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
+    expect(memoryManager.current?.card.members.map(({ id }) => id)).toEqual(['day-3', 'day-2']);
+  });
+
+  it('takes a photo out of every memory of the card that holds it', async () => {
+    renderViewer();
+    await screen.findByTestId('memory-film');
+    mockPage.reset('https://gallery.test/memories/day-3?assetId=b', {
+      routeId: '/(user)/memories/[id]/[[photos=photos]]/[[assetId=id]]',
+      params: { id: 'day-3' },
+    });
+
+    await memoryManager.deleteCurrentAsset();
+
+    expect(mockRemoveMemoryAssets).toHaveBeenCalledWith({ id: 'day-3', bulkIdsDto: { ids: ['b'] } });
+    expect(mockRemoveMemoryAssets).toHaveBeenCalledWith({ id: 'day-2', bulkIdsDto: { ids: ['b'] } });
+  });
+
+  it('keeps every memory of the card with the heart', async () => {
+    renderViewer();
+    await screen.findByTestId('memory-film');
+
+    await memoryManager.toggleCurrentMemorySaved();
+
+    expect(mockUpdateMemory).toHaveBeenCalledWith({ id: 'day-3', memoryUpdateDto: { isSaved: true } });
+    expect(mockUpdateMemory).toHaveBeenCalledWith({ id: 'day-2', memoryUpdateDto: { isSaved: true } });
+    expect(memoryManager.memories.every(({ isSaved }) => isSaved)).toBe(true);
   });
 });
