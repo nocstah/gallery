@@ -19,6 +19,7 @@
   import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import SpaceNewAssetsDivider from '$lib/components/spaces/space-new-assets-divider.svelte';
   import SpaceOnboardingBanner from '$lib/components/spaces/space-onboarding-banner.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import SpaceAssetLimitWarning from '$lib/components/spaces/space-asset-limit-warning.svelte';
   import SelectionToolbar from '$lib/components/timeline/SelectionToolbar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
@@ -34,6 +35,7 @@
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { lang } from '$lib/stores/preferences.store';
+  import { dismissedOnboardingSpaceIds } from '$lib/stores/space-view.store';
   import { handleError } from '$lib/utils/handle-error';
   import { getPhotosPersonFilterThumbnailUrl } from '$lib/utils/photos-filter-options';
   import {
@@ -71,7 +73,6 @@
     SharedSpaceRole,
     SearchSuggestionType,
     updateSpace,
-    UserAvatarColor,
     type SharedSpaceMemberResponseDto,
     type SharedSpaceResponseDto,
     type SmartSearchFacetsResponseDto,
@@ -782,20 +783,9 @@
     });
   });
 
-  const gradientClasses: Record<string, string> = {
-    [UserAvatarColor.Primary]: 'from-immich-primary/60 to-immich-primary',
-    [UserAvatarColor.Pink]: 'from-pink-300 to-pink-500',
-    [UserAvatarColor.Red]: 'from-red-400 to-red-600',
-    [UserAvatarColor.Yellow]: 'from-yellow-300 to-yellow-500',
-    [UserAvatarColor.Blue]: 'from-blue-400 to-blue-600',
-    [UserAvatarColor.Green]: 'from-green-400 to-green-700',
-    [UserAvatarColor.Purple]: 'from-purple-400 to-purple-700',
-    [UserAvatarColor.Orange]: 'from-orange-400 to-orange-600',
-    [UserAvatarColor.Gray]: 'from-gray-400 to-gray-600',
-    [UserAvatarColor.Amber]: 'from-amber-400 to-amber-600',
-  };
-
-  const spaceGradient = $derived(gradientClasses[space.color ?? 'primary'] ?? gradientClasses[UserAvatarColor.Primary]);
+  // Local Omarchy layer: the setup steps show for the owner until they are done or put away; while they do, their
+  // own Add photos is the empty Space's next step, so the empty state does not offer it a second time
+  const onboardingShown = $derived(isOwner && !$dismissedOnboardingSpaceIds.includes(space.id));
 
   $effect(() => {
     if (!space?.id || space.id === initializedSpaceId) {
@@ -904,11 +894,13 @@
 
     {#if !showSearchResults}
       {#if isFilteredTimelineEmpty}
-        <div class="flex flex-1 flex-col items-center justify-center gap-2" data-testid="empty-state-message">
-          <p class="text-sm text-(--fg-muted)">{$t('spaces_no_filtered_assets')}</p>
-          <button type="button" class="text-sm text-(--primary)" onclick={handleClearAllFilters}>
-            {$t('spaces_clear_all_filters')}
-          </button>
+        <!-- Local Omarchy layer: Photos' own words for a filter that finds nothing, in the Empty State's grammar -->
+        <div data-testid="empty-state-message">
+          <EmptyState
+            title={$t('timeline_empty_filtered_title')}
+            body={$t('timeline_empty_filtered_subtitle')}
+            action={{ label: $t('timeline_empty_clear_filters'), onclick: handleClearAllFilters }}
+          />
         </div>
       {:else}
         <Timeline
@@ -932,7 +924,6 @@
             {#if isOwner}
               <SpaceOnboardingBanner
                 {space}
-                gradientClass={spaceGradient}
                 onAddPhotos={() => (viewMode = 'select-assets')}
                 onInviteMembers={() => void goto(`/spaces/${space.id}/members`)}
                 onSetCover={openSelectCover}
@@ -950,9 +941,15 @@
 
           {#snippet empty()}
             {#if viewMode === 'view'}
-              <div class="mx-auto max-w-md py-16 text-center">
-                <p class="text-gray-500 dark:text-gray-400">{$t('spaces_no_assets')}</p>
-              </div>
+              <!-- Local Omarchy layer: the Empty State on the gutter, as on a Space's other pages (DESIGN.md, Space
+                   page); upstream centred one grey line -->
+              <EmptyState
+                title={$t('spaces_no_assets')}
+                body={$t('spaces_no_assets_body')}
+                action={isEditor && !onboardingShown
+                  ? { label: $t('add_photos'), onclick: () => (viewMode = 'select-assets') }
+                  : undefined}
+              />
             {/if}
           {/snippet}
         </Timeline>

@@ -24,7 +24,6 @@ const makeSpace = (overrides: Partial<SharedSpaceResponseDto> = {}): SharedSpace
 
 const defaultProps = {
   space: makeSpace(),
-  gradientClass: 'from-indigo-400 to-cyan-600',
   onAddPhotos: vi.fn(),
   onInviteMembers: vi.fn(),
   onSetCover: vi.fn(),

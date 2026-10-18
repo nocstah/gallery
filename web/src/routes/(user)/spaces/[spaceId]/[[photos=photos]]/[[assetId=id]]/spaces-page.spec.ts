@@ -1123,7 +1123,7 @@ describe('Spaces page search URL state', () => {
 
     renderPage();
 
-    expect(screen.getByTestId('empty-state-message')).toHaveTextContent('spaces_no_filtered_assets');
+    expect(screen.getByTestId('empty-state-message')).toHaveTextContent('timeline_empty_filtered_title');
     expect(screen.queryByTestId('timeline-stub')).not.toBeInTheDocument();
   });
 

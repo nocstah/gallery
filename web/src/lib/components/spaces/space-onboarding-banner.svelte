@@ -1,4 +1,9 @@
 <script lang="ts">
+  // Local Omarchy layer: the setup steps as a calm list on the ground (DESIGN.md, Space page), where the fork drew a
+  // white rounded slab with a shadow, the Space's gradient in a progress bar and on each done step's tile, and
+  // tinted icon tiles: a muted line that counts the steps, the desktop's 2px meter under it in ink, then a row per
+  // step split by hairlines, as Settings draws its rows (a muted icon that turns ink under the pointer, the label, what
+  // it does in muted meta); a done step keeps its row, its check in ink and its label muted.
   import type { SharedSpaceResponseDto } from '@immich/sdk';
   import {
     mdiAccountPlusOutline,
@@ -16,13 +21,12 @@
 
   interface Props {
     space: SharedSpaceResponseDto;
-    gradientClass?: string;
     onAddPhotos: () => void;
     onInviteMembers: () => void;
     onSetCover: () => void;
   }
 
-  let { space, gradientClass = '', onAddPhotos, onInviteMembers, onSetCover }: Props = $props();
+  let { space, onAddPhotos, onInviteMembers, onSetCover }: Props = $props();
 
   let collapsed = $state(false);
 
@@ -69,85 +73,166 @@
 </script>
 
 {#if !allComplete && !dismissed}
-  <div
-    class="m-4 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-immich-dark-gray"
+  <section
+    class="ws-onboarding"
     data-testid="onboarding-banner"
     data-collapsed={collapsed}
+    aria-label={$t('spaces_onboarding_title')}
   >
-    <!-- Progress bar -->
-    <div class="h-1 w-full bg-gray-100 dark:bg-gray-800">
-      <div
-        class="h-full bg-linear-to-r transition-all duration-500 ease-out {gradientClass}"
-        style="width: {progressPercent}%"
-        data-testid="progress-bar-fill"
-      ></div>
-    </div>
-
-    <!-- Header (always visible) -->
-    <div class="flex items-center justify-between px-4 py-2.5">
-      <p class="text-sm font-medium text-gray-600 dark:text-gray-300" data-testid="progress-text">
+    <div class="ws-onboarding-head">
+      <p class="ws-onboarding-count" data-testid="progress-text">
         {$t('spaces_setup_steps_done', { values: { completed: completedCount, total: 3 } })}
       </p>
-      <div class="flex items-center gap-1">
-        <button
-          type="button"
-          class="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-          onclick={() => (collapsed = !collapsed)}
-          data-testid="banner-collapse-toggle"
-          aria-label={collapsed ? 'Expand' : 'Collapse'}
-        >
-          <Icon icon={collapsed ? mdiChevronDown : mdiChevronUp} size="20" />
-        </button>
-        <button
-          type="button"
-          class="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-          onclick={dismiss}
-          data-testid="banner-dismiss"
-          aria-label="Dismiss"
-        >
-          <Icon icon={mdiClose} size="20" />
-        </button>
-      </div>
+      <button
+        type="button"
+        class="ws-onboarding-tool"
+        onclick={() => (collapsed = !collapsed)}
+        data-testid="banner-collapse-toggle"
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? $t('expand') : $t('collapse')}
+        title={collapsed ? $t('expand') : $t('collapse')}
+      >
+        <Icon icon={collapsed ? mdiChevronDown : mdiChevronUp} size="20" />
+      </button>
+      <button
+        type="button"
+        class="ws-onboarding-tool"
+        onclick={dismiss}
+        data-testid="banner-dismiss"
+        aria-label={$t('spaces_onboarding_hide')}
+        title={$t('spaces_onboarding_hide')}
+      >
+        <Icon icon={mdiClose} size="20" />
+      </button>
     </div>
 
-    <!-- Steps (collapsible) -->
+    <!-- how far the setup is, on the desktop's meter: a hairline, filled in ink -->
+    <div class="ws-meter" aria-hidden="true">
+      <span style="width: {progressPercent}%" data-testid="progress-bar-fill"></span>
+    </div>
+
     {#if !collapsed}
-      <div class="border-t border-gray-100 dark:border-gray-800">
-        {#each steps as step, i (step.id)}
-          {#if step.complete}
-            <div
-              class="flex items-center gap-3 px-4 py-3 opacity-50 {i < steps.length - 1
-                ? 'border-b border-gray-100 dark:border-gray-800'
-                : ''}"
-            >
-              <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-linear-to-br {gradientClass}">
-                <span data-testid="step-{step.id}-check">
-                  <Icon icon={mdiCheck} size="20" class="text-white" />
+      <ul class="ws-onboarding-steps">
+        {#each steps as step (step.id)}
+          <li>
+            {#if step.complete}
+              <div class="ws-onboarding-step" data-done>
+                <span class="ws-onboarding-icon" data-testid="step-{step.id}-check">
+                  <Icon icon={mdiCheck} size="20" />
+                </span>
+                <span class="ws-onboarding-text">
+                  <span class="ws-onboarding-label">{step.label}</span>
                 </span>
               </div>
-              <span class="flex-1 text-sm font-medium text-gray-400 line-through dark:text-gray-500">
-                {step.label}
-              </span>
-            </div>
-          {:else}
-            <button
-              type="button"
-              class="flex w-full items-center gap-3 px-4 py-3.5 transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-gray-800/50 {i <
-              steps.length - 1
-                ? 'border-b border-gray-100 dark:border-gray-800'
-                : ''}"
-              onclick={step.action}
-              data-testid="step-{step.id}-action"
-            >
-              <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <Icon icon={step.icon} size="20" class="text-primary" />
-              </div>
-              <span class="flex-1 text-left text-sm font-medium dark:text-white">{step.label}</span>
-              <Icon icon={mdiChevronRight} size="20" class="text-gray-400" />
-            </button>
-          {/if}
+            {:else}
+              <button
+                type="button"
+                class="ws-onboarding-step"
+                onclick={step.action}
+                data-testid="step-{step.id}-action"
+              >
+                <span class="ws-onboarding-icon"><Icon icon={step.icon} size="20" /></span>
+                <span class="ws-onboarding-text">
+                  <span class="ws-onboarding-label">{step.label}</span>
+                  <span class="ws-onboarding-description">{step.description}</span>
+                </span>
+                <span class="ws-onboarding-chevron"><Icon icon={mdiChevronRight} size="20" /></span>
+              </button>
+            {/if}
+          </li>
         {/each}
-      </div>
+      </ul>
     {/if}
-  </div>
+  </section>
 {/if}
+
+<style>
+  .ws-onboarding {
+    max-width: 60rem;
+    margin: 0 0 0.75rem;
+    color: var(--immich-ui-dark);
+  }
+  .ws-onboarding-head {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 2.5rem;
+  }
+  .ws-onboarding-count {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--ws-text-meta);
+    color: var(--immich-ui-muted);
+  }
+  .ws-onboarding-tool {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--ws-radius);
+    color: var(--immich-ui-muted);
+  }
+  .ws-onboarding-tool:hover {
+    background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
+    color: var(--immich-ui-dark);
+  }
+  .ws-onboarding-steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ws-onboarding-steps > li {
+    border-bottom: 1px solid var(--ws-hairline);
+  }
+  .ws-onboarding-step {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    width: 100%;
+    min-height: 3.25rem;
+    padding: 0.55rem 0.5rem 0.55rem 0;
+    text-align: start;
+  }
+  button.ws-onboarding-step:hover {
+    background: color-mix(in oklab, var(--immich-ui-dark) 4%, transparent);
+  }
+  .ws-onboarding-tool:focus-visible,
+  button.ws-onboarding-step:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
+  }
+  .ws-onboarding-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 2rem;
+    color: var(--immich-ui-muted);
+  }
+  button.ws-onboarding-step:hover .ws-onboarding-icon,
+  [data-done] .ws-onboarding-icon {
+    color: var(--immich-ui-dark);
+  }
+  .ws-onboarding-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  .ws-onboarding-label {
+    font-size: var(--ws-text-ui);
+    font-weight: 600;
+  }
+  [data-done] .ws-onboarding-label {
+    font-weight: 500;
+    color: var(--immich-ui-muted);
+  }
+  .ws-onboarding-description {
+    font-size: var(--ws-text-meta);
+    color: var(--immich-ui-muted);
+  }
+  .ws-onboarding-chevron {
+    flex: none;
+    color: var(--immich-ui-muted);
+  }
+</style>
