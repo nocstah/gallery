@@ -256,6 +256,7 @@ Every photo is a window.
 - **Stack badge** (a stack's count and icon at the top-right, a button that opens the stack in place) is sized to its tile (2026-10-18; on a phone it covered a quarter to three quarters of a tile): the count and a 24px icon on a tile wider than 7.5rem, the count in data type beside a 16px icon closer to the corner below that, and the count alone under 5rem.
 - **Favourite:** a white heart at the bottom-left. A grid of favourites only (Favorites, the favourites filter: the timeline's `isFavorite`) leaves it off, since on every tile it would say nothing (`Thumbnail`'s `showFavoriteIcon`); a photo taken out of its favourites leaves the grid instead.
 - **Open and close:** like a window on the desktop (see Motion).
+- **Keys** (2026-10-18): ← and → step a photo in the grid's order; ↑ and ↓ go to the photo above or below, read from the rows as they are drawn (`utils/grid-rows`: months share rows, so the order cannot say what is above), the one nearest by its horizontal centre; Home and End go to the first and last photo. The photo they reach comes wholly into view with a little air, below the glass bar and header rows when the chrome is glass. Where the row beyond is not drawn yet (its month still loading), ↑ and ↓ go on to the photo past the row's end, which loads it. With no photo focused, the arrows and Home and End stay the page's and scroll it.
 
 ### Time Strip (signature)
 One calm line in the middle of the one bar that never rearranges itself (`TimelineWorkspaces.svelte`):

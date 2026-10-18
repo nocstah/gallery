@@ -106,3 +106,112 @@ describe('TimelineKeyboardActions: special album keys', () => {
     expect(villa.move).not.toHaveBeenCalled();
   });
 });
+
+// Local Omarchy layer: ↑ and ↓ move by the rows as they are drawn (utils/grid-rows), Home and End to the first and last
+// photo; with no photo focused the keys are left to the page
+describe('TimelineKeyboardActions: rows, Home and End', () => {
+  const asset = (id: string) => ({ id, ownerId: 'me', visibility: 'timeline' }) as TimelineAsset;
+
+  const setup = ({
+    earlier,
+    later,
+    all = [],
+  }: {
+    earlier?: TimelineAsset;
+    later?: TimelineAsset;
+    all?: TimelineAsset[];
+  }) => {
+    const timelineManager = {
+      isInitialized: true,
+      months: [{}],
+      getTimelineMonthByAssetId: () => ({ findAssetById: () => undefined }),
+      getEarlierAsset: vi.fn(() => Promise.resolve(earlier)),
+      getLaterAsset: vi.fn(() => Promise.resolve(later)),
+      assetsIterator: vi.fn(({ direction }: { direction: 'earlier' | 'later' }) => {
+        const order = direction === 'earlier' ? all : [...all].reverse();
+        return (async function* () {
+          yield* await Promise.resolve(order);
+        })();
+      }),
+      scrollBy: vi.fn(),
+      update: vi.fn(),
+    } as unknown as TimelineManager;
+    const assetInteraction = {
+      selectionActive: false,
+      assets: [],
+      getOwnedAssets: () => [],
+      clear: vi.fn(),
+    } as unknown as AssetMultiSelectManager;
+    const scrollToAsset = vi.fn(() => true);
+    render(TimelineKeyboardActions, { timelineManager, assetInteraction, scrollToAsset });
+    return { timelineManager, scrollToAsset };
+  };
+
+  // a grid of two rows: a, b, c along the top, d and e under them
+  const layout: Record<string, [top: number, left: number, right: number]> = {
+    a: [0, 0, 200],
+    b: [0, 210, 400],
+    c: [0, 410, 600],
+    d: [110, 0, 300],
+    e: [110, 310, 600],
+  };
+  const drawGrid = (ids = Object.keys(layout)) => {
+    const grid = document.createElement('section');
+    grid.id = 'asset-grid';
+    grid.getBoundingClientRect = () => ({ top: 0, bottom: 800, left: 0, right: 600, height: 800 }) as DOMRect;
+    for (const id of ids) {
+      const [top, left, right] = layout[id];
+      const tile = document.createElement('div');
+      tile.dataset.asset = id;
+      tile.dataset.thumbnailFocusContainer = '';
+      tile.tabIndex = 0;
+      tile.getBoundingClientRect = () => ({ top, bottom: top + 100, left, right, height: 100 }) as DOMRect;
+      grid.append(tile);
+    }
+    document.body.append(grid);
+    return (id: string) => grid.querySelector<HTMLElement>(`[data-asset="${CSS.escape(id)}"]`)!;
+  };
+
+  beforeEach(() => document.body.replaceChildren());
+
+  it('moves down to the photo below nearest by its centre, and up again', async () => {
+    setup({});
+    const tile = drawGrid();
+    tile('b').focus();
+    const down = await fireEvent.keyDown(tile('b'), { key: 'ArrowDown' });
+    expect(down).toBe(false);
+    expect(document.activeElement).toBe(tile('e'));
+    await fireEvent.keyDown(tile('e'), { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(tile('c'));
+  });
+
+  it('leaves the arrows to the page while no photo is focused', async () => {
+    setup({});
+    drawGrid();
+    const down = await fireEvent.keyDown(document.body, { key: 'ArrowDown' });
+    expect(down).toBe(true);
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('goes on past the row when the row beyond is not drawn yet', async () => {
+    const { timelineManager, scrollToAsset } = setup({ earlier: asset('f') });
+    const tile = drawGrid();
+    tile('d').focus();
+    await fireEvent.keyDown(tile('d'), { key: 'ArrowDown' });
+    // the photo after the row's last (e), as → would reach it, which loads its month
+    await vi.waitFor(() => expect(scrollToAsset).toHaveBeenCalledWith(asset('f')));
+    expect(timelineManager.getEarlierAsset).toHaveBeenCalledWith({ id: 'e' }, 'asset');
+  });
+
+  it('goes to the first photo on Home and the last on End', async () => {
+    const all = [asset('a'), asset('b'), asset('e')];
+    const { scrollToAsset } = setup({ all });
+    const tile = drawGrid();
+    tile('b').focus();
+    await fireEvent.keyDown(tile('b'), { key: 'End' });
+    await vi.waitFor(() => expect(document.activeElement).toBe(tile('e')));
+    await fireEvent.keyDown(tile('e'), { key: 'Home' });
+    await vi.waitFor(() => expect(document.activeElement).toBe(tile('a')));
+    expect(scrollToAsset).toHaveBeenCalledTimes(2);
+  });
+});

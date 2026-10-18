@@ -1,6 +1,7 @@
 <script lang="ts">
   import { shortcuts, type ShortcutOptions } from '$lib/actions/shortcut';
   import {
+    focusAsset,
     setFocusToAsset as setFocusAssetInit,
     setFocusTo as setFocusToInit,
   } from '$lib/components/timeline/actions/focus-actions';
@@ -23,8 +24,10 @@
   import { deleteAssets } from '$lib/utils/actions';
   import { holdQuickTrash, quickTrash } from '$lib/utils/quick-trash';
   import { archiveAssets, selectAllAssets } from '$lib/utils/asset-utils';
+  import { revealDelta, rowNeighbour, rowOf } from '$lib/utils/grid-rows';
   import { AssetVisibility, type AlbumResponseDto } from '@immich/sdk';
   import { isModalOpen, modalManager } from '@immich/ui';
+  import { tick } from 'svelte';
 
   type Props = {
     timelineManager: TimelineManager;
@@ -170,6 +173,104 @@
     }
   };
 
+  // Local Omarchy layer: ↑ and ↓ move to the photo above or below, read from the rows as they are drawn
+  // (utils/grid-rows: months share rows, so the order cannot say which photo is above), Home and End to the first and
+  // last photo, each brought wholly into view clear of a glass bar over the grid. With no photo focused the keys stay
+  // the page's (they scroll it)
+  const TILE = '[data-thumbnail-focus-container][data-asset]';
+  const focusedTile = () => {
+    const focus = document.activeElement;
+    return focus instanceof HTMLElement && focus.matches(TILE) ? focus : undefined;
+  };
+
+  // the part of the grid nothing floats over: below the bar and the timeline's header rows when they are glass over it
+  // (Settings › Theme › Chrome), the grid's own box otherwise (they stand above it then)
+  const clearBand = (grid: HTMLElement) => {
+    const box = grid.getBoundingClientRect();
+    let top = box.top;
+    for (const over of [document.querySelector('#dashboard-navbar'), ...(grid.parentElement?.children ?? [])]) {
+      if (!over || over === grid || over.classList.contains('absolute')) {
+        continue;
+      }
+      const rect = over.getBoundingClientRect();
+      if (rect.height > 0 && rect.top < box.top + box.height / 2) {
+        top = Math.max(top, rect.bottom);
+      }
+    }
+    return { top, bottom: box.bottom };
+  };
+
+  const reveal = (tile: HTMLElement) => {
+    const grid = tile.closest<HTMLElement>('#asset-grid');
+    const delta = grid ? revealDelta(tile.getBoundingClientRect(), clearBand(grid)) : 0;
+    if (delta !== 0) {
+      timelineManager.scrollBy(delta);
+    }
+  };
+
+  const focusAndReveal = async (asset: TimelineAsset) => {
+    if (!scrollToAsset(asset)) {
+      return;
+    }
+    await tick();
+    focusAsset(asset.id);
+    const tile = focusedTile();
+    if (tile) {
+      reveal(tile);
+    }
+  };
+
+  let rowMoving = false;
+  const moveByRow = async (direction: 'up' | 'down', event: KeyboardEvent) => {
+    const from = focusedTile();
+    if (!from) {
+      return;
+    }
+    event.preventDefault();
+    if (rowMoving) {
+      return;
+    }
+    const tiles = [...(from.closest('#asset-grid') ?? document).querySelectorAll<HTMLElement>(TILE)];
+    const boxes = tiles.map((tile) => tile.getBoundingClientRect());
+    const here = from.getBoundingClientRect();
+    const index = rowNeighbour(boxes, here, direction);
+    if (index !== undefined) {
+      tiles[index].focus({ preventScroll: true });
+      reveal(tiles[index]);
+      return;
+    }
+    // no row drawn beyond this one (its month is still loading, or this is the end): the photo past this row's end,
+    // as → or ← would reach it, which loads its month
+    const row = rowOf(boxes, here).map((at) => tiles[at]);
+    const id = (direction === 'down' ? row.at(-1) : row[0])?.dataset.asset;
+    if (!id) {
+      return;
+    }
+    rowMoving = true;
+    try {
+      const asset =
+        direction === 'down'
+          ? await timelineManager.getEarlierAsset({ id }, 'asset')
+          : await timelineManager.getLaterAsset({ id }, 'asset');
+      if (asset) {
+        await focusAndReveal(asset);
+      }
+    } finally {
+      rowMoving = false;
+    }
+  };
+
+  const moveToEnd = async (end: 'first' | 'last', event: KeyboardEvent) => {
+    if (!focusedTile()) {
+      return;
+    }
+    event.preventDefault();
+    for await (const asset of timelineManager.assetsIterator({ direction: end === 'first' ? 'earlier' : 'later' })) {
+      await focusAndReveal(asset);
+      break;
+    }
+  };
+
   const shortcutList = $derived.by(() => {
     if (searchStore.isSearchEnabled || assetViewerManager.isViewing || isModalOpen()) {
       return [];
@@ -180,6 +281,11 @@
       { shortcut: { key: 'A', ctrl: true }, onShortcut: () => selectAllAssets(timelineManager, assetInteraction) },
       { shortcut: { key: 'ArrowRight' }, onShortcut: () => setFocusTo('earlier', 'asset') },
       { shortcut: { key: 'ArrowLeft' }, onShortcut: () => setFocusTo('later', 'asset') },
+      // Local Omarchy layer: by the rows as drawn; left to the page (they scroll) while no photo is focused
+      { shortcut: { key: 'ArrowDown' }, preventDefault: false, onShortcut: (event) => moveByRow('down', event) },
+      { shortcut: { key: 'ArrowUp' }, preventDefault: false, onShortcut: (event) => moveByRow('up', event) },
+      { shortcut: { key: 'Home' }, preventDefault: false, onShortcut: (event) => moveToEnd('first', event) },
+      { shortcut: { key: 'End' }, preventDefault: false, onShortcut: (event) => moveToEnd('last', event) },
       { shortcut: { key: 'D' }, onShortcut: () => setFocusTo('earlier', 'day') },
       { shortcut: { key: 'M' }, onShortcut: () => setFocusTo('earlier', 'month') },
       { shortcut: { key: 'M', shift: true }, onShortcut: () => setFocusTo('later', 'month') },
