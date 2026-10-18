@@ -103,7 +103,7 @@ test.describe('Shared Links', () => {
 
   test('show error for invalid shared link', async ({ page }) => {
     await page.goto('/share/invalid');
-    await page.getByRole('heading', { name: 'Invalid share key' }).waitFor();
+    await page.getByRole('heading', { name: 'This link has ended or is incomplete' }).waitFor();
   });
 
   test('auth on navigation from shared link to timeline', async ({ context, page }) => {

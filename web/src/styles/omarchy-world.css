@@ -599,6 +599,76 @@ div[role='dialog'] :is(.border-b, .border-t) {
   outline: var(--ws-border) solid var(--ws-accent);
   outline-offset: 3px;
 }
+/* a quiet link can be a button (Copy details) */
+button.ws-empty-link {
+  cursor: pointer;
+}
+
+/* ---- a page on its own, outside the shell (DESIGN.md, Error pages): an error page for someone not signed in or a
+   Gallery that is not answering, a shared link that ended, a link's password. The ground, and the Empty State on a
+   gutter of its own, since there is no sidebar or bar to line up with (the public link page's pages use the same) */
+.ws-standalone {
+  min-height: 100dvh;
+  padding: 0 clamp(1rem, 4vw, 2rem) 4rem;
+  background: var(--immich-ui-light);
+  color: var(--immich-ui-dark);
+}
+
+/* an error's status, message and stack, for the admin only: behind a muted Details under the actions, in data type */
+.ws-error-details {
+  max-width: 60rem;
+  margin-top: 2.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--ws-hairline);
+}
+.ws-error-details > summary {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  width: fit-content;
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--ws-text-ui);
+  font-weight: 600;
+  color: var(--immich-ui-muted);
+}
+.ws-error-details > summary::-webkit-details-marker {
+  display: none;
+}
+/* the house chevron in place of the browser's triangle, turned down while open */
+.ws-error-details-chevron {
+  transition: rotate 140ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ws-error-details[open] .ws-error-details-chevron {
+  rotate: 90deg;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-error-details-chevron {
+    transition: none;
+  }
+}
+.ws-error-details > summary:hover,
+.ws-error-details[open] > summary {
+  color: var(--immich-ui-dark);
+}
+.ws-error-details > summary:focus-visible {
+  outline: var(--ws-border) solid var(--ws-accent);
+  outline-offset: 3px;
+}
+.ws-error-details-line {
+  margin: 0.75rem 0 0.5rem;
+  font: 600 var(--ws-text-data) / 1.5 var(--ws-font-data);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.ws-error-stack {
+  max-height: 40vh;
+  margin: 0 0 0.75rem;
+  overflow: auto;
+  font: 400 var(--ws-text-data) / 1.6 var(--ws-font-data);
+  white-space: pre;
+  color: var(--immich-ui-muted);
+}
 
 /* ---- people: faces first; "Add a name" shows on the card you're pointing at, not 500 times ---- */
 .ws-person-name {

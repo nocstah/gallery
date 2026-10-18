@@ -1,8 +1,21 @@
 <script lang="ts">
+  // Local Omarchy layer: the error page in the Empty State's grammar (DESIGN.md, Error pages), where upstream showed a
+  // red siren, "Validation failed (HTTP 400)", a stack trace and links to Immich's Discord, releases and Docker docs.
+  // It says in plain words what failed (an album, a person, a photo, a Space, a shared link: utils/error-page), offers
+  // a way back (or Retry, when something failed rather than went missing), and keeps the status, message and stack in
+  // a collapsed Details for the server's admin only. Someone signed in keeps the shell (bar and sidebar) around it,
+  // so the rest of the archive is one click away; anyone else, and a Gallery that is not answering, gets the page on
+  // its own.
+  import { afterNavigate } from '$app/navigation';
+  import { page } from '$app/state';
+  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
+  import SharedLinkErrorPage from '$lib/components/pages/SharedLinkErrorPage.svelte';
+  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { Route } from '$lib/route';
   import { copyToClipboard } from '$lib/utils';
-  import { Card, CardBody, CardFooter, CardHeader, CardTitle, Icon, IconButton, Link, Text, VStack } from '@immich/ui';
-  import Logo from '$lib/components/shared-components/Logo.svelte';
-  import { mdiAlarmLight, mdiCodeTags, mdiContentCopy, mdiMessage, mdiPartyPopper } from '@mdi/js';
+  import { errorCode, errorPageKind, isMissingKind, type ErrorPageKind } from '$lib/utils/error-page';
+  import { Icon } from '@immich/ui';
+  import { mdiChevronRight } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -11,70 +24,92 @@
 
   let { error = undefined }: Props = $props();
 
-  const handleCopy = async () => {
-    if (!error) {
-      return;
-    }
+  // the page's own error carries the status; an error the root layout caught while starting (Gallery not answering)
+  // carries its own, if any
+  const code = $derived(errorCode(error) ?? (page.error ? page.status : undefined));
+  const kind = $derived(
+    errorPageKind({ status: code, message: error?.message, routeId: page.route?.id, params: page.params }),
+  );
+  const missing = $derived(isMissingKind(kind));
+  const isAdmin = $derived(authManager.authenticated && authManager.user.isAdmin);
+  // signed in, the shell stays around what is missing on a user page (or at an address with no page); a link's
+  // visitor, the sign-in and admin pages, and a Gallery that failed or is not answering get the page alone
+  const inShell = $derived(
+    authManager.authenticated && missing && (!page.route?.id || page.route.id.startsWith('/(user)')),
+  );
 
-    await copyToClipboard(`${error.message} - ${error.code}\n${error.stack}`);
+  const words = $derived.by((): { title: string; body: string } => {
+    const by: Record<Exclude<ErrorPageKind, 'link'>, { title: string; body: string }> = {
+      album: { title: $t('error_page_album_title'), body: $t('error_page_album_body') },
+      person: { title: $t('error_page_person_title'), body: $t('error_page_person_body') },
+      photo: { title: $t('error_page_photo_title'), body: $t('error_page_photo_body') },
+      space: { title: $t('error_page_space_title'), body: $t('error_page_space_body') },
+      page: { title: $t('error_page_missing_title'), body: $t('error_page_missing_body') },
+      offline: { title: $t('error_page_offline_title'), body: $t('error_page_offline_body') },
+      failed: { title: $t('error_page_failed_title'), body: $t('error_page_failed_body') },
+    };
+    return by[kind === 'link' ? 'failed' : kind];
+  });
+
+  // Back only where Gallery itself brought the person here; opened from a link in a message there is no page to go
+  // back to, and Photos is the way in
+  let cameFromGallery = $state(false);
+  afterNavigate(({ from, to, type }) => {
+    if (type === 'enter') {
+      cameFromGallery = false;
+    } else if (from && from.url.pathname !== to?.url.pathname) {
+      // (a page's own replaceState on the same address is not a way here)
+      cameFromGallery = true;
+    }
+  });
+
+  const details = $derived([code ? `HTTP ${code}` : '', error?.message ?? ''].filter(Boolean).join(' · '));
+  const handleCopy = async () => {
+    await copyToClipboard([details, error?.stack].filter(Boolean).join('\n'));
   };
 </script>
 
-<div class="flex h-dvh w-dvw flex-col">
-  <section>
-    <div class="flex place-items-center border-b px-6 py-4 dark:border-b-immich-dark-gray">
-      <Link href="/photos">
-        <Logo variant="inline" />
-      </Link>
-    </div>
-  </section>
+<svelte:head>
+  <title>{kind === 'link' ? $t('shared_link_ended_title') : words.title} - Immich</title>
+</svelte:head>
 
-  <div class="flex w-full flex-1 place-content-center place-items-center overflow-hidden bg-black/30">
-    <div class="max-w-[95vw]">
-      <Card color="secondary">
-        <CardHeader class="flex-row justify-between gap-12">
-          <CardTitle tag="h1" size="medium" class="flex place-items-center gap-4 text-primary">
-            <Icon icon={mdiAlarmLight} color="red" size="32" />
-            {$t('error_title')}
-          </CardTitle>
-          <IconButton
-            shape="round"
-            color="primary"
-            icon={mdiContentCopy}
-            aria-label={$t('copy_error')}
-            onclick={handleCopy}
-          />
-        </CardHeader>
-
-        <CardBody class="flex flex-col gap-2">
-          <Text color="danger">{error?.message} (HTTP {error?.code})</Text>
-          {#if error?.stack}
-            <label for="stacktrace">{$t('stacktrace')}</label>
-            <pre id="stacktrace" class="text-xs">{error.stack}</pre>
-          {/if}
-        </CardBody>
-
-        <CardFooter class="items-start">
-          <Link href="https://discord.immich.app" class="flex grow basis-0 justify-center">
-            <VStack>
-              <Icon icon={mdiMessage} size="24" />
-              <Text size="small" class="text-center">{$t('get_help')}</Text>
-            </VStack>
-          </Link>
-          <Link href="https://github.com/immich-app/immich/releases" class="flex grow basis-0 justify-center">
-            <VStack>
-              <Icon icon={mdiPartyPopper} size="24" />
-              <Text size="small" class="text-center">{$t('read_changelog')}</Text>
-            </VStack>
-          </Link>
-          <Link href="https://docs.immich.app/guides/docker-help" class="flex grow basis-0 justify-center">
-            <VStack>
-              <Icon icon={mdiCodeTags} size="24" />
-              <Text size="small" class="text-center">{$t('check_logs')}</Text>
-            </VStack>
-          </Link>
-        </CardFooter>
-      </Card>
+{#snippet content()}
+  <div class="ws-empty" data-testid="error-page" data-kind={kind}>
+    <h1 class="ws-empty-title">{words.title}</h1>
+    <p class="ws-empty-body">{words.body}</p>
+    <div class="ws-empty-actions">
+      {#if !missing}
+        <button type="button" class="ws-empty-action" onclick={() => location.reload()}>{$t('retry')}</button>
+        <a class="ws-empty-link" href={Route.photos()}>{$t('error_page_go_to_photos')}</a>
+      {:else if cameFromGallery}
+        <button type="button" class="ws-empty-action" onclick={() => history.back()}>{$t('go_back')}</button>
+        <a class="ws-empty-link" href={Route.photos()}>{$t('error_page_go_to_photos')}</a>
+      {:else}
+        <a class="ws-empty-action" href={Route.photos()}>{$t('error_page_go_to_photos')}</a>
+      {/if}
     </div>
   </div>
-</div>
+  {#if isAdmin && details}
+    <!-- under the Empty State's column, as wide as a page column, so a stack's lines can be read on a wide screen -->
+    <details class="ws-error-details" data-testid="error-details">
+      <summary><Icon icon={mdiChevronRight} size="16" class="ws-error-details-chevron" />{$t('details')}</summary>
+      <p class="ws-error-details-line">{details}</p>
+      {#if error?.stack}
+        <pre class="ws-error-stack">{error.stack}</pre>
+      {/if}
+      <button type="button" class="ws-empty-link" onclick={handleCopy}>{$t('error_page_copy_details')}</button>
+    </details>
+  {/if}
+{/snippet}
+
+{#if kind === 'link'}
+  <SharedLinkErrorPage />
+{:else if inShell}
+  <UserPageLayout>
+    {@render content()}
+  </UserPageLayout>
+{:else}
+  <main class="ws-standalone">
+    {@render content()}
+  </main>
+{/if}
