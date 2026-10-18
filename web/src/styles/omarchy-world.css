@@ -45,6 +45,11 @@
      a step firmer than a divider on the ground, which in a 10px gap beside bright photos all but vanished */
   --ws-month-line: color-mix(in oklab, var(--immich-ui-dark) 30%, transparent);
   --ws-accent: var(--omarchy-accent, var(--immich-ui-primary-500));
+  /* the danger role: what trashes or deletes, as words on the ground or as a fill under the surface's text. The hook
+     gives no red, so it is @immich/ui's danger red taken toward the theme's own ink, as far as holds AA on the theme's
+     ground and on a menu's glass (checked over every Omarchy theme, both faces: at least 4.6:1); the dark face below
+     takes the lighter red into its light ink. Hovered, a fill goes further toward the ink, which only adds contrast */
+  --ws-danger: color-mix(in oklab, var(--immich-ui-danger-700) 80%, var(--immich-ui-dark));
   --ws-font-data: var(--omarchy-font-mono, 'JetBrainsMono Nerd Font'), 'GoogleSansCode', ui-monospace, monospace;
   /* smoked glass over a photo: bars and pills (thin), cards that hold text (strong) */
   --ws-glass: rgb(10 10 12 / 0.42);
@@ -84,6 +89,7 @@
 .dark {
   --ws-hairline: color-mix(in oklab, var(--immich-ui-dark) 13%, transparent);
   --ws-month-line: color-mix(in oklab, var(--immich-ui-dark) 30%, transparent);
+  --ws-danger: color-mix(in oklab, var(--immich-ui-danger-500) 65%, var(--immich-ui-dark));
 }
 
 /* ---- upstream's roles in this world, as Tailwind theme tokens, so every utility and every @immich/ui component
@@ -1390,7 +1396,7 @@ section.ws-filter-sheet-panel {
 
 /* ---- every context menu (stock ones hard-code a light slate in both modes): a smoked-glass sheet with a soft
    two-layer shadow; rows flat on it, the hovered/keyboard-active row washed in the accent with its icon lit, shortcut
-   hints in mono at the right, a destructive row (MenuOption tone="danger") in red. Nothing inside a menu is a fixed
+   hints in mono at the right, a destructive row (MenuOption tone="danger") in the danger role. Nothing inside a menu is a fixed
    popup, so the sheet may carry its own backdrop-filter. ---- */
 div.z-70:has(> ul[role='menu']) {
   background: color-mix(in oklab, var(--immich-ui-light) 84%, transparent);
@@ -1444,14 +1450,25 @@ ul[role='menu'] > li[role='menuitem'] .text-gray-500 {
   opacity: 0.8;
 }
 ul[role='menu'] > li[role='menuitem'][data-tone='danger'] {
-  color: oklch(0.66 0.19 25);
+  color: var(--ws-danger);
 }
 ul[role='menu'] > li[role='menuitem'][data-tone='danger'] svg {
   color: inherit;
   opacity: 0.9;
 }
+/* pointed at or reached with the keys, a destructive row inverts in the danger role, its words and hint in the
+   surface's colour: the same pair as at rest, so it reads as well (a red tint under red words took it under AA) */
 ul[role='menu'] > li[role='menuitem'][data-tone='danger']:not(.bg-slate-100) {
-  background: oklch(0.66 0.19 25 / 0.16);
+  background: var(--ws-danger);
+  color: var(--immich-ui-light);
+}
+ul[role='menu'] > li[role='menuitem'][data-tone='danger']:not(.bg-slate-100) svg {
+  color: inherit;
+  opacity: 1;
+}
+ul[role='menu'] > li[role='menuitem'][data-tone='danger']:not(.bg-slate-100) .text-gray-500 {
+  color: inherit;
+  opacity: 1;
 }
 /* separators run edge to edge of the sheet (through its 6px padding) */
 ul[role='menu'] > hr {

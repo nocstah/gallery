@@ -106,7 +106,7 @@
   /* errors are the one count that means something is wrong: the theme's danger role on the number, nothing more (in
      the stats, so it outranks the wizard's ink for every count) */
   .ws-import-stats .ws-import-failed {
-    color: var(--immich-ui-danger-700);
+    color: var(--ws-danger);
   }
   .ws-import-done {
     margin-top: 0.5rem;

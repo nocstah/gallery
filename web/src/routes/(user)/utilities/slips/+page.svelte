@@ -614,11 +614,13 @@
   .ws-slips-stay {
     margin-top: 1.5rem;
   }
+  /* the danger role under the surface's text (omarchy-world.css); hovered it goes toward the ink, as the ink buttons
+     go toward the accent */
   .ws-slips-trash {
-    background: var(--immich-ui-danger, #c62828);
+    background: var(--ws-danger);
   }
   .ws-slips-trash:hover {
-    background: color-mix(in oklab, var(--immich-ui-danger, #c62828) 85%, black);
+    background: color-mix(in oklab, var(--ws-danger) 85%, var(--immich-ui-dark));
   }
   .ws-empty-action:disabled {
     opacity: 0.45;

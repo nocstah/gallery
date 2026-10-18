@@ -251,14 +251,14 @@
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: 3px;
   }
-  /* the destructive action takes the danger role, as Bank slips' Move to Trash does: the deep step of the theme's
-     danger ramp under the surface's text (the ramp turns over in dark mode, so the label holds AA in both) */
+  /* the destructive action takes the danger role (omarchy-world.css), as Bank slips' Move to Trash does, under the
+     surface's text; hovered it goes toward the ink */
   .ws-dup-trash {
-    background: var(--immich-ui-danger-700);
+    background: var(--ws-danger);
     color: var(--immich-ui-light);
   }
   .ws-dup-trash:hover {
-    background: color-mix(in oklab, var(--immich-ui-danger-700) 85%, var(--immich-ui-dark));
+    background: color-mix(in oklab, var(--ws-danger) 85%, var(--immich-ui-dark));
   }
   /* the photos side by side, each column up to 32rem (24rem for portrait photos), scrolling sideways when they do not
      fit */

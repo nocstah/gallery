@@ -140,7 +140,7 @@
     user-select: all;
   }
   .ws-share-expired {
-    color: var(--immich-ui-danger-500);
+    color: var(--ws-danger);
   }
   /* the expiry's one-press way out, a quiet underlined word at the line's end like Show selected's Put them back */
   .ws-share-remove-expiry {
