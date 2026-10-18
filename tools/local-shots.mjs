@@ -19,7 +19,18 @@
 // --curator FILE (answer Curator's requests, port 2290, from FILE instead of Curator: for a dev server on a port
 // Curator's CORS does not let in, or a page in a state Curator is not in now: a JSON map from a path, "*" standing for
 // one segment, to the answer, or to "@name" for a file beside FILE sent as it is, in byte ranges (a song); the first
-// path that matches answers, anything else is a 404).
+// path that matches answers, anything else is a 404), --contrast (measure the text that lies on a photo, as WCAG
+// does: see below).
+//
+// --contrast: before each shot the page lists its visible text whose ground, under the middle of each line, is a
+// photo (an img, a video, a canvas or a background picture) rather than an opaque colour, with its colour, size and
+// weight; right after the shot a second capture is taken with every text and its shadows made transparent, the plate,
+// so what lies behind each line (the photo, a scrim, glass) can be read without the letters on it. The page's
+// animations are held from before the shot until after the plate, and both are taken again when anything in the page
+// changed in between (a film's controls going, its next photo); a third try that still moved is marked so. Each line
+// box is compared pixel by pixel with its text colour composited over it, and the run prints, lowest first, the ratio
+// at the median background and at its brightest 20% and 5% (p50 / p80 / p95), against AA: 4.5:1, or 3:1 for large
+// text (24px, or 18.66px at 700). The numbers go into shots.json and the plates into plates/.
 //
 // A route can go on into a state before the shot, with steps after ">": key:Control+k, hover:SELECTOR,
 // click:SELECTOR, rclick:SELECTOR (right click), scroll:PX (the wheel over the middle of the page), wait:MS,
@@ -47,6 +58,7 @@ import {
 } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, extname, join, resolve } from 'node:path';
+import { inflateSync } from 'node:zlib';
 
 const CHROMIUM = process.env.GALLERY_SHOTS_CHROMIUM || '/usr/bin/chromium';
 const ROOT = join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'gallery-shots');
@@ -203,15 +215,43 @@ async function shoot() {
             if (problem) missed.push(problem);
           }
           if (steps.length) landed = await page.settle();
-          const png = await page.send('Page.captureScreenshot', { format: 'png' });
+          let contrast;
+          let png;
+          if (flag('contrast')) {
+            // the shot and its plate are one moment: the page's animations held, and taken again (twice at most)
+            // when anything in the page changed between the two (a timer that hid the controls, a new photo)
+            for (let attempt = 0; attempt < 3; attempt++) {
+              await page.evaluate(freezePage());
+              const texts = await page.evaluate(textOnPhotos());
+              png = await page.send('Page.captureScreenshot', { format: 'png' });
+              let plate;
+              if (texts.length > 0) {
+                await page.evaluate(hideText());
+                plate = Buffer.from((await page.send('Page.captureScreenshot', { format: 'png' })).data, 'base64');
+                await page.evaluate(showText());
+              }
+              const changed = await page.evaluate(thawPage());
+              if (plate && (changed === 0 || attempt === 2)) {
+                mkdirSync(join(out, 'plates'), { recursive: true });
+                writeFileSync(join(out, 'plates', file), plate);
+                contrast = measureContrast(decodePng(plate), texts, scale).map((result) =>
+                  changed === 0 ? result : { ...result, moved: true },
+                );
+              }
+              if (changed === 0) break;
+            }
+          } else {
+            png = await page.send('Page.captureScreenshot', { format: 'png' });
+          }
           writeFileSync(join(out, file), Buffer.from(png.data, 'base64'));
           if (steps.length) {
             await page.pointerAway();
             await page.storage(stored);
           }
-          shots.push({ route, label, path, steps, viewport: name, mode, file, landed, missed, ms: Date.now() - started });
+          shots.push({ route, label, path, steps, viewport: name, mode, file, landed, missed, contrast, ms: Date.now() - started });
           const notes = [landed === path ? '' : `landed on ${landed}`, ...missed].filter(Boolean);
           process.stdout.write(`  ${file}${notes.length ? `  (${notes.join('; ')})` : ''}\n`);
+          if (contrast) printContrast(contrast);
         }
       }
     }
@@ -513,6 +553,261 @@ async function pageSession(cdp, sessionId) {
           })()`)
         : evaluate('({ local: { ...localStorage }, session: { ...sessionStorage } })'),
   };
+}
+
+// ---- --contrast: text on photos, measured from the pixels behind it ----
+
+/** The page's visible text that lies on a photo: each text node's line boxes (CSS px, inside the window), its colour
+ * as sRGB bytes and alpha, its size and weight, and a short name for where it is. A line lies on a photo when, under
+ * its middle, the first thing below the text that is a picture (img, video, canvas, a url() background) comes before
+ * anything with an opaque background. Hidden, faded-out, clipped and covered text is left out. */
+function textOnPhotos() {
+  return `(() => {
+  const unlock = document.createElement('style');
+  unlock.id = 'local-shots-probe';
+  unlock.textContent = '*, *::before, *::after { pointer-events: auto !important; }';
+  document.head.append(unlock);
+  try {
+    const swatch = new OffscreenCanvas(1, 1).getContext('2d', { willReadFrequently: true });
+    const rgba = (css) => {
+      swatch.clearRect(0, 0, 1, 1);
+      swatch.fillStyle = '#000';
+      swatch.fillStyle = css;
+      swatch.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = swatch.getImageData(0, 0, 1, 1).data;
+      return [r, g, b, a / 255];
+    };
+    const pictured = (node) =>
+      node instanceof HTMLImageElement || node instanceof HTMLVideoElement || node instanceof HTMLCanvasElement ||
+      /url\\(/.test(getComputedStyle(node).backgroundImage);
+    const opaque = (node) => rgba(getComputedStyle(node).backgroundColor)[3] > 0.98;
+    const onPhoto = (element, x, y) => {
+      const stack = document.elementsFromPoint(x, y);
+      const at = stack.indexOf(element);
+      if (at === -1) return false;
+      for (const node of stack.slice(at + 1)) {
+        if (pictured(node)) return true;
+        if (opaque(node)) return false;
+      }
+      return false;
+    };
+    const opacityOf = (element) => {
+      let opacity = 1;
+      for (let node = element; node; node = node.parentElement) opacity *= Number(getComputedStyle(node).opacity);
+      return opacity;
+    };
+    const nameOf = (element) =>
+      element.tagName.toLowerCase() + [...element.classList].slice(0, 2).map((name) => '.' + name).join('');
+    const found = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const text = node.textContent.replace(/\\s+/g, ' ').trim();
+      const element = node.parentElement;
+      if (!text || !element || element.closest('script, style, noscript, template')) continue;
+      const style = getComputedStyle(element);
+      if (style.visibility !== 'visible') continue;
+      const opacity = opacityOf(element);
+      if (opacity < 0.5) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const rects = [...range.getClientRects()]
+        .map((r) => ({
+          x: Math.max(0, r.left),
+          y: Math.max(0, r.top),
+          w: Math.min(innerWidth, r.right) - Math.max(0, r.left),
+          h: Math.min(innerHeight, r.bottom) - Math.max(0, r.top),
+        }))
+        .filter((r) => r.w >= 2 && r.h >= 4)
+        .filter((r) => onPhoto(element, r.x + r.w / 2, r.y + r.h / 2));
+      if (rects.length === 0) continue;
+      found.push({
+        text: text.slice(0, 64),
+        where: nameOf(element),
+        color: rgba(style.color),
+        size: Number.parseFloat(style.fontSize),
+        weight: Number(style.fontWeight) || 400,
+        opacity: Math.round(opacity * 100) / 100,
+        rects,
+      });
+    }
+    return found;
+  } finally {
+    unlock.remove();
+  }
+})()`;
+}
+
+/** Every text and its shadows made transparent, at once, for the plate; showText takes it away again. */
+function hideText() {
+  return `(() => {
+  const style = document.createElement('style');
+  style.id = 'local-shots-plate';
+  style.textContent = '*, *::before, *::after { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; text-decoration-color: transparent !important; caret-color: transparent !important; } svg { visibility: hidden !important; }';
+  document.head.append(style);
+  return new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => {
+    // a colour that would fade out (a button's hover transition) goes at once; nothing else moves
+    for (const animation of document.getAnimations()) {
+      if (/color|shadow|fill/.test(animation.transitionProperty ?? '')) animation.finish();
+    }
+    requestAnimationFrame(() => done(true));
+  })));
+})()`;
+}
+
+/** Holds the page still for a shot and its plate: its running animations (the film's drift and fades, transitions)
+ * paused, and every change to the document from then on counted (thawPage returns the count and lets them run). */
+function freezePage() {
+  return `(() => {
+  const running = document.getAnimations().filter((animation) => animation.playState === 'running');
+  for (const animation of running) animation.pause();
+  const changes = [];
+  // the page's own changes: the styles this tool adds and takes away are not the page's
+  const count = (records) => {
+    for (const record of records) {
+      const nodes = [...record.addedNodes, ...record.removedNodes];
+      if (!nodes.some((node) => String(node.id ?? '').startsWith('local-shots-'))) changes.push(record.type);
+    }
+  };
+  const observer = new MutationObserver(count);
+  observer.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+  window.__localShotsFrozen = { running, observer, changes, count };
+  return true;
+})()`;
+}
+function thawPage() {
+  return `(() => {
+  const frozen = window.__localShotsFrozen;
+  if (!frozen) return 0;
+  frozen.count(frozen.observer.takeRecords());
+  frozen.observer.disconnect();
+  for (const animation of frozen.running) {
+    try {
+      animation.play();
+    } catch {
+      // gone with its element
+    }
+  }
+  delete window.__localShotsFrozen;
+  return frozen.changes.length;
+})()`;
+}
+function showText() {
+  return `document.getElementById('local-shots-plate')?.remove()`;
+}
+
+/** A PNG as Chromium writes it (8 bits, RGB or RGBA, not interlaced) into its pixels. */
+function decodePng(buffer) {
+  let at = 8;
+  let width = 0;
+  let height = 0;
+  let channels = 0;
+  const parts = [];
+  while (at < buffer.length) {
+    const length = buffer.readUInt32BE(at);
+    const kind = buffer.toString('latin1', at + 4, at + 8);
+    const data = buffer.subarray(at + 8, at + 8 + length);
+    if (kind === 'IHDR') {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      if (data[8] !== 8 || (data[9] !== 2 && data[9] !== 6) || data[12] !== 0) throw new Error('a PNG this cannot read');
+      channels = data[9] === 6 ? 4 : 3;
+    } else if (kind === 'IDAT') {
+      parts.push(data);
+    } else if (kind === 'IEND') {
+      break;
+    }
+    at += 12 + length;
+  }
+  const stride = width * channels;
+  const raw = inflateSync(Buffer.concat(parts));
+  const pixels = Buffer.alloc(height * stride);
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)];
+    const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
+    const row = pixels.subarray(y * stride, (y + 1) * stride);
+    const up = y > 0 ? pixels.subarray((y - 1) * stride, y * stride) : undefined;
+    for (let x = 0; x < stride; x++) {
+      const a = x >= channels ? row[x - channels] : 0;
+      const b = up ? up[x] : 0;
+      const c = up && x >= channels ? up[x - channels] : 0;
+      let value = line[x];
+      if (filter === 1) value += a;
+      else if (filter === 2) value += b;
+      else if (filter === 3) value += (a + b) >> 1;
+      else if (filter === 4) {
+        const p = a + b - c;
+        const [pa, pb, pc] = [Math.abs(p - a), Math.abs(p - b), Math.abs(p - c)];
+        value += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+      }
+      row[x] = value & 255;
+    }
+  }
+  return { width, height, channels, pixels };
+}
+
+/** WCAG's relative luminance of an sRGB colour (bytes). */
+function luminance(r, g, b) {
+  // the channels' linear values, worked out once (the module's top-level code runs before its constants are set)
+  const linear = (luminance.table ??= Array.from({ length: 256 }, (_, value) => {
+    const c = value / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  }));
+  return 0.2126 * linear[Math.round(r)] + 0.7152 * linear[Math.round(g)] + 0.0722 * linear[Math.round(b)];
+}
+
+/** Each text's ratio to the plate under its line boxes: its colour composited over each pixel (as the browser blends,
+ * in sRGB), the WCAG ratio there, read at the background's median and at its brightest 20% and 5%. Lowest first. */
+function measureContrast(plate, texts, scale) {
+  const results = [];
+  for (const text of texts) {
+    const [tr, tg, tb, ta] = text.color;
+    const ratios = [];
+    for (const rect of text.rects) {
+      const x0 = Math.max(0, Math.floor(rect.x * scale));
+      const y0 = Math.max(0, Math.floor(rect.y * scale));
+      const x1 = Math.min(plate.width, Math.ceil((rect.x + rect.w) * scale));
+      const y1 = Math.min(plate.height, Math.ceil((rect.y + rect.h) * scale));
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          const at = (y * plate.width + x) * plate.channels;
+          const [r, g, b] = [plate.pixels[at], plate.pixels[at + 1], plate.pixels[at + 2]];
+          const ground = luminance(r, g, b);
+          const ink = luminance(ta * tr + (1 - ta) * r, ta * tg + (1 - ta) * g, ta * tb + (1 - ta) * b);
+          ratios.push((Math.max(ground, ink) + 0.05) / (Math.min(ground, ink) + 0.05));
+        }
+      }
+    }
+    if (ratios.length === 0) continue;
+    ratios.sort((a, b) => a - b);
+    const at = (share) => Math.round(ratios[Math.min(ratios.length - 1, Math.floor(share * ratios.length))] * 100) / 100;
+    const large = text.size >= 24 || (text.size >= 18.66 && text.weight >= 700);
+    results.push({
+      text: text.text,
+      where: text.where,
+      size: text.size,
+      weight: text.weight,
+      opacity: text.opacity,
+      large,
+      needs: large ? 3 : 4.5,
+      p50: at(0.5),
+      p80: at(0.2),
+      p95: at(0.05),
+    });
+  }
+  return results.sort((a, b) => a.p80 / a.needs - b.p80 / b.needs);
+}
+
+function printContrast(results) {
+  for (const result of results.slice(0, 8)) {
+    const flag = result.p95 >= result.needs ? 'ok  ' : result.p50 >= result.needs ? 'low ' : 'FAIL';
+    const faded =
+      (result.opacity < 1 ? `, at ${result.opacity} opacity` : '') + (result.moved ? ', the page moved under it' : '');
+    process.stdout.write(
+      `    ${flag} ${result.p50} / ${result.p80} / ${result.p95} :1 (p50/p80/p95; needs ${result.needs})  ` +
+        `${result.where} ${result.size}px ${result.weight}${faded}  "${result.text}"\n`,
+    );
+  }
+  if (results.length > 8) process.stdout.write(`    … and ${results.length - 8} more in shots.json\n`);
 }
 
 // ---- comparing two runs ----
