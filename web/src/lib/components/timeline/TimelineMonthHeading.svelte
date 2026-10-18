@@ -49,7 +49,9 @@
   };
 </script>
 
-<div
+<!-- Photos' heading is the month in view, so it is that page's h1; beside a page's own title (quiet) it is a note -->
+<svelte:element
+  this={quiet ? 'div' : 'h1'}
   class="ws-now"
   data-short={short ? '' : undefined}
   data-quiet={quiet ? '' : undefined}
@@ -85,7 +87,7 @@
       >
     </div>
   {/key}
-</div>
+</svelte:element>
 
 <style>
   .ws-now {

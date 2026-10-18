@@ -44,6 +44,14 @@ describe('UserPageLayout header', () => {
     expect(screen.getByTestId('page-header-description')).toHaveClass('shrink-0', 'whitespace-nowrap');
   });
 
+  // Local Omarchy layer: the bar's title is the page's one h1, so the main pages have a heading to land on
+  it("makes the bar's title the page's h1", () => {
+    render(UserPageLayout, { props: { title: 'Albums' } });
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Albums' })).toBe(screen.getByTestId('page-header'));
+    expect(screen.getAllByRole('heading')).toHaveLength(1);
+  });
+
   it('renders a non-collapsing description trailing action beside the description', () => {
     render(UserPageLayoutDescriptionTrailingTestWrapper);
 

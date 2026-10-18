@@ -337,7 +337,15 @@
     >
       {@render leading?.()}
       {#if titleInBar}
-        <div class="ws-page-title min-w-0 truncate" tabindex="-1" id={headerId} data-testid="page-header">{title}</div>
+        <!-- Local Omarchy layer: the bar's title is the page's heading, its h1 (the look is the class's alone); a page
+             that heads its body with its name as a poster keeps the h1 there, and the bar carries the name as text -->
+        <svelte:element
+          this={titleInBody ? 'div' : 'h1'}
+          class="ws-page-title min-w-0 truncate"
+          tabindex="-1"
+          id={headerId}
+          data-testid="page-header">{title}</svelte:element
+        >
       {/if}
       {#if description}
         <p class="ws-page-description shrink-0 whitespace-nowrap" data-testid="page-header-description">
