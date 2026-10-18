@@ -12,6 +12,7 @@
   import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
   import { handleError } from '$lib/utils/handle-error';
+  import type { ShortcutSection } from '$lib/utils/shortcut-sheet';
   import type { AssetResponseDto } from '@immich/sdk';
   import { createStack, deleteDuplicates, resolveDuplicates, updateAssets } from '@immich/sdk';
   import { Button, HStack, Icon, IconButton, modalManager, Text, toastManager } from '@immich/ui';
@@ -33,26 +34,22 @@
 
   let { data = $bindable() }: Props = $props();
 
-  interface Shortcuts {
-    general: ExplainedShortcut[];
-    actions: ExplainedShortcut[];
-  }
-  interface ExplainedShortcut {
-    key: string[];
-    action: string;
-    info?: string;
-  }
-
-  const duplicateShortcuts: Shortcuts = {
-    general: [],
-    actions: [
-      { key: ['a'], action: $t('select_all_duplicates') },
-      { key: ['s'], action: $t('view') },
-      { key: ['d'], action: $t('unselect_all_duplicates') },
-      { key: ['⇧', 'c'], action: $t('resolve_duplicates') },
-      { key: ['⇧', 's'], action: $t('stack_duplicates') },
-    ],
-  };
+  // Local Omarchy layer: the page's own keys as one section of the shortcuts sheet (utils/shortcut-sheet), the arrows
+  // through the groups (bound below) with them
+  const duplicateShortcuts: ShortcutSection[] = $derived([
+    {
+      id: 'duplicates',
+      title: $t('duplicates'),
+      rows: [
+        { keys: [['←'], ['→']], action: $t('shortcut_duplicates_group') },
+        { keys: [['A']], action: $t('select_all_duplicates') },
+        { keys: [['S']], action: $t('view') },
+        { keys: [['D']], action: $t('unselect_all_duplicates') },
+        { keys: [['Shift', 'C']], action: $t('resolve_duplicates') },
+        { keys: [['Shift', 'S']], action: $t('stack_duplicates') },
+      ],
+    },
+  ]);
 
   let duplicates = $state(data.duplicates);
   let qrSlips = $state(data.qrSlips);
@@ -259,7 +256,7 @@
         color="secondary"
         icon={mdiKeyboard}
         title={$t('show_keyboard_shortcuts')}
-        onclick={() => modalManager.show(ShortcutsModal, { shortcuts: duplicateShortcuts })}
+        onclick={() => modalManager.show(ShortcutsModal, { sections: duplicateShortcuts })}
         aria-label={$t('show_keyboard_shortcuts')}
       />
     </HStack>
