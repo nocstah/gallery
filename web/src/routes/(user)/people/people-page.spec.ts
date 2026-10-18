@@ -332,6 +332,38 @@ describe('Global people page', () => {
     expect(screen.queryByText('search_no_people')).toBeNull();
   });
 
+  // Local Omarchy layer: people who share a name are told apart by how many photos they are in and the years those
+  // span (DESIGN.md, People); read-only, and a name nobody else bears says nothing more
+  it('tells apart people who share a name by their photos and years, and leaves a unique name alone', async () => {
+    sdkMock.getTimeBuckets.mockImplementation(({ personIds }) =>
+      Promise.resolve(
+        personIds?.[0] === 'daniel-a'
+          ? [
+              { timeBucket: '2026-01-01', count: 40 },
+              { timeBucket: '2010-01-01', count: 100 },
+            ]
+          : [{ timeBucket: '2015-01-01', count: 29 }],
+      ),
+    );
+    renderPage([
+      makePerson({ id: 'daniel-a', name: 'Daniel', numberOfAssets: 140 }),
+      makePerson({ id: 'daniel-b', name: 'daniel', numberOfAssets: 29 }),
+      makePerson({ id: 'kim', name: 'Kim', numberOfAssets: 11 }),
+    ]);
+
+    await waitFor(() =>
+      expect(screen.getAllByTestId('person-span').map((line) => line.textContent?.trim())).toEqual([
+        '140 · 2010–2026',
+        '29 · 2015',
+      ]),
+    );
+    // a screen reader hears the same: the tiles' links say the count and the years with the name
+    expect(screen.getAllByRole('link', { name: 'person_tile_label' })).toHaveLength(2);
+    expect(screen.getByRole('link', { name: 'Kim' })).toBeInTheDocument();
+    expect(sdkMock.getTimeBuckets).toHaveBeenCalledTimes(2);
+    expect(sdkMock.updatePerson).not.toHaveBeenCalled();
+  });
+
   // Local Omarchy layer: an empty People page says why, on the gutter (DESIGN.md, People)
   it('says People fills in as faces are found when the library has no one yet', () => {
     renderPage([], { total: 0, hidden: 0, detectedFaceCount: 0 });

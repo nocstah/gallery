@@ -3098,6 +3098,8 @@
     "other": "{count} 張相片"
   },
   "person_recognized": "已辨識人物",
+  "person_tile_label": "{name}，{count, plural, other {# 張相片}}，{years}",
+  "person_tile_label_count": "{name}，{count, plural, other {# 張相片}}",
   "pet": "寵物",
   "pets": "寵物",
   "photo_book_choosing": "正在挑選相片",

@@ -41,10 +41,10 @@
     mdiAccountGroupOutline,
     mdiAccountMultipleCheckOutline,
     mdiAccountMultipleOutline,
+    mdiAccountOffOutline,
     mdiCalendarEditOutline,
     mdiDotsVertical,
     mdiEyeOffOutline,
-    mdiEyeOutline,
     mdiPaw,
     mdiSortAlphabeticalAscending,
     mdiSortNumericDescending,
@@ -574,8 +574,9 @@
             />
           {/if}
           {#if canManageVisibility}
+            <!-- Local Omarchy layer: a crossed-out person, as on People: the eye is the bar's View menu -->
             <Button
-              leadingIcon={mdiEyeOutline}
+              leadingIcon={mdiAccountOffOutline}
               onclick={openVisibilityModal}
               size="small"
               variant="ghost"

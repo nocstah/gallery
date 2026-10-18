@@ -3123,6 +3123,8 @@
   },
   "person_recognized": "Persoon herkend",
   "person_share_no_users": "Alle gebruikers met wie je gezichtsgroepen deelt, hebben al toegang tot deze persoon.",
+  "person_tile_label": "{name}, {count, plural, one {# foto} other {# foto's}}, {years}",
+  "person_tile_label_count": "{name}, {count, plural, one {# foto} other {# foto's}}",
   "person_update_strategy": "Veranderen voor",
   "person_update_strategy_description": "Welke mensen bijgewerkt worden wanneer je een naam of geboortedatum verandert",
   "person_update_strategy_everyone": "Iedereen met gedeelde toegang",

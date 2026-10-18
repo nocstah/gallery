@@ -38,7 +38,12 @@
   onmouseleave={hideActionsUnlessFocused}
   use:focusOutside={{ onFocusOut: () => (showActions = false) }}
 >
-  <a href={person.href} draggable="false" aria-label={person.displayName} onfocus={() => (showActions = true)}>
+  <a
+    href={person.href}
+    draggable="false"
+    aria-label={person.accessibleName ?? person.displayName}
+    onfocus={() => (showActions = true)}
+  >
     <div class="size-full rounded-xl brightness-95 filter">
       {#if deferThumbnail && thumbnailQueue}
         <DeferredPersonThumbnail

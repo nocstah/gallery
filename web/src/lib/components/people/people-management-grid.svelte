@@ -23,6 +23,8 @@
     thumbnailConcurrency?: number;
     onNameSubmit?: (name: string, person: T) => void | Promise<void>;
     actions?: Snippet<[T]>;
+    /** Local Omarchy layer: a line under the name (People: what tells apart people who share it) */
+    detail?: Snippet<[T]>;
   }
 
   let {
@@ -41,6 +43,7 @@
     thumbnailConcurrency = 8,
     onNameSubmit = () => {},
     actions,
+    detail,
   }: Props = $props();
 
   const getThumbnailConcurrency = () => thumbnailConcurrency;
@@ -106,6 +109,7 @@
           {:else if managedPerson.displayName}
             <p class={readonlyNameClass}>{managedPerson.displayName}</p>
           {/if}
+          {@render detail?.(person)}
         {/snippet}
       </PersonTile>
     </div>

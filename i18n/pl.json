@@ -3141,6 +3141,8 @@
   },
   "person_recognized": "Osoba rozpoznana",
   "person_share_no_users": "Każdy użytkownik w Twojej grupie klastrowej ma już dostęp do tej osoby.",
+  "person_tile_label": "{name}, {count, plural, one {# zdjęcie} few {# zdjęcia} many {# zdjęć} other {# zdjęć}}, {years}",
+  "person_tile_label_count": "{name}, {count, plural, one {# zdjęcie} few {# zdjęcia} many {# zdjęć} other {# zdjęć}}",
   "person_update_strategy": "Zastosuj zmiany do",
   "person_update_strategy_description": "Które osoby zaktualizować w chwili kiedy zmienisz imię lub datę urodzenia",
   "person_update_strategy_everyone": "Wszyscy, którzy mają wspólny dostęp",

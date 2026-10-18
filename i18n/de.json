@@ -3124,6 +3124,8 @@
   },
   "person_recognized": "Person erkannt",
   "person_share_no_users": "Jeder Benutzer in Ihrer Clustergruppe hat bereits Zugriff auf diese Person.",
+  "person_tile_label": "{name}, {count, plural, one {# Foto} other {# Fotos}}, {years}",
+  "person_tile_label_count": "{name}, {count, plural, one {# Foto} other {# Fotos}}",
   "person_update_strategy": "Änderungen übernehmen",
   "person_update_strategy_description": "Personen, die im Falle eine Namens- oder Geburtstagsänderung informiert werden sollen",
   "person_update_strategy_everyone": "Alle Personen mit gemeinsamem Zugriff",

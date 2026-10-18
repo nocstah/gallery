@@ -3124,6 +3124,8 @@
   },
   "person_recognized": "Personne reconnue",
   "person_share_no_users": "Tous les utilisateurs de votre groupe de regroupements ont déjà accès à cette personne.",
+  "person_tile_label": "{name}, {count, plural, one {# photo} other {# photos}}, {years}",
+  "person_tile_label_count": "{name}, {count, plural, one {# photo} other {# photos}}",
   "person_update_strategy": "Appliquer les changements à",
   "person_update_strategy_description": "Personnes à informer en cas de changement de nom ou de date de naissance",
   "person_update_strategy_everyone": "Toutes les personnes disposant d'un accès partagé",

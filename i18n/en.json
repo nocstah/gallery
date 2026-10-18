@@ -3141,6 +3141,8 @@
   },
   "person_recognized": "Person recognized",
   "person_share_no_users": "Every user in your cluster group already has access to this person.",
+  "person_tile_label": "{name}, {count, plural, one {# photo} other {# photos}}, {years}",
+  "person_tile_label_count": "{name}, {count, plural, one {# photo} other {# photos}}",
   "person_update_strategy": "Apply changes to",
   "person_update_strategy_description": "Which people to update when you change a name or date of birth",
   "person_update_strategy_everyone": "Everyone with shared access",

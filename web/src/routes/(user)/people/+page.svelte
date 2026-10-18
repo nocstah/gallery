@@ -15,6 +15,7 @@
   import { PEOPLE_PAGE_SIZE, QueryParameter, SessionStorageKey } from '$lib/constants';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
+  import { personSpans } from '$lib/managers/person-spans.svelte';
   import PersonMergeSuggestionModal from '$lib/modals/PersonMergeSuggestionModal.svelte';
   import { Route } from '$lib/route';
   import { getPersonActions, isSpaceEditor, nameChangedDone, updatePersonName } from '$lib/services/person.service';
@@ -29,7 +30,9 @@
   import { clearQueryParam } from '$lib/utils/navigation';
   import { peopleFilterToTypeParam as filterToTypeParam, resolvePeopleFilterBy } from '$lib/utils/people-filter';
   import { appendUniqueById, sortPeople } from '$lib/utils/people-utils';
+  import { isRepeatedName, personSpanLine, repeatedNames } from '$lib/utils/person-names';
   import { formatPeopleHeaderDescription } from '$lib/utils/people-statistics';
+  import { placeYears } from '$lib/utils/place-stats';
   import {
     getAllPeople,
     getPeopleFaceStatistics,
@@ -41,8 +44,8 @@
   import { Button, modalManager, toastManager } from '@immich/ui';
   import {
     mdiAccountMultipleCheckOutline,
+    mdiAccountOffOutline,
     mdiDotsVertical,
-    mdiEyeOutline,
     mdiAccountGroupOutline,
     mdiAccountMultipleOutline,
     mdiPaw,
@@ -273,6 +276,35 @@
   );
   let showPeople = $derived(sortPeople(searchName ? searchedPeopleLocal : visiblePeople, peopleSortBy));
 
+  // Local Omarchy layer: where a name repeats among the people shown, each one's tile says how many photos they are in
+  // and the years those span (utils/person-names, managers/person-spans), so two Daniels can be told apart; read-only
+  let repeated = $derived(repeatedNames(showPeople));
+  $effect(() => {
+    personSpans.request(
+      showPeople
+        .filter((person) => isRepeatedName(repeated, person.name))
+        .map((person) => ({ id: person.id, filterId: person.filterId })),
+    );
+  });
+  const spanLine = (person: PersonResponseDto) =>
+    isRepeatedName(repeated, person.name)
+      ? personSpanLine(personSpans.get(person.id), person.numberOfAssets, $locale)
+      : undefined;
+  const accessibleNameOf = (person: PersonResponseDto) => {
+    if (!isRepeatedName(repeated, person.name)) {
+      return undefined;
+    }
+    const span = personSpans.get(person.id);
+    if (span && span.count > 0) {
+      return $t('person_tile_label', {
+        values: { name: person.name, count: span.count, years: placeYears(span) },
+      });
+    }
+    return person.numberOfAssets === undefined
+      ? undefined
+      : $t('person_tile_label_count', { values: { name: person.name, count: person.numberOfAssets } });
+  };
+
   // People-page type filter. Server-side rather than a filter over `people`: the grid is paged
   // (PEOPLE_PAGE_SIZE at a time) and pets are a small fraction of a real library, so filtering only
   // what has been loaded would show a near-empty grid until you scrolled to the very end.
@@ -380,6 +412,7 @@
     species: person.species,
     assetCount: person.numberOfAssets,
     canEditPersonalProfile: isPersonalPrimary(person),
+    accessibleName: accessibleNameOf(person),
   });
 
   const onNameChangeSubmit = async (name: string, targetPerson: PersonResponseDto) => {
@@ -508,8 +541,10 @@
           onSelect={(sortBy) => ($peopleViewSettings.sortBy = sortBy)}
           render={(sortBy) => ({ title: peopleSortByNames[sortBy], icon: peopleSortIcons[sortBy] })}
         />
+        <!-- Local Omarchy layer: a crossed-out person, not an eye: the bar's View menu beside it is the eye, and on a
+             phone, where the labels go, the two eyes stood side by side -->
         <Button
-          leadingIcon={mdiEyeOutline}
+          leadingIcon={mdiAccountOffOutline}
           onclick={() => goto('/people/manage')}
           size="small"
           variant="ghost"
@@ -530,6 +565,14 @@
       canShowActions={isPersonalPrimary}
       onNameSubmit={onNameChangeSubmit}
     >
+      {#snippet detail(person)}
+        {#if isRepeatedName(repeated, person.name)}
+          <!-- the line keeps its height while the years are asked for, so nothing moves when they come -->
+          <p class="ws-person-span" aria-hidden="true" lang={$locale} data-testid="person-span">
+            {spanLine(person) ?? ''}
+          </p>
+        {/if}
+      {/snippet}
       {#snippet actions(person)}
         {@const Actions = getPersonActions($t, person)}
         <ButtonContextMenu
@@ -557,3 +600,19 @@
     <EmptyState {...emptyState} testId="people-empty" />
   {/if}
 </UserPageLayout>
+
+<style>
+  /* what tells apart people who share a name: their count and years in data type, muted, under the name */
+  .ws-person-span {
+    min-height: calc(var(--ws-text-data) * 1.5);
+    margin-top: 0.125rem;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    color: var(--immich-ui-muted);
+    text-align: center;
+    white-space: nowrap;
+  }
+</style>

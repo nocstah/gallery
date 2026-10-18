@@ -3123,6 +3123,8 @@
   },
   "person_recognized": "已识别人物",
   "person_share_no_users": "你聚类分组中的所有用户已拥有该人物的访问权限。",
+  "person_tile_label": "{name}，{count, plural, other {# 张照片}}，{years}",
+  "person_tile_label_count": "{name}，{count, plural, other {# 张照片}}",
   "person_update_strategy": "将更改应用于",
   "person_update_strategy_description": "更改姓名或出生日期时，要更新哪些人物",
   "person_update_strategy_everyone": "所有拥有共享访问权限的用户",

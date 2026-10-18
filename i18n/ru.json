@@ -3126,6 +3126,8 @@
   },
   "person_recognized": "Человек распознан",
   "person_share_no_users": "Каждый пользователь в вашей кластерной группе уже имеет доступ к этому человеку.",
+  "person_tile_label": "{name}, {count, plural, one {# фото} few {# фото} many {# фото} other {# фото}}, {years}",
+  "person_tile_label_count": "{name}, {count, plural, one {# фото} few {# фото} many {# фото} other {# фото}}",
   "person_update_strategy": "Применить изменения",
   "person_update_strategy_description": "Информацию каких людей следует обновить при изменении имени или даты рождения",
   "person_update_strategy_everyone": "У всех кому предоставлен доступ",

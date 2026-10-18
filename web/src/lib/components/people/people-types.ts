@@ -11,6 +11,8 @@ export type ManagedPerson = {
   assetCount?: number;
   faceCount?: number;
   canEditPersonalProfile?: boolean;
+  /** Local Omarchy layer: the tile's name for a screen reader when the name alone does not say who (a repeated name) */
+  accessibleName?: string;
 };
 
 export type VisibilityPerson = Pick<

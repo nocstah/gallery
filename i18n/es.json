@@ -3124,6 +3124,8 @@
   },
   "person_recognized": "Persona reconocida",
   "person_share_no_users": "Todos los usuarios de tu grupo de personas ya tienen acceso a esta persona.",
+  "person_tile_label": "{name}, {count, plural, one {# foto} other {# fotos}}, {years}",
+  "person_tile_label_count": "{name}, {count, plural, one {# foto} other {# fotos}}",
   "person_update_strategy": "Aplicar cambios a",
   "person_update_strategy_description": "Cuales personas se actualizarán al cambiar el nombre o la fecha de nacimiento",
   "person_update_strategy_everyone": "Todos con acceso compartido",
