@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Route } from '$lib/route';
+  import PlaceTile from '$lib/components/places/PlaceTile.svelte';
+  import { placeStats } from '$lib/managers/place-stats.svelte';
   import { placesViewSettings } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl } from '$lib/utils';
   import { type PlacesGroup, isPlacesGroupCollapsed, togglePlacesGroupCollapsing } from '$lib/utils/places-utils';
-  import { AssetMediaSize, type AssetResponseDto } from '@immich/sdk';
+  import { type AssetResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiChevronRight } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -39,29 +39,13 @@
   {#if !isCollapsed}
     <!-- Local Omarchy layer: the places fill the width at every width, as Albums and People do: square tiles at least
          9rem wide on the desktop's gap, two to a row on a phone. Upstream sized each tile from the window and capped it
-         at 156px, which left a third of a phone's row and the end of every wider one empty -->
+         at 156px, which left a third of a phone's row and the end of every wider one empty. Each tile is a window with
+         its count and years (PlaceTile), where upstream dimmed the photo under a centred name -->
     <div class="grid grid-auto-fill-36 gap-(--ws-gap)" data-testid="places-grid">
       {#each places as item (item.id)}
-        {@const city = item.exifInfo?.city}
-        <a
-          class="relative"
-          href={Route.photos({ city: city ?? undefined, country: item.exifInfo?.country ?? undefined })}
-          draggable="false"
-        >
-          <div class="flex aspect-square w-full justify-center overflow-hidden rounded-xl brightness-75 filter">
-            <img
-              src={getAssetMediaUrl({ id: item.id, size: AssetMediaSize.Thumbnail })}
-              alt={city}
-              class="size-full object-cover"
-              loading="lazy"
-            />
-          </div>
-          <span
-            class="absolute bottom-2 w-full px-1 text-center text-sm font-medium text-ellipsis text-white capitalize backdrop-blur-[1px] hover:cursor-pointer"
-          >
-            {city}
-          </span>
-        </a>
+        {@const city = item.exifInfo?.city ?? ''}
+        {@const country = item.exifInfo?.country}
+        <PlaceTile assetId={item.id} {city} {country} stats={placeStats.get({ city, country })} />
       {/each}
     </div>
   {/if}

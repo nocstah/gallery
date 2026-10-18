@@ -3029,6 +3029,7 @@
   "pin_code_setup_successfully": "Pomyślnie ustawiono kod PIN",
   "pin_verification": "Weryfikacja kodem PIN",
   "place": "Miejsce",
+  "place_tile_label": "{place}, {count, plural, one {# zdjęcie} few {# zdjęcia} many {# zdjęć} other {# zdjęć}}, {years}",
   "places": "Miejsca",
   "places_count": "{count, plural, one {{count, number} Miejsce} few {{count, number} Miejsca}other {{count, number} Miejsc}}",
   "play": "Odtwórz",

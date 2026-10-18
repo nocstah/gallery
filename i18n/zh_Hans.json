@@ -3011,6 +3011,7 @@
   "pin_code_setup_successfully": "PIN码设置成功",
   "pin_verification": "PIN码验证",
   "place": "地点",
+  "place_tile_label": "{place}，{count, plural, other {# 张照片}}，{years}",
   "places": "地点",
   "places_count": "{count, plural, one {{count, number}个地点} other {{count, number}个地点}}",
   "play": "播放",

@@ -3012,6 +3012,7 @@
   "pin_code_setup_successfully": "Définition du code PIN réussie",
   "pin_verification": "Vérification du code PIN",
   "place": "Lieu",
+  "place_tile_label": "{place}, {count, plural, one {# photo} other {# photos}}, {years}",
   "places": "Lieux",
   "places_count": "{count, plural, one {{count, number} Lieu} other {{count, number} Lieux}}",
   "play": "Lancer",

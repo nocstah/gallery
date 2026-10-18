@@ -3012,6 +3012,7 @@
   "pin_code_setup_successfully": "PIN establecido exitosamente",
   "pin_verification": "Verificación con código PIN",
   "place": "Lugar",
+  "place_tile_label": "{place}, {count, plural, one {# foto} other {# fotos}}, {years}",
   "places": "Lugares",
   "places_count": "{count, plural, one {{count, number} Lugar} other {{count, number} Lugares}}",
   "play": "Reproducir",

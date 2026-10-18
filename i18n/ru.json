@@ -3014,6 +3014,7 @@
   "pin_code_setup_successfully": "PIN-код успешно установлен",
   "pin_verification": "Проверка PIN-кода",
   "place": "Места",
+  "place_tile_label": "{place}, {count, plural, one {# фото} few {# фото} many {# фото} other {# фото}}, {years}",
   "places": "Места",
   "places_count": "{count, plural, one {{count, number} место} many {{count, number} мест} other {{count, number} места}}",
   "play": "Воспроизвести",

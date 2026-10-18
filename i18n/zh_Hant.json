@@ -2982,6 +2982,7 @@
   "pin_code_setup_successfully": "PIN 碼設定成功",
   "pin_verification": "PIN 碼驗證",
   "place": "地點",
+  "place_tile_label": "{place}，{count, plural, other {# 張相片}}，{years}",
   "places": "地點",
   "places_count": "{count, plural, one {{count, number} 個地點} other {{count, number} 個地點}}",
   "play": "播放",

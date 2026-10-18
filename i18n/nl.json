@@ -3011,6 +3011,7 @@
   "pin_code_setup_successfully": "Pincode succesvol ingesteld",
   "pin_verification": "Pincodeverificatie",
   "place": "Plaats",
+  "place_tile_label": "{place}, {count, plural, one {# foto} other {# foto's}}, {years}",
   "places": "Plaatsen",
   "places_count": "{count, plural, one {{count, number} Plaats} other {{count, number} Plaatsen}}",
   "play": "Afspelen",

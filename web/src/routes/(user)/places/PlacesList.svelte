@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { placeStats } from '$lib/managers/place-stats.svelte';
   import { PlacesGroupBy, type PlacesViewSettings } from '$lib/stores/preferences.store';
   import { normalizeSearchString } from '$lib/utils/string-utils';
   import { type AssetResponseDto } from '@immich/sdk';
@@ -52,12 +53,20 @@
         return place.exifInfo?.country ?? unknownCountry;
       });
 
-      const sortedByCountryName = Object.entries(groupedByCountry).sort(([a], [b]) => {
+      // Local Omarchy layer: the countries that hold the most photos first, as the places within them already stand
+      // (managers/place-stats); upstream sorted them by name. Places without a country stay at the end.
+      const photosIn = (places: AssetResponseDto[]) =>
+        places.reduce(
+          (sum, place) =>
+            sum + (placeStats.get({ city: place.exifInfo?.city ?? '', country: place.exifInfo?.country })?.count ?? 0),
+          0,
+        );
+      const sortedByCountryName = Object.entries(groupedByCountry).sort(([a, inA], [b, inB]) => {
         // We make sure empty albums stay at the end of the list
         if (a === unknownCountry) {
           return 1;
         }
-        return b === unknownCountry ? -1 : a.localeCompare(b);
+        return b === unknownCountry ? -1 : photosIn(inB) - photosIn(inA) || a.localeCompare(b);
       });
 
       return sortedByCountryName.map(([country, places]) => ({

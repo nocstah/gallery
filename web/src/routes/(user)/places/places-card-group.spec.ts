@@ -2,8 +2,12 @@ import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
+import type { PlaceStats } from '$lib/utils/place-stats';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import PlacesCardGroup from './PlacesCardGroup.svelte';
+
+const { stats } = vi.hoisted(() => ({ stats: { current: undefined as PlaceStats | undefined } }));
+vi.mock('$lib/managers/place-stats.svelte', () => ({ placeStats: { get: () => stats.current } }));
 
 function renderGroup(city: string, country?: string | null) {
   const props = { places: [assetFactory.build({ id: 'asset-1', exifInfo: { city, country } })] };
@@ -48,8 +52,21 @@ describe('PlacesCardGroup', () => {
 
     const grid = screen.getByTestId('places-grid');
     expect(grid).toHaveClass('grid', 'grid-auto-fill-36');
-    const tile = screen.getByRole('link', { name: /Cape Town/ }).firstElementChild;
-    expect(tile).toHaveClass('aspect-square', 'w-full');
-    expect(tile?.className).not.toMatch(/max-w-|100vw/);
+    const tile = screen.getByRole('link', { name: /Cape Town/ });
+    expect(tile).toHaveClass('ws-place-tile');
+    expect(tile.className).not.toMatch(/max-w-|100vw/);
+  });
+
+  // Local Omarchy layer: a tile says how many photos the place holds and the years they span, in data type, and its
+  // photo is not dimmed (the caption scrim carries the words)
+  it("says a place's count and years, and names them for a screen reader", () => {
+    stats.current = { count: 1375, first: 2010, last: 2026 };
+    renderGroup('Riverton', 'Thailand');
+
+    expect(screen.getByText('1,375 · 2010–2026')).toBeInTheDocument();
+    // svelte-i18n echoes the key in a test: the label says the place, its photos and years in words
+    const tile = screen.getByRole('link', { name: 'place_tile_label' });
+    expect(tile.getHTML()).not.toMatch(/brightness/);
+    stats.current = undefined;
   });
 });
