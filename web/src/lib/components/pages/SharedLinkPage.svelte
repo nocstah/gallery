@@ -112,8 +112,10 @@
       <form class="ws-link-password" novalidate {onsubmit}>
         <label class="ws-link-password-label" for="shared-link-password">{$t('password')}</label>
         <div class="ws-link-password-row">
+          <!-- medium: 16px text, so a phone does not zoom in on the field when it takes the focus -->
           <PasswordInput
             id="shared-link-password"
+            size="medium"
             autocomplete="off"
             autofocus
             bind:value={password}
