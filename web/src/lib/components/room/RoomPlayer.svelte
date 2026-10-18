@@ -307,9 +307,13 @@
     });
   });
 
+  // the story's sentence over it: the caption leaves out what that line already says (the people, the place, the day)
+  let storyLine = $state<string | undefined>();
   const caption = $derived.by(() => {
     const info = filmAsset ? infos.get(filmAsset) : undefined;
-    return info ? roomCaption(info, $locale, (count) => $t('room_caption_more', { values: { count } })) : undefined;
+    return info
+      ? roomCaption(info, $locale, (count) => $t('room_caption_more', { values: { count } }), storyLine)
+      : undefined;
   });
 
   // ---- the screen: full, awake while playing ----
@@ -501,6 +505,7 @@
         bind:this={film}
         bind:current={filmAsset}
         bind:paused={filmPaused}
+        bind:storyLine
         memory={filmSource}
         assetId={filmSource.assets[0].id}
         active

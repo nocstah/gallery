@@ -179,20 +179,107 @@ export const inTimeOrder = (assets: AssetResponseDto[]): AssetResponseDto[] => {
 /** What a year's film holds: the photos, the year's favourites and photos, and whether it is a sample. */
 export type YearFilm = { assets: AssetResponseDto[]; favorites: number; total: number; sample: boolean };
 
-// ---- the caption: names · place · date ----
+// ---- the caption: names · place · date, less what the story's line above it says ----
 
 /** Names a caption gives at most; the rest are counted. */
 const MOST_NAMES = 3;
 
+/** A sentence as the caption reads it: its words, lowercased, letters and digits only, an ordinal's ending dropped
+ * ("18th" is "18"), so a name, a place or a day is found in it whatever its punctuation. */
+type Said = { text: string; words: string[] };
+
+const wordsOf = (text: string) =>
+  text
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+    .map((word) => word.replace(/^(\d+)(?:st|nd|rd|th)$/, '$1'));
+
+// scripts written without spaces between words: there a name is looked for anywhere in the sentence
+const UNSPACED = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u;
+
+/** Whether the sentence says `phrase`: its words one after another, never inside another word ("Ra" is not in "rain"). */
+const says = (said: Said, phrase: string) => {
+  const wanted = wordsOf(phrase);
+  if (wanted.length === 0) {
+    return false;
+  }
+  if (UNSPACED.test(phrase)) {
+    return said.text.toLowerCase().includes(phrase.trim().toLowerCase());
+  }
+  for (let at = 0; at + wanted.length <= said.words.length; at++) {
+    if (wanted.every((word, offset) => said.words[at + offset] === word)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/** The words a sentence may name a month by: English (Curator writes in English) and the reader's language, long and
+ * short, as they stand in a date ("октября", not the "октябрь" of a calendar's heading). */
+const monthWords = (month: number, locale: string | undefined) => {
+  const date = new Date(Date.UTC(2001, month - 1, 15));
+  const names = new Set<string>();
+  for (const language of ['en-US', 'en-GB', locale]) {
+    for (const style of ['long', 'short'] as const) {
+      try {
+        const parts = new Intl.DateTimeFormat(language, {
+          day: 'numeric',
+          month: style,
+          timeZone: 'UTC',
+        }).formatToParts(date);
+        for (const word of wordsOf(parts.find(({ type }) => type === 'month')?.value ?? '')) {
+          names.add(word);
+        }
+      } catch {
+        // a locale this browser does not know: English is there
+      }
+    }
+  }
+  return names;
+};
+
+/** Whether the sentence names the photo's day: its day and month side by side ("18 October", "October 18th", "the
+ * 18th of October", "18. Okt."), with its year anywhere in it; the date in numbers (2025-10-18); or the date just as
+ * the caption writes it. A month or a span of days ("12–19 March 2018") leaves the day to the caption. */
+const saysDay = (said: Said, day: DateTime, written: string, locale: string | undefined) => {
+  if (written && said.text.includes(written)) {
+    return true;
+  }
+  const { words } = said;
+  const [year, month, date] = [String(day.year), day.month, String(day.day)];
+  const months = monthWords(month, locale);
+  for (let at = 0; at < words.length; at++) {
+    if (words[at] === year && Number(words[at + 1]) === month && words[at + 2] === date) {
+      return true;
+    }
+  }
+  if (!words.includes(year)) {
+    return false;
+  }
+  return words.some((word, at) => {
+    if (word !== date) {
+      return false;
+    }
+    const after = words[at + 1] === 'of' ? words[at + 2] : words[at + 1];
+    return months.has(words[at - 1] ?? '') || months.has(after ?? '');
+  });
+};
+
 /**
  * The photo on screen in words, for Room's caption: who is in it (its named people, three at most and how many more),
- * where (its city and country) and when (its day, in the reader's language).
+ * where (its city and country) and when (its day, in the reader's language). `line` is what the story's line above it
+ * says: a part it already names is left out (DESIGN.md, Room), so the caption never says a thing twice: the people
+ * when it names every one of them, the place when it names the city (the country alone leaves the city), the day when
+ * it names the day with its month and year. A line that says it all leaves no caption.
  */
 export const roomCaption = (
   asset: Pick<AssetResponseDto, 'people' | 'exifInfo' | 'localDateTime'>,
   locale: string | undefined,
   more: (count: number) => string,
+  line?: string,
 ): string => {
+  const said: Said | undefined = line?.trim() ? { text: line, words: wordsOf(line) } : undefined;
   const names: string[] = [];
   for (const person of asset.people ?? []) {
     const name = person.name?.trim();
@@ -200,15 +287,24 @@ export const roomCaption = (
       names.push(name);
     }
   }
+  const everyoneSaid = !!said && names.length > 0 && names.every((name) => says(said, name));
   const who =
-    names.length > MOST_NAMES
-      ? joinNames([...names.slice(0, MOST_NAMES), more(names.length - MOST_NAMES)], locale)
-      : names.length > 0
-        ? joinNames(names, locale)
-        : '';
-  const where = [asset.exifInfo?.city, asset.exifInfo?.country].filter(Boolean).join(', ');
-  const when = asset.localDateTime
-    ? fromISODateTimeUTC(asset.localDateTime).toLocaleString(DateTime.DATE_FULL, { locale })
-    : '';
+    names.length === 0 || everyoneSaid
+      ? ''
+      : names.length > MOST_NAMES
+        ? joinNames([...names.slice(0, MOST_NAMES), more(names.length - MOST_NAMES)], locale)
+        : joinNames(names, locale);
+
+  const city = asset.exifInfo?.city?.trim() ?? '';
+  const country = asset.exifInfo?.country?.trim() ?? '';
+  const where =
+    said && city && says(said, city)
+      ? ''
+      : [city, said && country && says(said, country) ? '' : country].filter(Boolean).join(', ');
+
+  const day = asset.localDateTime ? fromISODateTimeUTC(asset.localDateTime) : undefined;
+  const written = day?.isValid ? day.toLocaleString(DateTime.DATE_FULL, { locale }) : '';
+  const when = day?.isValid && said && saysDay(said, day, written, locale) ? '' : written;
+
   return [who, where, when].filter(Boolean).join(' · ');
 };

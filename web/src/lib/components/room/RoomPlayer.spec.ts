@@ -141,6 +141,28 @@ describe('RoomPlayer', () => {
     );
   });
 
+  it('never captions what the story line over it already says', async () => {
+    vi.mocked(curator.story).mockResolvedValue({
+      story: { text: 'Anna was in Siem Reap, Cambodia on 18 October 2025. The rain stopped by noon.', model: 'text' },
+    } as never);
+    vi.mocked(loadToday).mockResolvedValue([memoryReel(memory('m1', 2025, 4))]);
+    render(RoomPlayer, { request: today });
+    await playing('October 2025');
+
+    // the newest of each: one on its way out may still be fading
+    const story = () => [...document.querySelectorAll('.film-story')].at(-1)?.textContent?.trim();
+    const caption = () => screen.queryAllByTestId('memory-film-caption').at(-1)?.textContent?.trim();
+    // the first sentence says who, where and when: the caption holds
+    await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    await waitFor(() => expect(story()).toBe('Anna was in Siem Reap, Cambodia on 18 October 2025.'));
+    await waitFor(() => expect(caption()).toBeUndefined());
+    // the next one says none of it: the caption says it all
+    await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    await waitFor(() => expect(story()).toBe('The rain stopped by noon.'));
+    await waitFor(() => expect(caption()).toBe('Anna · Siem Reap, Cambodia · October 18, 2025'));
+  });
+
   it("asks Curator for a memory's story and songs for its owner, and nothing for a family account", async () => {
     vi.mocked(loadToday).mockResolvedValue([memoryReel(memory('m1', 2025))]);
     const { unmount } = render(RoomPlayer, { request: today });

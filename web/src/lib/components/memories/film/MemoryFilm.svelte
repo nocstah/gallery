@@ -88,6 +88,9 @@
     dress?: FilmDress;
     /** the photo on screen in words, "names · place · date": the room dress's caption at the foot */
     caption?: string;
+    /** the story's sentence on screen (none under the title card or at the end), for a caption that must not say it
+     * again (Room's) */
+    storyLine?: string;
     /** paused by a person (or by the tab being hidden), not before the film starts or once it has ended: Room keeps
      * the screen awake while this is false */
     paused?: boolean;
@@ -120,6 +123,7 @@
     extra,
     dress = 'screen',
     caption,
+    storyLine = $bindable(),
     paused = $bindable(false),
     onClose,
     onAllPhotos,
@@ -1038,6 +1042,14 @@
   });
 
   const controlsHidden = $derived(!controlsShown && playing && !ended);
+
+  // the story's sentence as it stands on screen: Room's caption under it leaves out what it says
+  $effect(() => {
+    const line = !ended && !titleShown ? storyText : undefined;
+    if (untrack(() => storyLine) !== line) {
+      storyLine = line;
+    }
+  });
 
   // paused by a person (or a hidden tab): Room lets the screen sleep then, and keeps it awake otherwise
   $effect(() => {

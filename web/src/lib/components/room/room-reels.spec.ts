@@ -192,4 +192,57 @@ describe(roomCaption.name, () => {
     expect(roomCaption({ localDateTime: '2025-10-16T10:00:00.000Z' }, 'en', more)).toBe('October 16, 2025');
     expect(roomCaption({ exifInfo: { country: 'Norway' }, localDateTime: '' }, 'en', more)).toBe('Norway');
   });
+
+  describe('under a line of the story', () => {
+    const photo = {
+      people: [person('Anna'), person('Ben')],
+      exifInfo: { city: 'Siem Reap', country: 'Cambodia' },
+      localDateTime: '2025-10-16T10:00:00.000Z',
+    };
+    const caption = (line: string, locale = 'en') => roomCaption(photo, locale, more, line);
+
+    it('says nothing a line already says whole, in its own date format', () => {
+      expect(caption('Anna and Ben were in Siem Reap, Cambodia on 16 October 2025.')).toBe('');
+      expect(caption('On October 16th, 2025, Anna and Ben walked around Siem Reap.')).toBe('');
+      expect(caption('Anna and Ben reached Siem Reap on the 16th of October 2025.')).toBe('');
+    });
+
+    it('leaves out each part the line names, and keeps what it adds', () => {
+      expect(caption('Anna and Ben spent the morning by the river.')).toBe('Siem Reap, Cambodia · October 16, 2025');
+      expect(caption('The temples of Siem Reap rose out of the trees.')).toBe('Anna and Ben · October 16, 2025');
+      expect(caption('The trip through Cambodia went on in the rain.')).toBe(
+        'Anna and Ben · Siem Reap · October 16, 2025',
+      );
+      expect(caption('Ben swam on 16 October 2025.')).toBe('Anna and Ben · Siem Reap, Cambodia');
+    });
+
+    it('keeps the day when the line names only its month, a span, or the day without its year', () => {
+      const all = 'Anna and Ben · Siem Reap, Cambodia · October 16, 2025';
+      expect(caption('In October 2025 the rains came.')).toBe(all);
+      expect(caption('From 12 to 19 October 2025 the rains came.')).toBe(all);
+      expect(caption('On 16 October the rains came.')).toBe(all);
+      expect(caption('16 people came in 2025, in October.')).toBe(all);
+    });
+
+    it('finds a name only as a whole word', () => {
+      expect(roomCaption({ people: [person('Ra')], localDateTime: '' }, 'en', more, 'The rain stopped.')).toBe('Ra');
+      expect(roomCaption({ people: [person('Ra')], localDateTime: '' }, 'en', more, 'Ra laughed.')).toBe('');
+    });
+
+    it('keeps the people while the line leaves one of them out', () => {
+      const many = { ...photo, people: ['Anna', 'Ben', 'Mia', 'Tom'].map((name) => person(name)) };
+      expect(roomCaption(many, 'en', more, 'Anna, Ben and Mia ate in Siem Reap.')).toBe(
+        'Anna, Ben, Mia, and 1 others · October 16, 2025',
+      );
+      expect(roomCaption(many, 'en', more, 'Anna, Ben, Mia and Tom ate in Siem Reap.')).toBe('October 16, 2025');
+    });
+
+    it("reads the day in the reader's language as well as Curator's English", () => {
+      expect(caption('Anna and Ben were in Siem Reap on 16 October 2025.', 'de')).toBe('');
+      expect(caption('Anna und Ben waren am 16. Oktober 2025 dort.', 'de')).toBe('Siem Reap, Cambodia');
+      expect(roomCaption(photo, 'de', more, 'Ein Tag am Fluss.')).toBe(
+        'Anna und Ben · Siem Reap, Cambodia · 16. Oktober 2025',
+      );
+    });
+  });
 });
