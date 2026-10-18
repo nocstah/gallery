@@ -965,6 +965,7 @@
   "age_years": "{years, plural, other {Wiek #}}",
   "ai_inbox": "Skrzynka AI",
   "ai_inbox_accept_all_hint": "{backup, select, yes {Najpierw powstanie kopia zapasowa bazy danych Gallery, a „Cofnij wszystkie” wycofa te zmiany.} other {„Cofnij wszystkie” wycofa te zmiany.}}",
+  "ai_inbox_all_black": "Całkowicie czarne",
   "ai_inbox_applied": "Zastosowano",
   "ai_inbox_applying": "Tworzenie kopii zapasowej bazy danych, potem zastosowanie: {count}…",
   "ai_inbox_best": "Najlepsze",

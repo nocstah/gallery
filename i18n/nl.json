@@ -965,6 +965,7 @@
   "age_years": "{years, plural, other {Leeftijd #}}",
   "ai_inbox": "AI-inbox",
   "ai_inbox_accept_all_hint": "{backup, select, yes {De database van Gallery wordt eerst geback-upt, en ‘Alles ongedaan maken’ draait de wijzigingen terug.} other {‘Alles ongedaan maken’ draait de wijzigingen terug.}}",
+  "ai_inbox_all_black": "Helemaal zwart",
   "ai_inbox_applied": "Toegepast",
   "ai_inbox_applying": "Database wordt geback-upt, daarna worden er {count} toegepast…",
   "ai_inbox_best": "Beste",

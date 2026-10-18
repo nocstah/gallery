@@ -965,6 +965,7 @@
   "age_years": "{years, plural, other {Età #}}",
   "ai_inbox": "Posta in arrivo IA",
   "ai_inbox_accept_all_hint": "{backup, select, yes {Prima viene fatto il backup del database di Gallery e con Annulla tutto puoi tornare indietro.} other {Con Annulla tutto puoi tornare indietro.}}",
+  "ai_inbox_all_black": "Tutto nero",
   "ai_inbox_applied": "Applicato",
   "ai_inbox_applying": "Backup del database in corso, poi applicazione di {count}…",
   "ai_inbox_best": "Migliore",

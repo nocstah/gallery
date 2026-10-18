@@ -970,6 +970,7 @@
   "age_years": "{years, plural, other {#岁}}",
   "ai_inbox": "AI 收件箱",
   "ai_inbox_accept_all_hint": "{backup, select, yes {会先备份 Gallery 的数据库，之后可用“全部撤销”恢复原状。} other {之后可用“全部撤销”恢复原状。}}",
+  "ai_inbox_all_black": "全黑",
   "ai_inbox_applied": "已应用",
   "ai_inbox_applying": "正在备份数据库，然后应用 {count} 项…",
   "ai_inbox_best": "最佳",

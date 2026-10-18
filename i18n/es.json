@@ -965,6 +965,7 @@
   "age_years": "Edad {years, plural, one {# año} other {# años}}",
   "ai_inbox": "Bandeja de IA",
   "ai_inbox_accept_all_hint": "{backup, select, yes {Primero se hace una copia de seguridad de la base de datos de Gallery y con Deshacer todo puedes volver atrás.} other {Con Deshacer todo puedes volver atrás.}}",
+  "ai_inbox_all_black": "Todo negro",
   "ai_inbox_applied": "Aplicada",
   "ai_inbox_applying": "Haciendo copia de seguridad de la base de datos y aplicando {count}…",
   "ai_inbox_best": "Mejor",

@@ -965,6 +965,7 @@
   "age_years": "{years, plural, other {Alter #}}",
   "ai_inbox": "KI-Eingang",
   "ai_inbox_accept_all_hint": "{backup, select, yes {Die Datenbank von Gallery wird vorher gesichert, und „Alle rückgängig machen“ nimmt die Änderungen zurück.} other {„Alle rückgängig machen“ nimmt die Änderungen zurück.}}",
+  "ai_inbox_all_black": "Ganz schwarz",
   "ai_inbox_applied": "Angewendet",
   "ai_inbox_applying": "Datenbank wird gesichert, dann werden {count} angewendet …",
   "ai_inbox_best": "Bestes",

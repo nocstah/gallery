@@ -972,6 +972,7 @@
   "age_years": "{years, plural, other {Age #}}",
   "ai_inbox": "AI inbox",
   "ai_inbox_accept_all_hint": "{backup, select, yes {Gallery's database is backed up first, and Undo all takes them back.} other {Undo all takes them back.}}",
+  "ai_inbox_all_black": "All black",
   "ai_inbox_applied": "Applied",
   "ai_inbox_applying": "Backing up the database, then applying {count}…",
   "ai_inbox_best": "Best",

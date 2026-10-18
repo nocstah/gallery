@@ -3,7 +3,9 @@
   // nothing, a video whose first frame is black (in "Mac albums you're missing", a 404 s clip that opens on black) or
   // a thumbnail Gallery could not make, is a quiet placeholder: the tile's own tint in its hairline with a muted mark,
   // rather than a black hole among the photos (utils/curator-inbox isBlankPicture). Only the tile changes; the photo
-  // opens as it is. The tiles are decoration beside the words, so the placeholder is too; its tooltip says why.
+  // opens as it is. The tiles are decoration beside the words, so the placeholder is too; its tooltip says why, and
+  // truly: "All black" for a picture that is (in "Accidental shots" the very reason for the card), "No preview" only
+  // where Gallery has none.
   import { isBlankPicture } from '$lib/utils/curator-inbox';
   import { Icon } from '@immich/ui';
   import { mdiImageOffOutline } from '@mdi/js';
@@ -20,14 +22,14 @@
 
   let { src, size, turn = 0, class: className = '' }: Props = $props();
 
-  let blank = $state(false);
+  let blank = $state<'black' | 'missing'>();
 </script>
 
 {#if blank}
   <span
     class="ws-strip-tile tile-blank {className}"
     style:--tile-size="{size}px"
-    title={$t('ai_inbox_no_preview')}
+    title={$t(blank === 'black' ? 'ai_inbox_all_black' : 'ai_inbox_no_preview')}
     aria-hidden="true"
   >
     <Icon icon={mdiImageOffOutline} size="40%" />
@@ -41,8 +43,8 @@
     width={size}
     height={size}
     style:rotate={turn ? `${turn}deg` : undefined}
-    onload={(event) => (blank = isBlankPicture(event.currentTarget as HTMLImageElement))}
-    onerror={() => (blank = true)}
+    onload={(event) => (blank = isBlankPicture(event.currentTarget as HTMLImageElement) ? 'black' : undefined)}
+    onerror={() => (blank = 'missing')}
   />
 {/if}
 
