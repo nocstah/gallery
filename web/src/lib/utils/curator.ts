@@ -28,6 +28,11 @@ export type InboxGroup = {
   applied: number;
   rejected: number;
   preview: string[] | null;
+  /** its kind: the key without the run's day (utils/curator-inbox); from Curator since 2026-10-18 */
+  series?: string;
+  /** the days its waiting proposals were made ('YYYY-MM-DD'), and when the first of them was */
+  runs?: string[] | null;
+  oldest?: string | null;
 };
 
 export type Suggestion = {
@@ -144,7 +149,15 @@ export type ChatEvent =
   | { type: 'done'; data: { id: string } };
 
 export type GroupPage = {
-  group: { key: string; kind: string; title: string; description: string | null };
+  group: {
+    key: string;
+    kind: string;
+    title: string;
+    description: string | null;
+    created_at?: string;
+    series?: string;
+    runs?: string[] | null;
+  };
   total: number;
   items: Suggestion[];
 };

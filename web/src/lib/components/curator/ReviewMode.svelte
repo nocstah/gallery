@@ -1,12 +1,13 @@
 <script lang="ts">
-  // Local Omarchy layer: review mode. One batch, one suggestion at a time, full screen and large, decided from the
-  // keyboard: A or → accepts, R or ← rejects, S or Space skips, U takes back the last decision (an accepted change is
-  // undone, a rejection reopened), Esc closes; the arrows belong to a slider while it has focus. The next
-  // suggestion's photos load while this one is on screen.
+  // Local Omarchy layer: review mode. One kind (all its batches, utils/curator-inbox), one suggestion at a time, full
+  // screen and large, decided from the keyboard: A or → accepts, R or ← rejects, S or Space skips, U takes back the
+  // last decision (an accepted change is undone, a rejection reopened), Esc closes; the arrows belong to a slider
+  // while it has focus. The next suggestion's photos load while this one is on screen.
   import ReviewStage from '$lib/components/curator/ReviewStage.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import { curator, type Suggestion } from '$lib/utils/curator';
+  import { waitingIn } from '$lib/utils/curator-inbox';
   import { AssetMediaSize } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiClose } from '@mdi/js';
@@ -14,12 +15,13 @@
   import { t } from 'svelte-i18n';
 
   interface Props {
-    groupKey: string;
+    /** the kind's batches, reviewed as one queue */
+    keys: string[];
     title: string;
     onClose: () => void;
   }
 
-  let { groupKey, title, onClose }: Props = $props();
+  let { keys, title, onClose }: Props = $props();
 
   let items = $state<Suggestion[]>([]);
   let index = $state(0);
@@ -142,8 +144,8 @@
   };
 
   onMount(() => {
-    void curator.group(groupKey, 'pending', 5000).then((page) => {
-      items = page.items;
+    void waitingIn(keys).then((found) => {
+      items = found;
       loaded = true;
       preload(items[1]);
     });

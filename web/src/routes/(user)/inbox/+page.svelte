@@ -36,7 +36,8 @@
     const value = page.url.searchParams.get('tab');
     return TABS.includes(value as Tab) ? (value as Tab) : 'inbox';
   });
-  const groupKey = $derived(page.url.searchParams.get('group'));
+  // a kind's batches: one ?group= each (utils/curator-inbox kindQuery), reviewed as one queue
+  const groupKeys = $derived(page.url.searchParams.getAll('group'));
 
   let health = $state<Health>();
   let failure = $state<CuratorError>();
@@ -91,9 +92,9 @@
         <p class="ws-inbox-row-body inbox-notice" role="note">{notice}</p>
       {/each}
       {#if tab === 'inbox'}
-        {#if groupKey}
-          {#key groupKey}
-            <InboxGroupView key={groupKey} onChange={refresh} />
+        {#if groupKeys.length > 0}
+          {#key groupKeys.join('\n')}
+            <InboxGroupView keys={groupKeys} onChange={refresh} />
           {/key}
         {:else}
           <InboxOverview onRunScan={() => open({ tab: 'jobs' })} onCalibrate={() => open({ tab: 'calibrate' })} />

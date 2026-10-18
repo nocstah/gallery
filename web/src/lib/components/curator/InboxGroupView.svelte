@@ -1,28 +1,31 @@
 <script lang="ts">
-  // Local Omarchy layer: reviewing one batch of Curator's suggestions. Reject the few that are wrong, then accept
-  // the rest in one go; every accepted change stays undoable here and in History. Keys: j/k move, a accepts,
-  // r rejects, u undoes. Accepting more than 20 at once runs Curator's database backup first, shown as progress.
-  // A decided row sinks to the bottom of the list at once, so the next one to decide is always where the last was.
-  // A card about one photo also has Delete (key d): the photo goes to Gallery's Trash and the card is set aside;
-  // its Undo restores the photo and puts the card back.
+  // Local Omarchy layer: reviewing one kind of Curator's suggestions, all its batches as one queue (utils/curator-inbox:
+  // Curator adds each night's proposals to the batch of their kind still waiting, and the batches it made one per
+  // night before that open together). Reject the few that are wrong, then accept the rest in one go; every accepted
+  // change stays undoable here and in History. Keys: j/k move, a accepts, r rejects, u undoes. Accepting more than 20
+  // at once runs Curator's database backup first, shown as progress. A decided row sinks to the bottom of the list at
+  // once, so the next one to decide is always where the last was. A card about one photo also has Delete (key d): the
+  // photo goes to Gallery's Trash and the card is set aside; its Undo restores the photo and puts the card back.
   import ReviewMode from '$lib/components/curator/ReviewMode.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
   import { curator, waitForJob, type GroupPage, type Suggestion, type SuggestionStatus } from '$lib/utils/curator';
+  import { newestBatch, queueOrder, runDays, runsOf, waitingIn } from '$lib/utils/curator-inbox';
   import { deleteAssets, restoreAssets } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiArrowLeft } from '@mdi/js';
   import { onMount, tick } from 'svelte';
   import { flip } from 'svelte/animate';
   import { SvelteSet } from 'svelte/reactivity';
-  import { t, type Translations } from 'svelte-i18n';
+  import { locale, t, type Translations } from 'svelte-i18n';
 
   interface Props {
-    key: string;
+    /** the kind's batches */
+    keys: string[];
     onChange: () => void;
   }
 
-  let { key, onChange }: Props = $props();
+  let { keys, onChange }: Props = $props();
 
   const FILTERS = ['pending', 'applied', 'rejected'] as const;
   type Filter = (typeof FILTERS)[number];
@@ -34,9 +37,14 @@
     undone: 'ai_inbox_undone',
     superseded: 'ai_inbox_replaced',
   };
+  // a page of the list, per batch
+  const PAGE = 100;
 
   let filter = $state<Filter>('pending');
-  let page = $state<GroupPage>();
+  /** each batch's last page: its words, how many it holds under the filter */
+  let pages = $state<GroupPage[]>([]);
+  /** how many of each batch's suggestions are in the list */
+  let loaded = $state<Record<string, number>>({});
   let items = $state<Suggestion[]>([]);
   let busy = $state(false);
   let working = $state<{ note: string; done: number; total: number }>();
@@ -48,19 +56,40 @@
   /** cards whose photo was sent to the Trash from here */
   const trashed = new SvelteSet<number>();
 
+  const deletable = (item: Suggestion) => item.kind.startsWith('asset.') && new Set(item.asset_ids).size === 1;
+
+  const words = $derived(pages.length > 0 ? newestBatch(pages.map((page) => page.group)) : undefined);
+  const runs = $derived([...new Set(pages.flatMap((page) => runsOf(page.group)))].sort());
+  const total = $derived(pages.reduce((sum, page) => sum + page.total, 0));
+  const waiting = $derived(filter === 'pending' ? items.filter((item) => item.status === 'pending').length : 0);
+  const remaining = $derived(filter === 'pending' ? total - (items.length - waiting) : 0);
+  const more = $derived(pages.some((page) => (loaded[page.group.key] ?? 0) < page.total));
+
   const closeReview = async () => {
     reviewing = false;
     await load();
     onChange();
   };
 
-  const waiting = $derived(filter === 'pending' ? items.filter((item) => item.status === 'pending').length : 0);
-  const remaining = $derived(page ? page.total - (items.length - waiting) : 0);
-
   const load = async (append = false) => {
-    const next = await curator.group(key, filter, 100, append ? items.length : 0);
-    page = next;
-    items = append ? [...items, ...next.items] : next.items;
+    try {
+      const wanted = append
+        ? pages.filter((page) => (loaded[page.group.key] ?? 0) < page.total).map((page) => page.group.key)
+        : keys;
+      const next = await Promise.all(
+        wanted.map((key) => curator.group(key, filter, PAGE, append ? (loaded[key] ?? 0) : 0)),
+      );
+      const counts = append ? { ...loaded } : {};
+      for (const page of next) {
+        counts[page.group.key] = (counts[page.group.key] ?? 0) + page.items.length;
+      }
+      loaded = counts;
+      pages = append ? pages.map((page) => next.find((fresh) => fresh.group.key === page.group.key) ?? page) : next;
+      const fresh = queueOrder(next.flatMap((page) => page.items));
+      items = append ? [...items, ...fresh] : fresh;
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
   };
 
   const setStatus = (ids: number[], status: SuggestionStatus) => {
@@ -130,8 +159,6 @@
     }
   };
 
-  const deletable = (item: Suggestion) => item.kind.startsWith('asset.') && new Set(item.asset_ids).size === 1;
-
   const trash = async (item: Suggestion) => {
     if (deciding.has(item.id) || item.status !== 'pending' || !deletable(item)) {
       return;
@@ -169,9 +196,9 @@
   };
 
   const decideAll = async (decision: 'accept' | 'reject') => {
-    const all = await curator.group(key, 'pending', 5000, 0);
+    const queue = await waitingIn(keys);
     await decide(
-      all.items.map((item) => item.id),
+      queue.map((item) => item.id),
       decision,
     );
   };
@@ -212,7 +239,12 @@
     } else if (item && event.key === 'a' && item.status === 'pending' && !deciding.has(item.id)) {
       void decide([item.id], 'accept');
       void tick().then(() => move(index)); // the next row has moved up into this place
-    } else if (item && (event.key === 'r' || event.key === 'x') && item.status === 'pending' && !deciding.has(item.id)) {
+    } else if (
+      item &&
+      (event.key === 'r' || event.key === 'x') &&
+      item.status === 'pending' &&
+      !deciding.has(item.id)
+    ) {
       void decide([item.id], 'reject');
       void tick().then(() => move(index));
     } else if (item && event.key === 'd' && item.status === 'pending' && deletable(item) && !deciding.has(item.id)) {
@@ -237,14 +269,24 @@
 
 <div class="group-head">
   <a class="ws-inbox-link back" href="?"><Icon icon={mdiArrowLeft} size="16" />{$t('back')}</a>
-  {#if page}
-    <h2 class="group-title">{page.group.title}</h2>
-    {#if page.group.description}
-      <p class="ws-inbox-row-body">{page.group.description}</p>
+  {#if words}
+    <h2 class="group-title">{words.title}</h2>
+    {#if filter === 'pending' || runs.length > 0}
+      <p class="ws-inbox-meta group-facts">
+        {#if filter === 'pending'}
+          <span>{$t('ai_inbox_waiting', { values: { count: remaining } })}</span>
+        {/if}
+        {#if runs.length > 0}
+          <span>{runDays(runs, $locale ?? undefined)}</span>
+        {/if}
+      </p>
+    {/if}
+    {#if words.description}
+      <p class="ws-inbox-row-body">{words.description}</p>
     {/if}
   {/if}
   <div class="group-bar">
-    <div class="ws-seg" role="group" aria-label={page?.group.title}>
+    <div class="ws-seg" role="group" aria-label={words?.title}>
       {#each FILTERS as name (name)}
         <button type="button" aria-pressed={filter === name} onclick={() => setFilter(name)}>
           {$t(STATUS_LABEL[name])}
@@ -274,7 +316,7 @@
   {/if}
 </div>
 
-{#if page && items.length === 0}
+{#if pages.length > 0 && items.length === 0}
   <p class="ws-inbox-row-body group-empty">{$t('ai_inbox_group_empty')}</p>
 {/if}
 
@@ -350,11 +392,11 @@
   {/each}
 </ul>
 
-{#if reviewing && page}
-  <ReviewMode groupKey={key} title={page.group.title} onClose={closeReview} />
+{#if reviewing && words}
+  <ReviewMode {keys} title={words.title} onClose={closeReview} />
 {/if}
 
-{#if page && items.length < page.total}
+{#if more}
   <button type="button" class="ws-btn-quiet more" onclick={() => load(true)}>{$t('show_more')}</button>
 {/if}
 
@@ -382,6 +424,11 @@
     letter-spacing: -0.03em;
     line-height: 1.05;
     text-wrap: balance;
+  }
+  .group-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem 1.25rem;
   }
   .group-bar {
     display: flex;

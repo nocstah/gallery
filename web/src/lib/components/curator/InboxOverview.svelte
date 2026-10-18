@@ -1,11 +1,14 @@
 <script lang="ts">
-  // Local Omarchy layer: the AI inbox's batches. One row per batch of suggestions (a scan's worth of burst covers,
-  // the Mac's names, an album folder), with a strip of the photos it touches; opening a row reviews the batch.
-  import { curator, type InboxGroup } from '$lib/utils/curator';
+  // Local Omarchy layer: the AI inbox's kinds. One row per kind of suggestion (the burst covers, the restored prints,
+  // the Mac's names), however many nights fed it (utils/curator-inbox): its title, how many wait, the days of its
+  // runs in data type and a strip of the photos it touches, the kind waiting longest first. What a kind does is said
+  // once, inside it; opening a row reviews the whole kind as one queue.
+  import { curator } from '$lib/utils/curator';
+  import { kindQuery, kindsOf, runDays, type InboxKind } from '$lib/utils/curator-inbox';
   import { getAssetMediaUrl } from '$lib/utils';
   import { AssetMediaSize } from '@immich/sdk';
   import { onMount } from 'svelte';
-  import { t } from 'svelte-i18n';
+  import { locale, t } from 'svelte-i18n';
 
   interface Props {
     onRunScan: () => void;
@@ -14,18 +17,16 @@
 
   let { onRunScan, onCalibrate }: Props = $props();
 
-  let groups = $state<InboxGroup[]>();
+  let kinds = $state<InboxKind[]>();
 
   onMount(async () => {
-    groups = await curator.inbox();
+    kinds = kindsOf(await curator.inbox());
   });
 
   const thumbnail = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
-  // one photo can open several batches' strips, and a strip may repeat it
-  const unique = (ids: string[] | null) => [...new Set(ids)];
 </script>
 
-{#if groups && groups.length === 0}
+{#if kinds && kinds.length === 0}
   <div class="ws-empty">
     <h2 class="ws-empty-title">{$t('ai_inbox_empty_title')}</h2>
     <p class="ws-empty-body">{$t('ai_inbox_empty_body')}</p>
@@ -34,20 +35,20 @@
       <button type="button" class="ws-empty-link" onclick={onCalibrate}>{$t('ai_inbox_tab_calibrate')}</button>
     </div>
   </div>
-{:else if groups}
+{:else if kinds}
   <ul class="ws-inbox-rows">
-    {#each groups as group (group.key)}
+    {#each kinds as kind (kind.series)}
       <li>
-        <a class="ws-inbox-row overview-row" href="?group={encodeURIComponent(group.key)}">
+        <a class="ws-inbox-row overview-row" href="?{kindQuery(kind.keys)}">
           <div class="overview-text">
-            <span class="ws-inbox-row-title">{group.title}</span>
-            <span class="ws-inbox-meta">{$t('ai_inbox_waiting', { values: { count: group.pending } })}</span>
-            {#if group.description}
-              <p class="ws-inbox-row-body">{group.description}</p>
-            {/if}
+            <span class="ws-inbox-row-title">{kind.title}</span>
+            <span class="ws-inbox-meta overview-facts">
+              <span>{$t('ai_inbox_waiting', { values: { count: kind.pending } })}</span>
+              <span>{runDays(kind.runs, $locale ?? undefined)}</span>
+            </span>
           </div>
           <div class="ws-strip overview-strip">
-            {#each unique(group.preview) as id (id)}
+            {#each kind.preview as id (id)}
               <img class="ws-strip-tile" src={thumbnail(id)} alt="" loading="lazy" width="72" height="72" />
             {/each}
           </div>
@@ -58,18 +59,19 @@
 {/if}
 
 <style>
+  /* the photos follow their title, not the far edge of a wide screen */
   .overview-row {
-    grid-template-columns: minmax(16rem, 1fr) auto;
+    grid-template-columns: minmax(16rem, 28rem) minmax(0, 1fr);
     align-items: center;
   }
   .overview-text {
+    display: grid;
+    gap: 0.3rem;
+  }
+  .overview-facts {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0.25rem 0.75rem;
-  }
-  .overview-text p {
-    flex-basis: 100%;
+    gap: 0.15rem 1.25rem;
   }
   .overview-strip :global(.ws-strip-tile) {
     width: 72px;
@@ -77,7 +79,7 @@
   }
   @media (max-width: 767px) {
     .overview-row {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
     .overview-strip :global(.ws-strip-tile) {
       width: 56px;
