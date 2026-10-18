@@ -1,11 +1,13 @@
-import { type AlbumResponseDto, type AssetResponseDto, type MemoryResponseDto, MemoryType } from '@immich/sdk';
+import { type AlbumResponseDto, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
 import { DateTime } from 'luxon';
 import { UUID_REGEX } from '$lib/constants';
+import type { MemoryCard } from '$lib/utils/memory-cards';
 import { joinNames } from '$lib/utils/memory-title';
 import { fromISODateTimeUTC } from '$lib/utils/timeline-util';
 
 // Local Omarchy layer: what Room plays (DESIGN.md, Room), worked out from what Gallery lists, as plain functions. Plain
-// /room is a chain of films: today's memories, then the albums Curator keeps for the TV once the owner has accepted
+// /room is a chain of films: today's memories as the Memories page shows them (memories that read the same, one place
+// and month, are one film: utils/memory-cards), then the albums Curator keeps for the TV once the owner has accepted
 // them ("Best of <year>", "<Month> across the years", "Growing up · <name>", and any album named "On the TV", the
 // names Curator's own Kiosk job looks for: curator/jobs/kiosk.py), and round again. /room?album= plays that album and
 // /room?year= that year: its favourites spread through its months, or a sample of the year spread by month when it has
@@ -14,9 +16,9 @@ import { fromISODateTimeUTC } from '$lib/utils/timeline-util';
 /** What Room was opened for. */
 export type RoomRequest = { kind: 'today' } | { kind: 'album'; albumId: string } | { kind: 'year'; year: number };
 
-/** A film of Room's chain: a memory, an album or a year. */
+/** A film of Room's chain: a memory (with its card when the card holds several), an album or a year. */
 export type RoomReel =
-  | { kind: 'memory'; key: string; memory: MemoryResponseDto }
+  | { kind: 'memory'; key: string; memory: MemoryResponseDto; card?: MemoryCard }
   | { kind: 'album'; key: string; album: AlbumResponseDto }
   | { kind: 'year'; key: string; year: number };
 
@@ -32,10 +34,11 @@ export const roomRequest = (params: URLSearchParams): RoomRequest => {
   return { kind: 'today' };
 };
 
-export const memoryReel = (memory: MemoryResponseDto): RoomReel => ({
+export const memoryReel = (memory: MemoryResponseDto, card?: MemoryCard): RoomReel => ({
   kind: 'memory',
   key: `memory:${memory.id}`,
   memory,
+  card,
 });
 export const albumReel = (album: AlbumResponseDto): RoomReel => ({ kind: 'album', key: `album:${album.id}`, album });
 export const yearReel = (year: number): RoomReel => ({ kind: 'year', key: `year:${year}`, year });
@@ -92,17 +95,17 @@ export const livingAlbums = (albums: AlbumResponseDto[], month: number): AlbumRe
     .map(({ album }) => album);
 };
 
-/** Plain Room's chain: today's memories (birthdays first, as the memories strip has them), then the living albums. */
-export const todayReels = (memories: MemoryResponseDto[], albums: AlbumResponseDto[], month: number): RoomReel[] => [
-  ...memories
-    .filter((memory) => memory.assets.length > 0)
-    .map((memory, order) => ({ memory, order }))
-    .sort(
-      (a, b) =>
-        Number(b.memory.type === MemoryType.Birthday) - Number(a.memory.type === MemoryType.Birthday) ||
-        a.order - b.order,
-    )
-    .map(({ memory }) => memoryReel(memory)),
+/**
+ * Plain Room's chain: today's memories as their cards (utils/memory-cards: a birthday first, then as the server sent
+ * them; memories that read the same play as one film, all their photos in the order taken, under the lead memory, whose
+ * story and songs it has), then the living albums. Cards not due yet stay out.
+ */
+export const todayReels = (cards: MemoryCard[], albums: AlbumResponseDto[], month: number): RoomReel[] => [
+  ...cards
+    .filter((card) => card.section !== 'upcoming' && card.assets.length > 0)
+    .map((card) =>
+      card.members.length > 1 ? memoryReel({ ...card.lead, assets: card.assets }, card) : memoryReel(card.lead),
+    ),
   ...livingAlbums(albums, month).map((album) => albumReel(album)),
 ];
 

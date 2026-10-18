@@ -20,7 +20,8 @@
   import { locale } from '$lib/stores/preferences.store';
   import { memoryLaneTitle } from '$lib/utils';
   import { curator, curatorIsMine, type MemoryTrack } from '$lib/utils/curator';
-  import { formatMemoryTime, memoryFilmWords, type MemoryFilmWords } from '$lib/utils/memory-title';
+  import { memoryCardCount } from '$lib/utils/memory-cards';
+  import { formatMemoryTime, memoryCount, memoryFilmWords, type MemoryFilmWords } from '$lib/utils/memory-title';
   import { AssetTypeEnum, getAlbumInfo, getAssetInfo, isHttpError, type AssetResponseDto } from '@immich/sdk';
   import { Icon, isModalOpen } from '@immich/ui';
   import { mdiClose, mdiFullscreen, mdiFullscreenExit, mdiPlay, mdiRefresh, mdiSkipNext } from '@mdi/js';
@@ -238,9 +239,13 @@
 
   const wordsOf = (target: RoomReel, content: Held | undefined): MemoryFilmWords => {
     if (target.kind === 'memory') {
+      // a card of several memories stands for what they stand for together, as on the memory's own page
       return memoryFilmWords(target.memory, memoryFacts.get(target.memory.id), $locale, {
         fallbackTitle: $memoryLaneTitle,
         count: countWords,
+        total: target.card
+          ? memoryCardCount(target.card, (memory) => memoryCount(memory, memoryFacts.get(memory.id)))
+          : undefined,
       });
     }
     const assets = content?.assets ?? [];
@@ -264,6 +269,14 @@
 
   const filmWords = $derived(filmReel ? wordsOf(filmReel, reelHeld) : undefined);
   const filmFacts = $derived(filmReel?.kind === 'memory' ? memoryFacts.get(filmReel.memory.id) : undefined);
+  // a card of several memories drifts toward the faces in all of them
+  const filmFocus = $derived.by(() => {
+    if (filmReel?.kind !== 'memory') {
+      return undefined;
+    }
+    const members = filmReel.card?.members;
+    return members ? Object.assign({}, ...members.map(({ id }) => memoryFacts.get(id)?.focus ?? {})) : filmFacts?.focus;
+  });
   const nextReel = $derived(status === 'playing' && reels.length > 1 ? reels[(index + 1) % reels.length] : undefined);
   const nextTitle = $derived(nextReel ? wordsOf(nextReel, holdOf(nextReel)).title : undefined);
 
@@ -514,7 +527,7 @@
         line={filmWords.line}
         title={filmWords.title}
         cover={filmFacts?.cover}
-        focus={filmFacts?.focus}
+        focus={filmFocus}
         settled={settledOf(filmReel)}
         story={storyHidden ? null : (stories.get(filmReel.key) ?? null)}
         tracks={songs.get(filmReel.key) ?? []}

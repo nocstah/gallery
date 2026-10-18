@@ -11,6 +11,9 @@ import {
   type MetadataSearchDto,
 } from '@immich/sdk';
 import type { DateTime } from 'luxon';
+import { memoryFacts } from '$lib/managers/memory-facts.svelte';
+import { memoryCards, wallClockAsUtc } from '$lib/utils/memory-cards';
+import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
 import {
   inTimeOrder,
   monthOf,
@@ -26,8 +29,11 @@ import {
 // every search names the timeline's visibility, so archived photos (To do, Villa, QR's bank slips), hidden ones and
 // the Locked Folder stay out even while the session is unlocked, when a search left open would let them in.
 
-/** Today's films: the day's memories (when the person keeps memories on), then Curator's living albums. It fails only
- * when Gallery answered neither. */
+/** Curator's facts title the memories, and so tell which read the same: Room waits this long for them at most. */
+const FACTS_PATIENCE_MS = 2000;
+
+/** Today's films: the day's memories (when the person keeps memories on) as the Memories page's cards, then Curator's
+ * living albums. It fails only when Gallery answered neither. */
 export const loadToday = async ({ memories, today }: { memories: boolean; today: DateTime }): Promise<RoomReel[]> => {
   const [found, albums] = await Promise.allSettled([
     memories ? searchMemories({ $for: today.toISODate() ?? undefined }) : Promise.resolve([]),
@@ -36,11 +42,24 @@ export const loadToday = async ({ memories, today }: { memories: boolean; today:
   if (found.status === 'rejected' && albums.status === 'rejected') {
     throw found.reason;
   }
-  return todayReels(
-    found.status === 'fulfilled' ? found.value : [],
-    albums.status === 'fulfilled' ? albums.value : [],
-    today.month,
+  const list = found.status === 'fulfilled' ? found.value : [];
+  // the cards are keyed by the facts' title, in one locale, as the memory manager keys them (managers/memory-manager);
+  // without Curator (a family account, Curator not answering in time) each memory titles itself
+  if (list.length > 0) {
+    let patience: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      memoryFacts.settle(list.map(({ id }) => id)),
+      new Promise<void>((resolve) => (patience = setTimeout(resolve, FACTS_PATIENCE_MS))),
+    ]);
+    clearTimeout(patience);
+  }
+  const cards = memoryCards(
+    list,
+    (memory) => memoryTitle(memory, memoryFacts.get(memory.id), 'en-US')?.title,
+    wallClockAsUtc(today.toJSDate()),
+    (memory) => memoryCount(memory, memoryFacts.get(memory.id)),
   );
+  return todayReels(cards, albums.status === 'fulfilled' ? albums.value : [], today.month);
 };
 
 /** Every photo a search finds, a thousand at a time, `most` at most. */

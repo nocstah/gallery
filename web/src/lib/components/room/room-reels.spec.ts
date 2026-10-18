@@ -1,4 +1,5 @@
 import { MemoryType, type AlbumResponseDto, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
+import { memoryCards } from '$lib/utils/memory-cards';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import {
   inTimeOrder,
@@ -82,9 +83,21 @@ describe('the living albums', () => {
 });
 
 describe(todayReels.name, () => {
+  const now = Date.UTC(2026, 9, 18, 9);
+  // each memory its own card unless the test keys them alike, as the facts' titles do
+  const cardsOf = (
+    memories: MemoryResponseDto[],
+    keyOf: (memory: MemoryResponseDto) => string | undefined = () => undefined,
+  ) => memoryCards(memories, keyOf, now);
+
   it("chains today's memories, a birthday first, then the living albums", () => {
     const reels = todayReels(
-      [memory('a'), memory('empty', MemoryType.OnThisDay, 0), memory('birthday', MemoryType.Birthday), memory('b')],
+      cardsOf([
+        memory('a'),
+        memory('empty', MemoryType.OnThisDay, 0),
+        memory('birthday', MemoryType.Birthday),
+        memory('b'),
+      ]),
       [album('Bali'), album('Best of 2020')],
       10,
     );
@@ -95,6 +108,38 @@ describe(todayReels.name, () => {
       'memory:b',
       'album:album-Best of 2020',
     ]);
+  });
+
+  it('plays memories that read the same as one film: their photos once each, in the order taken, under the lead', () => {
+    const day = (id: string, assets: AssetResponseDto[]) =>
+      ({ id, type: MemoryType.OnThisDay, assets }) as MemoryResponseDto;
+    const reels = todayReels(
+      cardsOf(
+        [
+          day('d1', [asset('p2', '2025-10-17T10:00:00.000Z'), asset('p1', '2025-10-16T10:00:00.000Z')]),
+          day('d2', [asset('p3', '2025-10-18T09:00:00.000Z'), asset('p2', '2025-10-17T10:00:00.000Z')]),
+        ],
+        () => 'Siem Reap · October 2025',
+      ),
+      [],
+      10,
+    );
+
+    expect(reels).toHaveLength(1);
+    const [reel] = reels;
+    if (reel.kind !== 'memory') {
+      throw new Error('a memory film');
+    }
+    expect(reel.key).toBe('memory:d1');
+    expect(reel.memory.id).toBe('d1');
+    expect(reel.memory.assets.map(({ id }) => id)).toEqual(['p1', 'p2', 'p3']);
+    expect(reel.card?.members.map(({ id }) => id)).toEqual(['d1', 'd2']);
+  });
+
+  it('keeps a memory not due yet out of the chain', () => {
+    const later = { ...memory('later'), showAt: '2026-10-20T00:00:00.000Z' } as MemoryResponseDto;
+
+    expect(todayReels(cardsOf([memory('a'), later]), [], 10).map(({ key }) => key)).toEqual(['memory:a']);
   });
 
   it('is nothing with nothing to play', () => {
