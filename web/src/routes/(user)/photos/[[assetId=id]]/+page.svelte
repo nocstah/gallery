@@ -36,6 +36,7 @@
   import { barSlot } from '$lib/managers/bar-slot.svelte';
   import TimelineWorkspaces from '$lib/components/timeline/TimelineWorkspaces.svelte';
   import TimelineMonthHeading from '$lib/components/timeline/TimelineMonthHeading.svelte';
+  import TimelineOverviewSwitch from '$lib/components/timeline/TimelineOverviewSwitch.svelte';
   import { monthInView } from '$lib/managers/timeline-heading.svelte';
   import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
   import SelectionGroup from '$lib/components/timeline/SelectionGroup.svelte';
@@ -610,14 +611,35 @@
     temporalAnchor = result.anchor;
   }
 
-  // Local Omarchy layer: the month heading and year strip (TimelineWorkspaces) stand in for the grouping row on the
-  // plain timeline
-  const workspacesShown = $derived(
-    !showSearchResults && timelineGrouping === 'day' && !!timelineManager && !hasActiveFilters,
-  );
+  // Local Omarchy layer: the one bar stands in for the grouping row on the plain timeline and its overviews: the month
+  // heading and year strip (TimelineWorkspaces) with "Years · Months" before the strip, and in an overview its name
+  // with the same words and All (TimelineOverviewSwitch); filters and search keep the row
+  const groupingInBar = $derived(!showSearchResults && !!timelineManager && !hasActiveFilters);
+  const workspacesShown = $derived(groupingInBar && timelineGrouping === 'day');
+  const overviewInBar = $derived(groupingInBar && timelineGrouping !== 'day');
+
+  // Local Omarchy layer: back from an overview (All, O, the phone's control) is back where the photos were, while that
+  // month is still in view in the overview; scrolled on, it is the period at the top, as before. Opening a period is
+  // that period, as before.
+  let dayAnchor: TimelineTemporalAnchor | undefined;
+  const inOverview = (anchor: TimelineTemporalAnchor) => {
+    const { scrollTop, viewportHeight } = timelineManager;
+    return timelineManager.timelineBuckets.some(
+      ({ date, top, height }) =>
+        date.year === anchor.year &&
+        (date.month === undefined || date.month === anchor.month) &&
+        top < scrollTop + viewportHeight &&
+        top + height > scrollTop,
+    );
+  };
 
   function handleTimelineGroupingChange(grouping: TimelineGrouping) {
-    const anchor = getTimelineTopVisibleAnchor(timelineManager);
+    let anchor = getTimelineTopVisibleAnchor(timelineManager);
+    if (timelineGrouping === 'day') {
+      dayAnchor = anchor;
+    } else if (grouping === 'day' && dayAnchor && inOverview(dayAnchor)) {
+      anchor = dayAnchor;
+    }
     timelineGrouping = grouping;
     temporalAnchor = anchor;
   }
@@ -724,17 +746,26 @@
   const showMemoryStrip = false;
 
   // Local Omarchy layer: the month heading and the time ruler live in the middle of the one bar (OmarchyBar) while the
-  // plain timeline shows; the overviews and filtered results keep the grouping row instead
+  // plain timeline shows; filtered results keep the grouping row instead
   $effect(() => {
     if (!workspacesShown) {
       return;
     }
     barSlot.content = timeBar;
-    barSlot.tools = timeTools;
     return () => {
       if (barSlot.content === timeBar) {
         barSlot.content = undefined;
       }
+    };
+  });
+  // the filter panel's reopen button is the bar's first tool wherever the bar stands in for the grouping row, the
+  // overviews too, so no row is left above their periods for it
+  $effect(() => {
+    if (!groupingInBar) {
+      return;
+    }
+    barSlot.tools = timeTools;
+    return () => {
       if (barSlot.tools === timeTools) {
         barSlot.tools = undefined;
       }
@@ -743,7 +774,8 @@
 
   // Local Omarchy layer: the Years and Months overviews name themselves in the bar where the month heading and the
   // years stood (it was empty on a phone, the wordmark alone on a wider screen), with the span of years they lay out
-  // in data type; the Years / Months / All control above the photos stays the way between them
+  // in data type, then the way between them and back (TimelineOverviewSwitch: Years · Months · All; a phone keeps
+  // the floating control)
   const overviewTitle = $derived(
     !showSearchResults && timelineManager && timelineGrouping !== 'day'
       ? $t(timelineGrouping === 'year' ? 'timeline_grouping_years' : 'timeline_grouping_months')
@@ -784,6 +816,14 @@
       onGrouping={assetMultiSelectManager.selectionActive ? undefined : handleTimelineGroupingChange}
     />
   {/if}
+{/snippet}
+
+{#snippet overviewSwitch()}
+  <TimelineOverviewSwitch
+    grouping={timelineGrouping}
+    onGrouping={assetMultiSelectManager.selectionActive ? undefined : handleTimelineGroupingChange}
+    trailing
+  />
 {/snippet}
 
 {#snippet monthBar()}
@@ -838,6 +878,7 @@
   scrollbar={false}
   title={overviewTitle}
   description={overviewSpan}
+  descriptionTrailing={overviewInBar ? overviewSwitch : undefined}
 >
   <div class="flex h-full">
     {#key showSearchResults ? `photos-search-${committedQuery.trim()}:${$lang}` : 'photos-browse'}
@@ -878,14 +919,14 @@
         class="mb-2 min-h-13"
         grouping={timelineGrouping}
         onGroupingChange={handleTimelineGroupingChange}
-        showGrouping={!showSearchResults && !workspacesShown}
+        showGrouping={!showSearchResults && !groupingInBar}
         groupingDisabled={assetMultiSelectManager.selectionActive}
         showFilters={hasActiveFilters}
         filters={photoFiltersBar}
         showFilterButton={filterCollapsed &&
           !isTimelineEmpty &&
           !assetMultiSelectManager.selectionActive &&
-          !workspacesShown}
+          !groupingInBar}
         filterActive={getActiveFilterCount(filters) > 0}
         onExpandFilters={() => (filterCollapsed = false)}
         showSearchButton={false}

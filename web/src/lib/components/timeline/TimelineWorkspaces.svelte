@@ -1,12 +1,14 @@
 <script lang="ts">
   // Local Omarchy layer ("Tiled Workspace"): the timeline's place in time, in the middle of the one bar
   // (components/omarchy/OmarchyBar.svelte, via lib/managers/bar-slot). One calm line that never rearranges itself:
-  // the month in view as the heading (its month name opens the Months overview, its year the Years overview) and
-  // every year of the archive on a strip that scrolls (wheel, drag, the arrows at its ends, the keyboard). Clicking a
-  // year switches to it the way SUPER+<n> switches Hyprland workspaces. The months are left to the scrubber and the
-  // Months overview: a row of twelve took the room the years need in a narrower window. A narrower bar shows fewer
-  // years and a shorter month name; nothing folds, moves or opens over the photos.
+  // the month in view as the heading (its month name opens the Months overview, its year the Years overview), the
+  // overviews' own way in ("Years · Months", TimelineOverviewSwitch) and every year of the archive on a strip that
+  // scrolls (wheel, drag, the arrows at its ends, the keyboard). Clicking a year switches to it the way SUPER+<n>
+  // switches Hyprland workspaces. The months are left to the scrubber and the Months overview: a row of twelve took the
+  // room the years need in a narrower window. A narrower bar shows fewer years and a shorter month name; nothing
+  // folds, moves or opens over the photos.
   import TimelineMonthHeading from '$lib/components/timeline/TimelineMonthHeading.svelte';
+  import TimelineOverviewSwitch from '$lib/components/timeline/TimelineOverviewSwitch.svelte';
   import { monthInView } from '$lib/managers/timeline-heading.svelte';
   import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineGrouping, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
@@ -304,6 +306,8 @@
 
     <span class="ws-split" aria-hidden="true"></span>
 
+    <TimelineOverviewSwitch grouping="day" {onGrouping} />
+
     <div class="ws-years" data-start={atStart ? '' : undefined} data-end={atEnd ? '' : undefined}>
       <button
         type="button"
@@ -416,6 +420,11 @@
     color: color-mix(in oklab, var(--immich-ui-dark) 82%, var(--immich-ui-muted));
   }
 
+  /* the overviews' words stand a little apart from the years they lead the line of */
+  .ws-time :global(.ws-overviews) {
+    margin-inline-end: 0.5rem;
+  }
+
   /* a hairline from the bar's top edge to its bottom between where you are and where you can go */
   .ws-split {
     flex: none;
@@ -487,7 +496,8 @@
      fits beside it the heading alone (a phone) */
   @container (max-width: 190px) {
     .ws-split,
-    .ws-years {
+    .ws-years,
+    .ws-time :global(.ws-overviews) {
       display: none;
     }
   }
