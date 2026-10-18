@@ -35,8 +35,9 @@ import { refreshAssets } from '$lib/utils/asset-refresh';
 type Tone = 'primary' | 'info' | 'success' | 'warning';
 
 // a toast offering Undo stays a while: the default 3 s is gone before a hand gets there, and an album page has no bar
-// undo to fall back on (Ctrl+Z still works there)
-const UNDO_TOAST_MS = 8000;
+// undo to fall back on (Ctrl+Z still works there). A memory removed waits this long before it is deleted
+// (managers/memory-manager), so the toast's Undo puts it back as it was
+export const UNDO_TOAST_MS = 8000;
 
 /** The toast of a done action, with an Undo that takes back its history entry (in the tone its own toast had: `info`
  * or `warning` for a partly done one). */

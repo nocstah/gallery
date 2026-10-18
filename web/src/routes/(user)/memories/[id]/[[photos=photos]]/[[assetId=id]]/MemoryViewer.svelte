@@ -241,9 +241,14 @@
     }
   };
 
+  // Local Omarchy layer: both removals can be taken back (the toast's Undo, the bar's history, Ctrl+Z; managers/memory-
+  // manager), and they are offered only for the account's own memories, the only ones Gallery lets it change
+  const removable = $derived(current ? memoryManager.removable(current.card) : false);
+  const photoRemovable = $derived(current && filmAsset ? memoryManager.removable(current.card, filmAsset) : false);
+
   const removePhoto = async () => {
     await syncTo(filmAsset);
-    await memoryManager.deleteCurrentAsset();
+    await memoryManager.deleteCurrentAsset(cardTitle);
   };
 
   // Save as video (Curator's owner, once Curator says it saves films): the film's own plan and the song playing, drawn
@@ -349,42 +354,49 @@
               shape="round"
             />
           {/if}
-          <ButtonContextMenu
-            icon={mdiDotsVertical}
-            title={$t('menu')}
-            onclick={() => {
-              film?.pause();
-              void syncTo(filmAsset);
-            }}
-            direction="left"
-            size="medium"
-            align="bottom-right"
-          >
-            <MenuOption
-              onClick={() => memoryManager.deleteCurrentMemory()}
-              text={$t('remove_memory')}
-              icon={mdiCardsOutline}
-            />
-            <MenuOption
-              onClick={() => removePhoto()}
-              text={$t('remove_photo_from_memory')}
-              icon={mdiImageMinusOutline}
-            />
-            {#if filmVideos.available}
-              <MenuOption
-                onClick={() => saveAsVideo()}
-                text={$t('memory_film_save_video')}
-                icon={mdiMovieOpenOutline}
-              />
-            {/if}
-            {#if story}
-              <MenuOption
-                onClick={() => setStoryHidden(!storyHidden)}
-                text={storyHidden ? $t('ai_story_show') : $t('ai_story_hide')}
-                icon={storyHidden ? mdiTextBoxOutline : mdiTextBoxRemoveOutline}
-              />
-            {/if}
-          </ButtonContextMenu>
+          <!-- Local Omarchy layer: no ⋮ with nothing in it (another account's memory, no story, no video) -->
+          {#if removable || photoRemovable || filmVideos.available || story}
+            <ButtonContextMenu
+              icon={mdiDotsVertical}
+              title={$t('menu')}
+              onclick={() => {
+                film?.pause();
+                void syncTo(filmAsset);
+              }}
+              direction="left"
+              size="medium"
+              align="bottom-right"
+            >
+              {#if removable}
+                <MenuOption
+                  onClick={() => memoryManager.deleteCurrentMemory(cardTitle)}
+                  text={$t('remove_memory')}
+                  icon={mdiCardsOutline}
+                />
+              {/if}
+              {#if photoRemovable}
+                <MenuOption
+                  onClick={() => removePhoto()}
+                  text={$t('remove_photo_from_memory')}
+                  icon={mdiImageMinusOutline}
+                />
+              {/if}
+              {#if filmVideos.available}
+                <MenuOption
+                  onClick={() => saveAsVideo()}
+                  text={$t('memory_film_save_video')}
+                  icon={mdiMovieOpenOutline}
+                />
+              {/if}
+              {#if story}
+                <MenuOption
+                  onClick={() => setStoryHidden(!storyHidden)}
+                  text={storyHidden ? $t('ai_story_show') : $t('ai_story_hide')}
+                  icon={storyHidden ? mdiTextBoxOutline : mdiTextBoxRemoveOutline}
+                />
+              {/if}
+            </ButtonContextMenu>
+          {/if}
         {/snippet}
         {#snippet extra()}
           {#if birthdayAge !== undefined}

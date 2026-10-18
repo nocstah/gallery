@@ -44,6 +44,8 @@ const {
     authenticated: false,
     params: {},
     preferences: { memories: { duration: 5 }, tags: { enabled: true } },
+    // Local Omarchy layer: the memories here are this account's (Remove photo acts on the account's own only)
+    user: { id: 'user-1', isAdmin: false },
   },
   mockGetAssetInfo: vi.fn(),
   mockRemoveMemoryAssets: vi.fn(() => Promise.resolve([])),
@@ -604,17 +606,22 @@ describe('MemoryViewer card of several memories', () => {
   });
 
   it('takes a photo out of every memory of the card that holds it', async () => {
-    renderViewer();
-    await screen.findByTestId('memory-film');
-    mockPage.reset('https://gallery.test/memories/day-3?assetId=b', {
-      routeId: '/(user)/memories/[id]/[[photos=photos]]/[[assetId=id]]',
-      params: { id: 'day-3' },
-    });
+    mockAuthManager.authenticated = true;
+    try {
+      renderViewer();
+      await screen.findByTestId('memory-film');
+      mockPage.reset('https://gallery.test/memories/day-3?assetId=b', {
+        routeId: '/(user)/memories/[id]/[[photos=photos]]/[[assetId=id]]',
+        params: { id: 'day-3' },
+      });
 
-    await memoryManager.deleteCurrentAsset();
+      await memoryManager.deleteCurrentAsset();
 
-    expect(mockRemoveMemoryAssets).toHaveBeenCalledWith({ id: 'day-3', bulkIdsDto: { ids: ['b'] } });
-    expect(mockRemoveMemoryAssets).toHaveBeenCalledWith({ id: 'day-2', bulkIdsDto: { ids: ['b'] } });
+      expect(mockRemoveMemoryAssets).toHaveBeenCalledWith({ id: 'day-3', bulkIdsDto: { ids: ['b'] } });
+      expect(mockRemoveMemoryAssets).toHaveBeenCalledWith({ id: 'day-2', bulkIdsDto: { ids: ['b'] } });
+    } finally {
+      mockAuthManager.authenticated = false;
+    }
   });
 
   it('keeps every memory of the card with the heart', async () => {

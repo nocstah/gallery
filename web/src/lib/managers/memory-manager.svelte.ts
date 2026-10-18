@@ -1,8 +1,12 @@
 import {
   type AssetResponseDto,
+  BulkIdErrorReason,
   MemorySearchOrder,
   MemoryType,
+  addMemoryAssets,
+  createMemory,
   deleteMemory,
+  type BulkIdResponseDto,
   type MemoryResponseDto,
   removeMemoryAssets,
   searchMemories,
@@ -22,14 +26,48 @@ import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { memoryFacts } from '$lib/managers/memory-facts.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+import { undoManager } from '$lib/managers/undo-manager.svelte';
 import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
 import { Route } from '$lib/route';
 import { memoryLaneTitle } from '$lib/utils';
+import { handleError } from '$lib/utils/handle-error';
 import { cardOfMemory, memoryCards, wallClockAsUtc, type MemoryCard } from '$lib/utils/memory-cards';
 import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
 import { toTimelineAsset } from '$lib/utils/timeline-util';
+import { toastUndoable, UNDO_TOAST_MS, undone } from '$lib/utils/undoable';
 
 type MemoriesSearchDto = Parameters<typeof searchMemories>[0];
+
+/** Local Omarchy layer: a memory taken off the page, as it was, with the memory that came after it (its place). */
+type Kept = { memory: MemoryResponseDto; before?: string };
+
+/**
+ * Local Omarchy layer: what Remove memory took off the page, or Remove photo emptied (DESIGN.md, Memories: the film's
+ * ⋮). Gallery deletes it only once its toast has had its time, or at once when the page goes away, so the toast's
+ * Undo puts each memory back exactly as it was (its id, and with it Curator's story and songs, which go by the id);
+ * an Undo after that makes each again from what it held (a new id).
+ */
+type Removal = {
+  kept: Kept[];
+  timer?: ReturnType<typeof setTimeout>;
+  /** the deletion, once it has gone to Gallery: resolves with the ids it deleted */
+  deletion?: Promise<Set<string>>;
+  /** the memories an Undo has made again, by the id each had, so an Undo tried again after a failure goes on */
+  made: Map<string, MemoryResponseDto>;
+};
+
+/** a photo Remove photo took out of a memory at once, and the photo that came after it there (its place) */
+type Taken = { memoryId: string; asset: AssetResponseDto; before?: string; back?: boolean };
+
+/** Gallery's answer for a photo of a bulk call when it was not done (nor, with `already`, done before): its reason */
+const refused = (results: BulkIdResponseDto[], id: string, already?: BulkIdErrorReason) => {
+  const result = results.find((candidate) => candidate.id === id && !candidate.success);
+  return result && result.error !== already ? new Error(result.errorMessage ?? result.error) : undefined;
+};
+
+// Local Omarchy layer: a removal is deleted from Gallery a little after its toast has gone, so a press on Undo as the
+// toast leaves still finds it held
+const HOLD_MS = UNDO_TOAST_MS + 500;
 
 type AdjacentMemory = {
   href: string;
@@ -61,10 +99,18 @@ class MemoryManager {
   #page: number = 1;
   #total: number | undefined = $state();
   #queued: boolean = false;
+  // Local Omarchy layer: the removals still held from Gallery, and the ids of the memories they hold, which a page
+  // loaded meanwhile leaves out
+  #removals = new Set<Removal>();
+  #held = new Set<string>();
 
   constructor() {
     eventManager.on({
-      AuthLogout: () => this.clearCache(),
+      // a removal still held is let go, its memories left in Gallery: signed out, nothing can delete them any more
+      AuthLogout: () => {
+        this.#letGo();
+        this.clearCache();
+      },
       AuthUserLoaded: () => this.initialize(),
     });
 
@@ -74,6 +120,17 @@ class MemoryManager {
     }
 
     this.scheduleHourlyRefresh();
+
+    // Local Omarchy layer: a page going away (closed, reloaded, put in the background on a phone) deletes at once what
+    // its toasts still hold, the requests sent as it goes (keepalive), so a memory removed is never left in Gallery
+    if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', () => this.#commitAll());
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          this.#commitAll();
+        }
+      });
+    }
   }
 
   get filters() {
@@ -244,7 +301,7 @@ class MemoryManager {
   /** Fetch a memory that is not part of the loaded pages, i.e. when opening a link to an older one. */
   async loadMemory(id: string) {
     const memory = this.#getMemory(id);
-    if (memory) {
+    if (memory || this.#held.has(id)) {
       return memory;
     }
 
@@ -273,36 +330,124 @@ class MemoryManager {
     this.memories = this.memories.filter((memory) => memory.assets.length > 0);
   }
 
-  // Local Omarchy layer: the photo leaves every memory of the card that holds it, since the film plays them as one
-  async deleteCurrentAsset() {
-    const current = this.current;
-    if (!current) {
-      return;
-    }
-
-    const assetId = current.asset.id;
-    const holders = current.card.members
-      .filter(({ assets }) => assets.some(({ id }) => id === assetId))
-      .map(({ id }) => id);
-    await this.#leaveCurrentAsset();
-    for (const memoryId of holders) {
-      await this.#deleteAsset(memoryId, assetId);
-    }
+  /** Local Omarchy layer: whether the account may remove the card's memories (with `assetId`, that photo from them):
+   * Gallery lets only a memory's owner change it, and the lane also shows memories others share with them. */
+  removable(card: MemoryCard, assetId?: string) {
+    return card.members.some(
+      (memory) => this.#mine(memory) && (assetId === undefined || memory.assets.some(({ id }) => id === assetId)),
+    );
   }
 
-  // Local Omarchy layer: a card is one memory to its reader, so Remove memory removes every memory it holds
-  async deleteCurrentMemory() {
+  // Local Omarchy layer: the photo leaves every memory of the card that holds it (the account's own), since the film
+  // plays them as one. From a memory with other photos it is taken out at once, and the Undo (its toast's, the bar's,
+  // Ctrl+Z) adds it back in its place; a memory it was the last photo of goes as Remove memory's do, held until the
+  // toast has gone. `title` names the memory in the toast and the bar's history.
+  async deleteCurrentAsset(title?: string) {
     const current = this.current;
     if (!current) {
       return;
     }
 
-    const ids = current.card.members.map(({ id }) => id);
-    await this.#goto(current.nextMemory?.href ?? current.previousMemory?.href ?? this.memoriesHref);
-    for (const id of ids) {
-      await this.#deleteMemory(id);
+    const translate = get(t);
+    const memoryId = current.memory.id;
+    const assetId = current.asset.id;
+    const holders = current.card.members.filter(
+      (memory) => this.#mine(memory) && memory.assets.some(({ id }) => id === assetId),
+    );
+    if (holders.length === 0) {
+      return;
     }
-    toastManager.primary(get(t)('removed_memory'));
+    await this.#leaveCurrentAsset();
+    const left = this.#here();
+
+    const taken: Taken[] = [];
+    let failure: unknown;
+    for (const memory of holders) {
+      if (memory.assets.length === 1) {
+        continue;
+      }
+      const index = memory.assets.findIndex(({ id }) => id === assetId);
+      const asset = $state.snapshot(memory.assets[index]) as AssetResponseDto;
+      const before = memory.assets[index + 1]?.id;
+      try {
+        const no = refused(await removeMemoryAssets({ id: memory.id, bulkIdsDto: { ids: [assetId] } }), assetId);
+        if (no) {
+          throw no;
+        }
+        memory.assets = memory.assets.filter(({ id }) => id !== assetId);
+        taken.push({ memoryId: memory.id, asset, before });
+      } catch (error) {
+        failure = error;
+      }
+    }
+    const emptied = holders.filter(({ assets }) => assets.length === 1);
+    const removal = emptied.length > 0 ? this.#hold(emptied) : undefined;
+    if (failure !== undefined) {
+      handleError(failure, translate('errors.unable_to_remove_photo_from_memory'));
+    }
+    if (taken.length === 0 && !removal) {
+      return;
+    }
+
+    const label = title
+      ? translate('memory_photo_removed_titled', { values: { title } })
+      : translate('memory_photo_removed');
+    const entry = undoManager.record(
+      label,
+      async () => {
+        for (const item of taken) {
+          if (item.back) {
+            continue;
+          }
+          const results = await addMemoryAssets({ id: item.memoryId, bulkIdsDto: { ids: [assetId] } });
+          const no = refused(results, assetId, BulkIdErrorReason.Duplicate);
+          if (no) {
+            throw no;
+          }
+          item.back = true;
+          this.#putPhotoBack(item);
+        }
+        const missing = removal ? await this.#undoRemoval(removal) : 0;
+        await this.#returnTo(left, memoryId, assetId, removal);
+        return this.#undone(label, missing);
+      },
+      translate('errors.unable_to_restore_memory'),
+    );
+    toastUndoable(label, entry);
+  }
+
+  // Local Omarchy layer: a card is one memory to its reader, so Remove memory removes every memory it holds (the
+  // account's own). They leave the page at once and Gallery deletes them once the toast has gone (Removal); the Undo
+  // (its toast's, the bar's, Ctrl+Z) puts them back, and the film goes back to the photo it was on while nothing has
+  // moved since. `title` names the memory in the toast and the bar's history.
+  async deleteCurrentMemory(title?: string) {
+    const current = this.current;
+    if (!current) {
+      return;
+    }
+
+    const translate = get(t);
+    const members = current.card.members.filter((memory) => this.#mine(memory));
+    if (members.length === 0) {
+      return;
+    }
+    const memoryId = current.memory.id;
+    const assetId = current.asset.id;
+    await this.#goto(current.nextMemory?.href ?? current.previousMemory?.href ?? this.memoriesHref);
+    const left = this.#here();
+    const removal = this.#hold(members);
+
+    const label = title ? translate('memory_removed_titled', { values: { title } }) : translate('removed_memory');
+    const entry = undoManager.record(
+      label,
+      async () => {
+        const missing = await this.#undoRemoval(removal);
+        await this.#returnTo(left, memoryId, assetId, removal);
+        return this.#undone(label, missing);
+      },
+      translate('errors.unable_to_restore_memory'),
+    );
+    toastUndoable(label, entry);
   }
 
   // Local Omarchy layer: the heart keeps, or lets go of, every memory on the card
@@ -331,28 +476,173 @@ class MemoryManager {
     return goto(href, { replaceState: true, noScroll: true, keepFocus: true });
   }
 
-  async #deleteMemory(id: string) {
-    if (!this.#getMemory(id)) {
-      return;
-    }
+  // ---- Local Omarchy layer: removals held from Gallery while their toast offers Undo (Removal) ----
 
-    await deleteMemory({ id });
-    this.memories = this.memories.filter((memory) => memory.id !== id);
+  #mine(memory: MemoryResponseDto) {
+    return authManager.authenticated && memory.ownerId === authManager.user.id;
   }
 
-  async #deleteAsset(memoryId: string, assetId: string) {
+  /** the address the page is at */
+  #here() {
+    return `${page.url.pathname}${page.url.search}`;
+  }
+
+  /** Takes memories off the page at once; Gallery deletes them once their toast has had its time. */
+  #hold(memories: MemoryResponseDto[]): Removal {
+    const ids = new Set(memories.map(({ id }) => id));
+    const kept: Kept[] = [];
+    for (const [index, memory] of this.memories.entries()) {
+      if (ids.has(memory.id)) {
+        kept.push({ memory: $state.snapshot(memory) as MemoryResponseDto, before: this.memories[index + 1]?.id });
+      }
+    }
+    this.memories = this.memories.filter(({ id }) => !ids.has(id));
+    for (const id of ids) {
+      this.#held.add(id);
+    }
+    const removal: Removal = { kept, made: new Map() };
+    removal.timer = setTimeout(() => void this.#commit(removal), HOLD_MS);
+    this.#removals.add(removal);
+    return removal;
+  }
+
+  /** Deletes a removal's memories from Gallery, once: its timer, a page going away and an Undo wait on the same. */
+  #commit(removal: Removal, keepalive = false): Promise<Set<string>> {
+    if (!removal.deletion) {
+      clearTimeout(removal.timer);
+      this.#removals.delete(removal);
+      // every request goes out before the first answer, so a page going away sends them all
+      const requests = removal.kept.map(({ memory }) =>
+        deleteMemory({ id: memory.id }, keepalive ? { keepalive } : undefined),
+      );
+      removal.deletion = this.#settle(removal, requests);
+    }
+    return removal.deletion;
+  }
+
+  #commitAll() {
+    for (const removal of this.#removals) {
+      void this.#commit(removal, true);
+    }
+  }
+
+  /** Signed out: what is still held stays in Gallery, and its Undo has nothing to take back. */
+  #letGo() {
+    for (const removal of this.#removals) {
+      clearTimeout(removal.timer);
+      removal.deletion = Promise.resolve(new Set());
+    }
+    this.#removals.clear();
+    this.#held.clear();
+  }
+
+  async #settle(removal: Removal, requests: Promise<unknown>[]) {
+    const results = await Promise.allSettled(requests);
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- an answer, not state the page reads
+    const deleted = new Set<string>();
+    const left: Kept[] = [];
+    let failure: unknown;
+    for (const [index, result] of results.entries()) {
+      const item = removal.kept[index];
+      this.#held.delete(item.memory.id);
+      if (result.status === 'fulfilled') {
+        deleted.add(item.memory.id);
+      } else {
+        failure = result.reason;
+        left.push(item);
+      }
+    }
+    if (left.length > 0) {
+      // still in Gallery: back on the page, and said
+      this.#putBack(left);
+      handleError(failure, get(t)('errors.unable_to_remove_memory'));
+    }
+    return deleted;
+  }
+
+  /**
+   * Puts a removal's memories back: as they were while Gallery still holds them; once deleted, each is made again from
+   * what it held (its kind, its rule's data, its dates, its heart and its photos, under a new id). Resolves with how
+   * many photos Gallery did not take back in.
+   */
+  async #undoRemoval(removal: Removal): Promise<number> {
+    if (!removal.deletion) {
+      clearTimeout(removal.timer);
+      this.#removals.delete(removal);
+      this.#putBack(removal.kept);
+      return 0;
+    }
+    const deleted = await removal.deletion;
+    let missing = 0;
+    // the last first, so each one's place (the memory after it) is back before it
+    for (const { memory, before } of [...removal.kept].reverse()) {
+      if (!deleted.has(memory.id) || removal.made.has(memory.id)) {
+        continue;
+      }
+      const made = await createMemory({
+        memoryCreateDto: {
+          type: memory.type,
+          data: memory.data,
+          memoryAt: memory.memoryAt,
+          showAt: memory.showAt,
+          hideAt: memory.hideAt,
+          seenAt: memory.seenAt,
+          isSaved: memory.isSaved,
+          assetIds: memory.assets.map(({ id }) => id),
+        },
+      });
+      removal.made.set(memory.id, made);
+      missing += Math.max(0, memory.assets.length - made.assets.length);
+      this.#putBack([{ memory: made, before: (before && removal.made.get(before)?.id) || before }]);
+    }
+    return missing;
+  }
+
+  /** Memories back in the list where they were: before the memory that came after each, else by date. */
+  #putBack(items: Kept[]) {
+    const memories = [...this.memories];
+    for (const { memory, before } of [...items].reverse()) {
+      this.#held.delete(memory.id);
+      if (memories.some(({ id }) => id === memory.id)) {
+        continue;
+      }
+      let index = before ? memories.findIndex(({ id }) => id === before) : -1;
+      if (index === -1) {
+        // memories are ordered by date, descending
+        index = memories.findIndex(({ memoryAt }) => memoryAt < memory.memoryAt);
+      }
+      memories.splice(index === -1 ? memories.length : index, 0, memory);
+    }
+    this.memories = memories;
+  }
+
+  /** A photo back in a memory where it was: before the photo that came after it, else by when it was taken. */
+  #putPhotoBack({ memoryId, asset, before }: Taken) {
     const memory = this.#getMemory(memoryId);
-    if (!memory?.assets.some((asset) => asset.id === assetId)) {
+    if (!memory || memory.assets.some(({ id }) => id === asset.id)) {
       return;
     }
-
-    if (memory.assets.length === 1) {
-      await this.#deleteMemory(memoryId);
-      return;
+    const assets = [...memory.assets];
+    let index = before ? assets.findIndex(({ id }) => id === before) : -1;
+    if (index === -1) {
+      // Gallery orders a memory's photos by when they were taken
+      index = assets.findIndex(({ localDateTime }) => localDateTime > asset.localDateTime);
     }
+    assets.splice(index === -1 ? assets.length : index, 0, asset);
+    memory.assets = assets;
+  }
 
-    await removeMemoryAssets({ id: memoryId, bulkIdsDto: { ids: [assetId] } });
-    memory.assets = memory.assets.filter((asset) => asset.id !== assetId);
+  /** After an Undo, the film goes back to the photo it was on, while the page is where the removal left it. */
+  async #returnTo(left: string, memoryId: string, assetId: string, removal?: Removal) {
+    const id = removal?.made.get(memoryId)?.id ?? memoryId;
+    if (this.#here() === left && this.#getMemory(id)) {
+      await this.#goto(Route.viewMemory({ id, assetId, isSaved: this.#url.isSaved }));
+    }
+  }
+
+  #undone(label: string, missing: number) {
+    const words = undone(label);
+    return missing > 0 ? `${words}. ${get(t)('memory_photos_not_restored', { values: { count: missing } })}` : words;
   }
 
   loadNextPage() {
@@ -403,7 +693,8 @@ class MemoryManager {
     }
 
     for (const item of items) {
-      if (!this.#lookup.has(item.id)) {
+      // Local Omarchy layer: nor one a removal still holds from Gallery (it is gone from the page)
+      if (!this.#lookup.has(item.id) && !this.#held.has(item.id)) {
         this.memories.push(item);
       }
     }
