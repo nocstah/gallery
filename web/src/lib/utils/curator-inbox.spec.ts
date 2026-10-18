@@ -4,6 +4,7 @@ import path from 'node:path';
 import { FORK_LOCALES } from '$lib/i18n/fork-locales';
 import { curator, type InboxGroup, type Suggestion } from '$lib/utils/curator';
 import {
+  confidenceMarks,
   isBlankPixels,
   kindAction,
   kindActionKeys,
@@ -275,6 +276,58 @@ describe('sharedConfidence', () => {
     expect(sharedConfidence([{ confidence: 0.8 }, { confidence: 0.65 }])).toBe(false);
     expect(sharedConfidence([{ confidence: 0.8 }, { confidence: null }])).toBe(false);
     expect(sharedConfidence([{ confidence: 0.8 }])).toBe(false);
+  });
+});
+
+// Local Omarchy layer (2026-10-18, the owner's "Divider + Delete set apart"): Curator's confidence said once where it
+// changes in the queue, not on every card
+describe('confidenceMarks', () => {
+  const cards = (...confidences: (number | null)[]) =>
+    confidences.map((confidence, index) => ({ id: index + 1, confidence }));
+
+  it('heads each run of cards at one percentage once, with how many it holds', () => {
+    // a kind like Very short clips: 17 at 0.8, then 25 at 0.65
+    const marks = confidenceMarks(
+      cards(...Array.from({ length: 17 }, () => 0.8), ...Array.from({ length: 25 }, () => 0.65)),
+    );
+
+    expect([...marks.levels]).toEqual([
+      [1, { percent: 80, count: 17 }],
+      [18, { percent: 65, count: 25 }],
+    ]);
+    expect(marks.runOf.get(17)).toBe(1);
+    expect(marks.runOf.get(18)).toBe(18);
+    expect(marks.runOf.get(42)).toBe(18);
+    expect(marks.own.size).toBe(0);
+  });
+
+  it('goes by the percentage a card shows', () => {
+    const marks = confidenceMarks(cards(0.801, 0.799, 0.65, 0.654));
+
+    expect([...marks.levels]).toEqual([
+      [1, { percent: 80, count: 2 }],
+      [3, { percent: 65, count: 2 }],
+    ]);
+  });
+
+  it('leaves a percentage no card beside it shares on its card', () => {
+    const marks = confidenceMarks(cards(0.9, 0.8, 0.8, 0.7, 0.65, 0.65));
+
+    expect([...marks.own]).toEqual([1, 4]);
+    expect([...marks.levels.keys()]).toEqual([2, 5]);
+  });
+
+  it('says nothing where every card would say the same, and a lone card says its own', () => {
+    expect(confidenceMarks(cards(0.8, 0.8, 0.801))).toEqual({ levels: new Map(), runOf: new Map(), own: new Set() });
+    expect(confidenceMarks(cards(0.8)).own).toEqual(new Set([1]));
+    expect(confidenceMarks([]).levels.size).toBe(0);
+  });
+
+  it('keeps it on the cards where some have no confidence, so no heading seems to hold them', () => {
+    const marks = confidenceMarks(cards(0.8, 0.8, null, null));
+
+    expect(marks.levels.size).toBe(0);
+    expect([...marks.own]).toEqual([1, 2]);
   });
 });
 

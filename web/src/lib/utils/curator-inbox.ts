@@ -302,13 +302,66 @@ export const kindActionKeys = (): Translations[] => [
   ...Object.values(WHAT).flatMap(([, todo, done]) => [todo, done]),
 ];
 
+/** the percentage a card shows (null where Curator gave none) */
+const percentOf = (confidence: number | null) => (confidence === null ? null : Math.round(confidence * 100));
+
 /**
  * Whether Curator is as sure of every card as of the next ("80% sure" on all 42 of a kind): said on each, it tells one
  * card from another nothing, so the cards leave it out. Goes by the percentage the card would show.
  */
 export const sharedConfidence = (items: Pick<Suggestion, 'confidence'>[]): boolean =>
-  items.length > 1 &&
-  new Set(items.map(({ confidence }) => (confidence === null ? null : Math.round(confidence * 100)))).size === 1;
+  items.length > 1 && new Set(items.map(({ confidence }) => percentOf(confidence))).size === 1;
+
+/** Where a kind's cards say how sure Curator is (confidenceMarks). */
+export type ConfidenceMarks = {
+  /** the card that starts a run of cards Curator is as sure of, with the percentage and how many the run holds */
+  levels: Map<number, { percent: number; count: number }>;
+  /** each card in such a run, by the card that starts it (whose heading a screen reader hears on every card) */
+  runOf: Map<number, number>;
+  /** the cards that say it themselves: a percentage no card beside them shares */
+  own: Set<number>;
+};
+
+/**
+ * Local Omarchy layer (2026-10-18, the owner's "Divider + Delete set apart"): how the cards of a kind, in queue order,
+ * say Curator's confidence. A run of cards at one percentage (queue order is most confident first, so a percentage is
+ * one run) is headed once, by one quiet line where the run starts ("65% sure  25"), where "80% sure" and "65% sure"
+ * had stood on each of a kind's 42 cards; a card whose percentage is its own says it as before. Nothing says it where
+ * every card would say the same (sharedConfidence), and a queue that mixes cards with and without a confidence keeps
+ * it on the cards, so a heading never seems to hold the ones without.
+ */
+export const confidenceMarks = (items: Pick<Suggestion, 'id' | 'confidence'>[]): ConfidenceMarks => {
+  const marks: ConfidenceMarks = { levels: new Map(), runOf: new Map(), own: new Set() };
+  if (sharedConfidence(items)) {
+    return marks;
+  }
+  if (items.some(({ confidence }) => confidence === null)) {
+    for (const { id, confidence } of items) {
+      if (confidence !== null) {
+        marks.own.add(id);
+      }
+    }
+    return marks;
+  }
+  let start = 0;
+  while (start < items.length) {
+    const percent = percentOf(items[start].confidence) as number;
+    let end = start + 1;
+    while (end < items.length && percentOf(items[end].confidence) === percent) {
+      end++;
+    }
+    if (end - start === 1) {
+      marks.own.add(items[start].id);
+    } else {
+      marks.levels.set(items[start].id, { percent, count: end - start });
+      for (const { id } of items.slice(start, end)) {
+        marks.runOf.set(id, items[start].id);
+      }
+    }
+    start = end;
+  }
+  return marks;
+};
 
 /**
  * Whether a picture shows nothing: every part of it black, as a tile from its pixels at 8x8 (RGBA) has it. A video

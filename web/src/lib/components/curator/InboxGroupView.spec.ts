@@ -156,6 +156,78 @@ describe('InboxGroupView', () => {
     expect(screen.getByText('65% sure')).toBeInTheDocument();
   });
 
+  // Local Omarchy layer (2026-10-18, the owner's "Divider + Delete set apart"): two percentages over 42 cards are said
+  // once each, where they start, and every card still says its own to a screen reader
+  it('says each confidence once where it changes, with how many cards it holds', async () => {
+    waiting([
+      ...Array.from({ length: 17 }, (_, n) => clip(n)),
+      ...Array.from({ length: 25 }, (_, n) => clip(17 + n, 0.65)),
+    ]);
+    await renderKind();
+    const cards = await screen.findAllByRole('article');
+
+    expect(screen.getAllByText('80% sure')).toHaveLength(1);
+    expect(screen.getAllByText('65% sure')).toHaveLength(1);
+    expect(screen.getByText('80% sure').parentElement).toHaveTextContent(/^80% sure 17$/);
+    expect(screen.getByText('65% sure').parentElement).toHaveTextContent(/^65% sure 25$/);
+    // the line stands before the first card of its run, outside the card
+    expect(cards[17].previousElementSibling).toHaveTextContent('65% sure');
+    expect(cards[0]).toHaveAccessibleDescription('80% sure');
+    expect(cards[16]).toHaveAccessibleDescription('80% sure');
+    expect(cards[41]).toHaveAccessibleDescription('65% sure');
+  });
+
+  it('moves the line on, and counts one fewer, when the first card of a run is decided', async () => {
+    waiting([clip(1), clip(2), clip(3, 0.65), clip(4, 0.65), clip(5, 0.65)]);
+    curatorMock.decide.mockResolvedValue({ rejected: 1 });
+    const user = userEvent.setup();
+    await renderKind();
+    const cards = await screen.findAllByRole('article');
+
+    await user.click(within(cards[2]).getByRole('button', { name: 'Reject' }));
+
+    await waitFor(() => expect(screen.getByText('65% sure').parentElement).toHaveTextContent(/^65% sure 2$/));
+    const now = screen.getAllByRole('article');
+    expect(now[2]).toHaveAccessibleName('IMG_5402.MOV');
+    expect(now[2].previousElementSibling).toHaveTextContent('65% sure');
+    // the decided card, sunk to the bottom, says nothing of it
+    expect(now[4]).toHaveAccessibleName('IMG_5401.MOV');
+    expect(now[4]).not.toHaveAccessibleDescription();
+  });
+
+  it('sets Delete apart from Reject, after it, with its key and the danger role', async () => {
+    waiting([clip(1), clip(2)]);
+    await renderKind();
+    const [first] = await screen.findAllByRole('article');
+
+    const buttons = within(first).getAllByRole('button');
+    expect(buttons.map((button) => button.textContent?.trim())).toEqual(['Archive', 'Reject', 'Delete']);
+    const remove = buttons[2];
+    expect(remove.parentElement).toHaveClass('item-apart');
+    expect(remove).toHaveClass('item-delete');
+    expect(remove).toHaveAttribute('aria-keyshortcuts', 'D');
+  });
+
+  it('keeps the cards Curator is as sure of together when Show more brings another batch’s', async () => {
+    const other = 'asset.archive:short:2026-10-12';
+    curatorMock.group.mockImplementation((key: string, _status: string, _limit: number, offset: number) => {
+      const batch =
+        key === KEY ? [clip(1), clip(2)] : offset === 0 ? [clip(3, 0.65), clip(4, 0.65)] : [clip(5), clip(6)];
+      return Promise.resolve({ ...page(batch), group: { ...page(batch).group, key }, total: key === KEY ? 2 : 4 });
+    });
+    const user = userEvent.setup();
+    render(InboxGroupView, { keys: [KEY, other], onChange: vi.fn() });
+    await screen.findAllByRole('article');
+
+    await user.click(screen.getByRole('button', { name: 'Show more' }));
+
+    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(6));
+    expect(screen.getAllByRole('article').map((card) => card.getAttribute('aria-labelledby'))).toEqual(
+      [101, 102, 105, 106, 103, 104].map((id) => `item-${id}-title`),
+    );
+    expect(screen.getAllByText('80% sure')).toHaveLength(1);
+  });
+
   it('moves with J and K, and A does what the button says', async () => {
     waiting([clip(1), clip(2), clip(3)]);
     curatorMock.decide.mockResolvedValue({ applied: [102], failed: [] });

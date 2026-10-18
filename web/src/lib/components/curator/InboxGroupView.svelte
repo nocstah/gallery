@@ -13,8 +13,9 @@
   // (an accepted change undone and waiting again, a rejection put back, a photo back from the Trash); a held one acts
   // once. A decided card sinks to the bottom of the list at once, so the next one to decide is always where the last
   // was; its buttons sit under its words, beside its photos. A card about one photo also has Delete, in the danger
-  // role: the photo goes to Gallery's Trash and the card is set aside; its Undo restores the photo and puts the card
-  // back.
+  // role and set apart from Reject by a hairline: the photo goes to Gallery's Trash and the card is set aside; its Undo
+  // restores the photo and puts the card back. How sure Curator is shows once where it changes in the queue, over the
+  // cards it holds (utils/curator-inbox confidenceMarks), not on every card.
   import ReviewMode from '$lib/components/curator/ReviewMode.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
@@ -28,13 +29,13 @@
     type UndoJobResult,
   } from '$lib/utils/curator';
   import {
+    confidenceMarks,
     kindAction,
     newestBatch,
     queueOrder,
     runDays,
     runsOf,
     seriesOf,
-    sharedConfidence,
     waitingIn,
   } from '$lib/utils/curator-inbox';
   import { deleteAssets, restoreAssets } from '@immich/sdk';
@@ -101,8 +102,9 @@
   const remaining = $derived(filter === 'pending' ? Math.max(0, total - decided.size) : 0);
   const more = $derived(pages.some((page) => (loaded[page.group.key] ?? 0) < page.total));
   const anyDeletable = $derived(items.some((item) => item.status === 'pending' && deletable(item)));
-  /** "80% sure" on every card tells one from another nothing: then no card says it */
-  const quietConfidence = $derived(sharedConfidence(items));
+  /** how sure Curator is, said once where it changes in the queue (utils/curator-inbox confidenceMarks): the cards
+   * not yet decided since the list was loaded, a decided one having sunk to the bottom */
+  const marks = $derived(confidenceMarks(items.filter((item) => !decided.has(item.id))));
 
   const closeReview = async () => {
     reviewing = false;
@@ -128,7 +130,14 @@
       loaded = counts;
       pages = append ? pages.map((page) => next.find((fresh) => fresh.group.key === page.group.key) ?? page) : next;
       const fresh = queueOrder(next.flatMap((page) => page.items));
-      items = append ? [...items, ...fresh] : fresh;
+      // the next page joins the queue in its order, so the cards Curator is as sure of stay together (another batch's
+      // may come before the ones in the list); the cards decided since stay at the bottom
+      items = append
+        ? [
+            ...queueOrder([...items.filter((item) => !decided.has(item.id)), ...fresh]),
+            ...items.filter((item) => decided.has(item.id)),
+          ]
+        : fresh;
     } catch (error) {
       message = error instanceof Error ? error.message : String(error);
     }
@@ -545,11 +554,21 @@
   aria-describedby={items.length > 0 ? 'group-keys' : undefined}
 >
   {#each items as item, index (item.id)}
+    {@const level = marks.levels.get(item.id)}
+    {@const run = marks.runOf.get(item.id)}
     <li animate:flip={{ duration: 180 }}>
+      {#if level}
+        <!-- one quiet line where Curator's confidence changes, over the cards it holds (each hears it as its own) -->
+        <p class="item-level">
+          <span id="item-{item.id}-level">{$t('ai_inbox_confidence', { values: { percent: level.percent } })}</span>
+          <span>{level.count.toLocaleString($locale ?? undefined)}</span>
+        </p>
+      {/if}
       <article
         class="ws-inbox-row item-row"
         tabindex="-1"
         aria-labelledby="item-{item.id}-title"
+        aria-describedby={run === undefined ? undefined : `item-${run}-level`}
         data-status={item.status}
         data-deciding={deciding.has(item.id) || undefined}
         bind:this={rows[index]}
@@ -565,7 +584,7 @@
           {/if}
           {#if item.error}
             <span class="ws-inbox-meta">{item.error}</span>
-          {:else if item.confidence !== null && !quietConfidence}
+          {:else if item.confidence !== null && marks.own.has(item.id)}
             <span class="ws-inbox-meta">
               {$t('ai_inbox_confidence', { values: { percent: confidence(item.confidence) } })}
             </span>
@@ -592,16 +611,19 @@
                 {$t('ai_inbox_reject')}
               </button>
               {#if deletable(item)}
-                <!-- the photo goes to the Trash: the danger role, not Reject's look -->
-                <button
-                  type="button"
-                  class="ws-btn-quiet item-delete"
-                  aria-keyshortcuts="D"
-                  disabled={busy || deciding.has(item.id)}
-                  onclick={() => trash(item)}
-                >
-                  {$t('delete')}
-                </button>
+                <!-- the photo goes to the Trash: the danger role, not Reject's look, and set apart from Reject by room
+                     and a hairline, so a hand reaching for Reject does not land on it -->
+                <span class="item-apart">
+                  <button
+                    type="button"
+                    class="ws-btn-quiet item-delete"
+                    aria-keyshortcuts="D"
+                    disabled={busy || deciding.has(item.id)}
+                    onclick={() => trash(item)}
+                  >
+                    {$t('delete')}
+                  </button>
+                </span>
               {/if}
             {:else if trashed.has(item.id)}
               <span class="ws-inbox-meta">{$t('moved_to_trash')}</span>
@@ -781,6 +803,21 @@
     gap: 0.25rem;
     margin-top: 0.35rem;
   }
+  /* Delete stands apart from Reject (2026-10-18, the owner's "Divider + Delete set apart"): room on either side of a
+     hairline as tall as the words, where it had been Reject's neighbour at the same 4px */
+  .item-apart {
+    display: inline-flex;
+    align-items: center;
+    /* the hairline midway between the two words (each button keeps its own padding): 1.2rem either side */
+    gap: 0.6rem;
+    margin-inline-start: 0.35rem;
+  }
+  .item-apart::before {
+    content: '';
+    width: 1px;
+    height: 1.25rem;
+    background: var(--ws-hairline);
+  }
   /* Delete sends the photo to Gallery's Trash: the danger role's words, inverted in it when pointed at, as a menu's
      destructive row is */
   .item-delete {
@@ -789,6 +826,22 @@
   .item-delete:hover {
     background: var(--ws-danger);
     color: var(--immich-ui-light);
+  }
+  /* where Curator's confidence changes: one quiet line in data type, the percentage and how many cards it holds, over
+     the first of them (the row's hairline above it, the card a step closer under it) */
+  .item-level {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding-top: 1.1rem;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--immich-ui-muted);
+  }
+  .item-level + .item-row {
+    padding-top: 0.6rem;
   }
   .more {
     margin-top: 1rem;
