@@ -41,7 +41,8 @@ describe('AlbumCard component', () => {
     const albumImgElement = sut.getByTestId('album-image');
     const albumNameElement = sut.getByTestId('album-name');
     const albumDetailsElement = sut.getByTestId('album-details');
-    const detailsText = `${count} items` + (shared ? ' . Shared' : '');
+    // Local Omarchy layer: a count of photos and videos says photos
+    const detailsText = `${count} photos` + (shared ? ' . Shared' : '');
 
     expect(albumImgElement).toHaveAttribute('src');
     expect(albumImgElement).toHaveAttribute('alt', album.albumName);
@@ -70,7 +71,7 @@ describe('AlbumCard component', () => {
     expect(albumImgElement).toHaveAttribute('src');
 
     expect(albumNameElement).toHaveTextContent('some album name');
-    expect(albumDetailsElement).toHaveTextContent(`${album.assetCount} item`);
+    expect(albumDetailsElement).toHaveTextContent(`${album.assetCount} photo`);
   });
 
   it('hides context menu when "contextMenuItems" is undefined', () => {
