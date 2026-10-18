@@ -16,6 +16,8 @@
     shortcutLabel?: string;
     /** Local Omarchy layer: 'danger' marks a destructive item (the menus draw it red) */
     tone?: 'danger';
+    /** Local Omarchy layer: a test hook, for a control that moved from the bar into a menu and keeps its id */
+    testId?: string;
   }
 
   let {
@@ -28,6 +30,7 @@
     shortcut = null,
     shortcutLabel = '',
     tone,
+    testId,
   }: Props = $props();
 
   let id: string = generateId();
@@ -62,6 +65,7 @@
     : 'bg-slate-100'}"
   role="menuitem"
   data-tone={tone}
+  data-testid={testId}
 >
   {#if icon}
     <Icon {icon} aria-hidden size="18" />

@@ -104,7 +104,7 @@
   import { resolveFilterNames } from '$lib/utils/filter-name-resolution';
   import { filterStateToSearchTerms } from '$lib/utils/filter-search-terms';
   import type { SearchTerms } from '$lib/services/search.service';
-  import { mdiDotsVertical, mdiTelevisionPlay, mdiTune } from '@mdi/js';
+  import { mdiDotsVertical, mdiFilterOutline, mdiTelevisionPlay } from '@mdi/js';
   import { DateTime } from 'luxon';
   import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -807,7 +807,8 @@
       data-testid="filter-toggle-btn"
       onclick={() => (filterCollapsed = false)}
     >
-      <Icon icon={mdiTune} size="20" />
+      <!-- Local Omarchy layer: the funnel, as every filter affordance; sliders are Adjust's -->
+      <Icon icon={mdiFilterOutline} size="20" />
       {#if getActiveFilterCount(filters) > 0}<span class="ws-bar-dot" aria-hidden="true"></span>{/if}
     </button>
   {/if}

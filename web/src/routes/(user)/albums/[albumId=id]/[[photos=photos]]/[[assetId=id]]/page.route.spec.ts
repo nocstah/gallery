@@ -1016,17 +1016,19 @@ describe('album detail filter panel route', () => {
     });
   });
 
-  // Local Omarchy layer: the album across the room (components/room), from its bar beside Slideshow
+  // Local Omarchy layer: the album across the room (components/room), from the bar's one Play, after Slideshow
   describe('Room', () => {
     afterEach(() => {
       qrManager.albumId = undefined;
     });
 
-    it('plays the album in Room', async () => {
+    it('plays the album in Room from the bar’s Play', async () => {
       const album = albumFactory.build({ assetCount: 2 });
       renderPage(album);
 
-      expect(await screen.findByTestId('album-room')).toHaveAttribute('href', `/room?album=${album.id}`);
+      expect(await screen.findByRole('button', { name: 'play' })).toHaveAttribute('aria-haspopup');
+      await fireEvent.click(await screen.findByTestId('album-room'));
+      expect(gotoMock).toHaveBeenCalledWith(`/room?album=${album.id}`);
     });
 
     it('is not offered for QR, whose bank slips stay out of sight', async () => {
@@ -1034,8 +1036,16 @@ describe('album detail filter panel route', () => {
       qrManager.albumId = album.id;
       renderPage(album);
 
-      await waitFor(() => expect(screen.getByLabelText('slideshow')).toBeInTheDocument());
+      await waitFor(() => expect(screen.getByRole('menuitem', { name: 'slideshow' })).toBeInTheDocument());
       expect(screen.queryByTestId('album-room')).not.toBeInTheDocument();
+    });
+
+    it('offers nothing to play in an empty album', async () => {
+      renderPage(albumFactory.build({ assetCount: 0 }));
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'back' })).toBeInTheDocument());
+      expect(screen.queryByRole('button', { name: 'play' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: 'slideshow' })).not.toBeInTheDocument();
     });
   });
 });

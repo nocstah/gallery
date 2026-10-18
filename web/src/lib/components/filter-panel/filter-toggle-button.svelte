@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Icon } from '@immich/ui';
-  import { mdiTune } from '@mdi/js';
+  import { mdiFilterOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -23,7 +23,8 @@
   aria-label={$t('filters')}
   title={$t('filters')}
 >
-  <Icon icon={mdiTune} size="20" />
+  <!-- Local Omarchy layer: the funnel, as every filter affordance; sliders are Adjust's (DESIGN.md, Photo viewer) -->
+  <Icon icon={mdiFilterOutline} size="20" />
   {#if active}
     <span
       class="absolute -top-0.5 -right-0.5 size-2 rounded-full border-[1.5px] border-light bg-immich-primary dark:bg-immich-dark-primary"

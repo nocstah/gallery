@@ -387,7 +387,7 @@
          before the title on a phone and was pulled back over it with -ms-6 elsewhere, covering "Map" on the 4K
          screen). A phone opens the filters as a drawer, a wider screen the rail beside the map. The same component
          either way, rather than a hand-rolled button: that duplicate had drifted onto a different icon (mdiFilterVariant
-         vs the mdiTune every other filter affordance uses) and carried no accessible name. -->
+         vs the funnel every other filter affordance uses) and carried no accessible name. -->
     {#snippet buttons()}
       {#if isMobile}
         <FilterToggleButton

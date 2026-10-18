@@ -123,6 +123,7 @@
     mdiImagePlusOutline,
     mdiLink,
     mdiLinkVariantPlus,
+    mdiPlayOutline,
     mdiPlus,
     mdiPresentationPlay,
     mdiTelevisionPlay,
@@ -883,7 +884,31 @@
     </Button>
   {/if}
   {#if !narrowBar.current}
-    <ActionButton action={Cast} />
+    <!-- Local Omarchy layer: one Play with its ways of showing the album on a screen (DESIGN.md, Album page): a
+         slideshow here, Room across the room (never for To do, Villa or QR, which keep their photos out of sight) and
+         Cast when a cast target is around. They stood side by side as three screen icons; Cast is in the View menu too -->
+    {#if album.assetCount > 0}
+      <ButtonContextMenu
+        icon={mdiPlayOutline}
+        title={$t('play')}
+        color="secondary"
+        offset={{ x: 175, y: 25 }}
+        data-testid="album-play"
+      >
+        <MenuOption icon={mdiPresentationPlay} text={$t('slideshow')} onClick={handleStartSlideshow} />
+        {#if !special}
+          <MenuOption
+            icon={mdiTelevisionPlay}
+            text={$t('room')}
+            onClick={() => goto(Route.room({ album: album.id }))}
+            testId="album-room"
+          />
+        {/if}
+        {#if Cast.$if?.() ?? true}
+          <MenuOption icon={Cast.icon} text={$t('cast')} onClick={(event) => Cast.onAction({ action: Cast, event })} />
+        {/if}
+      </ButtonContextMenu>
+    {/if}
 
     {#if isEditor}
       <IconButton
@@ -900,30 +925,6 @@
       <AlbumMap {album} filters={albumFilters} />
     {/if}
 
-    {#if album.assetCount > 0}
-      <IconButton
-        shape="round"
-        variant="ghost"
-        color="secondary"
-        aria-label={$t('slideshow')}
-        onclick={handleStartSlideshow}
-        icon={mdiPresentationPlay}
-      />
-      <!-- Local Omarchy layer: the album across the room, full screen (components/room); To do, Villa and QR keep
-           their photos out of sight, so not for them -->
-      {#if !special}
-        <IconButton
-          shape="round"
-          variant="ghost"
-          color="secondary"
-          aria-label={$t('room_play')}
-          title={$t('room_play')}
-          href={Route.room({ album: album.id })}
-          icon={mdiTelevisionPlay}
-          data-testid="album-room"
-        />
-      {/if}
-    {/if}
     <ActionButton action={Actions.Download} />
   {/if}
 
@@ -942,6 +943,7 @@
               icon={mdiTelevisionPlay}
               text={$t('room_play')}
               onClick={() => goto(Route.room({ album: album.id }))}
+              testId="album-room"
             />
           {/if}
         {/if}

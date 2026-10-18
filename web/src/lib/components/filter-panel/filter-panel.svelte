@@ -9,7 +9,7 @@
   import { SvelteSet } from 'svelte/reactivity';
   import { fade, fly } from 'svelte/transition';
   import { t } from 'svelte-i18n';
-  import { mdiClose, mdiTune } from '@mdi/js';
+  import { mdiClose, mdiFilterOutline } from '@mdi/js';
   import { tick, untrack } from 'svelte';
   import { PANEL_DURATION_MS } from './motion';
   import type {
@@ -1029,7 +1029,7 @@
           aria-label={$t('filters')}
           title={$t('filters')}
         >
-          <Icon icon={mdiTune} size="20" />
+          <Icon icon={mdiFilterOutline} size="20" />
           {#if anyActiveFilter}
             <span
               class="absolute -top-0.5 -right-0.5 size-2 rounded-full border-[1.5px] border-light bg-immich-primary dark:bg-immich-dark-primary"

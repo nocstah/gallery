@@ -25,6 +25,7 @@ import {
   mdiCogRefreshOutline,
   mdiCompare,
   mdiContentCopy,
+  mdiCropRotate,
   mdiDatabaseRefreshOutline,
   mdiDownload,
   mdiDownloadBox,
@@ -40,6 +41,7 @@ import {
   mdiMagnifyPlusOutline,
   mdiMotionPauseOutline,
   mdiMotionPlayOutline,
+  mdiMovieEditOutline,
   mdiPlus,
   mdiPlusBoxMultipleOutline,
   mdiPresentationPlay,
@@ -48,7 +50,6 @@ import {
   mdiShareVariantOutline,
   mdiTagMultipleOutline,
   mdiTagPlusOutline,
-  mdiTune,
 } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
 import { goto } from '$app/navigation';
@@ -505,7 +506,8 @@ export const getAssetActions = (
 
   const Edit: ActionItem = {
     title: $t('editor'),
-    icon: mdiTune,
+    // Local Omarchy layer: what the editor does (crop and rotate, a video's trim), not the sliders Adjust wears beside it
+    icon: asset.type === AssetTypeEnum.Video ? mdiMovieEditOutline : mdiCropRotate,
     $if: canEdit,
     onAction: () => assetViewerManager.openEditor(),
     shortcuts: [{ key: 'e' }],

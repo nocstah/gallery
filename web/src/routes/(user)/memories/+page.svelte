@@ -16,7 +16,7 @@
   import { getAltText } from '$lib/utils/thumbnail-util';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import { Button, IconButton, modalManager } from '@immich/ui';
-  import { mdiTelevisionPlay, mdiTune } from '@mdi/js';
+  import { mdiFilterOutline, mdiTelevisionPlay } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -95,7 +95,7 @@
         color="secondary"
         variant="ghost"
         indicator={userPreferencesManager.hasMemoryPreferences() ? 'primary' : undefined}
-        icon={mdiTune}
+        icon={mdiFilterOutline}
         aria-label={$t('filters')}
         onclick={handleSettings}
       />
