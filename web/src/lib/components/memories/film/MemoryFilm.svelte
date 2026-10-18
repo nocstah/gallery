@@ -40,14 +40,18 @@
   import { filmKeyAction, type FilmAction, type FilmDress } from './film-keys';
   import { FilmMusic } from './film-music.svelte';
   import {
+    FOOT_SCRIM,
     headScrimAt,
     imagePicture,
+    pixels,
+    ROOM_SCRIM,
     scrimAt,
     shotShade,
+    textBox,
     thumbhashPicture,
     wholeLift,
+    wordsIn,
     type FilmWords,
-    type FrameBox,
   } from './film-shade';
   import {
     buildFilmPlan,
@@ -155,10 +159,9 @@
   const reducedMotion = $derived(mediaQueryManager.reducedMotion);
 
   let film: HTMLElement | undefined = $state();
-  // what the shade and the lift are measured from: the words' rulers, the scrims, the top bar's words
+  // what the shade and the lift are measured from: the words' rulers, the top bar's scrim and words
   let titleRuler: HTMLElement | undefined = $state();
   let linesRuler: HTMLElement | undefined = $state();
-  let footScrim: HTMLElement | undefined = $state();
   let headScrim: HTMLElement | undefined = $state();
   let headEl: HTMLElement | undefined = $state();
   let whereEl: HTMLElement | undefined = $state();
@@ -327,43 +330,9 @@
     return longest;
   });
 
-  /** a length in CSS pixels as getComputedStyle gives it ("17px") */
-  const pixels = (value: string) => Number(value.replace(/px$/, '')) || 0;
-
-  /** a box of the frame (px) in shares of it */
-  const shareOf = (rect: DOMRect): FrameBox => ({
-    left: rect.left / frameWidth,
-    top: rect.top / frameHeight,
-    right: rect.right / frameWidth,
-    bottom: rect.bottom / frameHeight,
-  });
-
-  /** the box of an element's text itself, not of the element: a short line in a wide block is short */
-  const textBox = (element: Element | null | undefined) => {
-    if (!element) {
-      return undefined;
-    }
-    const range = document.createRange();
-    range.selectNodeContents(element);
-    const rect = range.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0 ? rect : undefined;
-  };
-
-  /** words as the shade needs them: where they are, their white's opacity, and the ratio WCAG AA asks of them (3:1
-   * for large text, 24px, or 18.66px at 700; else 4.5:1) */
-  const wordsOf = (element: Element, rect: DOMRect, scrim: number): FilmWords => {
-    const style = getComputedStyle(element);
-    const size = pixels(style.fontSize);
-    const weight = Number(style.fontWeight) || 400;
-    const channels = style.color.match(/[\d.]+%?/g) ?? [];
-    const alpha = channels[3];
-    return {
-      box: shareOf(rect),
-      ink: alpha === undefined ? 1 : alpha.endsWith('%') ? Number(alpha.slice(0, -1)) / 100 : Number(alpha),
-      ratio: size >= 24 || (size >= 18.66 && weight >= 700) ? 3 : 4.5,
-      scrim,
-    };
-  };
+  /** words as the shade needs them, in the frame (the window) */
+  const wordsOf = (element: Element, rect: DOMRect, scrim: number): FilmWords =>
+    wordsIn(element, rect, { left: 0, top: 0, width: frameWidth, height: frameHeight }, scrim);
 
   /** the words at the foot over a shot (the title card's, the story's, across the room the caption) and how far up
    * from the frame's foot they come (px) */
@@ -373,7 +342,11 @@
     if (!plan) {
       return { words, reach };
     }
-    const scrimHeight = footScrim?.clientHeight || frameHeight * 0.55;
+    // the foot scrim's height as `.film-scrim-foot` sets it (measured, it would be the end's whole frame while a film
+    // that has ended starts over)
+    const rem = pixels(getComputedStyle(document.documentElement).fontSize) || 16;
+    const scrimHeight =
+      dress === 'room' ? Math.min(frameHeight * 0.66, rem * 60) : Math.min(frameHeight * 0.55, rem * 30);
     const until = target.start + target.duration;
     const over = (kind: 'title' | 'story') =>
       !!plan?.texts.some((text) => text.kind === kind && text.start < until && text.end > target.start);
@@ -382,7 +355,7 @@
     const add = (element: Element | null | undefined, rect = textBox(element)) => {
       if (element && rect) {
         const height = frameHeight - rect.top;
-        words.push(wordsOf(element, rect, scrimAt(height / scrimHeight, dress === 'room')));
+        words.push(wordsOf(element, rect, scrimAt(height / scrimHeight, dress === 'room' ? ROOM_SCRIM : FOOT_SCRIM)));
         reach = Math.max(reach, height);
       }
     };
@@ -1343,11 +1316,7 @@
     {/each}
   </div>
 
-  <div
-    class="film-scrim film-scrim-foot"
-    class:is-lit={wordsShown || ended || !controlsHidden}
-    bind:this={footScrim}
-  ></div>
+  <div class="film-scrim film-scrim-foot" class:is-lit={wordsShown || ended || !controlsHidden}></div>
   <div class="film-scrim film-scrim-head" class:is-lit={!controlsHidden} bind:this={headScrim}></div>
 
   <header class="film-head film-chrome" class:is-hidden={controlsHidden} bind:this={headEl}>
@@ -1634,7 +1603,8 @@
     background: radial-gradient(ellipse at center, transparent 35%, rgb(0 0 0 / 0.6) 100%);
   }
 
-  /* ---- the scrims: the caption's black under the words, a lighter one under the top bar ---- */
+  /* ---- the scrims: the caption's black under the words, a lighter one under the top bar (film-shade.ts reads their
+     stops as FOOT_SCRIM, ROOM_SCRIM and headScrimAt, and Curator's film.py draws the foot's) ---- */
   .film-scrim {
     position: absolute;
     inset-inline: 0;
@@ -2218,6 +2188,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .film-scrim,
+    .film-shade,
     .film-chrome,
     .film-pill,
     .film-veil {

@@ -3,6 +3,7 @@
   import { Icon, type CarouselImageItem } from '@immich/ui';
   import { mdiCakeVariant, mdiHeart } from '@mdi/js';
   import BirthdayConfetti from './BirthdayConfetti.svelte';
+  import { CARD_SCRIM, imagePicture, scrimAt, shotShade, textBox, wordsIn, type FilmWords } from './film/film-shade';
 
   type Props = {
     item: MemoryCardItem;
@@ -18,6 +19,49 @@
   let confettiCount = $state(0);
 
   const [flamePath, bottomLayerPath, topLayerPath] = mdiCakeVariant.split(/(?=M)/, 3);
+
+  // Local Omarchy layer: a bright cover lays a shade of its own under the card's words, as the film's photos do
+  // (film-shade.ts): its pixels, once loaded, say how bright it is where the title and the line stand, and the shade is
+  // the black that brings them to AA there (the title, large, to 3:1; the line to 4.5:1) beyond what the scrim gives
+  let card: HTMLElement | undefined = $state();
+  let cover: HTMLImageElement | undefined = $state();
+  let words: HTMLElement | undefined = $state();
+  let width = $state(0);
+  let shade = $state(0);
+  let reach = $state(0);
+
+  const lookAtCover = () => {
+    if (!card || !cover?.complete || !words) {
+      return;
+    }
+    const frame = card.getBoundingClientRect();
+    const picture = imagePicture(cover, null);
+    if (!picture || frame.width <= 0 || frame.height <= 0) {
+      return;
+    }
+    const lines: FilmWords[] = [];
+    let top = frame.bottom;
+    for (const element of words.children) {
+      const rect = textBox(element);
+      if (!rect) {
+        continue;
+      }
+      lines.push(wordsIn(element, rect, frame, scrimAt((frame.bottom - rect.top) / frame.height, CARD_SCRIM)));
+      top = Math.min(top, rect.top);
+    }
+    const still = { scale: 1, x: 0.5, y: 0.5 };
+    const shot = { fit: 'fill' as const, ratio: cover.naturalWidth / cover.naturalHeight, from: still, to: still };
+    shade = lines.length > 0 ? shotShade(picture, shot, frame.width / frame.height, lines) : 0;
+    reach = Math.round(frame.bottom - top);
+  };
+
+  // a cover already loaded (from the cache), a card laid out at another size, a new title
+  $effect(() => {
+    void width;
+    void item.title;
+    void item.subtitle;
+    lookAtCover();
+  });
 </script>
 
 <!-- Local Omarchy layer: a memory is a tile like a photo's (DESIGN.md, Memories): its title of facts in the display
@@ -26,9 +70,18 @@
   class="ws-memory-card group relative me-2 inline-block aspect-3/4 h-54 rounded-xl last:me-0 max-md:h-37.5 md:me-4 md:aspect-4/3 xl:aspect-video {className}"
   href={item.href}
   onmouseenter={() => isBirthday && confettiCount++}
+  bind:this={card}
+  bind:clientWidth={width}
 >
   {#if item.src}
-    <img class="size-full rounded-xl object-cover" src={item.src} alt={item.alt ?? item.title} draggable="false" />
+    <img
+      class="size-full rounded-xl object-cover"
+      src={item.src}
+      alt={item.alt ?? item.title}
+      draggable="false"
+      bind:this={cover}
+      onload={lookAtCover}
+    />
   {/if}
   {#if item.isSaved}
     <div class="absolute inset-s-2 top-2 p-1">
@@ -36,10 +89,18 @@
     </div>
   {/if}
   <div class="ws-memory-card-scrim absolute inset-s-0 top-0 size-full rounded-xl"></div>
+  {#if shade > 0}
+    <div
+      class="ws-memory-card-shade absolute inset-0 rounded-xl"
+      style:--shade={shade}
+      style:--reach="{reach}px"
+      aria-hidden="true"
+    ></div>
+  {/if}
   <!-- Gallery: a wrapper so a subtitle can stack under the title. The rule engine emits rule-aware subtitles (e.g.
        recent-trip's "12 photos over 3 days"); upstream's card renders the title only. Only the memories index passes
        one. -->
-  <div class="absolute inset-s-4 inset-e-4 bottom-3">
+  <div class="absolute inset-s-4 inset-e-4 bottom-3" bind:this={words}>
     <p class="ws-memory-card-title flex items-center gap-2 whitespace-normal text-white">
       {#if isBirthday}
         <span class="relative">
@@ -90,9 +151,19 @@
 </a>
 
 <style>
-  /* the caption scrim (black 55% to nothing) under the words, so they read on any photo */
+  /* the caption scrim (black 55% to nothing) under the words (its stops are film-shade.ts's CARD_SCRIM) */
   .ws-memory-card-scrim {
     background: linear-gradient(to top, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0.12) 45%, transparent 70%);
+  }
+  /* the bright cover's own shade: flat as high as the words come, fading out a little above them */
+  .ws-memory-card-shade {
+    pointer-events: none;
+    background: linear-gradient(
+      to top,
+      rgb(0 0 0 / var(--shade)) calc(var(--reach) + 0.25rem),
+      rgb(0 0 0 / calc(var(--shade) * 0.5)) calc(var(--reach) + 1.5rem),
+      transparent calc(var(--reach) + 3rem)
+    );
   }
   .ws-memory-card-title {
     font-family: var(--font-display);

@@ -282,24 +282,31 @@ export const wholeLift = (ratio: number | null, aspect: number, reach: number, g
   return Math.round(clamp(wanted, 0, Math.max(0, spare - top)) * 10_000) / 10_000;
 };
 
-/**
- * The foot scrim's black at a height over the frame's bottom (a share of the scrim's own height): its gradient's stops
- * as `.film-scrim-foot` draws them, the screen's or the room's.
- */
-export const scrimAt = (height: number, room: boolean) => {
-  const stops = room
-    ? [
-        [0, 0.62],
-        [0.38, 0.36],
-        [0.72, 0.12],
-        [1, 0],
-      ]
-    : [
-        [0, 0.55],
-        [0.35, 0.32],
-        [0.7, 0.1],
-        [1, 0],
-      ];
+/** A scrim's gradient (to top) as stops: [a share of its height from its foot, the black there]. */
+export type ScrimStops = [number, number][];
+
+/** `.film-scrim-foot`, the screen's and the room's, and the memory card's (MemoryCard.svelte) */
+export const FOOT_SCRIM: ScrimStops = [
+  [0, 0.55],
+  [0.35, 0.32],
+  [0.7, 0.1],
+  [1, 0],
+];
+export const ROOM_SCRIM: ScrimStops = [
+  [0, 0.62],
+  [0.38, 0.36],
+  [0.72, 0.12],
+  [1, 0],
+];
+export const CARD_SCRIM: ScrimStops = [
+  [0, 0.55],
+  [0.45, 0.12],
+  [0.7, 0],
+  [1, 0],
+];
+
+/** A scrim's black at a height over its foot (a share of the scrim's own height). */
+export const scrimAt = (height: number, stops: ScrimStops) => {
   const at = clamp(height, 0, 1);
   for (let index = 1; index < stops.length; index++) {
     const [x1, y1] = stops[index];
@@ -313,3 +320,46 @@ export const scrimAt = (height: number, room: boolean) => {
 
 /** The top bar's scrim (`.film-scrim-head`): 0.42 of black at the frame's top, none at its foot. */
 export const headScrimAt = (depth: number) => 0.42 * (1 - clamp(depth, 0, 1));
+
+// ---- words as they stand in the page ----
+
+/** The box of an element's text itself, not of the element: a short line in a wide block is short. */
+export const textBox = (element: Element | null | undefined) => {
+  if (!element) {
+    return undefined;
+  }
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  const rect = range.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0 ? rect : undefined;
+};
+
+/** A length in CSS pixels as getComputedStyle gives it ("17px"). */
+export const pixels = (value: string) => Number(value.replace(/px$/, '')) || 0;
+
+/**
+ * Words as the shade needs them: their box (`rect`) as shares of the frame they stand in, the opacity of their white,
+ * the ratio WCAG AA asks of them (3:1 for large text, 24px, or 18.66px at 700; else 4.5:1), and the scrim under them.
+ */
+export const wordsIn = (
+  element: Element,
+  rect: DOMRect,
+  frame: { left: number; top: number; width: number; height: number },
+  scrim: number,
+): FilmWords => {
+  const style = getComputedStyle(element);
+  const size = pixels(style.fontSize);
+  const weight = Number(style.fontWeight) || 400;
+  const alpha = (style.color.match(/[\d.]+%?/g) ?? [])[3];
+  return {
+    box: {
+      left: (rect.left - frame.left) / frame.width,
+      top: (rect.top - frame.top) / frame.height,
+      right: (rect.right - frame.left) / frame.width,
+      bottom: (rect.bottom - frame.top) / frame.height,
+    },
+    ink: alpha === undefined ? 1 : alpha.endsWith('%') ? Number(alpha.slice(0, -1)) / 100 : Number(alpha),
+    ratio: size >= 24 || (size >= 18.66 && weight >= 700) ? 3 : 4.5,
+    scrim,
+  };
+};

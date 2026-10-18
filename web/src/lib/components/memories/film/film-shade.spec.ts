@@ -1,10 +1,13 @@
 import { rgbaToThumbHash } from 'thumbhash';
 import { deepen } from './film-backdrop';
 import {
+  CARD_SCRIM,
   darknessFor,
+  FOOT_SCRIM,
   headScrimAt,
   imagePicture,
   relativeLuminance,
+  ROOM_SCRIM,
   scrimAt,
   SHADE_MOST,
   shotLight,
@@ -196,12 +199,13 @@ describe(wholeLift.name, () => {
 
 describe('the scrims', () => {
   it("follow the foot scrim's stops, the room's a little darker", () => {
-    expect(scrimAt(0, false)).toBe(0.55);
-    expect(scrimAt(0.35, false)).toBeCloseTo(0.32);
-    expect(scrimAt(0.525, false)).toBeCloseTo(0.21);
-    expect(scrimAt(1, false)).toBe(0);
-    expect(scrimAt(0, true)).toBe(0.62);
-    expect(scrimAt(2, true)).toBe(0);
+    expect(scrimAt(0, FOOT_SCRIM)).toBe(0.55);
+    expect(scrimAt(0.35, FOOT_SCRIM)).toBeCloseTo(0.32);
+    expect(scrimAt(0.525, FOOT_SCRIM)).toBeCloseTo(0.21);
+    expect(scrimAt(1, FOOT_SCRIM)).toBe(0);
+    expect(scrimAt(0, ROOM_SCRIM)).toBe(0.62);
+    expect(scrimAt(2, ROOM_SCRIM)).toBe(0);
+    expect(scrimAt(0.8, CARD_SCRIM)).toBe(0);
   });
 
   it("follow the head scrim's fade", () => {
