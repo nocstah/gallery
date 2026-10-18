@@ -304,7 +304,7 @@ Explore (`routes/(user)/explore`) is the wander pages in brief, a row of each (2
 - **People** in the People page's order, its own sort (favourites first, then the most photos by default; upstream: by name, so the row began with the alphabet's first names).
 - **Places**: the Places page's tiles at its size (Places: a window with its count and years), those that hold the most photos first; the row asks for every place's count (`managers/place-stats`, shared with Places, so either page fills the other's) and holds the tiles' frames until the counts are in (2 s at most), so nothing below moves. Upstream showed the first twelve cities by name that had five photos, dimmed to 75%.
 - **Memories**: the Memories page's cards (`memoryManager.cards`: what reads the same as one card, today's first, each with its kind), as many as fit one row, the upcoming ones left to their day; on a phone its first two, one under the other at the full width, as on Memories, so a title and its line keep to a line each. Upstream's carousel set them in portrait there (a title in four lines) with its round arrow over the third card.
-- **Recently added** as before, on the gutter.
+- **Recently added** as before, on the gutter and the desktop's gap (upstream: 4px).
 - **Structural departure:** the page reads the memories from the memory manager's cards rather than its load, and its load asks for every place (`getAssetsByCity`) and this week's years (each failure leaves its row out); upstream's `ImageCarousel` is no longer used here.
 
 ### Map

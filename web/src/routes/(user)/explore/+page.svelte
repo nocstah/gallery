@@ -259,7 +259,8 @@
           {$t('recently_added')}
           <a class="ws-sharing-heading-action" href={Route.recentlyAdded()} draggable="false">{$t('view_all')}</a>
         </h2>
-        <div class="flex h-24 max-w-fit flex-wrap gap-x-1 overflow-hidden md:h-42">
+        <!-- Local Omarchy layer: the photos on the desktop's gap, as every row of tiles here (upstream: 4px) -->
+        <div class="flex h-24 max-w-fit flex-wrap gap-x-(--ws-gap) overflow-hidden md:h-42">
           {#each recents as item (item.data.id)}
             <button
               type="button"
