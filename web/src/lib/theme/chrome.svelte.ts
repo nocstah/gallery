@@ -5,7 +5,9 @@
 // omarchy-world.css's `:root[data-chrome^='glass']` rules.
 //
 // Glass needs one measurement CSS cannot make: how tall the timeline's header rows are (month heading, grouping and
-// filter row), so the timeline's top section can start below them; it is kept in --ws-tl-head on that column.
+// filter row), so the timeline's top section can start below them; it is kept in --ws-tl-head on that column. The rows
+// come and go without a navigation (Years and Months mount their grouping row, filters their bar, search results stand
+// in for the grid), so the column is watched as well as each row's size.
 import { afterNavigate } from '$app/navigation';
 
 export type ChromeMode = 'solid' | 'glass' | 'glass-hide';
@@ -45,28 +47,66 @@ class Chrome {
 
 export const chrome = new Chrome();
 
-/** The timeline column's header rows (everything above #asset-grid but the scrubber), measured into --ws-tl-head. */
-let observer: ResizeObserver | undefined;
-const measure = () => {
-  observer?.disconnect();
-  const column = document.querySelector<HTMLElement>('div:has(> #asset-grid)');
-  if (!column || chrome.mode === 'solid') {
+/** A header row of the timeline column: not the grid itself, nor what floats (the scrubber, a phone's grouping control). */
+export const isHeaderRow = (child: Element): child is HTMLElement => {
+  if (!(child instanceof HTMLElement) || child.id === 'asset-grid') {
+    return false;
+  }
+  const { position } = getComputedStyle(child);
+  return position !== 'absolute' && position !== 'fixed';
+};
+
+/** The timeline column's header rows (everything above #asset-grid but what floats), measured into --ws-tl-head. */
+let rowSizes: ResizeObserver | undefined;
+let changes: MutationObserver | undefined;
+let watched: Node | undefined;
+
+// What is watched for rows that come and go: the column's own children, so a row mounted or taken away (switching to
+// Years, filters turned on) measures again, and the grid's return to it (search results stood in for it); with no
+// column on the page, the body, until a grid mounts somewhere (a look-up by id per change, nothing more, until then)
+const watch = (target: Node | undefined) => {
+  if (target === watched) {
     return;
   }
-  const rows = [...column.children].filter(
-    (child): child is HTMLElement => child.id !== 'asset-grid' && getComputedStyle(child).position !== 'absolute',
-  );
+  changes?.disconnect();
+  watched = target;
+  if (!target) {
+    return;
+  }
+  changes ??= new MutationObserver(() => {
+    if (watched !== document.body || document.querySelector('#asset-grid')) {
+      measure();
+    }
+  });
+  changes.observe(target, { childList: true, subtree: target === document.body });
+};
+
+const measure = () => {
+  rowSizes?.disconnect();
+  rowSizes = undefined;
+  if (chrome.mode === 'solid') {
+    watch(undefined);
+    return;
+  }
+  const column = document.querySelector<HTMLElement>('div:has(> #asset-grid)');
+  if (!column) {
+    watch(watched instanceof HTMLElement && watched.isConnected ? watched : document.body);
+    return;
+  }
+  watch(column);
+  const rows = [...column.children].filter(isHeaderRow);
   // from the first row's top to the last one's bottom: rows may keep a margin between them (offsets, so the slide of
-  // glass-hide does not count)
+  // glass-hide does not count); a row a narrower screen hides (display: none, no offset parent) counts for nothing
   const update = () => {
-    const first = rows[0];
-    const last = rows.at(-1);
+    const shown = rows.filter((row) => row.offsetParent !== null);
+    const first = shown[0];
+    const last = shown.at(-1);
     const height = first && last ? last.offsetTop + last.offsetHeight - first.offsetTop : 0;
     column.style.setProperty('--ws-tl-head', `${height}px`);
   };
-  observer = new ResizeObserver(update);
+  rowSizes = new ResizeObserver(update);
   for (const row of rows) {
-    observer.observe(row);
+    rowSizes.observe(row);
   }
   update();
 };

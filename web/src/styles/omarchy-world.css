@@ -2500,11 +2500,11 @@ label.ws-sheet-title {
   /* the material sits on a layer behind each bar, not on the bar: a backdrop-filter on the bar itself would make it
      the box its fixed menus are placed in, and they would open in the wrong place */
   #dashboard-navbar,
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute) {
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed) {
     background: transparent;
   }
   #dashboard-navbar::before,
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute)::before {
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed)::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -2532,24 +2532,26 @@ label.ws-sheet-title {
     padding-top: calc(var(--ws-over) + 0.5rem);
   }
   /* the timeline: its header rows (month and years, grouping and filters) float over the grid in one cell, the grid
-     fills the column, and its top section starts below the bar, the title bar and the header rows */
+     fills the column, and its top section starts below the bar, the title bar and the header rows (measured into
+     --ws-tl-head, lib/theme/chrome.svelte.ts). What floats on its own is no row: the scrubber (.absolute) and a phone's
+     Years / Months / All (.fixed), which glass had pulled into the column's grid and laid glass behind */
   div:has(> #asset-grid) {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto minmax(0, 1fr);
     align-content: start;
   }
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute) {
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed) {
     position: relative;
     z-index: 20;
     grid-column: 1;
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute):first-child {
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed):first-child {
     grid-row: 1;
     margin-top: calc(var(--ws-over) - 0.5rem);
   }
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute):nth-child(2) {
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed):nth-child(2) {
     grid-row: 2;
   }
   #asset-grid {
@@ -2567,7 +2569,7 @@ label.ws-sheet-title {
 /* glass-hide: everything above the content slides up together: the one bar and any timeline header rows */
 :root[data-chrome='glass-hide'][data-bar-hidden] body:has(#dashboard-navbar) {
   #dashboard-navbar,
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute) {
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed) {
     transform: translateY(calc(-1 * (var(--ws-over) + var(--ws-tl-head, 0px))));
   }
   #dashboard-navbar {
