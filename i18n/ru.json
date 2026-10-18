@@ -4304,7 +4304,7 @@
   "unknown_country": "Неизвестная страна",
   "unknown_date": "Дата неизвестна",
   "unknown_schema": "Неизвестная схема",
-  "unknown_year": "Неизвестный Год",
+  "unknown_year": "Неизвестный год",
   "unlimited": "Не ограничено",
   "unlink_album_from_space": "Отвязать альбом от «{space}»",
   "unlink_album_from_space_confirmation": "Убрать этот альбом из «{space}»? Объекты этого альбома больше не будут отображаться в этом Space.",
