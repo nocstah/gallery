@@ -4,6 +4,7 @@ import path from 'node:path';
 import { FORK_LOCALES } from '$lib/i18n/fork-locales';
 import { curator, type InboxGroup, type Suggestion } from '$lib/utils/curator';
 import {
+  isBlankPixels,
   kindAction,
   kindActionKeys,
   kindQuery,
@@ -274,5 +275,26 @@ describe('sharedConfidence', () => {
     expect(sharedConfidence([{ confidence: 0.8 }, { confidence: 0.65 }])).toBe(false);
     expect(sharedConfidence([{ confidence: 0.8 }, { confidence: null }])).toBe(false);
     expect(sharedConfidence([{ confidence: 0.8 }])).toBe(false);
+  });
+});
+
+describe('isBlankPixels', () => {
+  const tile = (rgba: [number, number, number, number], odd?: [number, number, number, number]) => {
+    const data = new Uint8ClampedArray(8 * 8 * 4);
+    for (let index = 0; index < 64; index++) {
+      data.set(index === 27 && odd ? odd : rgba, index * 4);
+    }
+    return data;
+  };
+
+  it('is true for a black picture, and one with nothing in it', () => {
+    expect(isBlankPixels(tile([0, 0, 0, 255]))).toBe(true);
+    expect(isBlankPixels(tile([6, 4, 9, 255]))).toBe(true);
+    expect(isBlankPixels(tile([255, 255, 255, 0]))).toBe(true);
+  });
+
+  it('is false for a dark photo with a light in it, and for anything brighter', () => {
+    expect(isBlankPixels(tile([3, 3, 3, 255], [40, 30, 20, 255]))).toBe(false);
+    expect(isBlankPixels(tile([20, 20, 20, 255]))).toBe(false);
   });
 });

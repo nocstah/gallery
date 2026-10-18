@@ -309,3 +309,35 @@ export const kindActionKeys = (): Translations[] => [
 export const sharedConfidence = (items: Pick<Suggestion, 'confidence'>[]): boolean =>
   items.length > 1 &&
   new Set(items.map(({ confidence }) => (confidence === null ? null : Math.round(confidence * 100)))).size === 1;
+
+/**
+ * Whether a picture shows nothing: every part of it black, as a tile from its pixels at 8x8 (RGBA) has it. A video
+ * whose first frame is black has such a thumbnail (in "Mac albums you're missing", a 404 s clip that opens on black),
+ * and so does a frame that came out black; the inbox shows a quiet placeholder for it instead of a black hole in a
+ * strip of photos.
+ */
+export const isBlankPixels = (data: ArrayLike<number>, darkest = 10): boolean => {
+  for (let index = 0; index < data.length; index += 4) {
+    if (data[index + 3] > 0 && (data[index] > darkest || data[index + 1] > darkest || data[index + 2] > darkest)) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/** Whether a loaded picture is blank (isBlankPixels); one that cannot be read shows as it is. */
+export const isBlankPicture = (image: HTMLImageElement): boolean => {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 8;
+    canvas.height = 8;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context || image.naturalWidth === 0) {
+      return false;
+    }
+    context.drawImage(image, 0, 0, 8, 8);
+    return isBlankPixels(context.getImageData(0, 0, 8, 8).data);
+  } catch {
+    return false;
+  }
+};

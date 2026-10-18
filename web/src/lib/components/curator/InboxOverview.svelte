@@ -4,6 +4,7 @@
   // many wait ("Archive 42 clips", kindAction) and the days of its runs in data type, and a strip of the photos it
   // touches, the kind waiting longest first. The rest of what a kind does is said once, inside it; opening a row
   // reviews the whole kind as one queue.
+  import InboxTile from '$lib/components/curator/InboxTile.svelte';
   import { curator } from '$lib/utils/curator';
   import { kindAction, kindQuery, kindsOf, runDays, type InboxKind } from '$lib/utils/curator-inbox';
   import { getAssetMediaUrl } from '$lib/utils';
@@ -53,7 +54,7 @@
           </div>
           <div class="ws-strip overview-strip">
             {#each kind.preview as id (id)}
-              <img class="ws-strip-tile" src={thumbnail(id)} alt="" loading="lazy" width="72" height="72" />
+              <InboxTile src={thumbnail(id)} size={72} />
             {/each}
           </div>
         </a>

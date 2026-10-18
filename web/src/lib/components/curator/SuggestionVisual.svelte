@@ -4,8 +4,10 @@
   // name shows the face group beside photos it was found in, a merge shows
   // every face group being joined, a restored photo or clip shares one frame with its original, an album of people
   // seen together (a smart album Curator proposes) shows their faces before photos of them together. Each photo
-  // opens in Gallery in a new tab, so the review keeps its place. Resting the pointer on a photo shows it large,
-  // whole, in the middle of the screen, until the pointer moves off it.
+  // opens in Gallery in a new tab, so the review keeps its place (the link says so). Resting the pointer on a photo
+  // shows it large, whole, in the middle of the screen, until the pointer moves off it. A picture with nothing to show
+  // is a quiet placeholder (InboxTile).
+  import InboxTile from '$lib/components/curator/InboxTile.svelte';
   import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
   import { reelUrl, type Suggestion } from '$lib/utils/curator';
   import { getAssetMediaUrl } from '$lib/utils';
@@ -54,19 +56,12 @@
     target="_blank"
     rel="noopener"
     style:width="{size}px"
+    aria-label={label ? undefined : $t('ai_inbox_open_photo')}
     onmouseenter={() => peekAt(id, turn)}
     onmouseleave={unpeek}
     onclick={unpeek}
   >
-    <img
-      class="ws-strip-tile"
-      src={thumbnail(id)}
-      alt=""
-      loading="lazy"
-      width={size}
-      height={size}
-      style:rotate={turn ? `${turn}deg` : undefined}
-    />
+    <InboxTile src={thumbnail(id)} {size} {turn} />
     {#if label}
       <span class="ws-inbox-meta">{label}</span>
     {/if}
