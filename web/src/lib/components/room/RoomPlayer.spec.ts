@@ -152,15 +152,18 @@ describe('RoomPlayer', () => {
     // the newest of each: one on its way out may still be fading
     const story = () => [...document.querySelectorAll('.film-story')].at(-1)?.textContent?.trim();
     const caption = () => screen.queryAllByTestId('memory-film-caption').at(-1)?.textContent?.trim();
+    // a sentence comes a moment after its photo (FILM_TIMING.storyDelay, 0.8 s, once the photo is ready), so waiting
+    // for one takes longer than waitFor's own second on a busy machine
+    const shortly = { timeout: 3000 };
     // the first sentence says who, where and when: the caption holds
     await fireEvent.keyDown(document, { key: 'ArrowRight' });
-    await waitFor(() => expect(story()).toBe('Anna was in Siem Reap, Cambodia on 18 October 2025.'));
-    await waitFor(() => expect(caption()).toBeUndefined());
+    await waitFor(() => expect(story()).toBe('Anna was in Siem Reap, Cambodia on 18 October 2025.'), shortly);
+    await waitFor(() => expect(caption()).toBeUndefined(), shortly);
     // the next one says none of it: the caption says it all
     await fireEvent.keyDown(document, { key: 'ArrowRight' });
     await fireEvent.keyDown(document, { key: 'ArrowRight' });
-    await waitFor(() => expect(story()).toBe('The rain stopped by noon.'));
-    await waitFor(() => expect(caption()).toBe('Anna · Siem Reap, Cambodia · October 18, 2025'));
+    await waitFor(() => expect(story()).toBe('The rain stopped by noon.'), shortly);
+    await waitFor(() => expect(caption()).toBe('Anna · Siem Reap, Cambodia · October 18, 2025'), shortly);
   });
 
   it("asks Curator for a memory's story and songs for its owner, and nothing for a family account", async () => {
