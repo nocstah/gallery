@@ -105,6 +105,28 @@ describe('FolderFaceManager', () => {
     expect(searchAssets).toHaveBeenCalledTimes(2);
   });
 
+  it('gives up on a question not answered in 8 s, and shows what the others answered', async () => {
+    vi.useFakeTimers();
+    try {
+      const faces = new FolderFaceManager();
+      vi.mocked(searchAssets).mockImplementation(
+        (_, options) =>
+          new Promise<SearchResponseDto>((_, reject) => {
+            options?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+          }),
+      );
+
+      faces.resolve('trips', [album('a')]);
+      await vi.advanceTimersByTimeAsync(7999);
+      expect(faces.get('trips', [album('a')])).toBeUndefined();
+
+      await vi.advanceTimersByTimeAsync(1);
+      await vi.waitFor(() => expect(faces.get('trips', [album('a')])).toEqual(['cover-a']));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps at most six questions in flight over every folder', async () => {
     const faces = new FolderFaceManager();
     const answers: Array<() => void> = [];
