@@ -9,8 +9,7 @@
   import UploadCover from './DragAndDropUploadOverlay.svelte';
   import InspectorFeed from '$lib/components/inspector/InspectorFeed.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
+  import { resolveSpecialAlbums } from '$lib/managers/special-albums.svelte';
   import { onMount, type Snippet } from 'svelte';
   interface Props {
     children?: Snippet;
@@ -21,15 +20,10 @@
   // Local Omarchy layer: grid <-> viewer morph (lib/utils/photo-transition.ts)
   onNavigate((navigation) => photoTransition(navigation));
 
-  // Local Omarchy layer: which albums are To do and Villa (managers/special-albums), looked up once per page load, so a
-  // special album knows itself even when opened directly (album pages have no sidebar)
-  onMount(() => {
-    if (authManager.authenticated) {
-      for (const special of offeredSpecialAlbums()) {
-        void special.ready();
-      }
-    }
-  });
+  // Local Omarchy layer: which albums are To do, Villa and QR (managers/special-albums), looked up once per page load, so
+  // a special album knows itself even on a page without the sidebar (Room, a photo opened on its own); the sidebar asks
+  // too, wherever it is drawn
+  onMount(resolveSpecialAlbums);
 
   // Local Omarchy layer: Ctrl+Z takes back the newest action (managers/undo-manager) on every user page, the album
   // pages without the one bar included, from anywhere but a text field, a dialog or the editor

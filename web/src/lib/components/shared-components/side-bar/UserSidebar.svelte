@@ -12,7 +12,7 @@
   import Sidebar from '$lib/components/sidebar/sidebar-shell.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { offeredSpecialAlbums, specialAlbums } from '$lib/managers/special-albums.svelte';
+  import { offeredSpecialAlbums, resolveSpecialAlbums, specialAlbums } from '$lib/managers/special-albums.svelte';
   import { Route } from '$lib/route';
   import { pinnedAlbums } from '$lib/stores/pinned-albums.svelte';
   import { recentAlbumsDropdown, recentSpacesDropdown } from '$lib/stores/preferences.store';
@@ -53,10 +53,15 @@
     mdiViewDashboard,
     mdiViewDashboardOutline,
   } from '@mdi/js';
+  import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import { fly } from 'svelte/transition';
 
   const collapsed = $derived(sidebarModeStore.layout === 'rail' && !sidebarModeStore.railExpanded);
+
+  // Local Omarchy layer: the special albums are looked up wherever the sidebar is drawn (once per page load), so an
+  // error page's sidebar, outside the user pages' layout, shows To do, Villa and QR with their counts, not as albums
+  onMount(resolveSpecialAlbums);
 
   // Local Omarchy layer: the owner's tools (the command center, Curator's inbox and chat, Utilities, Import) show for
   // the owner only, the server's admin ("Owner tools only for me"); a family account sees the library and what is

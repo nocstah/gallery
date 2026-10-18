@@ -551,6 +551,18 @@ export const specialAlbums: readonly SpecialAlbumManager[] = [todoManager, villa
  * family account. Rows, buttons, menu items and keys come from this; lookups by id go through every one. */
 export const offeredSpecialAlbums = () => specialAlbums.filter((special) => special.offered);
 
+/** Local Omarchy layer: looks each offered special album up, once per page load (`ready`), for whatever asks first: the
+ * user pages' layout, and the sidebar wherever it is drawn (an error page's too, which no user layout holds: without
+ * it To do, Villa and QR lost their counts there and the Albums tree listed them as plain albums). */
+export const resolveSpecialAlbums = () => {
+  if (!authManager.authenticated) {
+    return;
+  }
+  for (const special of offeredSpecialAlbums()) {
+    void special.ready();
+  }
+};
+
 /** The special album with this id, if it is one. */
 export const specialAlbumOf = (albumId: string | null | undefined) =>
   specialAlbums.find((album) => album.isAlbum(albumId));

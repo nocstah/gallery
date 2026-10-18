@@ -6,6 +6,7 @@ import {
   planDone,
   planMove,
   qrManager,
+  resolveSpecialAlbums,
   todoManager,
   villaManager,
   type From,
@@ -109,5 +110,24 @@ describe('special albums', () => {
   it('keeps a photo out of Photos while another special album holds it', () => {
     const elsewhere = new Map<string, From | undefined>([['photos', 'timeline']]);
     expect(planDone([...now.keys()], now, notes, elsewhere)).toEqual([]);
+  });
+});
+
+// Local Omarchy layer: the user pages' layout and the sidebar both ask (an error page's sidebar has no user layout
+// around it); each special album is looked up once a page load, whoever asks first
+describe('resolveSpecialAlbums', () => {
+  it('looks each offered special album up once, however many ask', async () => {
+    sdkMock.getAllAlbums.mockReset();
+    sdkMock.getAllAlbums.mockImplementation(({ name }: { name?: string } = {}) =>
+      Promise.resolve([{ id: `${name}-album`, assetCount: 36 }] as never),
+    );
+
+    resolveSpecialAlbums();
+    resolveSpecialAlbums();
+
+    await vi.waitFor(() => expect(qrManager.albumId).toBe('QR-album'));
+    expect(sdkMock.getAllAlbums).toHaveBeenCalledTimes(3);
+    expect(todoManager.count).toBe(36);
+    expect(villaManager.isAlbum('Villa-album')).toBe(true);
   });
 });

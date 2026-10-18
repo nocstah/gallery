@@ -90,6 +90,12 @@ const sidebarMocks = vi.hoisted(() => ({
 
 vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: sidebarMocks.sidebarModeStore }));
 
+const specialMocks = vi.hoisted(() => ({ resolveSpecialAlbums: vi.fn() }));
+vi.mock('$lib/managers/special-albums.svelte', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('$lib/managers/special-albums.svelte')>()),
+  resolveSpecialAlbums: specialMocks.resolveSpecialAlbums,
+}));
+
 describe('UserSidebar', () => {
   beforeEach(() => {
     mocks.authManager.user.isAdmin = true;
@@ -99,6 +105,14 @@ describe('UserSidebar', () => {
     sidebarMocks.sidebarModeStore.layout = 'expanded';
     sidebarMocks.sidebarModeStore.hoverExpanded = false;
     sidebarMocks.sidebarModeStore.railExpanded = false;
+  });
+
+  // Local Omarchy layer: the sidebar looks the special albums up wherever it is drawn, so an error page's (outside the
+  // user pages' layout) shows To do, Villa and QR with their counts rather than as plain albums
+  it('looks the special albums up when it is drawn', () => {
+    render(UserSidebar);
+
+    expect(specialMocks.resolveSpecialAlbums).toHaveBeenCalledTimes(1);
   });
 
   // Local Omarchy layer (plan A): one Shared row, beside Albums, in place of Spaces, Sharing and Shared links. It
