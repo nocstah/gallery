@@ -18,8 +18,9 @@
 // localStorage; by default a run starts from none, so two runs compare: the session cookie is kept either way),
 // --curator FILE (answer Curator's requests, port 2290, from FILE instead of Curator: for a dev server on a port
 // Curator's CORS does not let in, or a page in a state Curator is not in now: a JSON map from a path, "*" standing for
-// one segment, to the answer, or to "@name" for a file beside FILE sent as it is, in byte ranges (a song); the first
-// path that matches answers, anything else is a 404), --contrast (measure the text that lies on a photo, as WCAG
+// one segment, to the answer, or to "@name" for a file beside FILE sent as it is, in byte ranges (a song), or to
+// "@hold", never answered, so the page shows what it says while it waits; the first path that matches answers,
+// anything else is a 404), --contrast (measure the text that lies on a photo, as WCAG
 // does: see below).
 //
 // --contrast: before each shot the page lists its visible text whose ground, under the middle of each line, is a
@@ -912,6 +913,8 @@ async function answerCurator(send, { requestId, request }, { dir, routes }) {
     });
   }
   const route = routes.find(({ pattern }) => pattern.test(url.pathname));
+  // "@hold": the request is left waiting, so the page shows its loading state for as long as the shot needs
+  if (route?.answer === '@hold') return;
   const file = typeof route?.answer === 'string' && route.answer.startsWith('@') ? join(dir, route.answer.slice(1)) : null;
   let body = route ? (file ? readFileSync(file) : Buffer.from(JSON.stringify(route.answer))) : Buffer.from('{"detail":"not in --curator"}');
   const headers = [

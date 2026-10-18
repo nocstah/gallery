@@ -3,8 +3,10 @@
   // the Mac's names), however many nights fed it (utils/curator-inbox): its title, what accepting would do with how
   // many wait ("Archive 42 clips", kindAction) and the days of its runs in data type, and a strip of the photos it
   // touches, the kind waiting longest first. The rest of what a kind does is said once, inside it; opening a row
-  // reviews the whole kind as one queue.
+  // reviews the whole kind as one queue. While Curator answers, a quiet line says what is coming; if it cannot, the
+  // line says so with Retry (PanelStatus).
   import InboxTile from '$lib/components/curator/InboxTile.svelte';
+  import PanelStatus from '$lib/components/curator/PanelStatus.svelte';
   import { curator } from '$lib/utils/curator';
   import { kindAction, kindQuery, kindsOf, runDays, type InboxKind } from '$lib/utils/curator-inbox';
   import { getAssetMediaUrl } from '$lib/utils';
@@ -20,15 +22,32 @@
   let { onRunScan, onCalibrate }: Props = $props();
 
   let kinds = $state<InboxKind[]>();
+  let failed = $state(false);
 
-  onMount(async () => {
-    kinds = kindsOf(await curator.inbox());
+  const load = async () => {
+    failed = false;
+    try {
+      kinds = kindsOf(await curator.inbox());
+    } catch (error) {
+      console.warn('[ai inbox] the suggestions did not load', error);
+      failed = true;
+    }
+  };
+
+  onMount(() => {
+    void load();
   });
 
   const thumbnail = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
 </script>
 
-{#if kinds && kinds.length === 0}
+{#if !kinds}
+  <PanelStatus
+    waiting={$t('ai_inbox_list_loading')}
+    failure={failed ? $t('ai_inbox_list_failed') : undefined}
+    onRetry={() => void load()}
+  />
+{:else if kinds.length === 0}
   <div class="ws-empty">
     <h2 class="ws-empty-title">{$t('ai_inbox_empty_title')}</h2>
     <p class="ws-empty-body">{$t('ai_inbox_empty_body')}</p>
@@ -37,7 +56,7 @@
       <button type="button" class="ws-empty-link" onclick={onCalibrate}>{$t('ai_inbox_tab_calibrate')}</button>
     </div>
   </div>
-{:else if kinds}
+{:else}
   <ul class="ws-inbox-rows">
     {#each kinds as kind (kind.series)}
       <li>

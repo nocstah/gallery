@@ -1,24 +1,43 @@
 <script lang="ts">
   // Local Omarchy layer: the library's health (Curator's /api/library-health). What needs a person comes first, each
   // with its number and where to deal with it; then the big face groups still without a name, how the library grew
-  // month by month, and the local models Curator can use.
+  // month by month, and the local models Curator can use. While Curator answers, a quiet line says what is coming; if
+  // it cannot, the line says so with Retry (PanelStatus).
+  import PanelStatus from '$lib/components/curator/PanelStatus.svelte';
   import { curator, type LibraryHealth } from '$lib/utils/curator';
   import { onMount } from 'svelte';
   import { locale, t } from 'svelte-i18n';
 
   let report = $state<LibraryHealth>();
+  let failed = $state(false);
 
   const tallest = $derived(Math.max(1, ...(report?.months ?? []).map((month) => month.items)));
 
   const monthLabel = (value: string) =>
     new Date(`${value}-15T12:00:00`).toLocaleDateString($locale ?? undefined, { month: 'short', year: '2-digit' });
 
-  onMount(async () => {
-    report = await curator.libraryHealth();
+  const load = async () => {
+    failed = false;
+    try {
+      report = await curator.libraryHealth();
+    } catch (error) {
+      console.warn("[ai inbox] the library's health did not load", error);
+      failed = true;
+    }
+  };
+
+  onMount(() => {
+    void load();
   });
 </script>
 
-{#if report}
+{#if !report}
+  <PanelStatus
+    waiting={$t('ai_inbox_health_loading')}
+    failure={failed ? $t('ai_inbox_health_failed') : undefined}
+    onRetry={() => void load()}
+  />
+{:else}
   <ul class="ws-inbox-rows">
     {#each report.items as item (item.key)}
       <li>
