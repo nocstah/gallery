@@ -2,10 +2,13 @@
   // Local Omarchy layer: reviewing one kind of Curator's suggestions, all its batches as one queue (utils/curator-inbox:
   // Curator adds each night's proposals to the batch of their kind still waiting, and the batches it made one per
   // night before that open together). Reject the few that are wrong, then accept the rest in one go; every accepted
-  // change stays undoable here and in History. Keys: j/k move, a accepts, r rejects, u undoes. Accepting more than 20
-  // at once runs Curator's database backup first, shown as progress. A decided row sinks to the bottom of the list at
-  // once, so the next one to decide is always where the last was. A card about one photo also has Delete (key d): the
-  // photo goes to Gallery's Trash and the card is set aside; its Undo restores the photo and puts the card back.
+  // change stays undoable here and in History. Keys (one quiet line under the bar says them): J/K or the arrows
+  // move, A accepts, R rejects, D sends a one-photo card's photo to the Trash, U takes back the last word on a card
+  // (undoes an applied change, restores a photo from the Trash).
+  // Accepting more than 20 at once runs Curator's database backup first, shown as progress. A decided row sinks to
+  // the bottom of the list at once, so the next one to decide is always where the last was; Accept and Reject sit
+  // under the card's words, beside its photos. A card about one photo also has Delete: the photo goes to Gallery's
+  // Trash and the card is set aside; its Undo restores the photo and puts the card back.
   import ReviewMode from '$lib/components/curator/ReviewMode.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
@@ -64,6 +67,7 @@
   const waiting = $derived(filter === 'pending' ? items.filter((item) => item.status === 'pending').length : 0);
   const remaining = $derived(filter === 'pending' ? total - (items.length - waiting) : 0);
   const more = $derived(pages.some((page) => (loaded[page.group.key] ?? 0) < page.total));
+  const anyDeletable = $derived(items.some((item) => item.status === 'pending' && deletable(item)));
 
   const closeReview = async () => {
     reviewing = false;
@@ -220,6 +224,18 @@
     }
   };
 
+  /** U: the last word on a card taken back, whatever it was */
+  const takeBack = (item: Suggestion) => {
+    if (trashed.has(item.id)) {
+      void untrash(item);
+    } else if (item.status === 'applied') {
+      void undo(item);
+    } else {
+      return false;
+    }
+    return true;
+  };
+
   const setFilter = async (next: Filter) => {
     filter = next;
     await load();
@@ -232,40 +248,49 @@
     const index = rows.indexOf(document.activeElement as HTMLElement);
     const item = items[index];
     const move = (to: number) => rows[Math.max(0, Math.min(rows.length - 1, to))]?.focus();
-    if (event.key === 'j' || event.key === 'ArrowDown') {
+    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+    const open = item && item.status === 'pending' && !deciding.has(item.id);
+    if (key === 'j' || key === 'ArrowDown') {
       move(index + 1);
-    } else if (event.key === 'k' || event.key === 'ArrowUp') {
+    } else if (key === 'k' || key === 'ArrowUp') {
       move(index - 1);
-    } else if (item && event.key === 'a' && item.status === 'pending' && !deciding.has(item.id)) {
+    } else if (open && key === 'a') {
       void decide([item.id], 'accept');
       void tick().then(() => move(index)); // the next row has moved up into this place
-    } else if (
-      item &&
-      (event.key === 'r' || event.key === 'x') &&
-      item.status === 'pending' &&
-      !deciding.has(item.id)
-    ) {
+    } else if (open && (key === 'r' || key === 'x')) {
       void decide([item.id], 'reject');
       void tick().then(() => move(index));
-    } else if (item && event.key === 'd' && item.status === 'pending' && deletable(item) && !deciding.has(item.id)) {
+    } else if (open && key === 'd' && deletable(item)) {
       void trash(item);
       void tick().then(() => move(index));
-    } else if (item && event.key === 'u' && trashed.has(item.id)) {
-      void untrash(item);
-    } else if (item && event.key === 'u' && item.status === 'applied') {
-      void undo(item);
-    } else {
+    } else if (!(item && key === 'u' && takeBack(item))) {
       return;
     }
     event.preventDefault();
   };
 
-  const confidence = (value: number | null) => (value === null ? '' : `${Math.round(value * 100)}%`);
+  // J or K pressed with nothing in particular focused starts on the first card, so the keys work as soon as the page is
+  // there; the list's own handler takes it from there
+  const onWindowKeydown = (event: KeyboardEvent) => {
+    const start = event.key.toLowerCase() === 'j' || event.key.toLowerCase() === 'k';
+    if (!start || reviewing || event.ctrlKey || event.metaKey || event.altKey || event.defaultPrevented) {
+      return;
+    }
+    if (document.activeElement && document.activeElement !== document.body) {
+      return;
+    }
+    rows[0]?.focus();
+    event.preventDefault();
+  };
+
+  const confidence = (value: number) => Math.round(value * 100);
 
   onMount(() => {
     void load();
   });
 </script>
+
+<svelte:window onkeydown={onWindowKeydown} />
 
 <div class="group-head">
   <a class="ws-inbox-link back" href="?"><Icon icon={mdiArrowLeft} size="16" />{$t('back')}</a>
@@ -305,6 +330,9 @@
       </button>
     {/if}
   </div>
+  {#if items.length > 0}
+    <p class="ws-inbox-meta group-keys">{$t(anyDeletable ? 'ai_inbox_keys_trash' : 'ai_inbox_keys')}</p>
+  {/if}
   {#if working}
     <div class="group-working" role="status">
       <span class="ws-inbox-meta">{working.note}</span>
@@ -341,51 +369,56 @@
           {#if item.story}
             <StoryText story={item.story} kind={item.kind} clamp />
           {/if}
-          {#if item.confidence !== null || item.error}
-            <span class="ws-inbox-meta">{item.error ?? confidence(item.confidence)}</span>
+          {#if item.error}
+            <span class="ws-inbox-meta">{item.error}</span>
+          {:else if item.confidence !== null}
+            <span class="ws-inbox-meta">
+              {$t('ai_inbox_confidence', { values: { percent: confidence(item.confidence) } })}
+            </span>
           {/if}
-        </div>
-        <div class="item-actions">
-          {#if item.status === 'pending'}
-            <button
-              type="button"
-              class="ws-btn"
-              disabled={busy || deciding.has(item.id)}
-              onclick={() => decide([item.id], 'accept')}
-            >
-              {$t('accept')}
-            </button>
-            <button
-              type="button"
-              class="ws-btn-quiet"
-              disabled={busy || deciding.has(item.id)}
-              onclick={() => decide([item.id], 'reject')}
-            >
-              {$t('ai_inbox_reject')}
-            </button>
-            {#if deletable(item)}
+          <!-- the decision sits under the words it decides, beside the photos -->
+          <div class="item-actions">
+            {#if item.status === 'pending'}
+              <button
+                type="button"
+                class="ws-btn"
+                disabled={busy || deciding.has(item.id)}
+                onclick={() => decide([item.id], 'accept')}
+              >
+                {$t('accept')}
+              </button>
               <button
                 type="button"
                 class="ws-btn-quiet"
                 disabled={busy || deciding.has(item.id)}
-                onclick={() => trash(item)}
+                onclick={() => decide([item.id], 'reject')}
               >
-                {$t('delete')}
+                {$t('ai_inbox_reject')}
               </button>
-            {/if}
-          {:else if trashed.has(item.id)}
-            <span class="ws-inbox-meta">{$t('moved_to_trash')}</span>
-            <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => untrash(item)}>
-              {$t('undo')}
-            </button>
-          {:else}
-            <span class="ws-inbox-meta">{$t(STATUS_LABEL[item.status])}</span>
-            {#if item.status === 'applied'}
-              <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => undo(item)}>
+              {#if deletable(item)}
+                <button
+                  type="button"
+                  class="ws-btn-quiet"
+                  disabled={busy || deciding.has(item.id)}
+                  onclick={() => trash(item)}
+                >
+                  {$t('delete')}
+                </button>
+              {/if}
+            {:else if trashed.has(item.id)}
+              <span class="ws-inbox-meta">{$t('moved_to_trash')}</span>
+              <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => untrash(item)}>
                 {$t('undo')}
               </button>
+            {:else}
+              <span class="ws-inbox-meta">{$t(STATUS_LABEL[item.status])}</span>
+              {#if item.status === 'applied'}
+                <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => undo(item)}>
+                  {$t('undo')}
+                </button>
+              {/if}
             {/if}
-          {/if}
+          </div>
         </div>
       </div>
     </li>
@@ -437,9 +470,16 @@
     gap: 0.75rem;
     margin-top: 0.4rem;
   }
+  /* the batch's actions follow its filters, near the words and photos they decide, not at a wide screen's far edge */
   .group-bar :global(.ws-seg) {
     margin-inline-start: 0;
-    margin-inline-end: auto;
+    margin-inline-end: 0.75rem;
+  }
+  /* the keys are for a keyboard: a touch screen has none to press (as the Adjust panel's help line) */
+  @media (pointer: coarse) {
+    .group-keys {
+      display: none;
+    }
   }
   .group-working {
     display: grid;
@@ -454,7 +494,7 @@
     padding: 2rem 0;
   }
   .item-row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: start;
   }
   .item-row[data-deciding],
@@ -470,8 +510,10 @@
   }
   .item-actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.25rem;
+    margin-top: 0.35rem;
   }
   .more {
     margin-top: 1rem;
