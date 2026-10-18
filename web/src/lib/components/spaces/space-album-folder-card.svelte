@@ -68,9 +68,11 @@
   };
 </script>
 
+<!-- Local Omarchy layer: a folder without albums is marked (data-empty) so it reads quieter than the others -->
 <div
   data-testid="space-album-folder-card"
   data-folder-id={folder.id}
+  data-empty={albumCount === 0 ? '' : undefined}
   role="listitem"
   draggable={canManage}
   ondragstart={(event) => {

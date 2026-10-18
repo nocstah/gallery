@@ -3017,6 +3017,11 @@ label.ws-sheet-title {
     transition: none;
   }
 }
+/* a folder without albums yet steps back, after the others (the Albums page sorts it there): its folder glyph on the
+   quiet cover, its name and count in muted ink */
+[data-testid='space-album-folder-card'][data-empty] p {
+  color: var(--immich-ui-muted);
+}
 
 /* ---- a Space's own pages (routes/(user)/spaces/[spaceId]: Members, People, Activity, Albums) ----
    one column on the page's gutter, as Shared and Settings, where upstream centred a narrow box or inset its controls

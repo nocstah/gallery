@@ -63,12 +63,18 @@
   const ownedHere = $derived(data.albums.filter((album) => inLevel(album)));
   const sharedHere = $derived(data.sharedAlbums.filter((album) => inLevel(album)));
   const summaries = $derived(buildFolderSummaries(albumFolders.folders, albumFolders.linked));
-  // folders by name, the way a person numbers them ("2" before "10", years in order)
+  const isEmpty = (folder: SharedSpaceAlbumFolderDto) => (summaries.get(folder.id)?.albumCount ?? 0) === 0;
+  // folders by name, the way a person numbers them ("2" before "10", years in order); one with no albums yet waits
+  // after the others, as quiet as an empty state ("Smart albums · 0 albums" had stood between Other and Trips)
   const subfolders = $derived(
     browsing
       ? getFolderContents(albumFolders.folders, albumFolders.linked, folderId)
           .folders.slice()
-          .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+          .sort(
+            (a, b) =>
+              Number(isEmpty(a)) - Number(isEmpty(b)) ||
+              a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }),
+          )
       : [],
   );
   // each folder's photos, chosen once per page load: photos only, best first (managers/folder-faces), where the covers

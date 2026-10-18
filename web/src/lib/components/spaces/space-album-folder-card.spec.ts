@@ -105,6 +105,14 @@ describe('SpaceAlbumFolderCard', () => {
     expect(container.querySelector(':scope .ws-folder-cover svg')).toBeNull();
   });
 
+  it('marks a folder without albums, so it reads quieter than the others', () => {
+    const empty = renderWithTooltips(SpaceAlbumFolderCard, { ...defaults, previewAssetIds: [], albumCount: 0 });
+    const full = renderWithTooltips(SpaceAlbumFolderCard, defaults);
+
+    expect(empty.container.querySelector('[data-testid="space-album-folder-card"]')).toHaveAttribute('data-empty');
+    expect(full.container.querySelector('[data-testid="space-album-folder-card"]')).not.toHaveAttribute('data-empty');
+  });
+
   // W-11: viewers get no management affordances at all.
   it('W-11: renders no kebab menu and is not draggable for a viewer', () => {
     const { container } = renderWithTooltips(SpaceAlbumFolderCard, { ...defaults, canManage: false });
