@@ -1078,6 +1078,8 @@
   "album_share_title": "„{name}“ teilen",
   "album_show_in_photos": "In Fotos zeigen",
   "album_summary": "Album Zusammenfassung",
+  "album_tree_more": "+{count} weitere",
+  "album_tree_more_label": "{count} weitere in {name} anzeigen",
   "album_unpin_from_sidebar": "Von der Seitenleiste lösen",
   "album_updated": "Album aktualisiert",
   "album_updated_setting_description": "Erhalte eine E-Mail-Benachrichtigung, wenn ein freigegebenes Album neue Dateien enthält",

@@ -1078,6 +1078,8 @@
   "album_share_title": "Condividi \"{name}\"",
   "album_show_in_photos": "Mostra in Foto",
   "album_summary": "Riepilogo album",
+  "album_tree_more": "+{count} altri",
+  "album_tree_more_label": "Mostra altri {count} in {name}",
   "album_unpin_from_sidebar": "Rimuovi dai fissati della barra laterale",
   "album_updated": "Album aggiornato",
   "album_updated_setting_description": "Ricevi una notifica email quando un album condiviso ha nuovi media",

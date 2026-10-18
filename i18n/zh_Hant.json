@@ -1076,6 +1076,8 @@
   "album_share_title": "分享「{name}」",
   "album_show_in_photos": "在相片中顯示",
   "album_summary": "相簿摘要",
+  "album_tree_more": "還有 {count} 項",
+  "album_tree_more_label": "顯示「{name}」中的另外 {count} 項",
   "album_unpin_from_sidebar": "從側邊欄取消釘選",
   "album_updated": "相簿已更新",
   "album_updated_setting_description": "當共享相簿有新項目時用電子郵件通知我",

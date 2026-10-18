@@ -1078,6 +1078,8 @@
   "album_share_title": "Compartir «{name}»",
   "album_show_in_photos": "Mostrar en Fotos",
   "album_summary": "Resumen del álbum",
+  "album_tree_more": "+{count} más",
+  "album_tree_more_label": "Mostrar {count} más en {name}",
   "album_unpin_from_sidebar": "Dejar de fijar en la barra lateral",
   "album_updated": "Álbum actualizado",
   "album_updated_setting_description": "Reciba una notificación por correo electrónico cuando un álbum compartido tenga nuevos recursos",

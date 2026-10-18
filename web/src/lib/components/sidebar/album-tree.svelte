@@ -1,4 +1,6 @@
 <script lang="ts" module>
+  import { SvelteSet } from 'svelte/reactivity';
+
   /** An album in a tree: where it sits (`folderId`, null at the top) is all the tree needs to place it. */
   export interface TreeAlbum {
     id: string;
@@ -9,6 +11,11 @@
     /** hidden from my timeline: marked at the row's end too, its photos are not in Photos */
     hidden?: boolean;
   }
+
+  // Local Omarchy layer: the long levels shown whole from their more row, by `<tree>:<folder id>`: for this page load
+  // only, never remembered, and kept from page to page (the sidebar is made again on every page) while the level stays
+  // open, so a person can go from album to album in it
+  const shownWhole = new SvelteSet<string>();
 </script>
 
 <script lang="ts">
@@ -19,9 +26,11 @@
   // into an album row, and a folder row springs open under them (managers/sidebar-drop); an album a drop just made
   // lights for a moment. The tree is one tab stop, a WAI-ARIA tree walked with the arrows (utils/album-tree): every row
   // was a chevron and a link, so an album page had 172 tab stops before its first photo, 142 of them in the sidebar.
+  // A long folder the tree opened by itself shows only the way to what is on screen, the rest behind "+N more": the
+  // whole folder opened under an album page, some 140 rows.
   import { dropSpring, dropTarget, sidebarDrop } from '$lib/managers/sidebar-drop.svelte';
   import { albumTreeOpen } from '$lib/stores/preferences.store';
-  import { albumKey, folderKey, treeKey, visibleRows } from '$lib/utils/album-tree';
+  import { albumKey, folderKey, moreKey, shownAt, treeKey, visibleRows } from '$lib/utils/album-tree';
   import { showPinMenu } from '$lib/utils/pin-menu';
   import type { SharedSpaceAlbumFolderDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
@@ -36,7 +45,6 @@
   } from '@mdi/js';
   import { tick, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
-  import { SvelteSet } from 'svelte/reactivity';
   import { get } from 'svelte/store';
 
   interface Props {
@@ -112,16 +120,23 @@
   const setOpen = (folderId: string, value: boolean) => {
     if (!value) {
       revealed.delete(key(folderId));
+      shownWhole.delete(key(folderId));
     }
     albumTreeOpen.update((open) => ({ ...open, [key(folderId)]: value }));
   };
   const toggle = (folderId: string) => setOpen(folderId, !isOpen(folderId));
 
-  // a folder springs open under carried photos, and closes again when they go elsewhere
+  // a folder springs open under carried photos, and closes again when they go elsewhere; so does a long level's rest
+  // under its more row (a drop there keeps it, as a drop keeps the folders on the way open)
   const springOf = (folderId: string) => ({
     isOpen: () => revealed.has(key(folderId)) || !!get(albumTreeOpen)[key(folderId)],
     open: () => setOpen(folderId, true),
     close: () => setOpen(folderId, false),
+  });
+  const moreSpring = (folderId: string) => ({
+    isOpen: () => shownWhole.has(key(folderId)),
+    open: () => shownWhole.add(key(folderId)),
+    close: () => shownWhole.delete(key(folderId)),
   });
 
   // an album a drop just made is brought into the sidebar's view once its row is there
@@ -141,41 +156,65 @@
   const onScreen = $derived(
     activeFolderId ? `folder:${activeFolderId}` : activeAlbumId ? `album:${activeAlbumId}` : '',
   );
-  let revealedFor: string | undefined;
-  $effect(() => {
-    const album = activeAlbumId ? albums.find(({ id }) => id === activeAlbumId) : undefined;
-    const chain: string[] = [];
-    let folderId = activeFolderId ? parentOf.get(activeFolderId) : placed(album?.folderId);
-    while (folderId && chain.length < 32) {
-      chain.push(key(folderId));
+  const onScreenAlbum = $derived(activeAlbumId ? albums.find(({ id }) => id === activeAlbumId) : undefined);
+  // the folders above what is on screen, nearest first
+  const chain = $derived.by(() => {
+    const ids: string[] = [];
+    let folderId = activeFolderId ? parentOf.get(activeFolderId) : placed(onScreenAlbum?.folderId);
+    while (folderId && ids.length < 32) {
+      ids.push(folderId);
       folderId = parentOf.get(folderId) ?? null;
     }
+    return ids;
+  });
+  // the way to what is on screen, which a long level the tree opened keeps to (the folder on screen included)
+  const path = $derived(new Set(activeFolderId ? [...chain, activeFolderId] : chain));
+  let revealedFor: string | undefined;
+  $effect(() => {
+    const keys = chain.map((folderId) => key(folderId));
+    // what is on screen has been found in the tree (the albums and folders load after the tree is made)
+    const found = activeAlbumId ? !!onScreenAlbum : activeFolderId ? parentOf.has(activeFolderId) : true;
     // revealed once per arrival and chain: the albums and folders loading in later find the chain, and loading again
     // with nothing changed leaves a folder closed by hand closed
-    const reveal = `${onScreen}|${chain.join('/')}`;
+    const reveal = `${onScreen}|${keys.join('/')}`;
     untrack(() => {
       if (reveal === revealedFor) {
         return;
       }
       revealedFor = reveal;
       revealed.clear();
-      for (const k of chain) {
+      for (const k of keys) {
         revealed.add(k);
+      }
+      // a level shown whole goes back to its way there once it closes (something else on screen)
+      if (found) {
+        for (const k of shownWhole) {
+          if (k.startsWith(`${scope}:`) && !revealed.has(k) && !get(albumTreeOpen)[k]) {
+            shownWhole.delete(k);
+          }
+        }
       }
     });
   });
 
   const filledFolder = (folderId: string) => (foldersIn[folderId]?.length ?? 0) + (albumsIn[folderId]?.length ?? 0) > 0;
 
+  // What each level shows (utils/album-tree): everything in a level the person opened (the top is Albums', or the
+  // Space's, opened by its own chevron), and in a long level the tree opened only the way to what is on screen
+  const shownOf = (folderId: string | null) =>
+    shownAt(foldersIn[folderId ?? ''] ?? [], albumsIn[folderId ?? ''] ?? [], {
+      opened: folderId === null || !!$albumTreeOpen[key(folderId)],
+      more: folderId !== null && shownWhole.has(key(folderId)),
+      path,
+      album: activeAlbumId,
+    });
+  const showMore = (folderId: string) => shownWhole.add(key(folderId));
+  const showLess = (folderId: string) => shownWhole.delete(key(folderId));
+  const nameOf = $derived(new Map(folders.map(({ id, name }) => [id, name])));
+
   // The rows the keyboard walks, in the order they show (utils/album-tree). One of them is the tree's tab stop: the row
   // last focused while it still shows, else the one on screen, else the first; the rest are reached with the arrows.
-  const rows = $derived(
-    visibleRows({
-      shown: (folderId) => ({ folders: foldersIn[folderId ?? ''] ?? [], albums: albumsIn[folderId ?? ''] ?? [] }),
-      filled: filledFolder,
-      isOpen,
-    }),
-  );
+  const rows = $derived(visibleRows({ shown: shownOf, filled: filledFolder, isOpen }));
   let focused = $state<string>();
   const onScreenKey = $derived(
     activeFolderId ? folderKey(activeFolderId) : activeAlbumId ? albumKey(activeAlbumId) : undefined,
@@ -215,6 +254,10 @@
       setOpen(move.open, true);
     } else if ('close' in move) {
       setOpen(move.close, false);
+    } else if ('more' in move) {
+      showMore(move.more);
+    } else if ('less' in move) {
+      showLess(move.less);
     } else {
       row.click();
     }
@@ -233,7 +276,8 @@
      link owns the group of rows under it; the row on screen is the selected one (selected and current, and no other
      row says either); the chevrons are the pointer's, since → and ← open and close a folder -->
 {#snippet level(parentId: string | null, depth: number)}
-  {#each foldersIn[parentId ?? ''] ?? [] as folder (folder.id)}
+  {@const shown = shownOf(parentId)}
+  {#each shown.folders as folder (folder.id)}
     {@const open = isOpen(folder.id)}
     {@const filled = filledFolder(folder.id)}
     {@const active = folder.id === activeFolderId}
@@ -293,7 +337,7 @@
       {/if}
     </li>
   {/each}
-  {#each albumsIn[parentId ?? ''] ?? [] as album (album.id)}
+  {#each shown.albums as album (album.id)}
     {@const active = album.id === activeAlbumId}
     {@const rowKey = albumKey(album.id)}
     <li role="none">
@@ -339,6 +383,33 @@
       </div>
     </li>
   {/each}
+  {#if parentId !== null && (shown.hidden > 0 || shown.less)}
+    {@const folderId = parentId}
+    {@const rowKey = moreKey(folderId)}
+    <!-- a long level the tree opened keeps to the way to what is on screen: the rest wait here, shown in place on a
+         press (or under carried photos), and the row then offers less again -->
+    <li role="none">
+      <div class="ws-tree-row" style:--depth={depth} use:dropSpring={moreSpring(folderId)}>
+        <span class="ws-tree-toggle" aria-hidden="true"></span>
+        <!-- the tree takes its keys (Enter and Space here), and only the row on screen says it is selected -->
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_role_has_required_aria_props -->
+        <span
+          role="treeitem"
+          class="ws-tree-link ws-tree-more"
+          tabindex={rowKey === tabStop ? 0 : -1}
+          aria-level={depth + 1}
+          aria-label={shown.less
+            ? undefined
+            : $t('album_tree_more_label', { values: { count: shown.hidden, name: nameOf.get(folderId) ?? label } })}
+          data-key={rowKey}
+          data-testid="tree-more-{folderId}"
+          onclick={() => (shown.less ? showLess(folderId) : showMore(folderId))}
+        >
+          {shown.less ? $t('show_less') : $t('album_tree_more', { values: { count: shown.hidden } })}
+        </span>
+      </div>
+    </li>
+  {/if}
 {/snippet}
 
 <!-- one tab stop: the rows carry the focus (one of them at a time is in the tab order), so the tree itself takes none -->
@@ -424,6 +495,19 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  /* a long level's more row: quiet, in data type (a count), its words where its rows' names start */
+  .ws-tree-more {
+    padding-inline-start: calc(18px + 0.5rem);
+    color: var(--immich-ui-muted);
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+  .ws-tree-row:hover .ws-tree-more {
+    color: var(--immich-ui-dark);
   }
   .ws-tree-marks {
     display: inline-flex;

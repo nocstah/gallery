@@ -1078,6 +1078,8 @@
   "album_share_title": "Udostępnij „{name}”",
   "album_show_in_photos": "Pokaż w Zdjęciach",
   "album_summary": "Podsumowanie albumu",
+  "album_tree_more": "+{count} więcej",
+  "album_tree_more_label": "Pokaż jeszcze {count} w folderze {name}",
   "album_unpin_from_sidebar": "Odepnij od panelu bocznego",
   "album_updated": "Album zaktualizowany",
   "album_updated_setting_description": "Otrzymaj powiadomienie e-mail, gdy do udostępnionego Ci albumu zostaną dodane nowe zasoby",

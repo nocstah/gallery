@@ -1078,6 +1078,8 @@
   "album_share_title": "\"{name}\" delen",
   "album_show_in_photos": "Tonen in Foto's",
   "album_summary": "Album samenvatting",
+  "album_tree_more": "+{count} meer",
+  "album_tree_more_label": "Nog {count} tonen in {name}",
   "album_unpin_from_sidebar": "Losmaken uit de zijbalk",
   "album_updated": "Album bijgewerkt",
   "album_updated_setting_description": "Ontvang een e-mailmelding wanneer een gedeeld album nieuwe items heeft",

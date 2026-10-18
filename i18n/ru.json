@@ -1078,6 +1078,8 @@
   "album_share_title": "Поделиться «{name}»",
   "album_show_in_photos": "Показывать в «Фото»",
   "album_summary": "Информация об альбоме",
+  "album_tree_more": "+{count} ещё",
+  "album_tree_more_label": "Показать ещё {count} в «{name}»",
   "album_unpin_from_sidebar": "Открепить от боковой панели",
   "album_updated": "Альбом обновлён",
   "album_updated_setting_description": "Получать уведомление по электронной почте при добавлении новых объектов в общий альбом",

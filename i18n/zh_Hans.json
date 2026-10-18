@@ -1083,6 +1083,8 @@
   "album_share_title": "分享“{name}”",
   "album_show_in_photos": "在照片中显示",
   "album_summary": "相册概览",
+  "album_tree_more": "还有 {count} 项",
+  "album_tree_more_label": "显示“{name}”中的另外 {count} 项",
   "album_unpin_from_sidebar": "从侧边栏取消固定",
   "album_updated": "相册已更新",
   "album_updated_setting_description": "当共享相册有新内容时，通过邮件通知",

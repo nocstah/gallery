@@ -1085,6 +1085,8 @@
   "album_share_title": "Share \"{name}\"",
   "album_show_in_photos": "Show in Photos",
   "album_summary": "Album summary",
+  "album_tree_more": "+{count} more",
+  "album_tree_more_label": "Show {count} more in {name}",
   "album_unpin_from_sidebar": "Unpin from sidebar",
   "album_updated": "Album updated",
   "album_updated_setting_description": "Receive an email notification when a shared album has new photos",

@@ -155,6 +155,93 @@ describe('album tree', () => {
   });
 });
 
+// Local Omarchy layer: a long folder the tree opened by itself keeps to the way to what is on screen; the whole
+// folder (siblings and all) opened under an album page, some 140 rows
+describe('album tree on a long folder', () => {
+  beforeAll(() =>
+    addMessages('dev', {
+      expand_named: 'Expand {name}',
+      collapse_named: 'Collapse {name}',
+      album_tree_more: '+{count} more',
+      album_tree_more_label: 'Show {count} more in {name}',
+      show_less: 'Show less',
+    }),
+  );
+  beforeEach(() => albumTreeOpen.set({}));
+
+  // Asia holds twelve albums, Trips three folders and ten albums of its own; each test is a tree of its own, since the
+  // levels shown whole are kept for the page load
+  const many = (prefix: string, count: number, folderId: string) =>
+    Array.from({ length: count }, (_, index) => ({
+      id: `${prefix}${index + 1}`,
+      name: `${prefix} ${index + 1}`,
+      folderId,
+    }));
+  const long = (scope: string) => ({
+    ...props,
+    scope,
+    folders: [
+      folder('trips', 'Trips'),
+      folder('asia', 'Asia', 'trips'),
+      folder('europe', 'Europe', 'trips'),
+      folder('africa', 'Africa', 'trips'),
+    ],
+    albums: [
+      ...many('asia', 12, 'asia'),
+      ...many('trip', 10, 'trips'),
+      { id: 'malta', name: 'Malta', folderId: 'europe' },
+    ],
+  });
+  const names = () => screen.getAllByRole('treeitem').map((row) => row.textContent?.trim());
+
+  it('shows only the way to the album on screen, the rest behind more', () => {
+    render(AlbumTree, { ...long('long-1'), activeAlbumId: 'asia5' });
+    expect(names()).toEqual(['Trips', 'Africa', 'Asia', 'asia 5', '+11 more', 'Europe', '+10 more']);
+    expect(screen.getByTestId('tree-more-asia')).toHaveAccessibleName('Show 11 more in Asia');
+    expect(screen.getByTestId('tree-more-asia')).toHaveAttribute('aria-level', '3');
+  });
+
+  it('shows the rest in place from its more row, then less again', async () => {
+    render(AlbumTree, { ...long('long-2'), activeAlbumId: 'asia5' });
+    await fireEvent.click(screen.getByTestId('tree-more-asia'));
+    expect(screen.getAllByRole('treeitem', { name: /^asia \d+$/ })).toHaveLength(12);
+    expect(screen.getByTestId('tree-more-asia')).toHaveTextContent('Show less');
+    // never remembered
+    expect(get(albumTreeOpen)).toEqual({});
+    await fireEvent.click(screen.getByTestId('tree-more-asia'));
+    expect(screen.getAllByRole('treeitem', { name: /^asia \d+$/ })).toHaveLength(1);
+  });
+
+  it('shows the rest from the more row with Enter, the focus staying on it', async () => {
+    render(AlbumTree, { ...long('long-3'), activeAlbumId: 'asia5' });
+    const more = screen.getByTestId('tree-more-asia');
+    more.focus();
+    await fireEvent.keyDown(more, { key: 'Enter' });
+    expect(screen.getAllByRole('treeitem', { name: /^asia \d+$/ })).toHaveLength(12);
+    expect(screen.getByTestId('tree-more-asia')).toHaveFocus();
+    expect(screen.getByTestId('tree-more-asia')).toHaveAttribute('tabindex', '0');
+  });
+
+  it('shows a long folder the person opened whole', () => {
+    albumTreeOpen.set({ 'long-4:asia': true });
+    render(AlbumTree, { ...long('long-4'), activeAlbumId: 'asia5' });
+    expect(screen.getAllByRole('treeitem', { name: /^asia \d+$/ })).toHaveLength(12);
+    expect(screen.queryByTestId('tree-more-asia')).not.toBeInTheDocument();
+  });
+
+  it('keeps a level shown whole while it stays open, and the way there once it has closed', async () => {
+    const { rerender } = render(AlbumTree, { ...long('long-5'), activeAlbumId: 'asia5' });
+    await fireEvent.click(screen.getByTestId('tree-more-asia'));
+    // another album in Asia: still whole
+    await rerender({ ...long('long-5'), activeAlbumId: 'asia6' });
+    expect(screen.getAllByRole('treeitem', { name: /^asia \d+$/ })).toHaveLength(12);
+    // somewhere else, then back: the way there again
+    await rerender({ ...long('long-5'), activeAlbumId: 'malta' });
+    await rerender({ ...long('long-5'), activeAlbumId: 'asia6' });
+    expect(screen.getAllByRole('treeitem', { name: /^asia \d+$/ })).toHaveLength(1);
+  });
+});
+
 // Local Omarchy layer: the tree is one tab stop walked with the keys (utils/album-tree has the rules)
 describe('album tree with the keyboard', () => {
   beforeAll(() => addMessages('dev', { expand_named: 'Expand {name}', collapse_named: 'Collapse {name}' }));
