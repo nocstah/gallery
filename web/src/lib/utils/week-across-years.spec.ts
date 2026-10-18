@@ -1,4 +1,11 @@
-import { thisWeek, weekDaysAcrossYears, weekSpread, weekYearDays, weekYears } from '$lib/utils/week-across-years';
+import {
+  thisWeek,
+  weekAround,
+  weekDaysAcrossYears,
+  weekSpread,
+  weekYearDays,
+  weekYears,
+} from '$lib/utils/week-across-years';
 
 // Sunday 18 October 2026, in the reader's own calendar
 const TODAY = new Date(2026, 9, 18, 9, 30);
@@ -25,6 +32,15 @@ describe(thisWeek.name, () => {
   });
 });
 
+describe(weekAround.name, () => {
+  it('runs from three days before a day to three after it, across a month or a year', () => {
+    expect(weekAround(new Date(2015, 6, 14)).map((day) => day.getDate())).toEqual([11, 12, 13, 14, 15, 16, 17]);
+    expect(
+      weekAround(new Date(2016, 0, 1)).map((day) => `${day.getFullYear()}-${day.getMonth() + 1}-${day.getDate()}`),
+    ).toEqual(['2015-12-29', '2015-12-30', '2015-12-31', '2016-1-1', '2016-1-2', '2016-1-3', '2016-1-4']);
+  });
+});
+
 describe(weekDaysAcrossYears.name, () => {
   it("asks for this week's days in the past years whose month holds photos, never this year", () => {
     const days = weekDaysAcrossYears(TODAY, months('2026-10', '2025-10', '2013-10', '2013-03', '2010-07'));
@@ -43,6 +59,26 @@ describe(weekDaysAcrossYears.name, () => {
 
   it('asks for nothing in an archive without photos', () => {
     expect(weekDaysAcrossYears(TODAY, [])).toEqual([]);
+    expect(weekDaysAcrossYears(TODAY, [], { later: true })).toEqual([]);
+  });
+
+  it("asks for the days around a photo's day in the years before it and after it (the inspector)", () => {
+    const day = new Date(2015, 6, 14);
+    const days = weekDaysAcrossYears(day, months('2026-07', '2015-07', '2013-07', '2010-03'), {
+      week: weekAround(day),
+      later: true,
+    });
+
+    expect([...new Set(days.map(({ yearsAgo }) => yearsAgo))]).toEqual([-11, 2]);
+    expect(days.filter(({ yearsAgo }) => yearsAgo === -11).map(({ key }) => key)).toEqual([
+      '2026-07-11',
+      '2026-07-12',
+      '2026-07-13',
+      '2026-07-14',
+      '2026-07-15',
+      '2026-07-16',
+      '2026-07-17',
+    ]);
   });
 });
 
@@ -71,6 +107,23 @@ describe(weekYears.name, () => {
 
   it('leaves out a year with no photos that week', () => {
     expect(weekYears(TODAY, days, [cover('2025-10-15', 'x')]).map(({ year }) => year)).toEqual([2025]);
+  });
+
+  it("takes the photo nearest the middle day around a photo's day, the later years first", () => {
+    const day = new Date(2015, 6, 14);
+    const around = weekDaysAcrossYears(day, months('2026-07', '2013-07'), { week: weekAround(day), later: true });
+    const years = weekYears(
+      day,
+      around,
+      [cover('2026-07-11', 'a'), cover('2026-07-15', 'b'), cover('2013-07-17', 'c'), cover('2013-07-11', 'd')],
+      3,
+    );
+
+    expect(years.map(({ year, assetId }) => [year, assetId])).toEqual([
+      [2026, 'b'],
+      // the 11th and the 17th are three days from the 14th: the later wins
+      [2013, 'c'],
+    ]);
   });
 });
 

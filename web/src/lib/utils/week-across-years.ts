@@ -3,7 +3,9 @@ import type { TimeBucketCoverResponseDto, TimeBucketsResponseDto } from '@immich
 // Local Omarchy layer: "This week, across the years" (DESIGN.md, Explore): for every past year with photos in this
 // calendar week (Monday to Sunday), one photo of it, the day nearest today's, so Explore shows time: the same week in
 // 2025, 2024 … 2001. Worked out from the timeline's months (which years have photos in the week's months) and the
-// covers of those days, two requests in all; plain functions here, the requests in the Explore page's load.
+// covers of those days, two requests in all; plain functions here, the requests in the Explore page's load. The
+// inspector's "This day across the years" (components/inspector) asks the same of the seven days around a photo's
+// day, in the years before it and after.
 
 /** One past year of this week: its year, the photo that stands for it and the first and last day it has photos. */
 export type WeekYear = { year: number; assetId: string; thumbhash: string | null; first: string; last: string };
@@ -20,23 +22,35 @@ export const thisWeek = (today: Date): Date[] => {
   );
 };
 
+/** The seven days around `day`, three before it and three after (the inspector's "this day"), in the reader's
+ * calendar. */
+export const weekAround = (day: Date): Date[] =>
+  Array.from({ length: 7 }, (_, index) => new Date(day.getFullYear(), day.getMonth(), day.getDate() - 3 + index));
+
 /** The week `yearsAgo` years back: each day moved by whole years (a 29 February becomes the 1st of March). */
 const weekYearsAgo = (week: Date[], yearsAgo: number) =>
   week.map((day) => new Date(day.getFullYear() - yearsAgo, day.getMonth(), day.getDate()));
 
 /**
  * The days to ask covers for: this week in every past year whose months the week falls in hold photos (`months`, the
- * timeline's month buckets), as 'YYYY-MM-DD' keys, with how many years ago each is.
+ * timeline's month buckets), as 'YYYY-MM-DD' keys, with how many years ago each is. `week` is another run of seven
+ * days to ask for instead, and `later` asks for the years after `today`'s too (as negative years ago).
  */
 export const weekDaysAcrossYears = (
   today: Date,
   months: Pick<TimeBucketsResponseDto, 'timeBucket' | 'count'>[],
+  { week = thisWeek(today), later = false }: { week?: Date[]; later?: boolean } = {},
 ): { key: string; yearsAgo: number }[] => {
-  const week = thisWeek(today);
   const withPhotos = new Set(months.filter(({ count }) => count > 0).map(({ timeBucket }) => timeBucket.slice(0, 7)));
-  const oldest = Math.min(...[...withPhotos].map((month) => Number(month.slice(0, 4))));
+  const years = [...withPhotos].map((month) => Number(month.slice(0, 4)));
+  const oldest = Math.min(...years);
+  const newest = later ? Math.max(...years) : today.getFullYear() - 1;
   const days: { key: string; yearsAgo: number }[] = [];
-  for (let yearsAgo = 1; today.getFullYear() - yearsAgo >= oldest; yearsAgo++) {
+  for (let year = newest; year >= oldest; year--) {
+    const yearsAgo = today.getFullYear() - year;
+    if (yearsAgo === 0) {
+      continue;
+    }
     const back = weekYearsAgo(week, yearsAgo);
     if (back.every((day) => !withPhotos.has(dayKey(day).slice(0, 7)))) {
       continue;
@@ -51,16 +65,17 @@ export const weekDaysAcrossYears = (
 /**
  * The years of this week, newest first, from the covers Gallery found for those days: each year's photo is the one of
  * its day nearest today's (today's own when it has photos, a later day before an earlier one at the same distance).
+ * `anchor` is where today stands in the seven days (its weekday in this week; the middle, 3, in `weekAround`).
  */
 export const weekYears = (
   today: Date,
   days: { key: string; yearsAgo: number }[],
   covers: Pick<TimeBucketCoverResponseDto, 'timeBucket' | 'representativeAssetId' | 'representativeThumbhash'>[],
+  anchor = (today.getDay() + 6) % 7,
 ): WeekYear[] => {
   const byDay = new Map(
     covers.filter((cover) => cover.representativeAssetId).map((cover) => [cover.timeBucket, cover]),
   );
-  const todayIndex = (today.getDay() + 6) % 7;
   const years = new Map<number, { key: string; index: number }[]>();
   for (const [index, { key, yearsAgo }] of days.entries()) {
     if (!byDay.has(key)) {
@@ -74,7 +89,7 @@ export const weekYears = (
     .sort(([a], [b]) => a - b)
     .map(([yearsAgo, found]) => {
       const nearest = [...found].sort(
-        (a, b) => Math.abs(a.index - todayIndex) - Math.abs(b.index - todayIndex) || b.index - a.index,
+        (a, b) => Math.abs(a.index - anchor) - Math.abs(b.index - anchor) || b.index - a.index,
       )[0];
       const cover = byDay.get(nearest.key)!;
       const keys = found.map(({ key }) => key).sort();
