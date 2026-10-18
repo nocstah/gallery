@@ -38,6 +38,7 @@
   import TimelineMonthHeading from '$lib/components/timeline/TimelineMonthHeading.svelte';
   import { monthInView } from '$lib/managers/timeline-heading.svelte';
   import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
+  import SelectionGroup from '$lib/components/timeline/SelectionGroup.svelte';
   import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
   import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
   import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
@@ -1024,54 +1025,67 @@
     {@const StackActions = getStackBulkActions($t)}
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
 
-    <ActionButton action={Actions.CreateSharedLink} />
-    {#if showSearchResults}
-      <SelectAllAssets
-        assetInteraction={assetMultiSelectManager}
-        onSelectAll={() => selectAllSearchResults(searchResults, assetMultiSelectManager)}
-      />
-    {:else}
-      <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
-    {/if}
-    <!-- Local Omarchy layer: the primary selection action, ink-filled -->
-    <span class="ws-primary-action contents"><ActionButton action={Actions.AddToAlbum} /></span>
-
-    <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
+    <!-- Local Omarchy layer: the actions in groups split by hairlines (SelectionGroup): the selection itself, then
+         what keeps or shares it (Add to album by its name, the ink primary, where it was a bare +), the special albums,
+         and the rest under the ⋮ -->
+    <SelectionGroup>
+      {#if showSearchResults}
+        <SelectAllAssets
+          assetInteraction={assetMultiSelectManager}
+          onSelectAll={() => selectAllSearchResults(searchResults, assetMultiSelectManager)}
+        />
+      {:else}
+        <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
+      {/if}
+    </SelectionGroup>
+    <SelectionGroup>
+      <span class="ws-primary-action ws-select-labelled contents"
+        ><ActionButton action={Actions.AddToAlbum} type="button" /></span
+      >
+      <ActionButton action={Actions.CreateSharedLink} />
+      <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
+    </SelectionGroup>
 
     {#if assetMultiSelectManager.isAllUserOwned}
       <!-- Local Omarchy layer: into a special album (To do B, Villa V), out of Photos until taken out again -->
-      {#each offeredSpecialAlbums() as special (special.key)}
-        <SpecialAlbumAction {special} onArchive={handleArchive} />
-      {/each}
-      <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
-        <DownloadAction menuItem />
-        {#if !showSearchResults}
-          <ActionMenuItem action={StackActions.Stack} />
-          <ActionMenuItem action={StackActions.Unstack} />
-        {/if}
-        {#if !showSearchResults && isLinkActionAvailable}
-          <LinkLivePhotoAction
-            menuItem
-            unlink={assetMultiSelectManager.assets.length === 1}
-            onLink={handleLink}
-            onUnlink={handleUnlink}
-          />
-        {/if}
-        <RotateAction />
-        <ChangeDate menuItem />
-        <ChangeDescription menuItem />
-        <ChangeLocation menuItem />
-        <ArchiveAction menuItem onArchive={handleArchive} />
-        <ActionMenuItem action={Actions.Tag} />
-        <DeleteAssets menuItem onAssetDelete={handleAssetDelete} onUndoDelete={handleUndoDelete} />
-        <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
-        <hr />
-        <ActionMenuItem action={Actions.RegenerateThumbnailJob} />
-        <ActionMenuItem action={Actions.RefreshMetadataJob} />
-        <ActionMenuItem action={Actions.TranscodeVideoJob} />
-      </ButtonContextMenu>
+      <SelectionGroup>
+        {#each offeredSpecialAlbums() as special (special.key)}
+          <SpecialAlbumAction {special} onArchive={handleArchive} />
+        {/each}
+      </SelectionGroup>
+      <SelectionGroup>
+        <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
+          <DownloadAction menuItem />
+          {#if !showSearchResults}
+            <ActionMenuItem action={StackActions.Stack} />
+            <ActionMenuItem action={StackActions.Unstack} />
+          {/if}
+          {#if !showSearchResults && isLinkActionAvailable}
+            <LinkLivePhotoAction
+              menuItem
+              unlink={assetMultiSelectManager.assets.length === 1}
+              onLink={handleLink}
+              onUnlink={handleUnlink}
+            />
+          {/if}
+          <RotateAction />
+          <ChangeDate menuItem />
+          <ChangeDescription menuItem />
+          <ChangeLocation menuItem />
+          <ArchiveAction menuItem onArchive={handleArchive} />
+          <ActionMenuItem action={Actions.Tag} />
+          <DeleteAssets menuItem onAssetDelete={handleAssetDelete} onUndoDelete={handleUndoDelete} />
+          <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+          <hr />
+          <ActionMenuItem action={Actions.RegenerateThumbnailJob} />
+          <ActionMenuItem action={Actions.RefreshMetadataJob} />
+          <ActionMenuItem action={Actions.TranscodeVideoJob} />
+        </ButtonContextMenu>
+      </SelectionGroup>
     {:else}
-      <DownloadAction />
+      <SelectionGroup>
+        <DownloadAction />
+      </SelectionGroup>
     {/if}
   </AssetSelectControlBar>
 {/if}

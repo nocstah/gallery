@@ -38,6 +38,7 @@
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
+  import SelectionGroup from '$lib/components/timeline/SelectionGroup.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import { AlbumPageViewMode } from '$lib/constants';
@@ -1363,52 +1364,65 @@
   <AssetSelectControlBar>
     {@const Actions = getAssetBulkActions($t, { album })}
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
-    <ActionButton action={Actions.CreateSharedLink} />
-    <SelectAllAssets
-      timelineManager={showSearchResults ? undefined : timelineManager}
-      assetInteraction={assetMultiSelectManager}
-      onSelectAll={showSearchResults ? () => selectAllSearchResults(searchResults, assetMultiSelectManager) : undefined}
-    />
-    <ActionButton action={Actions.AddToAlbum} />
-    <!-- #763: no isAllUserOwned gate — a favorite is a per-user overlay row, so any asset the
-             viewer can read is favoritable, including another member's in a shared space. -->
-    <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleBulkFavorite}
-    ></FavoriteAction>
+    <!-- Local Omarchy layer: the actions in groups split by hairlines (SelectionGroup), as on Photos: the selection
+         itself, what keeps or shares it (Add to album by its name, where it was a bare +), a special album's way out,
+         and the rest under the ⋮ -->
+    <SelectionGroup>
+      <SelectAllAssets
+        timelineManager={showSearchResults ? undefined : timelineManager}
+        assetInteraction={assetMultiSelectManager}
+        onSelectAll={showSearchResults
+          ? () => selectAllSearchResults(searchResults, assetMultiSelectManager)
+          : undefined}
+      />
+    </SelectionGroup>
+    <SelectionGroup>
+      <span class="ws-select-labelled contents"><ActionButton action={Actions.AddToAlbum} type="button" /></span>
+      <ActionButton action={Actions.CreateSharedLink} />
+      <!-- #763: no isAllUserOwned gate — a favorite is a per-user overlay row, so any asset the
+               viewer can read is favoritable, including another member's in a shared space. -->
+      <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleBulkFavorite}
+      ></FavoriteAction>
+    </SelectionGroup>
     <!-- Local Omarchy layer: in a special album its way out (Mark done, Remove from Villa) puts the photos back
              where they came from; its key does the same -->
     {#if special && assetMultiSelectManager.isAllUserOwned}
-      <span class="ws-primary-action contents"><SpecialAlbumAction {special} done /></span>
+      <SelectionGroup>
+        <span class="ws-primary-action contents"><SpecialAlbumAction {special} done /></span>
+      </SelectionGroup>
     {/if}
-    <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')} offset={{ x: 175, y: 25 }}>
-      <DownloadAction menuItem filename={album.albumName} />
-      {#if assetMultiSelectManager.isAllUserOwned}
-        <RotateAction />
-        <ChangeDate menuItem />
-        <ChangeDescription menuItem />
-        <ChangeLocation menuItem />
-        <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
-        {#each offeredSpecialAlbums() as other (other.key)}
-          {#if other !== special}
-            <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
-          {/if}
-        {/each}
-        <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
-      {/if}
-      {#if isEditor && assetMultiSelectManager.assets.length === 1}
-        <MenuOption
-          text={$t('set_as_album_cover')}
-          icon={mdiImageOutline}
-          onClick={() => updateThumbnailUsingCurrentSelection()}
-        />
-      {/if}
+    <SelectionGroup>
+      <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')} offset={{ x: 175, y: 25 }}>
+        <DownloadAction menuItem filename={album.albumName} />
+        {#if assetMultiSelectManager.isAllUserOwned}
+          <RotateAction />
+          <ChangeDate menuItem />
+          <ChangeDescription menuItem />
+          <ChangeLocation menuItem />
+          <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
+          {#each offeredSpecialAlbums() as other (other.key)}
+            {#if other !== special}
+              <SpecialAlbumAction special={other} menuItem onArchive={handleBulkArchive} />
+            {/if}
+          {/each}
+          <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+        {/if}
+        {#if isEditor && assetMultiSelectManager.assets.length === 1}
+          <MenuOption
+            text={$t('set_as_album_cover')}
+            icon={mdiImageOutline}
+            onClick={() => updateThumbnailUsingCurrentSelection()}
+          />
+        {/if}
 
-      <ActionMenuItem action={Actions.Tag} />
+        <ActionMenuItem action={Actions.Tag} />
 
-      <ActionMenuItem action={Actions.RemoveFromAlbum} />
-      {#if assetMultiSelectManager.isAllUserOwned}
-        <DeleteAssets menuItem onAssetDelete={handleRemoveAssets} onUndoDelete={handleUndoRemoveAssets} />
-      {/if}
-    </ButtonContextMenu>
+        <ActionMenuItem action={Actions.RemoveFromAlbum} />
+        {#if assetMultiSelectManager.isAllUserOwned}
+          <DeleteAssets menuItem onAssetDelete={handleRemoveAssets} onUndoDelete={handleUndoRemoveAssets} />
+        {/if}
+      </ButtonContextMenu>
+    </SelectionGroup>
   </AssetSelectControlBar>
 {:else if viewMode === AlbumPageViewMode.SELECT_ASSETS}
   <ControlAppBar onClose={handleCloseSelectAssets} class="ws-select-bar">

@@ -400,39 +400,48 @@
       data-testid="asset-viewer-navbar-actions"
     >
       {@render status()}
-      <ActionButton action={Actions.Share} />
       <ActionButton action={Actions.Offline} />
-      <ActionButton action={Actions.PlayMotionPhoto} />
-      <ActionButton action={Actions.StopMotionPhoto} />
-      <ActionButton action={Actions.SharedLinkDownload} />
-      <ActionButton action={Actions.Info} />
-      <ActionButton action={Actions.Favorite} />
-      <ActionButton action={Actions.Unfavorite} />
+      <!-- Local Omarchy layer: the row's actions in groups split by hairlines (omarchy-world.css, .ws-viewer-group):
+           the photo itself (a Live Photo's motion, Info, the heart), sharing it, the editor and Curator's tools, then
+           Delete and the ⋮. Twelve icons had stood in one even row, Curator's four among the others -->
+      <div class="ws-viewer-group">
+        <ActionButton action={Actions.PlayMotionPhoto} />
+        <ActionButton action={Actions.StopMotionPhoto} />
+        <ActionButton action={Actions.Info} />
+        <ActionButton action={Actions.Favorite} />
+        <ActionButton action={Actions.Unfavorite} />
+      </div>
+      <div class="ws-viewer-group">
+        <ActionButton action={Actions.Share} />
+        <ActionButton action={Actions.SharedLinkDownload} />
+      </div>
+      <div class="ws-viewer-group">
+        <ActionButton action={Actions.Edit} />
+        <ActionButton action={Adjust} />
+        <ActionButton action={RemoveObjects} />
+        <ActionButton action={LiveEffects} />
+        <ActionButton action={LookUp} />
+        <ActionButton action={CopySubject} />
+        <!-- Local Omarchy layer: Save frame as photo, for a video on screen (Curator) -->
+        <SaveFrameAction {asset} {album} />
+      </div>
+      <div class="ws-viewer-group">
+        {#if isOwner}
+          <DeleteAction {asset} {onAction} {preAction} {onUndoDelete} />
+        {/if}
 
-      <ActionButton action={Actions.Edit} />
-      <ActionButton action={Adjust} />
-      <ActionButton action={RemoveObjects} />
-      <ActionButton action={LiveEffects} />
-      <ActionButton action={LookUp} />
-      <ActionButton action={CopySubject} />
-      <!-- Local Omarchy layer: Save frame as photo, for a video on screen (Curator) -->
-      <SaveFrameAction {asset} {album} />
-
-      {#if isOwner}
-        <DeleteAction {asset} {onAction} {preAction} {onUndoDelete} />
-      {/if}
-
-      {#if !sharedLink}
-        <ButtonContextMenu
-          direction="left"
-          align="top-right"
-          color="secondary"
-          title={$t('more')}
-          icon={mdiDotsVertical}
-        >
-          {@render moreItems()}
-        </ButtonContextMenu>
-      {/if}
+        {#if !sharedLink}
+          <ButtonContextMenu
+            direction="left"
+            align="top-right"
+            color="secondary"
+            title={$t('more')}
+            icon={mdiDotsVertical}
+          >
+            {@render moreItems()}
+          </ButtonContextMenu>
+        {/if}
+      </div>
     </div>
   </div>
 {/if}

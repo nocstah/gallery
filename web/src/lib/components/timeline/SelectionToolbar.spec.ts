@@ -169,7 +169,7 @@ describe('SelectionToolbar', () => {
     expect(screen.getByRole('menuitem', { name: 'download' })).toBeInTheDocument();
 
     expect(screen.queryByLabelText('share')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('add_to_album_or_space')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'add_to_album_or_space' })).not.toBeInTheDocument();
     // Shown even for a viewer on someone else's asset: a favorite is the viewer's own
     // `asset_favorite` overlay row (#763), so it is not owner-gated.
     expect(screen.getByLabelText('to_favorite')).toBeInTheDocument();
@@ -197,7 +197,7 @@ describe('SelectionToolbar', () => {
     expect(screen.getByLabelText('select_all')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'download' })).toBeInTheDocument();
     expect(screen.getByLabelText('share')).toBeInTheDocument();
-    expect(screen.getByLabelText('add_to_album_or_space')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'add_to_album_or_space' })).toBeInTheDocument();
     expect(screen.getByLabelText('to_favorite')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'delete' })).toBeInTheDocument();
     expect(screen.getByLabelText('remove_from_space')).toBeInTheDocument();
@@ -258,7 +258,7 @@ describe('SelectionToolbar', () => {
     });
 
     expect(screen.getByLabelText('share')).toBeInTheDocument();
-    expect(screen.getByLabelText('add_to_album_or_space')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'add_to_album_or_space' })).toBeInTheDocument();
     // Shown regardless of ownership: a favorite is the viewer's own `asset_favorite` row (#763).
     expect(screen.getByLabelText('to_favorite')).toBeInTheDocument();
     // Still hidden: this mutates every selected asset and the server refuses the non-owned ones.
@@ -276,7 +276,7 @@ describe('SelectionToolbar', () => {
       onRemove: vi.fn(),
     });
 
-    expect(screen.getByLabelText('add_to_album_or_space')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'add_to_album_or_space' })).toBeInTheDocument();
     expect(screen.getByLabelText('share')).toBeInTheDocument();
   });
 
@@ -291,7 +291,7 @@ describe('SelectionToolbar', () => {
     });
 
     expect(screen.getByLabelText('share')).toBeInTheDocument();
-    expect(screen.queryByLabelText('add_to_album_or_space')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'add_to_album_or_space' })).not.toBeInTheDocument();
   });
 
   it('Given a REGULAR album editor with a mixed selection, When the toolbar renders, Then Add-to-album stays hidden — contribution needs a space link', () => {
@@ -305,7 +305,7 @@ describe('SelectionToolbar', () => {
       onRemove: vi.fn(),
     });
 
-    expect(screen.queryByLabelText('add_to_album_or_space')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'add_to_album_or_space' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('share')).toBeInTheDocument();
   });
 

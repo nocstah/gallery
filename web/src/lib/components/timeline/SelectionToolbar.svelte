@@ -16,6 +16,7 @@
   import SelectAllAssets from '$lib/components/timeline/actions/SelectAllAction.svelte';
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
+  import SelectionGroup from '$lib/components/timeline/SelectionGroup.svelte';
   import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import type {
@@ -261,60 +262,73 @@
       fromSpaceId: space?.id,
     })}
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
-    {#if caps.canShare}
-      <CreateSharedLink spaceId={shareSpaceId} fromSpaceId={space?.id} />
-    {/if}
-    {#if caps.canSelectAll}
-      <SelectAllAssets {timelineManager} {assetInteraction} {onSelectAll} />
-    {/if}
-    {#if caps.canAddToAlbum}
-      <!-- Local Omarchy layer: the primary selection action, ink-filled -->
-      <span class="ws-primary-action contents"><ActionButton action={Actions.AddToAlbum} /></span>
-    {/if}
-    {#if caps.canFavorite}
-      <FavoriteAction removeFavorite={assetInteraction.isAllFavorite} {onFavorite} />
-    {/if}
+    <!-- Local Omarchy layer: the actions in groups split by hairlines (SelectionGroup), as on Photos: the selection
+         itself, what keeps or shares it (Add to album by its name, the ink primary, where it was a bare +), taking the
+         photos out of the Space, and the rest under the ⋮ -->
+    <SelectionGroup>
+      {#if caps.canSelectAll}
+        <SelectAllAssets {timelineManager} {assetInteraction} {onSelectAll} />
+      {/if}
+    </SelectionGroup>
+    <SelectionGroup>
+      {#if caps.canAddToAlbum}
+        <!-- Local Omarchy layer: the primary selection action, ink-filled -->
+        <span class="ws-primary-action ws-select-labelled contents"
+          ><ActionButton action={Actions.AddToAlbum} type="button" /></span
+        >
+      {/if}
+      {#if caps.canShare}
+        <CreateSharedLink spaceId={shareSpaceId} fromSpaceId={space?.id} />
+      {/if}
+      {#if caps.canFavorite}
+        <FavoriteAction removeFavorite={assetInteraction.isAllFavorite} {onFavorite} />
+      {/if}
+    </SelectionGroup>
     {#if caps.canRemoveFromSpace && space}
       <!-- Top-level (not a menu item): RemoveFromSpaceAction has no `menuItem` variant, and the
            direct-space pages render it top-level today. RemoveFromAlbum stays in the menu below,
            mirroring the album page. A surface only ever has one of the two removes. -->
-      <RemoveFromSpaceAction spaceId={space.id} {onRemove} />
+      <SelectionGroup>
+        <RemoveFromSpaceAction spaceId={space.id} {onRemove} />
+      </SelectionGroup>
     {/if}
-    <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')} offset={{ x: 175, y: 25 }}>
-      {#if caps.canDownload}
-        <DownloadAction menuItem filename={downloadFilename} />
-      {/if}
-      {#if caps.canEditMetadata}
-        <!-- #734: editableSelectedAssetIds is never undefined here — canEditMetadata (hasEditable)
+    <SelectionGroup>
+      <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')} offset={{ x: 175, y: 25 }}>
+        {#if caps.canDownload}
+          <DownloadAction menuItem filename={downloadFilename} />
+        {/if}
+        {#if caps.canEditMetadata}
+          <!-- #734: editableSelectedAssetIds is never undefined here — canEditMetadata (hasEditable)
              requires either an all-owned (synchronously resolved) selection or a resolved,
              non-empty editable subset. The `?? []` is defensive only. -->
-        <RotateAction editableSelectedAssetIds={editableSelectedAssetIds ?? []} />
-        <ChangeDate menuItem editableSelectedAssetIds={editableSelectedAssetIds ?? []} />
-        <ChangeDescription menuItem editableSelectedAssetIds={editableSelectedAssetIds ?? []} />
-        <ChangeLocation menuItem editableSelectedAssetIds={editableSelectedAssetIds ?? []} />
-      {/if}
-      {#if caps.canSetVisibility}
-        <ArchiveAction menuItem unarchive={assetInteraction.isAllArchived} {onArchive} />
-        {#if onVisibilitySet}
-          <SetVisibilityAction menuItem {onVisibilitySet} />
+          <RotateAction editableSelectedAssetIds={editableSelectedAssetIds ?? []} />
+          <ChangeDate menuItem editableSelectedAssetIds={editableSelectedAssetIds ?? []} />
+          <ChangeDescription menuItem editableSelectedAssetIds={editableSelectedAssetIds ?? []} />
+          <ChangeLocation menuItem editableSelectedAssetIds={editableSelectedAssetIds ?? []} />
         {/if}
-      {/if}
-      {#if caps.canSetCover && onSetCover}
-        {#if album}
-          <MenuOption text={$t('set_as_album_cover')} icon={mdiImageOutline} onClick={() => onSetCover?.()} />
-        {:else}
-          <MenuOption text={$t('set_as_space_cover')} icon={mdiImageOutline} onClick={() => onSetCover?.()} />
+        {#if caps.canSetVisibility}
+          <ArchiveAction menuItem unarchive={assetInteraction.isAllArchived} {onArchive} />
+          {#if onVisibilitySet}
+            <SetVisibilityAction menuItem {onVisibilitySet} />
+          {/if}
         {/if}
-      {/if}
-      {#if caps.canTag}
-        <ActionMenuItem action={Actions.Tag} />
-      {/if}
-      {#if caps.canRemoveFromAlbum && album}
-        <RemoveFromAlbum menuItem bind:album={localAlbum} {onRemove} />
-      {/if}
-      {#if caps.canDelete && onAssetDelete}
-        <DeleteAssets menuItem {onAssetDelete} {onUndoDelete} />
-      {/if}
-    </ButtonContextMenu>
+        {#if caps.canSetCover && onSetCover}
+          {#if album}
+            <MenuOption text={$t('set_as_album_cover')} icon={mdiImageOutline} onClick={() => onSetCover?.()} />
+          {:else}
+            <MenuOption text={$t('set_as_space_cover')} icon={mdiImageOutline} onClick={() => onSetCover?.()} />
+          {/if}
+        {/if}
+        {#if caps.canTag}
+          <ActionMenuItem action={Actions.Tag} />
+        {/if}
+        {#if caps.canRemoveFromAlbum && album}
+          <RemoveFromAlbum menuItem bind:album={localAlbum} {onRemove} />
+        {/if}
+        {#if caps.canDelete && onAssetDelete}
+          <DeleteAssets menuItem {onAssetDelete} {onUndoDelete} />
+        {/if}
+      </ButtonContextMenu>
+    </SelectionGroup>
   </AssetSelectControlBar>
 {/if}
