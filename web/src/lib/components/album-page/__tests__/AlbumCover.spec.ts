@@ -5,6 +5,9 @@ import { getAssetMediaUrl } from '$lib/utils';
 import { albumFactory } from '@test-data/factories/album-factory';
 
 vi.mock('$lib/utils');
+vi.mock('$lib/managers/slip-covers.svelte', () => ({
+  slipCovers: { isSlip: (assetId: string | null | undefined) => assetId === 'a-bank-slip' },
+}));
 
 describe('AlbumCover component', () => {
   it('renders an image when the album has a thumbnail', () => {
@@ -40,6 +43,18 @@ describe('AlbumCover component', () => {
     } finally {
       qrManager.albumId = undefined;
     }
+  });
+
+  // Local Omarchy layer: a bank app's album holds nothing but slips, and had one for its cover (managers/slip-covers)
+  it("covers an album whose cover is one of QR's slips with QR's icon", () => {
+    const album = albumFactory.build({ albumName: 'Bank C', albumThumbnailAssetId: 'a-bank-slip' });
+
+    const cover = render(AlbumCover, { album }).getByTestId('album-image');
+
+    expect(cover.className).toContain('ws-album-icon-cover');
+    expect(cover.getAttribute('aria-label')).toBe('Bank C');
+    expect(cover.querySelector(':scope svg path')).toHaveAttribute('d', qrManager.icon);
+    expect(cover.querySelector('img')).toBeNull();
   });
 
   it('renders an image when the album has no thumbnail', () => {
