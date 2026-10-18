@@ -1866,10 +1866,31 @@
   .film[data-dress='room'] .film-position {
     min-width: 5em;
   }
+  /* across the room the way to the sound is the film's strong glass with white type, as the end's offers are: the one
+     thing at the bottom-right while the controls rest, never a white slab brighter than the photo beside it */
   .film[data-dress='room'] .film-sound-on {
+    position: relative;
+    z-index: 0;
     min-height: var(--room-control);
     padding-inline: 0.9em 1.1em;
+    border: 1px solid var(--ws-glass-edge);
+    background: transparent;
+    color: #fff;
     font-size: clamp(0.875rem, 2.6vmin, 3.25rem);
+    box-shadow: none;
+  }
+  .film[data-dress='room'] .film-sound-on::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--ws-glass-strong);
+    -webkit-backdrop-filter: var(--ws-glass-blur);
+    backdrop-filter: var(--ws-glass-blur);
+  }
+  .film[data-dress='room'] .film-sound-on:hover::before {
+    background: linear-gradient(var(--ws-glass), var(--ws-glass)), var(--ws-glass-strong);
   }
   .film[data-dress='room'] .film-sound-on :global(svg) {
     width: var(--room-icon);

@@ -709,7 +709,8 @@
     color: #fff;
     background: rgb(255 255 255 / 0.12);
   }
-  /* the next step, white on the black room as the film's Turn on sound is */
+  /* the next step, white on the black room: with no photo here, nothing it could outshine (over a film, Turn on sound
+     is the film's strong glass instead) */
   .room-choice.is-primary {
     padding-inline: 0.9em 1.2em;
     border-color: #fff;
