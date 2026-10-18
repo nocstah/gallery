@@ -2,9 +2,9 @@
   // Local Omarchy layer: reviewing one kind of Curator's suggestions, all its batches as one queue (utils/curator-inbox:
   // Curator adds each night's proposals to the batch of their kind still waiting, and the batches it made one per
   // night before that open together). Reject the few that are wrong, then accept the rest in one go; every accepted
-  // change stays undoable here and in History. Keys (one quiet line under the bar says them): J/K or the arrows
-  // move, A accepts, R rejects, D sends a one-photo card's photo to the Trash, U takes back the last word on a card
-  // (undoes an applied change, restores a photo from the Trash).
+  // change stays undoable here and in History, and a rejected one waits under Rejected, where Put back returns it.
+  // Keys (one quiet line under the bar says them): J/K or the arrows move, A accepts, R rejects, D sends a one-photo
+  // card's photo to the Trash, U takes back the last word on a card (undoes, puts back, restores from the Trash).
   // Accepting more than 20 at once runs Curator's database backup first, shown as progress. A decided row sinks to
   // the bottom of the list at once, so the next one to decide is always where the last was; Accept and Reject sit
   // under the card's words, beside its photos. A card about one photo also has Delete: the photo goes to Gallery's
@@ -40,8 +40,9 @@
     undone: 'ai_inbox_undone',
     superseded: 'ai_inbox_replaced',
   };
-  // a page of the list, per batch
+  // Curator answers a page of at most 500; a reopen takes as many at once
   const PAGE = 100;
+  const MOST = 500;
 
   let filter = $state<Filter>('pending');
   /** each batch's last page: its words, how many it holds under the filter */
@@ -52,20 +53,23 @@
   let busy = $state(false);
   let working = $state<{ note: string; done: number; total: number }>();
   let message = $state<string>();
+  /** what Reject all just rejected, for its Undo */
+  let rejectedAll = $state<number[]>();
   let rows: HTMLElement[] = $state([]);
   let reviewing = $state(false);
   /** rows whose accept or reject is on its way to Curator */
   const deciding = new SvelteSet<number>();
   /** cards whose photo was sent to the Trash from here */
   const trashed = new SvelteSet<number>();
+  /** cards decided since the list was loaded, shown or not (Reject all takes the ones not loaded yet too) */
+  const decided = new SvelteSet<number>();
 
   const deletable = (item: Suggestion) => item.kind.startsWith('asset.') && new Set(item.asset_ids).size === 1;
 
   const words = $derived(pages.length > 0 ? newestBatch(pages.map((page) => page.group)) : undefined);
   const runs = $derived([...new Set(pages.flatMap((page) => runsOf(page.group)))].sort());
   const total = $derived(pages.reduce((sum, page) => sum + page.total, 0));
-  const waiting = $derived(filter === 'pending' ? items.filter((item) => item.status === 'pending').length : 0);
-  const remaining = $derived(filter === 'pending' ? total - (items.length - waiting) : 0);
+  const remaining = $derived(filter === 'pending' ? Math.max(0, total - decided.size) : 0);
   const more = $derived(pages.some((page) => (loaded[page.group.key] ?? 0) < page.total));
   const anyDeletable = $derived(items.some((item) => item.status === 'pending' && deletable(item)));
 
@@ -84,6 +88,9 @@
         wanted.map((key) => curator.group(key, filter, PAGE, append ? (loaded[key] ?? 0) : 0)),
       );
       const counts = append ? { ...loaded } : {};
+      if (!append) {
+        decided.clear();
+      }
       for (const page of next) {
         counts[page.group.key] = (counts[page.group.key] ?? 0) + page.items.length;
       }
@@ -105,16 +112,22 @@
     }
   };
 
+  const mark = (ids: number[]) => {
+    for (const id of ids) {
+      decided.add(id);
+    }
+  };
+
   // the decided rows go to the bottom, keeping their order
   const sink = (ids: number[]) => {
     const set = new Set(ids);
     items = [...items.filter((item) => !set.has(item.id)), ...items.filter((item) => set.has(item.id))];
   };
 
-  const decide = async (ids: number[], decision: 'accept' | 'reject') => {
+  const decide = async (ids: number[], decision: 'accept' | 'reject'): Promise<boolean> => {
     ids = ids.filter((id) => !deciding.has(id));
     if (ids.length === 0) {
-      return;
+      return false;
     }
     // one row at a time stays quick: the rest of the list stays usable while it is applied
     const single = ids.length === 1;
@@ -125,6 +138,7 @@
       busy = true;
     }
     message = undefined;
+    rejectedAll = undefined;
     try {
       const result = await curator.decide(ids, decision);
       if (result.job) {
@@ -142,16 +156,20 @@
       } else if (decision === 'reject') {
         setStatus(ids, 'rejected');
         sink(ids);
+        mark(ids);
       } else {
         setStatus(result.applied ?? [], 'applied');
         setStatus(result.failed ?? [], 'failed');
+        mark([...(result.applied ?? []), ...(result.failed ?? [])]);
         if (result.failed?.length) {
           message = $t('ai_inbox_some_failed', { values: { count: result.failed.length } });
         }
         sink(ids);
       }
+      return true;
     } catch (error) {
       message = error instanceof Error ? error.message : String(error);
+      return false;
     } finally {
       for (const id of ids) {
         deciding.delete(id);
@@ -175,6 +193,7 @@
       await curator.decide([item.id], 'reject');
       item.status = 'rejected';
       trashed.add(item.id);
+      decided.add(item.id);
     } catch (error) {
       message = error instanceof Error ? error.message : String(error);
     } finally {
@@ -191,6 +210,36 @@
       await curator.reopen([item.id]);
       item.status = 'pending';
       trashed.delete(item.id);
+      decided.delete(item.id);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    } finally {
+      busy = false;
+      onChange();
+    }
+  };
+
+  /** rejected (or failed) back to waiting, `MOST` at a time; the ones Curator left as they were */
+  const reopen = async (ids: number[]) => {
+    const back: number[] = [];
+    for (let start = 0; start < ids.length; start += MOST) {
+      const { reopened } = await curator.reopen(ids.slice(start, start + MOST));
+      back.push(...reopened);
+    }
+    return ids.filter((id) => !back.includes(id));
+  };
+
+  const putBack = async (item: Suggestion) => {
+    busy = true;
+    message = undefined;
+    try {
+      const left = await reopen([item.id]);
+      if (left.length > 0) {
+        message = $t('ai_inbox_put_back_failed', { values: { count: 1 } });
+      } else {
+        item.status = 'pending';
+        decided.delete(item.id);
+      }
     } catch (error) {
       message = error instanceof Error ? error.message : String(error);
     } finally {
@@ -201,10 +250,32 @@
 
   const decideAll = async (decision: 'accept' | 'reject') => {
     const queue = await waitingIn(keys);
-    await decide(
-      queue.map((item) => item.id),
-      decision,
-    );
+    const ids = queue.map((item) => item.id);
+    if ((await decide(ids, decision)) && decision === 'reject' && !message) {
+      rejectedAll = ids;
+    }
+  };
+
+  const undoRejectAll = async () => {
+    const ids = rejectedAll;
+    if (!ids) {
+      return;
+    }
+    busy = true;
+    message = undefined;
+    try {
+      const left = await reopen(ids);
+      rejectedAll = undefined;
+      if (left.length > 0) {
+        message = $t('ai_inbox_put_back_failed', { values: { count: left.length } });
+      }
+      await load();
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    } finally {
+      busy = false;
+      onChange();
+    }
   };
 
   const undo = async (item: Suggestion) => {
@@ -230,6 +301,8 @@
       void untrash(item);
     } else if (item.status === 'applied') {
       void undo(item);
+    } else if (item.status === 'rejected') {
+      void putBack(item);
     } else {
       return false;
     }
@@ -238,6 +311,7 @@
 
   const setFilter = async (next: Filter) => {
     filter = next;
+    rejectedAll = undefined;
     await load();
   };
 
@@ -325,9 +399,17 @@
       <button type="button" class="ws-btn" disabled={busy} onclick={() => decideAll('accept')}>
         {$t('ai_inbox_accept_all', { values: { count: remaining } })}
       </button>
-      <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => decideAll('reject')}>
-        {$t('ai_inbox_reject_all')}
+      <button
+        type="button"
+        class="ws-btn-quiet"
+        disabled={busy}
+        title={$t('ai_inbox_reject_all_hint')}
+        aria-describedby="group-reject-all-hint"
+        onclick={() => decideAll('reject')}
+      >
+        {$t('ai_inbox_reject_all', { values: { count: remaining } })}
       </button>
+      <span id="group-reject-all-hint" hidden>{$t('ai_inbox_reject_all_hint')}</span>
     {/if}
   </div>
   {#if items.length > 0}
@@ -338,6 +420,13 @@
       <span class="ws-inbox-meta">{working.note}</span>
       <div class="ws-meter"><span style:width="{(working.done / Math.max(1, working.total)) * 100}%"></span></div>
     </div>
+  {/if}
+  {#if rejectedAll}
+    <p class="group-message" role="status">
+      {$t('ai_inbox_rejected_all', { values: { count: rejectedAll.length } })}
+      <button type="button" class="ws-btn-quiet group-undo" disabled={busy} onclick={undoRejectAll}>{$t('undo')}</button
+      >
+    </p>
   {/if}
   {#if message}
     <p class="group-message" role="status">{message}</p>
@@ -416,6 +505,10 @@
                 <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => undo(item)}>
                   {$t('undo')}
                 </button>
+              {:else if item.status === 'rejected'}
+                <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => putBack(item)}>
+                  {$t('ai_inbox_put_back')}
+                </button>
               {/if}
             {/if}
           </div>
@@ -487,8 +580,16 @@
     max-width: 36rem;
   }
   .group-message {
-    font-size: 0.9rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    max-width: 62ch;
+    font-size: var(--ws-text-ui);
     font-weight: 500;
+  }
+  .group-undo {
+    margin-inline-start: -0.6rem;
   }
   .group-empty {
     padding: 2rem 0;
@@ -497,10 +598,12 @@
     grid-template-columns: auto minmax(0, 1fr);
     align-items: start;
   }
+  /* a card set aside steps back, its photos and words; what takes it back (Put back) stays legible */
   .item-row[data-deciding],
-  .item-row[data-status='rejected'],
-  .item-row[data-status='undone'],
-  .item-row[data-status='superseded'] {
+  .item-row:is([data-status='rejected'], [data-status='undone'], [data-status='superseded']) > :not(.item-text),
+  .item-row:is([data-status='rejected'], [data-status='undone'], [data-status='superseded'])
+    .item-text
+    > :not(.item-actions) {
     opacity: 0.55;
   }
   .item-text {

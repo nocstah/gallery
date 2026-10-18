@@ -527,7 +527,8 @@ export const curator = {
   decide: (ids: number[], decision: 'accept' | 'reject') =>
     post<DecideResult>('/suggestions/decide', { ids, decision }),
   undo: (ids: number[]) => post<UndoResult>('/suggestions/undo', { ids }),
-  /** a rejection or a failed apply back to waiting */
+  /** a rejection or a failed apply back to waiting; the ids it leaves out stay as they were (a restored version whose
+   * file is gone, a week after it was rejected) */
   reopen: (ids: number[]) => post<{ reopened: number[] }>('/suggestions/reopen', { ids }),
   libraryHealth: () => call<LibraryHealth>('/library-health'),
   history: (limit = 100) => call<HistoryEntry[]>(`/history?limit=${limit}`),
