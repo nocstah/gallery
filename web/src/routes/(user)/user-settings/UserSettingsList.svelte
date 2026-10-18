@@ -5,7 +5,6 @@
   import DownloadSettings from './DownloadSettings.svelte';
   import FeatureSettings from './FeatureSettings.svelte';
   import NotificationsSettings from './NotificationsSettings.svelte';
-  import UserPurchaseSettings from './UserPurchaseSettings.svelte';
   import UserUsageStatistic from './UserUsageStatistic.svelte';
   import { OpenQueryParam, QueryParameter } from '$lib/constants';
   import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -23,7 +22,6 @@
     mdiDownload,
     mdiFeatureSearchOutline,
     mdiFormTextboxPassword,
-    mdiKeyOutline,
     mdiLockSmart,
     mdiPaletteOutline,
     mdiServerOutline,
@@ -158,16 +156,10 @@
   <ChangePinCodeSettings />
 </SettingAccordion>
 
-<SettingAccordion
-  icon={mdiKeyOutline}
-  key={OpenQueryParam.PURCHASE_SETTINGS}
-  title={$t('user_purchase_settings')}
-  subtitle={$t('user_purchase_settings_description')}
-  autoScrollTo={true}
->
-  <UserPurchaseSettings />
-</SettingAccordion>
-
+<!-- Local Omarchy layer: no Purchase section. This fork's build has nothing to buy or activate (PurchaseContent lost
+     its product key and buy options, and the /link activation lands on a page that ignores the key), so the section
+     only carried upstream's pitch (full-time engineers, a sustainable income) beside the project's Discord and a GitHub
+     star: not a family archive's settings. UserPurchaseSettings stays in the tree for upstream merges. -->
 <SettingAccordion
   icon={mdiAccountGroupOutline}
   key={OpenQueryParam.SHARING}
