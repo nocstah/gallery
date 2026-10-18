@@ -242,11 +242,185 @@ const monthWords = (month: number, locale: string | undefined) => {
   return names;
 };
 
+// ---- a span of days that holds the photo's day names it: "16 to 18 October 2025" over a photo of the 17th ----
+
+/** The words that join two days into a span: a dash, "to", "bis", "au", "al", "tot", "do", "по", "至" and their like,
+ * in Curator's English and the maintained languages ("t" and "m" are Dutch "t/m"). */
+const SPAN_JOINS = new Set([
+  '-',
+  '–',
+  '—',
+  '~',
+  '〜',
+  'to',
+  'through',
+  'thru',
+  'till',
+  'until',
+  'bis',
+  'au',
+  'jusqu',
+  'al',
+  'a',
+  'à',
+  'hasta',
+  'tot',
+  't',
+  'm',
+  'do',
+  'по',
+  'до',
+  '至',
+  '到',
+]);
+/** "and" joins a span only after "between": "between 16 and 18 October" (but "16 and 18 October" are two days) */
+const SPAN_ANDS = new Set(['and', 'und', 'et', 'e', 'y', 'en', 'i', 'и', '和', '与', '與', '及']);
+const SPAN_BETWEENS = new Set(['between', 'zwischen', 'entre', 'tra', 'fra', 'tussen', 'między', 'между']);
+/** Small words a date may hold between its day, its month and its year ("the 18th of October", "18 de octubre") */
+const DATE_FILLERS = new Set([
+  'the',
+  'of',
+  'on',
+  'from',
+  'de',
+  'del',
+  'des',
+  'du',
+  'd',
+  'le',
+  'il',
+  'el',
+  'het',
+  'dem',
+  'den',
+  'vom',
+  'von',
+  'van',
+  'dal',
+  'dalla',
+  'od',
+  'с',
+  'со',
+  '日',
+  '号',
+  '號',
+  '年',
+  '月',
+]);
+/** An ordinal's ending, written onto its number: "16th", "1er", "1º" */
+const ORDINAL_ENDINGS = new Set(['st', 'nd', 'rd', 'th', 'er', 're', 'e', 'ème', 'º', 'ª']);
+
+/** A sentence's words for reading its dates: digits and letters apart, each character of a script written without
+ * spaces a word of its own ("10月16日至18日" is 10, 月, 16, 日, 至, 18, 日), a dash a word of its own (it joins a span),
+ * an ordinal's ending on its number dropped. */
+const DATE_WORD =
+  /\p{N}+|[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]|(?:(?![\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])\p{L})+|[-–—~〜]/gu;
+
+const dateWords = (text: string) => {
+  const words: string[] = [];
+  let end = -1;
+  for (const match of text.toLowerCase().matchAll(DATE_WORD)) {
+    const word = match[0];
+    const attached = match.index === end;
+    end = match.index + word.length;
+    if (attached && ORDINAL_ENDINGS.has(word) && /^\d+$/.test(words.at(-1) ?? '')) {
+      continue;
+    }
+    words.push(word);
+  }
+  return words;
+};
+
+const monthNames = new Map<string, Map<string, number>>();
+
+/** Every month's words to its number, in English and the reader's language (monthWords), once per language. */
+const monthIndex = (locale: string | undefined) => {
+  const known = monthNames.get(locale ?? '');
+  if (known) {
+    return known;
+  }
+  const index = new Map<string, number>();
+  for (let month = 1; month <= 12; month++) {
+    for (const word of monthWords(month, locale)) {
+      if (!index.has(word)) {
+        index.set(word, month);
+      }
+    }
+  }
+  monthNames.set(locale ?? '', index);
+  return index;
+};
+
+/**
+ * Whether the sentence names a span of days that holds the photo's day, with its year anywhere in it: two days joined
+ * by a dash or a word for "to" (or "between … and …"), a month named with one of them or each ("16 to 18 October
+ * 2025", "October 16–18, 2025", "30 September to 2 October 2025", "du 16 au 18 octobre 2025", "16.–18. Oktober 2025",
+ * "с 16 по 18 октября 2025 года", "2025年10月16日至18日"). The span may run over a New Year.
+ */
+const spansDay = (text: string, day: DateTime, locale: string | undefined) => {
+  const words = dateWords(text);
+  if (!words.includes(String(day.year))) {
+    return false;
+  }
+  const months = monthIndex(locale);
+  const monthAt = (at: number) =>
+    months.get(words[at] ?? '') ??
+    (words[at + 1] === '月' && /^\d{1,2}$/.test(words[at] ?? '') ? Number(words[at]) : undefined);
+  // the days: numbers from 1 to 31 that are no month (the 10 of 10月), each with the month named next to it, a small
+  // word between them at most
+  const days: { at: number; day: number; month?: number }[] = [];
+  for (const [at, word] of words.entries()) {
+    const value = Number(word);
+    if (!/^\d{1,2}$/.test(word) || value < 1 || value > 31 || words[at + 1] === '月') {
+      continue;
+    }
+    const month =
+      monthAt(at + 1) ??
+      monthAt(at - 1) ??
+      (DATE_FILLERS.has(words[at + 1] ?? '') ? monthAt(at + 2) : undefined) ??
+      (DATE_FILLERS.has(words[at - 1] ?? '') ? monthAt(at - 2) : undefined);
+    days.push({ at, day: value, month });
+  }
+  const order = (month: number, date: number) => month * 100 + date;
+  const photo = order(day.month, day.day);
+  for (let index = 1; index < days.length; index++) {
+    const [first, last] = [days[index - 1], days[index]];
+    const between = words.slice(first.at + 1, last.at);
+    const joined =
+      between.some((word) => SPAN_JOINS.has(word)) ||
+      (between.some((word) => SPAN_ANDS.has(word)) &&
+        words.slice(Math.max(0, first.at - 2), first.at).some((word) => SPAN_BETWEENS.has(word)));
+    const plain = between.every(
+      (word) =>
+        SPAN_JOINS.has(word) ||
+        SPAN_ANDS.has(word) ||
+        DATE_FILLERS.has(word) ||
+        months.has(word) ||
+        /^\d{4}$/.test(word) ||
+        /^\d{1,2}$/.test(word),
+    );
+    const from = first.month ?? last.month;
+    const to = last.month ?? first.month;
+    if (!joined || !plain || from === undefined || to === undefined) {
+      continue;
+    }
+    const [start, end] = [order(from, first.day), order(to, last.day)];
+    if (start <= end ? start <= photo && photo <= end : photo >= start || photo <= end) {
+      return true;
+    }
+  }
+  return false;
+};
+
 /** Whether the sentence names the photo's day: its day and month side by side ("18 October", "October 18th", "the
- * 18th of October", "18. Okt."), with its year anywhere in it; the date in numbers (2025-10-18); or the date just as
- * the caption writes it. A month or a span of days ("12–19 March 2018") leaves the day to the caption. */
+ * 18th of October", "18. Okt."), with its year anywhere in it; the date in numbers (2025-10-18); the date just as the
+ * caption writes it; or a span of days that holds it ("16 to 18 October 2025"). A month, or a span that leaves the
+ * day out, leaves the day to the caption. */
 const saysDay = (said: Said, day: DateTime, written: string, locale: string | undefined) => {
   if (written && said.text.includes(written)) {
+    return true;
+  }
+  if (spansDay(said.text, day, locale)) {
     return true;
   }
   const { words } = said;

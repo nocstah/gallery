@@ -261,12 +261,47 @@ describe(roomCaption.name, () => {
       expect(caption('Ben swam on 16 October 2025.')).toBe('Anna and Ben · Siem Reap, Cambodia');
     });
 
-    it('keeps the day when the line names only its month, a span, or the day without its year', () => {
+    it('keeps the day when the line names only its month, a span without it, or the day without its year', () => {
       const all = 'Anna and Ben · Siem Reap, Cambodia · October 16, 2025';
       expect(caption('In October 2025 the rains came.')).toBe(all);
-      expect(caption('From 12 to 19 October 2025 the rains came.')).toBe(all);
+      expect(caption('From 1 to 9 October 2025 the rains came.')).toBe(all);
+      expect(caption('From 12 to 19 October the rains came.')).toBe(all);
+      expect(caption('On 15 and 17 October 2025 the rains came.')).toBe(all);
       expect(caption('On 16 October the rains came.')).toBe(all);
       expect(caption('16 people came in 2025, in October.')).toBe(all);
+      expect(caption('Some 12–19 people came in October 2025.')).toBe(all);
+    });
+
+    it("takes a span of days that holds the photo's day for naming it, in Curator's English", () => {
+      const rest = 'Anna and Ben · Siem Reap, Cambodia';
+      expect(caption('The family stayed by the river from 16 to 18 October 2025.')).toBe(rest);
+      expect(caption('From 12 to 19 October 2025 the rains came.')).toBe(rest);
+      expect(caption('The rains came 15–17 October 2025.')).toBe(rest);
+      expect(caption('The rains came October 14–18, 2025.')).toBe(rest);
+      expect(caption('The rains came between 15 and 17 October 2025.')).toBe(rest);
+      expect(caption('The rains came from the 15th to the 17th of October 2025.')).toBe(rest);
+      expect(caption('The trip ran from 30 September to 2 November 2025.')).toBe(rest);
+    });
+
+    it('reads a span over a New Year', () => {
+      const newYear = { ...photo, localDateTime: '2025-01-01T10:00:00.000Z' };
+      expect(roomCaption(newYear, 'en', more, 'They stayed from 30 December 2024 to 2 January 2025.')).toBe(
+        'Anna and Ben · Siem Reap, Cambodia',
+      );
+      expect(roomCaption(newYear, 'en', more, 'They stayed from 2 to 5 January 2025.')).toBe(
+        'Anna and Ben · Siem Reap, Cambodia · January 1, 2025',
+      );
+    });
+
+    it("reads a span in the reader's language", () => {
+      expect(caption('Anna und Ben waren vom 15. bis 17. Oktober 2025 dort.', 'de')).toBe('Siem Reap, Cambodia');
+      expect(caption('Anna und Ben waren 15.–17. Oktober 2025 dort.', 'de')).toBe('Siem Reap, Cambodia');
+      expect(caption('Anna et Ben étaient là du 15 au 17 octobre 2025.', 'fr')).toBe('Siem Reap, Cambodia');
+      expect(caption('Anna y Ben estuvieron del 15 al 17 de octubre de 2025.', 'es')).toBe('Siem Reap, Cambodia');
+      expect(caption('Anna en Ben waren er van 15 t/m 17 oktober 2025.', 'nl')).toBe('Siem Reap, Cambodia');
+      expect(caption('Anna i Ben byli tam od 15 do 17 października 2025.', 'pl')).toBe('Siem Reap, Cambodia');
+      expect(caption('Anna и Ben были там с 15 по 17 октября 2025 года.', 'ru')).toBe('Siem Reap, Cambodia');
+      expect(caption('Anna 和 Ben 于2025年10月15日至17日在那里。', 'zh-Hans')).toBe('Siem Reap, Cambodia');
     });
 
     it('finds a name only as a whole word', () => {
