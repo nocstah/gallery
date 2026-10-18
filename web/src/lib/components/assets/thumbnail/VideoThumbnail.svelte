@@ -17,6 +17,9 @@
     playIcon?: string;
     pauseIcon?: string;
     class?: ClassValue;
+    /** Local Omarchy layer: the corner badge's own hook (`ws-live-badge`: a Live Photo's mark, shown only while the tile
+     * is pointed at or holds the focus) */
+    badgeClass?: ClassValue;
   }
 
   let {
@@ -29,6 +32,7 @@
     playIcon = mdiPlayCircleOutline,
     pauseIcon = mdiPauseCircleOutline,
     class: className,
+    badgeClass,
   }: Props = $props();
 
   let remainingSeconds = $state(durationInSeconds);
@@ -97,7 +101,7 @@
      narrow for both; the time and the icon are one chip, every corner badge's (ws-tile-badge: strong glass, data type;
      omarchy-world.css), where they were white under a shadow -->
 <div class="ws-tile-corner @container absolute inset-x-0 top-0 flex justify-end">
-  <span class="ws-tile-badge">
+  <span class={['ws-tile-badge', badgeClass]}>
     {#if showTime}
       <span class="ws-tile-badge-text hidden @min-[100px]:inline">
         {#if remainingSeconds < 60}

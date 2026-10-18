@@ -1,7 +1,8 @@
-import { mdiPlayCircleOutline } from '@mdi/js';
+import { mdiMotionPlayOutline, mdiPlayCircleOutline } from '@mdi/js';
 import { render } from '@testing-library/svelte';
 import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
 import Thumbnail from '$lib/components/assets/thumbnail/Thumbnail.svelte';
+import { livePhotoMark } from '$lib/components/assets/thumbnail/live-mark';
 import { getTabbable } from '$lib/utils/focus-util';
 import { assetFactory, timelineAssetFactory } from '@test-data/factories/asset-factory';
 
@@ -127,10 +128,31 @@ describe('Thumbnail component', () => {
       expect(badge?.classList.contains('ws-tile-corner')).toBe(false);
       expect(badge?.classList.contains('ws-tile-badge-low')).toBe(true);
     });
+
+    // a Live Photo's mark is gone at rest, so its stack takes the corner as a still photo's does
+    it("marks a Live Photo stack's badge", () => {
+      const asset = timelineAssetFactory.build({ livePhotoVideoId: 'motion-1', stack });
+      const { baseElement } = render(Thumbnail, { asset, monthMark: 'SEP' });
+
+      expect(baseElement.querySelector('.ws-stack-badge')?.classList.contains('ws-tile-corner')).toBe(true);
+    });
   });
 
-  // Local Omarchy layer: every corner badge is one chip (ws-tile-badge, omarchy-world.css)
+  // Local Omarchy layer: every corner badge is one chip (ws-tile-badge); a Live Photo wears a mark of its own
+  // (live-mark.ts), not a video's play, and its chip's ws-live-badge keeps it off at rest (omarchy-world.css)
   describe('the corner badges', () => {
+    it('gives a Live Photo its own mark, on a chip that waits for the pointer or the focus', () => {
+      const asset = timelineAssetFactory.build({ livePhotoVideoId: 'motion-1' });
+      const { baseElement } = render(Thumbnail, { asset });
+
+      const badge = baseElement.querySelector('.ws-live-badge');
+      expect(badge?.classList.contains('ws-tile-badge')).toBe(true);
+      const mark = badge?.querySelector('path')?.getAttribute('d');
+      expect(mark).toBe(livePhotoMark);
+      expect(mark).not.toBe(mdiPlayCircleOutline);
+      expect(mark).not.toBe(mdiMotionPlayOutline);
+    });
+
     it("keeps a video's time and play mark on its chip, at rest", () => {
       const asset = timelineAssetFactory.build({
         isImage: false,

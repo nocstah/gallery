@@ -1034,6 +1034,31 @@ section.ws-filter-sheet-panel {
   font-weight: 500;
   text-overflow: ellipsis;
 }
+/* a Live Photo's mark only while the tile is pointed at or holds the focus, as the place caption, never at rest (the
+   owner, 2026-10-18: it stood on 52 of 55 tiles of an iPhone album). A touch screen (a coarse pointer, as the captions
+   tell one) has no pointer to rest, so it stays off there, where a tap would leave a :hover behind; the viewer says the
+   photo is Live */
+.ws-live-badge {
+  opacity: 0;
+  transition: opacity 140ms;
+}
+@media not all and (pointer: coarse) {
+  [data-thumbnail-focus-container]:hover .ws-live-badge {
+    opacity: 1;
+  }
+}
+[data-thumbnail-focus-container]:focus-visible .ws-live-badge {
+  opacity: 1;
+}
+/* gone at rest, the mark leaves a Live Photo's stack the corner, and comes in under it */
+[data-thumbnail-focus-container]:has(.ws-stack-badge) .ws-live-badge {
+  translate: 0 1.5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-live-badge {
+    transition: none;
+  }
+}
 @container (max-width: 7.5rem) {
   .ws-tile-badge {
     margin: 0.25rem;
@@ -1046,6 +1071,9 @@ section.ws-filter-sheet-panel {
   }
   .ws-tile-badge-low {
     top: 1.25rem;
+  }
+  [data-thumbnail-focus-container]:has(.ws-stack-badge) .ws-live-badge {
+    translate: 0 1.25rem;
   }
   .ws-stack-badge svg {
     display: none;

@@ -24,7 +24,6 @@
     mdiHeart,
     mdiMagnifyPlusOutline,
     mdiMotionPauseOutline,
-    mdiMotionPlayOutline,
     mdiRotate360,
   } from '@mdi/js';
   import { onMount, untrack } from 'svelte';
@@ -32,6 +31,7 @@
   import { fade } from 'svelte/transition';
   import Thumbhash from '$lib/components/Thumbhash.svelte';
   import ImageThumbnail from './ImageThumbnail.svelte';
+  import { livePhotoMark } from './live-mark';
   import VideoThumbnail from './VideoThumbnail.svelte';
   interface Props {
     asset: TimelineAsset;
@@ -340,13 +340,16 @@
           />
         </div>
       {:else if asset.isImage && asset.livePhotoVideoId}
+        <!-- Local Omarchy layer: a Live Photo wears its own mark (live-mark.ts), not a video's play, and only while the
+             tile is pointed at or holds the focus (ws-live-badge, omarchy-world.css) -->
         <div class="pointer-events-none absolute size-full group-focus-visible:rounded-lg">
           <VideoThumbnail
             class="group-focus-visible:rounded-lg"
             url={getAssetPlaybackUrl({ id: asset.livePhotoVideoId, cacheKey: asset.thumbhash })}
             enablePlayback={mouseOver && $playVideoThumbnailOnHover}
-            pauseIcon={mdiMotionPauseOutline}
-            playIcon={mdiMotionPlayOutline}
+            pauseIcon={livePhotoMark}
+            playIcon={livePhotoMark}
+            badgeClass="ws-live-badge"
             showTime={false}
             curve={selected}
             playbackOnIconHover={!$playVideoThumbnailOnHover}
@@ -462,12 +465,13 @@
       <!-- Stacked asset. Local Omarchy layer: the badge is a button that expands the stack in place.
            It sits after the hover link (same z-2 layer, later wins) so real clicks reach it;
            (stack-expand-manager) instead of opening the photo; click again to collapse. It is the corner's chip
-           (ws-tile-badge), under a video's or a Live Photo's play icon (ws-tile-badge-low). -->
+           (ws-tile-badge), under a video's time (ws-tile-badge-low); a Live Photo's mark is gone at rest, so its stack
+           keeps the corner as a still photo's does. -->
       {#if asset.stack && showStackedIcon && !stackBadgeExpands}
         <div
           class={[
             'ws-tile-badge ws-stack-badge pointer-events-none absolute z-3',
-            asset.isImage && !asset.livePhotoVideoId ? 'ws-tile-corner inset-e-0 top-0' : 'ws-tile-badge-low inset-e-0',
+            asset.isVideo ? 'ws-tile-badge-low inset-e-0' : 'ws-tile-corner inset-e-0 top-0',
           ]}
         >
           <p class="ws-tile-badge-text">{asset.stack.assetCount.toLocaleString($locale)}</p>
@@ -480,7 +484,7 @@
           type="button"
           class={[
             'ws-tile-badge ws-stack-badge absolute z-3',
-            asset.isImage && !asset.livePhotoVideoId ? 'ws-tile-corner inset-e-0 top-0' : 'ws-tile-badge-low inset-e-0',
+            asset.isVideo ? 'ws-tile-badge-low inset-e-0' : 'ws-tile-corner inset-e-0 top-0',
           ]}
           aria-expanded={expanded}
           aria-label={expanded ? $t('collapse_stack') : $t('expand_stack')}
