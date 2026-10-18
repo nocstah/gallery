@@ -3,7 +3,16 @@
   import { Icon, type CarouselImageItem } from '@immich/ui';
   import { mdiCakeVariant, mdiHeart } from '@mdi/js';
   import BirthdayConfetti from './BirthdayConfetti.svelte';
-  import { CARD_SCRIM, imagePicture, scrimAt, shotShade, textBox, wordsIn, type FilmWords } from './film/film-shade';
+  import {
+    CARD_SCRIM,
+    imagePicture,
+    scrimAt,
+    shotShade,
+    textBox,
+    wordsIn,
+    type FilmPicture,
+    type FilmWords,
+  } from './film/film-shade';
 
   type Props = {
     item: MemoryCardItem;
@@ -29,13 +38,20 @@
   let width = $state(0);
   let shade = $state(0);
   let reach = $state(0);
+  // the cover's pixels, read once per cover: a card laid out at another size (every step of a window's resize, for
+  // every card on the page) works its shade out again from them, without drawing and reading the photo again
+  let read: { src: string; picture: FilmPicture | null } | undefined;
 
   const lookAtCover = () => {
     if (!card || !cover?.complete || !words) {
       return;
     }
     const frame = card.getBoundingClientRect();
-    const picture = imagePicture(cover, null);
+    const src = cover.currentSrc || cover.src;
+    if (read?.src !== src) {
+      read = { src, picture: imagePicture(cover, null) };
+    }
+    const { picture } = read;
     if (!picture || frame.width <= 0 || frame.height <= 0) {
       return;
     }
