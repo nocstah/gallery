@@ -15,23 +15,6 @@
 
   const MAX_AVATARS = 4;
 
-  const gradientClasses: Record<string, string> = {
-    [UserAvatarColor.Primary]: 'from-immich-primary/60 to-immich-primary',
-    [UserAvatarColor.Pink]: 'from-pink-300 to-pink-500',
-    [UserAvatarColor.Red]: 'from-red-400 to-red-600',
-    [UserAvatarColor.Yellow]: 'from-yellow-300 to-yellow-500',
-    [UserAvatarColor.Blue]: 'from-blue-400 to-blue-600',
-    [UserAvatarColor.Green]: 'from-green-400 to-green-700',
-    [UserAvatarColor.Purple]: 'from-purple-400 to-purple-700',
-    [UserAvatarColor.Orange]: 'from-orange-400 to-orange-600',
-    [UserAvatarColor.Gray]: 'from-gray-400 to-gray-600',
-    [UserAvatarColor.Amber]: 'from-amber-400 to-amber-600',
-  };
-
-  const gradientClass = $derived(
-    gradientClasses[item.color ?? UserAvatarColor.Primary] ?? gradientClasses[UserAvatarColor.Primary],
-  );
-
   const collageAssets = $derived(
     (item.recentAssetIds ?? []).map((id, i) => ({
       id,
@@ -52,14 +35,16 @@
 <div data-cmdk-preview-space class="flex flex-col gap-3 p-5">
   <div class="w-full">
     {#if collageAssets.length > 0}
-      <SpaceCollage assets={collageAssets} {gradientClass} />
+      <SpaceCollage assets={collageAssets} />
     {:else}
+      <!-- Local Omarchy layer: a Space with no photos wears its mark on the house's icon cover, where a Space-coloured
+           gradient slab stood -->
       <div
         data-testid="space-preview-gradient"
-        class="flex aspect-square w-full items-center justify-center rounded-xl bg-linear-to-br {gradientClass}"
+        class="ws-album-icon-cover aspect-square w-full rounded-xl"
         aria-hidden="true"
       >
-        <Icon icon={mdiAccountMultipleOutline} size="4em" class="text-white/40" />
+        <Icon icon={mdiAccountMultipleOutline} size="36%" />
       </div>
     {/if}
   </div>

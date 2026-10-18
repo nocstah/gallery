@@ -112,7 +112,8 @@
           <span>&middot;</span>
         {/if}
         {#if space.memberCount !== undefined}
-          <span>{space.memberCount} {$t('members')}</span>
+          <!-- Local Omarchy layer: "1 member", never "1 Members" -->
+          <span>{$t('cmdk_preview_member_count', { values: { count: space.memberCount } })}</span>
         {/if}
       </span>
     </span>

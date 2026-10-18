@@ -23,19 +23,6 @@
   let hoveredId = $state<string | null>(null);
   let openMenuId = $state<string | null>(null);
 
-  const gradientClasses: Record<string, string> = {
-    primary: 'from-immich-primary/60 to-immich-primary',
-    pink: 'from-pink-300 to-pink-500',
-    red: 'from-red-400 to-red-600',
-    yellow: 'from-yellow-300 to-yellow-500',
-    blue: 'from-blue-400 to-blue-600',
-    green: 'from-green-400 to-green-700',
-    purple: 'from-purple-400 to-purple-700',
-    orange: 'from-orange-400 to-orange-600',
-    gray: 'from-gray-400 to-gray-600',
-    amber: 'from-amber-400 to-amber-600',
-  };
-
   const colorBarClasses: Record<string, string> = {
     primary: 'bg-immich-primary',
     pink: 'bg-pink-400',
@@ -61,9 +48,6 @@
     gray: 'bg-gray-600 text-white',
     amber: 'bg-amber-600 text-white',
   };
-
-  const getGradientClass = (color: string | null | undefined) =>
-    gradientClasses[color ?? 'primary'] ?? gradientClasses['primary'];
 
   const getColorBarClass = (color: string | null | undefined) =>
     colorBarClasses[color ?? 'primary'] ?? colorBarClasses['primary'];
@@ -120,7 +104,6 @@
 
 {#snippet spaceRow(space: SharedSpaceResponseDto)}
   {@const collageAssets = getCollageAssets(space)}
-  {@const gradientClass = getGradientClass(space.color)}
   {@const colorBarClass = getColorBarClass(space.color)}
   {@const newBadgeClass = getNewBadgeClass(space.color)}
   {@const currentRole = getCurrentUserRole(space)}
@@ -147,7 +130,7 @@
         class="flex items-center gap-3 font-medium text-black hover:text-immich-primary dark:text-white dark:hover:text-immich-primary"
       >
         <div class="size-8 shrink-0">
-          <SpaceCollage assets={collageAssets} {gradientClass} />
+          <SpaceCollage assets={collageAssets} />
         </div>
         <span class="flex items-center gap-1">
           {#if isPinned}

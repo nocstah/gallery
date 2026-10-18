@@ -13,7 +13,7 @@
   } from '$lib/utils/space-album-folder-dnd';
   import type { SharedSpaceAlbumFolderDto, SharedSpaceLinkedAlbumDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
-  import { mdiDotsVertical, mdiFolder } from '@mdi/js';
+  import { mdiDotsVertical, mdiFolder, mdiFolderOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -129,11 +129,15 @@
     data-testid="space-album-folder-card-open"
   >
     <div class="relative aspect-square w-full overflow-hidden rounded-xl">
-      <SpaceCollage assets={collageAssets} />
-      <!-- Badge, so a folder is never mistaken for an album at a glance. -->
-      <div class="absolute inset-s-2 bottom-2 rounded-lg bg-black/55 p-1.5 text-white">
-        <Icon icon={mdiFolder} size="20" />
-      </div>
+      <!-- Local Omarchy layer: an empty folder wears a folder on the house's quiet icon cover, where a grey slab stood
+           under the badge; the cover then says folder itself, so the badge is for folders with photos to show -->
+      <SpaceCollage assets={collageAssets} emptyIcon={mdiFolderOutline} />
+      {#if collageAssets.length > 0}
+        <!-- Badge, so a folder is never mistaken for an album at a glance. -->
+        <div class="absolute inset-s-2 bottom-2 rounded-lg bg-black/55 p-1.5 text-white">
+          <Icon icon={mdiFolder} size="20" />
+        </div>
+      {/if}
     </div>
 
     <div class="mt-4">

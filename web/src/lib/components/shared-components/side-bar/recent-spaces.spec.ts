@@ -230,13 +230,16 @@ describe('RecentSpaces component', () => {
       expect(screen.queryAllByTestId(/^sidebar-space-thumbnail-/)).toHaveLength(3);
     });
 
-    it('falls back to the placeholder square when the space has no thumbnail asset', async () => {
+    // Local Omarchy layer: the Space's mark, not a grey square, where there is no cover yet
+    it('falls back to the Space mark when the space has no thumbnail asset', async () => {
       const space = sharedSpaceFactory.build({ id: 'no-thumb', newAssetCount: 4, thumbnailAssetId: null });
       sdkMock.getAllSpaces.mockResolvedValueOnce([space]);
       await renderAndFlush();
 
       const thumbnail = screen.getByTestId('sidebar-space-thumbnail-no-thumb');
       expect(thumbnail.getAttribute('style')).toBeFalsy();
+      expect(thumbnail.querySelector('svg')).toBeInTheDocument();
+      expect(thumbnail).not.toHaveClass('bg-gray-200');
       expect(screen.queryByTestId('sidebar-space-dot-no-thumb')).not.toBeInTheDocument();
     });
   });

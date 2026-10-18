@@ -1,6 +1,7 @@
 import type { SharedSpaceResponseDto } from '@immich/sdk';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { init, register, waitLocale } from 'svelte-i18n';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import SpaceListItem from './space-list-item.svelte';
 
 const base = {
@@ -20,6 +21,13 @@ const props = (over = {}) => ({
 });
 
 describe('SpaceListItem', () => {
+  // the real English bundle, so the counts read as words ("3 members")
+  beforeAll(async () => {
+    register('en-US', () => import('$i18n/en.json'));
+    await init({ fallbackLocale: 'en-US' });
+    await waitLocale('en-US');
+  });
+
   it('renders the people badge and empty collage when no recent assets', () => {
     render(SpaceListItem, props({ recentAssetIds: [] }));
     expect(screen.queryByTestId('space-row-badge')).not.toBeNull();
@@ -49,8 +57,14 @@ describe('SpaceListItem', () => {
   it('shows only the member count (no separator) when assetCount is absent', () => {
     render(SpaceListItem, props({ recentAssetIds: [], assetCount: undefined, memberCount: 3 }));
     const details = screen.getByTestId('space-row-details');
-    expect(details.textContent).toContain('3');
+    expect(details.textContent).toContain('3 members');
     expect(details.textContent).not.toContain('·'); // separator only renders when both counts exist
+  });
+
+  // Local Omarchy layer: one member is "1 member", and the photos are photos
+  it('says its counts with the right noun for one and for many', () => {
+    render(SpaceListItem, props({ recentAssetIds: [], assetCount: 1, memberCount: 1 }));
+    expect(screen.getByTestId('space-row-details')).toHaveTextContent('1 photo · 1 member');
   });
 
   it('highlights the matching slice of the space name', () => {

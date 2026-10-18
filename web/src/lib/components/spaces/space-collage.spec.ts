@@ -4,9 +4,11 @@ import SpaceCollage from '$lib/components/spaces/space-collage.svelte';
 const makeAsset = (id: string, thumbhash: string | null = null) => ({ id, thumbhash });
 
 describe('SpaceCollage component', () => {
-  it('should render gradient placeholder for 0 assets', () => {
-    render(SpaceCollage, { assets: [], gradientClass: 'from-blue-400 to-blue-600' });
-    expect(screen.getByTestId('collage-empty')).toBeInTheDocument();
+  // Local Omarchy layer: the house's icon cover (a faint ground in a hairline, the glyph muted), not a gradient slab
+  it('should render the quiet icon cover for 0 assets', () => {
+    render(SpaceCollage, { assets: [] });
+    expect(screen.getByTestId('collage-empty')).toHaveClass('ws-album-icon-cover');
+    expect(screen.getByTestId('collage-empty').querySelector('svg')).toBeInTheDocument();
   });
 
   it('should render single image layout for 1 asset', () => {

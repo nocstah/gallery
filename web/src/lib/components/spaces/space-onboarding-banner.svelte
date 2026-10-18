@@ -3,7 +3,9 @@
   // white rounded slab with a shadow, the Space's gradient in a progress bar and on each done step's tile, and
   // tinted icon tiles: a muted line that counts the steps, the desktop's 2px meter under it in ink, then a row per
   // step split by hairlines, as Settings draws its rows (a muted icon that turns ink under the pointer, the label, what
-  // it does in muted meta); a done step keeps its row, its check in ink and its label muted.
+  // it does in muted meta); a done step keeps its row, its check in ink and its label muted. The steps name the Space
+  // in plain words ("Add photos to Family", "Invite people to Family"), where the fork said "Invite members to
+  // collaborate" and "Personalize your space with a cover image".
   import type { SharedSpaceResponseDto } from '@immich/sdk';
   import {
     mdiAccountPlusOutline,
@@ -44,19 +46,20 @@
   const allComplete = $derived(completedCount === 3);
   const progressPercent = $derived(Math.round((completedCount / 3) * 100));
 
+  const named = $derived({ values: { name: space.name } });
   const steps = $derived([
     {
       id: 'add-photos',
       icon: mdiImagePlusOutline,
-      label: $t('spaces_onboarding_add_photos'),
-      description: $t('spaces_onboarding_add_photos_description'),
+      label: $t('spaces_onboarding_add_photos', named),
+      description: $t('spaces_onboarding_add_photos_description', named),
       complete: hasPhotos,
       action: onAddPhotos,
     },
     {
       id: 'invite-members',
       icon: mdiAccountPlusOutline,
-      label: $t('spaces_onboarding_invite_members'),
+      label: $t('spaces_onboarding_invite_members', named),
       description: $t('spaces_onboarding_invite_members_description'),
       complete: hasMembers,
       action: onInviteMembers,
@@ -64,7 +67,7 @@
     {
       id: 'set-cover',
       icon: mdiImageFilterHdrOutline,
-      label: $t('spaces_onboarding_set_cover'),
+      label: $t('spaces_onboarding_set_cover', named),
       description: $t('spaces_onboarding_set_cover_description'),
       complete: hasCover,
       action: onSetCover,
@@ -77,7 +80,7 @@
     class="ws-onboarding"
     data-testid="onboarding-banner"
     data-collapsed={collapsed}
-    aria-label={$t('spaces_onboarding_title')}
+    aria-label={$t('spaces_onboarding_title', named)}
   >
     <div class="ws-onboarding-head">
       <p class="ws-onboarding-count" data-testid="progress-text">

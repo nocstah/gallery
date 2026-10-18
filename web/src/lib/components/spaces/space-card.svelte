@@ -21,21 +21,6 @@
 
   const MAX_AVATARS = 4;
 
-  const gradientClasses: Record<string, string> = {
-    [UserAvatarColor.Primary]: 'from-immich-primary/60 to-immich-primary',
-    [UserAvatarColor.Pink]: 'from-pink-300 to-pink-500',
-    [UserAvatarColor.Red]: 'from-red-400 to-red-600',
-    [UserAvatarColor.Yellow]: 'from-yellow-300 to-yellow-500',
-    [UserAvatarColor.Blue]: 'from-blue-400 to-blue-600',
-    [UserAvatarColor.Green]: 'from-green-400 to-green-700',
-    [UserAvatarColor.Purple]: 'from-purple-400 to-purple-700',
-    [UserAvatarColor.Orange]: 'from-orange-400 to-orange-600',
-    [UserAvatarColor.Gray]: 'from-gray-400 to-gray-600',
-    [UserAvatarColor.Amber]: 'from-amber-400 to-amber-600',
-  };
-
-  let gradientClass = $derived(gradientClasses[space.color ?? 'primary'] ?? gradientClasses[UserAvatarColor.Primary]);
-
   let collageAssets = $derived(
     (space.recentAssetIds ?? []).map((id, i) => ({
       id,
@@ -69,7 +54,7 @@
   }}
 >
   <div class="relative">
-    <SpaceCollage assets={collageAssets} {gradientClass} {preload} />
+    <SpaceCollage assets={collageAssets} {preload} />
 
     {#if isPinned}
       <div
@@ -166,14 +151,15 @@
     {/if}
 
     <span class="flex gap-2 text-sm dark:text-immich-dark-fg" data-testid="space-details">
+      <!-- Local Omarchy layer: counts said in words that count ("1 member", never "1 Members") -->
       {#if space.assetCount !== undefined}
-        <p>{space.assetCount} {$t('photos')}</p>
+        <p>{$t('items_count', { values: { count: space.assetCount } })}</p>
       {/if}
       {#if space.assetCount !== undefined && space.memberCount !== undefined}
         <p>&middot;</p>
       {/if}
       {#if space.memberCount !== undefined}
-        <p>{space.memberCount} {$t('members')}</p>
+        <p>{$t('cmdk_preview_member_count', { values: { count: space.memberCount } })}</p>
       {/if}
     </span>
   </div>

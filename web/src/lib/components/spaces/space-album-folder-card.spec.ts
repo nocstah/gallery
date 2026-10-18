@@ -1,4 +1,5 @@
 import type { SharedSpaceAlbumFolderDto, SharedSpaceLinkedAlbumDto } from '@immich/sdk';
+import { mdiFolderOutline } from '@mdi/js';
 import { fireEvent, screen } from '@testing-library/svelte';
 import SpaceAlbumFolderCard from '$lib/components/spaces/space-album-folder-card.svelte';
 import {
@@ -81,6 +82,17 @@ describe('SpaceAlbumFolderCard', () => {
 
     expect(container.querySelectorAll('img')).toHaveLength(0);
     expect(container.querySelector('[data-testid="collage-empty"]')).toBeInTheDocument();
+  });
+
+  // Local Omarchy layer: an empty folder wears a folder on the quiet icon cover (no grey slab), and no second folder
+  // badge over it
+  it('draws an empty folder as a folder on the quiet icon cover, without the badge', () => {
+    const { container } = renderWithTooltips(SpaceAlbumFolderCard, { ...defaults, previewAssetIds: [], albumCount: 0 });
+
+    const cover = container.querySelector('[data-testid="collage-empty"]');
+    expect(cover).toHaveClass('ws-album-icon-cover');
+    expect(cover?.querySelector(':scope svg path')).toHaveAttribute('d', mdiFolderOutline);
+    expect(container.querySelector(String.raw`.bg-black\/55`)).not.toBeInTheDocument();
   });
 
   // W-11: viewers get no management affordances at all.

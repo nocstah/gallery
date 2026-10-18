@@ -19,7 +19,7 @@
   import { handleError } from '$lib/utils/handle-error';
   import { getSharedSpaceAlbumFolders, getSharedSpaceAlbums } from '@immich/sdk';
   import { Icon } from '@immich/ui';
-  import { mdiChevronDown, mdiChevronRight } from '@mdi/js';
+  import { mdiAccountMultipleOutline, mdiChevronDown, mdiChevronRight } from '@mdi/js';
   import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { t } from 'svelte-i18n';
@@ -193,13 +193,19 @@
         <div class="flex size-6 items-center justify-center">
           <!-- Always the thumbnail: the sidebar identifies a space, it doesn't report on it. New
                activity is surfaced on the Spaces page and by the in-timeline new-assets divider. -->
-          <div
-            class="size-6 rounded-sm bg-gray-200 bg-cover dark:bg-gray-600"
-            style={space.thumbnailAssetId
-              ? `background-image:url('${getAssetMediaUrl({ id: space.thumbnailAssetId })}')`
-              : ''}
-            data-testid="sidebar-space-thumbnail-{space.id}"
-          ></div>
+          {#if space.thumbnailAssetId}
+            <div
+              class="size-6 rounded-sm bg-cover"
+              style={`background-image:url('${getAssetMediaUrl({ id: space.thumbnailAssetId })}')`}
+              data-testid="sidebar-space-thumbnail-{space.id}"
+            ></div>
+          {:else}
+            <!-- Local Omarchy layer: a Space without a cover wears the Space's mark (people together, as the pickers
+                 draw a Space), the size of the Shared links row's icon below it, where a grey square stood in -->
+            <span class="flex size-6 items-center justify-center" data-testid="sidebar-space-thumbnail-{space.id}">
+              <Icon icon={mdiAccountMultipleOutline} size="1.25em" aria-hidden={true} />
+            </span>
+          {/if}
         </div>
         <!-- Kept mounted and collapsed to zero width rather than unmounted, so rail <-> expanded
              stays a CSS transition. `grow` has to go with it or the name would still claim width. -->

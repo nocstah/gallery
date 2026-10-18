@@ -10,11 +10,12 @@
 
   interface Props {
     assets: AssetInfo[];
-    gradientClass?: string;
     preload?: boolean;
+    /** Local Omarchy layer: the glyph an empty collage wears (photos by default; a folder's card wears a folder) */
+    emptyIcon?: string;
   }
 
-  let { assets, gradientClass = 'from-gray-400 to-gray-600', preload = false }: Props = $props();
+  let { assets, preload = false, emptyIcon = mdiImageMultipleOutline }: Props = $props();
 
   let layout = $derived(
     assets.length === 0 ? 'empty' : assets.length === 1 ? 'single' : assets.length <= 3 ? 'asymmetric' : 'grid',
@@ -22,11 +23,11 @@
 </script>
 
 {#if layout === 'empty'}
-  <div
-    class="flex size-full items-center justify-center rounded-xl bg-linear-to-br {gradientClass} aspect-square"
-    data-testid="collage-empty"
-  >
-    <Icon icon={mdiImageMultipleOutline} size="4em" class="text-white/40" />
+  <!-- Local Omarchy layer: nothing to show yet wears the house's icon cover (a faint ink ground inside a hairline, the
+       glyph muted: .ws-album-icon-cover, as QR's albums do), where a grey or Space-coloured gradient slab stood (the
+       Albums page's empty folder, a Space with no photos on Spaces and in the pickers) -->
+  <div class="ws-album-icon-cover aspect-square size-full rounded-xl" data-testid="collage-empty">
+    <Icon icon={emptyIcon} size="36%" aria-hidden />
   </div>
 {:else if layout === 'single'}
   <div class="aspect-square overflow-hidden rounded-xl" data-testid="collage-single">

@@ -53,6 +53,12 @@ describe('SpaceCard component', () => {
     expect(details).toHaveTextContent('3');
   });
 
+  // Local Omarchy layer: counts in words that count, not a number before a plural heading ("1 Members")
+  it('says its counts with the right noun for one and for many', () => {
+    render(SpaceCard, { space: makeSpace({ assetCount: 0, memberCount: 1 }) });
+    expect(screen.getByTestId('space-details')).toHaveTextContent('0 photos · 1 member');
+  });
+
   it('should render collage when recentAssetIds are provided', () => {
     render(SpaceCard, { space: makeSpace({ recentAssetIds: ['a1', 'a2'], recentAssetThumbhashes: ['', ''] }) });
     expect(screen.getByTestId('collage-asymmetric')).toBeInTheDocument();
@@ -60,7 +66,9 @@ describe('SpaceCard component', () => {
 
   it('should render empty collage when no recentAssetIds', () => {
     render(SpaceCard, { space: makeSpace({ recentAssetIds: [] }) });
-    expect(screen.getByTestId('collage-empty')).toBeInTheDocument();
+    // Local Omarchy layer: the house's quiet icon cover, never a coloured gradient slab
+    expect(screen.getByTestId('collage-empty')).toHaveClass('ws-album-icon-cover');
+    expect(screen.getByTestId('collage-empty').className).not.toContain('bg-linear');
   });
 
   it('should render member avatars when members are provided', () => {
