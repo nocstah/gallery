@@ -136,6 +136,11 @@
   .ws-undo-row:not(:disabled):hover {
     background: color-mix(in oklab, var(--ws-accent) 16%, transparent);
   }
+  /* pointed at, the row's time and key take its words' ink: on the accent's wash the muted ones fell under AA
+     (2026-10-18, as a menu's key hints) */
+  .ws-undo-row:not(:disabled):hover :is(.ws-undo-when, .ws-undo-key) {
+    color: inherit;
+  }
   .ws-undo-row:disabled {
     opacity: 0.55;
     cursor: progress;

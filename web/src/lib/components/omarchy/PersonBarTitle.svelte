@@ -274,14 +274,14 @@
   .ws-person-bar-form :global(.ws-person-bar-field::placeholder) {
     color: var(--immich-ui-muted);
   }
-  /* the people whose names match float under the field like a context menu: the same sheet, rows washed in the accent
-     under the pointer or the keys */
+  /* the people whose names match float under the field like a context menu: the same sheet (94% of the ground, so its
+     words hold over a bright photo, omarchy-world.css), rows washed in the accent under the pointer or the keys */
   .ws-person-matches {
     position: fixed;
     z-index: 60;
     max-width: 24rem;
     padding: 6px;
-    background: color-mix(in oklab, var(--immich-ui-light) 84%, transparent);
+    background: color-mix(in oklab, var(--immich-ui-light) 94%, transparent);
     -webkit-backdrop-filter: blur(24px) saturate(1.4);
     backdrop-filter: blur(24px) saturate(1.4);
     border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);

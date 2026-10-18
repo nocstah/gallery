@@ -1567,8 +1567,16 @@ section.ws-filter-sheet-panel {
    two-layer shadow; rows flat on it, the hovered/keyboard-active row washed in the accent with its icon lit, shortcut
    hints in mono at the right, a destructive row (MenuOption tone="danger") in the danger role. Nothing inside a menu is a fixed
    popup, so the sheet may carry its own backdrop-filter. ---- */
+/* text on the glass holds AA over any photo (2026-10-18, the critique's "the menu's key hints fail AA"): the sheet keeps
+   94% of the ground, where 84% let the photo through, and what is muted on it (the key hints, the head's day and place,
+   a row's subtitle) takes 30% of the ink, --ws-menu-muted. The theme's muted ink holds 4.6:1 on the opaque ground only,
+   so on glass a white photo (the dark face) or a black one (the light face) took it under AA: the hints, also at 0.8
+   opacity, measured 3.5 to 4.0:1 in the dark face and 3.6 to 4.2:1 in the light one over Photos, 2.8:1 over the bank
+   slips. Worked out for all 79 Omarchy themes in both faces over pure white and black, the worst hint is now 4.6:1
+   (sakura-hanagumori, dark); 94% of plain muted ink would leave 157 of 158 under AA, 3.8:1 at worst */
 div.z-70:has(> ul[role='menu']) {
-  background: color-mix(in oklab, var(--immich-ui-light) 84%, transparent);
+  --ws-menu-muted: color-mix(in oklab, var(--immich-ui-muted) 70%, var(--immich-ui-dark));
+  background: color-mix(in oklab, var(--immich-ui-light) 94%, transparent);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   backdrop-filter: blur(24px) saturate(1.4);
   border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);
@@ -1612,11 +1620,15 @@ ul[role='menu'] > li[role='menuitem']:not(.bg-slate-100) svg {
 }
 /* the shortcut hint MenuOption puts after the label */
 ul[role='menu'] > li[role='menuitem'] .text-gray-500 {
-  color: var(--immich-ui-muted);
+  color: var(--ws-menu-muted, var(--immich-ui-muted));
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: var(--ws-text-data);
   letter-spacing: 0.02em;
-  opacity: 0.8;
+}
+/* pointed at or reached with the keys, a row's hint takes its words' ink: on the accent's wash the muted hint fell to
+   3.2:1 over a white photo (cyanotype, dark) */
+ul[role='menu'] > li[role='menuitem']:not(.bg-slate-100) .text-gray-500 {
+  color: inherit;
 }
 ul[role='menu'] > li[role='menuitem'][data-tone='danger'] {
   color: var(--ws-danger);
@@ -1637,7 +1649,6 @@ ul[role='menu'] > li[role='menuitem'][data-tone='danger']:not(.bg-slate-100) svg
 }
 ul[role='menu'] > li[role='menuitem'][data-tone='danger']:not(.bg-slate-100) .text-gray-500 {
   color: inherit;
-  opacity: 1;
 }
 /* separators run edge to edge of the sheet (through its 6px padding) */
 ul[role='menu'] > hr {

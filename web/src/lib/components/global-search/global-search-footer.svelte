@@ -7,7 +7,10 @@
   // Shared class for footer kbd chips. Extracted so the kbd tag fits on a single
   // line — otherwise prettier breaks `</kbd\n>` across lines, which causes Svelte
   // to merge adjacent text nodes into the kbd. A cosmetic but test-visible bug.
-  const kbdClass = 'rounded-sm border border-gray-200 bg-subtle/60 px-1.5 py-0.5 dark:border-gray-700';
+  // Local Omarchy layer: the key a step darker than its label in the light face, where gray-500 on the chip's fill
+  // measured 4.1:1 (2026-10-18, menus' key hints to AA); the dark face's gray-400 holds 4.9:1
+  const kbdClass =
+    'rounded-sm border border-gray-200 bg-subtle/60 px-1.5 py-0.5 text-gray-600 dark:border-gray-700 dark:text-gray-400';
 </script>
 
 <!-- The search-mode segmented control used to live here. It moved to `SearchModeControl`,

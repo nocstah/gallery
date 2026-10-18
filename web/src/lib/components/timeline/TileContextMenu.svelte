@@ -445,7 +445,7 @@
   .ws-menu-title small {
     overflow: hidden;
     font-size: var(--ws-text-data);
-    color: var(--immich-ui-muted);
+    color: var(--ws-menu-muted, var(--immich-ui-muted));
     text-overflow: ellipsis;
     white-space: nowrap;
   }

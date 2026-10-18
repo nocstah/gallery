@@ -247,10 +247,12 @@
   .ws-view-theme button {
     white-space: nowrap;
   }
+  /* an option not chosen is muted, a step toward the ink (as on a menu's glass, omarchy-world.css): on the track's tint
+     the muted ink fell to 4.0:1 in the dark face and 4.2:1 in the light one (2026-10-18) */
   .ws-view-seg button {
     padding: 0.35rem 0.5rem;
     border-radius: var(--ws-radius);
-    color: var(--immich-ui-muted);
+    color: color-mix(in oklab, var(--immich-ui-muted) 70%, var(--immich-ui-dark));
     font-size: var(--ws-text-meta);
     font-weight: 600;
   }
@@ -338,5 +340,9 @@
     font-size: var(--ws-text-data);
     font-weight: 600;
     color: var(--immich-ui-muted);
+  }
+  /* pointed at, the row's key takes its words' ink: on the accent's wash the muted key fell under AA (2026-10-18) */
+  button.ws-view-row:hover .ws-view-key {
+    color: inherit;
   }
 </style>
