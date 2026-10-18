@@ -1049,9 +1049,16 @@ section.ws-filter-sheet-panel {
   color: var(--immich-ui-dark);
 }
 /* maplibre's own icons are dark data-URI images: on the dark face, flip their lightness and keep hue
-   (the compass's red north stays red) */
-:root.dark .maplibregl-map .maplibregl-ctrl-icon {
+   (the compass's red north stays red). Only those: the layer's own icons (show photos in the area, the map's
+   light and dark, settings) are drawn in the ink already, and the flip turned them to near-black on the dark
+   ground (2026-10-18) */
+:root.dark .maplibregl-map .maplibregl-ctrl-icon:not(:has(svg)) {
   filter: invert(1) hue-rotate(180deg);
+}
+/* the layer's own icons at one size, as maplibre's are: two of them filled their button edge to edge */
+.maplibregl-map .maplibregl-ctrl-group .maplibregl-ctrl-icon > svg {
+  width: 70%;
+  height: 70%;
 }
 @media (hover: hover) {
   .maplibregl-map .maplibregl-ctrl button:not(:disabled):hover {
@@ -1076,6 +1083,12 @@ section.ws-filter-sheet-panel {
 }
 .maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib a {
   color: var(--immich-ui-muted);
+}
+/* on a phone the credits wrap beside the scale at the other corner, where they ran under it */
+@media (max-width: 639px) {
+  .maplibregl-map .maplibregl-ctrl-bottom-right .maplibregl-ctrl.maplibregl-ctrl-attrib {
+    max-width: calc(100vw - 9.5rem);
+  }
 }
 .maplibregl-map .maplibregl-ctrl.maplibregl-ctrl-attrib a:hover {
   color: var(--immich-ui-dark);
@@ -1107,16 +1120,24 @@ section.ws-filter-sheet-panel {
 .maplibregl-map [data-testid='map-marker']:hover {
   border-color: var(--ws-accent);
 }
+/* a cluster is a chip as wide as its count (upstream's 40px disc let "3,059" and "9,609" run past its edge), at
+   least that square, with the window's corners like the photo markers beside it (2026-10-18) */
 .ws-map-cluster,
 .ws-map-cluster:hover {
+  width: auto;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  padding-inline: 0.5rem;
+  border-radius: var(--ws-radius);
   opacity: 1;
   background: var(--immich-ui-dark);
   color: var(--immich-ui-light);
   border: 2px solid var(--immich-ui-light);
   font-family: var(--ws-font-data);
-  font-size: 12px;
+  font-size: var(--ws-text-data);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.5);
 }
 .ws-map-cluster:hover {

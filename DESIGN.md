@@ -306,6 +306,9 @@ Explore (`routes/(user)/explore`) is the wander pages in brief, a row of each (2
 - **Recently added** as before, on the gutter.
 - **Structural departure:** the page reads the memories from the memory manager's cards rather than its load, and its load asks for every place (`getAssetsByCity`; a failure leaves the row out); upstream's `ImageCarousel` is no longer used here.
 
+### Map
+The map's controls are small windows floating on it (the ground, a hairline, a soft shadow, the window's corners), its photo markers are tiles and its clusters ink chips with their count in data type (`omarchy-world.css`, the map section). A cluster is as wide as its count, at least a square of 2.5rem, with the window's corners like the markers beside it (2026-10-18; upstream's 40px disc let "3,059" and "9,609" run past its edge). On the dark face maplibre's own icons, dark images, are flipped to light; the layer's own (show photos in the area, the map's light and dark, settings) are drawn in the ink already and keep it, at maplibre's size (the flip had turned them near-black on the dark ground, and two filled their button edge to edge). On a phone the map's credits wrap beside the scale, where they ran under it.
+
 ### Buttons and Links (empty states)
 - **Primary action:** ink fill, surface text, 600 at 0.9rem, `0.55rem 1rem`, the window radius; hover mixes 15% accent into the ink.
 - **Text link:** ink, 500 at 0.9rem, underline in hairline at 0.25em offset; the underline takes the accent on hover.
