@@ -4,7 +4,10 @@
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import AlbumTitle from '$lib/components/album-page/AlbumTitle.svelte';
-  import AlbumDescription from '$lib/components/album-page/AlbumDescription.svelte';
+  import AlbumDescriptionField from '$lib/components/omarchy/AlbumDescriptionField.svelte';
+  import BarFilterButton from '$lib/components/omarchy/BarFilterButton.svelte';
+  import { barSlot } from '$lib/managers/bar-slot.svelte';
+  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
   import { curatorIsMine } from '$lib/utils/curator';
   import AlbumSummary from '$lib/components/album-page/AlbumSummary.svelte';
@@ -276,6 +279,25 @@
 
   // Filter-panel collapse is driven here so the header filter button can reclaim the panel's space.
   let filterCollapsed = $state(loadFilterCollapsed(true)); // local Omarchy layer: the timeline leads
+  // the filter panel's reopen button, while the panel is folded away
+  const filterButtonShown = $derived(
+    mode === 'browse' && !assetMultiSelectManager.selectionActive && filterCollapsed && !isBrowseEmpty,
+  );
+  // Local Omarchy layer: below 768px, as on an album of one's own, the grouping floats over the photos and Search here
+  // is the bar's own search, so the filter button goes first among the bar's icons (managers/bar-slot) rather than
+  // stand alone in a row above the album's name
+  const filterInBar = $derived(mediaQueryManager.maxMd);
+  $effect(() => {
+    if (!filterInBar) {
+      return;
+    }
+    barSlot.tools = albumTools;
+    return () => {
+      if (barSlot.tools === albumTools) {
+        barSlot.tools = undefined;
+      }
+    };
+  });
   const showBrowseFilteredEmpty = $derived(
     timelineManager?.isInitialized && !browseHasMonths && browseTotal === 0 && browseActive > 0,
   );
@@ -611,6 +633,13 @@
   />
 {/snippet}
 
+<!-- Local Omarchy layer: the filter button among the bar's icons below 768px (see filterInBar) -->
+{#snippet albumTools()}
+  {#if filterButtonShown}
+    <BarFilterButton active={browseActive > 0} onclick={() => (filterCollapsed = false)} />
+  {/if}
+{/snippet}
+
 <!-- Header shows the space (context/breadcrumb); the album name lives in the editable AlbumTitle in the
      timeline below, mirroring the regular album page (which has no page-header title).
      Local Omarchy layer: the album's name is the page's h1 (DESIGN.md, One heading), so the Space's in the bar is text
@@ -682,12 +711,12 @@
       <div class="flex flex-1 flex-col overflow-hidden pl-2">
         {#if !assetMultiSelectManager.selectionActive}
           <div
-            class="mb-2 shrink-0 items-center gap-2 bg-transparent py-2 pe-4 dark:bg-transparent {filterCollapsed &&
-            !isBrowseEmpty
+            class="mb-2 shrink-0 items-center gap-2 bg-transparent py-2 pe-4 dark:bg-transparent {filterButtonShown &&
+            !filterInBar
               ? 'flex ps-2'
               : 'hidden ps-4 md:flex'}"
           >
-            {#if filterCollapsed && !isBrowseEmpty}
+            {#if filterButtonShown && !filterInBar}
               <!-- Visible at EVERY viewport: the panel's own collapse control has no breakpoint gate,
                    so the reopen affordance can't be desktop-only either (#752 launch review F3). -->
               <FilterToggleButton active={browseActive > 0} onExpand={() => (filterCollapsed = false)} />
@@ -779,7 +808,9 @@
               {#if album.assetCount > 0}
                 <AlbumSummary {album} />
               {/if}
-              <AlbumDescription
+              <!-- Local Omarchy layer: on a phone an editor's empty description is one quiet line
+                   (components/omarchy/AlbumDescriptionField) -->
+              <AlbumDescriptionField
                 id={album.id}
                 isEditor={isAlbumEditor}
                 bind:description={() => album.description, (description) => (album = { ...album, description })}
