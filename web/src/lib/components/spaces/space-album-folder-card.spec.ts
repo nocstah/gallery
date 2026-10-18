@@ -95,6 +95,16 @@ describe('SpaceAlbumFolderCard', () => {
     expect(container.querySelector(String.raw`.bg-black\/55`)).not.toBeInTheDocument();
   });
 
+  // Local Omarchy layer: while the Albums page chooses a folder's photos, its cover is the quiet ground alone: no photo
+  // (the covers as they came could be bank slips), no folder glyph to swap out, no badge
+  it('shows the quiet ground alone while the photos are chosen', () => {
+    const { container } = renderWithTooltips(SpaceAlbumFolderCard, { ...defaults, looking: true });
+
+    expect(container.querySelector('[data-testid="folder-face-looking"]')).toHaveClass('ws-album-icon-cover');
+    expect(container.querySelectorAll('img')).toHaveLength(0);
+    expect(container.querySelector(':scope .ws-folder-cover svg')).toBeNull();
+  });
+
   // W-11: viewers get no management affordances at all.
   it('W-11: renders no kebab menu and is not draggable for a viewer', () => {
     const { container } = renderWithTooltips(SpaceAlbumFolderCard, { ...defaults, canManage: false });

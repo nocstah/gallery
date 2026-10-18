@@ -4,6 +4,7 @@ import {
   buildFolderTree,
   flattenForSearch,
   getFolderContents,
+  getFolderCoverAlbums,
   getFolderPath,
   getFolderPreviewAssetIds,
   getRecursiveAlbumCount,
@@ -249,6 +250,30 @@ describe('space-album-folders', () => {
     });
   });
 
+  // Local Omarchy layer: what the Albums page chooses a folder's photos from (managers/folder-faces)
+  describe('getFolderCoverAlbums', () => {
+    it('lists every album with a cover in the subtree, newest first, ties by id', () => {
+      const albums = [
+        album('a1', 'One', 'trips', { endDate: '2026-01-01T00:00:00.000Z' }),
+        album('a2', 'Two', 'italy', { endDate: '2026-05-01T00:00:00.000Z' }),
+        album('a3', 'No cover', 'trips', { albumThumbnailAssetId: null }),
+        album('a4', 'Four', 'trips', { endDate: '2026-01-01T00:00:00.000Z' }),
+        album('a5', 'Elsewhere', 'family'),
+      ];
+
+      expect(getFolderCoverAlbums(tripsTree(), albums, 'trips').map(({ id }) => id)).toEqual(['a2', 'a1', 'a4']);
+    });
+
+    it('keeps two albums with the same cover: each is a place to look for a photo', () => {
+      const albums = [
+        album('a1', 'One', 'trips', { albumThumbnailAssetId: 'shared-asset' }),
+        album('a2', 'Two', 'trips', { albumThumbnailAssetId: 'shared-asset' }),
+      ];
+
+      expect(getFolderCoverAlbums(tripsTree(), albums, 'trips')).toHaveLength(2);
+    });
+  });
+
   describe('isDescendant', () => {
     // U-09 — this is the client-side drop guard, so a bad drop fires no request at all.
     it('U-09: is true for descendants at any depth', () => {
@@ -362,6 +387,7 @@ describe('space-album-folders', () => {
         expect(summaries.get(id)).toEqual({
           albumCount: getRecursiveAlbumCount(folders, albums, id),
           previewAssetIds: getFolderPreviewAssetIds(folders, albums, id),
+          albums: getFolderCoverAlbums(folders, albums, id),
         });
       }
     });

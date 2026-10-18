@@ -214,9 +214,28 @@ export const getFolderPreviewAssetIds = (
     .slice(0, FOLDER_PREVIEW_LIMIT)
     .map((a) => a.albumThumbnailAssetId as string);
 
-export type FolderSummary = { albumCount: number; previewAssetIds: string[] };
+/**
+ * Local Omarchy layer: the subtree's albums that have a cover, newest first, ties by id: what `previewAssetIds` is cut
+ * from. The Albums page chooses a folder's photos from them (managers/folder-faces), where the covers as they come can
+ * be bank slips or screenshots.
+ */
+export const getFolderCoverAlbums = (
+  folders: SharedSpaceAlbumFolderDto[],
+  albums: SharedSpaceLinkedAlbumDto[],
+  folderId: string,
+): SharedSpaceLinkedAlbumDto[] =>
+  albumsInSubtree(folders, albums, folderId)
+    .filter((a) => a.albumThumbnailAssetId !== null)
+    .sort(byRecencyThenId);
 
-export const EMPTY_FOLDER_SUMMARY: FolderSummary = { albumCount: 0, previewAssetIds: [] };
+export type FolderSummary = {
+  albumCount: number;
+  previewAssetIds: string[];
+  /** Local Omarchy layer: getFolderCoverAlbums, for the Albums page's photo-only folder faces */
+  albums: SharedSpaceLinkedAlbumDto[];
+};
+
+export const EMPTY_FOLDER_SUMMARY: FolderSummary = { albumCount: 0, previewAssetIds: [], albums: [] };
 
 /**
  * Every folder's recursive album count and preview covers, in one pass over the space.
@@ -303,11 +322,13 @@ export const buildFolderSummaries = (
       }
     }
 
+    withCovers.sort(byRecencyThenId);
     summaries.set(folder.id, {
       albumCount,
-      previewAssetIds: dedupeByAssetId(withCovers.sort(byRecencyThenId))
+      previewAssetIds: dedupeByAssetId(withCovers)
         .slice(0, FOLDER_PREVIEW_LIMIT)
         .map((a) => a.albumThumbnailAssetId as string),
+      albums: withCovers,
     });
   }
 

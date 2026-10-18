@@ -12,6 +12,7 @@
   import GroupTab from '$lib/elements/GroupTab.svelte';
   import SearchBar from '$lib/elements/SearchBar.svelte';
   import { albumFolders } from '$lib/managers/album-folders.svelte';
+  import { folderFaces } from '$lib/managers/folder-faces.svelte';
   import { specialAlbumOf } from '$lib/managers/special-albums.svelte';
   import SpaceAlbumFolderNameModal from '$lib/modals/SpaceAlbumFolderNameModal.svelte';
   import SpaceAlbumFolderPickerModal from '$lib/modals/SpaceAlbumFolderPickerModal.svelte';
@@ -25,6 +26,7 @@
     writeDragPayload,
     type DragPayload,
   } from '$lib/utils/space-album-folder-dnd';
+  import { spreadFaces } from '$lib/utils/folder-faces';
   import {
     buildFolderSummaries,
     EMPTY_FOLDER_SUMMARY,
@@ -60,6 +62,7 @@
     !browsing || (albumFolders.folderOf(album.id) === folderId && !specialAlbumOf(album.id));
   const ownedHere = $derived(data.albums.filter((album) => inLevel(album)));
   const sharedHere = $derived(data.sharedAlbums.filter((album) => inLevel(album)));
+  const summaries = $derived(buildFolderSummaries(albumFolders.folders, albumFolders.linked));
   // folders by name, the way a person numbers them ("2" before "10", years in order)
   const subfolders = $derived(
     browsing
@@ -68,7 +71,29 @@
           .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
       : [],
   );
-  const summaries = $derived(buildFolderSummaries(albumFolders.folders, albumFolders.linked));
+  // each folder's photos, chosen once per page load: photos only, best first (managers/folder-faces), where the covers
+  // as they came put three bank slips on "Other" and a screenshot of text on "Home Life". The level's folders show
+  // theirs together once each is chosen, so no photo fronts two of them (spreadFaces); until then the quiet ground, or
+  // what a folder showed before while it is chosen again (an album dropped into it)
+  const coverAlbumsOf = (folder: SharedSpaceAlbumFolderDto) => summaries.get(folder.id)?.albums ?? [];
+  $effect(() => {
+    for (const folder of subfolders) {
+      folderFaces.resolve(folder.id, coverAlbumsOf(folder));
+    }
+  });
+  let shownFaces: Record<string, string[]> = {};
+  const levelFaces = $derived.by(() => {
+    const chosen = subfolders.map((folder) => {
+      const albums = coverAlbumsOf(folder);
+      return albums.length > 0 ? folderFaces.get(folder.id, albums) : [];
+    });
+    if (chosen.includes(undefined)) {
+      return subfolders.map(({ id }) => shownFaces[id]);
+    }
+    const spread = spreadFaces(chosen as string[][]);
+    shownFaces = { ...shownFaces, ...Object.fromEntries(subfolders.map(({ id }, index) => [id, spread[index]])) };
+    return spread;
+  });
   const path = $derived(getFolderPath(albumFolders.folders, folderId));
   // what a drop is checked against: the Space's albums where they are, and every other album of mine at the top
   const droppable = $derived.by(() => {
@@ -192,12 +217,14 @@
 
   {#if subfolders.length > 0}
     <div class="mt-4 grid grid-auto-fill-56 gap-y-4" role="list" data-testid="album-folders">
-      {#each subfolders as folder (folder.id)}
+      {#each subfolders as folder, index (folder.id)}
         {@const summary = summaries.get(folder.id) ?? EMPTY_FOLDER_SUMMARY}
+        {@const faces = levelFaces[index]}
         <SpaceAlbumFolderCard
           {folder}
           albumCount={summary.albumCount}
-          previewAssetIds={summary.previewAssetIds}
+          previewAssetIds={faces ?? []}
+          looking={faces === undefined && summary.albums.length > 0}
           canManage
           folders={albumFolders.folders}
           albums={droppable}

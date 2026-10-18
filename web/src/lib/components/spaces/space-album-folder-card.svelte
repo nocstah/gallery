@@ -20,6 +20,11 @@
     folder: SharedSpaceAlbumFolderDto;
     albumCount: number;
     previewAssetIds: string[];
+    /**
+     * Local Omarchy layer: the folder's photos are still being chosen (the Albums page's managers/folder-faces). The
+     * cover is the quiet ground alone meanwhile, never the covers as they came, which can be bank slips.
+     */
+    looking?: boolean;
     canManage: boolean;
     /** Needed to run the client-side canDrop check while this card is a drop target. */
     folders?: SharedSpaceAlbumFolderDto[];
@@ -35,6 +40,7 @@
     folder,
     albumCount,
     previewAssetIds,
+    looking = false,
     canManage,
     folders = [],
     albums = [],
@@ -129,14 +135,23 @@
     data-testid="space-album-folder-card-open"
   >
     <div class="relative aspect-square w-full overflow-hidden rounded-xl">
-      <!-- Local Omarchy layer: an empty folder wears a folder on the house's quiet icon cover, where a grey slab stood
-           under the badge; the cover then says folder itself, so the badge is for folders with photos to show -->
-      <SpaceCollage assets={collageAssets} emptyIcon={mdiFolderOutline} />
-      {#if collageAssets.length > 0}
-        <!-- Badge, so a folder is never mistaken for an album at a glance. -->
-        <div class="absolute inset-s-2 bottom-2 rounded-lg bg-black/55 p-1.5 text-white">
-          <Icon icon={mdiFolder} size="20" />
-        </div>
+      {#if looking}
+        <!-- Local Omarchy layer: the quiet ground while the folder's photos are chosen, with no glyph to swap out -->
+        <div
+          class="ws-album-icon-cover aspect-square size-full rounded-xl"
+          data-testid="folder-face-looking"
+          aria-hidden="true"
+        ></div>
+      {:else}
+        <!-- Local Omarchy layer: an empty folder wears a folder on the house's quiet icon cover, where a grey slab stood
+             under the badge; the cover then says folder itself, so the badge is for folders with photos to show -->
+        <SpaceCollage assets={collageAssets} emptyIcon={mdiFolderOutline} />
+        {#if collageAssets.length > 0}
+          <!-- Badge, so a folder is never mistaken for an album at a glance. -->
+          <div class="absolute inset-s-2 bottom-2 rounded-lg bg-black/55 p-1.5 text-white">
+            <Icon icon={mdiFolder} size="20" />
+          </div>
+        {/if}
       {/if}
     </div>
 
