@@ -67,10 +67,12 @@
   });
 </script>
 
-<nav class="flex flex-wrap items-center gap-1 px-4 pt-3 text-sm" data-testid="space-album-folder-breadcrumb">
+<!-- Local Omarchy layer: the crumbs start on the page's one gutter, the first one's words on it and its hover pad in the
+     gutter, as the folders and albums under them do (they stood 24px in: the row's 16px and the button's 8px) -->
+<nav class="flex flex-wrap items-center gap-1 pt-3 text-sm" data-testid="space-album-folder-breadcrumb">
   <button
     type="button"
-    class="rounded-md px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+    class="-ms-2 rounded-md px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-800"
     class:ring-2={dropTarget?.folderId === null}
     class:ring-primary={dropTarget?.folderId === null}
     data-testid="breadcrumb-root"
