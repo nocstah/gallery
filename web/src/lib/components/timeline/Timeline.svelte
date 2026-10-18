@@ -819,12 +819,15 @@
   }}
 />
 
+<!-- Local Omarchy layer: the grouping and the page's way to change it, for O (the Years overview and back) -->
 <TimelineKeyboardActions
   scrollToAsset={(asset) => scrollToAsset(asset) ?? false}
   {timelineManager}
   {assetInteraction}
   {onEscape}
   {album}
+  grouping={activeGrouping}
+  onGrouping={onGroupingChange}
 />
 
 {#if timelineManager.months.length > 0}

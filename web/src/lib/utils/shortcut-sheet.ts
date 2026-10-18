@@ -65,8 +65,9 @@ export const shortcutSections = ($t: MessageFormatter, account: SheetAccount): S
       ],
     },
     {
-      // timeline/actions/TimelineKeyboardActions, timeline/TimelineWorkspaces ([ and ]), assets/thumbnail/Thumbnail
-      // (Enter, X), managers/thumbnail-zoom-manager (+ - 0), utils/quick-trash, managers/special-albums (B V Q)
+      // timeline/actions/TimelineKeyboardActions (O: the Years overview and back, where a page offers the overviews; a
+      // shared link's grid does not), timeline/TimelineWorkspaces ([ and ]), assets/thumbnail/Thumbnail (Enter, X),
+      // managers/thumbnail-zoom-manager (+ - 0), utils/quick-trash, managers/special-albums (B V Q)
       id: 'grid',
       title: $t('shortcut_section_grid'),
       rows: [
@@ -77,6 +78,7 @@ export const shortcutSections = ($t: MessageFormatter, account: SheetAccount): S
         row([['M'], ['Shift', 'M']], $t('shortcut_month')),
         row([['Y'], ['Shift', 'Y']], $t('shortcut_year')),
         row([['['], [']']], $t('shortcut_year_older_newer')),
+        ...only(signedIn, row([['O']], $t('shortcut_overview'))),
         row([['G']], $t('shortcut_go_to_date')),
         row([['Enter']], $t('shortcut_open_photo')),
         row([['X']], $t('select')),

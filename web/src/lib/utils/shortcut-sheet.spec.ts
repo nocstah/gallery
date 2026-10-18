@@ -60,6 +60,15 @@ describe('shortcutSections', () => {
     expect(actions(family, 'film')).not.toContain('shortcut_sound');
   });
 
+  it('lists O, the Years overview and back, for a signed-in account, beside the keys that move through time', () => {
+    expect(keysFor(family, 'grid', 'shortcut_overview')).toEqual([['O']]);
+    expect(keysFor(owner, 'grid', 'shortcut_overview')).toEqual([['O']]);
+    const grid = actions(family, 'grid');
+    expect(grid.indexOf('shortcut_overview')).toBe(grid.indexOf('shortcut_year_older_newer') + 1);
+    // a shared link's grid offers no overviews, so O does nothing there
+    expect(actions(visitor, 'grid')).not.toContain('shortcut_overview');
+  });
+
   it('offers ⇧I only where the inspector window is offered, not on a phone or a touch screen', () => {
     expect(actions({ ...owner, inspector: false }, 'everywhere')).not.toContain('inspector_window_shortcut');
     expect(actions({ ...owner, inspector: true }, 'everywhere')).toContain('inspector_window_shortcut');

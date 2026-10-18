@@ -12,7 +12,7 @@
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import { offeredSpecialAlbums, specialAlbumOf, type SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+  import type { TimelineAsset, TimelineGrouping } from '$lib/managers/timeline-manager/types';
   import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte';
   import NavigateToDateModal from '$lib/modals/NavigateToDateModal.svelte';
   import ShortcutsModal from '$lib/modals/ShortcutsModal.svelte';
@@ -36,9 +36,21 @@
     scrollToAsset: (asset: TimelineAsset) => boolean;
     /** the album the timeline shows, if any (inside a special album its key takes photos out) */
     album?: AlbumResponseDto | null;
+    /** Local Omarchy layer: the grouping shown and the page's way to change it, for O (where the page offers the
+     * Years and Months overviews) */
+    grouping?: TimelineGrouping;
+    onGrouping?: (grouping: TimelineGrouping) => void;
   };
 
-  let { timelineManager = $bindable(), assetInteraction, onEscape, scrollToAsset, album = null }: Props = $props();
+  let {
+    timelineManager = $bindable(),
+    assetInteraction,
+    onEscape,
+    scrollToAsset,
+    album = null,
+    grouping = 'day',
+    onGrouping,
+  }: Props = $props();
 
   const trashOrDelete = async (forceRequested?: boolean) => {
     const force = forceRequested || !featureFlagsManager.value.trash;
@@ -295,6 +307,12 @@
     ];
     if (onEscape) {
       shortcuts.push({ shortcut: { key: 'Escape' }, onShortcut: onEscape });
+    }
+    // Local Omarchy layer: O opens the Years overview and, from either overview, goes back to the photos (the bar's
+    // "Years · Months" by key); not while photos are selected, as the overviews' controls wait then
+    if (onGrouping && !assetInteraction.selectionActive) {
+      const overviews = onGrouping;
+      shortcuts.push({ shortcut: { key: 'O' }, onShortcut: () => overviews(grouping === 'day' ? 'year' : 'day') });
     }
     // Local Omarchy layer: the special albums' keys, for the selection or the photo under the pointer
     for (const special of offeredSpecialAlbums()) {
