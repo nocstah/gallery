@@ -43,7 +43,7 @@ describe('SpaceAlbumCard', () => {
   it('renders album name and count', () => {
     renderWithTooltips(SpaceAlbumCard, { spaceId: 's-1', album, canManage: false });
     expect(screen.getByText('Trip')).toBeInTheDocument();
-    expect(screen.getByText(/12 items/i)).toBeInTheDocument();
+    expect(screen.getByText(/12 photos/i)).toBeInTheDocument();
   });
 
   it('editor and viewer both see the card menu (the "my timeline" item is not editor-gated)', () => {

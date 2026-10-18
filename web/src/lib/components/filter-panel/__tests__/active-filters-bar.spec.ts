@@ -575,7 +575,7 @@ describe('ActiveFiltersBar', () => {
     });
 
     const resultCount = getByTestId('result-count');
-    expect(resultCount.textContent).toContain('1,234 results');
+    expect(resultCount.textContent).toContain('1,234 photos');
   });
 
   it('should render camera chip as "Make Model"', () => {
@@ -815,7 +815,7 @@ describe('ActiveFiltersBar', () => {
     expect(queryByTestId('clear-all-btn')).toBeNull();
   });
 
-  it('should show singular "result" for count of 1', () => {
+  it('should show singular "photo" for count of 1', () => {
     const filters = createFilterState();
 
     const { getByTestId } = render(ActiveFiltersBar, {
@@ -828,8 +828,8 @@ describe('ActiveFiltersBar', () => {
     });
 
     const resultCount = getByTestId('result-count');
-    expect(resultCount.textContent).toContain('1 result');
-    expect(resultCount.textContent).not.toContain('results');
+    expect(resultCount.textContent).toContain('1 photo');
+    expect(resultCount.textContent).not.toContain('photos');
   });
 
   it('should call onClearSearch when Clear All is clicked and searchQuery is set', async () => {

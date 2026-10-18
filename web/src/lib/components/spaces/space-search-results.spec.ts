@@ -176,7 +176,7 @@ describe('SpaceSearchResults', () => {
         sortMode: 'relevance',
       },
     });
-    expect(screen.getByTestId('result-count')).toHaveTextContent('42 results');
+    expect(screen.getByTestId('result-count')).toHaveTextContent('42 photos');
     expect(screen.getByTestId('result-count').textContent).not.toContain('+');
   });
 

@@ -410,7 +410,7 @@ describe('Recently Added page query mode', () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId('user-page-layout')).toHaveAttribute('data-description', '12 items');
+      expect(screen.getByTestId('user-page-layout')).toHaveAttribute('data-description', '12 photos');
     });
   });
 

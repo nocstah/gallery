@@ -34,7 +34,7 @@ describe('AlbumPickerModal component', () => {
 
     render(AlbumPickerModal, { props: { onClose, selectedItemsCount: 1 } });
 
-    expect(await screen.findByText('Add 1 item to album')).toBeInTheDocument();
+    expect(await screen.findByText('Add 1 photo to album')).toBeInTheDocument();
     expect(screen.queryByText('Select albums')).not.toBeInTheDocument();
   });
 
@@ -43,7 +43,7 @@ describe('AlbumPickerModal component', () => {
 
     render(AlbumPickerModal, { props: { onClose, selectedItemsCount: 3 } });
 
-    expect(await screen.findByText('Add 3 items to album')).toBeInTheDocument();
+    expect(await screen.findByText('Add 3 photos to album')).toBeInTheDocument();
     expect(screen.queryByText('Select albums')).not.toBeInTheDocument();
   });
 
@@ -53,6 +53,6 @@ describe('AlbumPickerModal component', () => {
     render(AlbumPickerModal, { props: { onClose } });
 
     expect(await screen.findByText('Select albums')).toBeInTheDocument();
-    expect(screen.queryByText('Add 1 item to album')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add 1 photo to album')).not.toBeInTheDocument();
   });
 });

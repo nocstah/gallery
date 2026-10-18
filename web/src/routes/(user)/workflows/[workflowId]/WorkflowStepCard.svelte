@@ -84,7 +84,8 @@
       if (joined.length <= 28) {
         return `"${joined}"`;
       }
-      return $t('items_count', { values: { count: value.length } });
+      // Local Omarchy layer: items_count counts photos; a list of values has a word of its own
+      return $t('workflow_step_values_count', { values: { count: value.length } });
     }
     return JSON.stringify(value);
   };

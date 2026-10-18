@@ -43,7 +43,7 @@ describe('SpaceAlbumsTable', () => {
     renderWithTooltips(SpaceAlbumsTable, { spaceId: 's-1', albums: [a1, a2], canManage: false });
     expect(screen.getByTestId(`space-album-row-${a1.id}`)).toHaveAttribute('href', '/spaces/s-1/albums/a-1');
     expect(screen.getByText('Vacation')).toBeInTheDocument();
-    expect(screen.getByText(/5 items/i)).toBeInTheDocument();
+    expect(screen.getByText(/5 photos/i)).toBeInTheDocument();
   });
 
   it('shows the row menu for both an editor and a viewer (the "my timeline" item is not editor-gated)', () => {
@@ -191,7 +191,7 @@ describe('SpaceAlbumsTable', () => {
 
     const headerTexts = screen.getAllByRole('columnheader').map((header) => header.textContent?.trim());
 
-    expect(headerTexts).toContain('Number of items');
+    expect(headerTexts).toContain('Number of photos');
     // The bug rendered the bare fragment; assert on the exact string so a
     // substring match cannot pass against it.
     expect(headerTexts).not.toContain('items');
@@ -202,7 +202,7 @@ describe('SpaceAlbumsTable', () => {
 
     const header = screen
       .getAllByRole('columnheader')
-      .find((candidate) => candidate.textContent?.trim() === 'Number of items');
+      .find((candidate) => candidate.textContent?.trim() === 'Number of photos');
 
     expect(header).toBeDefined();
     expect(header?.className).toContain('w-4/12');

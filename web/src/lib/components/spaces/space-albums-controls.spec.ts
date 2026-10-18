@@ -77,7 +77,7 @@ describe('SpaceAlbumsControls sort dropdown', () => {
     await userEvent.click(screen.getByTestId('space-albums-sort-btn'));
     const menu = screen.getByTestId('space-albums-sort-menu');
     expect(within(menu).getByText('Title')).toBeInTheDocument();
-    expect(within(menu).getByText('Number of items')).toBeInTheDocument();
+    expect(within(menu).getByText('Number of photos')).toBeInTheDocument();
     expect(within(menu).getByText('Date modified')).toBeInTheDocument();
     expect(within(menu).getByText('Date created')).toBeInTheDocument();
     expect(within(menu).getByText('Most recent photo')).toBeInTheDocument();

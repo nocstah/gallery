@@ -11,7 +11,7 @@ vi.mock('@immich/ui', async (orig) => ({
 describe('AlbumPreview', () => {
   beforeAll(async () => {
     // Load the real en bundle so `$t('cmdk_preview_item_count', { values: { count } })`
-    // resolves to English ICU output ("1 item" / "2 items") instead of the raw key.
+    // resolves to English ICU output ("1 photo" / "2 photos") instead of the raw key.
     register('en-US', () => import('$i18n/en.json'));
     await init({ fallbackLocale: 'en-US' });
     await waitLocale('en-US');
@@ -32,7 +32,7 @@ describe('AlbumPreview', () => {
       } as never,
     });
     // Assert both item count and date range appear
-    expect(screen.getByText(/87 items/)).toBeInTheDocument();
+    expect(screen.getByText(/87 photos/)).toBeInTheDocument();
     expect(screen.getByText(/2024/)).toBeInTheDocument();
     expect(screen.getByText(/2026/)).toBeInTheDocument();
   });
@@ -51,7 +51,7 @@ describe('AlbumPreview', () => {
         },
       } as never,
     });
-    expect(screen.getByText('3 items')).toBeInTheDocument();
+    expect(screen.getByText('3 photos')).toBeInTheDocument();
   });
 
   it('null thumbnail renders placeholder icon', () => {
@@ -72,19 +72,19 @@ describe('AlbumPreview', () => {
     expect(screen.getByText(/shared/i)).toBeInTheDocument();
   });
 
-  it('ICU plural: "1 item" vs "2 items"', () => {
+  it('ICU plural: "1 photo" vs "2 photos"', () => {
     const { unmount } = render(AlbumPreview, {
       props: {
         item: { id: 'a1', albumName: 'x', assetCount: 1, shared: false, albumThumbnailAssetId: null },
       } as never,
     });
-    expect(screen.getByText(/1 item\b/)).toBeInTheDocument();
+    expect(screen.getByText(/1 photo\b/)).toBeInTheDocument();
     unmount();
     render(AlbumPreview, {
       props: {
         item: { id: 'a1', albumName: 'x', assetCount: 2, shared: false, albumThumbnailAssetId: null },
       } as never,
     });
-    expect(screen.getByText(/2 items/)).toBeInTheDocument();
+    expect(screen.getByText(/2 photos/)).toBeInTheDocument();
   });
 });

@@ -495,12 +495,12 @@ describe('Search page in the shell', () => {
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByTestId('search-result-count')).toHaveTextContent('42 results'));
+    await waitFor(() => expect(screen.getByTestId('search-result-count')).toHaveTextContent('42 photos'));
     expect(mockSearchAssetStatistics).toHaveBeenCalledWith(
       { statisticsSearchDto: { visibility: AssetVisibility.Timeline, withSharedSpaces: true, city: 'Berlin' } },
       expect.anything(),
     );
-    expect(screen.getByTestId('add-all-to-collection')).toHaveTextContent('Add all 42 results to');
+    expect(screen.getByTestId('add-all-to-collection')).toHaveTextContent('Add all 42 photos to');
   });
 
   it('counts a smart search by what has loaded, with a + while more follow, and offers no "add all"', async () => {
@@ -508,7 +508,7 @@ describe('Search page in the shell', () => {
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByTestId('search-result-count')).toHaveTextContent('1+ results'));
+    await waitFor(() => expect(screen.getByTestId('search-result-count')).toHaveTextContent('1+ photos'));
     expect(mockSearchAssetStatistics).not.toHaveBeenCalled();
     expect(screen.queryByTestId('add-all-to-collection')).not.toBeInTheDocument();
   });
