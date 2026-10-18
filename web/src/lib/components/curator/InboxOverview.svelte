@@ -1,10 +1,11 @@
 <script lang="ts">
   // Local Omarchy layer: the AI inbox's kinds. One row per kind of suggestion (the burst covers, the restored prints,
-  // the Mac's names), however many nights fed it (utils/curator-inbox): its title, how many wait, the days of its
-  // runs in data type and a strip of the photos it touches, the kind waiting longest first. What a kind does is said
-  // once, inside it; opening a row reviews the whole kind as one queue.
+  // the Mac's names), however many nights fed it (utils/curator-inbox): its title, what accepting would do with how
+  // many wait ("Archive 42 clips", kindAction) and the days of its runs in data type, and a strip of the photos it
+  // touches, the kind waiting longest first. The rest of what a kind does is said once, inside it; opening a row
+  // reviews the whole kind as one queue.
   import { curator } from '$lib/utils/curator';
-  import { kindQuery, kindsOf, runDays, type InboxKind } from '$lib/utils/curator-inbox';
+  import { kindAction, kindQuery, kindsOf, runDays, type InboxKind } from '$lib/utils/curator-inbox';
   import { getAssetMediaUrl } from '$lib/utils';
   import { AssetMediaSize } from '@immich/sdk';
   import { onMount } from 'svelte';
@@ -42,9 +43,12 @@
         <a class="ws-inbox-row overview-row" href="?{kindQuery(kind.keys)}">
           <div class="overview-text">
             <span class="ws-inbox-row-title">{kind.title}</span>
-            <span class="ws-inbox-meta overview-facts">
-              <span>{$t('ai_inbox_waiting', { values: { count: kind.pending } })}</span>
-              <span>{runDays(kind.runs, $locale ?? undefined)}</span>
+            <span class="overview-facts">
+              <!-- what accepting would do, in words, then the days of its runs in data type -->
+              <span class="overview-todo"
+                >{$t(kindAction(kind.series, kind.kind).todo, { values: { count: kind.pending } })}</span
+              >
+              <span class="ws-inbox-meta">{runDays(kind.runs, $locale ?? undefined)}</span>
             </span>
           </div>
           <div class="ws-strip overview-strip">
@@ -71,7 +75,12 @@
   .overview-facts {
     display: flex;
     flex-wrap: wrap;
+    align-items: baseline;
     gap: 0.15rem 1.25rem;
+  }
+  .overview-todo {
+    font-size: var(--ws-text-ui);
+    font-weight: 500;
   }
   .overview-strip :global(.ws-strip-tile) {
     width: 72px;

@@ -111,7 +111,8 @@ describe('the chat page', () => {
 
     expect(thread().getByText('I found 34 photos of Simon at the beach and proposed an album.')).toBeInTheDocument();
     expect(screen.getByText('Proposed an album')).toBeInTheDocument();
-    const accept = await screen.findByRole('button', { name: 'Accept' });
+    // the button says what accepting does: an album proposed in the chat is made
+    const accept = await screen.findByRole('button', { name: 'Make album' });
     await waitFor(() => expect(accept).toBeEnabled());
     await user.click(accept);
     expect(curator.decide).toHaveBeenCalledWith([7], 'accept');

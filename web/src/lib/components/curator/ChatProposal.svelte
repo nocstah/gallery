@@ -1,8 +1,10 @@
 <script lang="ts">
-  // Local Omarchy layer: a change the library chat proposed (an album), with Accept and Reject. It is an ordinary
-  // suggestion in the AI inbox's "Asked in chat" batch, so its state comes from Curator: decided here or in the inbox,
-  // it reads the same in both places, also when the conversation is opened again later.
+  // Local Omarchy layer: a change the library chat proposed (an album), with a button that says what accepting does
+  // (Make album, as the AI inbox says it: kindAction) and Reject. It is an ordinary suggestion in the AI inbox's "Asked
+  // in chat" batch, so its state comes from Curator: decided here or in the inbox, it reads the same in both places,
+  // also when the conversation is opened again later.
   import { curator, CuratorError, type ChatProposal, type SuggestionStatus } from '$lib/utils/curator';
+  import { kindAction } from '$lib/utils/curator-inbox';
   import { t, type Translations } from 'svelte-i18n';
 
   interface Props {
@@ -72,7 +74,7 @@
   <div class="chat-proposal-actions">
     {#if status === 'pending' || status === undefined}
       <button type="button" class="ws-btn" disabled={busy || status === undefined} onclick={() => decide('accept')}>
-        {$t('accept')}
+        {$t(kindAction('', proposal.kind).button)}
       </button>
       <button
         type="button"

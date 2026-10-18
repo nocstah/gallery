@@ -1,5 +1,19 @@
+import { IntlMessageFormat } from 'intl-messageformat';
+import fs from 'node:fs';
+import path from 'node:path';
+import { FORK_LOCALES } from '$lib/i18n/fork-locales';
 import { curator, type InboxGroup, type Suggestion } from '$lib/utils/curator';
-import { kindQuery, kindsOf, newestBatch, runDays, runsOf, seriesOf, waitingIn } from '$lib/utils/curator-inbox';
+import {
+  kindAction,
+  kindActionKeys,
+  kindQuery,
+  kindsOf,
+  newestBatch,
+  runDays,
+  runsOf,
+  seriesOf,
+  waitingIn,
+} from '$lib/utils/curator-inbox';
 
 // Local Omarchy layer: the AI inbox by kind. Batches Curator made one per night before it added to the waiting batch
 // of their kind read as one row here, its counts summed and its runs' days in data type.
@@ -71,6 +85,7 @@ describe('kindsOf', () => {
 
   it('is one row per kind, its counts summed, the one waiting longest first', () => {
     const kinds = kindsOf(groups);
+    expect(kinds.map((kind) => kind.kind)).toEqual(['asset.archive', 'restore.publish', 'smart.create']);
     expect(kinds.map((kind) => kind.series)).toEqual([
       'asset.archive:short',
       'restore.publish:prints',
@@ -176,5 +191,74 @@ describe('waitingIn', () => {
       ['b', 500],
     ]);
     group.mockRestore();
+  });
+});
+
+describe('kindAction', () => {
+  it("says what accepting does by Curator's kind of change", () => {
+    expect(kindAction('album.living:Best of', 'album.create')).toMatchObject({
+      verb: 'album',
+      button: 'ai_inbox_verb_album',
+      all: 'ai_inbox_verb_album_all',
+      todo: 'ai_inbox_do_album_albums',
+      done: 'ai_inbox_did_album_albums',
+    });
+    expect(kindAction('stack.cover', 'stack.cover').todo).toBe('ai_inbox_do_cover_stacks');
+    expect(kindAction('smart.create:people', 'smart.create').todo).toBe('ai_inbox_do_album_smart');
+    expect(kindAction('tag.retire', 'tag.retire').button).toBe('ai_inbox_verb_untag');
+    expect(kindAction('asset.archive:gallery:Screenshots', 'asset.archive').todo).toBe('ai_inbox_do_archive_photos');
+  });
+
+  it('counts what the series holds where one kind of change holds different things', () => {
+    expect(kindAction('asset.archive:short', 'asset.archive').todo).toBe('ai_inbox_do_archive_clips');
+    expect(kindAction('restore.publish:prints', 'restore.publish').todo).toBe('ai_inbox_do_publish_restored');
+    expect(kindAction('restore.publish:videos', 'restore.publish').todo).toBe('ai_inbox_do_publish_clips');
+    expect(kindAction('restore.publish:collages', 'restore.publish')).toMatchObject({
+      verb: 'make',
+      todo: 'ai_inbox_do_make_collages',
+    });
+    expect(kindAction('restore.publish:adjusted', 'restore.publish').todo).toBe('ai_inbox_do_publish_versions');
+    expect(kindAction('person.merge:pets', 'person.merge').todo).toBe('ai_inbox_do_merge_pets');
+  });
+
+  it("is the chat's Apply for its batch, each card its own, and Accept for a kind it does not know", () => {
+    expect(kindAction('agent', 'agent').verb).toBe('apply');
+    expect(kindAction('', 'asset.rotate').button).toBe('ai_inbox_verb_rotate');
+    expect(kindAction('something.new:x', 'something.new')).toMatchObject({
+      verb: 'accept',
+      button: 'ai_inbox_verb_accept',
+      todo: 'ai_inbox_do_accept_suggestions',
+    });
+  });
+});
+
+describe("the inbox's words for each kind", () => {
+  const I18N_DIR = path.resolve(process.cwd(), '../i18n');
+  const read = (code: string) =>
+    JSON.parse(fs.readFileSync(path.join(I18N_DIR, `${code}.json`), 'utf8')) as Record<string, unknown>;
+
+  it.each(['en', ...FORK_LOCALES])('%s has each, and each reads for one, a few and many', (code) => {
+    const messages = read(code);
+    const locale = code.replaceAll('_', '-');
+    for (const key of kindActionKeys()) {
+      const message = messages[key];
+      expect(message, `${key} missing in ${code}.json`).toBeTypeOf('string');
+      for (const count of [1, 2, 5, 22, 1224]) {
+        const said = new IntlMessageFormat(message as string, locale).format({ count }) as string;
+        expect(said, `${key} in ${code}.json`).not.toMatch(/[{}#]/);
+        if (!key.startsWith('ai_inbox_verb_') || key.endsWith('_all')) {
+          expect(said, `${key} in ${code}.json says no number for ${count}`).toMatch(/\d/);
+        }
+      }
+    }
+  });
+
+  it('counts with a plural where a phrase names what it counts', () => {
+    const en = read('en');
+    const phrases = kindActionKeys().filter((name) => /^ai_inbox_(do|did)_/.test(name));
+    expect(phrases).toHaveLength(60);
+    for (const key of phrases) {
+      expect(en[key], key).toMatch(/\{count, plural,/);
+    }
   });
 });
