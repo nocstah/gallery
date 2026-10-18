@@ -208,6 +208,12 @@ export const recentSpaceAlbumsExpanded = persisted<Record<string, boolean>>('spa
  */
 export const albumTreeOpen = persisted<Record<string, boolean>>('album-tree-opened', {}, {});
 
+/**
+ * Local Omarchy layer: the sidebar's groups folded away under their heading (Manage, Hidden and deleted), by name;
+ * a group not named here is open (components/sidebar/sidebar-nav-group).
+ */
+export const sidebarGroupsClosed = persisted<Record<string, boolean>>('sidebar-groups-closed', {}, {});
+
 export const isSpaceAlbumsExpanded = (state: Record<string, boolean>, spaceId: string): boolean => state[spaceId];
 
 export const setSpaceAlbumsExpanded = (spaceId: string, expanded: boolean, validSpaceIds: string[]): void => {

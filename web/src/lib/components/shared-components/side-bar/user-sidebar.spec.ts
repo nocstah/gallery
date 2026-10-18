@@ -76,7 +76,7 @@ vi.mock('$lib/components/sidebar/sidebar-nav-item.svelte', async () => {
 });
 
 vi.mock('$lib/components/sidebar/sidebar-nav-group.svelte', async () => {
-  const module = await import('@test-data/mocks/navbar-group.stub.svelte');
+  const module = await import('@test-data/mocks/sidebar-nav-group.stub.svelte');
   return { default: module.default };
 });
 

@@ -73,7 +73,8 @@
 <!-- Local Omarchy layer: the rows in four groups, each headed as Library is: Browse (the views to wander in), Pinned and
      Library (what the library holds), Manage (the owner's tools, the owner's only) and Hidden and deleted (where photos
      go out of sight) at the end. One "Library" had headed fifteen rows of the library, the owner's tools and the bins
-     alike, and the first six had none -->
+     alike, and the first six had none. Manage and Hidden and deleted fold away under their heading (remembered per
+     browser, open until folded): with every group open, Trash stood below the AORUS's fold -->
 <Sidebar ariaLabel={$t('primary')}>
   <SidebarNavGroup title={$t('sidebar_browse')} first />
 
@@ -188,41 +189,54 @@
   {/if}
 
   {#if ownerTools}
-    <SidebarNavGroup title={$t('sidebar_manage')} />
+    <SidebarNavGroup
+      title={$t('sidebar_manage')}
+      collapse="manage"
+      holds={['/command', '/inbox', '/chat', Route.utilities(), Route.import()]}
+    >
+      <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
+      <SidebarNavItem
+        title={$t('command_title')}
+        href="/command"
+        icon={mdiViewDashboardOutline}
+        activeIcon={mdiViewDashboard}
+      />
 
-    <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
+      <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
+      <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
+
+      <!-- Local Omarchy layer: a conversation with Curator's local model about the library (routes/(user)/chat) -->
+      <SidebarNavItem title={$t('chat_title')} href="/chat" icon={mdiChatOutline} activeIcon={mdiChat} />
+
+      <SidebarNavItem
+        title={$t('utilities')}
+        href={Route.utilities()}
+        icon={mdiToolboxOutline}
+        activeIcon={mdiToolbox}
+      />
+
+      <SidebarNavItem title={$t('import')} href={Route.import()} icon={mdiDatabaseImportOutline} />
+    </SidebarNavGroup>
+  {/if}
+
+  <SidebarNavGroup
+    title={$t('sidebar_hidden_deleted')}
+    collapse="hidden-deleted"
+    holds={[Route.archive(), Route.locked(), Route.trash()]}
+  >
     <SidebarNavItem
-      title={$t('command_title')}
-      href="/command"
-      icon={mdiViewDashboardOutline}
-      activeIcon={mdiViewDashboard}
+      title={$t('archive')}
+      href={Route.archive()}
+      icon={mdiArchiveArrowDownOutline}
+      activeIcon={mdiArchiveArrowDown}
     />
 
-    <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
-    <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
+    <SidebarNavItem title={$t('locked_folder')} href={Route.locked()} icon={mdiLockOutline} activeIcon={mdiLock} />
 
-    <!-- Local Omarchy layer: a conversation with Curator's local model about the library (routes/(user)/chat) -->
-    <SidebarNavItem title={$t('chat_title')} href="/chat" icon={mdiChatOutline} activeIcon={mdiChat} />
-
-    <SidebarNavItem title={$t('utilities')} href={Route.utilities()} icon={mdiToolboxOutline} activeIcon={mdiToolbox} />
-
-    <SidebarNavItem title={$t('import')} href={Route.import()} icon={mdiDatabaseImportOutline} />
-  {/if}
-
-  <SidebarNavGroup title={$t('sidebar_hidden_deleted')} />
-
-  <SidebarNavItem
-    title={$t('archive')}
-    href={Route.archive()}
-    icon={mdiArchiveArrowDownOutline}
-    activeIcon={mdiArchiveArrowDown}
-  />
-
-  <SidebarNavItem title={$t('locked_folder')} href={Route.locked()} icon={mdiLockOutline} activeIcon={mdiLock} />
-
-  {#if featureFlagsManager.value.trash}
-    <SidebarNavItem title={$t('trash')} href={Route.trash()} icon={mdiTrashCanOutline} activeIcon={mdiTrashCan} />
-  {/if}
+    {#if featureFlagsManager.value.trash}
+      <SidebarNavItem title={$t('trash')} href={Route.trash()} icon={mdiTrashCanOutline} activeIcon={mdiTrashCan} />
+    {/if}
+  </SidebarNavGroup>
 
   {#if collapsed}
     <RailStorage />
