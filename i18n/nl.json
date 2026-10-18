@@ -4233,6 +4233,8 @@
   "then": "Dan",
   "they_will_be_merged_together": "Zij zullen worden samengevoegd",
   "third_party_resources": "Bronnen van derden",
+  "thumbnail_link": "{isVideo, select, true {Link naar deze video} other {Link naar deze foto}}",
+  "thumbnail_preview": "{isVideo, select, true {Voorbeeld van deze video} other {Voorbeeld van deze foto}}",
   "time": "Tijd",
   "time_based_memories": "Tijdgebaseerde herinneringen",
   "time_based_memories_duration": "Aantal seconden dat elke afbeelding wordt weergegeven.",

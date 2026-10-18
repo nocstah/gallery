@@ -448,6 +448,7 @@
       </div>
 
       <!-- lazy show the url on mouse over-->
+      <!-- Local Omarchy layer: the link's name through i18n, as the photo's or the video's (was "Thumbnail URL") -->
       {#if !usingMobileDevice && mouseOver && !disableLinkMouseOver}
         <a
           class="absolute inset-y-0 z-2 w-full"
@@ -455,7 +456,7 @@
           href={currentUrlReplaceAssetId(asset.id)}
           onclick={(evt) => evt.preventDefault()}
           tabindex={-1}
-          aria-label="Thumbnail URL"
+          aria-label={$t('thumbnail_link', { values: { isVideo: asset.isVideo } })}
         >
         </a>
       {/if}
@@ -542,6 +543,7 @@
     {/if}
 
     <!-- Preview asset button (visible on hover when any asset is selected) -->
+    <!-- Local Omarchy layer: its name through i18n, as the photo's or the video's (was "Preview asset") -->
     {#if mouseOver && onPreview}
       <button
         type="button"
@@ -553,7 +555,7 @@
         class="absolute inset-e-1 bottom-1 z-2 rounded-full bg-black/25 p-1.5 transition-colors hover:bg-black/50 focus:outline-none"
         in:fade={{ duration: 100 }}
         tabindex={-1}
-        aria-label="Preview asset"
+        aria-label={$t('thumbnail_preview', { values: { isVideo: asset.isVideo } })}
       >
         <Icon icon={mdiMagnifyPlusOutline} size="20" class="text-white" />
       </button>

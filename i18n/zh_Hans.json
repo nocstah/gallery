@@ -4233,6 +4233,8 @@
   "then": "然后",
   "they_will_be_merged_together": "项目将会合并到一起",
   "third_party_resources": "第三方资源",
+  "thumbnail_link": "{isVideo, select, true {此视频的链接} other {此照片的链接}}",
+  "thumbnail_preview": "{isVideo, select, true {预览此视频} other {预览此照片}}",
   "time": "时间",
   "time_based_memories": "那年今日",
   "time_based_memories_duration": "显示每张图像的秒数。",

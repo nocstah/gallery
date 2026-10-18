@@ -4234,6 +4234,8 @@
   "then": "Entonces",
   "they_will_be_merged_together": "Se fusionarán entre sí",
   "third_party_resources": "Recursos de terceros",
+  "thumbnail_link": "{isVideo, select, true {Enlace a este vídeo} other {Enlace a esta foto}}",
+  "thumbnail_preview": "{isVideo, select, true {Previsualizar este vídeo} other {Previsualizar esta foto}}",
   "time": "Tiempo",
   "time_based_memories": "Recuerdos basados en tiempo",
   "time_based_memories_duration": "Cantidad de segundos que se mostrará cada imagen.",

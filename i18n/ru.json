@@ -4236,6 +4236,8 @@
   "then": "Затем",
   "they_will_be_merged_together": "Они будут объединены вместе",
   "third_party_resources": "Сторонние ресурсы",
+  "thumbnail_link": "{isVideo, select, true {Ссылка на это видео} other {Ссылка на это фото}}",
+  "thumbnail_preview": "{isVideo, select, true {Предварительный просмотр этого видео} other {Предварительный просмотр этого фото}}",
   "time": "Время",
   "time_based_memories": "Воспоминания, основанные на времени",
   "time_based_memories_duration": "Длительность показа слайдов в секундах",

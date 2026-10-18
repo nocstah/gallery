@@ -4251,6 +4251,8 @@
   "then": "Wtedy",
   "they_will_be_merged_together": "Zostaną one ze sobą połączone",
   "third_party_resources": "Zasoby stron trzecich",
+  "thumbnail_link": "{isVideo, select, true {Link do tego wideo} other {Link do tego zdjęcia}}",
+  "thumbnail_preview": "{isVideo, select, true {Podgląd tego wideo} other {Podgląd tego zdjęcia}}",
   "time": "Czas",
   "time_based_memories": "Wspomnienia oparte na czasie",
   "time_based_memories_duration": "Ilość sekund, przez jaką wyświetlane jest poszczególne zdjęcie.",

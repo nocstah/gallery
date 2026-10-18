@@ -4179,6 +4179,8 @@
   "then": "然後",
   "they_will_be_merged_together": "它們將會被合併在一起",
   "third_party_resources": "第三方資源",
+  "thumbnail_link": "{isVideo, select, true {此影片的連結} other {此相片的連結}}",
+  "thumbnail_preview": "{isVideo, select, true {預覽此影片} other {預覽此相片}}",
   "time": "時間",
   "time_based_memories": "依時間回憶",
   "time_based_memories_duration": "顯示每張影像的秒數。",

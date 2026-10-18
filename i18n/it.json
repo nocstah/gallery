@@ -4233,6 +4233,8 @@
   "then": "Allora",
   "they_will_be_merged_together": "Verranno uniti insieme",
   "third_party_resources": "Risorse di Terze Parti",
+  "thumbnail_link": "{isVideo, select, true {Link a questo video} other {Link a questa foto}}",
+  "thumbnail_preview": "{isVideo, select, true {Anteprima di questo video} other {Anteprima di questa foto}}",
   "time": "Orario",
   "time_based_memories": "Ricordi basati sul tempo",
   "time_based_memories_duration": "Numero di secondi per visualizzare ciascuna immagine.",
