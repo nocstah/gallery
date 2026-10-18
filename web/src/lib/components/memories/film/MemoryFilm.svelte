@@ -40,6 +40,16 @@
   import { filmKeyAction, type FilmAction, type FilmDress } from './film-keys';
   import { FilmMusic } from './film-music.svelte';
   import {
+    headScrimAt,
+    imagePicture,
+    scrimAt,
+    shotShade,
+    thumbhashPicture,
+    wholeLift,
+    type FilmWords,
+    type FrameBox,
+  } from './film-shade';
+  import {
     buildFilmPlan,
     filmChanges,
     filmMomentAt,
@@ -145,6 +155,13 @@
   const reducedMotion = $derived(mediaQueryManager.reducedMotion);
 
   let film: HTMLElement | undefined = $state();
+  // what the shade and the lift are measured from: the words' rulers, the scrims, the top bar's words
+  let titleRuler: HTMLElement | undefined = $state();
+  let linesRuler: HTMLElement | undefined = $state();
+  let footScrim: HTMLElement | undefined = $state();
+  let headScrim: HTMLElement | undefined = $state();
+  let headEl: HTMLElement | undefined = $state();
+  let whereEl: HTMLElement | undefined = $state();
   // the film is fixed over the whole window, so the window's size is the frame's (and holds while the film is hidden)
   let frameWidth = $state(0);
   let frameHeight = $state(0);
@@ -160,10 +177,15 @@
   let waited = $state(false);
   let storyText = $derived(plan && storyIndex >= 0 ? storyOf(plan)[storyIndex]?.text : undefined);
 
-  type Layer = { shot: FilmShot | null; key: string; z: number };
+  /** a photo as it lies under the words (film-shade.ts): the black under the words at the foot and under the top bar,
+   * as opacities, how far up and down from the frame's edge each is held (px), and how far a photo shown whole is
+   * raised (a share of the frame's height) */
+  type Look = { shade: number; reach: number; headShade: number; headReach: number; lift: number };
+  const NO_LOOK: Look = { shade: 0, reach: 0, headShade: 0, headReach: 0, lift: 0 };
+  type Layer = { shot: FilmShot | null; key: string; z: number } & Look;
   let layers = $state<Layer[]>([
-    { shot: null, key: '', z: 1 },
-    { shot: null, key: '', z: 0 },
+    { shot: null, key: '', z: 1, ...NO_LOOK },
+    { shot: null, key: '', z: 0, ...NO_LOOK },
   ]);
   const layerEls: (HTMLElement | undefined)[] = $state([undefined, undefined]);
   // each layer's running animations and the promise of its photo being decoded (plain: nothing renders from them)
@@ -290,6 +312,147 @@
     return asset ? $getAltText(toTimelineAsset(asset)) : '';
   };
 
+  // ---- each photo laid out for its words (film-shade.ts): the shade that keeps them at AA on it, and a photo shown
+  // whole raised clear of them where the frame has the room. Worked out as a photo is put into its layer, from the
+  // words' rulers (laid out out of sight where the words will be), and kept while it is on screen ----
+
+  /** the story's longest text, for its ruler */
+  const longestStory = $derived.by(() => {
+    let longest = '';
+    for (const text of plan ? storyOf(plan).map(({ text }) => text) : sentences) {
+      if (text.length > longest.length) {
+        longest = text;
+      }
+    }
+    return longest;
+  });
+
+  /** a length in CSS pixels as getComputedStyle gives it ("17px") */
+  const pixels = (value: string) => Number(value.replace(/px$/, '')) || 0;
+
+  /** a box of the frame (px) in shares of it */
+  const shareOf = (rect: DOMRect): FrameBox => ({
+    left: rect.left / frameWidth,
+    top: rect.top / frameHeight,
+    right: rect.right / frameWidth,
+    bottom: rect.bottom / frameHeight,
+  });
+
+  /** the box of an element's text itself, not of the element: a short line in a wide block is short */
+  const textBox = (element: Element | null | undefined) => {
+    if (!element) {
+      return undefined;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const rect = range.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 ? rect : undefined;
+  };
+
+  /** words as the shade needs them: where they are, their white's opacity, and the ratio WCAG AA asks of them (3:1
+   * for large text, 24px, or 18.66px at 700; else 4.5:1) */
+  const wordsOf = (element: Element, rect: DOMRect, scrim: number): FilmWords => {
+    const style = getComputedStyle(element);
+    const size = pixels(style.fontSize);
+    const weight = Number(style.fontWeight) || 400;
+    const channels = style.color.match(/[\d.]+%?/g) ?? [];
+    const alpha = channels[3];
+    return {
+      box: shareOf(rect),
+      ink: alpha === undefined ? 1 : alpha.endsWith('%') ? Number(alpha.slice(0, -1)) / 100 : Number(alpha),
+      ratio: size >= 24 || (size >= 18.66 && weight >= 700) ? 3 : 4.5,
+      scrim,
+    };
+  };
+
+  /** the words at the foot over a shot (the title card's, the story's, across the room the caption) and how far up
+   * from the frame's foot they come (px) */
+  const footWords = (target: FilmShot) => {
+    const words: FilmWords[] = [];
+    let reach = 0;
+    if (!plan) {
+      return { words, reach };
+    }
+    const scrimHeight = footScrim?.clientHeight || frameHeight * 0.55;
+    const until = target.start + target.duration;
+    const over = (kind: 'title' | 'story') =>
+      !!plan?.texts.some((text) => text.kind === kind && text.start < until && text.end > target.start);
+    // each kind of words where it stands; the story and Room's caption over the lines' whole block, since the story
+    // stands a line higher while a caption is under it and drops to the foot when there is none
+    const add = (element: Element | null | undefined, rect = textBox(element)) => {
+      if (element && rect) {
+        const height = frameHeight - rect.top;
+        words.push(wordsOf(element, rect, scrimAt(height / scrimHeight, dress === 'room')));
+        reach = Math.max(reach, height);
+      }
+    };
+    if (over('title')) {
+      for (const element of titleRuler?.children ?? []) {
+        add(element);
+      }
+    }
+    const lines = textBox(linesRuler);
+    if (over('story')) {
+      add(linesRuler?.querySelector('.film-story'), lines);
+    }
+    if (dress === 'room' && caption && !target.opening) {
+      add(linesRuler?.querySelector('.film-caption'), lines);
+    }
+    return { words, reach };
+  };
+
+  /** the top bar's words (the title, the date and place) and how far down they come (px) */
+  const headWords = () => {
+    const words: FilmWords[] = [];
+    let reach = 0;
+    const scrimHeight = headScrim?.clientHeight || 144;
+    for (const element of whereEl?.children ?? []) {
+      const rect = textBox(element);
+      if (!rect) {
+        continue;
+      }
+      words.push(wordsOf(element, rect, headScrimAt(rect.bottom / scrimHeight)));
+      reach = Math.max(reach, rect.bottom);
+    }
+    return { words, reach };
+  };
+
+  /** how far up the film's tallest words come (px): its title card or its longest sentence */
+  const tallestWords = () =>
+    Math.max(
+      0,
+      ...[titleRuler, linesRuler].map((ruler) => {
+        const rect = ruler?.getBoundingClientRect();
+        return rect && rect.height > 0 ? frameHeight - rect.top : 0;
+      }),
+    );
+
+  /** a shot's look: from its thumbhash when it is put into its layer, from the photo itself once that is decoded */
+  const lookOf = (target: FilmShot, media?: HTMLImageElement | HTMLVideoElement | null): Look => {
+    if (!plan || !film || frameWidth <= 0 || frameHeight <= 0) {
+      return NO_LOOK;
+    }
+    const thumbhash = assetsById.get(target.assetId)?.thumbhash;
+    const picture =
+      (media instanceof HTMLImageElement ? imagePicture(media, thumbhash) : null) ?? thumbhashPicture(thumbhash);
+    // a photo shown whole goes up clear of the film's tallest words, every photo of the film alike, with some air
+    // under it (its breathing included) and the top bar's margin above it
+    const top = headEl ? pixels(getComputedStyle(headEl).paddingTop) : 0;
+    const lift =
+      target.fit === 'whole'
+        ? wholeLift(target.ratio, plan.aspect, tallestWords() / frameHeight, 0.02 + 12 / frameHeight, top / frameHeight)
+        : 0;
+    const foot = footWords(target);
+    const head = headWords();
+    return {
+      shade: foot.words.length > 0 ? shotShade(picture, target, plan.aspect, foot.words, lift) : 0,
+      reach: Math.round(foot.reach),
+      headShade: head.words.length > 0 ? shotShade(picture, target, plan.aspect, head.words, lift) : 0,
+      headReach: Math.round(head.reach),
+      lift,
+    };
+  };
+
   // ---- the layers: the shot on screen and the next one, made ready under it ----
 
   const animate = (
@@ -339,17 +502,21 @@
     const key = `${index}:${next.assetId}`;
     const stage = stages[slot];
     if (layers[slot].key === key && stage.ready) {
-      // the same photo, perhaps planned again for a new frame's shape: its fit follows, the decoded image stays
-      layers[slot].shot = next;
+      // the same photo, perhaps planned again for a new frame's shape: its fit and look follow, the decoded image stays
+      Object.assign(layers[slot], { shot: next, ...lookOf(next, mediaOf(slot)) });
       return stage.ready;
     }
     stopLayer(slot);
-    layers[slot] = { shot: next, key, z: layers[slot].z };
+    layers[slot] = { shot: next, key, z: layers[slot].z, ...lookOf(next) };
     const ready = (async () => {
       await tick();
       const media = mediaOf(slot);
       if (media instanceof HTMLImageElement) {
         await withTimeout(typeof media.decode === 'function' ? media.decode() : Promise.resolve(), READY_MS);
+        // decoded, the photo itself says how bright it is under the words, better than its thumbhash did
+        if (layers[slot].key === key) {
+          Object.assign(layers[slot], lookOf(layers[slot].shot ?? next, media));
+        }
       } else if (media instanceof HTMLVideoElement) {
         await withTimeout(videoReady(media), READY_MS / 2);
       }
@@ -960,7 +1127,7 @@
         plan = makePlan(now);
         const onScreen = plan.shots[shotIndex];
         if (onScreen && layers[front].shot) {
-          layers[front].shot = onScreen;
+          Object.assign(layers[front], { shot: onScreen, ...lookOf(onScreen, mediaOf(front)) });
           show(front, onScreen, 0, Math.max(0, clockTime() - onScreen.start));
         }
       }, 180);
@@ -1047,6 +1214,11 @@
   });
 
   const controlsHidden = $derived(!controlsShown && playing && !ended);
+  // words on the photo at the foot: the title card, a sentence of the story, across the room the photo's caption (the
+  // title card's photo is named by the title card)
+  const wordsShown = $derived(
+    !ended && (titleShown || !!storyText || (dress === 'room' && !!caption && !!shot && !shot.opening)),
+  );
 
   // the story's sentence as it stands on screen: Room's caption under it leaves out what it says
   $effect(() => {
@@ -1081,6 +1253,7 @@
   data-ended={ended || undefined}
   data-sound={music?.available ? (music.playing ? 'on' : music.blocked ? 'blocked' : 'off') : undefined}
   data-dress={dress === 'room' ? 'room' : undefined}
+  data-words={wordsShown || undefined}
   data-pointer={pointerSeen || undefined}
   data-leaving={leaving || undefined}
 >
@@ -1092,7 +1265,14 @@
     role="presentation"
   >
     {#each layers as layer, slot (slot)}
-      <div class="film-layer" bind:this={layerEls[slot]} style:z-index={layer.z} data-asset-id={layer.shot?.assetId}>
+      <div
+        class="film-layer"
+        bind:this={layerEls[slot]}
+        style:z-index={layer.z}
+        data-asset-id={layer.shot?.assetId}
+        data-shade={layer.shade || undefined}
+        data-lift={layer.lift || undefined}
+      >
         {#if layer.shot && plan}
           {@const frame = shotFrame(layer.shot, plan.aspect)}
           {#key layer.key}
@@ -1109,6 +1289,7 @@
                 class:is-fill={frame.fill}
                 style:width={frame.width}
                 style:height={frame.height}
+                style:translate={!frame.fill && layer.lift > 0 ? `0 ${-layer.lift * 100}%` : undefined}
                 src={getAssetPlaybackUrl({
                   id: layer.shot.assetId,
                   cacheKey: assetsById.get(layer.shot.assetId)?.thumbhash,
@@ -1127,6 +1308,7 @@
                 class:is-fill={frame.fill}
                 style:width={frame.width}
                 style:height={frame.height}
+                style:translate={!frame.fill && layer.lift > 0 ? `0 ${-layer.lift * 100}%` : undefined}
                 src={preview(layer.shot.assetId)}
                 alt={altOf(layer.shot.assetId)}
                 decoding="async"
@@ -1134,6 +1316,23 @@
               />
             {/if}
           {/key}
+          <!-- the black this photo needs under its words, lit with them (film-shade.ts) -->
+          {#if layer.shade > 0}
+            <div
+              class="film-shade film-shade-foot"
+              style:--shade={layer.shade}
+              style:--reach="{layer.reach}px"
+              aria-hidden="true"
+            ></div>
+          {/if}
+          {#if layer.headShade > 0}
+            <div
+              class="film-shade film-shade-head"
+              style:--shade={layer.headShade}
+              style:--reach="{layer.headReach}px"
+              aria-hidden="true"
+            ></div>
+          {/if}
         {/if}
       </div>
     {/each}
@@ -1141,15 +1340,12 @@
 
   <div
     class="film-scrim film-scrim-foot"
-    class:is-lit={titleShown ||
-      !!storyText ||
-      ended ||
-      !controlsHidden ||
-      (dress === 'room' && !!caption && !!shot && !shot.opening)}
+    class:is-lit={wordsShown || ended || !controlsHidden}
+    bind:this={footScrim}
   ></div>
-  <div class="film-scrim film-scrim-head" class:is-lit={!controlsHidden}></div>
+  <div class="film-scrim film-scrim-head" class:is-lit={!controlsHidden} bind:this={headScrim}></div>
 
-  <header class="film-head film-chrome" class:is-hidden={controlsHidden}>
+  <header class="film-head film-chrome" class:is-hidden={controlsHidden} bind:this={headEl}>
     <div
       class="film-pill"
       role="group"
@@ -1160,7 +1356,7 @@
         <Icon icon={mdiClose} size="1.375rem" aria-hidden />
       </button>
     </div>
-    <div class="film-where">
+    <div class="film-where" bind:this={whereEl}>
       <p class="film-where-name">{title}</p>
       <!-- across the room the photo's date and place are its caption, at the foot -->
       {#if dress !== 'room'}
@@ -1183,6 +1379,23 @@
 
   <div class="film-foot">
     <div class="film-words">
+      <!-- the words' rulers, out of sight: the title card and the story's longest sentence (and across the room the
+           caption) laid out where they will stand, so each photo's shade and place are worked out before they come -->
+      <div class="film-title film-ruler" aria-hidden="true" bind:this={titleRuler}>
+        <p class="film-title-name">{name}</p>
+        {#if line}
+          <p class="film-title-line" lang={$locale}>{line}</p>
+        {/if}
+      </div>
+      <div class="film-lines film-ruler" aria-hidden="true" bind:this={linesRuler}>
+        {#if longestStory}
+          <p class="film-story" lang={$locale}>{longestStory}</p>
+        {/if}
+        <!-- a caption's line is there whether or not this photo has one, so the lines' place holds still -->
+        {#if dress === 'room'}
+          <p class="film-caption" lang={$locale}>{caption || '\u{A0}'}</p>
+        {/if}
+      </div>
       {#if ended && !onNextFilm}
         <div class="film-end" in:fade={{ duration: 400 }}>
           <p class="film-end-name">{name}</p>
@@ -1345,6 +1558,8 @@
   .film {
     --film-gutter: clamp(1rem, 0.6rem + 1.6vw, 2.5rem);
     --film-glass-ink: rgb(255 255 255 / 0.88);
+    /* how far a photo's shade fades out past its words */
+    --film-feather: clamp(4rem, 14vmin, 12rem);
     position: fixed;
     inset: 0;
     z-index: 40;
@@ -1435,6 +1650,38 @@
     top: 0;
     height: 9rem;
     background: linear-gradient(to bottom, rgb(0 0 0 / 0.42), transparent);
+  }
+  /* the shade: the black a bright photo needs under its words for them to hold AA (film-shade.ts: the scrims above
+     are enough for a dark one), part of its layer so it comes and goes with the photo, and lit with the words (the top
+     bar's with the controls). Held flat as far as the words reach, then fading out over the feather */
+  .film-shade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 600ms ease;
+  }
+  .film-shade-foot {
+    background: linear-gradient(
+      to top,
+      rgb(0 0 0 / var(--shade)) calc(var(--reach) + 0.5rem),
+      rgb(0 0 0 / calc(var(--shade) * 0.72)) calc(var(--reach) + var(--film-feather) * 0.33),
+      rgb(0 0 0 / calc(var(--shade) * 0.3)) calc(var(--reach) + var(--film-feather) * 0.67),
+      transparent calc(var(--reach) + var(--film-feather))
+    );
+  }
+  .film-shade-head {
+    background: linear-gradient(
+      to bottom,
+      rgb(0 0 0 / var(--shade)) calc(var(--reach) + 0.5rem),
+      rgb(0 0 0 / calc(var(--shade) * 0.72)) calc(var(--reach) + var(--film-feather) * 0.33),
+      rgb(0 0 0 / calc(var(--shade) * 0.3)) calc(var(--reach) + var(--film-feather) * 0.67),
+      transparent calc(var(--reach) + var(--film-feather))
+    );
+  }
+  .film[data-words] .film-shade-foot,
+  .film:not([data-idle]) .film-shade-head {
+    opacity: 1;
   }
 
   /* ---- the chrome: thin smoked glass, as the photo viewer's ---- */
@@ -1613,6 +1860,7 @@
     pointer-events: auto;
   }
   .film-words {
+    position: relative;
     display: grid;
     min-width: 0;
     text-shadow:
@@ -1622,6 +1870,14 @@
   .film-words > * {
     grid-area: 1 / 1;
     align-self: end;
+  }
+  /* the words' rulers: laid out where the words stand, never seen, never in the way */
+  .film-words > .film-ruler {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    visibility: hidden;
+    pointer-events: none;
   }
   .film-title-name {
     max-width: 16ch;

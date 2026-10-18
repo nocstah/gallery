@@ -1,6 +1,7 @@
 import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { rgbaToThumbHash } from 'thumbhash';
 import type { MemoryTrack } from '$lib/utils/curator';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { reactiveProps } from '@test-data/reactive-props.svelte';
@@ -74,6 +75,18 @@ const filmProps = (props: FilmProps = {}) => ({
 
 const renderFilm = (props: FilmProps = {}) => render(MemoryFilm, filmProps(props));
 
+/** a thumbhash of a picture of one colour */
+const plain = (grey: number) =>
+  btoa(
+    String.fromCodePoint(
+      ...rgbaToThumbHash(
+        4,
+        3,
+        new Uint8Array(4 * 3 * 4).fill(grey).map((v, i) => (i % 4 === 3 ? 255 : v)),
+      ),
+    ),
+  );
+
 const started = async () => {
   const film = await screen.findByTestId('memory-film');
   await waitFor(() => expect(film).toHaveAttribute('data-playing'));
@@ -96,13 +109,41 @@ describe('MemoryFilm', () => {
     vi.restoreAllMocks();
   });
 
+  it('lays a shade under the words of a bright photo, and none under a dark one', async () => {
+    // happy-dom lays nothing out: the words' rulers stand at the foot of the frame
+    vi.spyOn(Range.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 40,
+      top: window.innerHeight - 160,
+      right: 400,
+      bottom: window.innerHeight - 60,
+      width: 360,
+      height: 100,
+      x: 40,
+      y: window.innerHeight - 160,
+      toJSON: () => ({}),
+    } as DOMRect);
+    const film = memory();
+    film.assets[0].thumbhash = plain(245);
+    film.assets[1].thumbhash = plain(20);
+    render(MemoryFilm, { ...filmProps(), memory: film });
+    await started();
+
+    const layer = (id: string) => document.querySelector<HTMLElement>(`.film-layer[data-asset-id="${CSS.escape(id)}"]`);
+    await waitFor(() => expect(layer('asset-1')).toBeInTheDocument());
+    expect(Number(layer('asset-0')?.dataset.shade)).toBeGreaterThan(0.2);
+    expect(layer('asset-0')?.querySelector('.film-shade-foot')).toBeInTheDocument();
+    expect(layer('asset-1')).not.toHaveAttribute('data-shade');
+    expect(layer('asset-1')?.querySelector('.film-shade-foot')).not.toBeInTheDocument();
+  });
+
   it('opens on its title card', async () => {
     renderFilm();
     await started();
 
     // the title's words come up half a second in, once the first photo is on screen
     expect(await screen.findByRole('heading', { name: 'Siem Reap' }, { timeout: 4000 })).toBeInTheDocument();
-    expect(screen.getByText('October 2025 · 3 photos')).toBeInTheDocument();
+    // (the title card's ruler, out of sight, holds the same words)
+    expect(screen.getByText('October 2025 · 3 photos', { ignore: 'script, style, .film-ruler *' })).toBeInTheDocument();
   });
 
   it('starts the first song with the film, from Curator', async () => {

@@ -149,8 +149,9 @@ describe('RoomPlayer', () => {
     render(RoomPlayer, { request: today });
     await playing('October 2025');
 
-    // the newest of each: one on its way out may still be fading
-    const story = () => [...document.querySelectorAll('.film-story')].at(-1)?.textContent?.trim();
+    // the newest of each: one on its way out may still be fading (the story's ruler, out of sight, is not one)
+    const story = () =>
+      [...document.querySelectorAll('.film-lines:not(.film-ruler) > .film-story')].at(-1)?.textContent?.trim();
     const caption = () => screen.queryAllByTestId('memory-film-caption').at(-1)?.textContent?.trim();
     // a sentence comes a moment after its photo (FILM_TIMING.storyDelay, 0.8 s, once the photo is ready), so waiting
     // for one takes longer than waitFor's own second on a busy machine
