@@ -33,7 +33,7 @@
   import { pxOf } from '$lib/utils/review-grid';
   import { tileRowColumns } from '$lib/utils/tile-row';
   import { weekSpread, weekYearDays } from '$lib/utils/week-across-years';
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
@@ -109,6 +109,75 @@
 
   let hasPeople = $derived(data.people.total > 0);
 
+  // Local Omarchy layer: a screen with room to spare under the rows (the portrait Dell, where the page ended at 60% of
+  // its height) gives People, Places, Memories and Recently added a second line each, in that order, while each still
+  // fits in what is left and has enough to fill it; one that already fills its height (the AORUS) or scrolls (a
+  // laptop, a phone) keeps one line a row. Reckoned once the rows have settled (Curator's titles for the memories) and
+  // again when the window changes, with every row on one line, so a row opened or a card come in later never takes a
+  // line back from under the reader.
+  type ExploreRow = 'people' | 'places' | 'memories' | 'recent';
+  const ROWS: ExploreRow[] = ['people', 'places', 'memories', 'recent'];
+  let exploreElement = $state<HTMLElement>();
+  const rowSections: Partial<Record<ExploreRow, HTMLElement>> = $state({});
+  let lines = $state<Record<ExploreRow, number>>({ people: 1, places: 1, memories: 1, recent: 1 });
+  let peopleSlots = $state(1);
+  let placeSlots = $state(1);
+  let memorySlots = $state(1);
+  const filled = (row: ExploreRow) => {
+    const count = {
+      people: people.length,
+      places: (places ?? cities).length,
+      memories: cards.length,
+      recent: recents.length,
+    };
+    const slots = { people: peopleSlots, places: placeSlots, memories: memorySlots, recent: recentColumns };
+    return count[row] >= 2 * slots[row];
+  };
+  /** what a second line adds to a row: one line's height and the gap between lines */
+  const secondLineOf = (row: ExploreRow) => {
+    const grid = rowSections[row]?.lastElementChild;
+    const first = grid?.firstElementChild;
+    if (!(grid instanceof HTMLElement) || !(first instanceof HTMLElement)) {
+      return 0;
+    }
+    return first.offsetHeight + pxOf(getComputedStyle(grid).rowGap, 0);
+  };
+  const fillRoom = () => {
+    const page = exploreElement;
+    const scroller = page?.parentElement;
+    if (!page || !scroller || mediaQueryManager.maxMd) {
+      return;
+    }
+    let room =
+      scroller.clientHeight - page.offsetTop - page.offsetHeight - pxOf(getComputedStyle(scroller).paddingBottom, 0);
+    for (const row of ROWS) {
+      if (lines[row] > 1) {
+        room += secondLineOf(row);
+      }
+    }
+    const next = { people: 1, places: 1, memories: 1, recent: 1 };
+    for (const row of ROWS) {
+      const extra = secondLineOf(row);
+      if (extra <= 0 || extra > room || !filled(row)) {
+        continue;
+      }
+      next[row] = 2;
+      room -= extra;
+    }
+    if (ROWS.some((row) => next[row] !== lines[row])) {
+      lines = next;
+    }
+  };
+  $effect(() => {
+    const scroller = exploreElement?.parentElement;
+    if (!memoriesReady || !scroller) {
+      return;
+    }
+    const observer = new ResizeObserver(() => void tick().then(fillRoom));
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  });
+
   const onPersonThumbnailReady = ({ id }: { id: string }) => {
     for (const person of people) {
       if (person.id === id) {
@@ -138,7 +207,7 @@
 <OnEvents {onPersonThumbnailReady} />
 
 <UserPageLayout title={data.meta.title}>
-  <div class="ws-sharing ws-explore">
+  <div class="ws-sharing ws-explore" bind:this={exploreElement}>
     {#if data.week.length > 0}
       <!-- this week in every past year with photos in it, newest first, each year's numeral in the display face over
            the photo of its day nearest today's (utils/week-across-years); a year opens Photos at that photo -->
@@ -183,14 +252,17 @@
     {/if}
 
     {#if hasPeople}
-      <section class="ws-sharing-section" aria-labelledby="explore-people">
+      <section class="ws-sharing-section" aria-labelledby="explore-people" bind:this={rowSections.people}>
         <h2 class="ws-sharing-heading" id="explore-people">
           {$t('people')}
           <a class="ws-sharing-heading-action" href={Route.people()} draggable="false">{$t('view_all')}</a>
         </h2>
-        <SingleGridRow class="grid grid-flow-col grid-auto-fill-20 gap-x-4 md:grid-auto-fill-28">
+        <SingleGridRow
+          bind:itemCount={peopleSlots}
+          class="grid {lines.people > 1 ? '' : 'grid-flow-col'} grid-auto-fill-20 gap-x-4 gap-y-6 md:grid-auto-fill-28"
+        >
           {#snippet children({ itemCount })}
-            {#each people.slice(0, itemCount) as person (person.id)}
+            {#each people.slice(0, itemCount * lines.people) as person (person.id)}
               <a href={getPersonHref(person)} class="text-center">
                 <div class="@container relative">
                   <ImageThumbnail
@@ -211,17 +283,20 @@
     {/if}
 
     {#if cities.length > 0}
-      <section class="ws-sharing-section" aria-labelledby="explore-places">
+      <section class="ws-sharing-section" aria-labelledby="explore-places" bind:this={rowSections.places}>
         <h2 class="ws-sharing-heading" id="explore-places">
           {$t('places')}
           <a class="ws-sharing-heading-action" href={Route.places()} draggable="false">{$t('view_all')}</a>
         </h2>
         <!-- the Places page's tiles at its size, on the desktop's gap; until the counts are in, their frames hold
              the row's place so nothing below it moves -->
-        <SingleGridRow class="grid grid-flow-col grid-auto-fill-36 gap-(--ws-gap)">
+        <SingleGridRow
+          bind:itemCount={placeSlots}
+          class="grid {lines.places > 1 ? '' : 'grid-flow-col'} grid-auto-fill-36 gap-(--ws-gap)"
+        >
           {#snippet children({ itemCount })}
             {#if places}
-              {#each places.slice(0, itemCount) as item (item.id)}
+              {#each places.slice(0, itemCount * lines.places) as item (item.id)}
                 <PlaceTile
                   assetId={item.id}
                   city={item.exifInfo.city}
@@ -230,7 +305,7 @@
                 />
               {/each}
             {:else}
-              {#each cities.slice(0, itemCount) as item (item.id)}
+              {#each cities.slice(0, itemCount * lines.places) as item (item.id)}
                 <div class="ws-explore-waiting" aria-hidden="true"></div>
               {/each}
             {/if}
@@ -240,7 +315,7 @@
     {/if}
 
     {#if cards.length > 0}
-      <section class="ws-sharing-section" aria-labelledby="explore-memories">
+      <section class="ws-sharing-section" aria-labelledby="explore-memories" bind:this={rowSections.memories}>
         <h2 class="ws-sharing-heading" id="explore-memories">
           {$t('memories')}
           <a class="ws-sharing-heading-action" href={Route.memories()} draggable="false">{$t('view_all')}</a>
@@ -273,9 +348,12 @@
             {/each}
           </div>
         {:else}
-          <SingleGridRow class="grid grid-flow-col grid-auto-fill-72 gap-(--ws-gap)">
+          <SingleGridRow
+            bind:itemCount={memorySlots}
+            class="grid {lines.memories > 1 ? '' : 'grid-flow-col'} grid-auto-fill-72 gap-(--ws-gap)"
+          >
             {#snippet children({ itemCount })}
-              {#each cards.slice(0, itemCount) as card (card.lead.id)}
+              {#each cards.slice(0, itemCount * lines.memories) as card (card.lead.id)}
                 {@render memoryCard(card)}
               {/each}
             {/snippet}
@@ -285,7 +363,7 @@
     {/if}
 
     {#if recents.length > 0}
-      <section class="ws-sharing-section" aria-labelledby="explore-recent">
+      <section class="ws-sharing-section" aria-labelledby="explore-recent" bind:this={rowSections.recent}>
         <h2 class="ws-sharing-heading" id="explore-recent">
           {$t('recently_added')}
           <a class="ws-sharing-heading-action" href={Route.recentlyAdded()} draggable="false">{$t('view_all')}</a>
@@ -297,7 +375,7 @@
           class="grid gap-(--ws-gap)"
           style:grid-template-columns={`repeat(${recentColumns}, minmax(0, 1fr))`}
         >
-          {#each recents.slice(0, recentColumns) as item (item.data.id)}
+          {#each recents.slice(0, recentColumns * lines.recent) as item (item.data.id)}
             <button type="button" class="ws-explore-tile" onclick={() => onViewAsset(item.data.id)} draggable="false">
               <img
                 src={getAssetMediaUrl({ id: item.data.id, size: AssetMediaSize.Thumbnail })}
