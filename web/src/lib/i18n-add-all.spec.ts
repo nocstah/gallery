@@ -7,7 +7,12 @@ const here = path.dirname(fileURLToPath(import.meta.url)); // web/src/lib
 const i18nDir = path.resolve(here, '../../../i18n'); // repo-root/i18n
 
 const LOCALES = ['en', 'de', 'fr', 'it', 'nl', 'es'];
-const REQUIRED_KEYS = ['add_all_search_results', 'preparing_assets', 'spaces_hidden_too_many_assets'];
+const REQUIRED_KEYS = [
+  'add_all_photos_to',
+  'add_all_search_results',
+  'preparing_assets',
+  'spaces_hidden_too_many_assets',
+];
 
 const load = (locale: string): Record<string, unknown> =>
   JSON.parse(readFileSync(path.join(i18nDir, `${locale}.json`), 'utf8'));

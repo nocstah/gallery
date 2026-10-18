@@ -15,4 +15,10 @@ describe('SearchAddAllButton', () => {
     await fireEvent.click(button);
     expect(onclick).toHaveBeenCalledOnce();
   });
+
+  // Local Omarchy layer: it shows on Favorites, Archive and a person's photos, which are not searches
+  it("adds the page's photos, not search results", () => {
+    render(SearchAddAllButton, { total: 42, onclick: vi.fn() });
+    expect(screen.getByTestId('add-all-to-collection')).toHaveTextContent('add_all_photos_to');
+  });
 });
