@@ -59,7 +59,7 @@ export const loadSharedLink = async ({
         ...common,
         passwordRequired: true,
         meta: {
-          title: $t('password_required'),
+          title: $t('shared_link_password_title'),
         },
       };
     }

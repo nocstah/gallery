@@ -670,6 +670,44 @@ button.ws-empty-link {
   color: var(--immich-ui-muted);
 }
 
+/* a shared link's password: its label over the field, Open beside it, what went wrong under them */
+.ws-link-password {
+  margin-top: 1.75rem;
+}
+.ws-link-password-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: var(--ws-text-ui);
+  font-weight: 600;
+}
+.ws-link-password-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: stretch;
+  max-width: 26rem;
+}
+.ws-link-password-row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+.ws-link-password-row > .ws-empty-action {
+  flex: none;
+}
+/* the field is the sign-in pages' (a faint fill, a hairline, the accent when focused); @immich/ui draws its fill and
+   ring on the wrapper around the input */
+.ws-link-password-row div:has(> input) {
+  background: color-mix(in oklab, var(--immich-ui-dark) 5%, transparent);
+  --tw-ring-color: color-mix(in oklab, var(--immich-ui-dark) 16%, transparent);
+}
+.ws-link-password-row div:has(> input):focus-within {
+  --tw-ring-color: var(--ws-accent);
+}
+.ws-link-password-wrong {
+  margin-top: 0.6rem;
+  font-size: var(--ws-text-ui);
+  font-weight: 500;
+}
+
 /* ---- people: faces first; "Add a name" shows on the card you're pointing at, not 500 times ---- */
 .ws-person-name {
   background: transparent;

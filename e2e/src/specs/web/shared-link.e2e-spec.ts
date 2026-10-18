@@ -64,20 +64,20 @@ test.describe('Shared Links', () => {
 
   test('enter password for a shared link', async ({ page }) => {
     await page.goto(`/share/${sharedLinkPassword.key}`);
-    await page.getByPlaceholder('Password').fill('test-password');
-    await page.getByRole('button', { name: 'Submit' }).click();
+    await page.getByLabel('Password', { exact: true }).fill('test-password');
+    await page.getByRole('button', { name: 'Open' }).click();
     await page.getByRole('heading', { name: 'Test Album' }).waitFor();
   });
 
   test('show-password button visible', async ({ page }) => {
     await page.goto(`/share/${sharedLinkPassword.key}`);
-    await page.getByPlaceholder('Password').fill('test-password');
+    await page.getByLabel('Password', { exact: true }).fill('test-password');
     await page.getByRole('button', { name: 'Show password' }).waitFor();
   });
 
   test('view password for shared link', async ({ page }) => {
     await page.goto(`/share/${sharedLinkPassword.key}`);
-    const input = page.getByPlaceholder('Password');
+    const input = page.getByLabel('Password', { exact: true });
     await input.fill('test-password');
     await page.getByRole('button', { name: 'Show password' }).click();
     // await page.getByText('test-password', { exact: true }).waitFor();
@@ -86,7 +86,7 @@ test.describe('Shared Links', () => {
 
   test('hide-password button visible', async ({ page }) => {
     await page.goto(`/share/${sharedLinkPassword.key}`);
-    const input = page.getByPlaceholder('Password');
+    const input = page.getByLabel('Password', { exact: true });
     await input.fill('test-password');
     await page.getByRole('button', { name: 'Show password' }).click();
     await page.getByRole('button', { name: 'Hide password' }).waitFor();
@@ -94,7 +94,7 @@ test.describe('Shared Links', () => {
 
   test('hide password for shared link', async ({ page }) => {
     await page.goto(`/share/${sharedLinkPassword.key}`);
-    const input = page.getByPlaceholder('Password');
+    const input = page.getByLabel('Password', { exact: true });
     await input.fill('test-password');
     await page.getByRole('button', { name: 'Show password' }).click();
     await page.getByRole('button', { name: 'Hide password' }).click();
