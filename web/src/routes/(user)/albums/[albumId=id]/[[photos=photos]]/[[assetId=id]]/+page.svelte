@@ -884,12 +884,15 @@
 <CommandPaletteDefaultProvider name={$t('album')} actions={[AddAssets, Upload, Close, ...Object.values(Actions)]} />
 
 {#snippet albumBarLeading()}
+  <!-- Local Omarchy layer: the arrow keeps its size and a long name gives way (a phone's bar had squeezed the arrow of
+       "Trip to Dubai with Magnus Carlsen · April 2024" to 15px) -->
   <IconButton
     shape="round"
     variant="ghost"
     color="secondary"
     icon={mdiArrowLeft}
     aria-label={$t('back')}
+    class="shrink-0"
     onclick={() => backToAlbums()}
   />
   <AlbumBarTitle {album} {isEditor} onUpdate={(albumName) => (album = { ...album, albumName })} />
