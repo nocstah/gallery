@@ -1665,6 +1665,13 @@ ul[role='menu'] > hr:last-child {
   outline: var(--ws-border) solid var(--ws-accent);
   outline-offset: 1px;
 }
+/* the chip is the month mark's height (about 20px); the button it is keeps a 24px target past its edges, so the stack
+   still opens under a finger or a quick pointer */
+button.ws-stack-badge::before {
+  content: '';
+  position: absolute;
+  inset: -0.125rem;
+}
 /* an expanded stack, its cover included, reads as one set: an accent ring on every photo of it with a thin dark
    keyline inside (so it holds over bright photos), a "2 / 5" chip, and while the pointer is on one of them the rest of
    the timeline steps back */
