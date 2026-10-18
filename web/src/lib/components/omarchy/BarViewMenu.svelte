@@ -284,13 +284,15 @@
     accent-color: var(--immich-ui-dark);
     cursor: pointer;
   }
-  /* a switch drawn square: the track, and its knob that crosses on */
+  /* a switch drawn square, as every switch in the layer (omarchy-world.css): an outlined track whose muted knob fills
+     its height but for an even 2px, inverted (ink track, surface knob) when on. A small translucent knob in a faint
+     frame read as an empty checkbox, and on it took the accent, which marks focus only */
   .ws-view-switch {
     position: relative;
     flex: none;
-    width: 1.9rem;
-    height: 1.05rem;
-    border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 30%, transparent);
+    width: 2rem;
+    height: 1.125rem;
+    border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 55%, transparent);
     border-radius: var(--ws-radius);
     transition:
       background-color 140ms,
@@ -301,23 +303,29 @@
     position: absolute;
     top: 2px;
     left: 2px;
-    width: calc(1.05rem - 6px);
-    height: calc(1.05rem - 6px);
+    width: calc(1.125rem - 6px);
+    height: calc(1.125rem - 6px);
     border-radius: var(--ws-radius);
-    background: color-mix(in oklab, var(--immich-ui-dark) 55%, transparent);
+    background: var(--immich-ui-muted);
     transition:
       translate 160ms cubic-bezier(0.22, 1, 0.36, 1),
       background-color 140ms;
   }
   [aria-checked='true'] > .ws-view-switch,
   [aria-checked='true'] > .ws-view-end > .ws-view-switch {
-    border-color: var(--ws-accent);
-    background: color-mix(in oklab, var(--ws-accent) 22%, transparent);
+    border-color: var(--immich-ui-dark);
+    background: var(--immich-ui-dark);
   }
   [aria-checked='true'] > .ws-view-switch::after,
   [aria-checked='true'] > .ws-view-end > .ws-view-switch::after {
-    translate: calc(1.9rem - 1.05rem) 0;
-    background: var(--ws-accent);
+    translate: calc(2rem - 1.125rem) 0;
+    background: var(--immich-ui-light);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ws-view-switch,
+    .ws-view-switch::after {
+      transition: none;
+    }
   }
   /* a row's key, in data type before its switch */
   .ws-view-end {

@@ -175,13 +175,18 @@ describe('PeopleFilter', () => {
     expect(images[1]).toHaveAttribute('src', '/shared-spaces/s1/people/2/thumbnail');
   });
 
-  it('should render gradient avatar when thumbnailUrl is not provided', () => {
+  // Local Omarchy layer: a person without a face is a quiet ring with the initial, as the bar's account, not upstream's
+  // gradient disc; the row's name is its only name (the picture and the initial add none)
+  it('should render the initial in a quiet ring when thumbnailUrl is not provided', () => {
     const people: PersonOption[] = [{ id: '1', name: 'Alice' }];
-    const { container, getByText } = render(PeopleFilter, {
+    const { container, getByText, getByRole } = render(PeopleFilter, {
       props: { people, selectedIds: [], onSelectionChange: vi.fn() },
     });
     expect(container.querySelector('img')).toBeNull();
-    expect(getByText('A')).toBeTruthy();
+    const initial = getByText('A');
+    expect(initial).toHaveClass('ws-person-initial');
+    expect(initial.getAttribute('style') ?? '').not.toContain('gradient');
+    expect(getByRole('button', { name: 'Alice' })).toBeTruthy();
   });
 
   it('should show all search results without truncation', async () => {

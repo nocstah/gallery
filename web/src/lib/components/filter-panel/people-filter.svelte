@@ -69,22 +69,6 @@
     return name.charAt(0).toUpperCase();
   }
 
-  function getAvatarGradient(name: string): string {
-    const gradients = [
-      'linear-gradient(135deg, #667eea, #764ba2)',
-      'linear-gradient(135deg, #f093fb, #f5576c)',
-      'linear-gradient(135deg, #4facfe, #00f2fe)',
-      'linear-gradient(135deg, #43e97b, #38f9d7)',
-      'linear-gradient(135deg, #fa709a, #fee140)',
-      'linear-gradient(135deg, #a18cd1, #fbc2eb)',
-    ];
-    let hash = 0;
-    for (const ch of name) {
-      hash = ch.codePointAt(0)! + ((hash << 5) - hash);
-    }
-    return gradients[Math.abs(hash) % gradients.length];
-  }
-
   function togglePerson(id: string) {
     const isSelected = selectedIds.includes(id);
     if (isSelected) {
@@ -140,7 +124,7 @@
         {#if person.thumbnailUrl}
           <img
             src={person.thumbnailUrl}
-            alt={person.name}
+            alt=""
             class="size-5 shrink-0 rounded-full object-cover"
             onerror={(e) => {
               const img = e.currentTarget as HTMLImageElement;
@@ -148,18 +132,11 @@
               img.nextElementSibling?.removeAttribute('style');
             }}
           />
-          <div
-            class="flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white"
-            style="display: none; background: {getAvatarGradient(person.name)}"
-          >
+          <div class="ws-person-initial" style="display: none" aria-hidden="true">
             {getInitial(person.name)}
           </div>
         {:else}
-          <div
-            class="flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-300 text-[9px] font-semibold text-white dark:bg-gray-600"
-          >
-            {getInitial(person.name)}
-          </div>
+          <div class="ws-person-initial" aria-hidden="true">{getInitial(person.name)}</div>
         {/if}
 
         <!-- Label -->
@@ -195,7 +172,7 @@
         {#if person.thumbnailUrl}
           <img
             src={person.thumbnailUrl}
-            alt={person.name}
+            alt=""
             class="size-5 shrink-0 rounded-full object-cover"
             onerror={(e) => {
               const img = e.currentTarget as HTMLImageElement;
@@ -203,19 +180,11 @@
               img.nextElementSibling?.removeAttribute('style');
             }}
           />
-          <div
-            class="flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white"
-            style="display: none; background: {getAvatarGradient(person.name)}"
-          >
+          <div class="ws-person-initial" style="display: none" aria-hidden="true">
             {getInitial(person.name)}
           </div>
         {:else}
-          <div
-            class="flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-white"
-            style="background: {getAvatarGradient(person.name)}"
-          >
-            {getInitial(person.name)}
-          </div>
+          <div class="ws-person-initial" aria-hidden="true">{getInitial(person.name)}</div>
         {/if}
 
         <!-- Label -->
@@ -236,3 +205,26 @@
     {/if}
   {/if}
 </div>
+
+<style>
+  /* Local Omarchy layer: a person without a face to show is a quiet ring with the initial in ink, as the bar's account
+     is (components/omarchy/OmarchyBar), where upstream drew a stock two-stop gradient disc in a colour of its own (and a
+     grey one with white letters for a person no longer in the suggestions). The face's picture is decoration beside the
+     name, which the row already says, so it has no text of its own */
+  .ws-person-initial {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 9999px;
+    background: var(--immich-ui-light);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--immich-ui-dark) 38%, transparent);
+    color: var(--immich-ui-dark);
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    line-height: 1;
+  }
+</style>

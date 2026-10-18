@@ -214,7 +214,7 @@
     transition: background-color 120ms;
   }
   .ws-dup-view:hover {
-    background: rgb(10 10 12 / 0.82);
+    background: var(--ws-glass-hover);
   }
   .ws-dup-view:focus-visible {
     outline: var(--ws-border) solid var(--ws-accent);

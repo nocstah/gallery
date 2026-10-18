@@ -253,13 +253,15 @@ main > div:has([data-testid='page-header-title-row']) {
 /* Temporal filter (From/To inputs + year/month chips): the generous global
  * radius scale over-rounds these small controls into near-pills. Radius should
  * scale down with element size — tidy input + chip radii, scoped to the picker
- * so larger buttons/cards elsewhere keep their roundness. */
+ * so larger buttons/cards elsewhere keep their roundness.
+ * Local Omarchy layer: every corner is the desktop's window radius (DESIGN.md, Shapes): the 8px and 10px here
+ * rounded the picker on a square desktop */
 [data-testid='temporal-picker'] input {
-  border-radius: 8px;
+  border-radius: var(--ws-radius);
 }
 [data-testid='temporal-picker'] [data-testid='year-grid'] > button,
 [data-testid='temporal-picker'] [data-testid='month-grid'] > button {
-  border-radius: 10px;
+  border-radius: var(--ws-radius);
 }
 
 /* Filter panel scrollbar — keep it subtle: thin, transparent track, a faint
