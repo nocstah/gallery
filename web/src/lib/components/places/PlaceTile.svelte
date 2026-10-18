@@ -77,7 +77,10 @@
   .ws-place-tile:focus-visible {
     outline: none;
   }
-  /* the caption scrim, black 55% to nothing, under white words: it sits on the photo, not on the theme */
+  /* the caption scrim under white words, fixed (it sits on the photo, not on the theme): at least 55% black behind
+     every word, what the name and its line, both small type, need for 4.5:1 over a white wall, easing out in the band
+     above them as Years' scrim does (2026-10-18). It had faded from 55% at its foot to nothing, the name on about a
+     quarter of that: 1.7:1 over a bright photo, 56 of 224 lines under AA on the AORUS */
   .ws-place-tile-caption {
     position: absolute;
     inset-inline: 0;
@@ -85,8 +88,16 @@
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
-    padding: 1.5rem 0.6rem 0.45rem;
-    background: linear-gradient(to top, rgb(0 0 0 / 0.55), transparent);
+    padding: 2.25rem 0.6rem 0.45rem;
+    background: linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.62),
+      rgb(0 0 0 / 0.55) calc(100% - 2.25rem),
+      rgb(0 0 0 / 0.39) calc(100% - 1.6rem),
+      rgb(0 0 0 / 0.19) calc(100% - 0.95rem),
+      rgb(0 0 0 / 0.06) calc(100% - 0.4rem),
+      transparent
+    );
     color: #fff;
   }
   .ws-place-tile-name {
@@ -100,13 +111,14 @@
     line-height: 1.25;
     overflow-wrap: anywhere;
   }
+  /* full white like the name (85% left it at 4.1:1 over a white wall on the scrim's floor); the face and the size set
+     it apart */
   .ws-place-tile-data {
     overflow: hidden;
     font-family: var(--ws-font-data);
     font-size: var(--ws-text-data);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: rgb(255 255 255 / 0.85);
     white-space: nowrap;
     text-overflow: ellipsis;
   }

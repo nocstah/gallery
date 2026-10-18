@@ -860,7 +860,10 @@ section.ws-filter-sheet-panel {
   border: 1px solid var(--ws-hairline);
 }
 
-/* ---- place caption on the tile you're pointing at (people aren't in the timeline payload) ---- */
+/* ---- place caption on the tile you're pointing at (people aren't in the timeline payload). The scrim holds at least
+   55% black behind its words, what 12px type needs for 4.5:1 over a white wall, and eases out in the band above them,
+   as the Years tiles' does for their numerals (2026-10-18: the 55% had been its foot alone, fading to nothing, and over
+   a bright photo the date fell to 3.5:1) ---- */
 .ws-place {
   border-end-start-radius: var(--tile-radius, 0);
   border-end-end-radius: var(--tile-radius, 0);
@@ -869,7 +872,15 @@ section.ws-filter-sheet-panel {
   bottom: 0;
   z-index: 2;
   padding: 1.5rem 0.6rem 0.45rem;
-  background: linear-gradient(to top, rgb(0 0 0 / 0.55), transparent);
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.62),
+    rgb(0 0 0 / 0.55) calc(100% - 1.5rem),
+    rgb(0 0 0 / 0.39) calc(100% - 1.05rem),
+    rgb(0 0 0 / 0.19) calc(100% - 0.6rem),
+    rgb(0 0 0 / 0.06) calc(100% - 0.25rem),
+    transparent
+  );
   color: #fff;
   font-size: var(--ws-text-data);
   font-weight: 600;
