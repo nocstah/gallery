@@ -1730,8 +1730,9 @@
   .film-choice:hover {
     color: #fff;
   }
+  /* pointed at, the smoke deepens: the thin glass laid over the strong (about 0.79 over 0.64), from the two tokens */
   .film-choice:hover::before {
-    background: rgb(10 10 12 / 0.78);
+    background: linear-gradient(var(--ws-glass), var(--ws-glass)), var(--ws-glass-strong);
   }
   .film-choice-cover {
     width: 2.25rem;

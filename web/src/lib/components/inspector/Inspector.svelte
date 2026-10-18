@@ -548,8 +548,9 @@
     padding: 0.6rem 0.9rem 0.6rem 0.7rem;
     transition: background-color 120ms;
   }
+  /* pointed at, the smoke deepens: the thin glass laid over the strong (about 0.79 over 0.64), from the two tokens */
   .ins-play:hover {
-    background: rgb(10 10 12 / 0.8);
+    background: linear-gradient(var(--ws-glass), var(--ws-glass)), var(--ws-glass-strong);
   }
   .ins-play:focus-visible {
     outline: var(--ws-border) solid var(--ws-accent);
@@ -583,10 +584,12 @@
     justify-items: start;
     min-width: 0;
   }
-  /* the date in the bar heading's voice at the display role: the condensed face, the month 500 and the year 750 */
+  /* the date in the bar heading's voice at the display role: the condensed face, the month 500 and the year 750. The
+     role follows the window's width, and a window wider than tall holds the details in a column beside the photo, so
+     there the date is never wider than its column lets it be (36px, the role's least) */
   .ins-date {
     font-family: var(--font-display);
-    font-size: clamp(2.25rem, 1rem + 3.4cqi, 3.75rem);
+    font-size: min(var(--ws-text-display), max(2.25rem, 1rem + 3.4cqi));
     font-stretch: 75%;
     font-variation-settings:
       'wdth' 75,
