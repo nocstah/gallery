@@ -31,7 +31,7 @@
     max-width: 62ch;
   }
   .story-text {
-    font-size: 0.95rem;
+    font-size: var(--ws-text-body);
     line-height: 1.55;
     color: var(--immich-ui-dark);
     text-wrap: pretty;

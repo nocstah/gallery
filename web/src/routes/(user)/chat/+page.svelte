@@ -455,7 +455,7 @@
     margin-inline-start: auto;
   }
   .chat-confirm {
-    font-size: 0.9rem;
+    font-size: var(--ws-text-ui);
     font-weight: 600;
   }
   .chat-icon-button,
@@ -484,7 +484,7 @@
     padding: 0.55rem 0.9rem;
     border: 1px solid var(--ws-hairline);
     border-radius: var(--ws-radius);
-    font-size: 0.95rem;
+    font-size: var(--ws-text-ui);
     text-align: start;
     color: var(--immich-ui-dark);
     transition:
@@ -509,7 +509,7 @@
     padding: 0.6rem 0.9rem;
     border-radius: var(--ws-radius);
     background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
-    font-size: 1rem;
+    font-size: var(--ws-text-body);
     line-height: 1.5;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
@@ -534,7 +534,7 @@
     border-radius: var(--ws-radius);
     background: transparent;
     color: var(--immich-ui-dark);
-    font-size: 1rem;
+    font-size: var(--ws-text-body);
     line-height: 1.45;
     resize: none;
   }

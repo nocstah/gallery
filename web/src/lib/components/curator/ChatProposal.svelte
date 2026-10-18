@@ -110,7 +110,7 @@
     overflow-wrap: anywhere;
   }
   .chat-proposal-problem {
-    font-size: 0.9rem;
+    font-size: var(--ws-text-ui);
     font-weight: 600;
   }
   .chat-proposal-actions {

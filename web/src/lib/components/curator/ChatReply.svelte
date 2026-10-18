@@ -256,7 +256,7 @@
     align-items: baseline;
     gap: 0.3rem 0.5rem;
     font-family: var(--ws-font-data);
-    font-size: 12px;
+    font-size: var(--ws-text-data);
     font-variant-numeric: tabular-nums;
     color: var(--immich-ui-muted);
   }
@@ -297,14 +297,14 @@
     align-items: center;
     gap: 0.25rem 0.6rem;
     margin-top: 0.5rem;
-    font-size: 0.9rem;
+    font-size: var(--ws-text-ui);
     color: var(--immich-ui-dark);
   }
   .chat-wait {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.95rem;
+    font-size: var(--ws-text-body);
     color: var(--immich-ui-muted);
   }
   .chat-error {
@@ -312,7 +312,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem 1rem;
-    font-size: 0.95rem;
+    font-size: var(--ws-text-body);
     font-weight: 600;
     color: var(--immich-ui-dark);
   }

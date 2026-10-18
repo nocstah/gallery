@@ -529,7 +529,7 @@
   }
   .health-value {
     font-family: var(--font-display);
-    font-size: 2rem;
+    font-size: var(--ws-text-title);
     font-weight: 800;
     font-variation-settings: 'wdth' 75;
     line-height: 1;

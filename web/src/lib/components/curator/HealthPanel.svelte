@@ -108,7 +108,7 @@
   }
   .health-value {
     font-family: var(--font-display);
-    font-size: 1.75rem;
+    font-size: var(--ws-text-title);
     font-weight: 750;
     font-variation-settings:
       'wdth' 80,
@@ -120,14 +120,13 @@
   .health-row:not([data-attention]) .health-value {
     color: var(--immich-ui-muted);
   }
+  /* a section's name in the heading role over a hairline, as Shared and Utilities head theirs */
   .health-heading {
     margin-top: 2rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--ws-hairline);
-    font-family: var(--font-display);
-    font-size: 15px;
-    font-weight: 650;
-    letter-spacing: -0.01em;
+    font-size: var(--ws-text-heading);
+    font-weight: 600;
   }
   .health-faces {
     display: flex;

@@ -94,7 +94,7 @@
     display: grid;
     gap: 0.7rem;
     max-width: 68ch;
-    font-size: 1.02rem;
+    font-size: var(--ws-text-body);
     line-height: 1.6;
     color: var(--immich-ui-dark);
     text-wrap: pretty;

@@ -56,9 +56,9 @@
       if (!mine.signal.aborted) {
         answer = found;
       }
-    } catch (failure) {
+    } catch (error_) {
       if (!mine.signal.aborted) {
-        error = failure instanceof Error ? failure.message : String(failure);
+        error = error_ instanceof Error ? error_.message : String(error_);
       }
     } finally {
       if (!mine.signal.aborted) {
@@ -134,12 +134,12 @@
     overflow-y: auto;
     padding: 0.75rem 0.85rem 0.7rem;
     border: 1px solid var(--ws-glass-edge);
-    border-radius: 16px;
+    border-radius: var(--ws-radius);
     background: var(--ws-glass-strong);
     -webkit-backdrop-filter: var(--ws-glass-blur);
     backdrop-filter: var(--ws-glass-blur);
     color: rgb(255 255 255 / 0.92);
-    font-size: 0.85rem;
+    font-size: var(--ws-text-meta);
   }
   .lookup-head {
     display: flex;
@@ -150,7 +150,7 @@
   .lookup-title {
     flex: 1;
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: var(--ws-text-ui);
   }
   .lookup-icon {
     display: grid;
@@ -200,7 +200,7 @@
   }
   .lookup-name {
     font-weight: 650;
-    font-size: 0.92rem;
+    font-size: var(--ws-text-ui);
     line-height: 1.3;
   }
   .lookup-guess {
@@ -217,7 +217,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.2rem;
-    font-size: 0.78rem;
+    font-size: var(--ws-text-meta);
     font-weight: 600;
     color: var(--ws-accent, #fff);
   }

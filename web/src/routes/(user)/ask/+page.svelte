@@ -194,7 +194,7 @@
     border-radius: var(--ws-radius);
     background: transparent;
     color: var(--immich-ui-dark);
-    font-size: 1.05rem;
+    font-size: var(--ws-text-body);
   }
   .ask-input::placeholder {
     color: var(--immich-ui-muted);
@@ -228,7 +228,7 @@
     border: 1px solid var(--ws-hairline);
     border-radius: var(--ws-radius);
     font-family: var(--ws-font-data);
-    font-size: 12px;
+    font-size: var(--ws-text-data);
     font-weight: 600;
     color: var(--immich-ui-muted);
   }

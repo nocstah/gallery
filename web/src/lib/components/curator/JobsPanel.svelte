@@ -167,17 +167,16 @@
   .jobs-warning {
     margin-top: 0.75rem;
     max-width: 62ch;
-    font-size: 0.9rem;
+    font-size: var(--ws-text-ui);
     font-weight: 600;
   }
+  /* a section's name in the heading role over a hairline, as Shared and Utilities head theirs */
   .jobs-heading {
     margin-top: 2rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--ws-hairline);
-    font-family: var(--font-display);
-    font-size: 15px;
-    font-weight: 650;
-    letter-spacing: -0.01em;
+    font-size: var(--ws-text-heading);
+    font-weight: 600;
     scroll-margin-top: 1rem;
   }
   .kind-row,

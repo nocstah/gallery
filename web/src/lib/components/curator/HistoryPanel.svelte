@@ -100,7 +100,7 @@
   }
   .history-message {
     padding-top: 1rem;
-    font-size: 0.9rem;
+    font-size: var(--ws-text-ui);
     font-weight: 500;
   }
 </style>

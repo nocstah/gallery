@@ -265,7 +265,7 @@
     align-items: center;
   }
   .review-message {
-    font-size: 0.9rem;
+    font-size: var(--ws-text-ui);
     font-weight: 600;
   }
   @media (max-width: 767px) {
