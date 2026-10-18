@@ -90,6 +90,8 @@ type Config = {
   words: Words;
   /** Local Omarchy layer: the owner's own (the villa, bank slips), never offered to a family account */
   ownerOnly?: boolean;
+  /** Local Omarchy layer: what it holds is not for looking at (bank slips), so its cover is its icon, never a photo */
+  iconCover?: boolean;
 };
 
 const AT_ONCE = 8;
@@ -162,6 +164,7 @@ export class SpecialAlbumManager {
   readonly doneIcon: string;
   readonly words: Words;
   readonly ownerOnly: boolean;
+  readonly iconCover: boolean;
   /** the album, once known */
   albumId = $state<string | undefined>();
   /** how many photos it holds (the sidebar shows it) */
@@ -169,7 +172,18 @@ export class SpecialAlbumManager {
   #looking: Promise<string | undefined> | undefined;
   #checked = false;
 
-  constructor({ name, key, slug, shortcut, icon, activeIcon, doneIcon, words, ownerOnly = false }: Config) {
+  constructor({
+    name,
+    key,
+    slug,
+    shortcut,
+    icon,
+    activeIcon,
+    doneIcon,
+    words,
+    ownerOnly = false,
+    iconCover = false,
+  }: Config) {
     this.name = name;
     this.key = key;
     this.slug = slug;
@@ -179,6 +193,7 @@ export class SpecialAlbumManager {
     this.doneIcon = doneIcon;
     this.words = words;
     this.ownerOnly = ownerOnly;
+    this.iconCover = iconCover;
   }
 
   /**
@@ -509,6 +524,7 @@ export const qrManager = new SpecialAlbumManager({
   name: 'QR',
   key: 'omarchy-qr',
   ownerOnly: true,
+  iconCover: true,
   slug: 'qr',
   shortcut: 'q',
   icon: mdiQrcode,

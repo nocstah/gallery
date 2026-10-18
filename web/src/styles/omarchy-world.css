@@ -2505,6 +2505,16 @@ label.ws-sheet-title {
   color: var(--immich-ui-muted);
 }
 
+/* ---- a special album whose photos are not for looking at (QR's bank slips: managers/special-albums iconCover) is
+   covered by its own icon, muted on a faint ink ground inside a hairline, as a tile is framed, never by a slip ---- */
+.ws-album-icon-cover {
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
+  box-shadow: inset 0 0 0 1px var(--ws-hairline);
+  color: var(--immich-ui-muted);
+}
+
 /* ---- albums kept out of Photos (hidden from my timeline: managers/album-folders) ----
    one mark wherever the album shows: on its cover a glass chip, the cover itself grey; in a list row and under the
    album's title the same words in muted ink; in the sidebar tree the eye at the row's end */

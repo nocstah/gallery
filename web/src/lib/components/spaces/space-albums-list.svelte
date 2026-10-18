@@ -259,7 +259,10 @@
                 class="-mt-2.5 inline-block transition-all duration-250 {iconRotation}"
               />
               <span class="text-3xl font-bold text-black dark:text-white">{group.name}</span>
-              <span class="ms-1.5">({$t('albums_count', { values: { count: group.albums.length } })})</span>
+              <!-- Local Omarchy layer: lowercase, as a folder's count ("81 albums") -->
+              <span class="ms-1.5"
+                >({$t('space_album_folder_albums_count', { values: { count: group.albums.length } })})</span
+              >
             </button>
             <hr class="dark:border-immich-dark-gray" />
           </div>

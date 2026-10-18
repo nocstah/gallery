@@ -12,6 +12,7 @@
   import GroupTab from '$lib/elements/GroupTab.svelte';
   import SearchBar from '$lib/elements/SearchBar.svelte';
   import { albumFolders } from '$lib/managers/album-folders.svelte';
+  import { specialAlbumOf } from '$lib/managers/special-albums.svelte';
   import SpaceAlbumFolderNameModal from '$lib/modals/SpaceAlbumFolderNameModal.svelte';
   import SpaceAlbumFolderPickerModal from '$lib/modals/SpaceAlbumFolderPickerModal.svelte';
   import { Route } from '$lib/route';
@@ -53,7 +54,10 @@
   const folderId = $derived(
     browsing && requested && albumFolders.folders.some(({ id }) => id === requested) ? requested : null,
   );
-  const inLevel = (album: AlbumResponseDto) => !browsing || albumFolders.folderOf(album.id) === folderId;
+  // the special albums (To do, Villa, QR) have their own rows in the sidebar: a level of the page leaves them out, and a
+  // search still finds them
+  const inLevel = (album: AlbumResponseDto) =>
+    !browsing || (albumFolders.folderOf(album.id) === folderId && !specialAlbumOf(album.id));
   const ownedHere = $derived(data.albums.filter((album) => inLevel(album)));
   const sharedHere = $derived(data.sharedAlbums.filter((album) => inLevel(album)));
   // folders by name, the way a person numbers them ("2" before "10", years in order)

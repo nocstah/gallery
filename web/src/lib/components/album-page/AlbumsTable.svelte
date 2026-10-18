@@ -57,7 +57,8 @@
             />
             <span class="text-2xl font-bold">{albumGroup.name}</span>
             <span class="ms-1.5">
-              ({$t('albums_count', { values: { count: albumGroup.albums.length } })})
+              <!-- Local Omarchy layer: lowercase, as a folder's count ("81 albums") -->
+              ({$t('space_album_folder_albums_count', { values: { count: albumGroup.albums.length } })})
             </span>
           </td>
         </tr>
