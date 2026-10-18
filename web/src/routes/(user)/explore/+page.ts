@@ -1,4 +1,4 @@
-import { getAllPeople, getAssetsByCity, getExploreData, MemorySearchOrder } from '@immich/sdk';
+import { type AssetResponseDto, getAllPeople, getAssetsByCity, getExploreData, MemorySearchOrder } from '@immich/sdk';
 import { memoryManager } from '$lib/managers/memory-manager.svelte';
 import { authenticate } from '$lib/utils/auth';
 import { getFormatter } from '$lib/utils/i18n';
@@ -14,7 +14,7 @@ export const load = (async ({ url }) => {
     getAllPeople({ withHidden: false, withSharedSpaces: true }),
     // Local Omarchy layer: every place, for the row of those that hold the most photos (managers/place-stats); a
     // failure leaves the row out rather than the page
-    getAssetsByCity().catch(() => []),
+    getAssetsByCity().catch((): AssetResponseDto[] => []),
     memoryManager.refresh(),
   ]);
   const $t = await getFormatter();
