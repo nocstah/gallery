@@ -29,6 +29,8 @@ export type PeriodGridOptions = {
   viewportHeight?: number;
   /** the smallest tile a line may take before the row breaks into more lines */
   minTile?: number;
+  /** a tile big enough as it is: a line of them is not broken up for larger ones, even where those would fit */
+  comfortTile?: number;
   /** the row's name in a column before its tiles (wide grids) */
   labelWidth?: number;
   /** the row's name on a line above its tiles (narrow grids) */
@@ -78,7 +80,7 @@ export type PeriodGrid = {
   height: number;
 };
 
-const DEFAULTS = { minTile: 80, labelWidth: 72, labelHeight: 36, emptyHeight: 28, besideFrom: 640 };
+const DEFAULTS = { minTile: 80, comfortTile: 144, labelWidth: 72, labelHeight: 36, emptyHeight: 28, besideFrom: 640 };
 
 /** The smallest share of its own width a tile's height may be squeezed to, so a short archive fits the screen. */
 const FIT_RATIO = 0.75;
@@ -95,7 +97,7 @@ export const layoutPeriodGrid = (
   options: PeriodGridOptions,
 ): PeriodGrid | undefined => {
   const { kind, width, gap, newestFirst = true, viewportHeight } = options;
-  const { minTile, labelWidth, labelHeight, emptyHeight, besideFrom } = { ...DEFAULTS, ...options };
+  const { minTile, comfortTile, labelWidth, labelHeight, emptyHeight, besideFrom } = { ...DEFAULTS, ...options };
   if (periods.length === 0 || width <= 0) {
     return;
   }
@@ -160,17 +162,20 @@ export const layoutPeriodGrid = (
     return { fixed, lineCount };
   };
 
-  // as many slots to a line as keep the tiles at least minTile wide; where the room in view is known, the largest
-  // tiles with which the whole archive fits it (a portrait screen takes half decades), the tiles giving up to a quarter
-  // of their height for it; else the most to a line, so a long archive scrolls past fewer rows
+  // as many slots to a line as keep the tiles at least minTile wide. A whole row to a line whose tiles are big enough
+  // as they are stays so (the AORUS); one whose tiles are small takes, where the room in view is known, the largest
+  // tiles with which the whole archive still fits it (the portrait screen takes half decades), the tiles giving up to a
+  // quarter of their height for it; else the most to a line, so a long archive scrolls past fewer rows
   const choices = PER_LINE[kind].map((perLine) => ({ perLine, tile: lineTile(perLine), units: unitsFor(perLine) }));
   const usable = choices.filter(({ tile }) => tile >= minTile);
   const fits = ({ perLine, tile, units }: (typeof choices)[number]) => {
     const { fixed, lineCount } = measure(units, rowGapFor(perLine));
     return !!viewportHeight && fixed + lineCount * Math.ceil(tile * FIT_RATIO) <= viewportHeight;
   };
+  const [widest] = usable;
+  const roomy = widest && widest.tile >= comfortTile ? widest : undefined;
   const choice =
-    usable.filter((option) => fits(option)).sort((a, b) => b.tile - a.tile)[0] ?? usable[0] ?? choices.at(-1)!;
+    roomy ?? usable.filter((option) => fits(option)).sort((a, b) => b.tile - a.tile)[0] ?? usable[0] ?? choices.at(-1)!;
   const { perLine, units } = choice;
   const tileWidth = Math.max(1, choice.tile);
   const rowGap = rowGapFor(perLine);

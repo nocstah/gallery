@@ -108,6 +108,14 @@ describe(layoutPeriodGrid.name, () => {
     expect(new Set(twenties.cells.map(({ top }) => top)).size).toBe(2);
   });
 
+  it('keeps ten to a line where the tiles are big enough as they are, though halves would fit (a few years)', () => {
+    // a person's photos from three years on the AORUS: halves would make tiles of 431px
+    const few = years([2019, 2024, 2026]);
+    const grid = layoutPeriodGrid(few, { kind: 'year', width: 2287, gap: 10, viewportHeight: 1308 })!;
+    expect(grid.perLine).toBe(10);
+    expect(grid.tileWidth).toBe(211);
+  });
+
   it('keeps ten to a line where the archive fits the screen that way (a laptop)', () => {
     expect(layoutPeriodGrid(years(), { kind: 'year', width: 1167, gap: 10, viewportHeight: 768 })!.perLine).toBe(10);
   });
