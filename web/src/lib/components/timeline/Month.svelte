@@ -120,11 +120,18 @@
 
 {#each filterIsInOrNearViewport(timelineMonth.timelineDays) as timelineDay, groupIndex (timelineDay.day)}
   {@const isTimelineDaySelected = assetInteraction.selectedGroup.has(timelineDay.groupTitle)}
+  {@const head = timelineDay.viewerAssets[0]?.position}
+  {@const wraps = !!head && head.left > 0 && timelineDay.height > head.height}
+  <!-- Local Omarchy layer: a day that starts along a row and goes on to the next ones (internal/row-cuts) has its box
+       from the row's start, over the photos of the days before it on that row: the box lets the pointer through to
+       them, its own photos taking it as ever -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <section
     class={[{ 'transition-all': !timelineMonth.timelineManager.suspendTransitions }]}
     style:transition-delay={timelineMonth.timelineManager.suspendTransitions ? undefined : `${transitionDuration}ms`}
     data-group
+    data-wraps={wraps ? '' : undefined}
+    style:pointer-events={wraps ? 'none' : undefined}
     style:position="absolute"
     style:inset-inline-start={timelineDay.start + 'px'}
     style:top={timelineDay.top + 'px'}
@@ -183,6 +190,10 @@
 <style>
   section {
     contain: layout paint style;
+  }
+  /* Local Omarchy layer: the photos of a box that lets the pointer through (above) still take it */
+  section[data-wraps] :global([data-asset-id]) {
+    pointer-events: auto;
   }
 
   /* Local Omarchy layer: the hairline where the month starts, in the gap between photos (no tile moves for it); the
