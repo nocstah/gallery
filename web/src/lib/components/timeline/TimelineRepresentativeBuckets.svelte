@@ -2,7 +2,14 @@
   import TimelineBucketCard from '$lib/components/timeline/TimelineBucketCard.svelte';
   import type { TimelineGrouping } from '$lib/managers/timeline-manager/types';
   import { revealDelta, rowNeighbour } from '$lib/utils/grid-rows';
-  import { periodDensity, periodSlot, type PeriodGrid, type PeriodRow } from '$lib/utils/period-grid';
+  import {
+    periodDensity,
+    periodSlot,
+    type PeriodCell,
+    type PeriodFold,
+    type PeriodGrid,
+    type PeriodRow,
+  } from '$lib/utils/period-grid';
   import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
   import type { Snippet } from 'svelte';
   import { on } from 'svelte/events';
@@ -124,6 +131,16 @@
     return from === to ? String(from) : `${from}–${to}`;
   };
   const gapName = (kind: PeriodGrid['kind'], slot: number) => (kind === 'year' ? String(slot) : monthName(slot));
+  // a line of a row without photos, folded: its span ("1980–1984", "Jan–Jun")
+  const foldName = (kind: PeriodGrid['kind'], { first, last }: PeriodFold) =>
+    first === last ? gapName(kind, first) : `${gapName(kind, first)}–${gapName(kind, last)}`;
+  type RowItem = { key: string; top: number; left: number } & ({ fold: PeriodFold } | { cell: PeriodCell });
+  /** a row's tiles, gaps and folded lines in reading order, line by line */
+  const rowItems = (row: Extract<PeriodRow, { kind: 'period' }>): RowItem[] =>
+    [
+      ...row.folds.map((fold) => ({ key: `fold-${fold.first}`, top: fold.top, left: fold.left, fold })),
+      ...row.cells.map((cell) => ({ key: `cell-${cell.slot}`, top: cell.top, left: cell.left, cell })),
+    ].sort((a, b) => a.top - b.top || a.left - b.left);
 
   // the arrows move between the periods as they are drawn, as they do between photos: ← and → along the reading
   // order, ↑ and ↓ to the row above or below (the period nearest by its centre, so a column of the decade grid is one
@@ -209,26 +226,40 @@
           </div>
         {:else}
           <h2 class="ws-period-name" style={at(row.label)}>{rowName(kind, row.unit)}</h2>
-          {#each row.cells as cell (cell.slot)}
-            {@const bucket = cell.tile ? bySlot.get(cell.slot) : undefined}
-            {#if bucket}
-              <div style={at(cell)} data-testid={`timeline-bucket-shell-${bucket.timeBucket}`} class="ws-period-tile">
-                <TimelineBucketCard
-                  {bucket}
-                  {locale}
-                  loading={!bucket.isLoaded}
-                  {disabled}
-                  onActivate={activate}
-                  density={periodDensity(bucket.count, grid.busiest)}
-                  short={kind === 'month'}
-                />
-                {@render bucketAction?.(bucket)}
+          {#each rowItems(row) as item (item.key)}
+            {#if 'fold' in item}
+              <!-- Local Omarchy layer: a line of the row without photos (the Dell's 1980 to 1984): one slim line naming
+                   its span, as a run of empty rows is, the row's other lines at their places -->
+              <div
+                class="ws-period-run ws-period-fold"
+                style={at({ left: item.fold.left, top: item.fold.top, height: item.fold.height })}
+              >
+                <span class="ws-period-run-name"
+                  >{foldName(kind, item.fold)}<span class="sr-only">, {$t('timeline_overview_no_photos')}</span></span
+                >
               </div>
             {:else}
-              <!-- a period without photos inside the archive's span: a quiet gap at its place -->
-              <div class="ws-period-gap" style={at(cell)} aria-hidden="true">
-                <span>{gapName(kind, cell.slot)}</span>
-              </div>
+              {@const cell = item.cell}
+              {@const bucket = cell.tile ? bySlot.get(cell.slot) : undefined}
+              {#if bucket}
+                <div style={at(cell)} data-testid={`timeline-bucket-shell-${bucket.timeBucket}`} class="ws-period-tile">
+                  <TimelineBucketCard
+                    {bucket}
+                    {locale}
+                    loading={!bucket.isLoaded}
+                    {disabled}
+                    onActivate={activate}
+                    density={periodDensity(bucket.count, grid.busiest)}
+                    short={kind === 'month'}
+                  />
+                  {@render bucketAction?.(bucket)}
+                </div>
+              {:else}
+                <!-- a period without photos inside the archive's span: a quiet gap at its place -->
+                <div class="ws-period-gap" style={at(cell)} aria-hidden="true">
+                  <span>{gapName(kind, cell.slot)}</span>
+                </div>
+              {/if}
             {/if}
           {/each}
         {/if}

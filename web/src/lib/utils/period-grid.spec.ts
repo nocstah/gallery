@@ -108,6 +108,45 @@ describe(layoutPeriodGrid.name, () => {
     expect(new Set(twenties.cells.map(({ top }) => top)).size).toBe(2);
   });
 
+  it('folds a half decade without photos into one slim line, the other half keeping its places (the Dell)', () => {
+    const grid = layoutPeriodGrid(years(), { kind: 'year', width: 1023, gap: 10, viewportHeight: 2172 })!;
+    const eighties = periodRows(grid.rows).find((row) => row.unit === 198)!;
+
+    expect(grid.perLine).toBe(5);
+    // 1980 to 1984 held nine empty frames over two lines with the second half; now one slim line names them
+    expect(eighties.folds).toEqual([{ first: 1980, last: 1984, left: 72 + 10, top: eighties.top, height: 28 }]);
+    expect(eighties.cells.map(({ slot, tile }) => [slot, tile])).toEqual([
+      [1985, false],
+      [1986, false],
+      [1987, false],
+      [1988, false],
+      [1989, true],
+    ]);
+    expect(eighties.height).toBe(28 + 10 + grid.tileHeight);
+    // a year still stands under the same year of the next decade
+    expect(cellOf(grid.rows, 1989)!.left).toBe(cellOf(grid.rows, 1999)!.left);
+    expect(cellOf(grid.rows, 1985)!.left).toBe(cellOf(grid.rows, 1995)!.left);
+    // a half with photos in it keeps its gaps
+    expect(periodRows(grid.rows).find((row) => row.unit === 199)!.folds).toEqual([]);
+    expect(grid.height).toBeLessThanOrEqual(2172);
+  });
+
+  it('folds nothing where a decade is one line (the AORUS)', () => {
+    const grid = layoutPeriodGrid(years(), { kind: 'year', width: 2287, gap: 10, viewportHeight: 1308 })!;
+    expect(periodRows(grid.rows).flatMap((row) => row.folds)).toEqual([]);
+  });
+
+  it('counts a folded line as a slim one when fitting the archive to the screen', () => {
+    // just tall enough for the half decades with the 1980s' first half folded, not with it as a line of tiles
+    const open = layoutPeriodGrid(years(), { kind: 'year', width: 1023, gap: 10 })!;
+    const halves = layoutPeriodGrid(years(), { kind: 'year', width: 1023, gap: 10, viewportHeight: 4000 })!;
+    expect(open.perLine).toBe(10);
+    expect(halves.perLine).toBe(5);
+    const fitted = layoutPeriodGrid(years(), { kind: 'year', width: 1023, gap: 10, viewportHeight: halves.height })!;
+    expect(fitted.perLine).toBe(5);
+    expect(fitted.tileHeight).toBe(fitted.tileWidth);
+  });
+
   it('keeps ten to a line where the tiles are big enough as they are, though halves would fit (a few years)', () => {
     // a person's photos from three years on the AORUS: halves would make tiles of 431px
     const few = years([2019, 2024, 2026]);
@@ -181,6 +220,17 @@ describe(layoutPeriodGrid.name, () => {
         [11, false],
         [12, false],
       ]);
+    });
+
+    it('folds a part of a year without photos into one slim line on the portrait screen', () => {
+      const grid = layoutPeriodGrid(months, { kind: 'month', width: 1023, gap: 10 })!;
+      const year = (unit: number) => periodRows(grid.rows).find((row) => row.unit === unit)!;
+
+      // 1989 has July alone: January to June fold, July to December keep their places
+      expect(year(1989).folds.map(({ first, last }) => [(first % 12) + 1, (last % 12) + 1])).toEqual([[1, 6]]);
+      expect(year(1989).cells.map(({ slot }) => (slot % 12) + 1)).toEqual([7, 8, 9, 10, 11, 12]);
+      // 2026 has January and October, one in each half: nothing folds
+      expect(year(2026).folds).toEqual([]);
     });
 
     it('breaks a year into lines of four on a phone and six on the portrait screen', () => {

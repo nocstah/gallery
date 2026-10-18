@@ -2,8 +2,9 @@
 // overviews; components/timeline/TimelineRepresentativeBuckets). Each decade (Years) or year (Months) is a row whose
 // slots stand in calendar order at fixed places, so a column is the same year of every decade (1977 under 1987 under
 // 1997) or the same month of every year. A period with photos is a tile, one without them inside the archive's span a
-// quiet gap, and a run of decades or years with no photos at all one slim line naming it. Plain functions: the timeline
-// manager places its buckets from what they return.
+// quiet gap, and a run of decades or years with no photos at all one slim line naming it, as is a line of a row that
+// holds none (the Dell's half decades: 1980 to 1984). Plain functions: the timeline manager places its buckets from
+// what they return.
 
 export type PeriodKind = 'year' | 'month';
 
@@ -44,6 +45,10 @@ export type PeriodGridOptions = {
 /** A slot in a row: a tile (the period has photos) or a quiet gap (it has none, inside the archive's span). */
 export type PeriodCell = { slot: number; tile: boolean; left: number; top: number; width: number; height: number };
 
+/** A line of a row without photos, folded into one slim line naming its span (its first and last slot in the span):
+ * the row's other lines keep their fixed places. */
+export type PeriodFold = { first: number; last: number; left: number; top: number; height: number };
+
 export type PeriodRow =
   | {
       kind: 'period';
@@ -54,6 +59,7 @@ export type PeriodRow =
       /** where the row's name stands */
       label: { left: number; top: number; width: number; height: number };
       cells: PeriodCell[];
+      folds: PeriodFold[];
     }
   | {
       kind: 'empty';
@@ -85,7 +91,7 @@ const DEFAULTS = { minTile: 80, comfortTile: 144, labelWidth: 72, labelHeight: 3
 /** The smallest share of its own width a tile's height may be squeezed to, so a short archive fits the screen. */
 const FIT_RATIO = 0.75;
 
-type Line = { slots: number[] };
+type Line = { slots: number[]; folded?: boolean };
 type Unit = { unit: number; lines: Line[] } | { empty: true; first: number; last: number };
 
 /**
@@ -138,7 +144,9 @@ export const layoutPeriodGrid = (
       for (let at = 0; at < per; at += perLine) {
         const line = own.slice(at, at + perLine);
         if (line.some((slot) => slot >= first && slot <= last)) {
-          lines.push({ slots: line });
+          // a line without photos in a row that has them folds into one slim line (2026-10-18: the Dell's 1980s stood
+          // as two lines of tiles, nine of the ten empty)
+          lines.push({ slots: line, folded: line.every((slot) => !present.has(slot)) });
         }
       }
       units.push({ unit, lines });
@@ -156,7 +164,13 @@ export const layoutPeriodGrid = (
         fixed += emptyHeight;
       } else {
         fixed += nameHeight + gap * (unit.lines.length - 1);
-        lineCount += unit.lines.length;
+        for (const line of unit.lines) {
+          if (line.folded) {
+            fixed += emptyHeight;
+          } else {
+            lineCount++;
+          }
+        }
       }
     }
     return { fixed, lineCount };
@@ -200,8 +214,15 @@ export const layoutPeriodGrid = (
     }
     const top = y;
     const cells: PeriodCell[] = [];
-    for (const [lineIndex, line] of unit.lines.entries()) {
-      const lineTop = top + nameHeight + lineIndex * (tileHeight + gap);
+    const folds: PeriodFold[] = [];
+    let lineTop = top + nameHeight;
+    for (const line of unit.lines) {
+      if (line.folded) {
+        const span = line.slots.filter((slot) => slot >= first && slot <= last);
+        folds.push({ first: span[0], last: span.at(-1)!, left: x0, top: lineTop, height: emptyHeight });
+        lineTop += emptyHeight + gap;
+        continue;
+      }
       for (const [column, slot] of line.slots.entries()) {
         if (slot < first || slot > last) {
           continue;
@@ -215,8 +236,9 @@ export const layoutPeriodGrid = (
           height: tileHeight,
         });
       }
+      lineTop += tileHeight + gap;
     }
-    const height = nameHeight + unit.lines.length * (tileHeight + gap) - gap;
+    const height = lineTop - gap - top;
     rows.push({
       kind: 'period',
       unit: unit.unit,
@@ -224,6 +246,7 @@ export const layoutPeriodGrid = (
       height,
       label: { left: 0, top, width: beside ? nameWidth : width, height: beside ? height : nameHeight },
       cells,
+      folds,
     });
     y += height + rowGap;
   }
