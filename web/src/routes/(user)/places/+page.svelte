@@ -81,6 +81,7 @@
       {searchQuery}
       bind:searchResultCount
       bind:placesGroupIds={placesGroups}
+      onClearSearch={() => (searchQuery = '')}
     />
   {:else}
     <div class="flex items-center justify-center py-16">

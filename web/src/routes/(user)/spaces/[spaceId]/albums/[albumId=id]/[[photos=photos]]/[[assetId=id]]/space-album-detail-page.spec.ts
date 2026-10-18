@@ -905,6 +905,30 @@ describe('Space album detail page', () => {
     });
   });
 
+  // Local Omarchy layer: the timeline's own empty state is where a filtered album lands while the timeline is still
+  // settling, so it says what Photos says for a filter that finds nothing, never that the album is empty
+  it('browse: an album whose filters find nothing says so in the timeline, not that it is empty', async () => {
+    setMockTimelineEmpty();
+    mockTimelineState.isInitialized = false;
+    renderPage({ members: [makeMember(SharedSpaceRole.Editor)] });
+    expect(screen.getByText('No photos yet')).toBeInTheDocument();
+
+    await fireEvent.click(screen.getByTestId('filter-panel-add-person'));
+
+    await waitFor(() => expect(screen.getByTestId('browse-filtered-empty')).toHaveTextContent('No matching photos'));
+    expect(screen.queryByText('No photos yet')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('empty-add-photos-button')).not.toBeInTheDocument();
+  });
+
+  it('browse: an empty album says so on the gutter, with Add photos for an editor', () => {
+    setMockTimelineEmpty();
+    renderPage({ members: [makeMember(SharedSpaceRole.Editor)] });
+
+    expect(screen.getByText('No photos yet')).toBeInTheDocument();
+    expect(screen.getByText('Add photos to this album so everyone in the space can see them.')).toBeInTheDocument();
+    expect(screen.getByTestId('empty-add-photos-button')).toHaveTextContent('Add photos');
+  });
+
   it('browse: the FilterPanel is hidden when the album is genuinely empty (no assets, no filters)', async () => {
     setMockTimelineEmpty();
     renderPage();

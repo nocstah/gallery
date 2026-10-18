@@ -2,6 +2,7 @@
   import { goto, invalidateAll, onNavigate } from '$app/navigation';
   import { page } from '$app/state';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import AlbumTitle from '$lib/components/album-page/AlbumTitle.svelte';
   import AlbumDescription from '$lib/components/album-page/AlbumDescription.svelte';
   import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
@@ -79,9 +80,9 @@
     type SmartSearchFacetsResponseDto,
   } from '@immich/sdk';
   import HeaderActionButton from '$lib/components/HeaderActionButton.svelte';
-  import { Icon, IconButton, modalManager, toastManager } from '@immich/ui';
+  import { IconButton, modalManager, toastManager } from '@immich/ui';
   import { handleError } from '$lib/utils/handle-error';
-  import { mdiArrowLeft, mdiImageOutline, mdiImagePlusOutline, mdiLink } from '@mdi/js';
+  import { mdiArrowLeft, mdiImagePlusOutline, mdiLink } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
@@ -589,6 +590,27 @@
   const { AddAssets, Upload } = $derived(getAlbumAssetsActions($t, album, pickerMultiSelectManager.assets));
 </script>
 
+<!-- Local Omarchy layer: Photos' own words for a filter that finds nothing, in the Empty State's grammar on the gutter
+     (DESIGN.md, Space page), where upstream centred one grey line and a link -->
+{#snippet filteredEmpty()}
+  <EmptyState
+    title={$t('timeline_empty_filtered_title')}
+    body={$t('timeline_empty_filtered_subtitle')}
+    action={{
+      label: $t('timeline_empty_clear_filters'),
+      testId: 'browse-clear-filters',
+      onclick: () => {
+        browseFilters = clearFilters(browseFilters);
+        temporalAnchor = undefined;
+        // The filters are URL-backed now: without this the params survive the "clear",
+        // so a refresh or back/forward restores what the user just cleared.
+        syncFilterUrl(browseFilters);
+      },
+    }}
+    testId="browse-filtered-empty"
+  />
+{/snippet}
+
 <!-- Header shows the space (context/breadcrumb); the album name lives in the editable AlbumTitle in the
      timeline below, mirroring the regular album page (which has no page-header title). -->
 <UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} title={space.name}>
@@ -721,23 +743,7 @@
             total={searchTotal}
           />
         {:else if showBrowseFilteredEmpty}
-          <div class="flex flex-1 flex-col items-center justify-center gap-2" data-testid="browse-filtered-empty">
-            <p class="text-sm text-gray-500 dark:text-gray-400">{$t('space_album_no_photos_match_filters')}</p>
-            <button
-              type="button"
-              data-testid="browse-clear-filters"
-              class="text-sm text-(--primary)"
-              onclick={() => {
-                browseFilters = clearFilters(browseFilters);
-                temporalAnchor = undefined;
-                // The filters are URL-backed now: without this the params survive the "clear",
-                // so a refresh or back/forward restores what the user just cleared.
-                syncFilterUrl(browseFilters);
-              }}
-            >
-              {$t('space_album_clear_all_filters')}
-            </button>
-          </div>
+          {@render filteredEmpty()}
         {:else}
           <Timeline
             enableRouting={true}
@@ -780,22 +786,21 @@
             </section>
 
             {#snippet empty()}
-              <section class="mt-50 flex place-content-center place-items-center">
-                <div class="flex flex-col items-center gap-4 text-center">
-                  <Icon icon={mdiImageOutline} size="3.5em" class="text-gray-400" />
-                  <p class="text-lg text-gray-500 dark:text-gray-400">{$t('no_assets_to_show')}</p>
-                  {#if canManage}
-                    <button
-                      type="button"
-                      data-testid="empty-add-photos-button"
-                      class="text-sm text-(--primary)"
-                      onclick={enterAddMode}
-                    >
-                      {$t('add_photos')}
-                    </button>
-                  {/if}
-                </div>
-              </section>
+              <!-- Local Omarchy layer: the Empty State on the gutter, as on the Space's other pages (DESIGN.md, Space
+                   page), in the words the app's Space album says; upstream centred an image icon over "No photos to
+                   show". The timeline also ends up here when the album's filters match nothing (the branch above
+                   rarely wins that race), so a filtered album says what Photos says rather than that it is empty. -->
+              {#if browseActive > 0}
+                {@render filteredEmpty()}
+              {:else}
+                <EmptyState
+                  title={$t('space_album_empty_title')}
+                  body={$t(canManage ? 'space_album_empty_subtitle' : 'space_album_empty_subtitle_viewer')}
+                  action={canManage
+                    ? { label: $t('add_photos'), onclick: enterAddMode, testId: 'empty-add-photos-button' }
+                    : undefined}
+                />
+              {/if}
             {/snippet}
           </Timeline>
         {/if}
@@ -922,17 +927,17 @@
           {/if}
 
           {#if showPickerFilteredEmpty}
-            <div class="flex flex-1 flex-col items-center justify-center gap-2" data-testid="picker-filtered-empty">
-              <p class="text-sm text-gray-500 dark:text-gray-400">{$t('space_album_no_photos_to_add_match_filters')}</p>
-              <button
-                type="button"
-                data-testid="picker-clear-filters"
-                class="text-sm text-(--primary)"
-                onclick={() => (pickerFilters = clearFilters(pickerFilters))}
-              >
-                {$t('space_album_clear_all_filters')}
-              </button>
-            </div>
+            <!-- Local Omarchy layer: the picker's filter that finds nothing, in the same grammar as the album's -->
+            <EmptyState
+              title={$t('timeline_empty_filtered_title')}
+              body={$t('space_album_no_photos_to_add_match_filters')}
+              action={{
+                label: $t('timeline_empty_clear_filters'),
+                testId: 'picker-clear-filters',
+                onclick: () => (pickerFilters = clearFilters(pickerFilters)),
+              }}
+              testId="picker-filtered-empty"
+            />
           {:else}
             <Timeline
               enableRouting={false}

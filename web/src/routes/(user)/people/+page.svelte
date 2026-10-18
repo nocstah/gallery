@@ -10,6 +10,7 @@
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import SearchPeople from '$lib/components/faces-page/PeopleSearch.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import { PEOPLE_PAGE_SIZE, QueryParameter, SessionStorageKey } from '$lib/constants';
   import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -37,10 +38,9 @@
     updatePerson,
     type PersonResponseDto,
   } from '@immich/sdk';
-  import { Button, Icon, modalManager, toastManager } from '@immich/ui';
+  import { Button, modalManager, toastManager } from '@immich/ui';
   import {
     mdiAccountMultipleCheckOutline,
-    mdiAccountOff,
     mdiDotsVertical,
     mdiEyeOutline,
     mdiAccountGroupOutline,
@@ -288,15 +288,6 @@
     [PeopleFilterBy.Pets]: $t('pets'),
   });
   let peopleFilterBy = $derived(resolvePeopleFilterBy($peopleViewSettings.filterBy));
-  // "No people" under an empty Pets filter reads as a claim about the whole library, which is
-  // exactly backwards: the library still has people, it just has no pets.
-  let emptyStateMessageKey: 'search_no_people' | 'search_no_people_named' | 'search_no_pets' = $derived(
-    searchName
-      ? 'search_no_people_named'
-      : peopleFilterBy === PeopleFilterBy.Pets
-        ? 'search_no_pets'
-        : 'search_no_people',
-  );
   // A type filter that matches nothing — Pets after a pet-detection reset, say — legitimately
   // empties `people` without meaning the library has none. Gating the toolbar on the loaded rows
   // alone takes the filter dropdown down with them, stranding the user on the empty view with no
@@ -324,6 +315,35 @@
       loadingPage = false;
     }
   };
+
+  // Local Omarchy layer: an empty People page says why it is empty, in the Empty State's grammar (DESIGN.md, People).
+  // "No people" under an empty Pets filter reads as a claim about the whole library, which is exactly backwards: the
+  // library still has people, it just has no pets; and a library whose people are all hidden is not empty either.
+  const showAndHide = $derived({ label: $t('show_and_hide_people'), href: '/people/manage' });
+  let emptyState = $derived.by(() => {
+    if (searchName) {
+      return {
+        title: $t('search_no_people_named', { values: { name: searchName } }),
+        body: $t('people_search_none_body'),
+        link: showAndHide,
+      };
+    }
+    if (peopleFilterBy !== PeopleFilterBy.All) {
+      const pets = peopleFilterBy === PeopleFilterBy.Pets;
+      return {
+        title: $t(pets ? 'search_no_pets' : 'search_no_people'),
+        body: $t(pets ? 'people_no_pets_body' : 'timeline_empty_filtered_subtitle'),
+        action: {
+          label: $t('timeline_empty_clear_filters'),
+          onclick: () => handlePromiseError(handleFilterChange(PeopleFilterBy.All)),
+        },
+      };
+    }
+    if (peopleCountStatistics.hidden > 0) {
+      return { title: $t('people_all_hidden_title'), body: $t('people_all_hidden_body'), link: showAndHide };
+    }
+    return { title: $t('people_empty_title'), body: $t('people_empty_body') };
+  });
 
   const getPersonHref = (person: PersonResponseDto) => getGlobalPersonHref(person, Route.people());
 
@@ -533,13 +553,7 @@
       {/snippet}
     </PeopleManagementGrid>
   {:else}
-    <div class="flex min-h-[calc(66vh-11rem)] w-full place-content-center items-center dark:text-white">
-      <div class="flex flex-col content-center items-center text-center">
-        <Icon icon={mdiAccountOff} size="3.5em" />
-        <p class="mt-5 line-clamp-2 max-w-lg overflow-hidden text-3xl font-medium">
-          {$t(emptyStateMessageKey, { values: { name: searchName } })}
-        </p>
-      </div>
-    </div>
+    <!-- Local Omarchy layer: on the gutter, where upstream centred a crossed-out person over "No people" -->
+    <EmptyState {...emptyState} testId="people-empty" />
   {/if}
 </UserPageLayout>

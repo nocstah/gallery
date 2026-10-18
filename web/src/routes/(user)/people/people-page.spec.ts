@@ -332,6 +332,40 @@ describe('Global people page', () => {
     expect(screen.queryByText('search_no_people')).toBeNull();
   });
 
+  // Local Omarchy layer: an empty People page says why, on the gutter (DESIGN.md, People)
+  it('says People fills in as faces are found when the library has no one yet', () => {
+    renderPage([], { total: 0, hidden: 0, detectedFaceCount: 0 });
+
+    const empty = screen.getByTestId('people-empty');
+    expect(empty).toHaveTextContent('people_empty_title');
+    expect(empty).toHaveTextContent('people_empty_body');
+    expect(screen.queryByRole('link', { name: 'show_and_hide_people' })).toBeNull();
+  });
+
+  it('says everyone is hidden, with the way to Show & hide people, when every person is hidden', () => {
+    renderPage([makePerson({ id: 'p1', isHidden: true }), makePerson({ id: 'p2', isHidden: true })]);
+
+    expect(screen.getByTestId('people-empty')).toHaveTextContent('people_all_hidden_title');
+    expect(screen.getByRole('link', { name: 'show_and_hide_people' })).toHaveAttribute('href', '/people/manage');
+  });
+
+  it('offers Clear filters under an empty Pets filter, which brings everyone back', async () => {
+    const user = userEvent.setup();
+    renderEmptyPetFilter();
+    expect(screen.getByTestId('people-empty')).toHaveTextContent('people_no_pets_body');
+    sdkMock.getAllPeople.mockResolvedValue({
+      people: [makePerson({ id: 'p1', name: 'Alice' })],
+      total: 1,
+      hidden: 0,
+      hasNextPage: false,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'timeline_empty_clear_filters' }));
+
+    await waitFor(() => expect(screen.getByDisplayValue('Alice')).toBeInTheDocument());
+    expect(get(peopleViewSettings).filterBy).toBe(PeopleFilterBy.All);
+  });
+
   it('reloads the unfiltered people when an empty pet filter is switched back to All', async () => {
     const user = userEvent.setup();
     renderEmptyPetFilter();

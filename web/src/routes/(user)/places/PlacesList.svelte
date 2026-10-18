@@ -1,14 +1,13 @@
 <script lang="ts">
+  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import { placeStats } from '$lib/managers/place-stats.svelte';
   import { PlacesGroupBy, type PlacesViewSettings } from '$lib/stores/preferences.store';
   import { normalizeSearchString } from '$lib/utils/string-utils';
   import { type AssetResponseDto } from '@immich/sdk';
-  import { mdiMapMarkerOff } from '@mdi/js';
   import { groupBy } from 'lodash-es';
   import PlacesCardGroup from './PlacesCardGroup.svelte';
 
   import { type PlacesGroup } from '$lib/utils/places-utils';
-  import { Icon } from '@immich/ui';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -17,6 +16,8 @@
     searchResultCount: number;
     userSettings: PlacesViewSettings;
     placesGroupIds?: string[];
+    /** Local Omarchy layer: empties the search field, the next step when a search finds no place */
+    onClearSearch?: () => void;
   }
 
   let {
@@ -27,6 +28,7 @@
     userSettings,
     // eslint-disable-next-line no-useless-assignment
     placesGroupIds = $bindable([]),
+    onClearSearch,
   }: Props = $props();
 
   interface PlacesGroupOption {
@@ -96,8 +98,16 @@
   });
 </script>
 
-{#if places.length > 0}
-  <!-- Album Cards -->
+<!-- Local Omarchy layer: the empty states stand on the gutter in the Empty State's grammar (DESIGN.md, Places), where
+     upstream centred a crossed-out marker over "No places"; and a search that finds no place says so (it left the page
+     blank) -->
+{#if places.length > 0 && filteredPlaces.length === 0}
+  <EmptyState
+    title={$t('places_no_match', { values: { query: searchQuery.trim() } })}
+    action={onClearSearch ? { label: $t('filter_sheet_picker_clear_search'), onclick: onClearSearch } : undefined}
+    testId="places-no-match"
+  />
+{:else if places.length > 0}
   {#if userSettings.groupBy === PlacesGroupBy.None}
     <PlacesCardGroup places={groupedPlaces[0].places} />
   {:else}
@@ -106,10 +116,5 @@
     {/each}
   {/if}
 {:else}
-  <div class="flex min-h-[calc(66vh-11rem)] w-full place-content-center items-center dark:text-white">
-    <div class="flex flex-col content-center items-center text-center">
-      <Icon icon={mdiMapMarkerOff} size="3.5em" />
-      <p class="mt-5 text-3xl font-medium">{$t('no_places')}</p>
-    </div>
-  </div>
+  <EmptyState title={$t('places_empty_title')} body={$t('places_empty_body')} testId="places-empty" />
 {/if}
