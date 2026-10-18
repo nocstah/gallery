@@ -301,3 +301,11 @@ export const kindActionKeys = (): Translations[] => [
   ...Object.values(VERBS).flatMap(({ button, all }) => [button, all]),
   ...Object.values(WHAT).flatMap(([, todo, done]) => [todo, done]),
 ];
+
+/**
+ * Whether Curator is as sure of every card as of the next ("80% sure" on all 42 of a kind): said on each, it tells one
+ * card from another nothing, so the cards leave it out. Goes by the percentage the card would show.
+ */
+export const sharedConfidence = (items: Pick<Suggestion, 'confidence'>[]): boolean =>
+  items.length > 1 &&
+  new Set(items.map(({ confidence }) => (confidence === null ? null : Math.round(confidence * 100)))).size === 1;

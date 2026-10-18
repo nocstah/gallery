@@ -337,11 +337,28 @@ export type AskResult = {
 
 export type DecideResult = { applied?: number[]; failed?: number[]; rejected?: number; job?: number };
 
-/** Undo refuses where the photo changed again since (conflicts) and reports what Gallery refused (failed). */
+/**
+ * Undo refuses where the photo changed again since (conflicts) and reports what Gallery refused (failed). Only applied
+ * suggestions are taken back (the rest are skipped); with reopen, those taken back wait in the inbox again (reopened).
+ * More than 20 at once go to Curator's worker after its backup rule, as accepting that many does: then only `job`.
+ */
 export type UndoResult = {
   undone: number[];
   conflicts: { id: number; reason: string }[];
   failed?: { id: number; reason: string }[];
+  skipped?: number[];
+  reopened?: number[];
+  job?: number;
+};
+
+/** What Curator's apply.undo job did (an Undo all of more than 20): counts, and the first problems. */
+export type UndoJobResult = {
+  undone: number;
+  reopened: number;
+  conflicts: number;
+  failed: number;
+  skipped: number;
+  problems: { id: number; reason: string }[];
 };
 
 export type LookUpSubject = {
@@ -526,7 +543,8 @@ export const curator = {
     ),
   decide: (ids: number[], decision: 'accept' | 'reject') =>
     post<DecideResult>('/suggestions/decide', { ids, decision }),
-  undo: (ids: number[]) => post<UndoResult>('/suggestions/undo', { ids }),
+  /** take back what was accepted; `reopen` puts each one back in the inbox (Undo all, a card's Undo), History's does not */
+  undo: (ids: number[], reopen = false) => post<UndoResult>('/suggestions/undo', { ids, reopen }),
   /** a rejection or a failed apply back to waiting; the ids it leaves out stay as they were (a restored version whose
    * file is gone, a week after it was rejected) */
   reopen: (ids: number[]) => post<{ reopened: number[] }>('/suggestions/reopen', { ids }),

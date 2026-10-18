@@ -12,6 +12,7 @@ import {
   runDays,
   runsOf,
   seriesOf,
+  sharedConfidence,
   waitingIn,
 } from '$lib/utils/curator-inbox';
 
@@ -260,5 +261,18 @@ describe("the inbox's words for each kind", () => {
     for (const key of phrases) {
       expect(en[key], key).toMatch(/\{count, plural,/);
     }
+  });
+});
+
+describe('sharedConfidence', () => {
+  it('is true where every card would say the same percentage', () => {
+    expect(sharedConfidence([{ confidence: 0.8 }, { confidence: 0.801 }, { confidence: 0.8 }])).toBe(true);
+    expect(sharedConfidence([{ confidence: null }, { confidence: null }])).toBe(true);
+  });
+
+  it('is false where one card differs, or there is only one card', () => {
+    expect(sharedConfidence([{ confidence: 0.8 }, { confidence: 0.65 }])).toBe(false);
+    expect(sharedConfidence([{ confidence: 0.8 }, { confidence: null }])).toBe(false);
+    expect(sharedConfidence([{ confidence: 0.8 }])).toBe(false);
   });
 });

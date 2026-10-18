@@ -1,13 +1,14 @@
 <script lang="ts">
   // Local Omarchy layer: review mode. One kind (all its batches, utils/curator-inbox), one suggestion at a time, full
-  // screen and large, decided from the keyboard: A or → accepts, R or ← rejects, S or Space skips, U takes back the
-  // last decision (an accepted change is undone, a rejection reopened), Esc closes; the arrows belong to a slider
-  // while it has focus. The next suggestion's photos load while this one is on screen.
+  // screen and large, decided from the keyboard: A or → does what the kind's button says (Archive, Publish, Make album:
+  // kindAction), R or ← rejects, S or Space skips, U takes back the last decision (an accepted change is undone and
+  // waits again, a rejection is reopened), Esc closes; the arrows belong to a slider while it has focus. The next
+  // suggestion's photos load while this one is on screen.
   import ReviewStage from '$lib/components/curator/ReviewStage.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import { curator, type Suggestion } from '$lib/utils/curator';
-  import { waitingIn } from '$lib/utils/curator-inbox';
+  import { kindAction, waitingIn, type KindAction } from '$lib/utils/curator-inbox';
   import { AssetMediaSize } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiClose } from '@mdi/js';
@@ -18,10 +19,12 @@
     /** the kind's batches, reviewed as one queue */
     keys: string[];
     title: string;
+    /** what accepting does for the kind, in words */
+    action: KindAction;
     onClose: () => void;
   }
 
-  let { keys, title, onClose }: Props = $props();
+  let { keys, title, action, onClose }: Props = $props();
 
   let items = $state<Suggestion[]>([]);
   let index = $state(0);
@@ -33,6 +36,8 @@
 
   const current = $derived(items[index]);
   const done = $derived(decided.length);
+  /** the card's own words: the chat's batch holds every kind of change */
+  const own = $derived(current && action.verb === 'apply' ? kindAction('', current.kind) : action);
 
   const preload = (suggestion: Suggestion | undefined) => {
     for (const id of suggestion?.asset_ids.slice(0, 2) ?? []) {
@@ -76,7 +81,8 @@
     message = undefined;
     try {
       if (last.decision === 'accept') {
-        const result = await curator.undo([last.id]);
+        // undone and waiting again, so it can be decided again where it was
+        const result = await curator.undo([last.id], true);
         const problem = result.conflicts[0] ?? result.failed?.[0];
         if (!result.undone.includes(last.id)) {
           message = problem ? $t('ai_inbox_conflict', { values: { reason: problem.reason } }) : undefined;
@@ -163,7 +169,9 @@
         {$t('ai_inbox_review_progress', { values: { done, total: items.length } })}
       </span>
     {/if}
-    <span class="ws-inbox-meta review-keys">{$t('ai_inbox_review_keys')}</span>
+    <span class="ws-inbox-meta review-keys">
+      {$t('ai_inbox_review_keys', { values: { accept: $t(action.button) } })}
+    </span>
     <button type="button" class="ws-btn-quiet review-close" aria-label={$t('close')} onclick={onClose}>
       <Icon icon={mdiClose} size="20" />
     </button>
@@ -199,14 +207,30 @@
         {/if}
       </div>
       <div class="review-actions">
-        <button type="button" class="ws-btn-quiet" disabled={busy || decided.length === 0} onclick={takeBack}>
+        <button
+          type="button"
+          class="ws-btn-quiet"
+          aria-keyshortcuts="U"
+          disabled={busy || decided.length === 0}
+          onclick={takeBack}
+        >
           {$t('undo')}
         </button>
-        <button type="button" class="ws-btn-quiet" disabled={busy} onclick={advance}>{$t('skip')}</button>
-        <button type="button" class="ws-btn-quiet" disabled={busy} onclick={() => decide('reject')}>
+        <button type="button" class="ws-btn-quiet" aria-keyshortcuts="S" disabled={busy} onclick={advance}>
+          {$t('skip')}
+        </button>
+        <button
+          type="button"
+          class="ws-btn-quiet"
+          aria-keyshortcuts="R"
+          disabled={busy}
+          onclick={() => decide('reject')}
+        >
           {$t('ai_inbox_reject')}
         </button>
-        <button type="button" class="ws-btn" disabled={busy} onclick={() => decide('accept')}>{$t('accept')}</button>
+        <button type="button" class="ws-btn" aria-keyshortcuts="A" disabled={busy} onclick={() => decide('accept')}>
+          {$t(own.button)}
+        </button>
       </div>
     </footer>
   {/if}

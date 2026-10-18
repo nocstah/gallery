@@ -188,7 +188,8 @@ export const shortcutSections = ($t: MessageFormatter, account: SheetAccount): S
         rows: [
           row([['J'], ['↓']], $t('shortcut_inbox_next')),
           row([['K'], ['↑']], $t('shortcut_inbox_previous')),
-          row([['A']], $t('accept')),
+          // Local Omarchy layer: A does what the card's button says for its kind (Archive, Make album: kindAction)
+          row([['A']], $t('shortcut_inbox_accept')),
           row([['R'], ['X']], $t('ai_inbox_reject')),
           row([['D']], $t('shortcut_inbox_trash')),
           row([['U']], $t('shortcut_inbox_undo')),
@@ -199,7 +200,7 @@ export const shortcutSections = ($t: MessageFormatter, account: SheetAccount): S
         id: 'inbox-review',
         title: $t('ai_inbox_review'),
         rows: [
-          row([['A'], ['→']], $t('accept')),
+          row([['A'], ['→']], $t('shortcut_inbox_accept')),
           row([['R'], ['←']], $t('ai_inbox_reject')),
           row([['S'], ['Space']], $t('skip')),
           row([['U'], ['Backspace']], $t('shortcut_inbox_take_back')),
