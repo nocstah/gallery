@@ -247,6 +247,13 @@ patch_web() {
   sed -i "s/- Immich<\/title>/- ${NAME}<\/title>/g" \
     "$REPO_ROOT/web/src/routes/+layout.svelte"
 
+  # Local Omarchy layer: the pages that set their own title (the error pages, a shared link's page and its ended page)
+  sed -i "s/- Immich<\/title>/- ${NAME}<\/title>/g" \
+    "$REPO_ROOT/web/src/routes/ErrorLayout.svelte" \
+    "$REPO_ROOT/web/src/lib/components/pages/SharedLinkErrorPage.svelte"
+  sed -i "s/ + ' - Immich';/ + ' - ${NAME}';/g" \
+    "$REPO_ROOT/web/src/lib/components/pages/SharedLinkPage.svelte"
+
   # Noscript fallback in app.html
   sed -i "s/To use Immich,/To use ${NAME},/g" \
     "$REPO_ROOT/web/src/app.html"

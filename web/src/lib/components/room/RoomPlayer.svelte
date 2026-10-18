@@ -768,7 +768,7 @@
   }
   .room-next-label {
     font-family: var(--ws-font-data);
-    font-size: clamp(0.6875rem, 1.8vmin, 2.25rem);
+    font-size: clamp(0.75rem, 1.8vmin, 2.25rem);
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
