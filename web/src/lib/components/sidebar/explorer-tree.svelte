@@ -86,7 +86,7 @@
             class="ws-tree-toggle"
             aria-expanded={isOpen}
             aria-controls={idFor(node.path)}
-            aria-label={isOpen ? $t('collapse') : $t('expand')}
+            aria-label={$t(isOpen ? 'collapse_named' : 'expand_named', { values: { name: node.value } })}
             onclick={() => toggle(node.path)}
           >
             <Icon icon={isOpen ? mdiChevronDown : mdiChevronRight} size="16" aria-hidden={true} />

@@ -160,9 +160,10 @@
            the same inset the parent caret sat directly above its children's, reading as one
            column rather than a hierarchy. The 20px step mirrors the rows' own indent. -->
       {#if hasAlbums && !collapsed}
+        <!-- Local Omarchy layer: the chevron names the Space it opens -->
         <button
           type="button"
-          aria-label={expanded ? $t('collapse') : $t('expand')}
+          aria-label={$t(expanded ? 'collapse_named' : 'expand_named', { values: { name: space.name } })}
           aria-expanded={expanded}
           data-testid="sidebar-space-chevron-{space.id}"
           class="absolute inset-s-8 top-1/2 z-10 hidden -translate-y-1/2 rounded-lg p-0.5 hover:bg-subtle md:block"

@@ -201,8 +201,12 @@ export const recentSpacesDropdown = persisted<boolean>('recent-spaces-open', tru
 // starts closed (Library's tree is also under Albums)
 export const recentSpaceAlbumsExpanded = persisted<Record<string, boolean>>('space-tree-open', {}, {});
 
-/** Local Omarchy layer: the open folders of the sidebar's album trees, keyed `<tree>:<folder id>` */
-export const albumTreeOpen = persisted<Record<string, boolean>>('album-tree-open', {}, {});
+/**
+ * Local Omarchy layer: the folders a person opened or closed in the sidebar's album trees, keyed `<tree>:<folder id>`.
+ * The folders opened to reveal what is on screen are not kept here (components/sidebar/album-tree); a new key, since
+ * the old one ('album-tree-open') held those too, and every page carried them open.
+ */
+export const albumTreeOpen = persisted<Record<string, boolean>>('album-tree-opened', {}, {});
 
 export const isSpaceAlbumsExpanded = (state: Record<string, boolean>, spaceId: string): boolean => state[spaceId];
 

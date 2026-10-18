@@ -14,9 +14,10 @@
 <script lang="ts">
   // Local Omarchy layer: albums in their folders as a tree, the way the Mac's Photos sidebar shows them ("should be
   // like mac with tree structure thats collapsable.. expandable"). A folder opens and closes on its chevron and opens
-  // its page on its name; the open folders are remembered per tree; the folder or album on screen is lit and the
-  // folders above it open so it can be seen. Photos carried over the tree go into an album row, and a folder row
-  // springs open under them (managers/sidebar-drop); an album a drop just made lights for a moment.
+  // its page on its name; the folders a person opened are remembered per tree; the folder or album on screen is lit
+  // and the folders above it open so it can be seen, for as long as it is on screen. Photos carried over the tree go
+  // into an album row, and a folder row springs open under them (managers/sidebar-drop); an album a drop just made
+  // lights for a moment.
   import { dropSpring, dropTarget, sidebarDrop } from '$lib/managers/sidebar-drop.svelte';
   import { albumTreeOpen } from '$lib/stores/preferences.store';
   import { showPinMenu } from '$lib/utils/pin-menu';
@@ -33,6 +34,7 @@
   } from '@mdi/js';
   import { tick, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { SvelteSet } from 'svelte/reactivity';
   import { get } from 'svelte/store';
 
   interface Props {
@@ -100,16 +102,22 @@
     ),
   );
 
+  // A folder is open when the person opened it (remembered, albumTreeOpen) or while it holds what is on screen
+  // (revealed, below; never remembered: after one visit to a deep album, every page carried its folders open)
   const key = (folderId: string) => `${scope}:${folderId}`;
-  const isOpen = (folderId: string) => !!$albumTreeOpen[key(folderId)];
-  const toggle = (folderId: string) =>
-    albumTreeOpen.update((open) => ({ ...open, [key(folderId)]: !open[key(folderId)] }));
-  const setOpen = (folderId: string, value: boolean) =>
+  const revealed = new SvelteSet<string>();
+  const isOpen = (folderId: string) => revealed.has(key(folderId)) || !!$albumTreeOpen[key(folderId)];
+  const setOpen = (folderId: string, value: boolean) => {
+    if (!value) {
+      revealed.delete(key(folderId));
+    }
     albumTreeOpen.update((open) => ({ ...open, [key(folderId)]: value }));
+  };
+  const toggle = (folderId: string) => setOpen(folderId, !isOpen(folderId));
 
   // a folder springs open under carried photos, and closes again when they go elsewhere
   const springOf = (folderId: string) => ({
-    isOpen: () => !!get(albumTreeOpen)[key(folderId)],
+    isOpen: () => revealed.has(key(folderId)) || !!get(albumTreeOpen)[key(folderId)],
     open: () => setOpen(folderId, true),
     close: () => setOpen(folderId, false),
   });
@@ -124,9 +132,14 @@
     }
   });
 
-  // What comes on screen is never hidden in a closed folder: the folders above it open, once, when it arrives (a
-  // folder closed by hand afterwards stays closed). A chain is never longer than Gallery's depth cap, so a broken
-  // tree cannot loop.
+  // What comes on screen is never hidden in a closed folder: the folders above it open when it arrives (a folder
+  // closed by hand afterwards stays closed), and close again once something else is on screen, unless the person
+  // opened them; they are never remembered. A chain is never longer than Gallery's depth cap, so a broken tree cannot
+  // loop.
+  const onScreen = $derived(
+    activeFolderId ? `folder:${activeFolderId}` : activeAlbumId ? `album:${activeAlbumId}` : '',
+  );
+  let revealedFor: string | undefined;
   $effect(() => {
     const album = activeAlbumId ? albums.find(({ id }) => id === activeAlbumId) : undefined;
     const chain: string[] = [];
@@ -135,11 +148,17 @@
       chain.push(key(folderId));
       folderId = parentOf.get(folderId) ?? null;
     }
+    // revealed once per arrival and chain: the albums and folders loading in later find the chain, and loading again
+    // with nothing changed leaves a folder closed by hand closed
+    const reveal = `${onScreen}|${chain.join('/')}`;
     untrack(() => {
-      const open = get(albumTreeOpen);
-      const closed = chain.filter((k) => !open[k]);
-      if (closed.length > 0) {
-        albumTreeOpen.update((state) => ({ ...state, ...Object.fromEntries(closed.map((k) => [k, true])) }));
+      if (reveal === revealedFor) {
+        return;
+      }
+      revealedFor = reveal;
+      revealed.clear();
+      for (const k of chain) {
+        revealed.add(k);
       }
     });
   });
@@ -163,7 +182,7 @@
             class="ws-tree-toggle"
             aria-expanded={open}
             aria-controls="ws-tree-{scope}-{folder.id}"
-            aria-label={open ? $t('collapse') : $t('expand')}
+            aria-label={$t(open ? 'collapse_named' : 'expand_named', { values: { name: folder.name } })}
             onclick={() => toggle(folder.id)}
           >
             <Icon icon={open ? mdiChevronDown : mdiChevronRight} size="16" aria-hidden={true} />

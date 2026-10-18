@@ -94,9 +94,11 @@
          in rail mode - the sub-tree itself is hidden there too (see below), and there is
          nothing to toggle when the label isn't visible. -->
     {#if items && !collapsed}
+      <!-- Local Omarchy layer: the chevron names what it opens (Albums, Shared) and says whether it is open -->
       <button
         type="button"
-        aria-label={expanded ? $t('collapse') : $t('expand')}
+        aria-label={$t(expanded ? 'collapse_named' : 'expand_named', { values: { name: title } })}
+        aria-expanded={expanded}
         class="absolute inset-s-3 hidden h-full rounded-lg px-0.5 hover:bg-subtle hover:text-primary md:block"
         onclick={() => (expanded = !expanded)}
       >

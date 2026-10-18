@@ -1,8 +1,9 @@
 import type { SharedSpaceAlbumFolderDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import { addMessages } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sidebarDrop, SPRING_MS } from '$lib/managers/sidebar-drop.svelte';
 import { albumTreeOpen } from '$lib/stores/preferences.store';
 import AlbumTree from './album-tree.svelte';
@@ -36,6 +37,7 @@ const props = {
 };
 
 describe('album tree', () => {
+  beforeAll(() => addMessages('dev', { expand_named: 'Expand {name}', collapse_named: 'Collapse {name}' }));
   beforeEach(() => albumTreeOpen.set({}));
 
   it('starts closed: the top folders by name, then the albums at the top', () => {
@@ -48,13 +50,19 @@ describe('album tree', () => {
   it('opens a folder on its chevron, remembers it, and links its name to its page', async () => {
     render(AlbumTree, props);
     expect(screen.getByTestId('tree-folder-trips')).toHaveAttribute('href', '/albums?folder=trips');
-    const toggle = screen
-      .getAllByRole('button', { name: 'expand' })
-      .find((button) => button.closest('li')?.textContent?.includes('Trips'));
-    await fireEvent.click(toggle!);
+    await fireEvent.click(screen.getByRole('button', { name: 'Expand Trips' }));
     expect(screen.getByTestId('tree-folder-asia')).toBeInTheDocument();
     expect(screen.getByTestId('tree-folder-europe')).toBeInTheDocument();
     expect(get(albumTreeOpen)).toEqual({ 'albums:trips': true });
+  });
+
+  // Local Omarchy layer: every chevron said "Expand" or "Collapse" alone; it names its folder and says if it is open
+  it('names the folder on its chevron and says whether it is open', async () => {
+    render(AlbumTree, props);
+    const toggle = screen.getByRole('button', { name: 'Expand Trips' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await fireEvent.click(toggle);
+    expect(screen.getByRole('button', { name: 'Collapse Trips' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('gives a folder with nothing in it no chevron', () => {
@@ -63,10 +71,47 @@ describe('album tree', () => {
     expect(empty?.querySelector('button')).toBeNull();
   });
 
-  it('opens the folders above the album on screen and lights its row', () => {
+  it('opens the folders above the album on screen and lights its row, without remembering them', () => {
     render(AlbumTree, { ...props, activeAlbumId: 'bali' });
     expect(screen.getByTestId('tree-album-bali')).toHaveAttribute('aria-current', 'page');
-    expect(get(albumTreeOpen)).toEqual({ 'albums:asia': true, 'albums:trips': true });
+    expect(screen.getByRole('button', { name: 'Collapse Asia' })).toBeInTheDocument();
+    expect(get(albumTreeOpen)).toEqual({});
+  });
+
+  // Local Omarchy layer: the folders opened to show what is on screen were remembered, so after one visit to a deep
+  // album every page carried them open; only the folders the person opened stay open
+  it('closes the folders it opened for the album on screen once something else is', async () => {
+    const { rerender } = render(AlbumTree, { ...props, activeAlbumId: 'bali' });
+    expect(screen.getByTestId('tree-album-bali')).toBeInTheDocument();
+    await rerender({ ...props, activeAlbumId: 'highlights' });
+    expect(screen.queryByTestId('tree-folder-asia')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('tree-album-bali')).not.toBeInTheDocument();
+    expect(get(albumTreeOpen)).toEqual({});
+  });
+
+  it('keeps a folder the person opened open when the album in it leaves the screen', async () => {
+    const { rerender } = render(AlbumTree, { ...props, activeAlbumId: 'bali' });
+    await fireEvent.click(screen.getByRole('button', { name: 'Collapse Trips' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Expand Trips' }));
+    await rerender({ ...props, activeAlbumId: 'highlights' });
+    expect(screen.getByTestId('tree-folder-asia')).toBeInTheDocument();
+    expect(screen.queryByTestId('tree-album-bali')).not.toBeInTheDocument();
+    expect(get(albumTreeOpen)).toEqual({ 'albums:trips': true });
+  });
+
+  it('leaves a folder closed by hand closed while its album stays on screen', async () => {
+    const { rerender } = render(AlbumTree, { ...props, activeAlbumId: 'bali' });
+    await fireEvent.click(screen.getByRole('button', { name: 'Collapse Asia' }));
+    expect(screen.queryByTestId('tree-album-bali')).not.toBeInTheDocument();
+    // the albums load again (an album changed somewhere): the same album on screen, the same folders
+    await rerender({ ...props, albums: [...props.albums], activeAlbumId: 'bali' });
+    expect(screen.queryByTestId('tree-album-bali')).not.toBeInTheDocument();
+  });
+
+  it('opens the folders once the albums have loaded, for an album already on screen', async () => {
+    const { rerender } = render(AlbumTree, { ...props, albums: [], activeAlbumId: 'bali' });
+    await rerender({ ...props, activeAlbumId: 'bali' });
+    expect(screen.getByTestId('tree-album-bali')).toBeInTheDocument();
   });
 
   it('keeps each tree its own open folders', () => {
