@@ -41,6 +41,18 @@
     return out;
   });
 
+  // where years without photos lie between two (1979 to 1988), a quiet break in the strip, longer for more of them; the
+  // strip still never moves or changes size as the photos scroll
+  const skippedAfter = (index: number) => {
+    const next = years[index + 1];
+    return next ? Math.abs(years[index].year - next.year) - 1 : 0;
+  };
+  const skippedSpan = (index: number) => {
+    const [a, b] = [years[index].year, years[index + 1].year];
+    const [from, to] = a < b ? [a + 1, b - 1] : [b + 1, a - 1];
+    return from === to ? String(from) : `${from}–${to}`;
+  };
+
   // the month heading (TimelineMonthHeading) holds the width of its longest month name, so the years beside it stay put
   // as the photos scroll from May to September
   const current = $derived(monthInView(timelineManager, viewportMonth));
@@ -316,7 +328,7 @@
         onpointerenter={() => (hovering = true)}
         onpointerleave={() => (hovering = false)}
       >
-        {#each years as { year, count } (year)}
+        {#each years as { year, count }, index (year)}
           <button
             type="button"
             class="ws-cell ws-cell-year"
@@ -329,6 +341,10 @@
           >
             {year}
           </button>
+          {#if skippedAfter(index) > 0}
+            <span class="ws-skip" aria-hidden="true" title={skippedSpan(index)} style:--ws-skipped={skippedAfter(index)}
+            ></span>
+          {/if}
         {/each}
       </div>
       <button type="button" class="ws-step" tabindex="-1" aria-hidden="true" title={$t('next')} onclick={() => page(1)}>
@@ -384,6 +400,16 @@
   .ws-step:focus-visible {
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: -2px;
+  }
+  /* years without photos between two: a dotted break where they would be, longer for more of them (one year, a dot or
+     two; the ten from 1979 to 1988, a dash of the strip) */
+  .ws-skip {
+    flex: none;
+    align-self: center;
+    width: calc(0.3rem + min(var(--ws-skipped, 1), 10) * 0.12rem);
+    height: 1px;
+    margin-inline: 0.15rem;
+    background: linear-gradient(to right, var(--immich-ui-muted) 1px, transparent 1px) 0 0 / 3px 1px repeat-x;
   }
   /* each decade's first year in ink, so the strip reads in tens at a glance */
   .ws-cell-year[data-decade]:not([aria-current='true']) {
