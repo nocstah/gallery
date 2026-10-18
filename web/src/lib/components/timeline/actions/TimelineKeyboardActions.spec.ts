@@ -2,7 +2,7 @@ import type { AlbumResponseDto } from '@immich/sdk';
 import { fireEvent, render } from '@testing-library/svelte';
 import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
 import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+import type { TimelineAsset, TimelineGrouping } from '$lib/managers/timeline-manager/types';
 import TimelineKeyboardActions from './TimelineKeyboardActions.svelte';
 
 // Local Omarchy layer: a special album's key (B To do, V Villa) acts on the selection, or with nothing selected on the
@@ -213,5 +213,54 @@ describe('TimelineKeyboardActions: rows, Home and End', () => {
     await fireEvent.keyDown(tile('e'), { key: 'Home' });
     await vi.waitFor(() => expect(document.activeElement).toBe(tile('a')));
     expect(scrollToAsset).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Local Omarchy layer: O opens the Years overview and goes back, where the page offers the overviews
+describe('TimelineKeyboardActions: O, the Years overview and back', () => {
+  const setup = (grouping: TimelineGrouping, onGrouping?: (grouping: TimelineGrouping) => void, selected = false) => {
+    const timelineManager = { isInitialized: true, months: [{}] } as unknown as TimelineManager;
+    const assetInteraction = { selectionActive: selected, assets: [] } as unknown as AssetMultiSelectManager;
+    render(TimelineKeyboardActions, {
+      timelineManager,
+      assetInteraction,
+      scrollToAsset: () => false,
+      grouping,
+      onGrouping,
+    });
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.replaceChildren();
+  });
+
+  it('opens the Years overview from the photos', async () => {
+    const onGrouping = vi.fn();
+    setup('day', onGrouping);
+    await fireEvent.keyDown(document, { key: 'o' });
+    expect(onGrouping).toHaveBeenCalledWith('year');
+  });
+
+  it.each(['year', 'month'] as const)('goes back to the photos from the %s overview', async (grouping) => {
+    const onGrouping = vi.fn();
+    setup(grouping, onGrouping);
+    await fireEvent.keyDown(document, { key: 'O' });
+    expect(onGrouping).toHaveBeenCalledWith('day');
+  });
+
+  it('waits while photos are selected', async () => {
+    const onGrouping = vi.fn();
+    setup('day', onGrouping, true);
+    await fireEvent.keyDown(document, { key: 'o' });
+    expect(onGrouping).not.toHaveBeenCalled();
+  });
+
+  it('leaves Ctrl+O and Shift+O alone', async () => {
+    const onGrouping = vi.fn();
+    setup('day', onGrouping);
+    await fireEvent.keyDown(document, { key: 'o', ctrlKey: true });
+    await fireEvent.keyDown(document, { key: 'O', shiftKey: true });
+    expect(onGrouping).not.toHaveBeenCalled();
   });
 });
