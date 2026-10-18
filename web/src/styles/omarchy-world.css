@@ -934,6 +934,34 @@ section.ws-filter-sheet-panel {
   }
 }
 
+/* ---- a stack's badge, sized to its tile (2026-10-18): its 24px icon and count covered a quarter to three quarters
+   of a phone's tiles. Under 7.5rem the count is data type beside a 16px icon, closer to the corner; under 5rem the
+   count alone, as a month mark's neighbour has it ---- */
+@container (max-width: 7.5rem) {
+  [data-thumbnail-focus-container] .ws-stack-badge {
+    gap: 2px;
+    margin: 3px;
+    padding: 1px 4px 1px 5px;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  [data-thumbnail-focus-container] .ws-stack-badge svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+@container (max-width: 5rem) {
+  [data-thumbnail-focus-container] .ws-stack-badge {
+    margin: 2px;
+    padding: 0 4px;
+  }
+  [data-thumbnail-focus-container] .ws-stack-badge svg {
+    display: none;
+  }
+}
+
 /* ---- day labels: short form on narrow screens so single-tile days don't truncate ---- */
 .ws-day-short {
   display: none;

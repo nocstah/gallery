@@ -965,8 +965,11 @@
                   {@const isAssetSelected =
                     assetInteraction.hasSelectedAsset(asset.id) || timelineManager.albumAssets.has(asset.id)}
                   {@const isAssetDisabled = timelineManager.albumAssets.has(asset.id)}
+                  <!-- Local Omarchy layer: a grid of favourites only (Favorites, the favourites filter) leaves the
+                       heart off its tiles: on every one it would say nothing -->
                   <Thumbnail
                     showStackedIcon={withStacked}
+                    showFavoriteIcon={options?.isFavorite !== true}
                     {showArchiveIcon}
                     {asset}
                     {albumUsers}

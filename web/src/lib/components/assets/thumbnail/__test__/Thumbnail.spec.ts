@@ -84,6 +84,20 @@ describe('Thumbnail component', () => {
     expect(baseElement.querySelector('.ws-month-mark')).toBeNull();
   });
 
+  // Local Omarchy layer: a grid of favourites only (Favorites, the favourites filter) gives no tile its heart
+  it('draws the heart on a favourite, and none where every tile is one', () => {
+    const asset = timelineAssetFactory.build({ isFavorite: true, city: 'Riverton', country: 'Thailand' });
+    const shown = render(Thumbnail, { asset });
+    expect(shown.baseElement.querySelector('[data-icon-favorite]')).not.toBeNull();
+    expect(shown.baseElement.querySelector('.ws-place')?.classList.contains('ws-place-fav')).toBe(true);
+    shown.unmount();
+
+    const { baseElement } = render(Thumbnail, { asset, showFavoriteIcon: false });
+    expect(baseElement.querySelector('[data-icon-favorite]')).toBeNull();
+    // the caption no longer steps past a heart that is not there
+    expect(baseElement.querySelector('.ws-place')?.classList.contains('ws-place-fav')).toBe(false);
+  });
+
   // Local Omarchy layer: on a tile too narrow for both (under 5rem, omarchy-world.css), what sits at the top corner
   // gives way to the month mark. The hook has to be on exactly those badges: a video's stack sits lower and stays.
   describe('the top corner beside a month mark', () => {

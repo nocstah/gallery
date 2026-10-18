@@ -50,6 +50,9 @@
     stackBadgeExpands?: boolean;
     /** Local Omarchy layer: the month this photo begins in the timeline grid ("SEP"), set on that photo only */
     monthMark?: string;
+    /** Local Omarchy layer: false in a grid of favourites only (Favorites, the favourites filter), where a heart on
+     * every tile would say nothing */
+    showFavoriteIcon?: boolean;
     imageClass?: ClassValue;
     brokenAssetClass?: ClassValue;
     albumUsers?: UserResponseDto[];
@@ -74,6 +77,7 @@
     showStackedIcon = true,
     stackBadgeExpands = true,
     monthMark = undefined,
+    showFavoriteIcon = true,
     albumUsers = [],
     onClick = undefined,
     onPreview = undefined,
@@ -110,6 +114,7 @@
   );
 
   let assetOwner = $derived(albumUsers?.find((user) => user.id === asset.ownerId) ?? null);
+  const showsHeart = $derived(!authManager.isSharedLink && asset.isFavorite && showFavoriteIcon);
 
   const onIconClickedHandler = (e?: MouseEvent) => {
     e?.stopPropagation();
@@ -390,13 +395,13 @@
 
         <!-- Local Omarchy layer: the date and the place, captioned on the photo while it has focus -->
         {#if !disabled && (tileDate || tilePlace)}
-          <p class={['ws-place', { 'ws-place-fav': asset.isFavorite }]}>
+          <p class={['ws-place', { 'ws-place-fav': showsHeart }]}>
             <span class="ws-place-date">{tileDate}</span>{tileDate && tilePlace ? ' · ' : ''}{tilePlace}
           </p>
         {/if}
 
         <!-- Favorite asset star -->
-        {#if !authManager.isSharedLink && asset.isFavorite}
+        {#if showsHeart}
           <div
             class={['absolute inset-s-2 bottom-2 z-2', { 'ws-favorite-pop': favoritePop }]}
             onanimationend={() => (favoritePop = false)}
@@ -414,7 +419,7 @@
         {/if}
 
         {#if !authManager.isSharedLink && showArchiveIcon && asset.visibility === AssetVisibility.Archive}
-          <div class={['absolute inset-s-2 z-2', asset.isFavorite ? 'bottom-10' : 'bottom-2']}>
+          <div class={['absolute inset-s-2 z-2', showsHeart ? 'bottom-10' : 'bottom-2']}>
             <Icon data-icon-archive icon={mdiArchiveArrowDownOutline} size="24" class="text-white" />
           </div>
         {/if}
