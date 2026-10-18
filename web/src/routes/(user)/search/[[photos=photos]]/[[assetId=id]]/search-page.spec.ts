@@ -7,6 +7,7 @@ import { init, register, waitLocale } from 'svelte-i18n';
 import { goto } from '$app/navigation';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
 import { QueryParameter } from '$lib/constants';
+import { readRecentSearches, rememberSearch } from '$lib/utils/recent-searches';
 import SearchPage from './+page.svelte';
 
 const {
@@ -448,6 +449,68 @@ describe('Search page in the shell', () => {
     expect(mockSearchSmart).not.toHaveBeenCalled();
   });
 
+  // Local Omarchy layer: a bare search offers this account's searches from before (this browser alone, never sent
+  // anywhere, cleared by Clear) and a few the archive answers well
+  describe('a bare search', () => {
+    beforeEach(() => {
+      localStorage.clear();
+      Object.assign(mockAuthManager, { authenticated: true, user: { id: 'me' } });
+    });
+    afterEach(() => {
+      Object.assign(mockAuthManager, { authenticated: undefined, user: undefined });
+    });
+
+    it('keeps a search with words as it runs, with its other terms', async () => {
+      mockPage.url = searchUrl({ ocr: 'Happy birthday', city: 'Oslo' });
+      renderPage();
+
+      await waitFor(() => expect(mockSearchAssets).toHaveBeenCalled());
+      expect(readRecentSearches('me')).toEqual([
+        expect.objectContaining({
+          text: 'Happy birthday',
+          mode: 'ocr',
+          terms: { ocr: 'Happy birthday', city: 'Oslo' },
+        }),
+      ]);
+    });
+
+    it('offers the searches run here before, each opening as it ran, and clears them', async () => {
+      rememberSearch('me', { text: 'beach', mode: 'smart', terms: { query: 'beach' } }, 1);
+      rememberSearch('me', { text: 'IMG_2041', mode: 'metadata', terms: { originalFileName: 'IMG_2041' } }, 2);
+      renderPage();
+
+      const items = await screen.findAllByTestId('search-recent-item');
+      expect(items.map((item) => item.textContent?.replaceAll(/\s+/g, ' ').trim())).toEqual([
+        'IMG_2041 Filename',
+        'beach',
+      ]);
+      expect(items[1]).toHaveAttribute(
+        'href',
+        `/search?query=${encodeURIComponent(JSON.stringify({ query: 'beach' }))}`,
+      );
+
+      await fireEvent.click(screen.getByRole('button', { name: 'Clear all recent searches' }));
+
+      expect(screen.queryByTestId('search-recent')).not.toBeInTheDocument();
+      expect(readRecentSearches('me')).toEqual([]);
+      expect(mockSearchAssets).not.toHaveBeenCalled();
+      expect(mockSearchSmart).not.toHaveBeenCalled();
+    });
+
+    it('offers nothing to repeat before the first search, and a few searches the archive answers well', async () => {
+      renderPage();
+
+      expect(await screen.findByTestId('search-examples')).toBeInTheDocument();
+      expect(screen.queryByTestId('search-recent')).not.toBeInTheDocument();
+      const examples = screen.getAllByRole('link', { name: /sunset at the beach|birthday cake|snow|temple|dog/ });
+      expect(examples).toHaveLength(5);
+      expect(examples[0]).toHaveAttribute(
+        'href',
+        `/search?query=${encodeURIComponent(JSON.stringify({ query: 'sunset at the beach' }))}`,
+      );
+    });
+  });
+
   it('puts the text in the field and every other term in a chip', async () => {
     mockPage.url = searchUrl({ query: 'beach', city: 'Berlin' });
 
@@ -500,7 +563,11 @@ describe('Search page in the shell', () => {
       { statisticsSearchDto: { visibility: AssetVisibility.Timeline, withSharedSpaces: true, city: 'Berlin' } },
       expect.anything(),
     );
-    expect(screen.getByTestId('add-all-to-collection')).toHaveTextContent('Add all 42 photos to');
+    // Local Omarchy layer: right beside the count it adds, saying what it does; its name says both
+    const addAll = screen.getByTestId('add-all-to-collection');
+    expect(screen.getByTestId('search-result-count').nextElementSibling).toBe(addAll);
+    expect(addAll).toHaveTextContent('Add all to…');
+    expect(addAll).toHaveAccessibleName('Add all 42 photos to…');
   });
 
   it('counts a smart search by what has loaded, with a + while more follow, and offers no "add all"', async () => {
@@ -519,7 +586,7 @@ describe('Search page in the shell', () => {
     renderPage();
 
     expect(await screen.findByTestId('search-no-results')).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole('button', { name: 'Search by context' }));
+    await fireEvent.click(screen.getByRole('button', { name: "Search by what's in the photos" }));
 
     await waitFor(() => expect(goto).toHaveBeenCalled());
     expect(searchedTerms()).toEqual({ query: 'zzqxv' });

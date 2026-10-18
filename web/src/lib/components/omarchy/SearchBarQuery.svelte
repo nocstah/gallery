@@ -2,13 +2,14 @@
   // Local Omarchy layer: the search page's query in the one bar (the page lives in the shell since 2026-10-15). A back
   // arrow, then the query as a field: Enter searches again in place, Escape takes an edit back (then leaves the field),
   // Ctrl+/ steps through the modes as it does in the palette, whose mode control sits at the field's end. The count
-  // follows in data type while the bar has room for it (`roomy`; the page shows it under the bar otherwise). On a
-  // phone the field keeps the bar: the back arrow goes, and the mode shows as its icon.
+  // follows in data type while the bar has room for it (`roomy`; the page shows it under the bar otherwise), and what
+  // acts on the count right after it (the page's Add all). On a phone the field keeps the bar: the back arrow goes, and
+  // the mode shows as its icon.
   import SearchModeControl from '$lib/components/global-search/search-mode-control.svelte';
   import { isTextSearchMode, textSearchModes, type TextSearchMode } from '$lib/utils/search-mode-terms';
   import { Icon } from '@immich/ui';
   import { mdiArrowLeft, mdiClose, mdiMagnify } from '@mdi/js';
-  import { onMount } from 'svelte';
+  import { onMount, type Snippet } from 'svelte';
   import { t, type Translations } from 'svelte-i18n';
 
   type Props = {
@@ -17,8 +18,10 @@
     /** the text the results are for, which Escape goes back to */
     committed: string;
     mode: TextSearchMode;
-    /** the number of results, already worded ("248 results", "100+ results"); none while unknown */
+    /** the number of results, already worded ("248 photos", "100+ photos"); none while unknown */
     count?: string;
+    /** what acts on that count, right beside it (the page's Add all) */
+    countAction?: Snippet;
     /** a phone: no back arrow, the mode as its icon, the count under the bar */
     narrow?: boolean;
     /** whether the bar has room for the count (set here, read by the page) */
@@ -35,6 +38,7 @@
     committed,
     mode,
     count,
+    countAction,
     narrow = false,
     roomy = $bindable(true),
     autofocus = false,
@@ -153,6 +157,7 @@
 
   {#if count && roomy}
     <span class="ws-search-count" data-testid="search-result-count">{count}</span>
+    {@render countAction?.()}
   {/if}
 </div>
 

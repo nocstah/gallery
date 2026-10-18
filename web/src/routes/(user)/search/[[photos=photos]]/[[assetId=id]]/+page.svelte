@@ -22,6 +22,7 @@
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import { QueryParameter } from '$lib/constants';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
+  import { authManager } from '$lib/managers/auth-manager.svelte';
   import { barSlot } from '$lib/managers/bar-slot.svelte';
   import { registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
@@ -37,6 +38,12 @@
   import { parseUtcDate } from '$lib/utils/date-time';
   import { handleError } from '$lib/utils/handle-error';
   import { isAlbumsRoute, isPeopleRoute } from '$lib/utils/navigation';
+  import {
+    clearRecentSearches,
+    readRecentSearches,
+    rememberSearch,
+    type RecentSearch,
+  } from '$lib/utils/recent-searches';
   import {
     getSearchModeText,
     isTextSearchMode,
@@ -57,9 +64,9 @@
     searchSmart,
   } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton, modalManager } from '@immich/ui';
-  import { mdiClose, mdiDotsVertical, mdiPlus, mdiSelectAll } from '@mdi/js';
+  import { mdiClose, mdiDotsVertical, mdiHistory, mdiPlus, mdiSelectAll } from '@mdi/js';
   import { untrack } from 'svelte';
-  import { t } from 'svelte-i18n';
+  import { t, type Translations } from 'svelte-i18n';
   import { MediaQuery } from 'svelte/reactivity';
 
   const viewport: Viewport = $state({ width: 0, height: 0 });
@@ -140,6 +147,31 @@
   let draft = $derived(modeText?.text ?? '');
   let mode = $derived<TextSearchMode>(modeText?.mode ?? untrack(preferredMode));
   const chipKeys = $derived(searchTermKeys.filter((key) => !modeText || key !== searchModeField[modeText.mode]));
+
+  // Local Omarchy layer: a bare /search offers the searches this account ran here before (utils/recent-searches: this
+  // browser alone, never sent anywhere, cleared by the page's Clear) and a few the archive answers well, each a press
+  // away; a search with words is kept as it runs, with its other terms, so it runs again exactly
+  const userId = $derived(authManager.authenticated ? authManager.user.id : undefined);
+  let recentSearches = $state<RecentSearch[]>([]);
+  const exampleKeys: Translations[] = [
+    'search_example_sunset_beach',
+    'search_example_birthday_cake',
+    'search_example_snow',
+    'search_example_temple',
+    'search_example_dog',
+  ];
+  const modeLabels: Record<TextSearchMode, Translations> = {
+    smart: 'cmdk_mode_smart',
+    metadata: 'cmdk_mode_filename',
+    description: 'cmdk_mode_description',
+    ocr: 'cmdk_mode_ocr',
+  };
+  const clearRecent = () => {
+    if (userId) {
+      clearRecentSearches(userId);
+    }
+    recentSearches = [];
+  };
 
   // ...on a phone the field keeps the bar; the count moves under it, as it does when the bar is too narrow for it
   const narrowBar = new MediaQuery('max-width: 767px');
@@ -239,10 +271,14 @@
     searchTotal = undefined;
     removedCount = 0;
     // Local Omarchy layer: nothing asked yet (a bare /search): the page says how to search rather than listing
-    // every photo, which is what an empty search finds
+    // every photo, which is what an empty search finds, and offers the searches run here before
     if (!hasSearch) {
       isLoading = false;
+      recentSearches = userId ? readRecentSearches(userId) : [];
       return;
+    }
+    if (modeText && userId) {
+      rememberSearch(userId, { text: modeText.text, mode: modeText.mode, terms });
     }
     void countResults(searchSerial);
     await loadNextPage(true);
@@ -485,6 +521,24 @@
 
 <OnEvents {onAlbumAddAssets} />
 
+<!-- Local Omarchy layer: every result into an album or a Space, right beside the count it adds (in the bar, or under it
+     with the count on a narrow bar): it stood at the end of the chips row, some 1,700px from the count on the AORUS.
+     The count says how many, so the button says what it does; its name for a screen reader says both -->
+{#snippet addAll()}
+  {#if canAddAll && resultCount}
+    <button
+      type="button"
+      class="ws-search-add-all"
+      onclick={handleAddAll}
+      aria-label={$t('add_all_search_results', { values: { count: resultCount.count } })}
+      data-testid="add-all-to-collection"
+    >
+      <Icon icon={mdiPlus} size="16" aria-hidden />
+      <span>{$t('search_add_all_to')}</span>
+    </button>
+  {/if}
+{/snippet}
+
 <!-- Local Omarchy layer: the search's query, its mode and its count in the one bar -->
 {#snippet searchBar()}
   <SearchBarQuery
@@ -492,6 +546,7 @@
     committed={modeText?.text ?? ''}
     {mode}
     count={countText}
+    countAction={addAll}
     narrow={narrowBar.current}
     bind:roomy={barRoomy}
     autofocus={!hasSearch}
@@ -507,10 +562,11 @@
      one bar, the other terms are chips over the results, and the selection bar takes the bar's place (below the
      shell) -->
 <UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} barFitsNavbar use={scrollerActions}>
-  {#if hasSearch && ((countText && !barRoomy) || chipKeys.length > 0 || canAddAll)}
+  {#if hasSearch && ((countText && !barRoomy) || chipKeys.length > 0)}
     <div class="ws-search-terms" data-testid="search-terms">
       {#if countText && !barRoomy}
         <span class="ws-search-terms-count" data-testid="search-result-count">{countText}</span>
+        {@render addAll()}
       {/if}
       {#each chipKeys as searchKey (searchKey)}
         {@const value = terms[searchKey]}
@@ -559,12 +615,6 @@
           </button>
         </span>
       {/each}
-      {#if canAddAll && resultCount}
-        <button type="button" class="ws-search-add-all" onclick={handleAddAll} data-testid="add-all-to-collection">
-          <Icon icon={mdiPlus} size="16" aria-hidden />
-          <span>{$t('add_all_search_results', { values: { count: resultCount.count } })}</span>
-        </button>
-      {/if}
     </div>
   {/if}
 
@@ -575,10 +625,50 @@
     data-testid="search-results"
   >
     {#if !hasSearch}
-      <!-- Local Omarchy layer: the empty states say why and offer the next step (DESIGN.md, Empty State) -->
+      <!-- Local Omarchy layer: the empty states say why and offer the next step (DESIGN.md, Empty State); a bare search
+           also offers this account's searches from before and a few the archive answers well -->
       <div class="ws-empty" data-testid="search-empty">
         <h2 class="ws-empty-title">{$t('search_your_photos')}</h2>
         <p class="ws-empty-body">{$t('search_page_empty_body')}</p>
+        {#if recentSearches.length > 0}
+          <section class="ws-search-offer" aria-labelledby="search-recent-head" data-testid="search-recent">
+            <div class="ws-search-offer-head">
+              <h3 id="search-recent-head">{$t('recent_searches')}</h3>
+              <button
+                type="button"
+                class="ws-search-offer-clear"
+                aria-label={$t('clear_all_recent_searches')}
+                onclick={clearRecent}
+                data-testid="search-recent-clear"
+              >
+                {$t('clear')}
+              </button>
+            </div>
+            <ul class="ws-search-recent">
+              {#each recentSearches as recent (`${recent.mode}:${recent.text}`)}
+                <li>
+                  <a href={Route.search(recent.terms)} data-testid="search-recent-item">
+                    <Icon icon={mdiHistory} size="18" aria-hidden />
+                    <span class="ws-search-recent-text">{recent.text}</span>
+                    {#if recent.mode !== 'smart'}
+                      <span class="ws-search-recent-mode">{$t(modeLabels[recent.mode])}</span>
+                    {/if}
+                  </a>
+                </li>
+              {/each}
+            </ul>
+          </section>
+        {/if}
+        <section class="ws-search-offer" aria-labelledby="search-examples-head" data-testid="search-examples">
+          <div class="ws-search-offer-head">
+            <h3 id="search-examples-head">{$t('search_examples_title')}</h3>
+          </div>
+          <div class="ws-search-examples">
+            {#each exampleKeys as key (key)}
+              <a class="ws-search-example" href={Route.search({ query: $t(key) })}>{$t(key)}</a>
+            {/each}
+          </div>
+        </section>
         <div class="ws-empty-actions">
           <a class="ws-empty-link" href={Route.explore()}>{$t('explore')}</a>
         </div>
@@ -738,13 +828,13 @@
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: -2px;
   }
-  /* Photos' "Add all" in its filter row: a quiet ink tint, at the row's end */
+  /* Photos' "Add all": a quiet ink tint, right after the count it adds (in the bar, or leading the chips row) */
   .ws-search-add-all {
     display: inline-flex;
+    flex: none;
     gap: 0.375rem;
     align-items: center;
     height: 2rem;
-    margin-inline-start: auto;
     padding-inline: 0.625rem 0.75rem;
     border-radius: var(--ws-radius);
     background: color-mix(in oklab, var(--immich-ui-dark) 10%, transparent);
@@ -759,6 +849,101 @@
   .ws-search-add-all:focus-visible {
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: 2px;
+  }
+  /* a bare search's offers, inside the empty state's column: a head in the ui role with its Clear at the end, then the
+     recent searches as rows split by hairlines (as the explorer lists draw them) and the examples as the chips' frames */
+  .ws-search-offer {
+    margin-top: 1.75rem;
+  }
+  .ws-search-offer-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.375rem;
+    border-bottom: 1px solid var(--ws-hairline);
+  }
+  .ws-search-offer-head h3 {
+    font-size: var(--ws-text-ui);
+    font-weight: 600;
+    color: var(--immich-ui-dark);
+  }
+  .ws-search-offer-clear {
+    font-size: var(--ws-text-meta);
+    font-weight: 500;
+    color: var(--immich-ui-muted);
+    text-decoration: underline;
+    text-decoration-color: var(--ws-hairline);
+    text-underline-offset: 0.25em;
+  }
+  .ws-search-offer-clear:hover {
+    color: var(--immich-ui-dark);
+    text-decoration-color: var(--ws-accent);
+  }
+  .ws-search-recent {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ws-search-recent li {
+    border-bottom: 1px solid var(--ws-hairline);
+  }
+  .ws-search-recent a {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    min-height: 2.5rem;
+    padding: 0.375rem 0.5rem 0.375rem 0;
+    color: var(--immich-ui-dark);
+    font-size: var(--ws-text-ui);
+    font-weight: 500;
+  }
+  .ws-search-recent a:hover {
+    background: color-mix(in oklab, var(--immich-ui-dark) 4%, transparent);
+  }
+  .ws-search-recent a :global(svg) {
+    flex: none;
+    color: var(--immich-ui-muted);
+  }
+  .ws-search-recent-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-search-recent-mode {
+    flex: none;
+    margin-inline-start: auto;
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    color: var(--immich-ui-muted);
+  }
+  .ws-search-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+  }
+  .ws-search-example {
+    display: inline-flex;
+    align-items: center;
+    height: 2rem;
+    padding-inline: 0.75rem;
+    border-radius: var(--ws-radius);
+    box-shadow: inset 0 0 0 1px var(--ws-hairline);
+    color: var(--immich-ui-dark);
+    font-size: var(--ws-text-meta);
+    font-weight: 500;
+  }
+  .ws-search-example:hover {
+    background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
+  }
+  .ws-search-recent a:focus-visible,
+  .ws-search-example:focus-visible,
+  .ws-search-offer-clear:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: -2px;
   }
   /* the grid's Years / Months / All row starts on the page's gutter, as the photos under it do (it keeps upstream's
      1rem inset elsewhere) */
