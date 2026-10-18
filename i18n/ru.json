@@ -2058,6 +2058,7 @@
   "expires_date": "Срок действия до {date}",
   "explore": "Поиск",
   "explore_week_across_years": "Эта неделя в разные годы",
+  "explore_week_all_years": "{count, plural, one {# год} few {Все # года} many {Все # лет} other {Все # года}}",
   "explorer": "Проводник",
   "export": "Экспортировать",
   "export_as_json": "Экспорт в JSON",

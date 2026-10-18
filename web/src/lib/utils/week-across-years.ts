@@ -99,3 +99,65 @@ export const weekYearDays = ({ first, last }: Pick<WeekYear, 'first' | 'last'>, 
     ? format.formatRange(parse(first), parse(last))
     : `${format.format(parse(first))} – ${format.format(parse(last))}`;
 };
+
+/** Where a row too short for every year reaches first, in years ago (the newest and the oldest always come). */
+const MILESTONES = [5, 10, 20, 15, 30, 25, 40, 50];
+
+/**
+ * A spread of `years` (newest first) for a row of `slots`: the newest and the oldest, five, ten and twenty years ago,
+ * the anniversaries between, then the middles of the widest gaps left, so a row too short for every year still spans
+ * all of them rather than dropping the oldest first. A year missing at a mark gives way to the nearest one, the older
+ * when two are as near. All of them when they fit.
+ */
+export const weekSpread = <T extends Pick<WeekYear, 'year'>>(years: T[], slots: number, thisYear: number): T[] => {
+  if (years.length <= slots) {
+    return years;
+  }
+  const ago = (item: T) => thisYear - item.year;
+  const sorted = [...years].sort((a, b) => ago(a) - ago(b));
+  const oldest = ago(sorted.at(-1)!);
+  const chosen = new Set<T>();
+  const take = (item: T | undefined) => {
+    if (item && chosen.size < slots) {
+      chosen.add(item);
+    }
+    return !!item;
+  };
+  // the year not yet in the row nearest `target` years ago, strictly between `within`'s ends when given
+  const nearest = (target: number, within?: [number, number]) => {
+    let best: T | undefined;
+    for (const item of sorted) {
+      const years = ago(item);
+      if (chosen.has(item) || (within && (years <= within[0] || years >= within[1]))) {
+        continue;
+      }
+      const distance = Math.abs(years - target);
+      const bestDistance = best ? Math.abs(ago(best) - target) : Infinity;
+      if (distance < bestDistance || (distance === bestDistance && best && years > ago(best))) {
+        best = item;
+      }
+    }
+    return best;
+  };
+
+  take(sorted[0]);
+  take(sorted.at(-1));
+  for (const milestone of MILESTONES) {
+    // a mark as old as the oldest year or older: the oldest stands for it
+    if (milestone < oldest) {
+      take(nearest(milestone));
+    }
+  }
+  while (chosen.size < slots) {
+    const marks = [...chosen].map((item) => ago(item)).sort((a, b) => a - b);
+    const gaps = marks
+      .slice(1)
+      .map((to, index): [number, number] => [marks[index], to])
+      .sort((a, b) => b[1] - b[0] - (a[1] - a[0]));
+    // the widest gap with a year left in it takes one; none left, the row stays shorter
+    if (gaps.every((gap) => !take(nearest((gap[0] + gap[1]) / 2, gap)))) {
+      break;
+    }
+  }
+  return sorted.filter((item) => chosen.has(item));
+};

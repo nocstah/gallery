@@ -2058,6 +2058,7 @@
   "expires_date": "Verloopt {date}",
   "explore": "Verkennen",
   "explore_week_across_years": "Deze week, door de jaren heen",
+  "explore_week_all_years": "{count, plural, one {# jaar} other {Alle # jaren}}",
   "explorer": "Verkenner",
   "export": "Exporteren",
   "export_as_json": "Exporteren als JSON",

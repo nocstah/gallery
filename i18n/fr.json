@@ -2058,6 +2058,7 @@
   "expires_date": "Expire le {date}",
   "explore": "Explorer",
   "explore_week_across_years": "Cette semaine, au fil des ans",
+  "explore_week_all_years": "{count, plural, one {# année} other {Les # années}}",
   "explorer": "Explorateur",
   "export": "Exporter",
   "export_as_json": "Exporter en JSON",

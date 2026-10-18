@@ -2058,6 +2058,7 @@
   "expires_date": "将于 {date} 过期",
   "explore": "探索",
   "explore_week_across_years": "历年的这一周",
+  "explore_week_all_years": "{count, plural, other {全部 # 年}}",
   "explorer": "探索",
   "export": "导出",
   "export_as_json": "导出为 JSON",

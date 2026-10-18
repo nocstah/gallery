@@ -29,7 +29,7 @@
   import { memoryCover } from '$lib/utils/memory-title';
   import { sortPeople } from '$lib/utils/people-utils';
   import { rankPlaces, type PlaceKey } from '$lib/utils/place-stats';
-  import { weekYearDays } from '$lib/utils/week-across-years';
+  import { weekSpread, weekYearDays } from '$lib/utils/week-across-years';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
@@ -90,6 +90,12 @@
   const memoriesReady = $derived(memoryFacts.settledAll(memoryManager.memories.map(({ id }) => id)));
   const cards = $derived(memoriesReady ? memoryManager.cards.filter(({ section }) => section !== 'upcoming') : []);
 
+  // this week across the years: a row too short for every year shows a spread of them (the newest, five, ten and twenty
+  // years ago, the oldest, and between), and All N years at the heading's end opens them all (utils/week-across-years)
+  let weekSlots = $state(1);
+  let weekOpen = $state(false);
+  const weekShown = $derived(weekOpen ? data.week : weekSpread(data.week, weekSlots, new Date().getFullYear()));
+
   let hasPeople = $derived(data.people.total > 0);
 
   const onPersonThumbnailReady = ({ id }: { id: string }) => {
@@ -126,11 +132,25 @@
       <!-- this week in every past year with photos in it, newest first, each year's numeral in the display face over
            the photo of its day nearest today's (utils/week-across-years); a year opens Photos at that photo -->
       <section class="ws-sharing-section" aria-labelledby="explore-week">
-        <h2 class="ws-sharing-heading" id="explore-week">{$t('explore_week_across_years')}</h2>
-        <SingleGridRow class="grid grid-flow-col grid-auto-fill-28 gap-(--ws-gap) md:grid-auto-fill-48">
-          {#snippet children({ itemCount })}
-            {#each data.week.slice(0, itemCount) as year (year.year)}
-              <a class="ws-week-year" href={Route.photos({ at: year.assetId })} draggable="false">
+        <h2 class="ws-sharing-heading" id="explore-week">
+          {$t('explore_week_across_years')}
+          {#if weekOpen || data.week.length > weekSlots}
+            <button
+              type="button"
+              class="ws-sharing-heading-action"
+              aria-expanded={weekOpen}
+              aria-controls="explore-week-years"
+              onclick={() => (weekOpen = !weekOpen)}
+            >
+              {weekOpen ? $t('show_less') : $t('explore_week_all_years', { values: { count: data.week.length } })}
+            </button>
+          {/if}
+        </h2>
+        <!-- one row of as many as fit (five on a phone), all of them in rows once opened -->
+        <div id="explore-week-years">
+          <SingleGridRow bind:itemCount={weekSlots} class="grid grid-cols-5 gap-(--ws-gap) md:grid-auto-fill-48">
+            {#each weekShown as year (year.year)}
+              <a class="ws-explore-tile ws-week-year" href={Route.photos({ at: year.assetId })} draggable="false">
                 <img
                   src={getAssetMediaUrl({
                     id: year.assetId,
@@ -146,8 +166,8 @@
                 </span>
               </a>
             {/each}
-          {/snippet}
-        </SingleGridRow>
+          </SingleGridRow>
+        </div>
       </section>
     {/if}
 
@@ -299,22 +319,23 @@
 {/if}
 
 <style>
-  /* a year of this week: a window tile, as Years and Months are, the year in display numerals on the caption scrim
-     and its days in data type */
-  .ws-week-year {
+  /* a window tile, as Years, Months and Places are: the photo at full brightness, a hairline inside, the accent's
+     border inside for the pointer and the focus */
+  .ws-explore-tile {
     position: relative;
     display: block;
+    width: 100%;
     aspect-ratio: 1;
     overflow: hidden;
     border-radius: var(--ws-radius);
     background: color-mix(in oklab, var(--immich-ui-dark) 6%, var(--immich-ui-light));
   }
-  .ws-week-year img {
+  .ws-explore-tile img {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
-  .ws-week-year::after {
+  .ws-explore-tile::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -323,26 +344,46 @@
     pointer-events: none;
     transition: box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .ws-week-year:hover::after,
-  .ws-week-year:focus-visible::after {
+  .ws-explore-tile:hover::after,
+  .ws-explore-tile:focus-visible::after {
     box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
   }
-  .ws-week-year:focus-visible {
+  .ws-explore-tile:focus-visible {
     outline: none;
   }
+  @media (prefers-reduced-motion: reduce) {
+    .ws-explore-tile::after {
+      transition: none;
+    }
+  }
+  /* a year of this week: the year in display numerals on the caption scrim, sized to its tile, and its days in data
+     type (left to its label on a tile too narrow for them: a phone's row of five) */
+  .ws-week-year {
+    container-type: inline-size;
+  }
+  /* the scrim holds at least 48% black behind the numeral and the days, so over a white wall the numeral keeps 3:1 and
+     the days 4.5:1 (it faded from behind the numeral: 1.8:1 at the brightest), and eases out in the band above them */
   .ws-week-year-caption {
     position: absolute;
     inset-inline: 0;
     bottom: 0;
     display: flex;
     flex-direction: column;
-    padding: 2.5rem 0.7rem 0.6rem;
-    background: linear-gradient(to top, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0.2) 60%, transparent);
+    padding: 2.25rem clamp(0.35rem, 5cqi, 0.7rem) clamp(0.35rem, 5cqi, 0.6rem);
+    background: linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.66),
+      rgb(0 0 0 / 0.48) calc(100% - 2.25rem),
+      rgb(0 0 0 / 0.34) calc(100% - 1.6rem),
+      rgb(0 0 0 / 0.17) calc(100% - 0.95rem),
+      rgb(0 0 0 / 0.05) calc(100% - 0.4rem),
+      transparent
+    );
     color: #fff;
   }
   .ws-week-year-number {
     font-family: var(--font-display);
-    font-size: var(--ws-text-display);
+    font-size: clamp(1.1rem, 30cqi, var(--ws-text-display));
     font-weight: 800;
     font-variation-settings:
       'wdth' 75,
@@ -357,12 +398,16 @@
     font-size: var(--ws-text-data);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-    color: rgb(255 255 255 / 0.85);
+    color: rgb(255 255 255 / 0.95);
     white-space: nowrap;
   }
-  @media (prefers-reduced-motion: reduce) {
-    .ws-week-year::after {
-      transition: none;
+  @container (max-width: 6.5rem) {
+    .ws-week-year-days {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
     }
   }
   /* a place tile's frame while the counts come in */

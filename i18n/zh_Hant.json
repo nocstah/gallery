@@ -2046,6 +2046,7 @@
   "expires_date": "失效於 {date}",
   "explore": "探索",
   "explore_week_across_years": "歷年的這一週",
+  "explore_week_all_years": "{count, plural, other {全部 # 年}}",
   "explorer": "總覽",
   "export": "匯出",
   "export_as_json": "匯出為 JSON",
