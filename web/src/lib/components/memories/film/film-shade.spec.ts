@@ -4,6 +4,7 @@ import {
   CARD_SCRIM,
   darknessFor,
   FOOT_SCRIM,
+  HEADROOM,
   headScrimAt,
   imagePicture,
   relativeLuminance,
@@ -153,7 +154,9 @@ describe(shotShade.name, () => {
     const total = 1 - (1 - 0.25) * (1 - shade);
 
     expect(shade).toBeGreaterThan(0.1);
-    expect(total).toBeCloseTo(darknessFor(light, 0.94, 4.5), 2);
+    // with a little headroom past the 4.5:1 the words need
+    expect(total).toBeCloseTo(darknessFor(light, 0.94, 4.5 * HEADROOM), 2);
+    expect(total).toBeGreaterThan(darknessFor(light, 0.94, 4.5));
     expect(shotShade(bright, fill, 1.5, [story(0.45)])).toBeLessThan(shade);
   });
 

@@ -36,12 +36,17 @@ export const SHADE_GAIN = 1.7;
 
 /**
  * The photo itself, once decoded, is read at this many pixels on its longer side, and the light under the words is its
- * brightest fiftieth there: measured on the same 234 photos at 128 and 192 pixels, that came out above the full-size
- * photo's brightest twentieth under the words for every one of them, with no margin; 256 keeps the detail under a line
- * as thin as the title card's.
+ * brightest fiftieth there, or for words of the normal size its brightest two-hundredth. Measured on the same 234
+ * photos, the brightest fiftieth at 128 pixels already stood above the full-size photo's brightest twentieth under the
+ * story for every one; a single line of small type over fine detail (gravel, a print) needed the finer read and the
+ * brighter share (2026-10-18: the title card's line had come out at 4.3:1 there).
  */
-export const PICTURE_SIDE = 256;
-const PICTURE_SHARE = 0.98;
+export const PICTURE_SIDE = 512;
+const LARGE_SHARE = 0.98;
+const SMALL_SHARE = 0.995;
+/** The shade aims this much past the ratio the words need: room for the frames between the drift's two ends and for
+ * what a 512px read still misses (a title card's line had come out at 4.45:1 against its 4.5). */
+export const HEADROOM = 1.04;
 
 /** Where nothing is known (no thumbhash): a photo as bright as a light grey wall. */
 const UNKNOWN_LIGHT = 0.45;
@@ -224,15 +229,23 @@ export const withMargin = (light: number) => {
 
 /**
  * How bright a shot is under a part of the frame, for words on it (relative luminance, 0 to 1), at the drift's start
- * and end, the camera's two ends being where it is furthest apart: the photo's own brightest fiftieth there, read
- * across the part; or the brightest its thumbhash shows there, raised by the margin for what it smooths away.
+ * and end, the camera's two ends being where it is furthest apart: the photo's own brightest share there (`share`: a
+ * fiftieth, or a two-hundredth for small type), read across the part; or the brightest its thumbhash shows there,
+ * raised by the margin for what it smooths away.
  */
-export const shotLight = (picture: FilmPicture | null, shot: Shot, aspect: number, box: FrameBox, lift = 0) => {
+export const shotLight = (
+  picture: FilmPicture | null,
+  shot: Shot,
+  aspect: number,
+  box: FrameBox,
+  lift = 0,
+  share = LARGE_SHARE,
+) => {
   if (!picture) {
     return UNKNOWN_LIGHT;
   }
-  // the thumbhash's few dozen pixels on a coarse grid; a photo's own across as many points as it has pixels there
-  const columns = picture.exact ? 64 : 12;
+  // the thumbhash's few dozen pixels on a coarse grid; a photo's own across about as many points as it has pixels
+  const columns = picture.exact ? 96 : 12;
   const rows = picture.exact ? 32 : 6;
   let light = 0;
   for (const camera of [shot.from, shot.to]) {
@@ -246,9 +259,7 @@ export const shotLight = (picture: FilmPicture | null, shot: Shot, aspect: numbe
       }
     }
     lights.sort((a, b) => a - b);
-    const at = picture.exact
-      ? Math.min(lights.length - 1, Math.floor(PICTURE_SHARE * lights.length))
-      : lights.length - 1;
+    const at = picture.exact ? Math.min(lights.length - 1, Math.floor(share * lights.length)) : lights.length - 1;
     light = Math.max(light, lights[at]);
   }
   return picture.exact ? light : withMargin(light);
@@ -261,8 +272,9 @@ export const shotLight = (picture: FilmPicture | null, shot: Shot, aspect: numbe
 export const shotShade = (picture: FilmPicture | null, shot: Shot, aspect: number, words: FilmWords[], lift = 0) => {
   let shade = 0;
   for (const { box, ink, ratio, scrim } of words) {
-    const light = shotLight(picture, shot, aspect, box, lift);
-    const dark = darknessFor(light, ink, ratio);
+    // small type is read against the brighter share: one bright pebble under a 12px line is a letter lost
+    const light = shotLight(picture, shot, aspect, box, lift, ratio > 3 ? SMALL_SHARE : LARGE_SHARE);
+    const dark = darknessFor(light, ink, ratio * HEADROOM);
     shade = Math.max(shade, 1 - (1 - dark) / (1 - clamp(scrim, 0, 0.99)));
   }
   return Math.round(clamp(shade, 0, SHADE_MOST) * 1000) / 1000;
