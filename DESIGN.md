@@ -7,6 +7,8 @@ colors:
   muted: "#5f6368"
   accent: "#0b57d0"
   hairline: "color-mix(in oklab, #1f1f1f 13%, transparent)"
+  # what trashes or deletes (--ws-danger): @immich/ui's danger red taken toward the ink; the dark face mixes its own
+  danger: "color-mix(in oklab, oklch(0.433 0.166 28.91) 80%, #1f1f1f)"
   caption-scrim: "rgb(0 0 0 / 0.55)"
   caption-ink: "#ffffff"
 typography:
