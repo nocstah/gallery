@@ -1440,8 +1440,20 @@ describe('global-search root', () => {
     expect(document.querySelector('[data-cmdk-preview]')).toBeNull();
   });
 
-  it('preview pane mounts at ≥ 1024 px', () => {
+  it('preview pane mounts at ≥ 1024 px once the list holds what it can show', async () => {
     mediaState.minLg = true;
+    const m = new GlobalSearchManager();
+    m.open();
+    render(GlobalSearch, { props: { manager: m } });
+    // Local Omarchy layer: the quick links alone have nothing to preview, so they take the width
+    expect(document.querySelector('[data-cmdk-preview]')).toBeNull();
+    await user.type(screen.getByRole('combobox'), 'beach');
+    await vi.waitFor(() => expect(document.querySelector('[data-cmdk-preview]')).not.toBeNull());
+  });
+
+  it('preview pane comes with a recent photo, person, place or tag', () => {
+    mediaState.minLg = true;
+    addEntry({ kind: 'photo', id: 'photo:a1', assetId: 'a1', label: 'IMG_0001.JPG', lastUsed: Date.now() });
     const m = new GlobalSearchManager();
     m.open();
     render(GlobalSearch, { props: { manager: m } });
@@ -2095,7 +2107,7 @@ describe('prefix scoping — scoped rendering', () => {
     expect(document.querySelector('[data-cmdk-preview-space]')).not.toBeNull();
   });
 
-  it('preview pane under >theme with nav highlighted renders empty-state fallback', () => {
+  it('no preview pane under >theme, where pages and commands take the width', () => {
     mediaState.minLg = true;
     const manager = makeWithScope('>theme');
     manager.sections.navigation = {
@@ -2113,8 +2125,32 @@ describe('prefix scoping — scoped rendering', () => {
     };
     manager.setActiveItem('nav:userPages:photos');
     render(GlobalSearch, { props: { manager } });
-    // Nav preview branch renders the empty-state placeholder (literal key under dev fallback).
-    expect(screen.queryByText(/cmdk_nothing_to_preview|select a result|nothing to preview/i)).not.toBeNull();
+    // Local Omarchy layer: pages and commands have nothing beyond their row to preview, so under > the list takes the
+    // width
+    expect(document.querySelector('[data-cmdk-preview]')).toBeNull();
+  });
+
+  it('a row with nothing to preview among results leaves one quiet line in the pane, no logo', () => {
+    mediaState.minLg = true;
+    const manager = makeWithScope('photos');
+    manager.sections.navigation = {
+      status: 'ok',
+      items: [
+        {
+          id: 'nav:userPages:photos',
+          category: 'userPages',
+          labelKey: 'photos',
+          icon: 'x',
+          route: '/photos',
+        } as never,
+      ],
+      total: 1,
+    };
+    manager.setActiveItem('nav:userPages:photos');
+    render(GlobalSearch, { props: { manager } });
+    const pane = document.querySelector('[data-cmdk-preview]');
+    expect(pane?.textContent).toMatch(/cmdk_nothing_to_preview|select a result/i);
+    expect(pane?.querySelector('svg, img')).toBeNull();
   });
 
   it('> bare scroll: nav items render in DOM across buckets', () => {

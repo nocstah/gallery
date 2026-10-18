@@ -6,7 +6,6 @@
   import TagPreview from './previews/tag-preview.svelte';
   import AlbumPreview from './previews/album-preview.svelte';
   import SpacePreview from './previews/space-preview.svelte';
-  import Logo from '$lib/components/shared-components/Logo.svelte';
   import { fade } from 'svelte/transition';
   import { t } from 'svelte-i18n';
 
@@ -21,18 +20,18 @@
   const previewKey = $derived(activeItem?.kind ?? 'none');
 </script>
 
+{#snippet nothing()}
+  <div class="flex h-full min-h-[360px] items-center justify-center px-8 text-center">
+    <span class="text-sm text-muted">{$t('cmdk_nothing_to_preview')}</span>
+  </div>
+{/snippet}
+
 {#key previewKey}
   <div in:fade={{ duration: 120 }}>
     {#if activeItem === null}
-      <!-- Empty state still needs to fill the pane so the logo is centered vertically.
-           Using `h-full` here is safe because there's no tall content fighting for
-           height — the pane's flex-stretched size is the logo's target. -->
-      <div class="flex h-full min-h-[360px] flex-col items-center justify-center gap-3 px-8 text-center">
-        <Logo variant="icon" size="giant" class="opacity-10" />
-        <span class="text-sm text-gray-500 opacity-50 dark:text-gray-400">
-          {$t('cmdk_nothing_to_preview')}
-        </span>
-      </div>
+      <!-- Local Omarchy layer: one quiet line where upstream drew a giant faded logo; the palette shows this pane only
+           while its list holds something to preview (global-search.svelte, showPreview) -->
+      {@render nothing()}
     {:else if activeItem.kind === 'photo'}
       <PhotoPreview photo={activeItem.data as never} />
     {:else if activeItem.kind === 'person'}
@@ -49,23 +48,13 @@
       <!-- Nav items have nothing richer than the row itself to show. Render the same
            empty-state placeholder so the pane stays the same width and doesn't
            flash a blank frame when the user cursors over a `>` nav result. -->
-      <div class="flex h-full min-h-[360px] flex-col items-center justify-center gap-3 px-8 text-center">
-        <Logo variant="icon" size="giant" class="opacity-10" />
-        <span class="text-sm text-gray-500 opacity-50 dark:text-gray-400">
-          {$t('cmdk_nothing_to_preview')}
-        </span>
-      </div>
+      {@render nothing()}
     {:else if activeItem.kind === 'command'}
       <!-- Commands are verbs, not destinations — there's nothing richer than the row
            itself to show. Render the same empty-state placeholder so the pane stays
            the same width and doesn't flash a blank frame when the user cursors over
            a command result. -->
-      <div class="flex h-full min-h-[360px] flex-col items-center justify-center gap-3 px-8 text-center">
-        <Logo variant="icon" size="giant" class="opacity-10" />
-        <span class="text-sm text-gray-500 opacity-50 dark:text-gray-400">
-          {$t('cmdk_nothing_to_preview')}
-        </span>
-      </div>
+      {@render nothing()}
     {/if}
   </div>
 {/key}

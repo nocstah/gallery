@@ -315,7 +315,17 @@
     const items = status.items.filter((i) => (i as NavigationItem).id !== top.id);
     return { status: 'ok' as const, items, total: items.length };
   });
-  const showPreview = $derived(mediaQueryManager.minLg);
+  // Local Omarchy layer: the preview pane is there while the list holds something it can show (a photo, a person, a
+  // place, a tag, an album or a Space); the quick links, the pages (>) and the commands have nothing beyond their own
+  // row, so with only those the results take the width (half the palette was a faded logo over "Select a result to
+  // preview"). It goes by what the list is, not the row under the cursor, so arrowing never moves the layout.
+  const PREVIEWED_RECENTS = new Set<RecentEntry['kind']>(['photo', 'person', 'place', 'tag']);
+  const listPreviews = $derived(
+    inputValue.trim() === ''
+      ? recentEntries.some((entry) => PREVIEWED_RECENTS.has(entry.kind))
+      : manager.scope !== 'nav',
+  );
+  const showPreview = $derived(mediaQueryManager.minLg && listPreviews);
   // Local Omarchy layer: a phone's field holds about 314px of the hint, and the full ones need 316 to 530 (English ran out
   // at "/ albums,"), so below 768px the hints are the short ones: the four scopes alone, and Ask's lead without its
   // example. The palette's label, the field's accessible name, stays the full search hint.
