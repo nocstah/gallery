@@ -410,9 +410,11 @@
           </div>
         {/if}
 
+        <!-- Local Omarchy layer: who added it, in a shared album, on the corner badges' chip (ws-tile-badge), where it
+             was white under a shadow -->
         {#if !!assetOwner}
-          <div class="absolute inset-e-2 bottom-1 z-2 max-w-[50%]">
-            <p class="text-white-shadow max-w-full truncate p-1 text-xs font-medium text-white">
+          <div class="absolute inset-e-0 bottom-0 z-2 flex max-w-[50%] justify-end">
+            <p class="ws-tile-badge ws-tile-badge-name">
               {assetOwner.name}
             </p>
           </div>
@@ -425,23 +427,20 @@
         {/if}
 
         <!-- Local Omarchy layer: ws-tile-corner (here, on a video's play icon and on a photo stack's badge) is what sits
-             at the top corner, which gives way to the month mark on a tile too narrow for both (omarchy-world.css) -->
+             at the top corner, which gives way to the month mark on a tile too narrow for both; each badge there is
+             one chip, ws-tile-badge (omarchy-world.css) -->
         {#if asset.isImage && asset.projectionType === ProjectionType.EQUIRECTANGULAR}
-          <div
-            class="ws-tile-corner absolute inset-e-0 top-0 z-2 flex place-items-center gap-1 text-xs font-medium text-white"
-          >
-            <span class="pe-2 pt-2">
-              <Icon icon={mdiRotate360} size="24" />
+          <div class="ws-tile-corner absolute inset-e-0 top-0 z-2 flex">
+            <span class="ws-tile-badge">
+              <Icon icon={mdiRotate360} size="16" />
             </span>
           </div>
         {/if}
 
         {#if asset.isImage && asset.duration}
-          <div
-            class="ws-tile-corner absolute inset-e-0 top-0 z-2 flex place-items-center gap-1 text-xs font-medium text-white"
-          >
-            <span class="pe-2 pt-2">
-              <Icon icon={mouseOver ? mdiMotionPauseOutline : mdiFileGifBox} size="24" />
+          <div class="ws-tile-corner absolute inset-e-0 top-0 z-2 flex">
+            <span class="ws-tile-badge">
+              <Icon icon={mouseOver ? mdiMotionPauseOutline : mdiFileGifBox} size="16" />
             </span>
           </div>
         {/if}
@@ -462,16 +461,17 @@
       {/if}
       <!-- Stacked asset. Local Omarchy layer: the badge is a button that expands the stack in place.
            It sits after the hover link (same z-2 layer, later wins) so real clicks reach it;
-           (stack-expand-manager) instead of opening the photo; click again to collapse. -->
+           (stack-expand-manager) instead of opening the photo; click again to collapse. It is the corner's chip
+           (ws-tile-badge), under a video's or a Live Photo's play icon (ws-tile-badge-low). -->
       {#if asset.stack && showStackedIcon && !stackBadgeExpands}
         <div
           class={[
-            'ws-stack-badge pointer-events-none absolute z-3 flex place-items-center gap-1 text-xs font-medium text-white',
-            asset.isImage && !asset.livePhotoVideoId ? 'ws-tile-corner inset-e-0 top-0' : 'inset-e-1 top-7',
+            'ws-tile-badge ws-stack-badge pointer-events-none absolute z-3',
+            asset.isImage && !asset.livePhotoVideoId ? 'ws-tile-corner inset-e-0 top-0' : 'ws-tile-badge-low inset-e-0',
           ]}
         >
-          <p>{asset.stack.assetCount.toLocaleString($locale)}</p>
-          <Icon icon={mdiCameraBurst} size="24" />
+          <p class="ws-tile-badge-text">{asset.stack.assetCount.toLocaleString($locale)}</p>
+          <Icon icon={mdiCameraBurst} size="16" />
         </div>
       {:else if asset.stack && showStackedIcon}
         {@const stackId = asset.stack.id}
@@ -479,8 +479,8 @@
         <button
           type="button"
           class={[
-            'ws-stack-badge absolute z-3 flex place-items-center gap-1 text-xs font-medium text-white',
-            asset.isImage && !asset.livePhotoVideoId ? 'ws-tile-corner inset-e-0 top-0' : 'inset-e-1 top-7',
+            'ws-tile-badge ws-stack-badge absolute z-3',
+            asset.isImage && !asset.livePhotoVideoId ? 'ws-tile-corner inset-e-0 top-0' : 'ws-tile-badge-low inset-e-0',
           ]}
           aria-expanded={expanded}
           aria-label={expanded ? $t('collapse_stack') : $t('expand_stack')}
@@ -491,12 +491,15 @@
             void stackExpandManager.toggle(stackId, asset.id);
           }}
         >
-          <p>{asset.stack.assetCount.toLocaleString($locale)}</p>
-          <Icon icon={expanded ? mdiArrowCollapseHorizontal : mdiCameraBurst} size="24" />
+          <p class="ws-tile-badge-text">{asset.stack.assetCount.toLocaleString($locale)}</p>
+          <Icon icon={expanded ? mdiArrowCollapseHorizontal : mdiCameraBurst} size="16" />
         </button>
       {/if}
       {#if stackPlace}
-        <span class="ws-stack-place pointer-events-none absolute inset-s-0 bottom-0 z-3" aria-hidden="true">
+        <span
+          class="ws-tile-badge ws-stack-place pointer-events-none absolute inset-s-0 bottom-0 z-3"
+          aria-hidden="true"
+        >
           {stackPlace.index.toLocaleString($locale)} / {stackPlace.total.toLocaleString($locale)}
         </span>
       {/if}

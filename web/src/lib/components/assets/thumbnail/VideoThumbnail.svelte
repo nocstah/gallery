@@ -94,38 +94,35 @@
 {/if}
 
 <!-- Local Omarchy layer: ws-tile-corner, what sits at the tile's top corner, which gives way to a month mark on a tile too
-     narrow for both (omarchy-world.css) -->
-<div
-  class="ws-tile-corner @container absolute inset-x-0 top-0 flex place-items-center justify-end gap-1 text-xs font-medium text-white text-shadow-[1px_1px_6px_rgb(0_0_0)]"
->
-  {#if showTime}
-    <span class="hidden pt-2 tabular-nums @min-[100px]:inline">
-      {#if remainingSeconds < 60}
-        {Duration.fromObject({ seconds: remainingSeconds }).toFormat('m:ss')}
-      {:else if remainingSeconds < 3600}
-        {Duration.fromObject({ seconds: remainingSeconds }).toFormat('mm:ss')}
+     narrow for both; the time and the icon are one chip, every corner badge's (ws-tile-badge: strong glass, data type;
+     omarchy-world.css), where they were white under a shadow -->
+<div class="ws-tile-corner @container absolute inset-x-0 top-0 flex justify-end">
+  <span class="ws-tile-badge">
+    {#if showTime}
+      <span class="ws-tile-badge-text hidden @min-[100px]:inline">
+        {#if remainingSeconds < 60}
+          {Duration.fromObject({ seconds: remainingSeconds }).toFormat('m:ss')}
+        {:else if remainingSeconds < 3600}
+          {Duration.fromObject({ seconds: remainingSeconds }).toFormat('mm:ss')}
+        {:else}
+          {Duration.fromObject({ seconds: remainingSeconds }).toFormat('h:mm:ss')}
+        {/if}
+      </span>
+    {/if}
+
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <span class="flex" onmouseenter={onMouseEnter} onmouseleave={onMouseLeave}>
+      {#if enablePlayback}
+        {#if loading}
+          <LoadingSpinner size="small" />
+        {:else if error}
+          <Icon icon={mdiAlertCircleOutline} size="16" class="text-red-600" />
+        {:else}
+          <Icon icon={pauseIcon} size="16" />
+        {/if}
       {:else}
-        {Duration.fromObject({ seconds: remainingSeconds }).toFormat('h:mm:ss')}
+        <Icon icon={playIcon} size="16" />
       {/if}
     </span>
-  {/if}
-
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <span
-    class="pe-2 pt-2 drop-shadow-[1px_1px_6px_rgb(0_0_0)] @max-[99px]:scale-75 @max-[99px]:pe-1 @max-[99px]:pt-1"
-    onmouseenter={onMouseEnter}
-    onmouseleave={onMouseLeave}
-  >
-    {#if enablePlayback}
-      {#if loading}
-        <LoadingSpinner size="large" />
-      {:else if error}
-        <Icon icon={mdiAlertCircleOutline} size="24" class="text-red-600" />
-      {:else}
-        <Icon icon={pauseIcon} size="24" />
-      {/if}
-    {:else}
-      <Icon icon={playIcon} size="24" />
-    {/if}
   </span>
 </div>

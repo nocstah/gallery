@@ -986,30 +986,68 @@ section.ws-filter-sheet-panel {
   }
 }
 
-/* ---- a stack's badge, sized to its tile (2026-10-18): its 24px icon and count covered a quarter to three quarters
-   of a phone's tiles. Under 7.5rem the count is data type beside a 16px icon, closer to the corner; under 5rem the
-   count alone, as a month mark's neighbour has it ---- */
+/* ---- a tile's badges (2026-10-18): what sits at its top corner (a video's time and play mark, a Live Photo's mark, a
+   stack's count, a GIF's or a 360° photo's mark) and a shared album's name of who added it are one chip, the month
+   mark's: white data type and a 16px icon on strong glass, 0.5rem in, so it holds AA over any photo (a white wall
+   leaves it 6:1). A video's time had been white under a shadow and a stack's count white on 38% black: 1.7:1 and
+   3.3:1 over bright photos. Closer to the corner on narrow tiles as the month mark is; under 5rem a stack keeps its
+   count without the icon ---- */
+.ws-tile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0.5rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--ws-radius);
+  background: var(--ws-glass-strong);
+  -webkit-backdrop-filter: var(--ws-glass-blur);
+  backdrop-filter: var(--ws-glass-blur);
+  color: #fff;
+  font-family: var(--ws-font-data);
+  font-size: var(--ws-text-data);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.ws-tile-badge svg {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+/* words before the icon (a time, a count) take the chip's text inset */
+.ws-tile-badge-text {
+  padding-inline-start: 0.125rem;
+}
+/* a video's stack sits under its time */
+.ws-tile-badge-low {
+  top: 1.5rem;
+}
+/* a name is words, not data: the meta role, cut short at half the tile */
+.ws-tile-badge-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  padding-inline: 0.375rem;
+  font-family: inherit;
+  font-size: var(--ws-text-meta);
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
 @container (max-width: 7.5rem) {
-  [data-thumbnail-focus-container] .ws-stack-badge {
-    gap: 2px;
-    margin: 3px;
-    padding: 1px 4px 1px 5px;
-    font-family: var(--ws-font-data);
-    font-size: var(--ws-text-data);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-  [data-thumbnail-focus-container] .ws-stack-badge svg {
-    width: 16px;
-    height: 16px;
+  .ws-tile-badge {
+    margin: 0.25rem;
   }
 }
 @container (max-width: 5rem) {
-  [data-thumbnail-focus-container] .ws-stack-badge {
-    margin: 2px;
-    padding: 0 4px;
+  .ws-tile-badge {
+    margin: 0.1875rem;
+    padding: 0 0.1875rem;
   }
-  [data-thumbnail-focus-container] .ws-stack-badge svg {
+  .ws-tile-badge-low {
+    top: 1.25rem;
+  }
+  .ws-stack-badge svg {
     display: none;
   }
 }
@@ -1585,20 +1623,15 @@ ul[role='menu'] > hr:last-child {
   display: none;
 }
 
-/* ---- stacks expanded in place: the badge is a button; the inserted frames carry a quiet ink ring ---- */
+/* ---- stacks expanded in place: the badge is a button, the corner's chip (.ws-tile-badge), a step denser while it is
+   pointed at or its stack is open; the inserted frames carry a quiet ink ring ---- */
 .ws-stack-badge {
-  padding: 4px 6px 4px 8px;
-  margin: 4px;
-  border-radius: var(--ws-radius);
-  background: rgb(0 0 0 / 0.38);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
   cursor: pointer;
   transition: background-color 120ms;
 }
 .ws-stack-badge:hover,
 .ws-stack-badge[aria-expanded='true'] {
-  background: rgb(0 0 0 / 0.62);
+  background: var(--ws-glass-hover);
 }
 .ws-stack-badge:focus-visible {
   outline: var(--ws-border) solid var(--ws-accent);
@@ -1617,19 +1650,9 @@ ul[role='menu'] > hr:last-child {
     inset 0 0 0 4px var(--ws-accent),
     inset 0 0 0 5px rgb(0 0 0 / 0.35);
 }
+/* a stack's place ("2 / 5") at the tile's foot, on the corner badges' chip (.ws-tile-badge), words alone */
 .ws-stack-place {
-  margin: 8px;
-  padding: 2px 8px;
-  border-radius: var(--ws-radius);
-  background: rgb(0 0 0 / 0.55);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  color: #fff;
-  font-size: var(--ws-text-micro);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  line-height: 18px;
-  white-space: nowrap;
+  padding-inline: 0.375rem;
 }
 [data-thumbnail-focus-container] {
   transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1);

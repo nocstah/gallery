@@ -1,3 +1,4 @@
+import { mdiPlayCircleOutline } from '@mdi/js';
 import { render } from '@testing-library/svelte';
 import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
 import Thumbnail from '$lib/components/assets/thumbnail/Thumbnail.svelte';
@@ -122,7 +123,39 @@ describe('Thumbnail component', () => {
       const asset = timelineAssetFactory.build({ isImage: false, isVideo: true, duration: 15_000, stack });
       const { baseElement } = render(Thumbnail, { asset, monthMark: 'SEP' });
 
-      expect(baseElement.querySelector('.ws-stack-badge')?.classList.contains('ws-tile-corner')).toBe(false);
+      const badge = baseElement.querySelector('.ws-stack-badge');
+      expect(badge?.classList.contains('ws-tile-corner')).toBe(false);
+      expect(badge?.classList.contains('ws-tile-badge-low')).toBe(true);
+    });
+  });
+
+  // Local Omarchy layer: every corner badge is one chip (ws-tile-badge, omarchy-world.css)
+  describe('the corner badges', () => {
+    it("keeps a video's time and play mark on its chip, at rest", () => {
+      const asset = timelineAssetFactory.build({
+        isImage: false,
+        isVideo: true,
+        duration: 15_000,
+        livePhotoVideoId: null,
+      });
+      const { baseElement } = render(Thumbnail, { asset });
+
+      const badge = baseElement.querySelector('.ws-tile-corner')?.querySelector('.ws-tile-badge');
+      expect(badge?.textContent).toContain('0:15');
+      expect(badge?.classList.contains('ws-live-badge')).toBe(false);
+      expect(badge?.querySelector('path')?.getAttribute('d')).toBe(mdiPlayCircleOutline);
+    });
+
+    it("puts a stack's count on the chip", () => {
+      const asset = timelineAssetFactory.build({
+        livePhotoVideoId: null,
+        stack: { id: 'stack-1', assetCount: 12, primaryAssetId: 'cover' },
+      });
+      const { baseElement } = render(Thumbnail, { asset });
+
+      const badge = baseElement.querySelector('.ws-stack-badge');
+      expect(badge?.classList.contains('ws-tile-badge')).toBe(true);
+      expect(badge?.textContent).toContain('12');
     });
   });
 });
