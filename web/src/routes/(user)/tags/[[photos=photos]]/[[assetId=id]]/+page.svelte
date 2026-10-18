@@ -218,7 +218,10 @@
         <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
         <ActionButton action={Actions.CreateSharedLink} />
         <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
-        <ActionButton action={Actions.AddToAlbum} />
+        <!-- Local Omarchy layer: Add to album by its name, the ink primary, as on Photos -->
+        <span class="ws-primary-action ws-select-labelled contents"
+          ><ActionButton action={Actions.AddToAlbum} type="button" /></span
+        >
         <FavoriteAction
           removeFavorite={assetMultiSelectManager.isAllFavorite}
           onFavorite={(ids, isFavorite) => timelineManager.update(ids, (asset) => (asset.isFavorite = isFavorite))}

@@ -178,7 +178,10 @@
         icon={mdiSelectAll}
         onclick={handleSelectAllAssets}
       />
-      <ActionButton action={Actions.AddToAlbum} />
+      <!-- Local Omarchy layer: Add to album by its name, the ink primary, as on Photos -->
+      <span class="ws-primary-action ws-select-labelled contents"
+        ><ActionButton action={Actions.AddToAlbum} type="button" /></span
+      >
       <FavoriteAction
         removeFavorite={assetMultiSelectManager.isAllFavorite}
         onFavorite={function handleFavoriteUpdate(ids, isFavorite) {

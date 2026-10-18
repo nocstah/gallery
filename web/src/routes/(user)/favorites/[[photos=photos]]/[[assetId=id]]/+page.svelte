@@ -146,7 +146,10 @@
     <FavoriteAction removeFavorite onFavorite={(assetIds) => timelineManager.removeAssets(assetIds)} />
     <ActionButton action={Actions.CreateSharedLink} />
     <SelectAllAssets {timelineManager} assetInteraction={assetMultiSelectManager} />
-    <ActionButton action={Actions.AddToAlbum} />
+    <!-- Local Omarchy layer: Add to album by its name, the ink primary, as on Photos -->
+    <span class="ws-primary-action ws-select-labelled contents"
+      ><ActionButton action={Actions.AddToAlbum} type="button" /></span
+    >
     <ButtonContextMenu icon={mdiDotsVertical} title={$t('menu')}>
       <DownloadAction menuItem />
       <RotateAction />
