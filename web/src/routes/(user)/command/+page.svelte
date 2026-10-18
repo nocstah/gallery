@@ -1,8 +1,10 @@
 <script lang="ts">
   // Local Omarchy layer: the command center. Everything about the library on one screen: what waits in the AI inbox
-  // (by batch), what Curator is doing and will do tonight, the library's health, the machine (GPU, local models,
-  // disk, backups), today's memory, and the actions used most. Read from Curator (~/code/curator: /api/overview,
-  // /api/inbox, /api/jobs, /api/library-health) and Gallery (today's memories); refreshed while open.
+  // (by kind, as the inbox lists it: utils/curator-inbox), what Curator is doing and will do tonight, the library's
+  // health, the machine (GPU, local models, disk, backups), today's memory, and the actions used most. Read from
+  // Curator (~/code/curator: /api/overview, /api/inbox, /api/jobs, /api/library-health) and Gallery (today's
+  // memories); refreshed while open. Counts are ink; what went wrong (failed runs, a backup in trouble) takes the
+  // danger tone, never the accent, which stays for focus and response.
   import { goto } from '$app/navigation';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
@@ -16,9 +18,11 @@
     type JobRow,
     type LibraryHealth,
   } from '$lib/utils/curator';
+  import { kindQuery, kindsOf } from '$lib/utils/curator-inbox';
   import { AssetMediaSize, searchMemories, type MemoryResponseDto } from '@immich/sdk';
   import { Icon, modalManager, toastManager } from '@immich/ui';
   import {
+    mdiAlertCircleOutline,
     mdiChatOutline,
     mdiInboxOutline,
     mdiMagnify,
@@ -76,23 +80,23 @@
   });
 
   const thumb = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
-  const topGroups = $derived(
-    [...groups]
-      .filter((g) => g.pending > 0)
+  // the inbox's biggest kinds, a kind's nightly batches counted as one, as the inbox lists them
+  const topKinds = $derived(
+    kindsOf(groups.filter((g) => g.pending > 0))
       .sort((a, b) => b.pending - a.pending)
       .slice(0, 6),
   );
   const active = $derived(jobs.filter((j) => j.status === 'running' || j.status === 'queued'));
-  const failedRecently = $derived(
-    jobs.filter((j) => j.status === 'failed' && DateTime.fromISO(j.created_at) > DateTime.now().minus({ days: 1 })),
-  );
   const attention = $derived((health?.items ?? []).filter((item) => item.attention));
   const calm = $derived((health?.items ?? []).filter((item) => !item.attention));
-  // disk and backups are in the machine panel; the inbox count is the first number above
-  const shown = (item: { key: string }) => !['disk', 'backup', 'inbox'].includes(item.key);
+  // disk and backups are in the machine panel, Curator's own failed runs in its panel as an alert; the inbox count is
+  // the first number above
+  const shown = (item: { key: string }) => !['disk', 'backup', 'inbox', 'curator_jobs'].includes(item.key);
   const gpuShare = $derived(overview?.gpu ? overview.gpu.used_mib / overview.gpu.total_mib : 0);
   const nextNight = $derived(overview ? DateTime.fromISO(overview.schedule.next_night) : undefined);
   const item = (key: string): HealthItem | undefined => health?.items.find((i) => i.key === key);
+  // Curator's runs that failed this week or are stuck (its health report says which, and links to them)
+  const jobsAlert = $derived(item('curator_jobs')?.attention ? item('curator_jobs') : undefined);
   const number = (value: number) => value.toLocaleString();
   // a backup's last good run, short ("13 Oct, 07:37"); three days without one is worth a look (curator-health says so)
   const when = (iso: string | null) =>
@@ -177,20 +181,20 @@
       <!-- the inbox's biggest batches -->
       <section class="command-panel wide">
         <h2>{$t('command_inbox')}</h2>
-        {#if topGroups.length === 0}
+        {#if topKinds.length === 0}
           <p class="command-note">{$t('command_inbox_empty')}</p>
         {/if}
         <ul class="command-batches">
-          {#each topGroups as group (group.key)}
+          {#each topKinds as kind (kind.series)}
             <li>
-              <a href="/inbox?group={encodeURIComponent(group.key)}">
+              <a href="/inbox?{kindQuery(kind.keys)}">
                 <span class="batch-thumbs">
-                  {#each (group.preview ?? []).slice(0, 3) as id (id)}
+                  {#each kind.preview.slice(0, 3) as id (id)}
                     <img src={thumb(id)} alt="" loading="lazy" />
                   {/each}
                 </span>
-                <span class="batch-title">{group.title}</span>
-                <span class="batch-count">{number(group.pending)}</span>
+                <span class="batch-title">{kind.title}</span>
+                <span class="batch-count">{number(kind.pending)}</span>
               </a>
             </li>
           {/each}
@@ -214,9 +218,11 @@
             </li>
           {/each}
         </ul>
-        {#if failedRecently.length > 0}
-          <a class="command-alert" href="/inbox?tab=jobs">
-            {$t('command_jobs_failed', { values: { count: failedRecently.length } })}
+        {#if jobsAlert}
+          <!-- Curator's words ("9 failed in the last 7 days."), leading to the failures in the Jobs tab -->
+          <a class="command-alert" href={jobsAlert.link ?? '/inbox?tab=jobs#failed'}>
+            <Icon icon={mdiAlertCircleOutline} size="16" />
+            <span>{jobsAlert.detail}</span>
           </a>
         {/if}
         <button type="button" class="ws-btn-quiet command-run" onclick={runTonightNow}>
@@ -443,7 +449,7 @@
     width: 2.6rem;
     height: 2.6rem;
     object-fit: cover;
-    border-radius: max(var(--ws-radius), 3px);
+    border-radius: var(--ws-radius);
     border: 2px solid var(--immich-ui-light);
   }
   .batch-thumbs img + img {
@@ -454,11 +460,13 @@
     font-size: var(--ws-text-ui);
     line-height: 1.25;
   }
+  /* a count is data, in ink: the accent is for focus and response */
   .batch-count {
     font-family: var(--ws-font-data);
-    font-size: var(--ws-text-meta);
-    font-weight: 700;
-    color: var(--ws-accent);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--immich-ui-dark);
   }
   .command-jobs {
     display: grid;
@@ -477,12 +485,20 @@
     font-size: var(--ws-text-meta);
     color: var(--immich-ui-muted);
   }
+  /* something went wrong: the danger tone (the theme's danger role once it has one, else @immich/ui's danger ramp,
+     whose 700 step has the contrast on either face), an icon beside the words, the way to it on hover */
   .command-alert {
-    display: block;
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
     margin-top: 0.75rem;
     font-size: var(--ws-text-meta);
     font-weight: 600;
-    color: var(--ws-accent);
+    color: var(--immich-ui-danger, var(--immich-ui-danger-700));
+  }
+  .command-alert:hover span {
+    text-decoration: underline;
+    text-underline-offset: 0.25em;
   }
   .command-run {
     display: inline-flex;
@@ -571,7 +587,7 @@
     gap: 0.3rem;
   }
   .command-facts dd.attention {
-    color: var(--ws-accent);
+    color: var(--immich-ui-danger, var(--immich-ui-danger-700));
     font-weight: 600;
   }
   .command-memory {

@@ -534,6 +534,12 @@ export const curator = {
   history: (limit = 100) => call<HistoryEntry[]>(`/history?limit=${limit}`),
   kinds: () => call<JobKind[]>('/kinds'),
   jobs: (limit = 30) => call<JobRow[]>(`/jobs?limit=${limit}`),
+  /** the runs that failed in the last `days` (a Curator from before 2026-10-18 gives the newest runs of any kind:
+   * filtered here too) */
+  failedJobs: (days = 7, limit = 50) =>
+    call<JobRow[]>(`/jobs?status=failed&days=${days}&limit=${limit}`).then((rows) =>
+      rows.filter((row) => row.status === 'failed'),
+    ),
   startJob: (kind: string, params: Record<string, unknown> = {}) => post<{ id: number }>('/jobs', { kind, params }),
   cancelJob: (id: number) => post<{ cancelled: boolean }>(`/jobs/${id}/cancel`, {}),
   nextLabels: (set: string, count = 10) => call<LabelBatch>(`/labels/${set}/next?count=${count}`),

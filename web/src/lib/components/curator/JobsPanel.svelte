@@ -1,9 +1,11 @@
 <script lang="ts">
   // Local Omarchy layer: Curator's jobs and health. Scans only make suggestions, so running one is always safe; the
   // health line says what would make a job unsafe (Gallery's schema drifting from Curator's reads) or slow (paused for
-  // a game, low disk). The list refreshes itself while anything is queued or running.
+  // a game, low disk). The runs that failed in the last week come first (#failed, where the command center's and the
+  // Health tab's count of them lead), since the routine runs push them out of the recent list within hours. The list
+  // refreshes itself while anything is queued or running.
   import { curator, type Health, type JobKind, type JobRow } from '$lib/utils/curator';
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { locale, t, type Translations } from 'svelte-i18n';
 
   interface Props {
@@ -23,6 +25,7 @@
 
   let kinds = $state<JobKind[]>([]);
   let jobs = $state<JobRow[]>([]);
+  let failures = $state<JobRow[]>([]);
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   const titleOf = (kind: string) => kinds.find((entry) => entry.kind === kind)?.title ?? kind;
@@ -75,6 +78,11 @@
   onMount(async () => {
     kinds = await curator.kinds();
     await load();
+    failures = await curator.failedJobs(7).catch(() => []);
+    if (location.hash === '#failed') {
+      await tick();
+      document.querySelector('#failed')?.scrollIntoView({ block: 'start' });
+    }
   });
 
   onDestroy(() => clearTimeout(timer));
@@ -91,6 +99,23 @@
   <p class="jobs-warning" role="alert">
     {$t('ai_inbox_schema_drift', { values: { names: health.schema_drift.join(', ') } })}
   </p>
+{/if}
+
+{#if failures.length > 0}
+  <h2 class="jobs-heading" id="failed">{$t('ai_inbox_failed_week')}</h2>
+  <ul class="ws-inbox-rows">
+    {#each failures as job (job.id)}
+      <li>
+        <div class="ws-inbox-row job-row" data-status={job.status}>
+          <div class="job-text">
+            <span class="ws-inbox-row-title">{titleOf(job.kind)}</span>
+            <span class="ws-inbox-meta">{$t(JOB_LABEL[job.status])} · {when(job.finished_at ?? job.created_at)}</span>
+            <span class="ws-inbox-meta job-summary">{summary(job)}</span>
+          </div>
+        </div>
+      </li>
+    {/each}
+  </ul>
 {/if}
 
 <h2 class="jobs-heading">{$t('ai_inbox_scans')}</h2>
@@ -153,6 +178,7 @@
     font-size: 15px;
     font-weight: 650;
     letter-spacing: -0.01em;
+    scroll-margin-top: 1rem;
   }
   .kind-row,
   .job-row {
