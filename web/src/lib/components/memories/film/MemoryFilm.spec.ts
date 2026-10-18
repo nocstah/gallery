@@ -396,4 +396,57 @@ describe('MemoryFilm', () => {
       expect(props.paused).toBe(false);
     });
   });
+
+  describe('the transport', () => {
+    let restore: (() => void) | undefined;
+
+    /** the window, which is the film's frame, at this size */
+    const frame = (width: number, height: number) => {
+      const saved = (['innerWidth', 'innerHeight'] as const).map(
+        (key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const,
+      );
+      Object.defineProperties(globalThis, {
+        innerWidth: { configurable: true, value: width },
+        innerHeight: { configurable: true, value: height },
+      });
+      restore = () => {
+        for (const [key, descriptor] of saved) {
+          if (descriptor) {
+            Object.defineProperty(globalThis, key, descriptor);
+          } else {
+            Reflect.deleteProperty(globalThis, key);
+          }
+        }
+      };
+    };
+
+    afterEach(() => {
+      restore?.();
+      restore = undefined;
+    });
+
+    it.each([
+      // the AORUS, a 1080p TV, a laptop, a phone on its side, the Dell, a window tiled half the AORUS, a phone
+      [2560, 1440, true, true],
+      [1920, 1080, true, true],
+      [1440, 900, true, false],
+      [844, 390, false, true],
+      [1296, 2304, false, false],
+      [1270, 1430, false, false],
+      [390, 844, false, false],
+    ])(
+      'stands beside the words only where a %ix%i frame holds both (the film: %s, Room: %s)',
+      async (width, height, screenBeside, roomBeside) => {
+        frame(width, height);
+        const film = renderFilm();
+        const onScreen = await screen.findByTestId('memory-film');
+        expect(onScreen.dataset.foot === 'beside').toBe(screenBeside);
+        film.unmount();
+
+        renderFilm({ dress: 'room' });
+        const acrossTheRoom = await screen.findByTestId('memory-film');
+        expect(acrossTheRoom.dataset.foot === 'beside').toBe(roomBeside);
+      },
+    );
+  });
 });

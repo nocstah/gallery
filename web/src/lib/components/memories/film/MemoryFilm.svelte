@@ -173,6 +173,18 @@
   let frameWidth = $state(0);
   let frameHeight = $state(0);
   const aspect = $derived(frameWidth > 0 && frameHeight > 0 ? frameWidth / frameHeight : 0);
+  /** The transport stands beside the words where the frame holds them side by side, else it has a row of its own under
+   * them; either way it never takes their width or moves them. Room's sizes follow the screen's shorter side, so a
+   * frame 17:10 and wider (a 16:9 TV, the AORUS) holds its words' measure and its transport side by side, and a
+   * narrower one (a 16:10 laptop, a tablet) does not; the film's transport keeps one size, so it needs 1152px, on a
+   * frame wider than 13:10 (a portrait screen gives the words its whole width). Decided by the frame alone, so it
+   * never changes while the film plays in one window. */
+  const footBeside = $derived(
+    frameWidth >= 768 && (dress === 'room' ? aspect >= 1.7 : frameWidth >= 1152 && aspect >= 1.3),
+  );
+  // the transport's width, for the end's offers, which keep clear of it beside the words (it shows at the end and
+  // stays)
+  let transportWidth = $state(0);
 
   let plan = $state<FilmPlan | undefined>();
   let shotIndex = $state(0);
@@ -1250,6 +1262,7 @@
   data-ended={ended || undefined}
   data-sound={music?.available ? (music.playing ? 'on' : music.blocked ? 'blocked' : 'off') : undefined}
   data-dress={dress === 'room' ? 'room' : undefined}
+  data-foot={footBeside ? 'beside' : undefined}
   data-words={wordsShown || undefined}
   data-pointer={pointerSeen || undefined}
   data-leaving={leaving || undefined}
@@ -1367,7 +1380,7 @@
     {/if}
   </header>
 
-  <div class="film-foot">
+  <div class="film-foot" style:--film-transport="{transportWidth}px">
     <div class="film-words">
       <!-- the words' rulers, out of sight: the title card and the story's longest sentence (and across the room the
            caption) laid out where they will stand, so each photo's shade and place are worked out before they come -->
@@ -1456,7 +1469,11 @@
       {/if}
     </div>
 
-    <div class="film-transport film-chrome" class:is-hidden={controlsHidden && !soundBlocked}>
+    <div
+      class="film-transport film-chrome"
+      class:is-hidden={controlsHidden && !soundBlocked}
+      bind:clientWidth={transportWidth}
+    >
       {#if soundBlocked}
         <button type="button" class="film-sound-on" onclick={startSound}>
           <Icon icon={mdiMusicNote} size="1.25rem" aria-hidden />
@@ -1832,28 +1849,50 @@
   }
 
   /* ---- the words: the title card, then the story a sentence at a time ---- */
+  /* The words have the foot's whole width, held to their own measures (the story's 44ch; across the room the story's
+     34ch, which the caption keeps). The transport has a row of its own under them, kept while it rests, so showing it
+     moves nothing; where the frame holds the words and the transport side by side (`data-foot="beside"`: Room on a
+     16:9 screen, the film from 1152px wide) it shares their cell instead, at its bottom end, taking none of their width
+     resting and never moving them shown. It had been a column of its own, kept at its full width while it rested: on
+     the Dell Room's story got 164px of 1,296 and broke into a word or two a line (2026-10-18). */
   .film-foot {
     position: absolute;
     inset-inline: 0;
     bottom: 0;
     z-index: 2;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
     align-items: end;
-    gap: 1rem 2rem;
+    gap: 1rem;
     padding: 0 max(var(--film-gutter), env(safe-area-inset-right, 0px))
       max(calc(var(--film-gutter) * 1.4), env(safe-area-inset-bottom, 0px))
       max(var(--film-gutter), env(safe-area-inset-left, 0px));
     pointer-events: none;
   }
   .film-foot > * {
+    grid-area: 1 / 1;
     pointer-events: auto;
   }
   .film-foot > .film-words {
     pointer-events: none;
   }
+  /* the transport's own box lets a tap or a swipe through to the photo; only what is on it takes the pointer */
+  .film-foot > .film-transport {
+    grid-area: 2 / 1;
+    pointer-events: none;
+  }
+  .film[data-foot='beside'] .film-foot > .film-transport {
+    grid-area: 1 / 1;
+  }
+  .film-transport > * {
+    pointer-events: auto;
+  }
   .film-end {
     pointer-events: auto;
+  }
+  /* beside the words, the end's offers keep clear of the transport, which shows at the end and stays */
+  .film[data-foot='beside'] .film-end {
+    max-width: calc(100% - var(--film-transport, 0px) - 2rem);
   }
   .film-words {
     position: relative;
@@ -1915,8 +1954,8 @@
     text-wrap: pretty;
     color: rgb(255 255 255 / 0.94);
   }
+  /* the caption (Room's) takes the story's measure, set on their lines below */
   .film-caption {
-    max-width: 60ch;
     font-weight: 560;
     line-height: 1.25;
     letter-spacing: 0.005em;
@@ -2024,6 +2063,23 @@
     justify-items: end;
     gap: 0.6rem;
   }
+  /* beside the words: at the foot's bottom end, Turn on sound over the controls */
+  .film[data-foot='beside'] .film-transport {
+    justify-self: end;
+  }
+  /* a row of its own under the words, wider than a phone: the transport's own shape at the row's end, and Turn on
+     sound at its start, on the same line where both fit (the row as tall with it as without it, so the words stay put
+     when the sound starts), else on a line above, as on a phone (below) */
+  @media (min-width: 768px) {
+    .film:not([data-foot='beside']) .film-transport {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .film:not([data-foot='beside']) .film-transport > .film-pill {
+      margin-inline-start: auto;
+    }
+  }
   /* a link opened cold cannot start the sound by itself: one clear way to, which stays until it is used. The film's
      strong glass with white type, as the end's offers are: the one thing at the bottom while the controls rest, never
      a white slab brighter than the photo beside it */
@@ -2094,9 +2150,16 @@
     font-size: var(--room-caption);
     letter-spacing: 0.08em;
   }
-  .film[data-dress='room'] .film-story {
+  /* the story's measure (34ch at its size, about 40 characters a line) is its lines', so the caption under it ends on
+     the same edge and a long one balances over two lines (it had 60ch of its own, which the transport's column used
+     to cut short) */
+  .film[data-dress='room'] .film-lines {
     max-width: 34ch;
     font-size: clamp(1.125rem, 3.9vmin, 5.25rem);
+  }
+  .film[data-dress='room'] .film-story {
+    max-width: none;
+    font-size: 1em;
     line-height: 1.3;
   }
   .film[data-dress='room'] .film-caption {
@@ -2127,10 +2190,12 @@
     height: var(--room-control);
     padding-inline: 0.9em;
   }
-  /* beside the transport on a wide screen; a phone gives the song a row of its own */
+  /* in the transport's row wider than a phone, 40% of the screen's shorter side like the rest of Room (576px on the
+     AORUS, as before; 36rem had given a 1080p TV's song 53%), so beside the words on a 16:9 screen the transport never
+     reaches them; a phone gives the song a row of its own */
   @media (min-width: 768px) {
     .film[data-dress='room'] .film-song {
-      max-width: min(36rem, 38vw);
+      max-width: 40vmin;
     }
   }
   .film[data-dress='room'] .film-song :global(svg) {
@@ -2153,9 +2218,6 @@
 
   /* a phone: the words over the whole width, the controls in a row of their own under them, thumb-sized */
   @media (max-width: 767px) {
-    .film-foot {
-      grid-template-columns: minmax(0, 1fr);
-    }
     .film-transport {
       justify-items: stretch;
     }
