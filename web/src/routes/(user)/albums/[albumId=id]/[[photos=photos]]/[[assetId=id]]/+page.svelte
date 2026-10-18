@@ -132,7 +132,7 @@
   import { fly } from 'svelte/transition';
   import { MediaQuery, SvelteMap } from 'svelte/reactivity';
   import type { PageData } from './$types';
-  import AlbumDescription from '$lib/components/album-page/AlbumDescription.svelte';
+  import AlbumDescriptionField from '$lib/components/omarchy/AlbumDescriptionField.svelte';
   import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
   import SmartAlbumBadge from '$lib/components/curator/SmartAlbumBadge.svelte';
   import { curatorIsMine } from '$lib/utils/curator';
@@ -1220,15 +1220,20 @@
                          the album owner, so this self-hides for every other caller. -->
                       <AlbumSharedSpaceLinks {album} />
 
-                      <div class="ws-album-description">
-                        <AlbumDescription
-                          id={album.id}
-                          {isEditor}
-                          bind:description={
-                            () => album.description, (description) => (album = { ...album, description })
-                          }
-                        />
-                      </div>
+                      <!-- Local Omarchy layer: the field for an editor (on a phone one quiet line while it is empty), the
+                           words for everyone else, and for a viewer of an album without any, nothing, not even the
+                           details' gap (components/omarchy/AlbumDescriptionField) -->
+                      {#if isEditor || album.description}
+                        <div class="ws-album-description">
+                          <AlbumDescriptionField
+                            id={album.id}
+                            {isEditor}
+                            bind:description={
+                              () => album.description, (description) => (album = { ...album, description })
+                            }
+                          />
+                        </div>
+                      {/if}
                       <!-- Local Omarchy layer: the story of the event or trip the album holds, Curator's, so only for
                          Curator's owner (curatorIsMine) -->
                       {#if curatorIsMine()}
