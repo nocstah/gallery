@@ -1410,7 +1410,8 @@ section.ws-filter-sheet-panel {
 .ws-select-count {
   color: var(--immich-ui-dark);
   font-family: var(--font-display);
-  font-size: 1.6rem;
+  /* the bar's heading while photos are chosen: the size of the month heading it stands in for */
+  font-size: var(--ws-text-bar);
   font-weight: 750;
   font-variation-settings:
     'wdth' 80,

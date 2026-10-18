@@ -1719,7 +1719,7 @@
   .film-where-name {
     overflow: hidden;
     font-family: var(--font-display);
-    font-size: clamp(1.125rem, 0.95rem + 0.45vw, 1.5rem);
+    font-size: var(--ws-text-bar);
     font-weight: 650;
     font-stretch: 75%;
     line-height: 1.1;
@@ -1949,7 +1949,7 @@
   /* ---- the end: start over, the next memory, all its photos ---- */
   .film-end-name {
     font-family: var(--font-display);
-    font-size: clamp(1.75rem, 1.1rem + 2.2vw, 3.25rem);
+    font-size: var(--ws-text-display);
     font-weight: 800;
     font-stretch: 75%;
     line-height: 0.95;
