@@ -2,14 +2,20 @@
   // Local Omarchy layer: the main window's side of the inspector (managers/inspector-link). Started by the user pages'
   // layout for a signed-in account (a shared link's visitor has no inspector): it answers inspectors, tells them what
   // the viewer shows and what is selected (the photo under the pointer comes from the tiles themselves, Thumbnail),
-  // goes where an inspector asks, and Shift+I opens the inspector or closes it. While no inspector listens, the
-  // viewer and the selection are not even watched.
+  // goes where an inspector asks, and Shift+I opens the inspector or closes it (it opens one only where there is a
+  // second screen to put it on, inspectorFits: not on a phone or a touch-first tablet). While no inspector listens,
+  // the viewer and the selection are not even watched.
   import { goto } from '$app/navigation';
   import { shortcut } from '$lib/actions/shortcut';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { inspectorFeed, subjectOfAsset, subjectOfTimelineAsset } from '$lib/managers/inspector-link.svelte';
+  import {
+    inspectorFeed,
+    inspectorFits,
+    subjectOfAsset,
+    subjectOfTimelineAsset,
+  } from '$lib/managers/inspector-link.svelte';
   import { untrack } from 'svelte';
 
   const offered = $derived(authManager.authenticated && !authManager.isSharedLink);
@@ -54,7 +60,8 @@
   use:shortcut={{
     shortcut: { key: 'i', shift: true },
     onShortcut: () => {
-      if (offered) {
+      // an open inspector always closes; a new one opens only where it has a screen of its own to go on
+      if (offered && (inspectorFits() || inspectorFeed.isInspectorOpen())) {
         inspectorFeed.toggle();
       }
     },

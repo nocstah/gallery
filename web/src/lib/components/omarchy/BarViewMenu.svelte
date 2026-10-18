@@ -7,7 +7,7 @@
   import { page } from '$app/state';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-  import { inspectorFeed } from '$lib/managers/inspector-link.svelte';
+  import { inspectorFeed, inspectorFits } from '$lib/managers/inspector-link.svelte';
   import { thumbnailZoomManager, ZOOM_MAX, ZOOM_MIN } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { getGlobalActions } from '$lib/services/app.service';
   import { corners } from '$lib/theme/corners.svelte';
@@ -25,7 +25,11 @@
   const order = $derived(searchable.sortOrder === 'asc' ? 'asc' : 'desc');
   const { Cast } = $derived(getGlobalActions($t));
   const canCast = $derived(Cast.$if?.() ?? true);
-  const canInspect = $derived(authManager.authenticated && !authManager.isSharedLink);
+  // the inspector goes on a second screen: a phone or a touch-first tablet has none, so it is not offered there (one
+  // that is open, opened from a wider window, can still be switched off)
+  const canInspect = $derived(
+    authManager.authenticated && !authManager.isSharedLink && (inspectorFits() || inspectorFeed.listening),
+  );
   // the default: Omarchy's palette in the desktop's light or dark; Light or Dark hold that face whatever the desktop does
   const followsOmarchy = $derived(
     galleryThemes.current === FOLLOW_OMARCHY && themeManager.preference === ThemePreference.System,

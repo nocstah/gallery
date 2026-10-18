@@ -1,5 +1,6 @@
 import { AssetTypeEnum, type AssetResponseDto } from '@immich/sdk';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
 
 // Local Omarchy layer: the inspector, a second window (on the owner's portrait Dell, beside the AORUS that holds the
 // grid) that shows the photo the main window points at, large, with its details (routes/inspector). The two windows
@@ -17,6 +18,10 @@ export const INSPECTOR_WINDOW = 'gallery-inspector';
 export const INSPECTOR_TITLE = 'Gallery inspector';
 /** The popup's size where nothing places it (the Hyprland rule maximizes it on the Dell): portrait, like the Dell. */
 export const INSPECTOR_FEATURES = 'popup,width=820,height=1180';
+
+/** Whether this window is somewhere an inspector can go beside it: not a phone, nor a touch-first device (a coarse
+ * pointer: a tablet), which have no second screen to put one on. There the View menu and ⇧I offer none. */
+export const inspectorFits = () => !mediaQueryManager.isPhone && !mediaQueryManager.pointerCoarse;
 
 export const INSPECTOR_TIMING = {
   /** the pointer rests this long on a photo before the inspector hears of it, so a sweep over the grid says nothing */
