@@ -10,8 +10,8 @@ export const PAGE_FIT_FOLD = 4;
 
 /** What a person can press or type into among a page's own buttons. */
 const CONTROL = 'button, a[href], input:not([type="hidden"]), select, textarea, [role="button"], [role="tab"]';
-/** A menu's rows belong to its button, which is the control. */
-const IN_POPUP = '[role="menu"], [role="listbox"], [role="dialog"]';
+/** A menu's rows belong to its button, which is the control; so do the controls of a sheet a button opens there. */
+const IN_POPUP = '[role="menu"], [role="listbox"], [role="dialog"], [data-bar-sheet]';
 
 const shows = (element: HTMLElement) =>
   typeof element.checkVisibility === 'function'
@@ -43,10 +43,11 @@ export const POPUP_CHOICE = '[role="option"], [role^="menuitem"]';
 
 /**
  * A press in the fold's sheet is a press on one of the page's buttons, so the sheet closes behind it as a menu closes
- * behind its item; it stays for a control that opens something of its own there (a menu, a list) and for a field.
+ * behind its item; it stays for a control that opens something of its own there (a menu, a list, a sheet of the
+ * page's: the Albums page's View) and for a field, and for the controls in such a sheet.
  */
 export const keepsSheetOpen = (control: Element) => {
-  if (control.matches('input, select, textarea, label') || control.closest('.ws-search-field')) {
+  if (control.matches('input, select, textarea, label') || control.closest('.ws-search-field, [data-bar-sheet]')) {
     return true;
   }
   const popup = control.getAttribute('aria-haspopup');

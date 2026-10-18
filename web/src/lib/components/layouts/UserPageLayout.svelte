@@ -522,7 +522,8 @@
     .ws-page-bar-title :global(button[class~='w-10']) {
       width: 2rem;
     }
-    .ws-page-actions :global(:is(button, a):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
+    .ws-page-actions
+      :global(:is(button, a):not(.ws-search-field *, .ws-seg *, [role='tablist'] *, [data-bar-sheet] *)) {
       min-width: 2rem;
       padding-inline: 0.375rem;
     }
@@ -593,7 +594,7 @@
   .ws-page-actions :global([class~='gap-0']) {
     gap: 2px;
   }
-  .ws-page-actions :global(:is(button, a):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
+  .ws-page-actions :global(:is(button, a):not(.ws-search-field *, .ws-seg *, [role='tablist'] *, [data-bar-sheet] *)) {
     height: 2.25rem;
     min-width: 2.25rem;
     padding-inline: 0.5rem;
@@ -601,7 +602,15 @@
   }
   .ws-page-actions
     :global(
-      :is(button, a):not(.ws-search-field *, .ws-seg *, [role='tablist'] *, [class~='w-10'], [class~='size-9']) svg
+      :is(button, a):not(
+          .ws-search-field *,
+          .ws-seg *,
+          [role='tablist'] *,
+          [data-bar-sheet] *,
+          [class~='w-10'],
+          [class~='size-9']
+        )
+        svg
     ) {
     flex: none;
     width: 16px;
@@ -643,14 +652,14 @@
      button with an icon is its icon from the start (Spaces' Create Space): the words stay in the accessibility tree */
   .ws-page-bar:is([data-fit='2'], [data-fit='3'], [data-fit='4']):not([data-fold])
     .ws-page-actions
-    :global(:is(button, a):has(svg):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
+    :global(:is(button, a):has(svg):not(.ws-search-field *, .ws-seg *, [role='tablist'] *, [data-bar-sheet] *)) {
     gap: 0;
     font-size: 0;
   }
   @media (max-width: 639px) {
     .ws-page-bar:not([data-fold])
       .ws-page-actions
-      :global(:is(button, a):has(svg):not(.ws-search-field *, .ws-seg *, [role='tablist'] *)) {
+      :global(:is(button, a):has(svg):not(.ws-search-field *, .ws-seg *, [role='tablist'] *, [data-bar-sheet] *)) {
       gap: 0;
       font-size: 0;
     }

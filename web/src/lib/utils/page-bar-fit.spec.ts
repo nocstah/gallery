@@ -58,6 +58,16 @@ describe('page bar fit', () => {
     expect(countPageControls(box)).toBe(3);
   });
 
+  // Local Omarchy layer: a sheet one of the page's buttons opens in the bar (the Albums page's View) is that button's
+  it("counts a sheet's controls as the button that opened it", () => {
+    const box = html(`
+      <button type="button" aria-haspopup="true" aria-expanded="true">View</button>
+      <div role="group" data-bar-sheet><button type="button">Title</button><button type="button">List</button></div>
+    `);
+
+    expect(countPageControls(box)).toBe(1);
+  });
+
   it('closes the sheet behind an action, not behind a control that opens something of its own', () => {
     const box = html(`
       <button type="button" data-id="action">Share</button>
@@ -66,6 +76,7 @@ describe('page bar fit', () => {
       <button type="button" data-id="no-popup" aria-haspopup="false">Cast</button>
       <input data-id="field" />
       <div class="ws-search-field"><button type="button" data-id="search">Search</button></div>
+      <div data-bar-sheet><button type="button" data-id="sheet-choice">List</button></div>
     `);
     const control = (id: string) => box.querySelector(`[data-id="${CSS.escape(id)}"]`)!;
 
@@ -75,6 +86,8 @@ describe('page bar fit', () => {
     expect(keepsSheetOpen(control('menu'))).toBe(true);
     expect(keepsSheetOpen(control('field'))).toBe(true);
     expect(keepsSheetOpen(control('search'))).toBe(true);
+    // Local Omarchy layer: a choice in a sheet one of the page's buttons opened there (the Albums page's View)
+    expect(keepsSheetOpen(control('sheet-choice'))).toBe(true);
   });
 
   it('hangs the sheet from the end of the ⋮ and keeps it inside the window', () => {

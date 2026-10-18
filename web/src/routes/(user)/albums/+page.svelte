@@ -223,7 +223,13 @@
       {#if subfolders.length > 0}
         <!-- a level of folders only -->
       {:else if folderId}
-        <p class="mt-10 text-center text-sm text-gray-500 dark:text-gray-400">{$t('space_album_folder_empty')}</p>
+        <!-- Local Omarchy layer: an empty folder says how albums get in, in the empty states' grammar on the gutter
+             (upstream centred one grey line); an album made here goes in it (OnEvents above) -->
+        <EmptyState
+          title={$t('space_album_folder_empty')}
+          body={$t('album_folder_empty_body')}
+          action={{ label: $t('create_album'), onclick: () => createAlbumAndRedirect() }}
+        />
       {:else}
         <EmptyState
           title={$t('albums_empty_title')}
