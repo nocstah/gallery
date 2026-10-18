@@ -141,6 +141,8 @@
   import AlbumBarTitle from '$lib/components/omarchy/AlbumBarTitle.svelte';
   import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import AlbumPeopleStrip from '$lib/components/omarchy/AlbumPeopleStrip.svelte';
+  import BarFilterButton from '$lib/components/omarchy/BarFilterButton.svelte';
+  import { barSlot } from '$lib/managers/bar-slot.svelte';
   import { getAlbumDateRange } from '$lib/utils/date-time';
 
   interface Props {
@@ -662,6 +664,28 @@
   const filterTimeBuckets = $derived(showSearchResults ? (smartFacets?.timeBuckets ?? []) : timeBuckets);
   const isBrowseTimeline = $derived(viewMode === AlbumPageViewMode.VIEW);
 
+  // the filter panel's reopen button, while the panel is folded away
+  const filterButtonShown = $derived(
+    filterCollapsed &&
+      isBrowseTimeline &&
+      !assetMultiSelectManager.selectionActive &&
+      (!isTimelineEmpty || showSearchResults),
+  );
+  // Local Omarchy layer: below 768px Years / Months / All float over the photos and Search here is the bar's own
+  // search, so the filter button would stand alone in a row above them (52px on a phone): it goes first among the
+  // bar's icons instead, as Photos keeps its own (managers/bar-slot), and the row is left to the filters in use
+  $effect(() => {
+    if (!narrowBar.current) {
+      return;
+    }
+    barSlot.tools = albumTools;
+    return () => {
+      if (barSlot.tools === albumTools) {
+        barSlot.tools = undefined;
+      }
+    };
+  });
+
   /**
    * The album scope handed to smart search — this album alone, matching the browse timeline's own
    * `albumId` scope and the personal person tokens its filter panel speaks.
@@ -987,6 +1011,13 @@
   {/if}
 {/snippet}
 
+<!-- Local Omarchy layer: the filter button among the bar's icons below 768px (see filterButtonShown) -->
+{#snippet albumTools()}
+  {#if filterButtonShown}
+    <BarFilterButton active={getActiveFilterCount(albumFilters) > 0} onclick={() => (filterCollapsed = false)} />
+  {/if}
+{/snippet}
+
 <!-- Local Omarchy layer: the album lives in the shell like every page (2026-10-15): the sidebar stays, with the album
      lit in its tree, and the one bar carries its back arrow, its name (renamed in place), its dates and count and its
      own buttons, Share first. Selecting, adding photos and choosing a cover swap the bar for theirs (below the shell) -->
@@ -1084,10 +1115,7 @@
                 showGrouping={isBrowseTimeline && !showSearchResults && !assetMultiSelectManager.selectionActive}
                 showFilters={getActiveFilterCount(albumFilters) > 0 || showSearchResults}
                 filters={albumFiltersBar}
-                showFilterButton={filterCollapsed &&
-                  isBrowseTimeline &&
-                  !assetMultiSelectManager.selectionActive &&
-                  (!isTimelineEmpty || showSearchResults)}
+                showFilterButton={filterButtonShown && !narrowBar.current}
                 filterActive={getActiveFilterCount(albumFilters) > 0}
                 onExpandFilters={() => (filterCollapsed = false)}
                 showSearchButton={isBrowseTimeline && !assetMultiSelectManager.selectionActive}

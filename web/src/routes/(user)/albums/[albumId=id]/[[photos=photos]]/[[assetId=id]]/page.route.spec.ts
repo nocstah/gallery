@@ -9,6 +9,7 @@ import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
 import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
+import { barSlot } from '$lib/managers/bar-slot.svelte';
 import { qrManager } from '$lib/managers/special-albums.svelte';
 import { albumFactory } from '@test-data/factories/album-factory';
 import { timelineAssetFactory } from '@test-data/factories/asset-factory';
@@ -1038,6 +1039,48 @@ describe('album detail filter panel route', () => {
         expect(screen.getByTestId('smart-search-results')).toHaveAttribute('data-search-query', 'mountain'),
       );
       expect(screen.getByTestId('smart-search-results')).toHaveAttribute('data-total', '');
+    });
+  });
+
+  // Local Omarchy layer: below 768px Years / Months / All float over the photos and Search here is the bar's own search,
+  // so the filter button goes first among the bar's icons rather than stand alone in a row above the photos
+  describe('the filter button by width', () => {
+    // test-data/setup.ts makes matchMedia a mock that matches nothing; the page's MediaQuery reads it as it starts
+    const matchMedia = vi.mocked(globalThis.matchMedia);
+    const matchNothing = matchMedia.getMockImplementation();
+    const narrow = (query: string) => ({
+      matches: query === '(max-width: 767px)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    });
+    beforeEach(() => {
+      localStorage.setItem('gallery-filter-collapsed', 'true');
+    });
+    afterEach(() => {
+      if (matchNothing) {
+        matchMedia.mockImplementation(matchNothing);
+      }
+      barSlot.tools = undefined;
+    });
+
+    it('keeps it in the row above the photos, with Years / Months / All, on a wider screen', async () => {
+      renderPage();
+
+      expect(await screen.findByTestId('filter-toolbar-reopen')).toBeInTheDocument();
+      expect(screen.getByTestId('timeline-desktop-grouping-control')).toBeInTheDocument();
+      expect(barSlot.tools).toBeUndefined();
+    });
+
+    it('puts it among the bar’s icons below 768px, leaving the row nothing to show', async () => {
+      matchMedia.mockImplementation(narrow as never);
+      renderPage();
+
+      await waitFor(() => expect(barSlot.tools).toBeDefined());
+      expect(screen.queryByTestId('filter-toolbar-reopen')).not.toBeInTheDocument();
+      expect(screen.getByTestId('filter-toolbar-root')).toHaveClass('hidden');
     });
   });
 
