@@ -1483,6 +1483,7 @@
   "memory_share_download_note": "« Télécharger le MP4 » enregistre la vidéo ici et ne partage rien.",
   "memory_share_expiry": "Expiration",
   "memory_share_film_failed": "Gallery a créé le lien, mais Curator n’a pas pu y préparer le film. Réessayez, ou désactivez le lien.",
+  "memory_share_film_tonight": "Le film du lien ne sera supprimé que cette nuit.",
   "memory_share_format": "Format de partage",
   "memory_share_keep_failed": "Gallery n’a pas pu garder une copie de la vidéo à partager.",
   "memory_share_landscape": "Vidéo en paysage",

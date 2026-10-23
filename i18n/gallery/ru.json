@@ -1485,6 +1485,7 @@
   "memory_share_download_note": "«Скачать MP4» сохраняет видео здесь и ничем не делится.",
   "memory_share_expiry": "Срок действия",
   "memory_share_film_failed": "Gallery создала ссылку, но Curator не удалось подготовить для неё фильм. Попробуйте ещё раз или отключите ссылку.",
+  "memory_share_film_tonight": "Фильм этой ссылки будет удалён только сегодня ночью.",
   "memory_share_format": "Формат публикации",
   "memory_share_keep_failed": "Gallery не удалось сохранить копию видео, чтобы им поделиться.",
   "memory_share_landscape": "Горизонтальное видео",

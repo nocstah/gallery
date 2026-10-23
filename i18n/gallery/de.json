@@ -1484,6 +1484,7 @@
   "memory_share_download_note": "„MP4 herunterladen“ speichert das Video hier und teilt nichts.",
   "memory_share_expiry": "Ablauf",
   "memory_share_film_failed": "Gallery hat den Link erstellt, aber Curator konnte den Film dafür nicht einrichten. Versuch es noch einmal oder schalte den Link aus.",
+  "memory_share_film_tonight": "Der Film des Links wird erst heute Nacht entfernt.",
   "memory_share_format": "Freigabeformat",
   "memory_share_keep_failed": "Gallery konnte keine Kopie des Videos zum Teilen anlegen.",
   "memory_share_landscape": "Video im Querformat",

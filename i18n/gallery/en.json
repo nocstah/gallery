@@ -1560,6 +1560,7 @@
   "memory_share_download_note": "Download MP4 saves the video here and shares nothing.",
   "memory_share_expiry": "Expiry",
   "memory_share_film_failed": "Gallery made the link, but Curator couldn't set up the film for it. Try again, or turn the link off.",
+  "memory_share_film_tonight": "The link's film won't be removed until tonight.",
   "memory_share_format": "Sharing format",
   "memory_share_keep_failed": "Gallery couldn't keep a copy of the video to share.",
   "memory_share_landscape": "Landscape video",

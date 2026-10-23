@@ -1497,6 +1497,7 @@
   "memory_share_download_note": "“下载 MP4”只会把视频保存在这里，不会分享任何内容。",
   "memory_share_expiry": "有效期",
   "memory_share_film_failed": "Gallery 已创建链接，但 Curator 无法为它准备影片。请重试，或关闭此链接。",
+  "memory_share_film_tonight": "此链接的影片要到今晚才会移除。",
   "memory_share_format": "分享格式",
   "memory_share_keep_failed": "Gallery 无法保留一份用于分享的视频副本。",
   "memory_share_landscape": "横屏视频",

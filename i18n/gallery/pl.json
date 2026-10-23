@@ -1499,6 +1499,7 @@
   "memory_share_download_note": "„Pobierz MP4” zapisuje film tutaj i niczego nie udostępnia.",
   "memory_share_expiry": "Ważność",
   "memory_share_film_failed": "Gallery utworzyło link, ale Curatorowi nie udało się przygotować do niego filmu. Spróbuj ponownie albo wyłącz link.",
+  "memory_share_film_tonight": "Film tego linku zostanie usunięty dopiero dziś w nocy.",
   "memory_share_format": "Format udostępniania",
   "memory_share_keep_failed": "Gallery nie mogło zachować kopii filmu do udostępnienia.",
   "memory_share_landscape": "Film poziomy",

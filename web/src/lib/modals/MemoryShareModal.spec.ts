@@ -14,12 +14,14 @@ import { assetFactory } from '@test-data/factories/asset-factory';
 import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 import MemoryShareModal from './MemoryShareModal.svelte';
 
-const { makeSharedLink, prepare, save, shareMemory, keepFilm } = vi.hoisted(() => ({
+const { makeSharedLink, prepare, save, shareMemory, keepFilm, memoryShares, forgetMemoryShare } = vi.hoisted(() => ({
   makeSharedLink: vi.fn(),
   prepare: vi.fn(),
   save: vi.fn(),
   shareMemory: vi.fn(),
   keepFilm: vi.fn(),
+  memoryShares: vi.fn(),
+  forgetMemoryShare: vi.fn(),
 }));
 vi.mock('@immich/ui', async (importOriginal) => {
   const original = await importOriginal<typeof import('@immich/ui')>();
@@ -28,7 +30,11 @@ vi.mock('@immich/ui', async (importOriginal) => {
 vi.mock('$lib/managers/film-video-manager.svelte', () => ({
   filmVideos: { items: [], shareDialogOpen: false, prepare, save },
 }));
-vi.mock('$lib/utils/curator', () => ({ curator: { shareMemory, keepFilm }, FILM_MOST_SECONDS: 300 }));
+vi.mock('$lib/utils/curator', () => ({
+  curator: { shareMemory, keepFilm, memoryShares, forgetMemoryShare },
+  curatorIsMine: () => true,
+  FILM_MOST_SECONDS: 300,
+}));
 vi.mock('$lib/utils', () => ({ copyToClipboard: vi.fn() }));
 vi.mock('$lib/managers/server-config-manager.svelte', () => ({
   serverConfigManager: { value: { externalDomain: 'https://photos.example' } },
@@ -120,6 +126,8 @@ beforeEach(() => {
   prepare.mockResolvedValue({ jobId: 41, status: 'ready' });
   keepFilm.mockResolvedValue({ assetId: 'export' });
   shareMemory.mockResolvedValue({ ready: true, count: 2 });
+  memoryShares.mockResolvedValue({ shares: {} });
+  forgetMemoryShare.mockResolvedValue({ forgotten: true, songs: 1 });
   vi.mocked(modalManager.showDialog).mockResolvedValue(true);
   sdkMock.removeSharedLink.mockResolvedValue(undefined as never);
 });
@@ -407,6 +415,7 @@ describe('a link that fails says which step failed', () => {
 
     await screen.findByText('The link is off.');
     expect(sdkMock.removeSharedLink).toHaveBeenCalledWith({ id: 'link' });
+    expect(forgetMemoryShare).toHaveBeenCalledWith('memory', 'link');
   });
 });
 
@@ -446,7 +455,7 @@ describe('turning it off', () => {
     expect(screen.getByText('Your link is ready.')).toBeInTheDocument();
   });
 
-  it('says so when Gallery could not turn it off', async () => {
+  it('says so when Gallery could not turn it off, and asks Curator to forget nothing', async () => {
     sdkMock.removeSharedLink.mockRejectedValue(new Error('Gallery did not answer'));
     await shared();
 
@@ -454,6 +463,47 @@ describe('turning it off', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent("Gallery couldn't turn the link off.");
     expect(screen.getByTestId('share-link')).toBeInTheDocument();
+    expect(forgetMemoryShare).not.toHaveBeenCalled();
+  });
+
+  it("has Curator forget the link's film once Gallery has deleted the link", async () => {
+    await shared();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Turn off' }));
+
+    await waitFor(() => expect(forgetMemoryShare).toHaveBeenCalledWith('memory', 'link'));
+    expect(sdkMock.removeSharedLink.mock.invocationCallOrder[0]).toBeLessThan(
+      forgetMemoryShare.mock.invocationCallOrder[0],
+    );
+    expect(screen.queryByTestId('memory-share-film-tonight')).not.toBeInTheDocument();
+  });
+
+  it('stays off when Curator cannot forget the film, and says quietly that it goes tonight', async () => {
+    forgetMemoryShare.mockRejectedValue(new Error('Curator is not answering'));
+    await shared();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Turn off' }));
+
+    expect(await screen.findByTestId('memory-share-film-tonight')).toHaveTextContent(
+      "The link's film won't be removed until tonight.",
+    );
+    expect(scope()).toBe('The link is off. Anyone who has it can no longer open this memory.');
+    expect(within(screen.getByTestId('memory-share')).queryByRole('alert')).not.toBeInTheDocument();
+
+    // a fresh start leaves the word behind
+    await userEvent.click(screen.getByRole('button', { name: 'Make a link' }));
+    expect(screen.queryByTestId('memory-share-film-tonight')).not.toBeInTheDocument();
+  });
+
+  it("asks Curator nothing for a video file's link, which has no film", async () => {
+    await choose('portrait');
+    await userEvent.click(screen.getByRole('button', { name: 'Make a link' }));
+    await screen.findByText('Your link is ready.');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Turn off' }));
+
+    await screen.findByText('The link is off.');
+    expect(forgetMemoryShare).not.toHaveBeenCalled();
   });
 });
 
@@ -479,6 +529,30 @@ describe('a memory already shared', () => {
     expect(screen.getByTestId('share-link-url')).toHaveTextContent('https://photos.example/share/live-key');
     expect(screen.getByRole('button', { name: 'Turn off' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Make a link' })).not.toBeInTheDocument();
+  });
+
+  it("says the film's music when Curator keeps the link's film with songs", async () => {
+    const live = madeLink({ id: 'live', assets: [photo('a')] });
+    sdkMock.getAllSharedLinks.mockResolvedValue([live]);
+    sdkMock.getSharedLinkById.mockResolvedValue({ ...live, assets: [photo('a'), photo('b')] });
+    memoryShares.mockResolvedValue({ shares: { live: { memoryId: 'memory', music: true } } });
+    open();
+
+    await screen.findByText('This memory is shared.');
+    expect(scope()).toBe(
+      "This memory is shared. Anyone with the link can watch this memory's 2 photos and its music as a film, without an account. The link ends Nov 20.",
+    );
+  });
+
+  it('leaves the music out when Curator cannot say, and still opens on the link', async () => {
+    const live = madeLink({ id: 'live', assets: [photo('a')] });
+    sdkMock.getAllSharedLinks.mockResolvedValue([live]);
+    sdkMock.getSharedLinkById.mockResolvedValue({ ...live, assets: [photo('a'), photo('b')] });
+    memoryShares.mockRejectedValue(new Error('Curator is not answering'));
+    open();
+
+    await screen.findByText('This memory is shared.');
+    expect(scope()).toMatch(/can watch this memory's 2 photos as a film, without an account\./);
   });
 
   it('finds a video file made of it, and says how many more links are on', async () => {

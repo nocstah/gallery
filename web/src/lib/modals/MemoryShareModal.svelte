@@ -8,8 +8,9 @@
   // password, and one action, Make a link; a video format also downloads its file, which shares nothing. The link made
   // shows in place with its QR, Copy, Edit and Turn off (components/omarchy/ShareLinkPanel), under a receipt worded
   // from the link Gallery holds (its password, its end) and Curator's count; a memory already shared opens on its live
-  // link. A failure names its step: the video, keeping it to share, Gallery's link, Curator's film for the link,
-  // turning it off.
+  // link, its music said from the films Curator keeps. A failure names its step: the video, keeping it to share,
+  // Gallery's link, Curator's film for the link, turning it off. Turned off, the link's film goes too: Curator forgets
+  // it, or its nightly sweep does when Curator cannot now, which a quiet line says.
   import OnEvents from '$lib/components/OnEvents.svelte';
   import ShareLinkPanel from '$lib/components/omarchy/ShareLinkPanel.svelte';
   import {
@@ -30,7 +31,7 @@
   import { asUrl, makeSharedLink, SHARE_LINK_DAYS } from '$lib/services/shared-link.service';
   import { locale } from '$lib/stores/preferences.store';
   import { copyToClipboard } from '$lib/utils';
-  import { curator, FILM_MOST_SECONDS, type FilmRequest } from '$lib/utils/curator';
+  import { curator, curatorIsMine, FILM_MOST_SECONDS, type FilmRequest } from '$lib/utils/curator';
   import { serverDetail } from '$lib/utils/handle-error';
   import { filmPhotoCount } from '$lib/utils/memory-title';
   import { linkEnd, linkEndDay } from '$lib/utils/shared-link-words';
@@ -75,6 +76,8 @@
   let count = $state<number>();
   let withMusic = $state(false);
   let found = $state(false);
+  // the link went off, but Curator could not forget its film now: Curator's nightly sweep does
+  let filmTonight = $state(false);
   // this memory's other links still open (Shared links lists them)
   let others = $state(0);
   // Share memory looks for a link already open first; Save as video goes straight to the choices
@@ -166,8 +169,9 @@
     filmVideos.shareDialogOpen = false;
   });
 
-  // a memory already shared opens on its newest link still open (one request, the owner's links; then that link, for
-  // how many photos its film plays); not finding one, or not being able to look, leaves the choices
+  // a memory already shared opens on its newest link still open (one request, the owner's links; then, at once, that
+  // link, for how many photos its film plays, and the films Curator keeps, for whether it plays music); not finding
+  // one, or not being able to look, leaves the choices
   const lookUp = async () => {
     try {
       const open = liveMemoryLinks(await getAllSharedLinks({}), presentation);
@@ -175,12 +179,12 @@
       if (newest && !closed) {
         let shown = newest.link;
         if (newest.kind === 'memory') {
-          try {
-            shown = await getSharedLinkById({ id: newest.link.id });
-            count = filmPhotoCount(shown.assets);
-          } catch {
-            // the sentence counts the memory's photos instead
+          const [held, music] = await Promise.all([linkAsHeld(newest.link.id), filmMusic(newest.link.id)]);
+          if (held) {
+            shown = held;
+            count = filmPhotoCount(held.assets);
           }
+          withMusic = music;
         }
         link = shown;
         kind = newest.kind;
@@ -193,6 +197,28 @@
       // Shared links still lists every link
     }
     view = 'choose';
+  };
+
+  /** the link as Gallery holds it, every photo in it; not knowing, the sentence counts the memory's photos instead */
+  const linkAsHeld = async (id: string) => {
+    try {
+      return await getSharedLinkById({ id });
+    } catch {
+      return;
+    }
+  };
+
+  /** whether the film Curator keeps for a link plays music; not knowing, the sentence leaves the music out */
+  const filmMusic = async (id: string) => {
+    if (!curatorIsMine()) {
+      return false;
+    }
+    try {
+      const { shares } = await curator.memoryShares();
+      return !!shares[id]?.music;
+    } catch {
+      return false;
+    }
   };
 
   /** a step that failed with nothing more to tell than which step it was */
@@ -325,7 +351,9 @@
     }
   };
 
-  // Turn off deletes the link: whoever has it can no longer open the memory (the player asks Gallery on every request)
+  // Turn off deletes the link: whoever has it can no longer open the memory (the player asks Gallery on every request).
+  // Then the film Curator kept for it goes too; when Curator cannot forget it now, the link is off all the same, the
+  // sheet says quietly that the film goes tonight, and Curator's nightly sweep forgets it
   const turnOff = async () => {
     if (!link || busy) {
       return;
@@ -339,16 +367,26 @@
       return;
     }
     const gone = link;
+    const film = kind === 'memory';
     busy = 'off';
     failure = undefined;
+    filmTonight = false;
     try {
       await removeSharedLink({ id: gone.id });
-      eventManager.emit('SharedLinkDelete', gone);
-      wentOff(gone);
     } catch (error) {
       failure = { step: 'off', reason: reasonOf(error, failed('off')) };
+      return;
     } finally {
       busy = undefined;
+    }
+    eventManager.emit('SharedLinkDelete', gone);
+    wentOff(gone);
+    if (film && curatorIsMine()) {
+      try {
+        await curator.forgetMemoryShare(memoryId, gone.id);
+      } catch {
+        filmTonight = !closed;
+      }
     }
   };
 
@@ -370,6 +408,7 @@
     count = undefined;
     found = false;
     failure = undefined;
+    filmTonight = false;
     view = 'choose';
   };
 
@@ -528,8 +567,15 @@
           </a>
           {@render otherLinks()}
         </section>
-      {:else if view === 'off' && others > 0}
-        <section class="ws-sheet-section">{@render otherLinks()}</section>
+      {:else if view === 'off' && (filmTonight || others > 0)}
+        <section class="ws-sheet-section">
+          {#if filmTonight}
+            <p class="ws-sheet-note" role="status" data-testid="memory-share-film-tonight">
+              {$t('memory_share_film_tonight')}
+            </p>
+          {/if}
+          {@render otherLinks()}
+        </section>
       {/if}
 
       {#if failure}
