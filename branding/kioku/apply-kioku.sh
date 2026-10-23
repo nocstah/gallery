@@ -152,7 +152,7 @@ rule web/src/lib/modals/HelpAndFeedbackModal.svelte 1 <<'RULE'
 RULE
 
 echo "--- The loader and the login card ---"
-# Kioku's loader writes itself (the mark drawn stroke by stroke, then let go), so it no longer also spins: not in
+# Kioku's loader lays its mark down in one stroke, then lets it go, so it no longer also spins: not in
 # LoadingSpinner, not on the boot screen. Noodle's spinning mark keeps its spin in a GALLERY_BRAND=noodle build, and
 # the source keeps it for its specs.
 rule web/src/lib/components/shared-components/LoadingSpinner.svelte 1 <<'RULE'
@@ -178,7 +178,7 @@ animation:
 =>
 animation: 0s linear 0.3s forwards delayedVisibility;
 RULE
-# The login card shows the still mark rather than the loader, which would write itself every few seconds there
+# The login card shows the still mark rather than the loader, which would draw it again every few seconds there
 rule web/src/lib/components/layouts/AuthPageLayout.svelte 1 <<'RULE'
 <Logo variant="icon" size="giant" transparent />
 =>

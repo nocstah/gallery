@@ -776,8 +776,8 @@ const verify = (target) => {
     (!titleBefore || player.includes(titleBefore)) && player.includes(titleAfter),
     `«${brand.memory_player.memory_title}»`,
   );
-  // The loader writes itself, so nothing spins it too, and the login card shows the still mark; a dark boot screen
-  // shows the loader drawn for a dark ground; a 24 px favicon is listed once one ships.
+  // The loader draws its mark itself, so nothing spins it too, and the login card shows the still mark; a dark boot
+  // screen shows the loader drawn for a dark ground; a 24 px favicon is listed once one ships.
   const boot = read(copyMode ? 'web/src/app.html' : 'web/index.html');
   expect('the boot screen: the loader not spun', !boot.includes('loadspin'), 'no loadspin');
   expect(
