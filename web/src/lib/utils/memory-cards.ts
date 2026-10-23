@@ -240,13 +240,6 @@ export const memoryCards = (
 export const cardOfMemory = (cards: MemoryCard[], memoryId: string): MemoryCard | undefined =>
   cards.find(({ members }) => members.some(({ id }) => id === memoryId));
 
-/**
- * How many photos a card stands for: the most any of its memories stands for (a trip's whole count), or the photos it
- * plays when those are more (two days of one place).
- */
-export const memoryCardCount = (card: MemoryCard, countOf: (memory: MemoryResponseDto) => number) =>
-  Math.max(card.assets.length, ...card.members.map((memory) => countOf(memory)));
-
 // ---- the line: what kind of memory it is, how long ago, how long ----
 
 type RuleContext = Record<string, unknown>;

@@ -22,8 +22,7 @@
   import { locale } from '$lib/stores/preferences.store';
   import { memoryLaneTitle } from '$lib/utils';
   import { curator, curatorIsMine, type MemoryTrack, type Story } from '$lib/utils/curator';
-  import { memoryCardCount } from '$lib/utils/memory-cards';
-  import { formatMemoryTime, memoryCount, memoryFilmWords, type MemoryFilmWords } from '$lib/utils/memory-title';
+  import { formatMemoryTime, memoryFilmWords, type MemoryFilmWords } from '$lib/utils/memory-title';
   import {
     AssetTypeEnum,
     getAlbumInfo,
@@ -331,13 +330,10 @@
 
   const wordsOf = (target: RoomReel, content: Held | undefined): MemoryFilmWords => {
     if (target.kind === 'memory') {
-      // a card of several memories stands for what they stand for together, as on the memory's own page
+      // a card of several memories plays all their photos, and counts them, as on the memory's own page
       return memoryFilmWords(target.memory, memoryFacts.get(target.memory.id), $locale, {
         fallbackTitle: $memoryLaneTitle,
         count: countWords,
-        total: target.card
-          ? memoryCardCount(target.card, (memory) => memoryCount(memory, memoryFacts.get(memory.id)))
-          : undefined,
       });
     }
     const assets = content?.assets ?? [];

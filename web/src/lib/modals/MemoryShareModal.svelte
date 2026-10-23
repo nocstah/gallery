@@ -13,7 +13,6 @@
   import OnEvents from '$lib/components/OnEvents.svelte';
   import ShareLinkPanel from '$lib/components/omarchy/ShareLinkPanel.svelte';
   import {
-    filmPhotoCount,
     liveMemoryLinks,
     MEMORY_LINK_DAYS,
     memoryLinkDuration,
@@ -33,6 +32,7 @@
   import { copyToClipboard } from '$lib/utils';
   import { curator, FILM_MOST_SECONDS, type FilmRequest } from '$lib/utils/curator';
   import { serverDetail } from '$lib/utils/handle-error';
+  import { filmPhotoCount } from '$lib/utils/memory-title';
   import { linkEnd, linkEndDay } from '$lib/utils/shared-link-words';
   import {
     getAllSharedLinks,

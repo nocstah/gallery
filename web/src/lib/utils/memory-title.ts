@@ -1,4 +1,4 @@
-import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
+import { AssetTypeEnum, MemoryType, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
 import type { MemoryFacts } from '$lib/utils/curator';
 
 // Local Omarchy layer: a memory's title from facts, place and time (2026-10-16, the owner's choice for "Memories worth
@@ -242,8 +242,9 @@ export const memoryCover = (memory: MemoryResponseDto, facts: MemoryFacts | null
 };
 
 /**
- * How many photos a memory stands for, for its title card: Curator's count (a trip's whole count), else the count its
- * rule kept (a trip's photos, a month's favourites), else the photos it holds.
+ * How many photos a memory stands for: Curator's count (a trip's whole count), else the count its rule kept (a trip's
+ * photos, a month's favourites), else the photos it holds. It weighs which memory of one kind leads a card
+ * (utils/memory-cards); no surface says it, since the film shows only the photos the memory holds.
  */
 export const memoryCount = (memory: MemoryResponseDto, facts: MemoryFacts | null | undefined) => {
   if (facts && Number.isFinite(facts.count) && facts.count > 0) {
@@ -255,11 +256,17 @@ export const memoryCount = (memory: MemoryResponseDto, facts: MemoryFacts | null
   return kept && kept >= memory.assets.length ? kept : memory.assets.length;
 };
 
+/** How many photos a memory's film plays: each once, exact copies once, as the film's plan skips them and Curator
+ * leaves them out of a shared film (curator/memory_sharing.py). */
+export const filmPhotoCount = (assets: Pick<AssetResponseDto, 'id' | 'checksum'>[]) =>
+  new Set(assets.map(({ id, checksum }) => checksum || id)).size;
+
 /** What a memory's film says (the memory's page and Room alike): the card's title for its top bar, the title card's
- * name (the places or people, else the time) and the line under it ("October 2025 · 192 photos": the time when the
- * name is not it, then the count the memory stands for). `count` words the count; `fallbackTitle` titles a memory
- * with nothing to go on, as its card does; `total`, when given, is the count to say (a card of several memories says
- * what they stand for together, utils/memory-cards). */
+ * name (the places or people, else the time) and the line under it ("October 2025 · 76 photos": the time when the
+ * name is not it, then how many photos the film plays, a card of several memories all of theirs). `count` words the
+ * count; `fallbackTitle` titles a memory with nothing to go on, as its card does. The count is what the film shows
+ * (2026-10-23, the owner's "counts that match what's shown"): it had said what the memory stands for, a trip's whole
+ * ("192 photos" over a film of 76, its position "4/76", its Share sheet "this memory's 76 photos"). */
 export type MemoryFilmWords = { title: string; name: string; line: string; count: string };
 
 export const memoryFilmWords = (
@@ -269,13 +276,12 @@ export const memoryFilmWords = (
   words: {
     fallbackTitle: (memory: MemoryResponseDto) => string;
     count: (count: number, videos: boolean) => string;
-    total?: number;
   },
 ): MemoryFilmWords => {
   const parts = memoryTitle(memory, facts, locale);
   const title = parts?.title ?? words.fallbackTitle(memory);
   const videos = memory.assets.every((asset) => asset.type === AssetTypeEnum.Video);
-  const count = words.count(words.total ?? memoryCount(memory, facts), videos);
+  const count = words.count(filmPhotoCount(memory.assets), videos);
   return {
     title,
     name: parts?.name ?? (parts?.time || title),

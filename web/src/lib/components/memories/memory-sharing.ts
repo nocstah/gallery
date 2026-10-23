@@ -1,4 +1,4 @@
-import { AssetTypeEnum, SharedLinkType, type AssetResponseDto, type SharedLinkResponseDto } from '@immich/sdk';
+import { AssetTypeEnum, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
 import type { FilmStoryCue } from './film/film-plan';
 
 /** Only the presentation the owner is sharing; no private asset metadata or session credentials. */
@@ -87,7 +87,3 @@ export const liveMemoryLinks = (
   }
   return found.sort((a, b) => b.link.createdAt.localeCompare(a.link.createdAt));
 };
-
-/** How many photos a playable memory's film plays: Curator leaves exact copies out (curator/memory_sharing.py). */
-export const filmPhotoCount = (assets: Pick<AssetResponseDto, 'id' | 'checksum'>[]) =>
-  new Set(assets.map(({ id, checksum }) => checksum || id)).size;

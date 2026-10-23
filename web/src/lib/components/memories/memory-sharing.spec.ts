@@ -1,13 +1,7 @@
 import { AssetTypeEnum, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
-import {
-  filmPhotoCount,
-  liveMemoryLinks,
-  MEMORY_LINK_DAYS,
-  memoryLinkDuration,
-  memoryLinkExpiry,
-} from './memory-sharing';
+import { liveMemoryLinks, MEMORY_LINK_DAYS, memoryLinkDuration, memoryLinkExpiry } from './memory-sharing';
 
 const NOW = Date.parse('2026-10-21T12:00:00.000Z');
 const memory = { title: 'Riverton · October 2023', assetIds: ['a', 'b'] };
@@ -76,17 +70,5 @@ describe('the expiry choices', () => {
   it('end that many days from now, or never', () => {
     expect(memoryLinkExpiry(30, NOW)).toBe('2026-11-20T12:00:00.000Z');
     expect(memoryLinkExpiry(null, NOW)).toBeNull();
-  });
-});
-
-describe('filmPhotoCount', () => {
-  it('counts exact copies once, as Curator plays them', () => {
-    expect(
-      filmPhotoCount([
-        { id: 'a', checksum: 'x' },
-        { id: 'b', checksum: 'y' },
-        { id: 'c', checksum: 'x' },
-      ]),
-    ).toBe(2);
   });
 });

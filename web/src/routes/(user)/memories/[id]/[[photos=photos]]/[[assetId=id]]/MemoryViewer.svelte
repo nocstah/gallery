@@ -31,10 +31,16 @@
   import { locale } from '$lib/stores/preferences.store';
   import { handlePromiseError, memoryLaneTitle } from '$lib/utils';
   import { curator, curatorIsMine, type MemoryTrack, type Story } from '$lib/utils/curator';
-  import { memoryCardCount } from '$lib/utils/memory-cards';
-  import { memoryCount, memoryFilmWords } from '$lib/utils/memory-title';
+  import { memoryFilmWords } from '$lib/utils/memory-title';
   import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
-  import { addMemoryAssets, BulkIdErrorReason, type AssetResponseDto, getAssetInfo, MemoryType } from '@immich/sdk';
+  import {
+    addMemoryAssets,
+    AssetTypeEnum,
+    BulkIdErrorReason,
+    type AssetResponseDto,
+    getAssetInfo,
+    MemoryType,
+  } from '@immich/sdk';
   import {
     ActionButton,
     CommandPaletteDefaultProvider,
@@ -99,15 +105,10 @@
   });
   const facts = $derived(memoryId ? memoryFacts.get(memoryId) : undefined);
   // Local Omarchy layer: a card of several memories plays their photos as one film, which drifts toward the faces in
-  // all of them and stands for what they stand for together
+  // all of them
   const members = $derived(current?.card.members ?? []);
   const focus = $derived(
     members.length > 1 ? Object.assign({}, ...members.map(({ id }) => memoryFacts.get(id)?.focus ?? {})) : facts?.focus,
-  );
-  const total = $derived(
-    current && members.length > 1
-      ? memoryCardCount(current.card, (memory) => memoryCount(memory, memoryFacts.get(memory.id)))
-      : undefined,
   );
 
   const STORY_HIDDEN = 'curator-memory-story-hidden';
@@ -184,20 +185,26 @@
 
   // ---- its title: facts, place and time (utils/memory-title, as Room says them) ----
 
+  const countWords = (count: number, videos: boolean) =>
+    $t(videos ? 'memory_video_moments_subtitle' : 'memory_assets_count', { values: { count } });
   const words = $derived(
     current
-      ? memoryFilmWords(current.memory, facts, $locale, {
-          fallbackTitle: $memoryLaneTitle,
-          count: (count, videos) =>
-            $t(videos ? 'memory_video_moments_subtitle' : 'memory_assets_count', { values: { count } }),
-          total,
-        })
+      ? memoryFilmWords(current.memory, facts, $locale, { fallbackTitle: $memoryLaneTitle, count: countWords })
       : undefined,
   );
   const cardTitle = $derived(words?.title ?? '');
   const filmName = $derived(words?.name ?? '');
-  const countText = $derived(words?.count ?? '');
   const filmLine = $derived(words?.line ?? '');
+  // Local Omarchy layer: All photos counts its tiles, as the film counts the photos it plays (the owner's "counts that
+  // match what's shown"): it had said what the memory stands for, "192 photos" over a grid of 76
+  const countText = $derived(
+    current
+      ? countWords(
+          current.memory.assets.length,
+          current.memory.assets.length > 0 && current.memory.assets.every(({ type }) => type === AssetTypeEnum.Video),
+        )
+      : '',
+  );
 
   // ---- the photo on screen: where it was taken, and the way to it in the timeline ----
 

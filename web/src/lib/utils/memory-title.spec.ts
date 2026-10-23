@@ -2,6 +2,7 @@ import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import type { MemoryFacts } from '$lib/utils/curator';
 import {
   composeMemoryTitle,
+  filmPhotoCount,
   formatMemoryTime,
   joinNames,
   memoryCount,
@@ -247,6 +248,18 @@ describe(memoryCount.name, () => {
   });
 });
 
+describe(filmPhotoCount.name, () => {
+  it('counts exact copies once, as the film and Curator play them', () => {
+    expect(
+      filmPhotoCount([
+        { id: 'a', checksum: 'x' },
+        { id: 'b', checksum: 'y' },
+        { id: 'c', checksum: 'x' },
+      ]),
+    ).toBe(2);
+  });
+});
+
 describe(memoryFilmWords.name, () => {
   const words = {
     fallbackTitle: () => 'Old title',
@@ -263,8 +276,26 @@ describe(memoryFilmWords.name, () => {
     expect(plain(memoryFilmWords(photos(), facts({ places: ['Siem Reap'] }), 'en', words))).toEqual({
       title: 'Siem Reap · October 2025',
       name: 'Siem Reap',
-      line: 'October 2025 · 192 photos',
-      count: '192 photos',
+      line: 'October 2025 · 1 photos',
+      count: '1 photos',
+    });
+  });
+
+  // the owner's "counts that match what's shown": the trip's 192 photos are not the film's
+  it('counts the photos the film plays, not what the memory stands for', () => {
+    const film = photos();
+    film.assets = [0, 1, 2].map((index) =>
+      assetFactory.build({
+        id: `asset-${index}`,
+        checksum: index === 2 ? 'copy' : `file-${index}`,
+        type: AssetTypeEnum.Image,
+        localDateTime: '2025-10-16T10:00:00.000Z',
+      }),
+    );
+    film.assets.push({ ...film.assets[2], id: 'asset-3' });
+    expect(memoryFilmWords(film, facts({ count: 192 }), 'en', words)).toMatchObject({
+      line: '3 photos',
+      count: '3 photos',
     });
   });
 

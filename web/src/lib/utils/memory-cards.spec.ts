@@ -1,13 +1,6 @@
 import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import type { MessageFormatter } from 'svelte-i18n';
-import {
-  cardOfMemory,
-  memoryCardCount,
-  memoryCardLine,
-  memoryCards,
-  memorySection,
-  wallClockAsUtc,
-} from '$lib/utils/memory-cards';
+import { cardOfMemory, memoryCardLine, memoryCards, memorySection, wallClockAsUtc } from '$lib/utils/memory-cards';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { BRIGHT, DIM } from '@test-data/thumbhash';
 
@@ -312,23 +305,6 @@ describe("today's one order", () => {
     ]);
   });
 });
-
-describe(memoryCardCount.name, () => {
-  it('counts the most any of its memories stands for, or the photos it plays', () => {
-    const cards = memoryCards(
-      [
-        { ...memory('a', { photos: ['a@2013-10-14', 'b@2013-10-14'] }), data: { key: 'k' } } as never,
-        { ...memory('b', { photos: ['c@2013-10-13'] }), data: { key: 'k' } } as never,
-      ],
-      (memory) => (memory.data as { key?: string }).key,
-      NOW,
-    );
-
-    expect(memoryCardCount(cards[0], (memory) => memory.assets.length)).toBe(3);
-    expect(memoryCardCount(cards[0], (memory) => (memory.id === 'a' ? 192 : 1))).toBe(192);
-  });
-});
-
 describe(memoryCardLine.name, () => {
   const now = new Date(2026, 9, 18);
   const line = (lead: MemoryResponseDto) => memoryCardLine({ lead, assets: lead.assets }, translate, 'en', now);
