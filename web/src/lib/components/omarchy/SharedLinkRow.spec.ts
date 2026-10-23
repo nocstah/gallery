@@ -1,7 +1,7 @@
 import { AssetTypeEnum, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
-import { modalManager } from '@immich/ui';
+import { modalManager, toastManager } from '@immich/ui';
 import '@testing-library/jest-dom';
-import { screen, within } from '@testing-library/svelte';
+import { cleanup, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { DateTime } from 'luxon';
 import { init, register, waitLocale } from 'svelte-i18n';
@@ -10,6 +10,7 @@ import { getAnimateMock } from '$lib/__mocks__/animate.mock';
 import '$lib/__mocks__/sdk.mock';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import SharedLinkRow from '$lib/components/omarchy/SharedLinkRow.svelte';
+import { curatorIsMine, forgetLinkFilm } from '$lib/utils/curator';
 import { renderWithTooltips } from '$tests/helpers';
 import { albumFactory } from '@test-data/factories/album-factory';
 import { assetFactory } from '@test-data/factories/asset-factory';
@@ -25,6 +26,7 @@ vi.mock('$lib/managers/event-manager.svelte', () => ({ eventManager: { emit, on:
 vi.mock('$lib/services/shared-link.service', () => ({
   asUrl: ({ key }: { key: string }) => `https://photos.example/share/${key}`,
 }));
+vi.mock('$lib/utils/curator', () => ({ curatorIsMine: vi.fn(), forgetLinkFilm: vi.fn() }));
 
 const inDays = (days: number) => DateTime.now().plus({ days }).toISO();
 const link = (overrides: Partial<SharedLinkResponseDto> = {}) =>
@@ -127,5 +129,83 @@ describe('SharedLinkRow', () => {
       .getAllByRole('button')
       .filter((button) => button.classList.contains('ws-link-action'));
     expect(actions.map((button) => button.textContent?.trim())).toEqual(['Edit', 'Remove']);
+  });
+
+  describe("a memory's link takes its film with it", () => {
+    const film = () => link({ description: 'Riverton · October 2025', allowDownload: false });
+    const turnOff = async (sharedLink: SharedLinkResponseDto) => {
+      show(sharedLink);
+      vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+      await userEvent.click(screen.getByRole('button', { name: 'Turn off' }));
+    };
+
+    beforeEach(() => {
+      vi.mocked(curatorIsMine).mockReturnValue(true);
+      vi.spyOn(toastManager, 'primary');
+      vi.spyOn(toastManager, 'info');
+    });
+
+    it('has Curator forget the film once Gallery has deleted the link, and says nothing more', async () => {
+      vi.mocked(forgetLinkFilm).mockResolvedValue('forgotten');
+      const sharedLink = film();
+
+      await turnOff(sharedLink);
+
+      await vi.waitFor(() => expect(forgetLinkFilm).toHaveBeenCalledWith(sharedLink.id));
+      expect(sdkMock.removeSharedLink.mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(forgetLinkFilm).mock.invocationCallOrder[0],
+      );
+      expect(toastManager.primary).toHaveBeenCalledWith('Link turned off');
+      expect(toastManager.info).not.toHaveBeenCalled();
+    });
+
+    it('stays off when Curator cannot forget the film now, and says quietly that it goes tonight', async () => {
+      vi.mocked(forgetLinkFilm).mockResolvedValue('later');
+
+      await turnOff(film());
+
+      await vi.waitFor(() =>
+        expect(toastManager.info).toHaveBeenCalledWith("The link's film won't be removed until tonight."),
+      );
+      expect(emit).toHaveBeenCalledWith('SharedLinkDelete', expect.anything());
+      expect(toastManager.primary).toHaveBeenCalledWith('Link turned off');
+    });
+
+    it("asks Curator even of a link edited out of a memory's shape, and says nothing when it played no film", async () => {
+      vi.mocked(forgetLinkFilm).mockResolvedValue('none');
+      const photos = link({ description: 'Beach day' });
+
+      await turnOff(photos);
+
+      await vi.waitFor(() => expect(forgetLinkFilm).toHaveBeenCalledWith(photos.id));
+      expect(toastManager.info).not.toHaveBeenCalled();
+    });
+
+    it("when Curator cannot say whether there was a film, says it of a memory's link only", async () => {
+      vi.mocked(forgetLinkFilm).mockResolvedValue('unsure');
+      await turnOff(film());
+      await vi.waitFor(() => expect(toastManager.info).toHaveBeenCalledOnce());
+      cleanup();
+
+      await turnOff(link({ description: 'Beach day' }));
+      await vi.waitFor(() => expect(forgetLinkFilm).toHaveBeenCalledTimes(2));
+      expect(toastManager.info).toHaveBeenCalledOnce();
+    });
+
+    it("asks Curator nothing of an album's link, for another account, or when Gallery kept the link", async () => {
+      await turnOff(link({ type: SharedLinkType.Album, album: albumFactory.build({ albumName: 'Riverton 2024' }) }));
+      cleanup();
+
+      vi.mocked(curatorIsMine).mockReturnValue(false);
+      await turnOff(film());
+      cleanup();
+
+      vi.mocked(curatorIsMine).mockReturnValue(true);
+      sdkMock.removeSharedLink.mockRejectedValue(new Error('Gallery did not answer'));
+      await turnOff(film());
+
+      await vi.waitFor(() => expect(sdkMock.removeSharedLink).toHaveBeenCalledTimes(3));
+      expect(forgetLinkFilm).not.toHaveBeenCalled();
+    });
   });
 });

@@ -4,16 +4,18 @@
   // and when it ends, in words and calendar days, with what it allows beyond looking (SharedLinkFacts, the line the
   // Shared feed and the Share sheets draw too). Its actions sit at the row's end: Copy, Edit and Turn off, which
   // deletes the link (the memory Share sheet's Turn off does the same), so whoever opens it reads that it has ended. A
-  // link that has ended is Edit, to open it again, and Remove. On a phone the three fold into one ⋮.
+  // link that has ended is Edit, to open it again, and Remove. On a phone the three fold into one ⋮. A memory's link
+  // takes its film with it: Curator forgets the film it kept for the link (utils/curator: forgetLinkFilm).
   import { goto } from '$app/navigation';
   import SharedLinkFacts from '$lib/components/omarchy/SharedLinkFacts.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { Route } from '$lib/route';
   import { asUrl } from '$lib/services/shared-link.service';
   import { copyToClipboard, getAssetMediaUrl } from '$lib/utils';
+  import { curatorIsMine, forgetLinkFilm } from '$lib/utils/curator';
   import { handleError } from '$lib/utils/handle-error';
   import { linkEnd, linkKind, linkName } from '$lib/utils/shared-link-words';
-  import { AssetMediaSize, removeSharedLink, type SharedLinkResponseDto } from '@immich/sdk';
+  import { AssetMediaSize, removeSharedLink, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
   import { ContextMenuButton, Icon, MenuItemType, modalManager, toastManager, type ActionItem } from '@immich/ui';
   import { mdiContentCopy, mdiImageMultipleOutline, mdiLinkOff, mdiPencilOutline, mdiTrashCanOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -51,12 +53,26 @@
     if (!confirmed) {
       return;
     }
+    // taken now: the row leaves the page with its link
+    const gone = sharedLink;
+    const tonight = $t('memory_share_film_tonight');
+    const filmShaped = kind === 'memory';
     try {
-      await removeSharedLink({ id: sharedLink.id });
-      eventManager.emit('SharedLinkDelete', sharedLink);
+      await removeSharedLink({ id: gone.id });
+      eventManager.emit('SharedLinkDelete', gone);
       toastManager.primary($t(ended ? 'shared_links_removed' : 'shared_links_turned_off'));
     } catch (error) {
       handleError(error, $t('errors.unable_to_delete_shared_link'));
+      return;
+    }
+    // the film Curator kept for a memory's link goes with it (an album's link never has one). When Curator cannot
+    // forget it now, the link is off all the same and Curator's nightly sweep forgets it; a quiet word says so, also
+    // when Curator could not say whether there was a film, for a link made the way a memory's is
+    if (curatorIsMine() && gone.type === SharedLinkType.Individual) {
+      const film = await forgetLinkFilm(gone.id);
+      if (film === 'later' || (film === 'unsure' && filmShaped)) {
+        toastManager.info(tonight);
+      }
     }
   };
 
