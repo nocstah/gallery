@@ -19,17 +19,27 @@ describe('temporal-utils', () => {
     { timeBucket: '2021-07-01', count: 50 },
   ];
 
-  it('should aggregate monthly buckets into year counts', () => {
+  it('should aggregate monthly buckets into year counts, newest first', () => {
     const years = aggregateYears(buckets);
     expect(years).toHaveLength(2);
-    expect(years[0]).toEqual({ year: 2020, count: 700, volumePercent: 100 });
-    expect(years[1]).toEqual({ year: 2021, count: 200, volumePercent: 29 });
+    expect(years[0]).toEqual({ year: 2021, count: 200, volumePercent: 29 });
+    expect(years[1]).toEqual({ year: 2020, count: 700, volumePercent: 100 });
+  });
+
+  it('should list the years newest first whatever order the buckets come in', () => {
+    const shuffled = [
+      { timeBucket: '2019-05-01', count: 1 },
+      { timeBucket: '2024-02-01', count: 1 },
+      { timeBucket: '1998-11-01', count: 1 },
+      { timeBucket: '2021-01-01', count: 1 },
+    ];
+    expect(aggregateYears(shuffled).map(({ year }) => year)).toEqual([2024, 2021, 2019, 1998]);
   });
 
   it('should calculate relative volume (max year = 100%)', () => {
     const years = aggregateYears(buckets);
-    expect(years[0].volumePercent).toBe(100);
-    expect(years[1].volumePercent).toBeLessThan(100);
+    expect(years.find(({ year }) => year === 2020)?.volumePercent).toBe(100);
+    expect(years.find(({ year }) => year === 2021)?.volumePercent).toBeLessThan(100);
   });
 
   it('should return all 12 months for a specific year', () => {
@@ -407,6 +417,14 @@ describe('TemporalPicker component', () => {
     expect(grid.className).toContain('grid-cols-3');
     // The old flex-wrap `basis-[...]` classes are gone; buttons are direct grid items.
     expect(grid.querySelectorAll(':scope > [data-testid^="year-btn-"]').length).toBe(2);
+  });
+
+  it('reads the years newest first, as the year strip and the Years overview do', () => {
+    const { getByTestId } = render(TemporalPicker, { props: { timeBuckets: buckets } });
+    const order = [...getByTestId('year-grid').querySelectorAll<HTMLElement>('[data-testid^="year-btn-"]')].map(
+      (button) => button.dataset.testid,
+    );
+    expect(order).toEqual(['year-btn-2023', 'year-btn-2022']);
   });
 
   it('guards the year and month chips against reduced motion', () => {

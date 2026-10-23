@@ -19,8 +19,10 @@ export function aggregateYears(buckets: Array<{ timeBucket: string; count: numbe
     yearMap.set(year, (yearMap.get(year) ?? 0) + b.count);
   }
   const maxCount = Math.max(...yearMap.values(), 1);
+  // Local Omarchy layer: newest first, as the year strip, the Years overview and every other list of years read (the
+  // owner's "newest first everywhere", 2026-10-23); the rail alone had run from the oldest year
   return [...yearMap]
-    .sort(([a], [b]) => a - b)
+    .sort(([a], [b]) => b - a)
     .map(([year, count]) => ({
       year,
       count,
