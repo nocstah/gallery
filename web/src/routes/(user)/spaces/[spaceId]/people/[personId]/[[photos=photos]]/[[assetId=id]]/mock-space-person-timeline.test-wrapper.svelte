@@ -14,6 +14,7 @@
     onTimelineBucketActivate?: (bucket: ActivatableTimelineBucket) => void;
     temporalAnchor?: TimelineTemporalAnchor;
     onTemporalAnchorResolved?: () => void;
+    beginning?: boolean;
     children?: Snippet;
     empty?: Snippet;
   }
@@ -29,6 +30,7 @@
     onTimelineBucketActivate,
     temporalAnchor,
     onTemporalAnchorResolved,
+    beginning = false,
     children,
     empty,
   }: Props = $props();
@@ -58,6 +60,7 @@
   data-space-id={spaceId}
   data-space={JSON.stringify(space ?? null)}
   data-has-timeline-manager={String(timelineManager !== undefined)}
+  data-beginning={String(beginning)}
 >
   <div data-testid="timeline-stub" data-options={serializedOptions}></div>
   <div data-testid="timeline-options">{serializedOptions}</div>

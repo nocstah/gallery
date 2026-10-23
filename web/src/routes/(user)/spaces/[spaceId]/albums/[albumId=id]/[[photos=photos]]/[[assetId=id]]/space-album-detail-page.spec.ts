@@ -876,6 +876,16 @@ describe('Space album detail page', () => {
     });
   });
 
+  // Local Omarchy layer: the album's own timeline ends where it begins (TimelineBeginning), as Photos does, only while it
+  // is unfiltered
+  it('ends the album where it begins, but not once a browse filter is set', async () => {
+    renderPage();
+    expect(screen.getByTestId('space-album-timeline')).toHaveAttribute('data-beginning', 'true');
+
+    await fireEvent.click(screen.getByTestId('filter-panel-add-person'));
+    await waitFor(() => expect(screen.getByTestId('space-album-timeline')).toHaveAttribute('data-beginning', 'false'));
+  });
+
   it('shows ActiveFiltersBar only when a browse filter is active', async () => {
     renderPage();
     expect(screen.queryByTestId('active-filters-bar')).not.toBeInTheDocument();

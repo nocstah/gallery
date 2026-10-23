@@ -287,6 +287,13 @@ describe('Spaces person detail page', () => {
     expect(screen.queryByTestId('person-asset-asset-1')).not.toBeInTheDocument();
   });
 
+  // Local Omarchy layer: the person's timeline ends where it begins, as Photos does (TimelineBeginning)
+  it("ends the Space person's timeline where it begins", () => {
+    renderPage();
+
+    expect(screen.getByTestId('space-person-timeline')).toHaveAttribute('data-beginning', 'true');
+  });
+
   // #889 — the asset viewer opened from this timeline gates add-to-album on the space capability.
   it('passes the space capability into the timeline for an editor', () => {
     renderPage();

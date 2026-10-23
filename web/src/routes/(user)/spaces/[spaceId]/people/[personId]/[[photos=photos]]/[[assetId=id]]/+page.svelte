@@ -622,7 +622,9 @@
   />
   <div class="relative min-h-0 flex-1">
     {#key person.id}
+      <!-- Local Omarchy layer: the person's timeline ends where it begins (TimelineBeginning), as Photos does -->
       <Timeline
+        beginning
         enableRouting={true}
         bind:timelineManager
         {options}

@@ -17,6 +17,7 @@
     onTimelineBucketActivate?: (bucket: ActivatableTimelineBucket) => void;
     temporalAnchor?: TimelineTemporalAnchor;
     onTemporalAnchorResolved?: () => void;
+    beginning?: boolean;
     empty?: Snippet;
   }
 
@@ -29,6 +30,7 @@
     timelineManager = $bindable(),
     space,
     grouping = 'day',
+    beginning = false,
     empty,
     // remaining props accepted but not used in mock rendering
     ...rest
@@ -58,6 +60,7 @@
   data-single-select={String(singleSelect)}
   data-mode={derivedMode}
   data-grouping={grouping}
+  data-beginning={String(beginning)}
   data-space={JSON.stringify(space ?? null)}
 >
   <div data-testid="timeline-options">{serializedOptions}</div>

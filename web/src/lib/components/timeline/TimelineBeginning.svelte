@@ -1,8 +1,9 @@
 <script lang="ts">
-  // Local Omarchy layer: where the archive begins (DESIGN.md, Ink). Under the oldest photo of Photos' own timeline, room
-  // of its own, the first stroke (一, drawn, not a character) and one quiet line: "It all begins here" and that photo's
-  // day. It shows once the timeline's last month is loaded, only where the timeline runs newest first by the day the
-  // photos were taken, and the leadout takes its height, so the scroll ends under it.
+  // Local Omarchy layer: where the archive begins (DESIGN.md, Ink). Under the oldest photo of a timeline a page browses
+  // unfiltered (Photos', an album's, a person's, a Space's), room of its own, the first stroke (一, drawn, not a
+  // character) and one quiet line: "It all begins here" and that photo's day. It shows once the timeline's last month
+  // is loaded, only where the timeline runs newest first by the day the photos were taken, and the leadout takes its
+  // height, so the scroll ends under it.
   import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import { locale } from '$lib/stores/preferences.store';
   import { AssetOrder, AssetOrderBy } from '@immich/sdk';

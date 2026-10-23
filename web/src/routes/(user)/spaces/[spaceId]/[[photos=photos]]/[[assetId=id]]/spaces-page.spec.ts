@@ -289,6 +289,23 @@ describe('Spaces page search URL state', () => {
     sdkMock.getSearchSuggestions.mockResolvedValue([]);
   });
 
+  // Local Omarchy layer: the Space's timeline ends where it begins (TimelineBeginning), as Photos does, only while it is
+  // browsed unfiltered: never with a filter on, nor while photos are picked to add
+  it('ends the Space where it begins, but not while photos are picked to add', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('timeline-stub')).toHaveAttribute('data-beginning', 'true'));
+
+    await enterSelectAssets();
+    await waitFor(() => expect(screen.getByTestId('timeline-stub')).toHaveAttribute('data-beginning', 'false'));
+  });
+
+  it('leaves the beginning out of a filtered Space', async () => {
+    mockPage.url = new URL('https://gallery.test/spaces/space-1/photos?city=Bergen');
+    renderPage();
+
+    await waitFor(() => expect(screen.getByTestId('timeline-stub')).toHaveAttribute('data-beginning', 'false'));
+  });
+
   it('renders search results from q without a local search input', () => {
     mockPage.url = new URL('https://gallery.test/spaces/space-1/photos?q=beach');
 

@@ -14,6 +14,7 @@
     onTemporalAnchorResolved?: () => void;
     withStacked?: boolean;
     space?: { id: string; canWrite: boolean };
+    beginning?: boolean;
     children?: Snippet;
     [key: string]: unknown;
   }
@@ -29,6 +30,7 @@
     onTemporalAnchorResolved,
     withStacked = false,
     space,
+    beginning = false,
     ...rest
   }: Props = $props();
 
@@ -58,7 +60,12 @@
   });
 </script>
 
-<div {...rest} data-testid="timeline-stub" data-has-timeline={String(timelineManager !== undefined)}>
+<div
+  {...rest}
+  data-testid="timeline-stub"
+  data-has-timeline={String(timelineManager !== undefined)}
+  data-beginning={String(beginning)}
+>
   <div data-testid="timeline-options">{JSON.stringify(options)}</div>
   <div data-testid="timeline-withstacked">{String(withStacked)}</div>
   <div data-testid="timeline-space">{JSON.stringify(space ?? null)}</div>

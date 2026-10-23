@@ -553,6 +553,22 @@ describe('album detail filter panel route', () => {
     );
   });
 
+  // Local Omarchy layer: the album's own timeline ends where it begins (TimelineBeginning), as Photos does, only while it
+  // is browsed unfiltered: never with a filter on, nor in the photo picker over it
+  it('ends the album where it begins, but not with a filter on or in the photo picker', async () => {
+    renderPage(albumFactory.build({ id: 'album-1', assetCount: 2 }));
+    const beginning = await screen.findByTestId('timeline-beginning-prop');
+    await waitFor(() => expect(beginning).toHaveTextContent('true'));
+
+    mockPage.url = new URL('https://gallery.test/albums/album-1?make=Apple');
+    await waitFor(() => expect(screen.getByTestId('timeline-beginning-prop')).toHaveTextContent('false'));
+    mockPage.url = new URL('https://gallery.test/albums/album-1');
+    await waitFor(() => expect(screen.getByTestId('timeline-beginning-prop')).toHaveTextContent('true'));
+
+    await fireEvent.click(screen.getByLabelText('add_photos'));
+    await waitFor(() => expect(screen.getByTestId('timeline-beginning-prop')).toHaveTextContent('false'));
+  });
+
   it('resets both filter states and label caches when navigating to another album', async () => {
     const firstAlbum = albumFactory.build({ id: 'album-1', assetCount: 2 });
     const secondAlbum = albumFactory.build({ id: 'album-2', assetCount: 2 });

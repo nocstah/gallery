@@ -89,7 +89,8 @@
      * (managers/timeline-heading); false for a timeline that is not the page's own (the map's photo panel).
      */
     barHeading?: boolean;
-    /** Local Omarchy layer: the timeline ends where the archive begins (TimelineBeginning; Photos' own, unfiltered) */
+    /** Local Omarchy layer: the timeline ends where it begins (TimelineBeginning: Photos', an album's, a person's, a
+     * Space's own, unfiltered) */
     beginning?: boolean;
     children?: Snippet;
     empty?: Snippet;

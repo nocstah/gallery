@@ -903,7 +903,10 @@
           />
         </div>
       {:else}
+        <!-- Local Omarchy layer: the Space's timeline ends where it begins (TimelineBeginning), as Photos does, while it
+             is browsed unfiltered; picking photos to add or a cover does not -->
         <Timeline
+          beginning={viewMode === 'view' && getActiveFilterCount(filters) === 0}
           enableRouting={false}
           bind:timelineManager
           {options}

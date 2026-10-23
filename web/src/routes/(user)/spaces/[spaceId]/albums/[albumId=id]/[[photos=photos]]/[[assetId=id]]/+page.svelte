@@ -776,7 +776,10 @@
         {:else if showBrowseFilteredEmpty}
           {@render filteredEmpty()}
         {:else}
+          <!-- Local Omarchy layer: the album's own timeline ends where it begins (TimelineBeginning), as Photos does,
+               while it is unfiltered -->
           <Timeline
+            beginning={browseActive === 0}
             enableRouting={true}
             options={browseOptions}
             bind:timelineManager

@@ -1163,7 +1163,10 @@
                 testId="empty-state-message"
               />
             {:else}
+              <!-- Local Omarchy layer: the album's own timeline ends where it begins (TimelineBeginning), as Photos does,
+                   while it is browsed unfiltered; the photo picker over it and choosing a cover do not -->
               <Timeline
+                beginning={isBrowseTimeline && activeFilterCount === 0}
                 enableRouting={viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : true}
                 {album}
                 {albumUsers}

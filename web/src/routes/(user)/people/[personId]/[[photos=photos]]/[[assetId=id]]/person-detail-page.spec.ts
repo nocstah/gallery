@@ -433,6 +433,13 @@ describe('Person detail page', () => {
     );
   });
 
+  // Local Omarchy layer: the person's timeline ends where it begins, as Photos does (TimelineBeginning)
+  it("ends the person's timeline where it begins", () => {
+    renderPage();
+
+    expect(screen.getByTestId('space-person-timeline')).toHaveAttribute('data-beginning', 'true');
+  });
+
   it('uses the scoped person token for identity-wide shared-space timelines', () => {
     renderPage({
       person: makePerson({

@@ -15,6 +15,7 @@
     grouping?: TimelineGrouping;
     onGroupingChange?: (grouping: TimelineGrouping) => void;
     onEscape?: () => void;
+    beginning?: boolean;
     children?: Snippet;
     empty?: Snippet;
   }
@@ -31,6 +32,7 @@
     grouping = 'day',
     onGroupingChange,
     onEscape,
+    beginning = false,
   }: Props = $props();
 
   const mountId = nextTimelineMountId();
@@ -80,6 +82,7 @@
 
 <div data-testid="timeline-options">{JSON.stringify(options)}</div>
 <div data-testid="timeline-mount-id">{mountId}</div>
+<div data-testid="timeline-beginning-prop">{String(beginning)}</div>
 <button
   type="button"
   data-testid="activate-year-bucket"
