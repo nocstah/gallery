@@ -60,4 +60,49 @@ describe('Logo Component', () => {
     const img = container.querySelector('img');
     expect(img?.className).toContain('custom-class');
   });
+
+  // Local Omarchy layer: the bar's mark in two layers, its ink a mask over the text's colour and its colour on top
+  describe('ink', () => {
+    const parts = (container: HTMLElement) => ({
+      box: container.querySelector('.ws-logo-ink'),
+      mask: container.querySelector<HTMLElement>('.ws-logo-ink-mask')?.style.getPropertyValue('--ws-logo-src'),
+      colour: container.querySelector('.ws-logo-ink-colour')?.getAttribute('src'),
+      size: container.querySelector('.ws-logo-ink-size')?.getAttribute('src'),
+    });
+
+    it('draws the mark from its ink and colour layers, in one box hidden from screen readers', () => {
+      const { container } = render(Logo, { props: { ink: true, size: 'tiny' } });
+      const { box, mask, colour, size } = parts(container);
+      expect(box?.getAttribute('aria-hidden')).toBe('true');
+      expect(box?.className).toContain('h-8');
+      expect(mask).toBe('url(/gallery-logo-mark-ink.svg)');
+      expect(colour).toBe('/gallery-logo-mark-colour.svg');
+      expect(size).toBe('/gallery-logo-mark-ink.svg');
+      for (const img of container.querySelectorAll('img')) {
+        expect(img.getAttribute('alt')).toBe('');
+      }
+    });
+
+    it('draws the wordmark from its own layers', () => {
+      const { container } = render(Logo, { props: { ink: true, variant: 'inline' } });
+      const { mask, colour } = parts(container);
+      expect(mask).toBe('url(/gallery-logo-inline-ink.svg)');
+      expect(colour).toBe('/gallery-logo-inline-colour.svg');
+    });
+
+    it('takes the same layers on a dark theme, the ink from the text around it', () => {
+      themeManager.setPreference(ThemePreference.Dark);
+      const { container } = render(Logo, { props: { ink: true } });
+      const { mask, colour } = parts(container);
+      expect(mask).toBe('url(/gallery-logo-mark-ink.svg)');
+      expect(colour).toBe('/gallery-logo-mark-colour.svg');
+    });
+
+    it('masks the stacked logo whole, with no colour layer', () => {
+      const { container } = render(Logo, { props: { ink: true, variant: 'stacked' } });
+      const { mask, colour } = parts(container);
+      expect(mask).toBe('url(/gallery-logo-stacked.svg)');
+      expect(colour).toBeUndefined();
+    });
+  });
 });

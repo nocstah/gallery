@@ -5,8 +5,11 @@
     variant?: 'icon' | 'inline' | 'stacked';
     size?: 'tiny' | 'small' | 'medium' | 'large' | 'giant';
     transparent?: boolean;
-    // Local Omarchy layer: drawn in the surrounding text's colour, the logo file used only as a mask, so the bar's mark
-    // takes each theme's ink instead of the file's fixed ink or paper. Decorative: the link around it carries the name.
+    // Local Omarchy layer: the logo in two layers in one box, so the bar's mark takes each theme's ink where the mark
+    // is ink and keeps its own colour where it has one: the variant's ink file is a mask over the surrounding text's
+    // colour, its colour file an image on top (icon: gallery-logo-mark-ink/-colour, inline: gallery-logo-inline-ink/
+    // -colour). The committed ink files are the light logo and the colour files empty, so an unbranded build draws the
+    // mark as before; a brand ships its own (branding/kioku). Decorative: the link around it carries the name.
     ink?: boolean;
     class?: string;
   };
@@ -45,12 +48,32 @@
   });
 
   const classes = $derived([sizeClasses[size], variantClasses[variant], className].filter(Boolean).join(' '));
+
+  // the ink mode's layers; stacked has none of its own, so its whole file is the mask, with no colour on top
+  const layers = $derived.by(() => {
+    switch (variant) {
+      case 'inline': {
+        return { ink: '/gallery-logo-inline-ink.svg', colour: '/gallery-logo-inline-colour.svg' };
+      }
+      case 'stacked': {
+        return { ink: src, colour: undefined };
+      }
+      default: {
+        return { ink: '/gallery-logo-mark-ink.svg', colour: '/gallery-logo-mark-colour.svg' };
+      }
+    }
+  });
 </script>
 
 {#if ink}
-  <!-- the hidden image gives the mask its width at the logo's own proportions -->
-  <span class="ws-logo-ink {classes}" style:--ws-logo-src="url({src})" aria-hidden="true">
-    <img {src} alt="" class="ws-logo-ink-size" />
+  <!-- the hidden image gives the box its width at the logo's own proportions; the ink layer and the colour layer fill
+       it, the colour over the ink and outside its mask -->
+  <span class="ws-logo-ink {classes}" aria-hidden="true">
+    <span class="ws-logo-ink-mask" style:--ws-logo-src="url({layers.ink})"></span>
+    {#if layers.colour}
+      <img src={layers.colour} alt="" class="ws-logo-ink-colour" />
+    {/if}
+    <img src={layers.ink} alt="" class="ws-logo-ink-size" />
   </span>
 {:else}
   <img {src} class={classes} alt="Gallery logo" />
@@ -58,10 +81,22 @@
 
 <style>
   .ws-logo-ink {
+    position: relative;
     display: inline-flex;
+  }
+  .ws-logo-ink-mask {
+    position: absolute;
+    inset: 0;
     background-color: currentColor;
     -webkit-mask: var(--ws-logo-src) center / contain no-repeat;
     mask: var(--ws-logo-src) center / contain no-repeat;
+  }
+  .ws-logo-ink-colour {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
   .ws-logo-ink-size {
     height: 100%;
