@@ -749,6 +749,8 @@
   "backup_background_stale_title": "Background backup has not run recently",
   "backup_background_warning_body": "Gallery has not checked for new photos in the background recently.",
   "backup_background_warning_title": "Background backup is delayed",
+  "bar_menu_hide_sidebar": "Hide the sidebar",
+  "bar_menu_show_sidebar": "Show the sidebar",
   "bulk_add_confirmation": "This adds every photo in your library to this space. It runs in the background and can take a few minutes for a large library.",
   "bulk_add_started": "Adding all your photos to this space... You'll be notified when it's done.",
   "bulk_delete_duplicates_confirmation": "Are you sure you want to bulk delete {count, plural, one {# duplicate photo} other {# duplicate photos}}? This will keep the largest photo of each group and permanently delete all other duplicates. You cannot undo this action!",

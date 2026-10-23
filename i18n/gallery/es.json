@@ -723,6 +723,8 @@
   "backup_background_stale_title": "La copia de seguridad en segundo plano no se ha ejecutado recientemente",
   "backup_background_warning_body": "Gallery no ha buscado fotos nuevas en segundo plano recientemente.",
   "backup_background_warning_title": "La copia de seguridad en segundo plano va con retraso",
+  "bar_menu_hide_sidebar": "Ocultar la barra lateral",
+  "bar_menu_show_sidebar": "Mostrar la barra lateral",
   "bulk_add_confirmation": "Esto añadirá todas las fotos de tu biblioteca a este Space. Se ejecuta en segundo plano y puede tardar unos minutos en bibliotecas grandes.",
   "bulk_add_started": "Añadiendo todas tus fotos a este Space... Te avisaremos cuando termine.",
   "change_cover_photo": "Cambiar portada",

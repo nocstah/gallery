@@ -723,6 +723,8 @@
   "backup_background_stale_title": "Back-up op de achtergrond is recent niet uitgevoerd",
   "backup_background_warning_body": "Gallery heeft recent niet op de achtergrond op nieuwe foto's gecontroleerd.",
   "backup_background_warning_title": "Back-up op de achtergrond is vertraagd",
+  "bar_menu_hide_sidebar": "Zijbalk verbergen",
+  "bar_menu_show_sidebar": "Zijbalk tonen",
   "bulk_add_confirmation": "Hiermee worden alle foto's uit je bibliotheek aan deze Space toegevoegd. Dit gebeurt op de achtergrond en kan bij grote bibliotheken enkele minuten duren.",
   "bulk_add_started": "Al je foto's worden aan deze Space toegevoegd... Je krijgt bericht zodra dit klaar is.",
   "change_cover_photo": "Omslag wijzigen",

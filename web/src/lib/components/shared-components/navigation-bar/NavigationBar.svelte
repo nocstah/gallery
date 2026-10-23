@@ -99,6 +99,10 @@
   // hand from 850px up (Ctrl+B does the same), so it stays in the expanded layout too
   const isHiddenLayout = $derived(railAware && sidebarModeStore.layout === 'hidden');
   const togglesHidden = $derived(railAware && (isExpandedLayout || isHiddenLayout));
+  // Local Omarchy layer: named by what a press does to the sidebar, as the one bar's (it said Collapse and Expand)
+  const menuLabel = $derived(
+    isHiddenLayout ? $t('bar_menu_show_sidebar') : togglesHidden ? $t('bar_menu_hide_sidebar') : $t('main_menu'),
+  );
   const menuButtonHidden = $derived(isExpandedLayout && !railAware);
   const logoVariant = $derived(isExpandedLayout ? 'inline' : 'icon');
 </script>
@@ -120,8 +124,8 @@
           color="secondary"
           variant="ghost"
           size="medium"
-          aria-label={isHiddenLayout ? $t('expand') : togglesHidden ? $t('collapse') : $t('main_menu')}
-          title={isHiddenLayout ? $t('expand') : togglesHidden ? $t('collapse') : undefined}
+          aria-label={menuLabel}
+          title={togglesHidden ? menuLabel : undefined}
           icon={mdiMenu}
           onclick={() => {
             if (togglesHidden) {
@@ -259,6 +263,8 @@
             class="flex ps-2"
             onclick={() => (shouldShowAccountInfoPanel = !shouldShowAccountInfoPanel)}
             title="{authManager.user.name} ({authManager.user.email})"
+            aria-label={authManager.user.name}
+            aria-expanded={shouldShowAccountInfoPanel}
           >
             {#key authManager.user}
               <UserAvatar user={authManager.user} size="md" noTitle interactive />

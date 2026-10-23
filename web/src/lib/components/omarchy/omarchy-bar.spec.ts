@@ -14,13 +14,16 @@ const mocks = vi.hoisted(() => ({
     notifications: [] as { id: string }[],
     refresh: vi.fn().mockResolvedValue(undefined),
   },
+  sidebarModeStore: {
+    layout: 'expanded' as 'overlay' | 'rail' | 'expanded' | 'hidden',
+    toggleHidden: vi.fn(),
+    toggleRailOverlay: vi.fn(),
+  },
 }));
 
 vi.mock('$lib/stores/media-query-manager.svelte', () => ({ mediaQueryManager: mocks.mediaQueryManager }));
 vi.mock('$lib/stores/notification-manager.svelte', () => ({ notificationManager: mocks.notificationManager }));
-vi.mock('$lib/stores/sidebar-mode.svelte', () => ({
-  sidebarModeStore: { layout: 'expanded', toggleHidden: vi.fn(), toggleRailOverlay: vi.fn() },
-}));
+vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
 vi.mock('$lib/stores/sidebar.svelte', () => ({ sidebarStore: { isOpen: false, toggle: vi.fn() } }));
 vi.mock('$app/state', () => ({ page: { url: new URL('https://gallery.test/photos') } }));
 vi.mock('$lib/managers/auth-manager.svelte', () => ({
@@ -52,10 +55,11 @@ vi.mock('$lib/components/shared-components/navigation-bar/NotificationPanel.svel
   return { default: module.default };
 });
 
-const renderBar = () =>
-  render(TestWrapper as Component<{ component: typeof OmarchyBar; componentProps: { onUploadClick: () => void } }>, {
+type BarProps = { onUploadClick: () => void; railAware?: boolean };
+const renderBar = (props: Partial<BarProps> = {}) =>
+  render(TestWrapper as Component<{ component: typeof OmarchyBar; componentProps: BarProps }>, {
     component: OmarchyBar,
-    componentProps: { onUploadClick: vi.fn() },
+    componentProps: { onUploadClick: vi.fn(), ...props },
   });
 
 describe('OmarchyBar notifications', () => {
@@ -104,6 +108,40 @@ describe('OmarchyBar notifications', () => {
     await fireEvent.click(screen.getByTestId('bar-account'));
     expect(screen.queryByTestId('account-notifications')).not.toBeInTheDocument();
     expect(document.querySelector('#account-info-panel')).toBeInTheDocument();
+  });
+});
+
+// Local Omarchy layer: the account is named by the person (its ring's initial had been its name), and the menu button
+// by what a press does to the sidebar (it said Collapse and Expand)
+describe('OmarchyBar names', () => {
+  beforeEach(() => {
+    mocks.mediaQueryManager.isPhone = false;
+    mocks.notificationManager.notifications = [];
+    mocks.sidebarModeStore.layout = 'expanded';
+    sdkMock.getAboutInfo.mockResolvedValue({} as never);
+  });
+
+  it('names the account by the person', () => {
+    renderBar();
+    expect(screen.getByTestId('bar-account')).toHaveAccessibleName('Test');
+  });
+
+  it("adds what is unread to the account's name on a phone, where its dot stands for the bell", () => {
+    mocks.mediaQueryManager.isPhone = true;
+    mocks.notificationManager.notifications = [{ id: 'one' }];
+    renderBar();
+    expect(screen.getByTestId('bar-account')).toHaveAccessibleName('Test, notifications_unread_count');
+  });
+
+  it.each`
+    layout        | name
+    ${'expanded'} | ${'bar_menu_hide_sidebar'}
+    ${'hidden'}   | ${'bar_menu_show_sidebar'}
+    ${'rail'}     | ${'main_menu'}
+  `('names the menu button $name in the $layout layout', ({ layout, name }) => {
+    mocks.sidebarModeStore.layout = layout;
+    renderBar({ railAware: true });
+    expect(document.querySelector('#top-menu-button')).toHaveAccessibleName(name);
   });
 });
 

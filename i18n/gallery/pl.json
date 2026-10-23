@@ -723,6 +723,8 @@
   "backup_background_stale_title": "Kopia zapasowa w tle nie działała od dłuższego czasu",
   "backup_background_warning_body": "Gallery nie sprawdzała ostatnio nowych zdjęć w tle.",
   "backup_background_warning_title": "Kopia zapasowa w tle jest opóźniona",
+  "bar_menu_hide_sidebar": "Ukryj panel boczny",
+  "bar_menu_show_sidebar": "Pokaż panel boczny",
   "bulk_add_confirmation": "Spowoduje to dodanie wszystkich zdjęć z Twojej biblioteki do tego Space. Operacja działa w tle i przy dużych bibliotekach może potrwać kilka minut.",
   "bulk_add_started": "Dodawanie wszystkich Twoich zdjęć do tego Space... Otrzymasz powiadomienie po zakończeniu.",
   "change_cover_photo": "Zmień okładkę",

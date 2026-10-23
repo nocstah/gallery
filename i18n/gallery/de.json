@@ -725,6 +725,8 @@
   "backup_background_stale_title": "Hintergrund-Backup wurde kürzlich nicht ausgeführt",
   "backup_background_warning_body": "Gallery hat im Hintergrund kürzlich nicht nach neuen Fotos gesucht.",
   "backup_background_warning_title": "Hintergrund-Backup ist verzögert",
+  "bar_menu_hide_sidebar": "Seitenleiste ausblenden",
+  "bar_menu_show_sidebar": "Seitenleiste einblenden",
   "bulk_add_confirmation": "Dadurch werden alle Fotos aus deiner Bibliothek zu diesem Space hinzugefügt. Dies läuft im Hintergrund und kann bei großen Bibliotheken einige Minuten dauern.",
   "bulk_add_started": "Alle deine Fotos werden zu diesem Space hinzugefügt... Du wirst benachrichtigt, sobald es fertig ist.",
   "change_cover_photo": "Titelbild ändern",

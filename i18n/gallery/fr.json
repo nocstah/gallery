@@ -723,6 +723,8 @@
   "backup_background_stale_title": "La sauvegarde en arrière-plan n'a pas été exécutée récemment",
   "backup_background_warning_body": "Gallery n'a pas vérifié la présence de nouvelles photos en arrière-plan récemment.",
   "backup_background_warning_title": "La sauvegarde en arrière-plan est retardée",
+  "bar_menu_hide_sidebar": "Masquer la barre latérale",
+  "bar_menu_show_sidebar": "Afficher la barre latérale",
   "bulk_add_confirmation": "Ceci ajoutera toutes les photos de votre bibliothèque à cet espace. L'opération s'exécute en arrière-plan et peut prendre quelques minutes pour les grandes bibliothèques.",
   "bulk_add_started": "Ajout de toutes vos photos à cet espace... Vous serez notifié une fois l'opération terminée.",
   "change_cover_photo": "Changer la couverture",

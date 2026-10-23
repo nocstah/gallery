@@ -82,8 +82,9 @@ const renderNavigationBar = (props: NavigationBarProps = {}) =>
     componentProps: props,
   });
 
-// Local Omarchy layer: where it hides and shows the sidebar by hand the button is named collapse / expand
-const menuButton = () => screen.getByRole('button', { name: /^(main_menu|collapse|expand)$/i });
+// Local Omarchy layer: where it hides and shows the sidebar by hand the button is named by what it does to it
+const menuButton = () =>
+  screen.getByRole('button', { name: /^(main_menu|bar_menu_hide_sidebar|bar_menu_show_sidebar)$/i });
 
 // Cross-checks the real Logo component's own rendered class, not just the wrapper span's
 // test-facing `data-variant` - a mutation that changes only Logo's `variant` prop while
@@ -135,7 +136,7 @@ describe('NavigationBar sidebar integration', () => {
     mocks.sidebarModeStore.layout = layout;
 
     renderNavigationBar({ railAware: true });
-    expect(menuButton()).toHaveAccessibleName(layout === 'hidden' ? 'expand' : 'collapse');
+    expect(menuButton()).toHaveAccessibleName(layout === 'hidden' ? 'bar_menu_show_sidebar' : 'bar_menu_hide_sidebar');
     menuButton().click();
 
     expect(mocks.sidebarModeStore.toggleHidden).toHaveBeenCalledOnce();
@@ -162,6 +163,13 @@ describe('NavigationBar sidebar integration', () => {
 
     expect(mocks.sidebarStore.toggle).toHaveBeenCalledOnce();
     expect(mocks.sidebarModeStore.toggleRailOverlay).not.toHaveBeenCalled();
+  });
+
+  // Local Omarchy layer: the account is named by the person; the avatar's initial had been its only name
+  it('names the account button by the person', () => {
+    renderNavigationBar({ railAware: true });
+
+    expect(screen.getByRole('button', { name: 'Test' })).toHaveAttribute('aria-expanded', 'false');
   });
 
   // Spec coverage 27: 4rem cannot hold the hamburger and the logo together. Rail takes 9rem

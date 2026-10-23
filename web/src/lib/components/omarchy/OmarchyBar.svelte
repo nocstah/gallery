@@ -61,6 +61,13 @@
       ? `${authManager.user.name} (${authManager.user.email}) · ${$t('notifications_unread_count', { values: { count: unread } })}`
       : `${authManager.user.name} (${authManager.user.email})`,
   );
+  // the account is named by the person, where the initial in its ring had been its only name ("R"); on a phone it
+  // also says what is unread, as its dot does
+  const accountLabel = $derived(
+    bellInAccount && unread > 0
+      ? `${authManager.user.name}, ${$t('notifications_unread_count', { values: { count: unread } })}`
+      : authManager.user.name,
+  );
 
   onMount(async () => {
     try {
@@ -79,6 +86,12 @@
   const isHiddenLayout = $derived(railAware && sidebarModeStore.layout === 'hidden');
   const togglesHidden = $derived(railAware && (isExpandedLayout || isHiddenLayout));
   const column = $derived(isExpandedLayout ? 'wide' : isRail ? 'rail' : 'narrow');
+
+  // the menu button says what a press does: where it puts the sidebar away and back by hand, "Hide the sidebar" and
+  // "Show the sidebar" (it was named "Collapse" and "Expand", which said nothing of what); elsewhere it opens the menu
+  const menuLabel = $derived(
+    isHiddenLayout ? $t('bar_menu_show_sidebar') : togglesHidden ? $t('bar_menu_hide_sidebar') : $t('main_menu'),
+  );
 
   const toggleMenu = () => {
     if (togglesHidden) {
@@ -99,8 +112,8 @@
       type="button"
       id={menuButtonId}
       class="ws-bar-icon"
-      aria-label={isHiddenLayout ? $t('expand') : togglesHidden ? $t('collapse') : $t('main_menu')}
-      title={isHiddenLayout ? $t('expand') : togglesHidden ? $t('collapse') : undefined}
+      aria-label={menuLabel}
+      title={togglesHidden ? menuLabel : undefined}
       onclick={toggleMenu}
       onmousedown={(event: MouseEvent) => {
         if (sidebarStore.isOpen) {
@@ -186,6 +199,7 @@
           class="ws-bar-avatar"
           onclick={() => (showAccount = !showAccount)}
           title={accountTitle}
+          aria-label={accountLabel}
           aria-expanded={showAccount}
           data-testid="bar-account"
         >
