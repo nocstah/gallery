@@ -33,8 +33,8 @@ A second run changes nothing.
   and the shared memory player's tab (`Kioku · Memory`, then `<memory> · Kioku`).
 - **Help › About**, the owner's section beside the projects' links, says "Kioku is built on Noodle Gallery and
   Immich" (`about_credit`, in the ten maintained languages): the AGPL credit stays in front of the owner.
-- **The icons, logos and link preview**, once `assets/` has them (below). The open-in-app banner keeps the phone
-  app's own icon (`noodle-app-icon-180.png`, from Noodle's iOS launcher icon), since it offers the phone app.
+- **The icons, logos and link preview**: the mark, 記 in ink, from `assets/` (below). The open-in-app banner keeps
+  the phone app's own icon (`noodle-app-icon-180.png`, from Noodle's iOS launcher icon), since it offers the phone app.
 - **The loader writes itself** (the mark drawn stroke by stroke, then let go), so it no longer spins as well:
   `LoadingSpinner` loses its `animate-spin` and the boot screen its `loadspin`. The login card shows the still mark
   rather than the loader, which would write itself every few seconds there. A `GALLERY_BRAND=noodle` build keeps
@@ -115,15 +115,15 @@ beats the resized one. `favicon.ico` ships as drawn, or is assembled from the 16
 
 | Source                                     | Becomes                                                                      |
 | ------------------------------------------ | ---------------------------------------------------------------------------- |
-| `favicon.png` (square, 256 px or more)     | `favicon.png`, `favicon-{256,144,96,48,32,24,16}.png`                        |
+| `favicon.png` (256 px, an opaque paper tile) | `favicon.png`, `favicon-{256,144,96,48,32,24,16}.png`                      |
 | `favicon-{48,32,24,16}.png` (optional)     | the small sizes, drawn for their pixels; 24 px is new with Kioku             |
 | `favicon.ico` (optional)                   | `favicon.ico`                                                                |
 | `app-icon.png` (opaque, 1024 px, maskable) | `manifest-icon-{512,192}.maskable.png`, `apple-icon-180.png`                 |
 | `apple-icon-180.png` (optional)            | `apple-icon-180.png`                                                         |
 | `feature-panel.png` (1200 × 630)           | the link preview of a shared link without a photo of its own                 |
-| `logo-mark.svg`, `logo-mark-dark.svg`      | `gallery-logo-mark{,-dark}.svg`: the login backdrop, the icon-sized logos    |
-| `loader.svg`, `loader-dark.svg`            | `gallery-loader{,-dark}.svg`: the loading mark, the login card's logo        |
-| `logo-inline-{light,dark}.svg`             | `gallery-logo-inline-{light,dark}.svg`: the bar on a wide screen             |
+| `logo-mark.svg`, `logo-mark-dark.svg`      | `gallery-logo-mark{,-dark}.svg`: the still mark (the login card and its backdrop, the icon-sized logos; the bar draws it as a mask in the theme's ink) |
+| `loader.svg`, `loader-dark.svg`            | `gallery-loader{,-dark}.svg`: the mark writing itself while a page loads, and on the boot screen |
+| `logo-inline-{light,dark}.svg`             | `gallery-logo-inline-{light,dark}.svg`: mark and wordmark, the bar on a wide screen |
 | `logo-stacked.svg`, `logo-stacked-dark.svg` | `gallery-logo-stacked{,-dark}.svg`                                          |
 
 ## On the desktop, by hand

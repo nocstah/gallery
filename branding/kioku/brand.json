@@ -45,7 +45,7 @@
     "files": [
       {
         "source": "favicon.png",
-        "why": "the tab and bookmark icon: square, transparent, 256 px or more",
+        "why": "the tab and bookmark icon: square, 256 px or more, the mark on an opaque paper tile (ink on a transparent ground vanishes on a dark tab strip)",
         "make": [
           { "target": "web/static/favicon.png", "size": 256 },
           { "target": "web/static/favicon-256.png", "size": 256 },
@@ -73,9 +73,9 @@
       },
       { "source": "apple-icon-180.png", "why": "the home-screen icon on an iPhone", "optional": "made from app-icon.png", "make": [{ "target": "web/static/apple-icon-180.png", "size": 180 }] },
       { "source": "feature-panel.png", "why": "the link preview for a shared link without a photo of its own (1200 × 630); the server's own share tags point at it too", "make": [{ "target": "web/static/feature-panel.png" }] },
-      { "source": "logo-mark.svg", "why": "the mark: the login backdrop, the bar on a narrow screen, every icon-sized logo (light)", "make": [{ "target": "web/static/gallery-logo-mark.svg" }] },
+      { "source": "logo-mark.svg", "why": "the still mark: the login card and its backdrop, the bar on a narrow screen, every icon-sized logo (light)", "make": [{ "target": "web/static/gallery-logo-mark.svg" }] },
       { "source": "logo-mark-dark.svg", "why": "the mark on a dark theme", "make": [{ "target": "web/static/gallery-logo-mark-dark.svg" }] },
-      { "source": "loader.svg", "why": "the mark while a page loads, and the login card's logo (light)", "make": [{ "target": "web/static/gallery-loader.svg" }] },
+      { "source": "loader.svg", "why": "the mark writing itself while a page loads, and on the boot screen (light); it does not also spin", "make": [{ "target": "web/static/gallery-loader.svg" }] },
       { "source": "loader-dark.svg", "why": "the loader on a dark theme", "make": [{ "target": "web/static/gallery-loader-dark.svg" }] },
       { "source": "logo-inline-light.svg", "why": "mark and wordmark in a row: the bar on a wide screen (light)", "make": [{ "target": "web/static/gallery-logo-inline-light.svg" }] },
       { "source": "logo-inline-dark.svg", "why": "the inline logo on a dark theme", "make": [{ "target": "web/static/gallery-logo-inline-dark.svg" }] },
