@@ -1,22 +1,21 @@
 <script lang="ts">
   // Local Omarchy layer: a shared link as a calm row of the Shared links page, where upstream drew a card: its cover,
   // what it shows in ink (the album's name, the memory's, or how many photos), and one muted line on who can open it
-  // and when it ends, in words and calendar days (utils/shared-link-words), with what it allows beyond looking. Its
-  // actions sit at the row's end: Copy, Edit and Turn off, which deletes the link (the memory Share sheet's Turn off
-  // does the same), so whoever opens it reads that it has ended. A link that has ended is Edit, to open it again, and
-  // Remove. On a phone the three fold into one ⋮.
+  // and when it ends, in words and calendar days, with what it allows beyond looking (SharedLinkFacts, the line the
+  // Shared feed and the Share sheets draw too). Its actions sit at the row's end: Copy, Edit and Turn off, which
+  // deletes the link (the memory Share sheet's Turn off does the same), so whoever opens it reads that it has ended. A
+  // link that has ended is Edit, to open it again, and Remove. On a phone the three fold into one ⋮.
   import { goto } from '$app/navigation';
+  import SharedLinkFacts from '$lib/components/omarchy/SharedLinkFacts.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { Route } from '$lib/route';
   import { asUrl } from '$lib/services/shared-link.service';
-  import { locale } from '$lib/stores/preferences.store';
   import { copyToClipboard, getAssetMediaUrl } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
   import { linkEnd, linkKind, linkName } from '$lib/utils/shared-link-words';
   import { AssetMediaSize, removeSharedLink, type SharedLinkResponseDto } from '@immich/sdk';
   import { ContextMenuButton, Icon, MenuItemType, modalManager, toastManager, type ActionItem } from '@immich/ui';
   import { mdiContentCopy, mdiImageMultipleOutline, mdiLinkOff, mdiPencilOutline, mdiTrashCanOutline } from '@mdi/js';
-  import { DateTime } from 'luxon';
   import { t } from 'svelte-i18n';
 
   type Props = {
@@ -39,52 +38,6 @@
   const named = $derived(linkName($t, sharedLink));
   const title = $derived(named.name);
   const what = $derived(named.what);
-
-  const day = (date: DateTime) =>
-    date.setLocale($locale).toLocaleString({
-      day: 'numeric',
-      month: 'short',
-      ...(date.year !== DateTime.now().year && { year: 'numeric' }),
-    });
-  const endWords = $derived.by(() => {
-    switch (end.state) {
-      case 'never': {
-        return $t('shared_links_row_never');
-      }
-      case 'ended': {
-        return $t('shared_links_row_ended', { values: { when: end.when, date: day(end.date) } });
-      }
-      default: {
-        return $t('shared_links_row_ends', { values: { when: end.when, days: end.days, date: day(end.date) } });
-      }
-    }
-  });
-  const endTitle = $derived(
-    end.state === 'never' ? undefined : end.date.setLocale($locale).toLocaleString(DateTime.DATETIME_MED),
-  );
-
-  // the line: what it is (where the title does not say), who can open it, when it ends, then what it lets a visitor
-  // do beyond looking
-  type Fact = { text: string; end?: boolean; ended?: boolean; title?: string };
-  // between two facts, as text (spaces and all), so they read apart
-  const separator = ' · ';
-  const facts = $derived.by(() => {
-    const list: Fact[] = [];
-    if (what) {
-      list.push({ text: what });
-    }
-    list.push(
-      { text: $t('shared_links_row_who', { values: { password: sharedLink.password ? 'yes' : 'no' } }) },
-      { text: endWords, end: true, ended, title: endTitle },
-    );
-    if (sharedLink.allowUpload) {
-      list.push({ text: $t('shared_links_row_upload') });
-    }
-    if (sharedLink.showMetadata) {
-      list.push({ text: $t('shared_links_row_location') });
-    }
-    return list;
-  });
 
   const copy = () => copyToClipboard(asUrl(sharedLink));
 
@@ -140,12 +93,7 @@
     {:else}
       <a class="ws-link-title" id={titleId} href={Route.viewSharedLink(sharedLink)}>{title}</a>
     {/if}
-    <p class="ws-link-facts" data-testid="shared-link-facts">
-      {#each facts as fact, index (index)}{#if index > 0}{separator}{/if}<span
-          class={{ 'ws-link-end': fact.end, 'ws-link-ended': fact.ended }}
-          title={fact.title}>{fact.text}</span
-        >{/each}
-    </p>
+    <SharedLinkFacts {sharedLink} {what} />
   </div>
   <div class="ws-link-actions">
     {#each actions as action (action.title)}
@@ -235,19 +183,6 @@
   }
   .ws-link-row[data-ended] .ws-link-title {
     color: var(--immich-ui-muted);
-  }
-  /* who can open it and when it ends, in muted meta; a link that has ended says so in the danger role */
-  .ws-link-facts {
-    color: var(--immich-ui-muted);
-    font-size: var(--ws-text-meta);
-    line-height: 1.45;
-  }
-  /* when it ends keeps its words together ("Ends Nov 17" had broken after "Nov" on a phone) */
-  .ws-link-end {
-    white-space: nowrap;
-  }
-  .ws-link-ended {
-    color: var(--ws-danger);
   }
   /* the actions: quiet words with their icons; Turn off in the danger role, inverted in it when pointed at, as a
      menu's destructive row */

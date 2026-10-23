@@ -2,7 +2,8 @@
   // Local Omarchy layer: Share memory, as a postcard ("Postcard: say it, then share", the owner, 2026-10-23, for the
   // critique's P1). One sentence at the top says what a link shares, worded from the choices as they change: who
   // (anyone with the link, and its password once one is set), what (this memory's photos and its music as a film, or
-  // one video file) and until when (a date, or until it is turned off). Then the format, how long the link stays open
+  // one video file) and when the link ends, in the words Shared links says it in (utils/shared-link-words: "The link
+  // ends Nov 22.", "… in 5 days.", "… never ends."). Then the format, how long the link stays open
   // as the layer's segmented control (30 days chosen, as on every link the Share sheets make: shareLinkExpiry), a
   // switch that adds a password, and one action, Make a link; a video format also downloads its file, which shares
   // nothing. The link made shows in place with its QR, Copy, Edit and Turn off (components/omarchy/ShareLinkPanel),
@@ -32,6 +33,7 @@
   import { copyToClipboard } from '$lib/utils';
   import { curator, FILM_MOST_SECONDS, type FilmRequest } from '$lib/utils/curator';
   import { serverDetail } from '$lib/utils/handle-error';
+  import { linkEnd, linkEndDay } from '$lib/utils/shared-link-words';
   import {
     getAllSharedLinks,
     getSharedLinkById,
@@ -42,7 +44,6 @@
   } from '@immich/sdk';
   import { Field, Icon, Modal, ModalBody, ModalFooter, modalManager, PasswordInput, Switch } from '@immich/ui';
   import { mdiCellphone, mdiMonitor, mdiOpenInNew, mdiPlayCircleOutline, mdiShareVariant } from '@mdi/js';
-  import { DateTime } from 'luxon';
   import { onDestroy, onMount, tick } from 'svelte';
   import { t } from 'svelte-i18n';
 
@@ -108,21 +109,28 @@
     progress ? new Intl.NumberFormat($locale, { style: 'percent' }).format(progress.progress) : '',
   );
 
-  const dateOf = (iso: string) => DateTime.fromISO(iso).setLocale($locale).toLocaleString(DateTime.DATE_MED);
-  /** who sees what until when, in one sentence */
+  /** when the link ends, as a sentence in the Shared links page's words: by calendar days ("today", "tomorrow", "in 5
+   * days"), then the day ("Nov 22"), or never. A day written with an abbreviation's full stop ("am 22. Nov.") ends the
+   * sentence with it, not with a second one. */
+  const endSentence = (expiresAt: string | null) => {
+    const end = linkEnd(expiresAt);
+    const when = end.state === 'ends' ? end.when : end.state;
+    return $t('memory_share_scope_end', {
+      values: {
+        when,
+        days: end.state === 'ends' ? end.days : 0,
+        date: end.state === 'never' ? '' : linkEndDay(end.date, $locale),
+      },
+    }).replace(/\.\.$/, '.');
+  };
+  /** who sees what, and when the link ends: one sentence and its end */
   const scope = (
     what: MemoryLinkKind,
     facts: { password: boolean; expiresAt: string | null; count: number; music: boolean },
   ) =>
-    $t(what === 'memory' ? 'memory_share_scope_film' : 'memory_share_scope_video', {
-      values: {
-        password: facts.password ? 'yes' : 'no',
-        count: facts.count,
-        music: facts.music ? 'yes' : 'no',
-        ends: facts.expiresAt ? 'yes' : 'no',
-        date: facts.expiresAt ? dateOf(facts.expiresAt) : '',
-      },
-    });
+    `${$t(what === 'memory' ? 'memory_share_scope_film' : 'memory_share_scope_video', {
+      values: { password: facts.password ? 'yes' : 'no', count: facts.count, music: facts.music ? 'yes' : 'no' },
+    })} ${endSentence(facts.expiresAt)}`;
 
   // what a link made now would share, from the choices
   const planned = $derived(

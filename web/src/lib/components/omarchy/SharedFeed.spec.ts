@@ -1,10 +1,19 @@
-import { ReactionType, UserAvatarColor, type ActivityResponseDto, type UserResponseDto } from '@immich/sdk';
+import {
+  AssetTypeEnum,
+  ReactionType,
+  SharedLinkType,
+  UserAvatarColor,
+  type ActivityResponseDto,
+  type UserResponseDto,
+} from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { addMessages, init } from 'svelte-i18n';
 import en from '$i18n/en.json';
-import { reactionItems, sortItems, spaceItems, type FeedItem } from '$lib/utils/shared-feed';
+import { linkItems, reactionItems, sortItems, spaceItems, type FeedItem } from '$lib/utils/shared-feed';
 import { albumFactory } from '@test-data/factories/album-factory';
+import { assetFactory } from '@test-data/factories/asset-factory';
+import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 import SharedFeed from './SharedFeed.svelte';
 
 // Local Omarchy layer: the Shared page's feed (components/omarchy/SharedFeed)
@@ -140,6 +149,61 @@ describe('SharedFeed', () => {
     expect(comments.querySelector('.ws-feed-tile')).toHaveAttribute('href', '/sharing/photos/p1');
     expect(within(hearts).getByText('Mom and Dad')).toBeInTheDocument();
     expect(hearts.querySelectorAll('.ws-feed-tile')).toHaveLength(2);
+  });
+
+  // the critique's case: the feed said "You made a link to 1 photo · Expires Oct 28" of a link that Shared links read as
+  // "1 video · Anyone with the link · Ends in 5 days"
+  it("tells a link I made in the Shared links page's words: what it shows, who can open it, when it ends", () => {
+    const link = (overrides: Parameters<typeof sharedLinkFactory.build>[0]) =>
+      sharedLinkFactory.build({
+        type: SharedLinkType.Individual,
+        description: null,
+        password: null,
+        allowDownload: true,
+        allowUpload: false,
+        showMetadata: false,
+        createdAt: iso(NOW - 2 * HOUR),
+        ...overrides,
+      });
+    render(SharedFeed, {
+      items: sortItems(
+        linkItems(
+          [
+            link({
+              id: 'video',
+              expiresAt: iso(NOW + 5 * 24 * HOUR),
+              assets: [assetFactory.build({ id: 'v1', type: AssetTypeEnum.Video })],
+            }),
+            link({
+              id: 'album',
+              type: SharedLinkType.Album,
+              album: albumFactory.build({ id: 'riverton', albumName: 'Riverton', albumThumbnailAssetId: 'cover' }),
+              createdAt: iso(NOW - 3 * HOUR),
+              expiresAt: iso(NOW - 24 * HOUR),
+              password: 'set',
+            }),
+          ],
+          person('me', 'Me'),
+        ),
+      ),
+      meId: 'me',
+      canShowMore: false,
+      onShowMore: vi.fn(),
+      photoHref: (id: string) => `/sharing/photos/${id}`,
+    });
+    const rows = screen.getAllByTestId('feed-item');
+
+    expect(rows.map((row) => row.querySelector('.ws-feed-head')?.textContent?.replaceAll(/\s+/g, ' ').trim())).toEqual([
+      'Shared links · You made a link',
+      'Riverton · You made a link',
+    ]);
+    expect(within(rows[0]).getByTestId('shared-link-facts')).toHaveTextContent(
+      '1 video · Anyone with the link · Ends in 5 days',
+    );
+    expect(within(rows[1]).getByTestId('shared-link-facts')).toHaveTextContent(
+      'Album · Anyone with the link and its password · Ended yesterday',
+    );
+    expect(within(rows[1]).getByText('Ended yesterday')).toHaveClass('ws-link-ended');
   });
 
   it('offers more only when there is more', async () => {

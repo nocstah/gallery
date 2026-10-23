@@ -6,14 +6,13 @@
   // external domain is set it can only be the address on this network, and the panel says so. The code is drawn black
   // on a white quiet zone whatever the theme, the one fixed colour pair outside a photo's caption: a camera needs the
   // contrast, and a dark theme would otherwise run into the code's edge.
+  import SharedLinkFacts from '$lib/components/omarchy/SharedLinkFacts.svelte';
   import SharedLinkEditModal from '$lib/modals/SharedLinkEditModal.svelte';
   import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
   import { asUrl, getSharedLinkActions, handleUpdateSharedLink } from '$lib/services/shared-link.service';
-  import { locale } from '$lib/stores/preferences.store';
   import type { SharedLinkResponseDto } from '@immich/sdk';
   import { Icon, modalManager } from '@immich/ui';
   import { mdiContentCopy, mdiLinkOff, mdiPencilOutline, mdiTrashCanOutline } from '@mdi/js';
-  import { DateTime } from 'luxon';
   import QRCode from 'qrcode';
   import { t } from 'svelte-i18n';
 
@@ -36,28 +35,10 @@
   );
   const homeOnly = $derived(!serverConfigManager.value.externalDomain);
 
-  // what the link allows, in the Shared links page's words: when it expires (a date: the locales' "Expires {date}"
-  // reads "Expire le …", "Scade il …"), then download, upload, password, place
-  const expired = $derived(!!sharedLink.expiresAt && DateTime.fromISO(sharedLink.expiresAt) < DateTime.now());
-  const expiry = $derived.by(() => {
-    if (!sharedLink.expiresAt) {
-      return $t('share_link_expires_never');
-    }
-    const date = DateTime.fromISO(sharedLink.expiresAt).setLocale($locale).toLocaleString(DateTime.DATE_MED);
-    return expired ? $t('expired') : $t('expires_date', { values: { date } });
-  });
-  const allows = $derived(
-    [
-      sharedLink.allowDownload && $t('download'),
-      sharedLink.allowUpload && $t('upload'),
-      sharedLink.password && $t('password'),
-      sharedLink.showMetadata && $t('location'),
-    ]
-      .filter(Boolean)
-      .join(' · '),
-  );
-  // a link made in one press is open for 30 days (shareLinkExpiry); one more press keeps it open, or opens an expired
-  // one again
+  // what the link allows, in the Shared links page's words (SharedLinkFacts): who can open it, when it ends in calendar
+  // days ("Ends Nov 22", "Never ends"), then whether a visitor can download, add photos or see where they were taken.
+  // A link made in one press is open for 30 days (shareLinkExpiry); one more press removes its end date, which keeps it
+  // open, or opens an ended one again
   const removeExpiry = () => handleUpdateSharedLink(sharedLink, { expiresAt: null });
 
   const { Copy, Delete } = $derived(getSharedLinkActions($t, sharedLink));
@@ -72,14 +53,13 @@
   </div>
   <div class="ws-share-link-text">
     <p class="ws-share-url" title={url} data-testid="share-link-url">{url}</p>
-    <p class="ws-sheet-note">
-      <span class={{ 'ws-share-expired': expired }}>{expiry}</span>{#if allows}&nbsp;· {allows}{/if}
+    <SharedLinkFacts {sharedLink} download>
       {#if sharedLink.expiresAt}
         <button type="button" class="ws-share-remove-expiry" onclick={removeExpiry}
           >{$t('share_link_remove_expiry')}</button
         >
       {/if}
-    </p>
+    </SharedLinkFacts>
     {#if homeOnly}
       <p class="ws-sheet-note">{$t('share_link_home_only')}</p>
     {/if}
@@ -150,9 +130,6 @@
     line-height: 1.5;
     word-break: break-all;
     user-select: all;
-  }
-  .ws-share-expired {
-    color: var(--ws-danger);
   }
   /* the expiry's one-press way out, a quiet underlined word at the line's end like Show selected's Put them back */
   .ws-share-remove-expiry {

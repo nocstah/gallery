@@ -49,7 +49,9 @@ export type FeedItem =
   | (ItemBase & { kind: 'joined' | 'left' })
   | (ItemBase & { kind: 'comments'; comments: FeedComment[]; people: FeedPerson[] })
   | (ItemBase & { kind: 'hearts'; hearts: number; people: FeedPerson[] })
-  | (ItemBase & { kind: 'link'; linkType: SharedLinkType; count: number; expiresAt: string | null });
+  // Local Omarchy layer: a link I made carries the link itself, so the feed tells it in the Shared links page's words
+  // (utils/shared-link-words: what it shows, who can open it, when it ends)
+  | (ItemBase & { kind: 'link'; link: SharedLinkResponseDto });
 
 /** Adds by one person to one place this close together (and on the same day) are one item: a sitting's batches. */
 export const MERGE_GAP_MS = 2 * 60 * 60 * 1000;
@@ -248,11 +250,9 @@ export const linkItems = (links: SharedLinkResponseDto[], me: FeedPerson): FeedI
         {
           ...base,
           kind: 'link',
-          linkType: link.type,
+          link,
           place: { kind: 'album', id: link.album.id, name: link.album.albumName },
           photoIds: link.album.albumThumbnailAssetId ? [link.album.albumThumbnailAssetId] : [],
-          count: link.album.assetCount,
-          expiresAt: link.expiresAt,
         },
       ];
     }
@@ -260,11 +260,9 @@ export const linkItems = (links: SharedLinkResponseDto[], me: FeedPerson): FeedI
       {
         ...base,
         kind: 'link',
-        linkType: link.type,
+        link,
         place: { kind: 'links', id: link.id, name: link.description ?? '' },
         photoIds: link.assets.map(({ id }) => id),
-        count: link.assets.length,
-        expiresAt: link.expiresAt,
       },
     ];
   });

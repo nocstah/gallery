@@ -1,5 +1,8 @@
-// Local Omarchy layer: a shared link in words, for the Shared links page's rows (components/omarchy/SharedLinkRow):
-// what it shows, who can open it, and when it ends, counted in calendar days ("Ends tomorrow" whatever the hour).
+// Local Omarchy layer: a shared link in words: what it shows, who can open it, and when it ends, counted in calendar
+// days ("Ends tomorrow" whatever the hour). One vocabulary wherever a link is told (the owner's "one word for one thing",
+// 2026-10-23): the Shared links page's rows (components/omarchy/SharedLinkRow), a link in the Shared feed, a link in the
+// Share sheets (components/omarchy/ShareLinkPanel) and the memory Share sheet's sentence, which had said "Expires Oct
+// 28", "Ends in 5 days" and "until Nov 22, 2026" of links that end alike.
 import { AssetTypeEnum, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
 import { DateTime } from 'luxon';
 import type { MessageFormatter } from 'svelte-i18n';
@@ -57,8 +60,8 @@ export const linkName = (
   return words ? { name: words, what: counted } : { name: counted };
 };
 
-/** When a link ends, in the reader's calendar days: never; ended (today, yesterday, or on a date); or ends today,
- * tomorrow, within the week ("in 5 days") or on a date further off. */
+/** When a link ends, in the reader's calendar days (as utils/relative-time counts them): never; ended (today,
+ * yesterday, or on a date); or ends today, tomorrow, within the week ("in 5 days") or on a date further off. */
 export type LinkEnd =
   | { state: 'never' }
   | { state: 'ended'; when: 'today' | 'yesterday' | 'date'; date: DateTime }
@@ -81,4 +84,72 @@ export const linkEnd = (expiresAt: string | null | undefined, now: DateTime = Da
     return { state: 'ends', when: 'tomorrow', days, date };
   }
   return { state: 'ends', when: days < 7 ? 'soon' : 'date', days, date };
+};
+
+/** The day a link ends on, as its line says it: "Nov 22", with the year where it is not this one ("Oct 23, 2027"). */
+export const linkEndDay = (date: DateTime, locale: string, now: DateTime = DateTime.now()) =>
+  date.setLocale(locale).toLocaleString({
+    day: 'numeric',
+    month: 'short',
+    ...(date.year !== now.year && { year: 'numeric' }),
+  });
+
+/** When a link ends, in words ("Ends in 5 days", "Ends Nov 22", "Never ends", "Ended yesterday"), with the day and
+ * time it ends for a tooltip. */
+export const linkEndWords = (
+  $t: MessageFormatter,
+  end: LinkEnd,
+  locale: string,
+  now: DateTime = DateTime.now(),
+): { text: string; title?: string } => {
+  if (end.state === 'never') {
+    return { text: $t('shared_links_row_never') };
+  }
+  const date = linkEndDay(end.date, locale, now);
+  const title = end.date.setLocale(locale).toLocaleString(DateTime.DATETIME_MED);
+  return end.state === 'ended'
+    ? { text: $t('shared_links_row_ended', { values: { when: end.when, date } }), title }
+    : { text: $t('shared_links_row_ends', { values: { when: end.when, days: end.days, date } }), title };
+};
+
+/** One fact of a link's line; its end keeps its words together and an end that has passed is said in the danger role. */
+export type LinkFact = { text: string; end?: boolean; ended?: boolean; title?: string };
+
+type LinkFacts = Pick<
+  SharedLinkResponseDto,
+  'password' | 'expiresAt' | 'allowDownload' | 'allowUpload' | 'showMetadata'
+>;
+
+/**
+ * A link's line: what it is, where its name does not say (`what`: "Album", "Memory", "12 photos"), who can open it,
+ * when it ends, then what it lets a visitor do beyond looking. `download` adds whether a visitor can download, for the
+ * Share sheets, where the link has just been made with downloads on or off; the lists leave it to Edit.
+ */
+export const linkFacts = (
+  $t: MessageFormatter,
+  link: LinkFacts,
+  {
+    what,
+    locale,
+    now = DateTime.now(),
+    download = false,
+  }: { what?: string; locale: string; now?: DateTime; download?: boolean },
+): LinkFact[] => {
+  const end = linkEnd(link.expiresAt, now);
+  const when = linkEndWords($t, end, locale, now);
+  const facts: LinkFact[] = what ? [{ text: what }] : [];
+  facts.push(
+    { text: $t('shared_links_row_who', { values: { password: link.password ? 'yes' : 'no' } }) },
+    { text: when.text, title: when.title, end: true, ended: end.state === 'ended' },
+  );
+  if (download && link.allowDownload) {
+    facts.push({ text: $t('shared_links_row_download') });
+  }
+  if (link.allowUpload) {
+    facts.push({ text: $t('shared_links_row_upload') });
+  }
+  if (link.showMetadata) {
+    facts.push({ text: $t('shared_links_row_location') });
+  }
+  return facts;
 };

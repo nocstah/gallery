@@ -3,11 +3,14 @@
   // label over a hairline that stays at the top while its items pass; an item is a row split from the next by a
   // hairline: who (the avatar, and the name or You in the sentence), where (the Space or album, a link), what happened,
   // when (data type, at the row's end), and the photos it is about as a strip of the grid's own square tiles, each
-  // opening in the viewer, then +N for the rest where they live. Comments show their text; hearts come together.
+  // opening in the viewer, then +N for the rest where they live. Comments show their text; hearts come together. A link
+  // I made says what it shows, who can open it and when it ends in the Shared links page's words (SharedLinkFacts).
+  import SharedLinkFacts from '$lib/components/omarchy/SharedLinkFacts.svelte';
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import { Route } from '$lib/route';
   import { getAssetMediaUrl } from '$lib/utils';
   import { relativeTime } from '$lib/utils/relative-time';
+  import { linkName } from '$lib/utils/shared-link-words';
   import {
     fullTime,
     groupByDay,
@@ -17,7 +20,7 @@
     type FeedPlace,
   } from '$lib/utils/shared-feed';
   import { formatGroupTitle } from '$lib/utils/timeline-util';
-  import { AssetMediaSize, SharedLinkType } from '@immich/sdk';
+  import { AssetMediaSize } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiImageAlbum } from '@mdi/js';
   import { DateTime } from 'luxon';
@@ -108,9 +111,7 @@
           : $t('shared_feed_hearted', { values: { ...who(item.person), photos: item.photoIds.length } });
       }
       case 'link': {
-        return $t('shared_feed_link', {
-          values: { kind: item.linkType === SharedLinkType.Album ? 'album' : 'photos', count: item.count },
-        });
+        return $t('shared_feed_link');
       }
     }
   };
@@ -134,18 +135,11 @@
   const total = (item: FeedItem) =>
     item.kind === 'added' ? Math.max(item.count, item.photoIds.length) : item.photoIds.length;
 
-  const expiry = (iso: string) => {
-    const date = new Date(iso);
-    if (date.getTime() <= now) {
-      return $t('expired');
-    }
-    const sameYear = date.getFullYear() === new Date(now).getFullYear();
-    const day = date.toLocaleDateString(lang, {
-      month: 'short',
-      day: 'numeric',
-      year: sameYear ? undefined : 'numeric',
-    });
-    return $t('expires_date', { values: { date: day } });
+  /** what a link shows, where the item's place does not say it: "Album", "Memory", "12 photos" (a link to photos
+   * without words of its own is placed under Shared links, so its count is said here, as its row's name) */
+  const linkWhat = (item: Extract<FeedItem, { kind: 'link' }>) => {
+    const named = linkName($t, item.link);
+    return named.what ?? named.name;
   };
 
   const quiet = (item: FeedItem) => ['removed', 'album-removed', 'left'].includes(item.kind);
@@ -256,8 +250,10 @@
                   <Icon icon={mdiImageAlbum} size="1.1em" aria-hidden={true} />
                   <span>{item.album.name}</span>
                 </span>
-              {:else if item.kind === 'link' && item.expiresAt}
-                <p class="ws-feed-meta">{expiry(item.expiresAt)}</p>
+              {:else if item.kind === 'link'}
+                <div class="ws-feed-link">
+                  <SharedLinkFacts sharedLink={item.link} what={linkWhat(item)} {now} />
+                </div>
               {/if}
               {#if item.kind === 'comments'}
                 {@render comments(item, item.comments, item.people.length > 1)}
@@ -381,7 +377,6 @@
     color: var(--immich-ui-muted);
     font-size: var(--ws-text-meta);
   }
-  .ws-feed-meta,
   .ws-feed-when {
     font-family: var(--ws-font-data);
     font-size: var(--ws-text-data);
@@ -389,7 +384,7 @@
     font-variant-numeric: tabular-nums;
     color: var(--immich-ui-muted);
   }
-  .ws-feed-meta {
+  .ws-feed-link {
     margin: 0.25rem 0 0;
   }
   .ws-feed-when {

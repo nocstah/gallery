@@ -87,6 +87,7 @@ beforeEach(() => {
 // `Modal` mounts a bits-ui dialog whose body scroll lock releases on a 24ms timer
 afterEach(async () => {
   cleanup();
+  vi.useRealTimers();
   await new Promise((resolve) => setTimeout(resolve, 30));
 });
 
@@ -187,19 +188,30 @@ describe('SelectionShareModal', () => {
     });
     const panel = await screen.findByTestId('share-link');
     expect(within(panel).getByTestId('share-link-url')).toHaveTextContent('https://photos.example/share/made');
-    expect(within(panel).getByText('Never expires')).toBeInTheDocument();
+    // the link's line, in the Shared links page's words
+    expect(within(panel).getByText('Never ends')).toBeInTheDocument();
     expect(within(panel).queryByRole('button', { name: 'Remove expiry' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Make a link' })).not.toBeInTheDocument();
   });
 
-  it('says when a link expires, and removes the expiry in one press', async () => {
-    const made = sharedLinkFactory.build({ key: 'made', expiresAt: '2026-11-15T00:00:00.000Z' });
+  it('says when a link ends, as Shared links says it, and removes the expiry in one press', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-21T12:00:00.000Z') });
+    const made = sharedLinkFactory.build({
+      key: 'made',
+      expiresAt: '2026-11-15T00:00:00.000Z',
+      password: null,
+      allowDownload: true,
+      allowUpload: false,
+      showMetadata: false,
+    });
     makeSharedLink.mockResolvedValue(made);
     await open({ assetIds: ['a1'], ownedAssetIds: ['a1'] });
 
     await userEvent.click(screen.getByRole('button', { name: 'Make a link' }));
     const panel = await screen.findByTestId('share-link');
-    expect(within(panel).getByText('Expires Nov 15, 2026')).toBeInTheDocument();
+    expect(within(panel).getByTestId('shared-link-facts')).toHaveTextContent(
+      'Anyone with the link · Ends Nov 15 · Can download',
+    );
 
     await userEvent.click(within(panel).getByRole('button', { name: 'Remove expiry' }));
     expect(handleUpdateSharedLink).toHaveBeenCalledWith(made, { expiresAt: null });

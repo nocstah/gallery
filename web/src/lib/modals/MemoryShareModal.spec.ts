@@ -3,12 +3,13 @@ import { modalManager } from '@immich/ui';
 import '@testing-library/jest-dom';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { init, register, waitLocale } from 'svelte-i18n';
+import { init, locale, register, waitLocale } from 'svelte-i18n';
 import { getAnimateMock } from '$lib/__mocks__/animate.mock';
 import '$lib/__mocks__/sdk.mock';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import { buildFilmPlan } from '$lib/components/memories/film/film-plan';
 import type { MemoryPresentation } from '$lib/components/memories/memory-sharing';
+import { locale as formatLocale } from '$lib/stores/preferences.store';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 import MemoryShareModal from './MemoryShareModal.svelte';
@@ -95,6 +96,7 @@ const madeLink = (overrides: Partial<SharedLinkResponseDto> = {}) =>
 beforeAll(async () => {
   await init({ fallbackLocale: 'en-US' });
   register('en-US', () => import('$i18n/en.json'));
+  register('de', () => import('$i18n/de.json'));
   await waitLocale('en-US');
 });
 beforeEach(() => {
@@ -129,32 +131,45 @@ afterEach(async () => {
 });
 
 describe('what a link shares, in one sentence', () => {
-  it('says who, what and until when, with 30 days chosen', async () => {
+  it("says who and what, then when the link ends in the Shared links page's words, with 30 days chosen", async () => {
     await choose();
 
     expect(scope()).toBe(
-      "Anyone with the link can watch this memory's 2 photos and its music as a film, without an account, until Nov 20, 2026.",
+      "Anyone with the link can watch this memory's 2 photos and its music as a film, without an account. The link ends Nov 20.",
     );
     expect(screen.getByRole('radio', { name: '30 days' })).toBeChecked();
     expect(screen.getByRole('radio', { name: /Playable memory/ })).toBeChecked();
   });
 
-  it('follows the expiry chosen, and says a link with no end lasts until it is turned off', async () => {
+  it('follows the expiry chosen, by the calendar, and says a link with no end never ends', async () => {
     await choose();
 
     await userEvent.click(screen.getByRole('radio', { name: '7 days' }));
-    expect(scope()).toMatch(/, until Oct 28, 2026\.$/);
+    expect(scope()).toMatch(/, without an account\. The link ends Oct 28\.$/);
     await userEvent.click(screen.getByRole('radio', { name: '1 year' }));
-    expect(scope()).toMatch(/, until Oct 21, 2027\.$/);
+    expect(scope()).toMatch(/\. The link ends Oct 21, 2027\.$/);
     await userEvent.click(screen.getByRole('radio', { name: 'Never' }));
-    expect(scope()).toMatch(/, without an account, until you turn it off\.$/);
+    expect(scope()).toMatch(/, without an account\. The link never ends\.$/);
+  });
+
+  it('ends the sentence once where the day is written with a full stop', async () => {
+    await locale.set('de');
+    formatLocale.set('de');
+    try {
+      open();
+      await screen.findByTestId('memory-share-scope');
+      expect(scope()).toMatch(/ohne Konto\. Der Link endet am 20\. Nov\.$/);
+    } finally {
+      await locale.set('en-US');
+      formatLocale.set('default');
+    }
   });
 
   it('leaves the music out when the film has none', async () => {
     await choose('memory', { ...presentation, assetIds: ['a'], trackIds: [] });
 
     expect(scope()).toBe(
-      "Anyone with the link can watch this memory's 1 photo as a film, without an account, until Nov 20, 2026.",
+      "Anyone with the link can watch this memory's 1 photo as a film, without an account. The link ends Nov 20.",
     );
   });
 
@@ -164,7 +179,7 @@ describe('what a link shares, in one sentence', () => {
     await userEvent.click(screen.getByRole('radio', { name: /Portrait video/ }));
 
     expect(scope()).toBe(
-      'Anyone with the link can watch and download this memory as one video file, without an account, until Nov 20, 2026.',
+      'Anyone with the link can watch and download this memory as one video file, without an account. The link ends Nov 20.',
     );
     expect(screen.getByText('Download MP4 saves the video here and shares nothing.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download MP4' })).toBeInTheDocument();
@@ -266,7 +281,7 @@ describe('making the link', () => {
 
     await screen.findByText('Your link is ready.');
     expect(scope()).toBe(
-      "Your link is ready. Anyone with the link and its password can watch this memory's 1 photo and its music as a film, without an account, until you turn it off.",
+      "Your link is ready. Anyone with the link and its password can watch this memory's 1 photo and its music as a film, without an account. The link never ends.",
     );
     expect(screen.getByTestId('share-link-url')).toHaveTextContent('https://photos.example/share/key');
     expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
@@ -286,7 +301,7 @@ describe('making the link', () => {
 
     await screen.findByText('Your link is ready.');
     expect(scope()).toBe(
-      "Your link is ready. Anyone with the link can watch this memory's 2 photos and its music as a film, without an account, until Nov 20, 2026.",
+      "Your link is ready. Anyone with the link can watch this memory's 2 photos and its music as a film, without an account. The link ends Nov 20.",
     );
   });
 
@@ -317,7 +332,7 @@ describe('making the link', () => {
     );
     expect(shareMemory).not.toHaveBeenCalled();
     expect(scope()).toBe(
-      'Your link is ready. Anyone with the link can watch and download this memory as one video file, without an account, until Nov 20, 2026.',
+      'Your link is ready. Anyone with the link can watch and download this memory as one video file, without an account. The link ends Nov 20.',
     );
   });
 
@@ -459,7 +474,7 @@ describe('a memory already shared', () => {
     await screen.findByText('This memory is shared.');
     expect(sdkMock.getSharedLinkById).toHaveBeenCalledWith({ id: 'live' });
     expect(scope()).toBe(
-      "This memory is shared. Anyone with the link and its password can watch this memory's 2 photos as a film, without an account, until Nov 20, 2026.",
+      "This memory is shared. Anyone with the link and its password can watch this memory's 2 photos as a film, without an account. The link ends Nov 20.",
     );
     expect(screen.getByTestId('share-link-url')).toHaveTextContent('https://photos.example/share/live-key');
     expect(screen.getByRole('button', { name: 'Turn off' })).toBeInTheDocument();

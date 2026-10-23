@@ -215,10 +215,11 @@ describe('linkItems', () => {
     expect(items[0]).toMatchObject({ kind: 'link', place: { kind: 'album', name: 'Bali' }, photoIds: ['cover'] });
     expect(items[1]).toMatchObject({
       kind: 'link',
-      count: 2,
       place: { kind: 'links', name: 'For grandma' },
       photoIds: ['p1', 'p2'],
     });
+    // the link itself goes along, so the feed tells it in the Shared links page's words
+    expect(items.map((item) => item.kind === 'link' && item.link.id)).toEqual(['l1', 'l2']);
     expect(items[0].person).toBe(me);
   });
 });

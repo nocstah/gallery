@@ -1,6 +1,8 @@
 import { AssetTypeEnum, SharedLinkType } from '@immich/sdk';
 import { DateTime } from 'luxon';
-import { linkEnd, linkKind } from '$lib/utils/shared-link-words';
+import { init, register, t, waitLocale } from 'svelte-i18n';
+import { get } from 'svelte/store';
+import { linkEnd, linkEndDay, linkFacts, linkKind } from '$lib/utils/shared-link-words';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 
@@ -60,5 +62,55 @@ describe('linkEnd', () => {
   it('knows a link that never ends', () => {
     expect(linkEnd(null, now)).toEqual({ state: 'never' });
     expect(linkEnd(undefined, now)).toEqual({ state: 'never' });
+  });
+});
+
+describe('linkEndDay', () => {
+  const now = DateTime.fromISO('2026-10-23T12:00:00', { zone: 'UTC' });
+
+  it('says the day, and the year only when it is not this one', () => {
+    expect(linkEndDay(DateTime.fromISO('2026-11-22T09:00:00', { zone: 'UTC' }), 'en-US', now)).toBe('Nov 22');
+    expect(linkEndDay(DateTime.fromISO('2027-10-23T09:00:00', { zone: 'UTC' }), 'en-US', now)).toBe('Oct 23, 2027');
+  });
+});
+
+// the owner's "one word for one thing": a link reads the same in Shared links, the Shared feed and the Share sheets
+describe('linkFacts', () => {
+  beforeAll(async () => {
+    await init({ fallbackLocale: 'en-US' });
+    register('en-US', () => import('$i18n/en.json'));
+    await waitLocale('en-US');
+  });
+
+  const now = DateTime.fromISO('2026-10-23T12:00:00', { zone: 'UTC' });
+  const text = (facts: { text: string }[]) => facts.map((fact) => fact.text).join(' · ');
+
+  it('says what it is, who can open it and when it ends, then what a visitor may do beyond looking', () => {
+    const link = individual({
+      password: 'set',
+      expiresAt: now.plus({ days: 5 }).toISO(),
+      allowUpload: true,
+      showMetadata: true,
+    });
+    expect(text(linkFacts(get(t), link, { what: 'Album', locale: 'en-US', now }))).toBe(
+      'Album · Anyone with the link and its password · Ends in 5 days · Can add photos · Shows where photos were taken',
+    );
+  });
+
+  it('says whether a visitor can download where the Share sheets ask for it', () => {
+    const link = individual({ expiresAt: null, password: null });
+    expect(text(linkFacts(get(t), link, { locale: 'en-US', now }))).toBe('Anyone with the link · Never ends');
+    expect(text(linkFacts(get(t), link, { locale: 'en-US', now, download: true }))).toBe(
+      'Anyone with the link · Never ends · Can download',
+    );
+  });
+
+  it('marks the end, and an end that has passed, with the day and time it falls on', () => {
+    const facts = linkFacts(get(t), individual({ expiresAt: now.minus({ days: 1 }).toISO() }), {
+      locale: 'en-US',
+      now,
+    });
+    expect(facts[1]).toMatchObject({ text: 'Ended yesterday', end: true, ended: true });
+    expect(facts[1].title).toMatch(/Oct 22, 2026/);
   });
 });
