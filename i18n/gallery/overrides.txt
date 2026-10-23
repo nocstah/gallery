@@ -71,6 +71,7 @@ download_settings_description exclusive
 downloading_asset_filename exclusive
 edit_title exclusive
 empty_trash_confirmation exclusive
+enter_your_pin_code_subtitle
 error_delete_face exclusive
 error_retrieving_asset_information exclusive
 error_while_navigating exclusive
@@ -133,11 +134,16 @@ memories_current en:e0d1b682
 memories_show_upcoming en:0f87babc
 memories_start_over
 memories_upcoming en:5f1a2542
+move_off_locked_folder
+move_to_locked_folder
+move_to_locked_folder_confirmation
 mute_memories
 navigate_to_time
 new_album exclusive
 new_api_key
+new_pin_code_subtitle
 no_assets_to_show exclusive
+no_locked_photos_message
 no_name exclusive
 obtainium_configurator
 ocr
@@ -163,6 +169,7 @@ recently_added_page_title
 remove_assets_album_confirmation exclusive
 remove_assets_shared_link_confirmation exclusive
 remove_assets_title exclusive
+remove_from_locked_folder_confirmation
 removed_from_stack exclusive
 removed_tagged_assets exclusive
 reset_sqlite_error_hint en:0546b1f2

@@ -21,7 +21,8 @@
 
   const toggleLockedVisibility = async () => {
     const isConfirmed = await modalManager.showDialog({
-      title: isLocked ? $t('remove_from_locked_folder') : $t('move_to_locked_folder'),
+      // Local Omarchy layer: the dialog is titled by the menu item that opens it ("Move out of the Locked Folder")
+      title: isLocked ? $t('move_off_locked_folder') : $t('move_to_locked_folder'),
       prompt: isLocked ? $t('remove_from_locked_folder_confirmation') : $t('move_to_locked_folder_confirmation'),
       confirmText: $t('move'),
       confirmColor: isLocked ? 'danger' : 'primary',
