@@ -2056,6 +2056,14 @@
     height: 100%;
     background: linear-gradient(to top, rgb(0 0 0 / 0.66), rgb(0 0 0 / 0.36) 50%, rgb(0 0 0 / 0.2));
   }
+  /* Local Omarchy layer: the colour passes (DESIGN.md, Ink). As the name comes back, the last photo's colour goes out
+     of it slowly to 60% grey, much of it left, as a memory settles (the owner chose 60 over 85, 2026-10-23); the next
+     memory's small photo keeps its own. Start over brings the colour back at once. Grey keeps the photo's light, so
+     the end's words keep their contrast; across the room a film hands on to the next instead and never ends here */
+  .film[data-ended]:not([data-dress='room']) .film-layer {
+    filter: grayscale(0.6);
+    transition: filter 3.2s cubic-bezier(0.4, 0, 0.2, 1) 0.6s;
+  }
 
   /* ---- the transport: the song, the photo before, play and pause, the next, where the film is ---- */
   .film-transport {
@@ -2276,6 +2284,10 @@
     .film-pill,
     .film-veil {
       transition-duration: 150ms;
+    }
+    /* the colour passes at once, without the slow change */
+    .film[data-ended]:not([data-dress='room']) .film-layer {
+      transition: none;
     }
   }
   /* what Curator makes on request waits in the bottom-left corner of the window (routes/+layout), where the film's
