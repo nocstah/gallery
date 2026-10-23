@@ -495,15 +495,15 @@ div[role='dialog'] button.bg-dark {
 div[role='dialog'] button.bg-dark:not(:disabled):hover {
   background: color-mix(in oklab, var(--immich-ui-dark) 8%, transparent);
 }
-/* ---- the sign-in pages (AuthPageLayout's .ws-auth-card): the card is a window as a modal's panel is, the theme's
-   surface in one hairline frame with the shadow (it was a fixed grey of its own), and its fields are the modals' (a
-   faint fill, a hairline, the accent when focused) instead of grey slabs with an ink ring. @immich/ui draws a field's
-   fill and ring on the wrapper around the input, so that is what takes them. ---- */
+/* ---- the sign-in pages (AuthPageLayout's .ws-auth-card): the card is a window on the bare ground, the theme's surface
+   in one hairline frame with the house's popup shadow, as menus and the View menu's sheets float (2026-10-24: it
+   kept a modal's heavier shadow, which spread 64px under it, a grey pool on the light face; it was a fixed grey of its
+   own before that), and its fields are the modals' (a faint fill, a hairline, the accent when focused) instead of grey
+   slabs with an ink ring. @immich/ui draws a field's fill and ring on the wrapper around the input, so that is what
+   takes them. ---- */
 .ws-auth-card {
-  border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 14%, transparent);
-  box-shadow:
-    0 4px 12px -4px rgb(0 0 0 / 0.3),
-    0 28px 64px -16px rgb(0 0 0 / 0.55);
+  border: 1px solid var(--ws-hairline);
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
 }
 .ws-auth-card > div {
   background: var(--immich-ui-light);
