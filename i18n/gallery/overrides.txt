@@ -29,6 +29,7 @@ albums_feature_description exclusive
 api_key
 api_key_empty
 api_keys exclusive
+app_download_links
 app_settings exclusive
 asset_day_count exclusive
 asset_description_updated exclusive
@@ -138,6 +139,8 @@ new_album exclusive
 new_api_key
 no_assets_to_show exclusive
 no_name exclusive
+obtainium_configurator
+ocr
 people_feature_description
 permanent_deletion_warning_setting_description exclusive
 permanently_delete_assets_count exclusive
