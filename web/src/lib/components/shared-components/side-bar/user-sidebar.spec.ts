@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import UserSidebar from '$lib/components/shared-components/side-bar/UserSidebar.svelte';
+import { sidebarRowsHidden } from '$lib/stores/sidebar-rows';
 
 const mockPage = vi.hoisted(() => ({ url: new URL('https://gallery.test/photos') }));
 vi.mock('$app/state', () => ({ page: mockPage }));
@@ -96,11 +97,19 @@ vi.mock('$lib/managers/special-albums.svelte', async (importOriginal) => ({
   resolveSpecialAlbums: specialMocks.resolveSpecialAlbums,
 }));
 
+const rowMenuMocks = vi.hoisted(() => ({ showSidebarRowMenu: vi.fn() }));
+vi.mock('$lib/utils/sidebar-row-menu', () => ({ showSidebarRowMenu: rowMenuMocks.showSidebarRowMenu }));
+
 describe('UserSidebar', () => {
   beforeEach(() => {
     mocks.authManager.user.isAdmin = true;
     mocks.authManager.preferences.memories.enabled = true;
     mocks.authManager.preferences.memories.sidebarWeb = true;
+    mocks.authManager.preferences.people.enabled = false;
+    mocks.authManager.preferences.people.sidebarWeb = false;
+    mocks.featureFlagsManager.value.map = false;
+    sidebarRowsHidden.set({});
+    rowMenuMocks.showSidebarRowMenu.mockClear();
     mockPage.url = new URL('https://gallery.test/photos');
     sidebarMocks.sidebarModeStore.layout = 'expanded';
     sidebarMocks.sidebarModeStore.hoverExpanded = false;
@@ -213,6 +222,7 @@ describe('UserSidebar', () => {
       ]);
       expect(rows[0]).toBe('# sidebar_browse');
       expect(groupOf(rows, '/photos')).toBe('# sidebar_browse');
+      expect(groupOf(rows, '/places')).toBe('# sidebar_browse');
       expect(groupOf(rows, '/room')).toBe('# sidebar_browse');
       expect(groupOf(rows, '/favorites')).toBe('# library');
       expect(groupOf(rows, '/albums')).toBe('# library');
@@ -234,6 +244,71 @@ describe('UserSidebar', () => {
         '# library',
         '# sidebar_hidden_deleted',
       ]);
+    });
+  });
+
+  // Local Omarchy layer (the owner's "Both in Browse"): People and Places are always among the views to wander in,
+  // Places right after the Map, so a phone's drawer has them too; People hides only where a person hid it, in this
+  // browser. Upstream showed People only with people.sidebarWeb, off for every account by default, and Places nowhere
+  describe('People and Places in Browse', () => {
+    const hrefs = () => [...document.body.querySelectorAll('a')].map((link) => link.getAttribute('href'));
+    const people = () => screen.queryByRole('link', { name: /^people$/i });
+
+    it('puts Places right after the Map', () => {
+      mocks.featureFlagsManager.value.map = true;
+
+      render(UserSidebar);
+
+      const rows = hrefs();
+      expect(rows.indexOf('/places')).toBe(rows.indexOf('/map') + 1);
+    });
+
+    it('keeps Places when there is no Map', () => {
+      render(UserSidebar);
+
+      expect(screen.getByRole('link', { name: /^places$/i })).toHaveAttribute('href', '/places');
+    });
+
+    it("shows People while the People feature is on, whatever upstream's sidebar preference says", () => {
+      mocks.authManager.preferences.people.enabled = true;
+      mocks.authManager.preferences.people.sidebarWeb = false;
+
+      render(UserSidebar);
+
+      expect(people()).toHaveAttribute('href', '/people');
+      const rows = hrefs();
+      expect(rows.indexOf('/people')).toBeLessThan(rows.indexOf('/favorites'));
+    });
+
+    it('leaves People out while the People feature is off', () => {
+      mocks.authManager.preferences.people.sidebarWeb = true;
+
+      render(UserSidebar);
+
+      expect(people()).not.toBeInTheDocument();
+    });
+
+    it('leaves People out where this browser hid it', () => {
+      mocks.authManager.preferences.people.enabled = true;
+      sidebarRowsHidden.set({ people: true });
+
+      render(UserSidebar);
+
+      expect(people()).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /^places$/i })).toBeInTheDocument();
+    });
+
+    it("offers to hide People from its row's right-click menu", async () => {
+      mocks.authManager.preferences.people.enabled = true;
+
+      render(UserSidebar);
+      await fireEvent.contextMenu(people()!);
+
+      expect(rowMenuMocks.showSidebarRowMenu).toHaveBeenCalledWith(
+        expect.any(MouseEvent),
+        'people',
+        'sidebar_people_hidden',
+      );
     });
   });
 

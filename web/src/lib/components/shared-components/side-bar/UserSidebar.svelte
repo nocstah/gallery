@@ -16,7 +16,9 @@
   import { Route } from '$lib/route';
   import { pinnedAlbums } from '$lib/stores/pinned-albums.svelte';
   import { recentAlbumsDropdown, recentSpacesDropdown } from '$lib/stores/preferences.store';
+  import { sidebarRowsHidden } from '$lib/stores/sidebar-rows';
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
+  import { showSidebarRowMenu } from '$lib/utils/sidebar-row-menu';
   import {
     mdiAccount,
     mdiAccountOutline,
@@ -40,6 +42,8 @@
     mdiLock,
     mdiLockOutline,
     mdiMap,
+    mdiMapMarker,
+    mdiMapMarkerOutline,
     mdiMapOutline,
     mdiShareVariant,
     mdiShareVariantOutline,
@@ -99,6 +103,10 @@
     <SidebarNavItem title={$t('map')} href={Route.map()} icon={mdiMapOutline} activeIcon={mdiMap} />
   {/if}
 
+  <!-- Local Omarchy layer: Places, the cities with the most photos first (routes/(user)/places), after the Map; only
+       Explore's View all had led there -->
+  <SidebarNavItem title={$t('places')} href={Route.places()} icon={mdiMapMarkerOutline} activeIcon={mdiMapMarker} />
+
   {#if authManager.preferences.memories.enabled && authManager.preferences.memories.sidebarWeb}
     <SidebarNavItem title={$t('memories')} href={Route.memories()} icon={mdiCardsOutline} activeIcon={mdiCards} />
   {/if}
@@ -107,8 +115,17 @@
        memories, then the albums Curator keeps for the TV -->
   <SidebarNavItem title={$t('room')} href={Route.room()} icon={mdiTelevisionPlay} />
 
-  {#if authManager.preferences.people.enabled && authManager.preferences.people.sidebarWeb}
-    <SidebarNavItem title={$t('people')} href={Route.people()} icon={mdiAccountOutline} activeIcon={mdiAccount} />
+  <!-- Local Omarchy layer: People is always in Browse while the People feature is on, unless hidden in this browser
+       (its right-click menu, or Settings > Features: stores/sidebar-rows). Upstream showed it only with
+       people.sidebarWeb, off by default, so a family on a phone never found it in the drawer -->
+  {#if authManager.preferences.people.enabled && !$sidebarRowsHidden.people}
+    <SidebarNavItem
+      title={$t('people')}
+      href={Route.people()}
+      icon={mdiAccountOutline}
+      activeIcon={mdiAccount}
+      menu={(event) => void showSidebarRowMenu(event, 'people', $t('sidebar_people_hidden'))}
+    />
   {/if}
 
   <!-- Local Omarchy layer: the albums pinned to the sidebar, first after the views as the Mac puts Pinned, and above

@@ -208,6 +208,16 @@ const USER_PAGES: readonly NavigationItem[] = [
     adminOnly: false,
     featureFlag: 'map',
   },
+  // Local Omarchy layer: Places, after the Map as in the sidebar's Browse (only Explore's View all had led there)
+  {
+    id: 'nav:userPages:places',
+    category: 'userPages',
+    labelKey: 'places',
+    descriptionKey: 'cmdk_nav_places_description',
+    icon: mdiMapMarkerOutline,
+    route: Route.places(),
+    adminOnly: false,
+  },
   // Local Omarchy layer: the page is Shared, by the sidebar's name and its own title (Ctrl+K said "Sharing"), and its
   // description says what it is now, a feed
   {

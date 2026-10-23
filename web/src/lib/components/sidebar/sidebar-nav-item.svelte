@@ -21,9 +21,22 @@
     count?: number;
     /** Local Omarchy layer: photos carried to this row go there (To do, Villa, QR: managers/sidebar-drop) */
     drop?: DropTarget;
+    /** Local Omarchy layer: the row's right-click menu (People's Hide from sidebar: utils/sidebar-row-menu) */
+    menu?: (event: MouseEvent) => void;
   }
 
-  let { title, href, icon, activeIcon, isActive, expanded = $bindable(false), items, count, drop }: Props = $props();
+  let {
+    title,
+    href,
+    icon,
+    activeIcon,
+    isActive,
+    expanded = $bindable(false),
+    items,
+    count,
+    drop,
+    menu,
+  }: Props = $props();
 
   // Local Omarchy layer: a row that opens into a tree (Albums, Shared) springs open under carried photos
   const spring = $derived(
@@ -125,6 +138,7 @@
       title={collapsed ? title : undefined}
       aria-current={active ? 'page' : undefined}
       class={linkClass}
+      oncontextmenu={menu}
     >
       {#if iconProps}
         <Icon

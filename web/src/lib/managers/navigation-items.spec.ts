@@ -104,8 +104,8 @@ function paramAccepts(name: string, segment: string): boolean {
 }
 
 describe('NAVIGATION_ITEMS schema', () => {
-  it('has exactly 56 items', () => {
-    expect(NAVIGATION_ITEMS).toHaveLength(56);
+  it('has exactly 57 items', () => {
+    expect(NAVIGATION_ITEMS).toHaveLength(57);
   });
 
   it('every item has non-empty required fields', () => {
@@ -187,7 +187,7 @@ describe('NAVIGATION_ITEMS schema', () => {
       'nav:userPages:import',
     ]);
     const items = NAVIGATION_ITEMS.filter((i) => i.category === 'userPages');
-    expect(items).toHaveLength(29);
+    expect(items).toHaveLength(30);
     for (const item of items) {
       expect(item.adminOnly, item.id).toBe(ownerTools.has(item.id));
     }
@@ -242,6 +242,18 @@ describe('NAVIGATION_ITEMS schema', () => {
     for (const key of sourceKeys) {
       expect(ourKeys.has(key)).toBe(true);
     }
+  });
+
+  // Local Omarchy layer: Places is among the pages, right after the Map, as in the sidebar's Browse (only Explore's
+  // View all had led there)
+  it('lists Places right after the Map', () => {
+    const pages = NAVIGATION_ITEMS.filter((item) => item.category === 'userPages').map((item) => item.route);
+
+    expect(pages.indexOf('/places')).toBe(pages.indexOf('/map') + 1);
+    expect(NAVIGATION_ITEMS.find((item) => item.route === '/places')).toMatchObject({
+      labelKey: 'places',
+      adminOnly: false,
+    });
   });
 
   it('drift guard: every page in the sidebar can be opened from Ctrl+K', () => {

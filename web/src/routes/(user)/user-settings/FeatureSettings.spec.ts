@@ -1,10 +1,13 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { sidebarRowsHidden } from '$lib/stores/sidebar-rows';
 import FeatureSettings from './FeatureSettings.svelte';
 
 const mocks = vi.hoisted(() => ({
+  open: ['memories'],
   preferences: {} as Record<string, unknown>,
   serverConfig: {} as Record<string, unknown>,
   setPreferences: vi.fn(),
@@ -37,7 +40,7 @@ vi.mock(import('@immich/sdk'), async (importOriginal) => {
 // stub it to keep the memories section open and avoid SvelteKit navigation in tests.
 vi.mock(import('$lib/managers/accordion-manager.svelte'), () => ({
   accordionManager: {
-    isOpen: (key: string) => key === 'memories',
+    isOpen: (key: string) => mocks.open.includes(key),
     open: vi.fn(),
     close: vi.fn(),
   } as never,
@@ -46,6 +49,7 @@ vi.mock(import('$lib/managers/accordion-manager.svelte'), () => ({
 describe('FeatureSettings memory types', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.open = ['memories'];
     mocks.preferences = {
       memories: { enabled: true, duration: 5, types: { on_this_day: true, birthday: false, recent_trip: true } },
     };
@@ -117,5 +121,48 @@ describe('memories preference payload', () => {
       // the fork's D3 default surviving: upstream's component defaults it to `false`.
       sidebarWeb: true,
     });
+  });
+});
+
+// Local Omarchy layer: People is in the sidebar unless hidden in this browser (stores/sidebar-rows), so the People
+// section's Sidebar switch is this browser's, and saving leaves upstream's people.sidebarWeb as the server has it
+describe("People's sidebar switch", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.open = ['people'];
+    mocks.preferences = { people: { enabled: true, sidebarWeb: false, minimumFaces: 3 } };
+    mocks.serverConfig = { availableMemoryTypes: [], minFaces: 3 };
+    mocks.updateMyPreferences.mockResolvedValue(mocks.preferences);
+    sidebarRowsHidden.set({});
+  });
+
+  it('shows People in the sidebar here, whatever the server preference says', () => {
+    render(FeatureSettings);
+
+    expect(screen.getByRole('switch', { name: 'sidebar' })).toBeChecked();
+  });
+
+  it('hides People in this browser on Save, and sends no sidebar preference', async () => {
+    const user = userEvent.setup();
+    render(FeatureSettings);
+
+    await user.click(screen.getByRole('switch', { name: 'sidebar' }));
+    await user.click(screen.getByRole('button', { name: 'save' }));
+
+    const payload = mocks.updateMyPreferences.mock.calls.at(-1)?.[0].userPreferencesUpdateDto;
+    expect(payload.people).toEqual({ enabled: true, minimumFaces: 3 });
+    expect(get(sidebarRowsHidden)).toEqual({ people: true });
+  });
+
+  it('shows it again from the switch', async () => {
+    sidebarRowsHidden.set({ people: true });
+    const user = userEvent.setup();
+    render(FeatureSettings);
+
+    expect(screen.getByRole('switch', { name: 'sidebar' })).not.toBeChecked();
+    await user.click(screen.getByRole('switch', { name: 'sidebar' }));
+    await user.click(screen.getByRole('button', { name: 'save' }));
+
+    expect(get(sidebarRowsHidden)).toEqual({});
   });
 });

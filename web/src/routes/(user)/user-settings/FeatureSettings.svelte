@@ -2,10 +2,12 @@
   import SettingAccordion from '$lib/components/shared-components/settings/SettingAccordion.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
+  import { setSidebarRowHidden, sidebarRowsHidden } from '$lib/stores/sidebar-rows';
   import { handleError } from '$lib/utils/handle-error';
   import { AssetOrder, updateMyPreferences } from '@immich/sdk';
   import { Button, Field, NumberInput, Select, Switch, toastManager } from '@immich/ui';
   import { t, type Translations } from 'svelte-i18n';
+  import { get } from 'svelte/store';
   import { fade } from 'svelte/transition';
 
   // Albums
@@ -31,7 +33,9 @@
 
   // People
   let peopleEnabled = $state(authManager.preferences.people?.enabled ?? false);
-  let peopleSidebar = $state(authManager.preferences.people?.sidebarWeb ?? false);
+  // Local Omarchy layer: People is in the sidebar unless hidden in this browser (stores/sidebar-rows), not by
+  // upstream's people.sidebarWeb, which is off until someone finds this switch; that preference is left alone
+  let peopleSidebar = $state(!get(sidebarRowsHidden).people);
   let peopleMinFaces = $state(authManager.preferences.people?.minimumFaces ?? serverConfigManager.value.minFaces);
 
   // Ratings
@@ -63,7 +67,7 @@
             types: { ...memoryTypes },
             sidebarWeb: memoriesSidebar,
           },
-          people: { enabled: peopleEnabled, sidebarWeb: peopleSidebar, minimumFaces: peopleMinFaces },
+          people: { enabled: peopleEnabled, minimumFaces: peopleMinFaces },
           ratings: { enabled: ratingsEnabled },
           sharedLinks: { enabled: sharedLinksEnabled, sidebarWeb: sharedLinkSidebar },
           tags: { enabled: tagsEnabled, sidebarWeb: tagsSidebar },
@@ -73,6 +77,7 @@
       });
 
       authManager.setPreferences(response);
+      setSidebarRowHidden('people', !peopleSidebar);
       toastManager.primary($t('saved_settings'));
     } catch (error) {
       handleError(error, $t('errors.unable_to_update_settings'));
@@ -150,7 +155,7 @@
             </Field>
 
             {#if peopleEnabled}
-              <Field label={$t('sidebar')} description={$t('sidebar_display_description')}>
+              <Field label={$t('sidebar')} description={$t('sidebar_people_description')}>
                 <Switch bind:checked={peopleSidebar} />
               </Field>
               <Field label={$t('minFaces')} description={$t('minFaces_description')}>
