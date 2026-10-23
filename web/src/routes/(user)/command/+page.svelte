@@ -3,7 +3,7 @@
   // (by kind, as the inbox lists it: utils/curator-inbox), what Curator is doing and will do tonight, the library's
   // health, the machine (GPU, local models, disk, backups), today's memory, and the actions used most. Read from
   // Curator (~/code/curator: /api/overview, /api/inbox, /api/jobs, /api/library-health) and Gallery (today's
-  // memories); refreshed while open. It opens on one thing to look at: how many wait in the inbox, with the way to
+  // memories, as the Memories page's cards: managers/memory-manager); refreshed while open. It opens on one thing to look at: how many wait in the inbox, with the way to
   // review them beside it; the day's other numbers follow in one quiet line, a zero in muted data type. Counts are ink;
   // the danger tone is only for real trouble, never the accent, which stays for focus and response: a job still
   // failing or stuck (Curator's health says which; a week's failures of jobs that have run fine since are said
@@ -12,8 +12,11 @@
   import { goto } from '$app/navigation';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
+  import { memoryFacts } from '$lib/managers/memory-facts.svelte';
+  import { memoryManager } from '$lib/managers/memory-manager.svelte';
   import { Route } from '$lib/route';
-  import { getAssetMediaUrl } from '$lib/utils';
+  import { locale } from '$lib/stores/preferences.store';
+  import { getAssetMediaUrl, memoryLaneTitle } from '$lib/utils';
   import { backupCopy, backupWhen, databaseBackup, type BackupFacts } from '$lib/utils/command-words';
   import {
     curator,
@@ -25,7 +28,9 @@
     type LibraryHealth,
   } from '$lib/utils/curator';
   import { kindQuery, kindsOf } from '$lib/utils/curator-inbox';
-  import { AssetMediaSize, searchMemories, type MemoryResponseDto } from '@immich/sdk';
+  import { memoryCardLine } from '$lib/utils/memory-cards';
+  import { memoryCover } from '$lib/utils/memory-title';
+  import { AssetMediaSize } from '@immich/sdk';
   import { Icon, modalManager, toastManager } from '@immich/ui';
   import {
     mdiAlertCircleOutline,
@@ -53,7 +58,6 @@
   // what each kind of job is called, so a running job reads by its name, not its key (faces.cluster)
   let kinds = $state<JobKind[]>([]);
   let health = $state<LibraryHealth>();
-  let memory = $state<MemoryResponseDto>();
   let offline = $state(false);
   let timers: ReturnType<typeof setInterval>[] = [];
 
@@ -79,9 +83,6 @@
     void curator
       .kinds()
       .then((found) => (kinds = found))
-      .catch(() => undefined);
-    void searchMemories({ $for: DateTime.now().toISODate() ?? undefined })
-      .then((found) => (memory = found.find((m) => m.assets.length > 0)))
       .catch(() => undefined);
     timers = [setInterval(() => void refreshFast(), 5000), setInterval(() => void refreshSlow(), 60_000)];
   });
@@ -164,19 +165,18 @@
   const trouble = (backup: { key: string; facts: BackupFacts }) =>
     backup.facts.state === 'failed' ||
     (backup.key !== 'offsite' && (backup.facts.state === 'stale' || backup.facts.state === 'none'));
-  const memoryLabel = (found: MemoryResponseDto) => {
-    // a featured memory's title, a trip's place, an "on this day" memory's year
-    const data = (found.data ?? {}) as { year?: number; title?: string; context?: { placeLabel?: string } };
-    if (typeof data.title === 'string') {
-      return data.title;
-    }
-    if (typeof data.context?.placeLabel === 'string') {
-      return data.context.placeLabel;
-    }
-    return data.year
-      ? $t('years_ago', { values: { years: DateTime.now().year - data.year } })
-      : $t('command_today_memory');
-  };
+  // Local Omarchy layer: today's memory is the Memories page's first card of today, named and shown as that card is
+  // (its title of facts, its line, Curator's cover; the owner's "one word for one thing", 2026-10-23), where the page
+  // had its own labeller that called the card "Siem Reap · October 2025" "1 year ago". Curator's facts tell which
+  // memories are one card, so it waits for them as the Memories page does (2 s at most).
+  $effect(() => {
+    memoryFacts.request(memoryManager.memories.map(({ id }) => id));
+  });
+  const todayKnown = $derived(
+    memoryManager.loading === undefined && memoryFacts.settledAll(memoryManager.memories.map(({ id }) => id)),
+  );
+  const today = $derived(todayKnown ? memoryManager.cards.find((card) => card.section === 'today') : undefined);
+  const todayCover = $derived(today ? memoryCover(today.lead, memoryFacts.get(today.lead.id)) : undefined);
 
   const runTonightNow = async () => {
     const confirmed = await modalManager.showDialog({
@@ -396,12 +396,15 @@
       <!-- today -->
       <section class="command-panel">
         <h2>{$t('command_today')}</h2>
-        {#if memory}
-          <a class="command-memory" href={Route.viewMemory({ id: memory.id })}>
-            <img src={thumb(memory.assets[0].id)} alt="" />
-            <span>{memoryLabel(memory)}</span>
+        {#if today && todayCover?.id}
+          <a class="command-memory" href={Route.viewMemory({ id: today.lead.id, assetId: today.assets[0].id })}>
+            <img src={thumb(todayCover.id)} alt="" />
+            <span class="command-memory-words">
+              <span class="command-memory-title">{$memoryLaneTitle(today.lead)}</span>
+              <span class="command-memory-line">{memoryCardLine(today, $t, $locale)}</span>
+            </span>
           </a>
-        {:else}
+        {:else if todayKnown}
           <p class="command-note">{$t('command_today_nothing')}</p>
         {/if}
       </section>
@@ -747,8 +750,20 @@
     object-fit: cover;
     border-radius: var(--ws-radius);
   }
-  .command-memory span {
+  /* the card's words: its title, then its line in data type, as the Memories page's card says them */
+  .command-memory-words {
+    display: grid;
+    gap: 0.15rem;
+  }
+  .command-memory-title {
     font-weight: 600;
+  }
+  .command-memory-line {
+    color: var(--immich-ui-muted);
+    font-family: var(--ws-font-data);
+    font-size: var(--ws-text-data);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
   }
   .command-actions {
     display: flex;
