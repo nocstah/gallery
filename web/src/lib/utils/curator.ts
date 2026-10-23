@@ -308,6 +308,13 @@ export type FilmRequest = {
 };
 export const FILM_MOST_SECONDS = 300;
 
+/** A film Curator keeps for a shared link (GET /api/memories/shares): the memory it plays, and whether it plays songs. */
+export type MemoryShare = { memoryId: string; music: boolean };
+
+/** What forgetting a link's film did: whether one was kept for the link (false the second time), and how many songs no
+ * other film plays went with it. */
+export type ForgottenShare = { forgotten: boolean; songs: number };
+
 /** What film.render made: the film as an MP4, 1080p at 30 fps, kept a week. */
 export type FilmResult = {
   /** the file's name, the memory's title ("Siem Reap · October 2025.mp4") */
@@ -643,9 +650,18 @@ export const curator = {
     post<{ job: number }>('/books', { ...subject, title, photos }),
   /** a photo book being made, or made */
   book: (jobId: number) => call<BookJob>(`/books/${jobId}`),
-  /** a memory's film saved as video (film.render on Curator's applier); follow it with film() */
+  /** a memory shared as a playable film: Curator keeps the film for the link Gallery made, for the public player */
   shareMemory: (memoryId: string, body: { linkId: string; key: string; presentation: MemoryPresentation }) =>
     post<{ ready: boolean; count: number }>(`/memories/${encodeURIComponent(memoryId)}/share`, body),
+  /** the films Curator keeps for shared links, by link id: which links play a memory, which memory, with songs or not */
+  memoryShares: () => call<{ shares: Record<string, MemoryShare> }>('/memories/shares'),
+  /** once Gallery has deleted the link: Curator forgets the film it kept for it (its snapshot, its key index, the songs
+   * no other film plays); Curator refuses (409) while Gallery still has the link, and a second call changes nothing */
+  forgetMemoryShare: (memoryId: string, linkId: string) =>
+    call<ForgottenShare>(`/memories/${encodeURIComponent(memoryId)}/share/${encodeURIComponent(linkId)}`, {
+      method: 'DELETE',
+    }),
+  /** a memory's film saved as video (film.render on Curator's applier); follow it with film() */
   saveFilm: (request: FilmRequest) => post<{ job: number }>('/films', request),
   keepFilm: (jobId: number) => post<{ assetId: string }>(`/films/${jobId}/gallery`, {}),
   /** a film being saved as video, or saved */
@@ -667,6 +683,37 @@ export const curator = {
   /** the switch for filing new slips and QR codes into QR as they arrive */
   setSlipsAuto: (enabled: boolean) =>
     call<{ auto: boolean }>('/slips/auto', { method: 'PUT', body: JSON.stringify({ enabled }) }),
+};
+
+/**
+ * What became of a link's film once Gallery deleted the link: Curator forgot it, kept none for the link, or could not
+ * forget it now (`later`: not answering, or refusing), so its nightly sweep does; `unsure` when Curator could not even
+ * say whether it kept one.
+ */
+export type FilmForgotten = 'forgotten' | 'none' | 'later' | 'unsure';
+
+/**
+ * Local Omarchy layer: after a link is turned off (deleted in Gallery), the film Curator kept for it goes too: the films
+ * Curator keeps say whether the link played one, and of which memory, so a memory's link is known for what it is, not
+ * guessed from its shape. Never throws: the link is off whatever Curator answers.
+ */
+export const forgetLinkFilm = async (linkId: string): Promise<FilmForgotten> => {
+  let film: MemoryShare | undefined;
+  try {
+    const { shares } = await curator.memoryShares();
+    film = shares[linkId];
+  } catch {
+    return 'unsure';
+  }
+  if (!film) {
+    return 'none';
+  }
+  try {
+    await curator.forgetMemoryShare(film.memoryId, linkId);
+    return 'forgotten';
+  } catch {
+    return 'later';
+  }
 };
 
 /**
