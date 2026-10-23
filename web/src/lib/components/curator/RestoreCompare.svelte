@@ -3,6 +3,8 @@
   // original left of a divider and the restored version right of it; dragging anywhere in the frame moves the divider.
   // The divider is a range input underneath, so arrow keys and touch move it too. A clip plays both versions in step,
   // with its own play button and position below the frame (native controls would be cut in half by the divider).
+  // On an inbox card every control is described by the card (`describedBy`), so a screen reader hears which photo's
+  // versions it compares.
   import { restoredUrl, type Suggestion } from '$lib/utils/curator';
   import { formatDuration } from '$lib/utils/duration';
   import { Icon } from '@immich/ui';
@@ -14,9 +16,11 @@
     /** a card in the inbox, or review mode's stage */
     size: 'card' | 'stage' | 'inspect';
     onInspect?: () => void;
+    /** the ids of what names the card it is on, for each of its controls */
+    describedBy?: string;
   }
 
-  let { suggestion, size, onInspect }: Props = $props();
+  let { suggestion, size, onInspect, describedBy }: Props = $props();
 
   type Payload = {
     variant?: string;
@@ -132,6 +136,7 @@
     class="restore-expand"
     onclick={inspect}
     aria-label={$t('ai_inbox_inspect')}
+    aria-describedby={describedBy}
     title={$t('ai_inbox_inspect')}><Icon icon={mdiFullscreen} size="22" /></button
   >
 {/snippet}
@@ -148,6 +153,7 @@
             type="button"
             class="restore-open-surface"
             aria-label={$t('ai_inbox_inspect')}
+            aria-describedby={describedBy}
             onclick={inspect}
           ></button>{/if}
         {#if effectClip}
@@ -238,6 +244,7 @@
             step="0.5"
             bind:value={split}
             aria-label={$t('ai_inbox_compare')}
+            aria-describedby={describedBy}
           />
         {/if}
         {#if onInspect}{@render expand()}{/if}
@@ -261,6 +268,7 @@
             class="ws-btn-quiet restore-play"
             onclick={toggle}
             aria-label={playing ? $t('pause') : $t('play')}
+            aria-describedby={describedBy}
           >
             <Icon icon={playing ? mdiPause : mdiPlay} size="18" />
           </button>
@@ -273,6 +281,7 @@
             value={time}
             oninput={seek}
             aria-label={$t('ai_inbox_clip_position')}
+            aria-describedby={describedBy}
           />
           <span class="ws-inbox-meta">{clock(time)} / {clock(duration)}</span>
         </div>
@@ -286,6 +295,7 @@
       <span>{$t('error_loading_image')}</span><button
         class="ws-btn"
         type="button"
+        aria-describedby={describedBy}
         onclick={() => {
           failed = false;
           retry++;

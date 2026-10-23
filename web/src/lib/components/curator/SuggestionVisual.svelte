@@ -6,7 +6,9 @@
   // seen together (a smart album Curator proposes) shows their faces before photos of them together. Each photo
   // opens in a zoomable inspector that keeps the review in place; modified clicks still open Gallery in a new tab. Resting the pointer on a photo
   // shows it large, whole, in the middle of the screen, until the pointer moves off it. A picture with nothing to show
-  // is a quiet placeholder (InboxTile).
+  // is a quiet placeholder (InboxTile). Each photo, face and control is described by its card (`describedBy`: the
+  // card's heading and line), so a screen reader hears whose preview it opens, and the inspector is titled as the
+  // card is headed.
   import InboxTile from '$lib/components/curator/InboxTile.svelte';
   import InboxInspector from '$lib/components/curator/InboxInspector.svelte';
   import { inspectionItems } from '$lib/utils/inbox-inspection';
@@ -19,9 +21,13 @@
 
   interface Props {
     suggestion: Suggestion;
+    /** the card's heading, for the inspector's title (Curator's title by default) */
+    title?: string;
+    /** the ids of what names the card (its heading and line), for each photo and control */
+    describedBy?: string;
   }
 
-  let { suggestion }: Props = $props();
+  let { suggestion, title, describedBy }: Props = $props();
   let inspecting = $state<number>();
   const inspectItems = $derived(inspectionItems(suggestion));
   const inspectPhoto = (id: string, turn = 0) => {
@@ -75,6 +81,7 @@
     rel="noopener"
     style:width="{size}px"
     aria-label={label ? `${label}: ${$t('ai_inbox_inspect')}` : $t('ai_inbox_inspect')}
+    aria-describedby={describedBy}
     onmouseenter={() => peekAt(id, turn)}
     onmouseleave={unpeek}
     onclick={(event) => {
@@ -117,6 +124,7 @@
       ></video><button
         type="button"
         class="ws-btn-quiet"
+        aria-describedby={describedBy}
         onclick={(event) => {
           event.currentTarget.parentElement?.querySelector('video')?.pause();
           inspecting = 0;
@@ -128,6 +136,7 @@
     <RestoreCompare
       {suggestion}
       size="card"
+      {describedBy}
       onInspect={() => {
         unpeek();
         inspecting = 0;
@@ -146,6 +155,7 @@
       class="visual-tile"
       style:width="112px"
       aria-label={`${$t('ai_inbox_now')}: ${$t('ai_inbox_inspect')}`}
+      aria-describedby={describedBy}
       onclick={() => inspectFace(face(suggestion.target_id))}
     >
       <img class="ws-strip-tile visual-face" src={face(suggestion.target_id)} alt="" width="112" height="112" />
@@ -156,6 +166,7 @@
       class="visual-tile"
       style:width="112px"
       aria-label={`${$t('ai_inbox_proposed')}: ${$t('ai_inbox_inspect')}`}
+      aria-describedby={describedBy}
       onclick={() => inspectFace(`/api/people/${suggestion.target_id}/faces/${payload.face_id}/thumbnail`)}
     >
       <img
@@ -173,6 +184,7 @@
         type="button"
         class="visual-tile"
         aria-label={$t('ai_inbox_inspect')}
+        aria-describedby={describedBy}
         onclick={() => inspectFace(face(personId))}
         ><img
           class="ws-strip-tile visual-face"
@@ -195,6 +207,7 @@
         type="button"
         class="visual-tile"
         aria-label={$t('ai_inbox_inspect')}
+        aria-describedby={describedBy}
         onclick={() => inspectFace(face(personId))}
         ><img
           class="ws-strip-tile visual-face"
@@ -222,7 +235,7 @@
   <InboxInspector
     items={inspectItems}
     initialIndex={inspecting}
-    title={suggestion.title}
+    title={title ?? suggestion.title}
     onClose={() => (inspecting = undefined)}
   />
 {/if}

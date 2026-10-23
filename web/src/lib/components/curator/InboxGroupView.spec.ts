@@ -1,8 +1,11 @@
+import { AssetTypeEnum, AssetVisibility, type AssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { init, register, waitLocale } from 'svelte-i18n';
 import type { GroupPage, JobRow, Suggestion } from '$lib/utils/curator';
+import { FACTS_AT_ONCE } from '$lib/utils/inbox-facts';
+import { assetFactory } from '@test-data/factories/asset-factory';
 import InboxGroupView from './InboxGroupView.svelte';
 
 // Local Omarchy layer: one kind of Curator's suggestions against a stand-in Curator. Every word says what accepting
@@ -11,7 +14,7 @@ import InboxGroupView from './InboxGroupView.svelte';
 // back exactly that action in one call, waiting again. The cards are a list of articles named by their titles, their
 // keys announced; Delete is the danger role, and a confidence every card shares is left out.
 
-const { curatorMock, waitForJobMock } = vi.hoisted(() => ({
+const { curatorMock, waitForJobMock, getAssetInfoMock } = vi.hoisted(() => ({
   curatorMock: {
     group: vi.fn(),
     decide: vi.fn(),
@@ -19,6 +22,7 @@ const { curatorMock, waitForJobMock } = vi.hoisted(() => ({
     reopen: vi.fn(),
   },
   waitForJobMock: vi.fn(),
+  getAssetInfoMock: vi.fn(),
 }));
 
 vi.mock('$lib/utils/curator', async (importOriginal) => ({
@@ -26,6 +30,43 @@ vi.mock('$lib/utils/curator', async (importOriginal) => ({
   curator: curatorMock,
   waitForJob: waitForJobMock,
 }));
+
+vi.mock('@immich/sdk', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@immich/sdk')>()),
+  getAssetInfo: getAssetInfoMock,
+}));
+
+// the cards a test brings near the screen (`enter`); none comes near by itself
+class NearObserver {
+  static all: NearObserver[] = [];
+  targets = new Set<Element>();
+  constructor(private callback: IntersectionObserverCallback) {
+    NearObserver.all.push(this);
+  }
+  observe(target: Element) {
+    this.targets.add(target);
+  }
+  unobserve(target: Element) {
+    this.targets.delete(target);
+  }
+  disconnect() {
+    this.targets.clear();
+  }
+  takeRecords() {
+    return [];
+  }
+  static enter(elements: Element[]) {
+    for (const observer of NearObserver.all) {
+      const near = elements.filter((element) => observer.targets.has(element));
+      if (near.length > 0) {
+        observer.callback(
+          near.map((target) => ({ target, isIntersecting: true }) as IntersectionObserverEntry),
+          observer as unknown as IntersectionObserver,
+        );
+      }
+    }
+  }
+}
 
 beforeAll(async () => {
   register('en-US', () => import('$i18n/en.json'));
@@ -86,10 +127,33 @@ const renderKind = async () => {
 };
 
 beforeEach(() => {
-  for (const mock of [...Object.values(curatorMock), waitForJobMock]) {
+  for (const mock of [...Object.values(curatorMock), waitForJobMock, getAssetInfoMock]) {
     mock.mockReset();
   }
+  getAssetInfoMock.mockRejectedValue(new Error('not asked for in this test'));
+  NearObserver.all = [];
+  vi.stubGlobal('IntersectionObserver', NearObserver);
 });
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+/** Gallery's asset for a card's clip (stand-in places) */
+const clipAsset = (n: number, fields: Partial<AssetResponseDto> = {}): AssetResponseDto =>
+  assetFactory.build({
+    id: `asset-${n}`,
+    type: AssetTypeEnum.Video,
+    localDateTime: '2019-10-11T15:55:06.000Z',
+    exifInfo: { city: 'Riverton', country: 'Testland' },
+    duration: 100,
+    originalFileName: `IMG_${5398 + n}.MOV`,
+    visibility: AssetVisibility.Timeline,
+    isTrashed: false,
+    livePhotoVideoId: null,
+    stack: null,
+    ...fields,
+  });
 
 describe('InboxGroupView', () => {
   it('says what accepting does, leads with Review one by one, and says the backup before the click', async () => {
@@ -351,5 +415,158 @@ describe('InboxGroupView', () => {
     await user.click(await screen.findByRole('button', { name: 'Undo' }));
     expect(curatorMock.undo).toHaveBeenCalledWith([101], true);
     expect(await screen.findByRole('button', { name: 'Archive' })).toBeInTheDocument();
+  });
+});
+
+// Local Omarchy layer (2026-10-23, the owner's "Inbox cards by when and where"): a card about one photo or clip is
+// headed by when and where from Gallery's asset, the file's name moving to the muted line under it, and every button on
+// it is described by that heading and line. Gallery is asked only for the cards near the screen, a few at a time.
+describe('InboxGroupView by when and where', () => {
+  const near = async (cards: HTMLElement[]) => {
+    NearObserver.enter(cards);
+    await Promise.resolve();
+  };
+
+  it("keeps Curator's heading, its line held, until the card comes near the screen", async () => {
+    waiting([clip(1), clip(2)]);
+    await renderKind();
+    const [first] = await screen.findAllByRole('article');
+
+    expect(first).toHaveAccessibleName('IMG_5399.MOV');
+    expect(first).toHaveAttribute('data-facts', 'waiting');
+    // the line is there, empty, so the card keeps its height when the facts come
+    expect(first.querySelector('.item-facts')).toHaveTextContent(/^$/);
+    expect(getAssetInfoMock).not.toHaveBeenCalled();
+  });
+
+  it('heads the card by when and where once Gallery says them, the file’s name under it', async () => {
+    waiting([clip(1), clip(2)]);
+    getAssetInfoMock.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(
+        id === 'asset-1'
+          ? clipAsset(1, { stack: { id: 'stack', assetCount: 3, primaryAssetId: 'other' } })
+          : clipAsset(2, { exifInfo: { city: null, country: 'Testland' }, duration: 2400, isTrashed: true }),
+      ),
+    );
+    await renderKind();
+    const cards = await screen.findAllByRole('article');
+
+    await near(cards);
+
+    await waitFor(() => expect(cards[0]).toHaveAccessibleName('Oct 11, 2019 · Riverton · 0.1 s'));
+    expect(cards[0]).toHaveAttribute('data-facts', 'shown');
+    expect(within(cards[0]).getByText('IMG_5399.MOV · In a stack of 3 photos')).toHaveClass('ws-inbox-meta');
+    await waitFor(() => expect(cards[1]).toHaveAccessibleName('Oct 11, 2019 · Testland · 0:02'));
+    expect(within(cards[1]).getByText('IMG_5400.MOV · In the Trash')).toBeInTheDocument();
+    expect(getAssetInfoMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('describes every button and photo on a card by its heading and line', async () => {
+    waiting([clip(1), clip(2)]);
+    getAssetInfoMock.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(id === 'asset-1' ? clipAsset(1, { visibility: AssetVisibility.Hidden }) : clipAsset(2)),
+    );
+    await renderKind();
+    const cards = await screen.findAllByRole('article');
+
+    await near(cards);
+
+    const about = 'Oct 11, 2019 · Riverton · 0.1 s IMG_5399.MOV · Part of a Live Photo';
+    await waitFor(() =>
+      expect(within(cards[0]).getByRole('button', { name: 'Archive' })).toHaveAccessibleDescription(about),
+    );
+    expect(within(cards[0]).getByRole('button', { name: 'Reject' })).toHaveAccessibleDescription(about);
+    expect(within(cards[0]).getByRole('button', { name: 'Delete' })).toHaveAccessibleDescription(about);
+    expect(within(cards[0]).getByRole('link', { name: 'Open large preview' })).toHaveAccessibleDescription(about);
+    // the card itself says its line, then its run's confidence where it has one
+    expect(cards[0]).toHaveAccessibleDescription('IMG_5399.MOV · Part of a Live Photo');
+    // and the next card is told apart from it
+    expect(within(cards[1]).getByRole('button', { name: 'Delete' })).toHaveAccessibleDescription(
+      'Oct 11, 2019 · Riverton · 0.1 s IMG_5400.MOV',
+    );
+  });
+
+  it("names a card's buttons by Curator's heading where Gallery could not say", async () => {
+    waiting([clip(1)]);
+    getAssetInfoMock.mockRejectedValue(new Error('400'));
+    await renderKind();
+    const [card] = await screen.findAllByRole('article');
+
+    await near([card]);
+
+    await waitFor(() => expect(card).toHaveAttribute('data-facts', 'failed'));
+    expect(card).toHaveAccessibleName('IMG_5399.MOV');
+    expect(within(card).getByRole('button', { name: 'Archive' })).toHaveAccessibleDescription('IMG_5399.MOV');
+  });
+
+  it('asks only for the cards near the screen, a few at a time, each photo once', async () => {
+    waiting(Array.from({ length: 12 }, (_, n) => clip(n)));
+    const answers: (() => void)[] = [];
+    getAssetInfoMock.mockImplementation(
+      ({ id }: { id: string }) =>
+        new Promise((resolve) => {
+          answers.push(() => resolve(clipAsset(Number(id.replace('asset-', '')))));
+        }),
+    );
+    await renderKind();
+    const cards = await screen.findAllByRole('article');
+
+    await near(cards.slice(0, 6));
+    expect(getAssetInfoMock).toHaveBeenCalledTimes(FACTS_AT_ONCE);
+    answers.shift()!();
+    await waitFor(() => expect(getAssetInfoMock).toHaveBeenCalledTimes(FACTS_AT_ONCE + 1));
+    for (const answer of answers.splice(0)) {
+      answer();
+    }
+    await waitFor(() => expect(getAssetInfoMock).toHaveBeenCalledTimes(6));
+    for (const answer of answers.splice(0)) {
+      answer();
+    }
+    await waitFor(() => expect(cards[5]).toHaveAttribute('data-facts', 'shown'));
+    // the cards further down are not asked about, and a card seen again asks nothing
+    expect(cards[6]).toHaveAttribute('data-facts', 'waiting');
+    await near(cards.slice(0, 2));
+    expect(getAssetInfoMock).toHaveBeenCalledTimes(6);
+    expect(getAssetInfoMock.mock.calls.map(([{ id }]) => id)).toEqual(
+      Array.from({ length: 6 }, (_, n) => `asset-${n}`),
+    );
+  });
+
+  it("keeps a title of the card's own, when and where on the line under it", async () => {
+    const caption: Suggestion = {
+      ...clip(1),
+      kind: 'asset.describe',
+      title: 'A dog on the beach',
+      payload: { asset_id: 'asset-1', description: 'A dog on the beach (AI)' },
+    };
+    waiting([caption]);
+    getAssetInfoMock.mockResolvedValue(clipAsset(1, { type: AssetTypeEnum.Image, duration: null }));
+    await renderKind();
+    const [card] = await screen.findAllByRole('article');
+
+    await near([card]);
+
+    await waitFor(() => expect(within(card).getByText('Oct 11, 2019 · Riverton')).toBeInTheDocument());
+    expect(card).toHaveAccessibleName('A dog on the beach');
+  });
+
+  it('asks nothing for a card about many photos, and holds no line for it', async () => {
+    const album: Suggestion = {
+      ...clip(1),
+      kind: 'album.create',
+      title: 'Best of 2003',
+      asset_ids: ['a', 'b', 'c'],
+      payload: { name: 'Best of 2003', asset_ids: ['a', 'b', 'c'] },
+    };
+    waiting([album]);
+    await renderKind();
+    const [card] = await screen.findAllByRole('article');
+
+    await near([card]);
+
+    expect(getAssetInfoMock).not.toHaveBeenCalled();
+    expect(card).not.toHaveAttribute('data-facts');
+    expect(card.querySelector('.item-facts')).toBeNull();
+    expect(within(card).getByRole('button', { name: 'Archive' })).toHaveAccessibleDescription('Best of 2003');
   });
 });

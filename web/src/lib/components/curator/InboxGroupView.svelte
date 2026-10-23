@@ -16,6 +16,11 @@
   // role and set apart from Reject by a hairline: the photo goes to Gallery's Trash and the card is set aside; its Undo
   // restores the photo and puts the card back. How sure Curator is shows once where it changes in the queue, over the
   // cards it holds (utils/curator-inbox confidenceMarks), not on every card.
+  // A card about one photo or clip is headed by when and where (utils/inbox-facts: "Oct 11, 2019 · Riverton · 0.1 s"),
+  // the file's name, a Live Photo, its stack and the Trash or the Archive on the muted line under it, from Gallery's
+  // asset, asked for once the card comes within a screen of the view, a few at a time; until then it keeps Curator's
+  // heading, its line reserved. Every button and photo on a card is described by its heading and that line, so a screen
+  // reader hears which clip a Delete is for.
   import ReviewMode from '$lib/components/curator/ReviewMode.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
@@ -38,10 +43,12 @@
     seriesOf,
     waitingIn,
   } from '$lib/utils/curator-inbox';
+  import { locale as dateLocale } from '$lib/stores/preferences.store';
+  import { cardWords, InboxFactsLoader, nearScreen, photoSubject } from '$lib/utils/inbox-facts';
   import { deleteAssets, restoreAssets } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiArrowLeft } from '@mdi/js';
-  import { onMount, tick } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { flip } from 'svelte/animate';
   import { SvelteSet } from 'svelte/reactivity';
   import { locale, t, type Translations } from 'svelte-i18n';
@@ -447,8 +454,21 @@
 
   const confidence = (value: number) => Math.round(value * 100);
 
+  // the cards' photos as Gallery has them, for this page: asked for as each card comes within a screen of the view
+  const facts = new InboxFactsLoader();
+  const near = nearScreen();
+  const whenNear = (subject: string) => (node: HTMLElement) => near.watch(node, () => facts.request(subject));
+  const factsState = (subject: string) => {
+    const known = facts.get(subject);
+    return known === undefined ? 'waiting' : known ? 'shown' : 'failed';
+  };
+
   onMount(() => {
     void load();
+  });
+  onDestroy(() => {
+    near.disconnect();
+    facts.close();
   });
 </script>
 
@@ -559,6 +579,11 @@
   {#each items as item, index (item.id)}
     {@const level = marks.levels.get(item.id)}
     {@const run = marks.runOf.get(item.id)}
+    <!-- a card about one photo or clip: when and where, from Gallery (utils/inbox-facts) -->
+    {@const subject = photoSubject(item)}
+    {@const said = cardWords(item.title, subject ? facts.get(subject) : undefined, $t, $dateLocale)}
+    <!-- what each of the card's buttons and photos is for, to a screen reader: the card's heading and its line -->
+    {@const about = said.line ? `item-${item.id}-title item-${item.id}-facts` : `item-${item.id}-title`}
     <li animate:flip={{ duration: 180 }}>
       {#if level}
         <!-- one quiet line where Curator's confidence changes, over the cards it holds (each hears it as its own) -->
@@ -571,14 +596,22 @@
         class="ws-inbox-row item-row"
         tabindex="-1"
         aria-labelledby="item-{item.id}-title"
-        aria-describedby={run === undefined ? undefined : `item-${run}-level`}
+        aria-describedby={[said.line ? `item-${item.id}-facts` : '', run === undefined ? '' : `item-${run}-level`]
+          .filter(Boolean)
+          .join(' ') || undefined}
         data-status={item.status}
         data-deciding={deciding.has(item.id) || undefined}
+        data-facts={subject ? factsState(subject) : undefined}
         bind:this={rows[index]}
+        {@attach subject ? whenNear(subject) : undefined}
       >
-        <SuggestionVisual suggestion={item} />
+        <SuggestionVisual suggestion={item} title={said.heading} describedBy={about} />
         <div class="item-text">
-          <h3 class="ws-inbox-row-title item-title" id="item-{item.id}-title">{item.title}</h3>
+          <h3 class="ws-inbox-row-title item-title" id="item-{item.id}-title">{said.heading}</h3>
+          {#if subject}
+            <!-- reserved while the facts are on their way, so the card does not grow when they come -->
+            <p class="ws-inbox-meta item-facts" id="item-{item.id}-facts">{said.line}</p>
+          {/if}
           {#if item.detail}
             <p class="ws-inbox-row-body">{item.detail}</p>
           {/if}
@@ -599,6 +632,7 @@
                 type="button"
                 class="ws-btn"
                 aria-keyshortcuts="A"
+                aria-describedby={about}
                 disabled={busy || deciding.has(item.id)}
                 onclick={() => decide(item, 'accept')}
               >
@@ -608,6 +642,7 @@
                 type="button"
                 class="ws-btn-quiet"
                 aria-keyshortcuts="R"
+                aria-describedby={about}
                 disabled={busy || deciding.has(item.id)}
                 onclick={() => decide(item, 'reject')}
               >
@@ -621,6 +656,7 @@
                     type="button"
                     class="ws-btn-quiet item-delete"
                     aria-keyshortcuts="D"
+                    aria-describedby={about}
                     disabled={busy || deciding.has(item.id)}
                     onclick={() => trash(item)}
                   >
@@ -634,6 +670,7 @@
                 type="button"
                 class="ws-btn-quiet"
                 aria-keyshortcuts="U"
+                aria-describedby={about}
                 disabled={busy}
                 onclick={() => untrash(item)}
               >
@@ -646,6 +683,7 @@
                   type="button"
                   class="ws-btn-quiet"
                   aria-keyshortcuts="U"
+                  aria-describedby={about}
                   disabled={busy}
                   onclick={() => undo(item)}
                 >
@@ -656,6 +694,7 @@
                   type="button"
                   class="ws-btn-quiet"
                   aria-keyshortcuts="U"
+                  aria-describedby={about}
                   disabled={busy}
                   onclick={() => putBack(item)}
                 >
@@ -671,7 +710,7 @@
 </ul>
 
 {#if reviewing && words}
-  <ReviewMode {keys} title={words.title} {action} onClose={closeReview} />
+  <ReviewMode {keys} title={words.title} {action} {facts} onClose={closeReview} />
 {/if}
 
 {#if more}
@@ -798,6 +837,13 @@
     display: grid;
     gap: 0.3rem;
     align-content: start;
+  }
+  /* the photo as Gallery has it, under the heading in muted data type (the file's name, a Live Photo, its stack, the
+     Trash): its line is held while the facts are on their way, so the card keeps its height when they come; a long
+     file name breaks rather than running past the column */
+  .item-facts {
+    min-height: 1lh;
+    overflow-wrap: anywhere;
   }
   .item-actions {
     display: flex;
