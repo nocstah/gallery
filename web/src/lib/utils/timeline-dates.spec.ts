@@ -1,4 +1,4 @@
-import { monthMarkLabel, tileDateLabel } from '$lib/utils/timeline-dates';
+import { dayLabel, monthMarkLabel, tileDateLabel } from '$lib/utils/timeline-dates';
 
 describe('monthMarkLabel', () => {
   it('sets the short month in capitals', () => {
@@ -36,5 +36,23 @@ describe('tileDateLabel', () => {
 
   it('says nothing for a date it cannot read', () => {
     expect(tileDateLabel({} as never, 'en-US')).toBe('');
+  });
+});
+
+describe('dayLabel', () => {
+  it('writes the day with its year, whatever the year', () => {
+    expect(dayLabel({ year: 2019, month: 10, day: 11 }, 'en-US')).toBe('Oct 11, 2019');
+    expect(dayLabel({ year: new Date().getFullYear(), month: 4, day: 2 }, 'en-US')).toContain(
+      String(new Date().getFullYear()),
+    );
+  });
+
+  it('follows the locale', () => {
+    expect(dayLabel({ year: 2019, month: 10, day: 11 }, 'de')).toBe('11. Okt. 2019');
+    expect(dayLabel({ year: 2019, month: 10, day: 11 }, 'zh-Hans')).toBe('2019年10月11日');
+  });
+
+  it('says nothing for a date it cannot read', () => {
+    expect(dayLabel({} as never, 'en-US')).toBe('');
   });
 });
