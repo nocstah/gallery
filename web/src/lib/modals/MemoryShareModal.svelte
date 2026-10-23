@@ -642,6 +642,12 @@
   .ws-memory-share-segments {
     height: 2.75rem;
   }
+  /* a finger's choices at the sheet's touch floor: 44px inside the control's frame */
+  @media (max-width: 639px), (pointer: coarse) {
+    .ws-memory-share-segments {
+      height: 3.25rem;
+    }
+  }
   .ws-memory-share-segments :global(.ws-group-tab) {
     display: grid;
     grid-auto-columns: minmax(0, 1fr);
