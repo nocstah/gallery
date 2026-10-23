@@ -131,7 +131,8 @@
     word-break: break-all;
     user-select: all;
   }
-  /* the expiry's one-press way out, a quiet underlined word at the line's end like Show selected's Put them back */
+  /* Remove end date, the end's one-press way out, a quiet underlined word at the line's end like Show selected's Put
+     them back */
   .ws-share-remove-expiry {
     margin-inline-start: 0.5rem;
     color: var(--immich-ui-dark);

@@ -146,6 +146,7 @@ describe('what a link shares, in one sentence', () => {
       "Anyone with the link can watch this memory's 2 photos and its music as a film, without an account. The link ends Nov 20.",
     );
     expect(screen.getByRole('radio', { name: '30 days' })).toBeChecked();
+    expect(screen.getByRole('group', { name: 'Ends' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /Playable memory/ })).toBeChecked();
   });
 

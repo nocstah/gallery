@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Local Omarchy layer: a link's options (custom URL, password, description, expiry, location, download, upload) from
+  // Local Omarchy layer: a link's options (custom URL, password, description, its end, location, download, upload) from
   // the Share sheet, in a dialog over it, so changing a link never leaves the album or the photos for the Shared links
   // page. The same fields and the same save as that page's Edit link (routes/(user)/shared-links/(list)/[id]/edit).
   import SharedLinkFormFields from '$lib/components/SharedLinkFormFields.svelte';

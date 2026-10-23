@@ -26,7 +26,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /**
  * How long a memory's link stays open: the Share sheet's segmented control, 30 days chosen as on every link the Share
  * sheets make (SHARE_LINK_DAYS, `shareLinkExpiry`); `null` keeps it open until it is turned off. Any other date is a
- * press away once the link is made (its Edit link, or Remove expiry).
+ * press away once the link is made (its Edit link, or Remove end date).
  */
 export const MEMORY_LINK_DAYS = [7, 30, 365, null] as const;
 export type MemoryLinkDays = (typeof MEMORY_LINK_DAYS)[number];

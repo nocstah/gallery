@@ -190,11 +190,11 @@ describe('SelectionShareModal', () => {
     expect(within(panel).getByTestId('share-link-url')).toHaveTextContent('https://photos.example/share/made');
     // the link's line, in the Shared links page's words
     expect(within(panel).getByText('Never ends')).toBeInTheDocument();
-    expect(within(panel).queryByRole('button', { name: 'Remove expiry' })).not.toBeInTheDocument();
+    expect(within(panel).queryByRole('button', { name: 'Remove end date' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Make a link' })).not.toBeInTheDocument();
   });
 
-  it('says when a link ends, as Shared links says it, and removes the expiry in one press', async () => {
+  it('says when a link ends, as Shared links says it, and removes its end date in one press', async () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-21T12:00:00.000Z') });
     const made = sharedLinkFactory.build({
       key: 'made',
@@ -213,7 +213,7 @@ describe('SelectionShareModal', () => {
       'Anyone with the link · Ends Nov 15 · Can download',
     );
 
-    await userEvent.click(within(panel).getByRole('button', { name: 'Remove expiry' }));
+    await userEvent.click(within(panel).getByRole('button', { name: 'Remove end date' }));
     expect(handleUpdateSharedLink).toHaveBeenCalledWith(made, { expiresAt: null });
   });
 

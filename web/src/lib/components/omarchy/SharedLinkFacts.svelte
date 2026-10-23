@@ -22,7 +22,7 @@
     download?: boolean;
     /** the clock the end is read against (a page that keeps one, as the feed does), else now */
     now?: number;
-    /** what follows the line on its last row (the Share sheets' Remove expiry) */
+    /** what follows the line on its last row (the Share sheets' Remove end date) */
     children?: Snippet;
   };
 

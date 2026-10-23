@@ -109,6 +109,7 @@ errors.unable_to_trash_asset exclusive
 errors.unable_to_update_album_cover en:8e68c919
 errors.unable_to_update_album_info en:0ef54d40
 exit_slideshow
+expire_after
 failed_to_load_assets exclusive
 folders_feature_description
 geolocation_instruction_location exclusive
@@ -139,6 +140,7 @@ move_to_locked_folder
 move_to_locked_folder_confirmation
 mute_memories
 navigate_to_time
+never en:6300ef80
 new_album exclusive
 new_api_key
 new_pin_code_subtitle
