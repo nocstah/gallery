@@ -1682,8 +1682,8 @@ ul[role='menu'] > hr:last-child {
 /* ---- Ctrl+K (components/global-search) in the house grammar (2026-10-23, the critique's "upstream islands": its
    section headings and its modes were upstream's chrome, letter-spaced 11px capitals and a rail of mono capitals).
    Nothing in it is set in capitals: the strings are sentence case, as everywhere else. The section headings ("Quick
-   links", "People", "Top result") take the sidebar's heading voice, meta size at 600 in the muted ink over their rows;
-   the modes (Smart, Filename, Description, OCR, Ask) are the segmented control, ui type, the mode in use inverted as a
+   links", "People", "Top result") take the sidebar's heading voice, meta size at the regular weight in ink over their
+   rows (as Browse and Library head theirs); the modes (Smart, Filename, Description, OCR, Ask) are the segmented control, ui type, the mode in use inverted as a
    segment is (its pill still slides); what was typed as a term ("person:", "from:") keeps its key as typed, in data
    type, in the search page's chip (a hairline frame, the key muted, the value in ink); a row's note ("Shared", "3
    members") is a quiet chip of the same frame. Upstream's classes stay in the markup; these hooks override them ---- */
@@ -1692,10 +1692,10 @@ ul[role='menu'] > hr:last-child {
 }
 [data-command-group-heading] {
   padding-block: 0.25rem 0.375rem;
-  color: var(--immich-ui-muted);
+  color: var(--immich-ui-dark);
   font-family: var(--font-sans);
   font-size: var(--ws-text-meta);
-  font-weight: 600;
+  font-weight: var(--font-weight-normal, 400);
   letter-spacing: normal;
 }
 /* the modes: a segmented control, a hairline frame on the ground, the mode in use inverted */
