@@ -1,10 +1,10 @@
 <script lang="ts">
   // Local Omarchy layer: the one bar's view menu. What you set now and then, not every minute, lives here instead of
   // in the bar: the order (on a page that can be sorted), and for photo grids the thumbnail size, day labels,
-  // expanded stacks and the compact grid; then the theme (following Omarchy, the default, or held light or dark: the one
-  // light/dark control, which Settings › Theme points to) and All themes, the way to Settings › Theme, rounded corners,
-  // the inspector window and Cast (when a cast target is around). Shift+wheel, Ctrl+wheel and + - 0 resize the
-  // thumbnails directly.
+  // expanded stacks and the compact grid; then the theme (following Omarchy, the default, or held light or dark: the
+  // one light/dark control, which Settings › Theme points to) and All themes, the way to Settings › Theme, rounded
+  // corners, the inspector window and Cast (when a cast target is around). Shift+wheel, Ctrl+wheel and + - 0 resize
+  // the thumbnails directly.
   import { page } from '$app/state';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';

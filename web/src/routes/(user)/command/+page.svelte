@@ -3,8 +3,9 @@
   // (by kind, as the inbox lists it: utils/curator-inbox), what Curator is doing and will do tonight, the library's
   // health, the machine (GPU, local models, disk, backups), today's memory, and the actions used most. Read from
   // Curator (~/code/curator: /api/overview, /api/inbox, /api/jobs, /api/library-health) and Gallery (today's
-  // memories, as the Memories page's cards: managers/memory-manager); refreshed while open. It opens on one thing to look at: how many wait in the inbox, with the way to
-  // review them beside it; the day's other numbers follow in one quiet line, a zero in muted data type. Counts are ink;
+  // memories, as the Memories page's cards: managers/memory-manager); refreshed while open. It opens on one thing to
+  // look at: how many wait in the inbox, with the way to review them beside it; the day's other numbers follow in one
+  // quiet line, a zero in muted data type. Counts are ink;
   // the danger tone is only for real trouble, never the accent, which stays for focus and response: a job still
   // failing or stuck (Curator's health says which; a week's failures of jobs that have run fine since are said
   // calmly), a backup that failed or is old. An off-site copy not set up yet is a fact, not trouble. What is

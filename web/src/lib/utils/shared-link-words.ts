@@ -1,8 +1,8 @@
 // Local Omarchy layer: a shared link in words: what it shows, who can open it, and when it ends, counted in calendar
-// days ("Ends tomorrow" whatever the hour). One vocabulary wherever a link is told (the owner's "one word for one thing",
-// 2026-10-23): the Shared links page's rows (components/omarchy/SharedLinkRow), a link in the Shared feed, a link in the
-// Share sheets (components/omarchy/ShareLinkPanel) and the memory Share sheet's sentence, which had said "Expires Oct
-// 28", "Ends in 5 days" and "until Nov 22, 2026" of links that end alike.
+// days ("Ends tomorrow" whatever the hour). One vocabulary wherever a link is told (the owner's "one word for one
+// thing", 2026-10-23): the Shared links page's rows (components/omarchy/SharedLinkRow), a link in the Shared feed, a
+// link in the Share sheets (components/omarchy/ShareLinkPanel) and the memory Share sheet's sentence, which had said
+// "Expires Oct 28", "Ends in 5 days" and "until Nov 22, 2026" of links that end alike.
 import { AssetTypeEnum, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
 import { DateTime } from 'luxon';
 import type { MessageFormatter } from 'svelte-i18n';

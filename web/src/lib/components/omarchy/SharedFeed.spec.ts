@@ -151,8 +151,8 @@ describe('SharedFeed', () => {
     expect(hearts.querySelectorAll('.ws-feed-tile')).toHaveLength(2);
   });
 
-  // the critique's case: the feed said "You made a link to 1 photo · Expires Oct 28" of a link that Shared links read as
-  // "1 video · Anyone with the link · Ends in 5 days"
+  // the critique's case: the feed said "You made a link to 1 photo · Expires Oct 28" of a link that Shared links read
+  // as "1 video · Anyone with the link · Ends in 5 days"
   it("tells a link I made in the Shared links page's words: what it shows, who can open it, when it ends", () => {
     const link = (overrides: Parameters<typeof sharedLinkFactory.build>[0]) =>
       sharedLinkFactory.build({
