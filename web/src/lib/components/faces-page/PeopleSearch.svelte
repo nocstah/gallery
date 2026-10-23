@@ -1,37 +1,12 @@
 <script lang="ts">
   import { initInput } from '$lib/actions/focus';
-  import { maximumLengthSearchPeople, timeBeforeShowLoadingSpinner } from '$lib/constants';
+  import { maximumLengthSearchPeople } from '$lib/constants';
   import SearchBar from '$lib/elements/SearchBar.svelte';
+  import { createPeopleSearch } from '$lib/gallery/people/people-search';
   import { handleError } from '$lib/utils/handle-error';
-  import { searchNameLocal } from '$lib/utils/person';
-  import { searchPerson, type PersonResponseDto } from '@immich/sdk';
+  import type { PersonResponseDto } from '@immich/sdk';
+  import { onDestroy } from 'svelte';
   import { t } from 'svelte-i18n';
-
-  let searchedPeople: PersonResponseDto[] = [];
-  let searchWord: string;
-  let abortController: AbortController | null = null;
-  let timeout: NodeJS.Timeout | null = null;
-
-  const search = () => {
-    searchedPeopleLocal = searchNameLocal(searchName, searchedPeople, numberPeopleToSearch);
-  };
-
-  const reset = () => {
-    searchedPeopleLocal = [];
-    cancelPreviousRequest();
-    onReset();
-  };
-
-  const cancelPreviousRequest = () => {
-    if (abortController) {
-      abortController.abort();
-      abortController = null;
-    }
-    if (timeout) {
-      clearTimeout(timeout);
-      timeout = null;
-    }
-  };
 
   interface Props {
     searchName: string;
@@ -60,8 +35,16 @@
     onSearch = () => {},
   }: Props = $props();
 
+  const peopleSearch = createPeopleSearch({
+    onResults: (people) => (searchedPeopleLocal = people),
+    onLoading: (loading) => (showLoadingSpinner = loading),
+    onError: (error) => handleError(error, $t('errors.cant_search_people')),
+  });
+
+  onDestroy(peopleSearch.cancel);
+
   const handleReset = () => {
-    reset();
+    peopleSearch.reset();
     onReset();
   };
 
@@ -69,37 +52,10 @@
     searchName = name ?? searchName;
     onSearch();
     if (searchName === '') {
-      reset();
+      handleReset();
       return;
     }
-    if (
-      !force &&
-      searchedPeople.length > 0 &&
-      searchedPeople.length < maximumLengthSearchPeople &&
-      searchName.startsWith(searchWord)
-    ) {
-      search();
-      return;
-    }
-    cancelPreviousRequest();
-    abortController = new AbortController();
-    timeout = setTimeout(() => (showLoadingSpinner = true), timeBeforeShowLoadingSpinner);
-    try {
-      const data = await searchPerson(
-        { name: searchName, ...(withSharedSpaces && { withSharedSpaces }) },
-        { signal: abortController?.signal },
-      );
-      searchedPeople = data;
-      searchWord = searchName;
-    } catch (error) {
-      handleError(error, $t('errors.cant_search_people'));
-    } finally {
-      clearTimeout(timeout);
-      timeout = null;
-      abortController = null;
-      showLoadingSpinner = false;
-      search();
-    }
+    await peopleSearch.search(searchName, { force, withSharedSpaces, numberPeopleToSearch });
   }
 </script>
 
