@@ -144,6 +144,40 @@ rule web/src/lib/modals/HelpAndFeedbackModal.svelte 1 <<'RULE'
           <p class="ws-sheet-note" data-testid="help-credit">{$t('@CREDIT_KEY@')}</p>
 RULE
 
+echo "--- The loader and the login card ---"
+# Kioku's loader writes itself (the mark drawn stroke by stroke, then let go), so it no longer also spins: not in
+# LoadingSpinner, not on the boot screen. Noodle's spinning mark keeps its spin in a GALLERY_BRAND=noodle build, and
+# the source keeps it for its specs.
+rule web/src/lib/components/shared-components/LoadingSpinner.svelte 1 <<'RULE'
+class={['animate-spin', sizeClasses[size], className]
+=>
+class={[sizeClasses[size], className]
+RULE
+rule web/src/app.html 1 <<'RULE'
+@keyframes loadspin {
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      #stencil {
+=>
+#stencil {
+RULE
+rule web/src/app.html 1 <<'RULE'
+animation:
+          0s linear 0.3s forwards delayedVisibility,
+          loadspin 8s linear infinite;
+=>
+animation: 0s linear 0.3s forwards delayedVisibility;
+RULE
+# The login card shows the still mark rather than the loader, which would write itself every few seconds there
+rule web/src/lib/components/layouts/AuthPageLayout.svelte 1 <<'RULE'
+<Logo variant="icon" size="giant" transparent />
+=>
+<Logo variant="icon" size="giant" />
+RULE
+
 echo "--- The phone app's banner ---"
 # The open-in-app banner offers the phone app, which stays Noodle Gallery's, so it keeps that app's icon (from Noodle's
 # iOS launcher icon) while apple-icon-180.png becomes the Kioku web app's own (Assets below).

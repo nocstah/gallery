@@ -148,9 +148,7 @@ const identifiers = (() => {
   const script = fs.readFileSync(path.join(here, '..', 'scripts', 'apply-branding.sh'), 'utf8');
   const match = /UPSTREAM_IDENTIFIERS_JSON='(\[[^']*\])'/.exec(script);
   if (!match) {
-    stop(
-      'apply-branding.sh no longer defines UPSTREAM_IDENTIFIERS_JSON: check i18n.identifiers in brand.json by hand',
-    );
+    stop('apply-branding.sh no longer defines UPSTREAM_IDENTIFIERS_JSON: check i18n.identifiers in brand.json by hand');
   }
   return [...JSON.parse(match[1]), ...brand.i18n.identifiers.keep].sort((a, b) => b.length - a.length);
 })();
@@ -710,12 +708,12 @@ const verify = (target) => {
     }
   };
   const read = (file) => (fs.existsSync(path.join(root, file)) ? fs.readFileSync(path.join(root, file), 'utf8') : '');
-  const scripts = copyMode
-    ? ''
-    : [...walk(path.join(root, 'web', '_app'))]
+  const codes = copyMode
+    ? []
+    : walk(path.join(root, 'web', '_app'))
         .filter((file) => file.endsWith('.js') && !localeFiles.has(file))
-        .map((file) => fs.readFileSync(file, 'utf8'))
-        .join('\n');
+        .map((file) => fs.readFileSync(file, 'utf8'));
+  const scripts = codes.join('\n');
   const player = copyMode
     ? read('web/memory-player/src/SharedMemoryPlayer.svelte')
     : walk(path.join(root, 'memory-player'))
@@ -777,6 +775,36 @@ const verify = (target) => {
     "a memory's title",
     (!titleBefore || player.includes(titleBefore)) && player.includes(titleAfter),
     `«${brand.memory_player.memory_title}»`,
+  );
+  // The loader writes itself, so nothing spins it too, and the login card shows the still mark; a dark boot screen
+  // shows the loader drawn for a dark ground.
+  const boot = read(copyMode ? 'web/src/app.html' : 'web/index.html');
+  expect('the boot screen: the loader not spun', !boot.includes('loadspin'), 'no loadspin');
+  expect(
+    'the boot screen: the loader for a dark ground',
+    /<picture>\s*<source srcset="\/gallery-loader-dark\.svg" media="\(prefers-color-scheme: dark\)"/.test(boot),
+    'a <picture> with a prefers-color-scheme: dark source',
+  );
+  const loaders = copyMode
+    ? [read('web/src/lib/components/shared-components/LoadingSpinner.svelte')]
+    : codes.filter((code) => code.includes('gallery-loader'));
+  expect(
+    'the loader: not spun',
+    loaders.length > 0 && loaders.every((code) => !code.includes('animate-spin')),
+    `no animate-spin in the ${loaders.length} ${copyMode ? 'LoadingSpinner source' : 'scripts drawing gallery-loader'}`,
+  );
+  const cards = copyMode
+    ? [read('web/src/lib/components/layouts/AuthPageLayout.svelte')]
+    : codes.filter((code) => code.includes('ws-auth-card'));
+  expect(
+    'the login card: the still mark',
+    cards.length > 0 &&
+      cards.every((code) =>
+        copyMode
+          ? code.includes('<Logo variant="icon" size="giant" />')
+          : !/size:\s*[`'"]giant[`'"]\s*,\s*transparent\s*:/.test(code),
+      ),
+    'its Logo without transparent',
   );
 
   // 4. A build output's precompressed copies say what the files say (the server sends those first).

@@ -35,6 +35,10 @@ A second run changes nothing.
   Immich" (`about_credit`, in the ten maintained languages): the AGPL credit stays in front of the owner.
 - **The icons, logos and link preview**, once `assets/` has them (below). The open-in-app banner keeps the phone
   app's own icon (`noodle-app-icon-180.png`, from Noodle's iOS launcher icon), since it offers the phone app.
+- **The loader writes itself** (the mark drawn stroke by stroke, then let go), so it no longer spins as well:
+  `LoadingSpinner` loses its `animate-spin` and the boot screen its `loadspin`. The login card shows the still mark
+  rather than the loader, which would write itself every few seconds there. A `GALLERY_BRAND=noodle` build keeps
+  Noodle's spinning mark, and the source keeps the spin its specs check.
 
 ## What stays Noodle Gallery or Immich, and why
 
