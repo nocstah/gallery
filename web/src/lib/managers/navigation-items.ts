@@ -70,6 +70,8 @@ export interface NavigationItem {
    * `featureFlagsManager.valueOrUndefined?.[featureFlag]` is falsy.
    */
   featureFlag?: keyof ServerFeaturesDto;
+  /** Local Omarchy layer: false keeps a page out of the empty palette's quick links (it is still found by name) */
+  quickLink?: false;
 }
 
 /**
@@ -229,6 +231,8 @@ const USER_PAGES: readonly NavigationItem[] = [
     route: '/sharing',
     adminOnly: false,
   },
+  // Local Omarchy layer: the list of Spaces is found by name, but it is no quick link: the sidebar's Shared holds the
+  // Spaces (2026-10-14), and the quick links had listed Spaces beside Shared
   {
     id: 'nav:userPages:spaces',
     category: 'userPages',
@@ -237,6 +241,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiBookOpenOutline,
     route: '/spaces',
     adminOnly: false,
+    quickLink: false,
   },
   {
     id: 'nav:userPages:trash',

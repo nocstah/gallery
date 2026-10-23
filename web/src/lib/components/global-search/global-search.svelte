@@ -288,14 +288,17 @@
   // Admin items are intentionally excluded — the cold palette is a quick-jump
   // surface for the user's own content, not a settings drawer. Admins still
   // reach admin pages via typed search.
+  // Local Omarchy layer: the owner's tools (adminOnly) are left out for anyone else, as typed search leaves them out
+  // ("Owner tools only for me"), and so is a page that is no quick link (Spaces, which Shared holds)
   const quickLinks = $derived<NavigationItem[]>(
     (() => {
       if (inputValue.trim() !== '' || recentEntries.length > 0) {
         return [];
       }
+      const isAdmin = (authManager.authenticated ? authManager.user : undefined)?.isAdmin ?? false;
       const flags = featureFlagsManager.valueOrUndefined;
       return NAVIGATION_ITEMS.filter((item) => {
-        if (item.category !== 'userPages') {
+        if (item.category !== 'userPages' || item.quickLink === false || (item.adminOnly && !isAdmin)) {
           return false;
         }
         const itemFlagEnabled = item.featureFlag ? flags?.[item.featureFlag] : true;

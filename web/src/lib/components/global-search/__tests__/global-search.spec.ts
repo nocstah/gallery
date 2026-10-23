@@ -1019,7 +1019,7 @@ describe('global-search root', () => {
     // Cold-open UX: if the user has no history AND has not typed anything, the
     // palette should not just sit at the helper text — surface the user-pages
     // navigation catalog so there is something to click and keyboard-navigate
-    // through. Pins "Photos" and "Spaces" from USER_PAGES because they are the
+    // through. Pins "Photos", "Albums" and "Shared" from USER_PAGES because they are the
     // most obvious entry points and always admin-independent.
     const m = new GlobalSearchManager();
     m.open();
@@ -1027,8 +1027,27 @@ describe('global-search root', () => {
     // svelte-i18n fallbackLocale 'dev' renders literal keys — match either the
     // raw label key or the English label.
     expect(screen.getByText(/^photos$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^spaces$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^shared$/i)).toBeInTheDocument();
     expect(screen.getByText(/^albums$/i)).toBeInTheDocument();
+  });
+
+  // Local Omarchy layer: Shared holds the Spaces, as the sidebar does, so the quick links no longer list Spaces beside
+  // it (typed, Spaces is still found); and the owner's tools are the owner's alone here too, as in typed search
+  it('quick links leave out Spaces, and the owner’s tools for anyone but the owner', () => {
+    const m = new GlobalSearchManager();
+    m.open();
+    const { unmount } = render(GlobalSearch, { props: { manager: m } });
+    expect(screen.queryByText(/^spaces$/i)).toBeNull();
+    expect(screen.queryByText(/^command_title$/i)).toBeNull();
+    expect(screen.queryByText(/^ai_inbox$/i)).toBeNull();
+    unmount();
+
+    mockUser.current = { id: 'test-user', isAdmin: true };
+    const owner = new GlobalSearchManager();
+    owner.open();
+    render(GlobalSearch, { props: { manager: owner } });
+    expect(screen.queryByText(/^spaces$/i)).toBeNull();
+    expect(screen.getByText(/^command_title$/i)).toBeInTheDocument();
   });
 
   it('quick-links fallback is replaced by recents once any recent exists', () => {
