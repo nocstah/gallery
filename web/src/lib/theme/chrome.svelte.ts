@@ -9,6 +9,7 @@
 // come and go without a navigation (Years and Months mount their grouping row, filters their bar, search results stand
 // in for the grid), so the column is watched as well as each row's size.
 import { afterNavigate } from '$app/navigation';
+import { startGlassDensity } from '$lib/theme/glass-density';
 
 export type ChromeMode = 'solid' | 'glass' | 'glass-hide';
 export const CHROME_MODES: ChromeMode[] = ['solid', 'glass', 'glass-hide'];
@@ -142,6 +143,8 @@ const onScroll = (event: Event) => {
 /** Called once from the root layout. */
 export const startChrome = () => {
   document.documentElement.dataset.chrome = chrome.mode;
+  // the glass's ground, as dense as its words need over a photo in this theme's colours (lib/theme/glass-density)
+  startGlassDensity();
   document.addEventListener('scroll', onScroll, { capture: true, passive: true });
   afterNavigate(() => {
     delete document.documentElement.dataset.barHidden;

@@ -58,6 +58,11 @@
   --ws-glass-hover: rgb(10 10 12 / 0.8);
   --ws-glass-edge: rgb(255 255 255 / 0.08);
   --ws-glass-blur: blur(18px) saturate(1.3);
+  /* the muted words of the glass chrome (the glass bar below): the theme's muted ink halfway to its ink, worked out here
+     on the root so the bar's own --immich-ui-muted can take it; lib/theme/glass-density reads it to fit the ground. And
+     the muted ink as the ground has it, for what sits on a ground of its own inside the bar (its sheets, its search) */
+  --ws-glass-muted: color-mix(in oklab, var(--immich-ui-muted) 50%, var(--immich-ui-dark));
+  --ws-ground-muted: var(--immich-ui-muted);
 
   --font-sans: 'Mona Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Bricolage Grotesque Variable', 'Mona Sans', ui-sans-serif, sans-serif;
@@ -2638,9 +2643,16 @@ label.ws-sheet-title {
    runs to the top of the window and scrolls under them, as the desktop's glass themes do. The space they cover is
    reserved at the top of the content (it scrolls away), so nothing starts hidden. glass-hide slides them up while you
    scroll down and back on the way up; that moves paint only, the reserved space stays where it is. Only with the
-   navbar on screen: pages that swap it for their own bar (selection) keep the solid layout. */
+   navbar on screen: pages that swap it for their own bar (selection) keep the solid layout.
+   Every word on it holds AA over whatever photo comes under it (2026-10-23, the critique's "the returned bar's words
+   fail AA over photos": at 64% of the ground 735 of the 963 words measured over photos were under AA, the strip's
+   years down to 1.7:1 in the dark face and 2.5:1 in the light one). Its muted words go halfway to the ink
+   (--ws-glass-muted), and the ground is as dense as they need to hold 4.6:1 over a white photo and a black one in this
+   theme's colours, which lib/theme/glass-density works out whenever the colours change: 82% for most of the owner's
+   themes in their own face (73 to 91% across them), never under the 64% it was; none of the 940 words is under AA now.
+   At rest the ground lies over the page's own, so it looks as before; the photos show through once they scroll in. */
 :root[data-chrome^='glass'] {
-  --ws-glass-ground: color-mix(in oklab, var(--immich-ui-light) 64%, transparent);
+  --ws-glass-ground: color-mix(in oklab, var(--immich-ui-light) var(--ws-glass-density, 88%), transparent);
   --ws-glass-chrome-blur: blur(28px) saturate(1.4);
   /* how much of the top of the content the glass covers: the bar, and a page's title bar where it has one */
   --ws-over: var(--navbar-height);
@@ -2649,6 +2661,16 @@ label.ws-sheet-title {
   header:has(> #dashboard-navbar) {
     position: relative;
     z-index: 40;
+  }
+  /* the muted words on the glass, a step toward the ink; what has a ground of its own in the bar (its sheets and menus,
+     the search field and its list) keeps the muted ink of that ground */
+  #dashboard-navbar,
+  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed) {
+    --immich-ui-muted: var(--ws-glass-muted);
+  }
+  :is(#dashboard-navbar, div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed))
+    :is([data-bar-sheet], .ws-view-sheet, .ws-undo-sheet, .ws-bar-search-field, [role='menu'], [role='dialog']) {
+    --immich-ui-muted: var(--ws-ground-muted);
   }
   /* the material sits on a layer behind each bar, not on the bar: a backdrop-filter on the bar itself would make it
      the box its fixed menus are placed in, and they would open in the wrong place */
