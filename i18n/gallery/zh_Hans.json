@@ -1594,6 +1594,7 @@
   "people_empty_title": "还没有人物",
   "people_no_pets_body": "Gallery 还没有在您的照片中识别出宠物。",
   "people_search_none_body": "已在此页面隐藏的人物不会被搜索。",
+  "person_photos_in_stacks": "{count, plural, other {另有#张在堆叠中}}",
   "person_picker_photo_count": {
     "one": "{count} 张照片",
     "other": "{count} 张照片"

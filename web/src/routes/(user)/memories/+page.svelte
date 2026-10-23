@@ -50,14 +50,11 @@
       cards: memoryManager.cards.filter((card) => card.section === section),
     })).filter(({ cards }) => cards.length > 0),
   );
-  // the bar counts the cards, once every memory is in
-  const count = $derived(
-    memoryManager.total === undefined
-      ? undefined
-      : ready && !memoryManager.hasNextPage
-        ? memoryManager.cards.length
-        : memoryManager.total,
-  );
+  // the bar counts the cards on the page once they are laid out, and nothing before (2026-10-23, the owner's "counts
+  // that match the cards"). It had shown the server's count of memories until every one was in, which never came: the
+  // statistics count memories its search leaves out (37 against 36 found), and the cards fold memories that read the
+  // same (23 of them), so the bar read "(37)" over 23 cards
+  const count = $derived(memoryManager.total === undefined || !ready ? undefined : memoryManager.cards.length);
 
   const handleSettings = async () => {
     const settings = await modalManager.show(MemoriesSettingsModal);

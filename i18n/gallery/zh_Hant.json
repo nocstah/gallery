@@ -1595,6 +1595,7 @@
   "people_empty_title": "還沒有人物",
   "people_no_pets_body": "Gallery 還沒有在您的相片中辨識出寵物。",
   "people_search_none_body": "已在此頁面隱藏的人物不會被搜尋。",
+  "person_photos_in_stacks": "{count, plural, other {另有#張在堆疊中}}",
   "person_picker_photo_count": {
     "one": "{count} 張相片",
     "other": "{count} 張相片"

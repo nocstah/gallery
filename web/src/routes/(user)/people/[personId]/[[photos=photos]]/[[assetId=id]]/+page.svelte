@@ -55,6 +55,7 @@
   } from '$lib/utils/cross-owner-merge';
   import { handleError } from '$lib/utils/handle-error';
   import { curatorIsMine } from '$lib/utils/curator';
+  import { personPhotoCount } from '$lib/utils/person-photo-count';
   import { isSpaceScopedPerson, toScopedPersonRef } from '$lib/utils/scoped-person-ref';
   import { normalizeSearchString } from '$lib/utils/string-utils';
   import { getTimelineBucketZoomTarget, type ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
@@ -121,7 +122,8 @@
   let totalMatchingAssets = $derived(
     timelineManager?.isInitialized ? timelineManager.ungroupedAssetCount : data.statistics.assets,
   );
-  let numberOfAssets = $derived(totalMatchingAssets);
+  // Local Omarchy layer: the bar counts the photos it shows, a folded stack as its one photo (utils/person-photo-count)
+  let shownAssets = $derived(timelineManager?.isInitialized ? timelineManager.assetCount : data.statistics.assets);
   const groupPersonStacks = $derived(curatorIsMine() && !thumbnailZoomManager.expandStacks);
 
   const handleAddAllToCollection = () => {
@@ -195,7 +197,7 @@
     );
   const personBarDescription = $derived(
     [
-      $t('cmdk_preview_photo_count', { values: { count: numberOfAssets } }),
+      ...personPhotoCount($t, shownAssets, totalMatchingAssets),
       featureFlagsManager.value.peopleStatistics ? $t('faces_count', { values: { count: data.statistics.faces } }) : '',
       person.birthDate ? $t('person_birthdate', { values: { date: birthday(person.birthDate) } }) : '',
     ]

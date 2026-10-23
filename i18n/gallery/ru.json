@@ -1582,6 +1582,7 @@
   "people_empty_title": "Пока нет людей",
   "people_no_pets_body": "На ваших фото пока не распознано ни одного питомца.",
   "people_search_none_body": "Скрытые на этой странице люди не участвуют в поиске.",
+  "person_photos_in_stacks": "{count, plural, one {ещё # в группе} few {ещё # в группах} many {ещё # в группах} other {ещё # в группах}}",
   "person_picker_photo_count": {
     "one": "{count} фото",
     "other": "{count} фото"

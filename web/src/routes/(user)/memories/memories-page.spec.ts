@@ -169,6 +169,35 @@ describe('Memories page', () => {
     expect(within(screen.getByTestId('memories-upcoming')).getByText('October 2019')).toBeInTheDocument();
   });
 
+  // Local Omarchy layer: the bar counts the cards it heads, not the server's memories (it read "(37)" over 23 cards)
+  it('counts the cards in the bar, not the memories behind them', () => {
+    const memories = [
+      memory({ id: 'day-1', showAt: '2026-10-18T00:00:00.000Z', hideAt: '2026-10-18T23:59:59.999Z' }),
+      memory({
+        id: 'day-2',
+        showAt: '2026-10-17T00:00:00.000Z',
+        hideAt: '2026-10-17T23:59:59.999Z',
+        assets: [assetFactory.build({ id: 'asset-2', localDateTime: '2015-08-02T10:00:00.000Z' })],
+      }),
+    ];
+    mockMemoryManager.memories = memories;
+    // Gallery's statistics count a memory its search leaves out, so the manager never thinks every memory is in
+    mockMemoryManager.total = 3;
+    mockMemoryManager.hasNextPage = true;
+    try {
+      const props = { data: { meta: { title: 'Memories' } } };
+      render(TestWrapper as Component<{ component: typeof MemoriesPage; componentProps: typeof props }>, {
+        component: MemoriesPage,
+        componentProps: props,
+      });
+
+      expect(screen.getAllByText('August 2015')).toHaveLength(1);
+      expect(screen.getByTestId('user-page-layout')).toHaveAttribute('data-description', '(1)');
+    } finally {
+      mockMemoryManager.hasNextPage = false;
+    }
+  });
+
   it('renders no subtitle line for a memory that has none', () => {
     const { container } = renderPage([
       memory({ type: MemoryType.Rule, data: { ruleId: 'a_rule_without_words', context: {} } }),

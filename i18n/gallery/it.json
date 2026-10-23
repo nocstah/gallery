@@ -1579,6 +1579,7 @@
   "people_empty_title": "Ancora nessuna persona",
   "people_no_pets_body": "Gallery non ha ancora riconosciuto animali domestici nelle tue foto.",
   "people_search_none_body": "Le persone nascoste da questa pagina non vengono cercate.",
+  "person_photos_in_stacks": "{count, plural, one {# altra in un gruppo} other {# altre nei gruppi}}",
   "person_picker_photo_count": {
     "one": "{count} foto",
     "other": "{count} foto"

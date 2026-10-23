@@ -1581,6 +1581,7 @@
   "people_empty_title": "Noch keine Personen",
   "people_no_pets_body": "Gallery hat in deinen Fotos noch kein Haustier erkannt.",
   "people_search_none_body": "Personen, die auf dieser Seite ausgeblendet sind, werden nicht durchsucht.",
+  "person_photos_in_stacks": "{count, plural, one {# weiteres in einem Stapel} other {# weitere in Stapeln}}",
   "person_picker_photo_count": {
     "one": "{count} Foto",
     "other": "{count} Fotos"

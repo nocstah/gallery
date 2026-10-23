@@ -1578,6 +1578,7 @@
   "people_empty_title": "Nog geen mensen",
   "people_no_pets_body": "Gallery heeft nog geen huisdier in je foto's herkend.",
   "people_search_none_body": "Mensen die op deze pagina verborgen zijn, worden niet doorzocht.",
+  "person_photos_in_stacks": "{count, plural, one {# meer in een stapel} other {# meer in stapels}}",
   "person_picker_photo_count": {
     "one": "{count} foto",
     "other": "{count} foto's"

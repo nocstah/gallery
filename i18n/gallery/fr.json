@@ -1581,6 +1581,7 @@
   "people_empty_title": "Aucune personne pour l'instant",
   "people_no_pets_body": "Gallery n'a encore reconnu aucun animal dans vos photos.",
   "people_search_none_body": "Les personnes masquées sur cette page ne sont pas recherchées.",
+  "person_photos_in_stacks": "{count, plural, one {# autre dans une pile} other {# autres dans des piles}}",
   "person_picker_photo_count": {
     "one": "{count} photo",
     "other": "{count} photos"

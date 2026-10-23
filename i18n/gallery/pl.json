@@ -1597,6 +1597,7 @@
   "people_empty_title": "Na razie brak osób",
   "people_no_pets_body": "Gallery nie rozpoznało jeszcze żadnego zwierzęcia na twoich zdjęciach.",
   "people_search_none_body": "Osoby ukryte na tej stronie nie są wyszukiwane.",
+  "person_photos_in_stacks": "{count, plural, one {jeszcze # w stosie} few {jeszcze # w stosach} many {jeszcze # w stosach} other {jeszcze # w stosach}}",
   "person_picker_photo_count": {
     "few": "{count} zdjęcia",
     "many": "{count} zdjęć",
