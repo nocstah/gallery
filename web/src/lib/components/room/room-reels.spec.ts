@@ -179,6 +179,25 @@ describe(todayReels.name, () => {
     expect(todayReels(cardsOf([memory('a'), later]), [], 10).map(({ key }) => key)).toEqual(['memory:a']);
   });
 
+  it("plays an earlier day's memory only on a Today card that reads the same", () => {
+    const yesterday = (id: string) =>
+      ({ ...memory(id), showAt: '2026-10-17T00:00:00.000Z', hideAt: '2026-10-17T23:59:59.999Z' }) as MemoryResponseDto;
+    const reels = todayReels(
+      cardsOf([memory('today'), yesterday('same'), yesterday('alone')], (memory) =>
+        memory.id === 'alone' ? undefined : 'Riverton · October 2020',
+      ),
+      [],
+      10,
+    );
+
+    expect(reels.map(({ key }) => key)).toEqual(['memory:today']);
+    const [reel] = reels;
+    if (reel.kind !== 'memory') {
+      throw new Error('a memory film');
+    }
+    expect(reel.card?.members.map(({ id }) => id)).toEqual(['today', 'same']);
+  });
+
   it('is nothing with nothing to play', () => {
     expect(todayReels([], [album('Bali')], 10)).toEqual([]);
   });

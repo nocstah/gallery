@@ -13,7 +13,8 @@ import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
 // film, each photo once, in the order they were taken. Today's come first, in the one order the Memories page, Explore
 // and Room all show them in (todayRank below), then the earlier days' the server still keeps, then the upcoming ones
 // (generated a few days ahead) when the reader shows them. Each card's line says what kind of memory it is: "On this
-// day · 1 year ago", "Trip · 1 year ago · 4 days".
+// day · 1 year ago", "Trip · 1 year ago · 4 days". Room's films are the Today cards, whole (memoriesPageSearch and
+// cardsByFacts below, the memory manager's own).
 
 /** Where a card stands: shown today, shown on an earlier day and still kept, or not due yet. */
 export type MemorySection = 'today' | 'earlier' | 'upcoming';
@@ -104,8 +105,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}/;
 /**
  * Whether a card is a memory of several days: a trip, or one of the wider looks back (a month's, a season's, two people
  * together) whose days run over more than one, by Curator's span where the page has it, else by its photos' days. On
- * this day is a day, even on a card of two days of one place and month: the Memories page folds in the earlier days'
- * memories that Room does not ask for, and both rank a card alike.
+ * this day is a day, even on a card that holds two days of one place and month (yesterday's on this day and today's).
  */
 const ofSeveralDays = (card: MemoryCard, spanOf?: (memory: MemoryResponseDto) => MemorySpan | null | undefined) => {
   let first: string | undefined;
@@ -138,8 +138,7 @@ type TodayRank = { dim: number; kind: number; count: number };
  * Where a card of today's stands, the first difference deciding: a film that would open dim across the room (none of
  * its pictures passes Room's light gate, components/room/room-opening) after every other; then a birthday, a trip or a
  * memory of several days, the rest; then the one that holds more photos: the most any of its memories stands for (a
- * trip's whole count, `weight`), or the photos it plays when those are more (Room's cards hold only today's memories,
- * and what a memory stands for is the same there); then as the server sent them.
+ * trip's whole count, `weight`), or the photos it plays when those are more; then as the server sent them.
  */
 const todayRank = (
   card: MemoryCard,
@@ -243,12 +242,15 @@ export const memoryCards = (
 export const cardOfMemory = (cards: MemoryCard[], memoryId: string): MemoryCard | undefined =>
   cards.find(({ members }) => members.some(({ id }) => id === memoryId));
 
-// ---- what the Memories page asks for, and the cards it makes of it ----
+// ---- the cards every page shows, and Room plays (2026-10-24, the owner's "Room plays the whole card"): Room had asked
+// for the day's memories alone, so a trip that is a card of 76 photos on Memories played as its one memory shown
+// today, six photos ----
 
 /**
- * What the Memories page asks Gallery for (the memory manager's applyPreferences): every memory the server still keeps,
- * the newest first, the upcoming ones only while the reader shows them, and only the kept ones while the reader keeps
- * to those.
+ * What the Memories page asks Gallery for (the memory manager's applyPreferences), and so Room, whose films are its
+ * Today cards (components/room/room-source): every memory the server still keeps, the newest first, the upcoming ones
+ * only while the reader shows them, and only the kept ones while the reader keeps to those. Not a day's (`for`): a
+ * Today card also holds the earlier days' memories that read the same.
  */
 export const memoriesPageSearch = ({ showUpcoming, onlyFavorites }: MemoriesPreferences) => ({
   order: MemorySearchOrder.Desc,
@@ -260,8 +262,8 @@ export const memoriesPageSearch = ({ showUpcoming, onlyFavorites }: MemoriesPref
  * The memories as their cards, as every page shows them: keyed by the title of facts in one locale (utils/memory-title,
  * so a key does not move with the reader's language), the heavier of one kind leading by Curator's count, and a
  * memory's days by Curator's span (managers/memory-facts). The memory manager's cards (the Memories page, Explore, the
- * Command center's Today) and Room's chain (components/room/room-source) are these. Without Curator (a family account,
- * Curator not answering in time) each memory titles itself, and its photos say its days.
+ * Command center's Today) and Room's chain are these. Without Curator (a family account, Curator not answering in
+ * time) each memory titles itself, and its photos say its days.
  */
 export const cardsByFacts = (memories: MemoryResponseDto[], now = wallClockAsUtc()): MemoryCard[] =>
   memoryCards(

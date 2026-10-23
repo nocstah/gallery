@@ -7,11 +7,12 @@
 <script lang="ts">
   // Local Omarchy layer: Room (DESIGN.md, Room), the archive across the room: full screen without the shell, for the
   // AORUS when the owner sits back and later a TV's browser. It plays the film of a memory (MemoryFilm, dressed for
-  // three metres) one after another: today's memories, then the albums Curator keeps for the TV once accepted, and
-  // round again; or one album, or one year (room-reels.ts, room-source.ts). Space or a remote's OK pauses, ← and →
-  // step a photo, ↑ and ↓ go to the film before and after, M mutes, Escape or Back leaves; the screen stays awake
-  // while it plays (room-awake.ts). Music and stories are Curator's, for its owner only (curatorIsMine): a family
-  // account's Room is silent. Nothing here changes anything: no hearts, no edits, no Save as video.
+  // three metres) one after another: the Memories page's Today cards, each whole, then the albums Curator keeps for the
+  // TV once accepted, and round again; or one album, or one year (room-reels.ts, room-source.ts). Space or a remote's
+  // OK pauses, ← and → step a photo, ↑ and ↓ go to the film before and after, M mutes, Escape or Back leaves; the
+  // screen stays awake while it plays (room-awake.ts). Music and stories are Curator's, for its owner only
+  // (curatorIsMine): a family account's Room is silent. Nothing here changes anything: no hearts, no edits, no Save as
+  // video.
   import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
   import MemoryFilm from '$lib/components/memories/film/MemoryFilm.svelte';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';

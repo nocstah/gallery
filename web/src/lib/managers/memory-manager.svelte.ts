@@ -158,7 +158,7 @@ class MemoryManager {
   }
 
   applyPreferences() {
-    // Local Omarchy layer: the Memories page's search (utils/memory-cards)
+    // Local Omarchy layer: the Memories page's search, which Room asks too (utils/memory-cards)
     this.setFilters(memoriesPageSearch(userPreferencesManager.memories));
 
     return this.refresh();
@@ -177,12 +177,10 @@ class MemoryManager {
   memoriesHref = $derived(Route.memories({ isSaved: this.#url.isSaved }));
 
   // Local Omarchy layer: the cards the memories are shown as (utils/memory-cards, DESIGN.md Memories): memories that
-  // read the same (one place and month, by the title of facts, utils/memory-title) are one card, today's first in the
-  // one order Room plays them in too (room-source), then the earlier days', then the upcoming ones. The Memories page
-  // and Explore show them, and the film plays a card's photos as one, steps to the card before or after it and acts on
-  // all its memories (the heart, Remove memory, Remove photo). The key is titled in one locale, so it does not move
-  // with the reader's; Curator's count of a memory weighs which of one kind leads its card, and its span tells a memory
-  // of several days (cardsByFacts).
+  // read the same (one place and month, by the title of facts, utils/memory-title) are one card, today's first in
+  // their one order, then the earlier days', then the upcoming ones. The Memories page and Explore show them, Room
+  // plays the Today ones (room-source, the same cards from the same search), and the film plays a card's photos as
+  // one, steps to the card before or after it and acts on all its memories (the heart, Remove memory, Remove photo).
   cards = $derived(cardsByFacts(this.memories));
 
   /** Local Omarchy layer: the card a memory is shown on (by any of its memories' ids). */

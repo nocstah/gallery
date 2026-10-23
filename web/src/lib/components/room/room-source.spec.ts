@@ -3,6 +3,8 @@ import {
   AssetVisibility,
   getAllAlbums,
   getTimeBuckets,
+  MemorySearchOrder,
+  MemoryType,
   searchAssets,
   searchMemories,
   searchRandom,
@@ -12,6 +14,7 @@ import {
   type SearchResponseDto,
 } from '@immich/sdk';
 import { DateTime } from 'luxon';
+import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
 import { YEAR_FILM } from './room-reels';
 import { loadAlbumAssets, loadToday, loadYear } from './room-source';
 
@@ -35,7 +38,21 @@ const page = (items: AssetResponseDto[], nextPage: string | null = null) =>
 describe(loadToday.name, () => {
   const today = DateTime.fromISO('2026-10-18T09:00:00');
 
-  it("asks for today's memories and plays the living albums after them", async () => {
+  /** an on-this-day memory shown on `day` alone, of the photos given */
+  const onThisDay = (id: string, day: string, assets: AssetResponseDto[]) =>
+    ({
+      id,
+      type: MemoryType.OnThisDay,
+      showAt: `${day}T00:00:00.000Z`,
+      hideAt: `${day}T23:59:59.999Z`,
+      assets,
+    }) as MemoryResponseDto;
+
+  afterEach(() => {
+    userPreferencesManager.memories = { showUpcoming: false, onlyFavorites: false };
+  });
+
+  it('asks what the Memories page asks, and plays its Today cards and the living albums after them', async () => {
     vi.mocked(searchMemories).mockResolvedValue([
       { id: 'm1', type: 'on_this_day', assets: [asset('a', '2025-10-18')] } as unknown as MemoryResponseDto,
     ]);
@@ -46,8 +63,40 @@ describe(loadToday.name, () => {
 
     const reels = await loadToday({ memories: true, today });
 
-    expect(searchMemories).toHaveBeenCalledWith({ $for: '2026-10-18' });
+    // every memory the server keeps, not a day's: a Today card holds the earlier days' that read the same
+    expect(searchMemories).toHaveBeenCalledWith({ order: MemorySearchOrder.Desc, isUpcoming: false });
     expect(reels.map(({ key }) => key)).toEqual(['memory:m1', 'album:tv']);
+  });
+
+  it("asks as the reader's Memories settings in this browser have it", async () => {
+    vi.mocked(searchMemories).mockClear().mockResolvedValue([]);
+    vi.mocked(getAllAlbums).mockResolvedValue([]);
+    userPreferencesManager.memories = { showUpcoming: true, onlyFavorites: true };
+
+    await loadToday({ memories: true, today });
+
+    expect(searchMemories).toHaveBeenCalledWith({ order: MemorySearchOrder.Desc, isSaved: true });
+  });
+
+  it("plays a Today card whole: today's memory with the earlier days' that read the same, under the lead", async () => {
+    // two days' on this day of one month (titled alike by their photos, "October 2025"), and a day of another year
+    vi.mocked(searchMemories).mockResolvedValue([
+      onThisDay('today', '2026-10-18', [asset('c', '2025-10-18'), asset('b', '2025-10-17')]),
+      onThisDay('yesterday', '2026-10-17', [asset('a', '2025-10-16'), asset('b', '2025-10-17')]),
+      onThisDay('older', '2026-10-16', [asset('z', '2013-10-16')]),
+    ]);
+    vi.mocked(getAllAlbums).mockResolvedValue([]);
+
+    const reels = await loadToday({ memories: true, today });
+
+    // the earlier day's card of its own stays on the Memories page's Earlier
+    expect(reels.map(({ key }) => key)).toEqual(['memory:today']);
+    const [reel] = reels;
+    if (reel.kind !== 'memory') {
+      throw new Error('a memory film');
+    }
+    expect(reel.card?.members.map(({ id }) => id)).toEqual(['today', 'yesterday']);
+    expect(reel.memory.assets.map(({ id }) => id)).toEqual(['a', 'b', 'c']);
   });
 
   it('asks for no memories for someone who keeps them off', async () => {

@@ -6,12 +6,12 @@ import { joinNames } from '$lib/utils/memory-title';
 import { fromISODateTimeUTC } from '$lib/utils/timeline-util';
 
 // Local Omarchy layer: what Room plays (DESIGN.md, Room), worked out from what Gallery lists, as plain functions. Plain
-// /room is a chain of films: today's memories as the Memories page shows them (memories that read the same, one place
-// and month, are one film: utils/memory-cards), then the albums Curator keeps for the TV once the owner has accepted
-// them ("Best of <year>", "<Month> across the years", "Growing up · <name>", and any album named "On the TV", the
-// names Curator's own Kiosk job looks for: curator/jobs/kiosk.py), and round again. /room?album= plays that album and
-// /room?year= that year: its favourites spread through its months, or a sample of the year spread by month when it has
-// few favourites.
+// /room is a chain of films: the Memories page's Today cards, each whole (memories that read the same, one place and
+// month, are one film, the earlier days' still kept with today's: utils/memory-cards), then the albums Curator keeps
+// for the TV once the owner has accepted them ("Best of <year>", "<Month> across the years", "Growing up · <name>",
+// and any album named "On the TV", the names Curator's own Kiosk job looks for: curator/jobs/kiosk.py), and round
+// again. /room?album= plays that album and /room?year= that year: its favourites spread through its months, or a
+// sample of the year spread by month when it has few favourites.
 
 /** What Room was opened for. */
 export type RoomRequest = { kind: 'today' } | { kind: 'album'; albumId: string } | { kind: 'year'; year: number };
@@ -96,14 +96,16 @@ export const livingAlbums = (albums: AlbumResponseDto[], month: number): AlbumRe
 };
 
 /**
- * Plain Room's chain: today's memories as their cards, in the one order every surface shows them in (utils/memory-cards:
- * a birthday, a trip or a memory of several days, then the rest, each by the photos it holds, and last a film that
- * would open dim; memories that read the same play as one film, all their photos in the order taken, under the lead
- * memory, whose story and songs it has), then the living albums. Cards not due yet stay out.
+ * Plain Room's chain: the Memories page's Today cards, in the one order every surface shows them in
+ * (utils/memory-cards: a birthday, a trip or a memory of several days, then the rest, each by the photos it holds, and
+ * last a film that would open dim); a card of several memories (a trip and its days, today's and the earlier days'
+ * that read the same) plays as one film, all their photos in the order taken, under the lead memory, whose story and
+ * songs it has, as the Memories page's film of it plays them. Then the living albums. The Earlier and Upcoming cards
+ * stay out.
  */
 export const todayReels = (cards: MemoryCard[], albums: AlbumResponseDto[], month: number): RoomReel[] => [
   ...cards
-    .filter((card) => card.section !== 'upcoming' && card.assets.length > 0)
+    .filter((card) => card.section === 'today' && card.assets.length > 0)
     .map((card) =>
       card.members.length > 1 ? memoryReel({ ...card.lead, assets: card.assets }, card) : memoryReel(card.lead),
     ),

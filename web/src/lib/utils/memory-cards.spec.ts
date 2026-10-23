@@ -265,8 +265,7 @@ describe("today's one order", () => {
     );
     expect(order([place, lit('single', oneDay('d', 5))])).toEqual(['single', 'place']);
 
-    // two days' on this day of one place and month on one card: still a day, after a day of more photos, as Room
-    // ranks it (it asks only for today's memories, so its card holds one of the two)
+    // two days' on this day of one place and month on one card: still a day, after a day of more photos
     const cards = memoryCards(
       [
         lit('town-16', oneDay('f', 2, '2025-10-16')),

@@ -12,7 +12,8 @@ import {
 } from '@immich/sdk';
 import type { DateTime } from 'luxon';
 import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-import { cardsByFacts, wallClockAsUtc } from '$lib/utils/memory-cards';
+import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
+import { cardsByFacts, memoriesPageSearch, wallClockAsUtc } from '$lib/utils/memory-cards';
 import {
   inTimeOrder,
   monthOf,
@@ -31,19 +32,23 @@ import {
 /** Curator's facts title the memories, and so tell which read the same: Room waits this long for them at most. */
 const FACTS_PATIENCE_MS = 2000;
 
-/** Today's films: the day's memories (when the person keeps memories on) as the Memories page's cards, then Curator's
- * living albums. It fails only when Gallery answered neither. */
+/**
+ * Today's films: the Memories page's Today cards (when the person keeps memories on), each whole, then Curator's living
+ * albums. Room asks what the Memories page asks (utils/memory-cards' memoriesPageSearch, as the reader's Memories
+ * settings in this browser have it) and makes the same cards of it (cardsByFacts), so a trip whose anniversary or
+ * earlier days are still kept plays as the Memories page's film of its card: all their photos, under the lead memory.
+ * It fails only when Gallery answered neither.
+ */
 export const loadToday = async ({ memories, today }: { memories: boolean; today: DateTime }): Promise<RoomReel[]> => {
   const [found, albums] = await Promise.allSettled([
-    memories ? searchMemories({ $for: today.toISODate() ?? undefined }) : Promise.resolve([]),
+    memories ? searchMemories(memoriesPageSearch(userPreferencesManager.memories)) : Promise.resolve([]),
     getAllAlbums({}),
   ]);
   if (found.status === 'rejected' && albums.status === 'rejected') {
     throw found.reason;
   }
   const list = found.status === 'fulfilled' ? found.value : [];
-  // the cards are keyed by the facts' title, in one locale, and ranked by the facts' spans, as the memory manager keys
-  // and ranks them (utils/memory-cards' cardsByFacts, the manager's own)
+  // the facts' titles tell which memories are one card: all of them, since an earlier day's memory may join today's
   if (list.length > 0) {
     let patience: ReturnType<typeof setTimeout> | undefined;
     await Promise.race([

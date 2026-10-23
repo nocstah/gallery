@@ -11,6 +11,7 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
 import { curator } from '$lib/utils/curator';
+import type { MemoryCard } from '$lib/utils/memory-cards';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { BRIGHT, DIM } from '@test-data/thumbhash';
 import RoomPlayer from './RoomPlayer.svelte';
@@ -259,6 +260,35 @@ describe('RoomPlayer', () => {
     await playing('October 2025');
     expect(curator.story).not.toHaveBeenCalled();
     expect(curator.memoryMusic).not.toHaveBeenCalled();
+  });
+
+  // Local Omarchy layer: Room plays the whole card (2026-10-24), as the Memories page's film of it plays
+  it("plays a card of several memories as one film of all their photos, under the lead's story and songs", async () => {
+    const trip = memory('trip', 2025, 3);
+    const day = memory('day', 2025, 2);
+    const card: MemoryCard = {
+      lead: trip,
+      members: [trip, day],
+      section: 'today',
+      assets: [...trip.assets, ...day.assets],
+      isSaved: false,
+    };
+    vi.mocked(loadToday).mockResolvedValue([memoryReel({ ...trip, assets: card.assets }, card)]);
+    render(RoomPlayer, { request: today });
+    await playing('October 2025');
+
+    const shown = () =>
+      [...document.querySelectorAll<HTMLElement>('.film-layer')].sort(
+        (a, b) => Number(b.style.zIndex) - Number(a.style.zIndex),
+      )[0]?.dataset.assetId;
+    // past the lead's own three photos, the other memory's
+    for (let step = 0; step < 3; step++) {
+      await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    }
+    await waitFor(() => expect(shown()).toBe('day-0'));
+    expect(curator.story).toHaveBeenCalledWith({ memory: 'trip' });
+    expect(curator.memoryMusic).toHaveBeenCalledWith('trip', 3);
+    expect(curator.story).not.toHaveBeenCalledWith({ memory: 'day' });
   });
 
   it('keeps the screen awake while it plays, and lets it sleep while paused', async () => {
