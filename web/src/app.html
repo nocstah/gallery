@@ -109,7 +109,11 @@
 
   <body class="bg-light text-dark">
     <div id="stencil">
-      <img src="/gallery-loader.svg" alt="Loading" style="width: 80px; height: 80px" />
+      <!-- Local Omarchy layer: the loader drawn for a dark ground on a dark boot screen, where the ink one vanishes -->
+      <picture>
+        <source srcset="/gallery-loader-dark.svg" media="(prefers-color-scheme: dark)" />
+        <img src="/gallery-loader.svg" alt="Loading" style="width: 80px; height: 80px" />
+      </picture>
     </div>
     <div>%sveltekit.body%</div>
   </body>

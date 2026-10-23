@@ -57,6 +57,10 @@ A second run changes nothing.
 
 `verify-kioku.sh` lists each of these with its reason every time it runs.
 
+The boot screen's loader is drawn for a dark ground when the screen is dark (a `<picture>` with a
+`prefers-color-scheme: dark` source in `web/src/app.html`). That is in the source, for both brands, since the ink
+loader vanished on a dark boot screen whatever the name.
+
 ## The classification
 
 Every string in the folded bundle (`i18n/*.json` after `apply-branding.sh`) that names a brand is listed in
