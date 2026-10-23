@@ -964,6 +964,7 @@
             grouping={timelineGrouping}
             onGroupingChange={handleTimelineGroupingChange}
             withStacked={!thumbnailZoomManager.expandStacks}
+            beginning={!hasActiveFilters}
           >
             {#if showMemoryStrip && authManager.preferences.memories.enabled && !hasActiveFilters}
               <!-- In month/year grouping the timeline renders large representative cards; add breathing

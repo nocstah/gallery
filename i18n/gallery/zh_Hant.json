@@ -2218,6 +2218,7 @@
   "theme_settings_description": "跟隨桌面，或使用已安裝的主題",
   "thumbnail_link": "{isVideo, select, true {此影片的連結} other {此相片的連結}}",
   "thumbnail_preview": "{isVideo, select, true {預覽此影片} other {預覽此相片}}",
+  "timeline_beginning": "一切從這裡開始",
   "timeline_empty_clear_filters": "清除篩選條件",
   "timeline_empty_filtered_subtitle": "沒有符合您所套用篩選條件的內容。",
   "timeline_empty_filtered_title": "沒有相符的相片",

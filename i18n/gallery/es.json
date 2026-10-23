@@ -2204,6 +2204,7 @@
   "theme_settings_description": "Sigue a tu escritorio o usa uno de los temas instalados",
   "thumbnail_link": "{isVideo, select, true {Enlace a este vídeo} other {Enlace a esta foto}}",
   "thumbnail_preview": "{isVideo, select, true {Previsualizar este vídeo} other {Previsualizar esta foto}}",
+  "timeline_beginning": "Aquí empieza todo",
   "timeline_empty_clear_filters": "Borrar filtros",
   "timeline_empty_filtered_subtitle": "No hay nada aquí con los filtros que has aplicado.",
   "timeline_empty_filtered_title": "No hay fotos coincidentes",

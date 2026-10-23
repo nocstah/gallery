@@ -2329,6 +2329,7 @@
   "thumbnail_link": "{isVideo, select, true {Link to this video} other {Link to this photo}}",
   "thumbnail_preview": "{isVideo, select, true {Preview this video} other {Preview this photo}}",
   "thumbnail_size": "Thumbnail size",
+  "timeline_beginning": "It all begins here",
   "timeline_empty_clear_filters": "Clear filters",
   "timeline_empty_filtered_subtitle": "Nothing here for the filters you've applied.",
   "timeline_empty_filtered_title": "No matching photos",

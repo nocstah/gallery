@@ -2224,6 +2224,7 @@
   "theme_settings_description": "Podążaj za pulpitem albo użyj jednego z zainstalowanych motywów",
   "thumbnail_link": "{isVideo, select, true {Link do tego wideo} other {Link do tego zdjęcia}}",
   "thumbnail_preview": "{isVideo, select, true {Podgląd tego wideo} other {Podgląd tego zdjęcia}}",
+  "timeline_beginning": "Tu wszystko się zaczyna",
   "timeline_empty_clear_filters": "Wyczyść filtry",
   "timeline_empty_filtered_subtitle": "Brak wyników dla zastosowanych filtrów.",
   "timeline_empty_filtered_title": "Brak pasujących zdjęć",

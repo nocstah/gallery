@@ -2202,6 +2202,7 @@
   "theme_settings_description": "Volg je bureaublad of gebruik een van de geïnstalleerde thema's",
   "thumbnail_link": "{isVideo, select, true {Link naar deze video} other {Link naar deze foto}}",
   "thumbnail_preview": "{isVideo, select, true {Voorbeeld van deze video} other {Voorbeeld van deze foto}}",
+  "timeline_beginning": "Hier begint alles",
   "timeline_empty_clear_filters": "Filters wissen",
   "timeline_empty_filtered_subtitle": "Niets hier voor de filters die je hebt toegepast.",
   "timeline_empty_filtered_title": "Geen overeenkomende foto's",

@@ -2205,6 +2205,7 @@
   "theme_settings_description": "Suivez votre bureau ou utilisez l'un des thèmes installés",
   "thumbnail_link": "{isVideo, select, true {Lien vers cette vidéo} other {Lien vers cette photo}}",
   "thumbnail_preview": "{isVideo, select, true {Aperçu de cette vidéo} other {Aperçu de cette photo}}",
+  "timeline_beginning": "Ici, tout commence",
   "timeline_empty_clear_filters": "Effacer les filtres",
   "timeline_empty_filtered_subtitle": "Rien à afficher pour les filtres appliqués.",
   "timeline_empty_filtered_title": "Aucune photo correspondante",

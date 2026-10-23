@@ -2204,6 +2204,7 @@
   "theme_settings_description": "Segui il tuo desktop o usa uno dei temi installati",
   "thumbnail_link": "{isVideo, select, true {Link a questo video} other {Link a questa foto}}",
   "thumbnail_preview": "{isVideo, select, true {Anteprima di questo video} other {Anteprima di questa foto}}",
+  "timeline_beginning": "Qui comincia tutto",
   "timeline_empty_clear_filters": "Cancella filtri",
   "timeline_empty_filtered_subtitle": "Nessun risultato per i filtri che hai applicato.",
   "timeline_empty_filtered_title": "Nessuna foto corrispondente",

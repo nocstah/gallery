@@ -2205,6 +2205,7 @@
   "theme_settings_description": "Следуйте теме рабочего стола или выберите одну из установленных тем",
   "thumbnail_link": "{isVideo, select, true {Ссылка на это видео} other {Ссылка на это фото}}",
   "thumbnail_preview": "{isVideo, select, true {Предварительный просмотр этого видео} other {Предварительный просмотр этого фото}}",
+  "timeline_beginning": "Здесь всё начинается",
   "timeline_empty_clear_filters": "Сбросить фильтры",
   "timeline_empty_filtered_subtitle": "Ничего не найдено по применённым фильтрам.",
   "timeline_empty_filtered_title": "Нет подходящих фото",

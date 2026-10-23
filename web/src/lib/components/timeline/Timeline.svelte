@@ -5,6 +5,7 @@
   import Month from '$lib/components/timeline/Month.svelte';
   import Scrubber from '$lib/components/timeline/Scrubber.svelte';
   import TimelineAssetViewer from '$lib/components/timeline/TimelineAssetViewer.svelte';
+  import TimelineBeginning from '$lib/components/timeline/TimelineBeginning.svelte';
   import TimelineGroupingControl from '$lib/components/timeline/TimelineGroupingControl.svelte';
   import TimelineRepresentativeBuckets from '$lib/components/timeline/TimelineRepresentativeBuckets.svelte';
   import TimelineKeyboardActions from '$lib/components/timeline/actions/TimelineKeyboardActions.svelte';
@@ -88,6 +89,8 @@
      * (managers/timeline-heading); false for a timeline that is not the page's own (the map's photo panel).
      */
     barHeading?: boolean;
+    /** Local Omarchy layer: the timeline ends where the archive begins (TimelineBeginning; Photos' own, unfiltered) */
+    beginning?: boolean;
     children?: Snippet;
     empty?: Snippet;
     customThumbnailLayout?: Snippet<[TimelineAsset]>;
@@ -131,6 +134,7 @@
     onTemporalAnchorResolved,
     onViewportMonthChange,
     barHeading = true,
+    beginning = false,
     children,
     empty,
     customThumbnailLayout,
@@ -1029,7 +1033,11 @@
       style:left="0"
       style:right="0"
       style:transform={`translate3d(0,${timelineManager.topSectionHeight + timelineManager.bodySectionHeight + timelineManager.renderOffset}px,0)`}
-    ></div>
+    >
+      {#if beginning && activeGrouping === 'day' && !isEmpty}
+        <TimelineBeginning manager={timelineManager} />
+      {/if}
+    </div>
   </section>
 </section>
 

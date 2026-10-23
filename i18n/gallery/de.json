@@ -2205,6 +2205,7 @@
   "theme_settings_description": "Folge deinem Desktop oder nutze eines der installierten Designs",
   "thumbnail_link": "{isVideo, select, true {Link zu diesem Video} other {Link zu diesem Foto}}",
   "thumbnail_preview": "{isVideo, select, true {Vorschau dieses Videos} other {Vorschau dieses Fotos}}",
+  "timeline_beginning": "Hier beginnt alles",
   "timeline_empty_clear_filters": "Filter zurücksetzen",
   "timeline_empty_filtered_subtitle": "Für die ausgewählten Filter gibt es hier nichts.",
   "timeline_empty_filtered_title": "Keine passenden Fotos",
