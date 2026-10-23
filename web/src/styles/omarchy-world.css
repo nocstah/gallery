@@ -448,6 +448,13 @@ div[role='dialog'] > div > div.overflow-hidden {
     0 4px 12px -4px rgb(0 0 0 / 0.3),
     0 28px 64px -16px rgb(0 0 0 / 0.55) !important;
 }
+/* the admin shell's account (upstream's NavigationBar) as the one bar draws it: a quiet ring with the initial in ink
+   (a picture fills it), where upstream's colour disc was the one colour on the bar the theme did not give */
+.ws-bar-account > figure {
+  background: var(--immich-ui-light);
+  color: var(--immich-ui-dark);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--immich-ui-dark) 38%, transparent);
+}
 /* an avatar (UserAvatar's round figure) keeps its circle in a dialog too, as faces do everywhere (Shapes): the people
    an album is shared with, a Space's members, Help's owner had been squared here (2026-10-23) */
 div[role='dialog']

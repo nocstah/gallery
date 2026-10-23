@@ -252,7 +252,10 @@
 
         <ActionButton action={Cast} />
 
+        <!-- Local Omarchy layer: the account menu hangs from its button, and the account is a quiet ring, as in the one
+             bar (AccountInfoPanel, .ws-bar-account) -->
         <div
+          class="relative"
           use:clickOutside={{
             onOutclick: () => (shouldShowAccountInfoPanel = false),
             onEscape: () => (shouldShowAccountInfoPanel = false),
@@ -260,7 +263,7 @@
         >
           <button
             type="button"
-            class="flex ps-2"
+            class="ws-bar-account flex ps-2"
             onclick={() => (shouldShowAccountInfoPanel = !shouldShowAccountInfoPanel)}
             title="{authManager.user.name} ({authManager.user.email})"
             aria-label={authManager.user.name}
