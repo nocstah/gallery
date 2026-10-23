@@ -79,8 +79,15 @@ const boxArea = ({ x1, x2, x3, x4, y1, y2, y3, y4 }: AssetOcrResponseDto) =>
 export const isTextHeavy = (boxes: AssetOcrResponseDto[]) =>
   boxes.length >= TEXT_LINES || boxes.reduce((share, box) => share + boxArea(box), 0) >= TEXT_SHARE;
 
-/** What a picture is as a folder's face, from what Gallery knows of it (no text recognition: see FaceKind.Plain). */
-export const faceKind = (picture: FacePicture): FaceKind => {
+/**
+ * What a picture is as a folder's face, from what Gallery knows of it (no text recognition: see FaceKind.Plain).
+ * `camera` says whether it has a camera's data where its EXIF was not asked for (a search that finds only pictures with
+ * a camera make: managers/period-faces); left out, its EXIF says.
+ */
+export const faceKind = (
+  picture: FacePicture,
+  camera = !!(picture.exifInfo?.make || picture.exifInfo?.model),
+): FaceKind => {
   const tags = picture.tags?.map(({ value }) => value) ?? [];
   if (
     tags.some((tag) => SLIPS.has(tag)) ||
@@ -92,7 +99,6 @@ export const faceKind = (picture: FacePicture): FaceKind => {
   if (picture.visibility !== AssetVisibility.Timeline || tags.some((tag) => PAGES.has(tag))) {
     return FaceKind.Not;
   }
-  const camera = !!(picture.exifInfo?.make || picture.exifInfo?.model);
   const width = picture.width ?? picture.exifInfo?.exifImageWidth ?? 0;
   const height = picture.height ?? picture.exifInfo?.exifImageHeight ?? 0;
   const screen = !camera && width > 0 && height >= width * SCREEN_RATIO;

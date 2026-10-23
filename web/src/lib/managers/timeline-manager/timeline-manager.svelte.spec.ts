@@ -17,6 +17,14 @@ import { assetFactory, timelineAssetFactory, toResponseDto } from '@test-data/fa
 import { TimelineManager } from './timeline-manager.svelte';
 import type { TimelineAsset } from './types';
 
+// Local Omarchy layer: the overviews' faces are managers/period-faces' (its own tests); here the server's covers pass
+// through, so these tests keep reading the timeline's own requests
+vi.mock('$lib/managers/period-faces', () => ({
+  periodFaces: {
+    covers: (_scope: unknown, _periods: unknown, server: () => Promise<unknown>) => server(),
+  },
+}));
+
 async function getAssets(timelineManager: TimelineManager) {
   const assets = [];
   for await (const asset of timelineManager.assetsIterator()) {

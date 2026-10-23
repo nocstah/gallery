@@ -15,6 +15,7 @@ import { SvelteDate, SvelteSet } from 'svelte/reactivity';
 import { VirtualScrollManager, workspaceGap } from '$lib/managers/VirtualScrollManager/VirtualScrollManager.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
+import { periodFaces } from '$lib/managers/period-faces';
 import { GroupInsertionCache } from '$lib/managers/timeline-manager/group-insertion-cache.svelte';
 import {
   getTimelineAlbumQueryOptions,
@@ -632,16 +633,28 @@ export class TimelineManager extends VirtualScrollManager {
     const albumOptions = getTimelineAlbumQueryOptions(this.#options, bucketSize);
     let mainCovers: TimeBucketCoverResponseDto[];
     let albumCovers: TimeBucketCoverResponseDto[];
+    const index = this.#personStacks;
     try {
       // Requests are not aborted on re-init by design — the stale-sequence guard below prevents stale
       // application, and cover fetches are light GETs bounded to the currently visible bucket set.
+      const serverCovers = () => getTimeBucketCovers({ ...authManager.params, ...requestOptions, timeBuckets: todo });
+      // eslint-disable-next-line svelte/prefer-svelte-reactivity -- a lookup for this request only
+      const counts = new Map(this.timelineBuckets.map((bucket) => [bucket.timeBucket, bucket.count]));
       [mainCovers, albumCovers] = await Promise.all([
-        getTimeBucketCovers({ ...authManager.params, ...requestOptions, timeBuckets: todo }),
+        // Local Omarchy layer: each period's face by the folder rule, chosen before its tile shows and kept for the
+        // page load, the server's cover where nothing qualifies (managers/period-faces); a person's folded stacks
+        // keep the server's covers, which the fix below rereads
+        index
+          ? serverCovers()
+          : periodFaces.covers(
+              { ...authManager.params, ...requestOptions },
+              todo.map((timeBucket) => ({ timeBucket, count: counts.get(timeBucket) ?? 0 })),
+              serverCovers,
+            ),
         albumOptions
           ? getTimeBucketCovers({ ...authManager.params, ...albumOptions, timeBuckets: todo })
           : Promise.resolve([]),
       ]);
-      const index = this.#personStacks;
       if (index) {
         // A period's usual cover can be folded under a representative in a different period.
         // Pick a visible photo from that exact period instead; never bring a hidden member back.
