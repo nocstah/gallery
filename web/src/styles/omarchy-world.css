@@ -58,9 +58,10 @@
   --ws-glass-hover: rgb(10 10 12 / 0.8);
   --ws-glass-edge: rgb(255 255 255 / 0.08);
   --ws-glass-blur: blur(18px) saturate(1.3);
-  /* the muted words of the glass chrome (the glass bar below): the theme's muted ink halfway to its ink, worked out here
-     on the root so the bar's own --immich-ui-muted can take it; lib/theme/glass-density reads it to fit the ground. And
-     the muted ink as the ground has it, for what sits on a ground of its own inside the bar (its sheets, its search) */
+  /* the muted words of the glass chrome (the glass bar below): the theme's muted ink halfway to its ink, worked out
+     here on the root so the bar's own --immich-ui-muted can take it; lib/theme/glass-density reads it to fit the
+     ground. And the muted ink as the ground has it, for what sits on a ground of its own inside the bar (its sheets,
+     its search) */
   --ws-glass-muted: color-mix(in oklab, var(--immich-ui-muted) 50%, var(--immich-ui-dark));
   --ws-ground-muted: var(--immich-ui-muted);
 
@@ -1683,10 +1684,11 @@ ul[role='menu'] > hr:last-child {
    section headings and its modes were upstream's chrome, letter-spaced 11px capitals and a rail of mono capitals).
    Nothing in it is set in capitals: the strings are sentence case, as everywhere else. The section headings ("Quick
    links", "People", "Top result") take the sidebar's heading voice, meta size at the regular weight in ink over their
-   rows (as Browse and Library head theirs); the modes (Smart, Filename, Description, OCR, Ask) are the segmented control, ui type, the mode in use inverted as a
-   segment is (its pill still slides); what was typed as a term ("person:", "from:") keeps its key as typed, in data
-   type, in the search page's chip (a hairline frame, the key muted, the value in ink); a row's note ("Shared", "3
-   members") is a quiet chip of the same frame. Upstream's classes stay in the markup; these hooks override them ---- */
+   rows (as Browse and Library head theirs); the modes (Smart, Filename, Description, OCR, Ask) are the segmented
+   control, ui type, the mode in use inverted as a segment is (its pill still slides); what was typed as a term
+   ("person:", "from:") keeps its key as typed, in data type, in the search page's chip (a hairline frame, the key
+   muted, the value in ink); a row's note ("Shared", "3 members") is a quiet chip of the same frame. Upstream's classes
+   stay in the markup; these hooks override them ---- */
 [data-command-root] .uppercase {
   text-transform: none;
 }
