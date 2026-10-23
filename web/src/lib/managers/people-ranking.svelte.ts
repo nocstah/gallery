@@ -58,19 +58,19 @@ class PeopleRanking {
     }
     // a list waits for the order this long at most, then shows in the order it came in
     const waited = setTimeout(() => (this.#settled = true), WAIT_MS);
-    this.#loading = getAllPeople({ withHidden: false, withSharedSpaces: true, size: PAGE })
-      .then(({ people }) => {
+    this.#loading = (async () => {
+      try {
+        const { people } = await getAllPeople({ withHidden: false, withSharedSpaces: true, size: PAGE });
         this.#people = people;
         this.#at = Date.now();
-      })
-      .catch(() => {
+      } catch {
         // the lists keep the order they came in
-      })
-      .finally(() => {
+      } finally {
         clearTimeout(waited);
         this.#loading = undefined;
         this.#settled = true;
-      });
+      }
+    })();
     return this.#loading;
   }
 

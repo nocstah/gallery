@@ -74,8 +74,8 @@
     }
     // how long ago by the calendar (utils/relative-time): "Last backup 9h ago", "Last backup yesterday", where it had
     // counted hours past a day ("Last backup 30 h ago")
-    const when = relativeTime(health.last_backup.at * 1000, Date.now(), $locale ?? undefined);
-    return $t('ai_inbox_last_backup', { values: { when } });
+    const ago = relativeTime(health.last_backup.at * 1000, Date.now(), $locale ?? undefined);
+    return $t('ai_inbox_last_backup', { values: { when: ago } });
   });
 
   onMount(async () => {
