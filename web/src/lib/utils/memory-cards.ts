@@ -1,7 +1,10 @@
-import { MemoryType, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
+import { MemorySearchOrder, MemoryType, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
 import type { MessageFormatter } from 'svelte-i18n';
 import { opensLit } from '$lib/components/room/room-opening';
+import { memoryFacts } from '$lib/managers/memory-facts.svelte';
+import type { MemoriesPreferences } from '$lib/managers/user-preferences-manager.svelte';
 import { getMemoryCardSubtitle } from '$lib/utils/memory-card';
+import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
 
 // Local Omarchy layer: the cards the memories are shown as (DESIGN.md, Memories). The server makes a memory per rule
 // and per day, so one trip a year ago came back as four cards that read "Siem Reap · October 2025": the day before
@@ -239,6 +242,35 @@ export const memoryCards = (
 /** The card a memory belongs to, by any of its memories' ids. */
 export const cardOfMemory = (cards: MemoryCard[], memoryId: string): MemoryCard | undefined =>
   cards.find(({ members }) => members.some(({ id }) => id === memoryId));
+
+// ---- what the Memories page asks for, and the cards it makes of it ----
+
+/**
+ * What the Memories page asks Gallery for (the memory manager's applyPreferences): every memory the server still keeps,
+ * the newest first, the upcoming ones only while the reader shows them, and only the kept ones while the reader keeps
+ * to those.
+ */
+export const memoriesPageSearch = ({ showUpcoming, onlyFavorites }: MemoriesPreferences) => ({
+  order: MemorySearchOrder.Desc,
+  isSaved: onlyFavorites ? true : undefined,
+  isUpcoming: showUpcoming ? undefined : false,
+});
+
+/**
+ * The memories as their cards, as every page shows them: keyed by the title of facts in one locale (utils/memory-title,
+ * so a key does not move with the reader's language), the heavier of one kind leading by Curator's count, and a
+ * memory's days by Curator's span (managers/memory-facts). The memory manager's cards (the Memories page, Explore, the
+ * Command center's Today) and Room's chain (components/room/room-source) are these. Without Curator (a family account,
+ * Curator not answering in time) each memory titles itself, and its photos say its days.
+ */
+export const cardsByFacts = (memories: MemoryResponseDto[], now = wallClockAsUtc()): MemoryCard[] =>
+  memoryCards(
+    memories,
+    (memory) => memoryTitle(memory, memoryFacts.get(memory.id), 'en-US')?.title,
+    now,
+    (memory) => memoryCount(memory, memoryFacts.get(memory.id)),
+    (memory) => memoryFacts.get(memory.id),
+  );
 
 // ---- the line: what kind of memory it is, how long ago, how long ----
 

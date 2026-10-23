@@ -1,6 +1,14 @@
-import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
+import { AssetTypeEnum, MemorySearchOrder, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import type { MessageFormatter } from 'svelte-i18n';
-import { cardOfMemory, memoryCardLine, memoryCards, memorySection, wallClockAsUtc } from '$lib/utils/memory-cards';
+import {
+  cardOfMemory,
+  cardsByFacts,
+  memoriesPageSearch,
+  memoryCardLine,
+  memoryCards,
+  memorySection,
+  wallClockAsUtc,
+} from '$lib/utils/memory-cards';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { BRIGHT, DIM } from '@test-data/thumbhash';
 
@@ -305,6 +313,48 @@ describe("today's one order", () => {
     ]);
   });
 });
+
+describe(memoriesPageSearch.name, () => {
+  it('asks for every memory the server keeps, the newest first, none still to come', () => {
+    expect(memoriesPageSearch({ showUpcoming: false, onlyFavorites: false })).toEqual({
+      order: MemorySearchOrder.Desc,
+      isUpcoming: false,
+    });
+  });
+
+  it('lets the upcoming ones in, and keeps to the kept ones, as the reader chose', () => {
+    expect(memoriesPageSearch({ showUpcoming: true, onlyFavorites: true })).toEqual({
+      order: MemorySearchOrder.Desc,
+      isSaved: true,
+    });
+  });
+});
+
+describe(cardsByFacts.name, () => {
+  it("keys the cards by their titles, so a trip's earlier days and today's memory of it are one card", () => {
+    // without Curator each memory titles itself: its rule's place and month, else its photos' month
+    const trip = rule(
+      'trip',
+      'trip_anniversary',
+      { city: 'Riverton', year: 2025, month: 10, assetCount: 40 },
+      { day: '2026-10-14', until: '2026-10-17', photos: ['a@2025-10-15', 'b@2025-10-16'] },
+    );
+    const together = rule(
+      'together',
+      'people_together',
+      { city: 'Riverton', year: 2025, month: 10 },
+      { day: '2026-10-18', until: '2026-10-25', photos: ['b@2025-10-16', 'c@2025-10-17'] },
+    );
+    const other = memory('other', { photos: ['o@2019-10-18'] });
+
+    const cards = cardsByFacts([together, other, trip], NOW);
+
+    expect(ids(cards)).toEqual([['trip', 'together'], ['other']]);
+    expect(cards[0].section).toBe('today');
+    expect(cards[0].assets.map(({ id }) => id)).toEqual(['a', 'b', 'c']);
+  });
+});
+
 describe(memoryCardLine.name, () => {
   const now = new Date(2026, 9, 18);
   const line = (lead: MemoryResponseDto) => memoryCardLine({ lead, assets: lead.assets }, translate, 'en', now);

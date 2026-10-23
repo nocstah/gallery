@@ -12,8 +12,7 @@ import {
 } from '@immich/sdk';
 import type { DateTime } from 'luxon';
 import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-import { memoryCards, wallClockAsUtc } from '$lib/utils/memory-cards';
-import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
+import { cardsByFacts, wallClockAsUtc } from '$lib/utils/memory-cards';
 import {
   inTimeOrder,
   monthOf,
@@ -44,8 +43,7 @@ export const loadToday = async ({ memories, today }: { memories: boolean; today:
   }
   const list = found.status === 'fulfilled' ? found.value : [];
   // the cards are keyed by the facts' title, in one locale, and ranked by the facts' spans, as the memory manager keys
-  // and ranks them (managers/memory-manager); without Curator (a family account, Curator not answering in time) each
-  // memory titles itself and its photos say its days
+  // and ranks them (utils/memory-cards' cardsByFacts, the manager's own)
   if (list.length > 0) {
     let patience: ReturnType<typeof setTimeout> | undefined;
     await Promise.race([
@@ -54,13 +52,7 @@ export const loadToday = async ({ memories, today }: { memories: boolean; today:
     ]);
     clearTimeout(patience);
   }
-  const cards = memoryCards(
-    list,
-    (memory) => memoryTitle(memory, memoryFacts.get(memory.id), 'en-US')?.title,
-    wallClockAsUtc(today.toJSDate()),
-    (memory) => memoryCount(memory, memoryFacts.get(memory.id)),
-    (memory) => memoryFacts.get(memory.id),
-  );
+  const cards = cardsByFacts(list, wallClockAsUtc(today.toJSDate()));
   return todayReels(cards, albums.status === 'fulfilled' ? albums.value : [], today.month);
 };
 

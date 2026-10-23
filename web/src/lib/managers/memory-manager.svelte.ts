@@ -32,8 +32,7 @@ import { userPreferencesManager } from '$lib/managers/user-preferences-manager.s
 import { Route } from '$lib/route';
 import { memoryLaneTitle } from '$lib/utils';
 import { handleError } from '$lib/utils/handle-error';
-import { cardOfMemory, memoryCards, wallClockAsUtc, type MemoryCard } from '$lib/utils/memory-cards';
-import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
+import { cardOfMemory, cardsByFacts, memoriesPageSearch, type MemoryCard } from '$lib/utils/memory-cards';
 import { toTimelineAsset } from '$lib/utils/timeline-util';
 import { toastUndoable, UNDO_TOAST_MS, undone } from '$lib/utils/undoable';
 
@@ -159,12 +158,8 @@ class MemoryManager {
   }
 
   applyPreferences() {
-    const { showUpcoming, onlyFavorites } = userPreferencesManager.memories;
-    this.setFilters({
-      order: MemorySearchOrder.Desc,
-      isSaved: onlyFavorites ? true : undefined,
-      isUpcoming: showUpcoming ? undefined : false,
-    });
+    // Local Omarchy layer: the Memories page's search (utils/memory-cards)
+    this.setFilters(memoriesPageSearch(userPreferencesManager.memories));
 
     return this.refresh();
   }
@@ -187,16 +182,8 @@ class MemoryManager {
   // and Explore show them, and the film plays a card's photos as one, steps to the card before or after it and acts on
   // all its memories (the heart, Remove memory, Remove photo). The key is titled in one locale, so it does not move
   // with the reader's; Curator's count of a memory weighs which of one kind leads its card, and its span tells a memory
-  // of several days.
-  cards = $derived(
-    memoryCards(
-      this.memories,
-      (memory) => memoryTitle(memory, memoryFacts.get(memory.id), 'en-US')?.title,
-      wallClockAsUtc(),
-      (memory) => memoryCount(memory, memoryFacts.get(memory.id)),
-      (memory) => memoryFacts.get(memory.id),
-    ),
-  );
+  // of several days (cardsByFacts).
+  cards = $derived(cardsByFacts(this.memories));
 
   /** Local Omarchy layer: the card a memory is shown on (by any of its memories' ids). */
   cardOf(memoryId: string): MemoryCard | undefined {
