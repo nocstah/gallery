@@ -22,6 +22,10 @@
 
 import { Kysely } from 'kysely';
 import { AlbumUserRole, AssetVisibility, TimeBucketSize } from 'src/enum.js';
+import { FaceSearchRepository } from 'src/gallery/repositories/face-search.repository.js';
+import { FilterSuggestionRepository } from 'src/gallery/repositories/filter-suggestion.repository.js';
+import { GallerySyncRepository } from 'src/gallery/repositories/gallery-sync.repository.js';
+import { SpaceAlbumRepository } from 'src/gallery/repositories/space-album.repository.js';
 import { AccessRepository } from 'src/repositories/access.repository.js';
 import { ActivityRepository } from 'src/repositories/activity.repository.js';
 import { AlbumUserRepository } from 'src/repositories/album-user.repository.js';
@@ -62,7 +66,9 @@ const setup = () => {
       DownloadRepository,
       MapRepository,
       MemoryRepository,
+      FilterSuggestionRepository,
       SearchRepository,
+      FaceSearchRepository,
       SharedSpaceRepository,
       SyncRepository,
       TagRepository,
@@ -79,9 +85,9 @@ const setup = () => {
     downloadRepo: ctx.get(DownloadRepository),
     mapRepo: ctx.get(MapRepository),
     memoryRepo: ctx.get(MemoryRepository),
-    searchRepo: ctx.get(SearchRepository),
+    suggestionRepo: ctx.get(FilterSuggestionRepository),
     spaceRepo: ctx.get(SharedSpaceRepository),
-    syncRepo: ctx.get(SyncRepository),
+    syncRepo: new GallerySyncRepository(ctx.database),
     tagRepo: ctx.get(TagRepository),
     viewRepo: ctx.get(ViewRepository),
   };
@@ -361,7 +367,7 @@ describe('matrix: checkSpaceAccess', () => {
       a.albumHiddenArchive,
       a.albumDeletedTimeline,
     ]);
-    const result = await accessRepo.asset.checkSpaceAccess(f.viewerId, allIds);
+    const result = await accessRepo.spaceAsset.checkSpaceAccess(f.viewerId, allIds);
 
     // Direct path
     expect(result.has(a.directTimeline)).toBe(true);
@@ -396,7 +402,7 @@ describe('matrix: checkSpaceAccess', () => {
     const f = await seedMatrix(ctx, spaceRepo);
     const a = f.assets;
 
-    const before = await accessRepo.asset.checkSpaceAccess(f.viewerId, new Set([a.directTimeline]));
+    const before = await accessRepo.spaceAsset.checkSpaceAccess(f.viewerId, new Set([a.directTimeline]));
     expect(before.has(a.directTimeline)).toBe(true);
 
     await defaultDatabase
@@ -405,7 +411,7 @@ describe('matrix: checkSpaceAccess', () => {
       .where('id', '=', a.directTimeline)
       .execute();
 
-    const after = await accessRepo.asset.checkSpaceAccess(f.viewerId, new Set([a.directTimeline]));
+    const after = await accessRepo.spaceAsset.checkSpaceAccess(f.viewerId, new Set([a.directTimeline]));
     expect(after.has(a.directTimeline)).toBe(false);
   });
 
@@ -414,7 +420,7 @@ describe('matrix: checkSpaceAccess', () => {
     const f = await seedMatrix(ctx, spaceRepo);
     const a = f.assets;
 
-    const before = await accessRepo.asset.checkSpaceAccess(f.viewerId, new Set([a.albumShownTimeline]));
+    const before = await accessRepo.spaceAsset.checkSpaceAccess(f.viewerId, new Set([a.albumShownTimeline]));
     expect(before.has(a.albumShownTimeline)).toBe(true);
 
     await defaultDatabase
@@ -423,7 +429,7 @@ describe('matrix: checkSpaceAccess', () => {
       .where('id', '=', a.albumShownTimeline)
       .execute();
 
-    const after = await accessRepo.asset.checkSpaceAccess(f.viewerId, new Set([a.albumShownTimeline]));
+    const after = await accessRepo.spaceAsset.checkSpaceAccess(f.viewerId, new Set([a.albumShownTimeline]));
     expect(after.has(a.albumShownTimeline)).toBe(false);
   });
 });
@@ -456,7 +462,7 @@ describe('matrix: checkSpaceAccessForSpace', () => {
       a.albumHiddenArchive,
       a.albumDeletedTimeline,
     ]);
-    const result = await accessRepo.asset.checkSpaceAccessForSpace(f.viewerId, f.spaceId, allIds);
+    const result = await accessRepo.spaceAsset.checkSpaceAccessForSpace(f.viewerId, f.spaceId, allIds);
 
     expect(result.has(a.directTimeline)).toBe(true);
     expect(result.has(a.directArchive)).toBe(true);
@@ -486,7 +492,7 @@ describe('matrix: checkSpaceAccessForSpace', () => {
     const f = await seedMatrix(ctx, spaceRepo);
     const a = f.assets;
 
-    const before = await accessRepo.asset.checkSpaceAccessForSpace(f.viewerId, f.spaceId, new Set([a.libArchive]));
+    const before = await accessRepo.spaceAsset.checkSpaceAccessForSpace(f.viewerId, f.spaceId, new Set([a.libArchive]));
     expect(before.has(a.libArchive)).toBe(true);
 
     await defaultDatabase
@@ -495,7 +501,7 @@ describe('matrix: checkSpaceAccessForSpace', () => {
       .where('id', '=', a.libArchive)
       .execute();
 
-    const after = await accessRepo.asset.checkSpaceAccessForSpace(f.viewerId, f.spaceId, new Set([a.libArchive]));
+    const after = await accessRepo.spaceAsset.checkSpaceAccessForSpace(f.viewerId, f.spaceId, new Set([a.libArchive]));
     expect(after.has(a.libArchive)).toBe(false);
   });
 });
@@ -528,13 +534,16 @@ describe('matrix: checkSpaceEditAccess', () => {
       await ctx.newSharedSpaceAsset({ spaceId: space.id, assetId });
     }
 
-    const editorResult = await accessRepo.asset.checkSpaceEditAccess(editor.id, new Set([tl.id, ar.id, hi.id, lo.id]));
+    const editorResult = await accessRepo.spaceAsset.checkSpaceEditAccess(
+      editor.id,
+      new Set([tl.id, ar.id, hi.id, lo.id]),
+    );
     expect(editorResult.has(tl.id)).toBe(true);
     expect(editorResult.has(ar.id)).toBe(true);
     expect(editorResult.has(hi.id)).toBe(false);
     expect(editorResult.has(lo.id)).toBe(false);
 
-    const viewerResult = await accessRepo.asset.checkSpaceEditAccess(viewer.id, new Set([tl.id]));
+    const viewerResult = await accessRepo.spaceAsset.checkSpaceEditAccess(viewer.id, new Set([tl.id]));
     expect(viewerResult.has(tl.id)).toBe(false);
   });
 
@@ -549,7 +558,7 @@ describe('matrix: checkSpaceEditAccess', () => {
     const { asset } = await ctx.newAsset({ ownerId: owner.id, visibility: AssetVisibility.Timeline });
     await ctx.newSharedSpaceAsset({ spaceId: space.id, assetId: asset.id });
 
-    const before = await accessRepo.asset.checkSpaceEditAccess(editor.id, new Set([asset.id]));
+    const before = await accessRepo.spaceAsset.checkSpaceEditAccess(editor.id, new Set([asset.id]));
     expect(before.has(asset.id)).toBe(true);
 
     await defaultDatabase
@@ -558,7 +567,7 @@ describe('matrix: checkSpaceEditAccess', () => {
       .where('id', '=', asset.id)
       .execute();
 
-    const after = await accessRepo.asset.checkSpaceEditAccess(editor.id, new Set([asset.id]));
+    const after = await accessRepo.spaceAsset.checkSpaceEditAccess(editor.id, new Set([asset.id]));
     expect(after.has(asset.id)).toBe(false);
   });
 });
@@ -677,7 +686,7 @@ describe('matrix: SharedSpaceAlbumAssetSync backfill (album path)', () => {
 
 describe('matrix: getFilterSuggestions (space-scoped)', () => {
   it('includes Timeline+Archive countries; excludes Hidden+Locked+noTimeline', async () => {
-    const { searchRepo, spaceRepo, ctx } = setup();
+    const { suggestionRepo, spaceRepo, ctx } = setup();
     const { user: owner } = await ctx.newUser();
     const { user: viewer } = await ctx.newUser();
     const { space } = await ctx.newSharedSpace({ createdById: owner.id });
@@ -709,7 +718,7 @@ describe('matrix: getFilterSuggestions (space-scoped)', () => {
     // assets to bypass the space-visibility gate, so passing [owner.id, viewer.id] would expose
     // the owner's own Hidden/Locked assets (the owner can see their own hidden assets in their
     // search facets). Testing with viewer.id alone validates the space-member perspective.
-    const result = await searchRepo.getFilterSuggestions([viewer.id], { spaceId: space.id });
+    const result = await suggestionRepo.getFilterSuggestions([viewer.id], { spaceId: space.id });
 
     expect(result.countries).toContain('TimelineCountry');
     // Archive IS included in search (spaceVisibilityGate includes Archive)
@@ -729,7 +738,7 @@ describe('matrix: getFilterSuggestions (space-scoped)', () => {
 
 describe('matrix: getAccessibleTags (space-scoped)', () => {
   it('returns tags for Timeline+Archive assets; excludes Hidden+Locked+noTimeline', async () => {
-    const { searchRepo, tagRepo, spaceRepo, ctx } = setup();
+    const { suggestionRepo, tagRepo, spaceRepo, ctx } = setup();
     const { user: owner } = await ctx.newUser();
     const { user: viewer } = await ctx.newUser();
     const { space } = await ctx.newSharedSpace({ createdById: owner.id });
@@ -759,7 +768,7 @@ describe('matrix: getAccessibleTags (space-scoped)', () => {
 
     // Call with viewer.id only — same M3 reason as getFilterSuggestions: passing owner.id
     // would expose the owner's own Hidden/Locked tags via the "caller's own assets" bypass.
-    const tags = await searchRepo.getAccessibleTags([viewer.id], { spaceId: space.id });
+    const tags = await suggestionRepo.getAccessibleTags([viewer.id], { spaceId: space.id });
     const tagValues = tags.map((t) => t.value);
 
     expect(tagValues).toContain('TagTimeline');
@@ -1853,7 +1862,14 @@ describe('matrix: activity.search — space-linked album hides Hidden/Locked ass
 const setupAlbumService = () => {
   const result = newMediumService(AlbumService, {
     database: defaultDatabase,
-    real: [AccessRepository, AlbumRepository, AlbumUserRepository, SharedSpaceRepository, UserRepository],
+    real: [
+      SpaceAlbumRepository,
+      AccessRepository,
+      AlbumRepository,
+      AlbumUserRepository,
+      SharedSpaceRepository,
+      UserRepository,
+    ],
     mock: [LoggingRepository],
   });
   return result;
@@ -1937,7 +1953,7 @@ describe('matrix: AlbumService.get — email redaction for space-only Viewer', (
 
 describe('matrix: album-scoped facets — getFilterSuggestions excludes Hidden facet values', () => {
   it("excludes another participant's Hidden-asset facet from album-scoped suggestions", async () => {
-    const { searchRepo, spaceRepo, ctx } = setup();
+    const { suggestionRepo, spaceRepo, ctx } = setup();
     const { user: albumOwner } = await ctx.newUser();
     const { user: participant } = await ctx.newUser(); // album_user contributor
     const { user: viewer } = await ctx.newUser(); // space viewer
@@ -1975,7 +1991,7 @@ describe('matrix: album-scoped facets — getFilterSuggestions excludes Hidden f
     await ctx.newAlbumAsset({ albumId: album.id, assetId: viewerTl.id });
 
     // Get album-scoped filter suggestions from the viewer's perspective
-    const result = await searchRepo.getFilterSuggestions([viewer.id], { albumId: album.id });
+    const result = await suggestionRepo.getFilterSuggestions([viewer.id], { albumId: album.id });
 
     // Viewer's own Timeline country — present (ownerId bypass)
     expect(result.countries).toContain('ViewerTimelineCountry');
@@ -1988,7 +2004,7 @@ describe('matrix: album-scoped facets — getFilterSuggestions excludes Hidden f
   });
 
   it("excludes another participant's Locked-asset facet from album-scoped suggestions", async () => {
-    const { searchRepo, ctx } = setup();
+    const { suggestionRepo, ctx } = setup();
     const { user: albumOwner } = await ctx.newUser();
     const { user: participant } = await ctx.newUser();
 
@@ -2006,7 +2022,7 @@ describe('matrix: album-scoped facets — getFilterSuggestions excludes Hidden f
     await ctx.newAlbumAsset({ albumId: album.id, assetId: loAsset.id });
 
     // Ask from albumOwner's perspective (they are a participant)
-    const result = await searchRepo.getFilterSuggestions([albumOwner.id], { albumId: album.id });
+    const result = await suggestionRepo.getFilterSuggestions([albumOwner.id], { albumId: album.id });
 
     expect(result.countries).toContain('ParticipantLockedTLCountry'); // Timeline ✓
     expect(result.countries).not.toContain('ParticipantLockedCountry'); // Locked blocked ✓
@@ -2018,7 +2034,7 @@ describe('matrix: album-scoped facets — getFilterSuggestions excludes Hidden f
   // directly with no upstream visibility resolution, so the caller's OWN Hidden asset in the album
   // leaked a facet value even though the same asset is invisible everywhere else.
   it("excludes the CALLER'S OWN Hidden-asset facet from album-scoped suggestions (I1)", async () => {
-    const { searchRepo, ctx } = setup();
+    const { suggestionRepo, ctx } = setup();
     const { user: albumOwner } = await ctx.newUser();
 
     const { result: album } = await ctx.newAlbum({ ownerId: albumOwner.id, albumName: 'FacetOwnerHiddenAlbum' });
@@ -2035,7 +2051,7 @@ describe('matrix: album-scoped facets — getFilterSuggestions excludes Hidden f
 
     // Ask from albumOwner's own perspective — userIds includes the asset owner, hitting the
     // unguarded ownerId branch directly.
-    const result = await searchRepo.getFilterSuggestions([albumOwner.id], { albumId: album.id });
+    const result = await suggestionRepo.getFilterSuggestions([albumOwner.id], { albumId: album.id });
 
     expect(result.countries).toContain('OwnerTimelineCountry'); // Timeline ✓ (positive control)
     expect(result.countries).not.toContain('OwnerHiddenCountry'); // Hidden blocked ✓

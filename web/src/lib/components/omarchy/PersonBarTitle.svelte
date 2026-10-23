@@ -9,7 +9,7 @@
   import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
   import SearchPeople from '$lib/components/faces-page/PeopleSearch.svelte';
   import { portal } from '$lib/elements/Portal.svelte';
-  import { getPeopleThumbnailUrl } from '$lib/utils';
+  import { getGlobalPersonThumbnailUrl } from '$lib/utils/global-person-route';
   import type { PersonResponseDto } from '@immich/sdk';
   import { LoadingSpinner } from '@immich/ui';
   import { tick } from 'svelte';
@@ -126,6 +126,7 @@
       bind:showLoadingSpinner={searching}
       type="input"
       numberPeopleToSearch={MATCHES}
+      withSharedSpaces
       placeholder={$t('add_a_name')}
       inputClass="ws-person-bar-title ws-person-bar-field"
     />
@@ -157,7 +158,7 @@
             onmousedown={(event) => event.preventDefault()}
             onclick={() => pick(other)}
           >
-            <img src={getPeopleThumbnailUrl(other)} alt="" draggable="false" />
+            <img src={getGlobalPersonThumbnailUrl(other)} alt="" draggable="false" />
             <span>{other.name}</span>
           </button>
         {/each}

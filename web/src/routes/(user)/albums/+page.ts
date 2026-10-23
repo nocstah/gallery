@@ -7,15 +7,13 @@ import type { PageLoad } from './$types';
 
 export const load = (async ({ url }) => {
   await authenticate(url);
-  // the album folders (local Omarchy layer) load beside the albums, so no album shows at the top first; and QR's slips,
-  // so no album shows one for its cover first (managers/slip-covers)
-  const [sharedAlbums, albums] = await Promise.all([
+  const [sharedAlbums, albums, $t] = await Promise.all([
     getAllAlbums({ isShared: true }),
     getAllAlbums({ isOwned: true }),
+    getFormatter(),
     albumFolders.load(),
     slipCovers.load(),
   ]);
-  const $t = await getFormatter();
 
   return {
     albums,

@@ -10,11 +10,21 @@ import {
 } from 'kysely';
 import { jsonObjectFrom } from 'kysely/helpers/postgres';
 import { InjectKysely } from 'nestjs-kysely';
-import type { PetSearchTable } from 'src/schema/tables/pet-search.table.js';
 import { AssetFace } from 'src/database.js';
 import { Chunked, ChunkedArray, DummyValue, GenerateSql } from 'src/decorators.js';
 import { PersonUserRole } from 'src/dtos/person.dto.js';
 import { AssetFileType, AssetVisibility, SourceType, UserMetadataKey } from 'src/enum.js';
+import {
+  PersonSidecarFields,
+  clearOrphanPersonIdentity,
+  personIdentityId,
+  personIsPet,
+  personSidecarColumns,
+  personSpecies,
+  personType,
+  setPersonIdentity,
+  writePersonSidecars,
+} from 'src/gallery/utils/person-sidecar.js';
 import { type YearMonthDay } from 'src/repositories/asset.repository.js';
 import { DB } from 'src/schema/index.js';
 import { AssetFaceTable } from 'src/schema/tables/asset-face.table.js';
@@ -211,6 +221,7 @@ const withPerson = ({ viewingUserId }: WithPersonOptions) => {
       eb
         .selectFrom('person')
         .selectAll('person')
+        .select(personSidecarColumns())
         .whereRef('person.personGroupId', '=', 'asset_face.personGroupId')
         .orderBy(sql`case when "person"."ownerId" = ${viewingUserId} then 0 else 1 end`)
         .limit(1),
@@ -227,7 +238,11 @@ const withPerson = ({ viewingUserId }: WithPersonOptions) => {
  */
 const withPersonAnyOwner = (eb: ExpressionBuilder<DB, 'asset_face'>) =>
   jsonObjectFrom(
-    eb.selectFrom('person').selectAll('person').whereRef('person.personGroupId', '=', 'asset_face.personGroupId'),
+    eb
+      .selectFrom('person')
+      .selectAll('person')
+      .select(personSidecarColumns())
+      .whereRef('person.personGroupId', '=', 'asset_face.personGroupId'),
   ).as('person');
 
 const withFaceSearch = (eb: ExpressionBuilder<DB, 'asset_face'>) => {
@@ -235,26 +250,6 @@ const withFaceSearch = (eb: ExpressionBuilder<DB, 'asset_face'>) => {
     eb.selectFrom('face_search').selectAll('face_search').whereRef('face_search.faceId', '=', 'asset_face.id'),
   ).as('faceSearch');
 };
-
-const withPetSearch = (eb: ExpressionBuilder<DB, 'asset_face'>) => {
-  return jsonObjectFrom(
-    eb.selectFrom('pet_search').selectAll('pet_search').whereRef('pet_search.faceId', '=', 'asset_face.id'),
-  ).as('petSearch');
-};
-
-/**
- * Every embedded pet face: unassigned (recognition-written, not yet clustered) faces are invisible
- * to a person-scoped delete — the `pet_search` join is the only thing that identifies them. Shared
- * by {@link PersonRepository.deleteAllPets} (full purge) and
- * {@link PersonRepository.purgePetRecognitionArtifacts} (scoped purge) as their first statement:
- * both need this same delete, and it must run before anything that would remove the `pet_search`
- * rows it joins against (F5).
- */
-const deleteEmbeddedPetFaces = (trx: Transaction<DB>) =>
-  trx
-    .deleteFrom('asset_face')
-    .where('asset_face.id', 'in', (eb) => eb.selectFrom('pet_search').select('pet_search.faceId'))
-    .execute();
 
 @Injectable()
 export class PersonRepository {
@@ -288,7 +283,15 @@ export class PersonRepository {
   ): Promise<{ deletedThumbnailPath: string | null; targetNeedsFeatureFaceRepair: boolean }> {
     const people = await db
       .selectFrom('person')
-      .select(['personGroupId', 'name', 'birthDate', 'thumbnailPath', 'color', 'species', 'faceAssetId'])
+      .select([
+        'personGroupId',
+        'name',
+        'birthDate',
+        'thumbnailPath',
+        'color',
+        personSpecies().as('species'),
+        'faceAssetId',
+      ])
       .where('personGroupId', 'in', [input.sourcePersonId, input.targetPersonId])
       .execute();
     const target = people.find((person) => person.personGroupId === input.targetPersonId);
@@ -297,7 +300,9 @@ export class PersonRepository {
       throw new Error('Person profile not found');
     }
 
-    const update: Updateable<PersonTable> = { identityId: input.targetIdentityId };
+    await setPersonIdentity(db, input.targetPersonId, input.targetIdentityId);
+    // Always touches the survivor (bumping updatedAt/updateId), as when identityId lived on person.
+    const update: Updateable<PersonTable> = { name: target.name };
     if (isBlank(target.name) && !isBlank(source.name)) {
       update.name = source.name;
     }
@@ -311,7 +316,8 @@ export class PersonRepository {
     }
 
     if (isBlank(target.species) && !isBlank(source.species)) {
-      update.species = source.species;
+      // only lands when the survivor is a pet: species lives on its person_pet row
+      await writePersonSidecars(db, input.targetPersonId, { species: source.species });
     }
 
     await db.updateTable('person').set(update).where('personGroupId', '=', input.targetPersonId).execute();
@@ -405,11 +411,7 @@ export class PersonRepository {
     },
     db: Kysely<DB> | Transaction<DB> = this.db,
   ): Promise<void> {
-    await db
-      .updateTable('person')
-      .set({ identityId: input.identityId })
-      .where('personGroupId', '=', input.personId)
-      .execute();
+    await setPersonIdentity(db, input.personId, input.identityId);
   }
 
   /**
@@ -425,7 +427,7 @@ export class PersonRepository {
    * first (`createGroup`) — the same rule `createWithGroup` enforces for every other person-insert
    * path. A person is addressed by `personGroupId`; there is no standalone `person.id` any more.
    *
-   * The insert races `person_ownerId_identityId_key` (partial unique, `identityId IS NOT NULL`): two
+   * The insert races `person_identity_ownerId_identityId_key`: two
    * editors attaching two faces of the same not-yet-named human concurrently would both miss the
    * initial select. `doNothing` plus a re-select makes the loser adopt the winner's row rather than
    * fail on the duplicate key. The loser's freshly minted `person_group` row is then unreferenced,
@@ -438,9 +440,10 @@ export class PersonRepository {
     const find = () =>
       db
         .selectFrom('person')
-        .select('personGroupId')
-        .where('ownerId', '=', input.ownerId)
-        .where('identityId', '=', input.identityId)
+        .innerJoin('person_identity', 'person_identity.personGroupId', 'person.personGroupId')
+        .select('person.personGroupId')
+        .where('person.ownerId', '=', input.ownerId)
+        .where('person_identity.identityId', '=', input.identityId)
         .executeTakeFirst();
 
     const existing = await find();
@@ -455,20 +458,30 @@ export class PersonRepository {
       .returning('id')
       .executeTakeFirstOrThrow();
 
-    const inserted = await db
-      .insertInto('person')
-      .values({
-        ownerId: input.ownerId,
-        personGroupId: group.id,
-        identityId: input.identityId,
-        name: input.name,
-        type: input.type,
-      })
-      .onConflict((oc) => oc.doNothing())
+    // The identity link is written before the person: it carries the (ownerId, identityId) key.
+    await clearOrphanPersonIdentity(db, input.ownerId, input.identityId);
+    const linked = await db
+      .insertInto('person_identity')
+      .values({ personGroupId: group.id, ownerId: input.ownerId, identityId: input.identityId })
+      .onConflict((oc) => oc.columns(['ownerId', 'identityId']).doNothing())
       .returning('personGroupId')
       .executeTakeFirst();
+    if (!linked) {
+      // Lost the race: the winner's person row is visible once its transaction commits.
+      const winner = await find();
+      if (!winner) {
+        throw new Error(`Identity ${input.identityId} is linked for owner ${input.ownerId} but has no person row`);
+      }
+      return winner;
+    }
 
-    return inserted ?? ((await find()) as { personGroupId: string });
+    await db
+      .insertInto('person')
+      .values({ ownerId: input.ownerId, personGroupId: group.id, name: input.name })
+      .execute();
+    await writePersonSidecars(db, group.id, { type: input.type });
+
+    return { personGroupId: group.id };
   }
 
   /**
@@ -593,90 +606,6 @@ export class PersonRepository {
       .execute();
   }
 
-  async deleteAllPets(): Promise<void> {
-    await this.db.transaction().execute(async (trx) => {
-      // Unassigned pet faces (recognition-written, not yet clustered) are invisible to the
-      // person-scoped delete below — the pet_search join is the only thing that identifies
-      // them. Delete them first, while their pet_search rows still exist: the force purge
-      // calls deleteAllPetSearch() afterwards, and truncating first would orphan these rows
-      // forever.
-      await deleteEmbeddedPetFaces(trx);
-
-      // Delete pet faces before the pet people they belong to: asset_face.personId is
-      // ON DELETE SET NULL, so removing the people first would orphan (not delete) the faces.
-      await trx
-        .deleteFrom('asset_face')
-        .where('asset_face.personGroupId', 'in', (eb) =>
-          eb.selectFrom('person').select('person.personGroupId').where('person.type', '=', 'pet'),
-        )
-        .execute();
-
-      await trx.deleteFrom('person').where('person.type', '=', 'pet').execute();
-    });
-  }
-
-  /**
-   * Truncates `pet_search` outright, independent of `deleteAllPets()`'s delete order. Used by
-   * {@link PetRecognitionService.handleQueuePetRecognition}'s force purge (enabling recognition or
-   * switching model) as the explicit, order-independent guarantee that no stale embedding survives
-   * — `deleteAllPets()` already removes most rows via the `asset_face` CASCADE, but a truncate
-   * doesn't depend on that cascade to have run first or completely. A no-op (not an error) when the
-   * table is already empty.
-   */
-  async deleteAllPetSearch(): Promise<void> {
-    await sql`truncate ${sql.table('pet_search')}`.execute(this.db);
-  }
-
-  /**
-   * The SCOPED purge used by {@link PetRecognitionService}'s model-switch handler. Unlike
-   * {@link deleteAllPets} (the FULL purge behind the admin Reset button, which also wipes species
-   * buckets — the requeue rebuilds them, and the confirmation dialog promises exactly that), a
-   * model switch invalidates only embeddings and the individuals recognition created from them.
-   * Species buckets are pure detector output, are not model-coupled, and must survive every switch.
-   */
-  async purgePetRecognitionArtifacts(): Promise<void> {
-    await this.db.transaction().execute(async (trx) => {
-      // 1. Every embedded pet face. Bucket faces have no pet_search row, so they are untouched.
-      await deleteEmbeddedPetFaces(trx);
-
-      // 2. Pet people left with zero faces are exactly the recognition-created individuals — a
-      //    species bucket still holds its (embedding-less) faces after step 1.
-      const orphaned = await trx
-        .selectFrom('person')
-        .select(['person.personGroupId', 'person.identityId'])
-        .where('person.type', '=', 'pet')
-        .where((eb) =>
-          eb.not(
-            eb.exists(
-              eb
-                .selectFrom('asset_face')
-                .select(sql`1`.as('one'))
-                .whereRef('asset_face.personGroupId', '=', 'person.personGroupId'),
-            ),
-          ),
-        )
-        .execute();
-
-      if (orphaned.length > 0) {
-        const identityIds = orphaned.map((row) => row.identityId).filter((id): id is string => !!id);
-        if (identityIds.length > 0) {
-          await trx.deleteFrom('shared_space_person').where('identityId', 'in', identityIds).execute();
-        }
-        await trx
-          .deleteFrom('person')
-          .where(
-            'person.personGroupId',
-            'in',
-            orphaned.map((row) => row.personGroupId),
-          )
-          .execute();
-      }
-
-      // 3. Belt and braces: step 1 already cascaded these away.
-      await sql`truncate ${sql.table('pet_search')}`.execute(trx);
-    });
-  }
-
   @GenerateSql({
     params: [{ personGroupId: null, sourceType: SourceType.MachineLearning, clusterGroupId: DummyValue.UUID }],
     stream: true,
@@ -714,28 +643,11 @@ export class PersonRepository {
       .stream();
   }
 
-  /**
-   * Pet-recognition equivalent of {@link getAllFaces}'s `{ personGroupId: null }` case, used by
-   * {@link PetRecognitionService.handleQueuePetRecognition}'s non-force fan-out: every pet face that
-   * has been embedded (has a `pet_search` row) but not yet assigned to a person. The inner join on
-   * `pet_search` is the "has an embedding" filter — a face detected before recognition was enabled
-   * has no `pet_search` row and is deliberately excluded (it gets one the next time detection runs).
-   */
-  getUnassignedPetFaces() {
-    return this.db
-      .selectFrom('asset_face')
-      .innerJoin('pet_search', 'pet_search.faceId', 'asset_face.id')
-      .select(['asset_face.id'])
-      .where('asset_face.personGroupId', 'is', null)
-      .where('asset_face.deletedAt', 'is', null)
-      .where('asset_face.isVisible', 'is', true)
-      .stream();
-  }
-
   getAll(options: GetAllPeopleOptions = {}) {
     return this.db
       .selectFrom('person')
       .selectAll('person')
+      .select(personSidecarColumns())
       .$if(!!options.ownerId, (qb) => qb.where('person.ownerId', '=', options.ownerId!))
       .$if(options.thumbnailPath !== undefined, (qb) => qb.where('person.thumbnailPath', '=', options.thumbnailPath!))
       .$if(options.faceAssetId === null, (qb) => qb.where('person.faceAssetId', 'is', null))
@@ -787,7 +699,7 @@ export class PersonRepository {
       .select(['personGroupId', 'name', 'birthDate'])
       .where('ownerId', '=', ownerId)
       .where('isHidden', '=', false)
-      .where('type', '=', 'person')
+      .where((eb) => eb.not(personIsPet()))
       .where('name', '!=', '')
       .where('birthDate', 'is not', null)
       .where(sql`extract(month from "birthDate")`, '=', month)
@@ -798,7 +710,7 @@ export class PersonRepository {
   /**
    * Dormant people: named, non-hidden, non-pet persons whose most recent Timeline-visible,
    * previewable asset predates `lastSeenBefore`, with at least `minAssets` such assets ever.
-   * The asset-side predicates mirror `AssetRepository.getMemoryFacesForPeriod` exactly — a
+   * The asset-side predicates mirror `MemoryRuleAssetRepository.getMemoryFacesForPeriod` exactly — a
    * missing `Preview` file or an archived asset must not make a still-active person look dormant.
    */
   @GenerateSql({
@@ -816,7 +728,7 @@ export class PersonRepository {
       .innerJoin('asset_face', 'asset_face.personGroupId', 'person.personGroupId')
       .innerJoin('asset', 'asset.id', 'asset_face.assetId')
       .where('person.ownerId', '=', ownerId)
-      .where('person.type', '=', 'person')
+      .where((eb) => eb.not(personIsPet()))
       .where('person.name', '!=', '')
       .where('person.isHidden', '=', false)
       .where('asset_face.deletedAt', 'is', null)
@@ -857,6 +769,7 @@ export class PersonRepository {
     const items = await this.db
       .selectFrom('person')
       .selectAll('person')
+      .select(personSidecarColumns())
       .innerJoin('asset_face', 'asset_face.personGroupId', 'person.personGroupId')
       .innerJoin('asset', (join) =>
         join
@@ -878,7 +791,7 @@ export class PersonRepository {
           // photographed once still becomes its own individual), and the Pets view is where you go
           // to name those. The unfiltered view keeps the threshold, so it behaves exactly as before.
           // Grouping is by person.id (the PK), so person.type is functionally dependent here.
-          ...(options?.type === 'pet' ? [eb('person.type', '=', sql.lit('pet'))] : []),
+          ...(options?.type === 'pet' ? [personIsPet()] : []),
           eb(
             (innerEb) => innerEb.fn.count('asset_face.assetId'),
             '>=',
@@ -933,7 +846,7 @@ export class PersonRepository {
           .orderBy('person.personGroupId'),
       )
       .$if(!options?.withHidden, (qb) => qb.where('person.isHidden', '=', false))
-      .$if(!!options?.type, (qb) => qb.where('person.type', '=', options!.type!))
+      .$if(!!options?.type, (qb) => qb.where(personType(), '=', options!.type!))
       // "Pets" means the individuals pet recognition identified, not the per-species buckets the
       // detector alone produces. A bucket has no pet_search row on any of its faces.
       .$if(options?.type === 'pet', (qb) =>
@@ -963,6 +876,7 @@ export class PersonRepository {
     return this.db
       .selectFrom('person')
       .selectAll('person')
+      .select(personSidecarColumns())
       .leftJoin('asset_face', (join) =>
         join
           .onRef('asset_face.personGroupId', '=', 'person.personGroupId')
@@ -1052,7 +966,7 @@ export class PersonRepository {
                 .selectFrom('face_identity_face')
                 .select('face_identity_face.assetFaceId')
                 .whereRef('face_identity_face.assetFaceId', '=', 'asset_face.id')
-                .whereRef('face_identity_face.identityId', '=', 'person.identityId'),
+                .where('face_identity_face.identityId', '=', personIdentityId()),
             ),
           ]),
         ),
@@ -1072,7 +986,7 @@ export class PersonRepository {
               .selectFrom('face_identity_face')
               .select('face_identity_face.assetFaceId')
               .whereRef('face_identity_face.assetFaceId', '=', 'asset_face.id')
-              .where(sql<SqlBool>`face_identity_face."identityId" IS DISTINCT FROM person."identityId"`),
+              .where(sql<SqlBool>`face_identity_face."identityId" IS DISTINCT FROM ${personIdentityId()}`),
           ),
         ),
       )
@@ -1116,7 +1030,7 @@ export class PersonRepository {
                 .selectFrom('face_identity_face')
                 .select('face_identity_face.assetFaceId')
                 .whereRef('face_identity_face.assetFaceId', '=', 'asset_face.id')
-                .whereRef('face_identity_face.identityId', '=', 'person.identityId'),
+                .where('face_identity_face.identityId', '=', personIdentityId()),
             ),
           ]),
         ),
@@ -1136,7 +1050,7 @@ export class PersonRepository {
               .selectFrom('face_identity_face')
               .select('face_identity_face.assetFaceId')
               .whereRef('face_identity_face.assetFaceId', '=', 'asset_face.id')
-              .where(sql<SqlBool>`face_identity_face."identityId" IS DISTINCT FROM person."identityId"`),
+              .where(sql<SqlBool>`face_identity_face."identityId" IS DISTINCT FROM ${personIdentityId()}`),
           ),
         ),
       )
@@ -1158,28 +1072,6 @@ export class PersonRepository {
         ).as('asset'),
       )
       .select(withFaceSearch)
-      .where('asset_face.id', '=', id)
-      .where('asset_face.deletedAt', 'is', null)
-      .executeTakeFirst();
-  }
-
-  /**
-   * Pet-recognition equivalent of {@link getFaceForFacialRecognitionJob}: face + owning asset +
-   * `pet_search` embedding for {@link PetRecognitionService.handlePetRecognition}. Pets have no
-   * birthdate/visibility gating (see `PetEmbeddingSearch`), so the asset selection is narrower —
-   * just `ownerId`.
-   */
-  @GenerateSql({ params: [DummyValue.UUID] })
-  getPetFaceForRecognition(id: string) {
-    return this.db
-      .selectFrom('asset_face')
-      .select(['asset_face.id', 'asset_face.assetId', 'asset_face.personGroupId'])
-      .select((eb) =>
-        jsonObjectFrom(
-          eb.selectFrom('asset').select(['asset.ownerId']).whereRef('asset.id', '=', 'asset_face.assetId'),
-        ).as('asset'),
-      )
-      .select(withPetSearch)
       .where('asset_face.id', '=', id)
       .where('asset_face.deletedAt', 'is', null)
       .executeTakeFirst();
@@ -1231,6 +1123,7 @@ export class PersonRepository {
     return this.db //
       .selectFrom('person')
       .selectAll('person')
+      .select(personSidecarColumns())
       .where('person.personGroupId', '=', personGroupId)
       .where('person.ownerId', '=', ownerId)
       .executeTakeFirst();
@@ -1253,6 +1146,7 @@ export class PersonRepository {
     return this.db //
       .selectFrom('person')
       .selectAll('person')
+      .select(personSidecarColumns())
       .where('person.personGroupId', '=', personGroupId)
       .executeTakeFirst();
   }
@@ -1266,6 +1160,7 @@ export class PersonRepository {
         )
         .selectFrom(['similarity_threshold', 'person'])
         .selectAll('person')
+        .select(personSidecarColumns())
         .where('person.ownerId', '=', userId)
         .where(
           () =>
@@ -1332,7 +1227,7 @@ export class PersonRepository {
       .where((eb) =>
         eb.or([
           eb('asset.ownerId', '=', asUuid(userId)),
-          inSharedAlbum(eb, userId),
+          inSharedAlbum(userId, 'asset.id'),
           ...(options.memberUserId
             ? spaceAssetPathBranches(eb, {
                 correlateAssetId: 'asset.id',
@@ -1371,7 +1266,7 @@ export class PersonRepository {
           AND "asset"."deletedAt" IS NULL
           AND "asset_face"."deletedAt" IS NULL
           AND "asset_face"."isVisible" = true
-          AND (${typeFilter} = '' OR "person"."type" = ${typeFilter})
+          AND (${typeFilter} = '' OR ${personType()} = ${typeFilter})
           AND (
             ${typeFilter} <> 'pet'
             OR EXISTS (
@@ -1381,9 +1276,9 @@ export class PersonRepository {
             )
           )
         -- see getPeopleOverviewStatistics: group by the composite PRIMARY KEY, not the unique index
-        GROUP BY "person"."ownerId", "person"."personGroupId", "person"."type"
+        GROUP BY "person"."ownerId", "person"."personGroupId"
         HAVING NULLIF(BTRIM("person"."name"), '') IS NOT NULL
-          OR (${typeFilter} = 'pet' AND "person"."type" = 'pet')
+          OR (${typeFilter} = 'pet' AND ${personIsPet()})
           OR COUNT("asset_face"."assetId") >= ${minimumFaceCount}
       )
       SELECT
@@ -1517,8 +1412,23 @@ export class PersonRepository {
     };
   }
 
-  create(person: Insertable<PersonTable>) {
-    return this.db.insertInto('person').values(person).returningAll().executeTakeFirstOrThrow();
+  async create({
+    identityId = null,
+    type = 'person',
+    species = null,
+    ...person
+  }: Insertable<PersonTable> & PersonSidecarFields) {
+    // One transaction, as when type lived on person: a pet whose person_pet write failed would surface as a human.
+    const created = await this.db.transaction().execute(async (trx) => {
+      const row = await trx.insertInto('person').values(person).returningAll().executeTakeFirstOrThrow();
+      await writePersonSidecars(trx, row.personGroupId, {
+        identityId: identityId ?? undefined,
+        type: type === 'pet' ? type : undefined,
+        species: type === 'pet' ? species : undefined,
+      });
+      return row;
+    });
+    return { ...created, identityId, type, species: type === 'pet' ? species : null };
   }
 
   /**
@@ -1529,7 +1439,7 @@ export class PersonRepository {
    * was a standalone primary key — and it is the only sanctioned way to mint a person, so the 1:1
    * invariant cannot be broken by accident at a call site.
    */
-  async createWithGroup(person: Omit<Insertable<PersonTable>, 'personGroupId'>) {
+  async createWithGroup(person: Omit<Insertable<PersonTable>, 'personGroupId'> & PersonSidecarFields) {
     const group = await this.createGroup(person.ownerId);
     return this.create({ ...person, personGroupId: group.id });
   }
@@ -1678,60 +1588,6 @@ export class PersonRepository {
     await query.selectFrom(dummy).execute();
   }
 
-  /**
-   * Pet-recognition equivalent of {@link refreshFaces}, simplified: pets have no "remove stale
-   * faces" step here (that lives in the detection pipeline, not recognition).
-   *
-   * Like `refreshFaces`, the caller pre-generates each face's id (`CryptoRepository.randomUUID`)
-   * and pairs embeddings to faces by explicit `faceId`. The previous version let the DB generate
-   * ids and paired `embeddingsToAdd[i]` with the i-th `INSERT … RETURNING` row, which is only
-   * correct while postgres happens to return insert order (F7) — nothing in the SQL standard or
-   * Kysely guarantees it, and a mispairing silently attaches one pet's embedding to another pet's
-   * face.
-   *
-   * Every face must have exactly one embedding: callers route embedding-less pets to the species
-   * bucket instead, so a mismatch here is a broken contract and throws rather than writing a
-   * partially-embedded batch.
-   */
-  @GenerateSql({
-    params: [
-      [{ id: DummyValue.UUID, assetId: DummyValue.UUID }],
-      [{ faceId: DummyValue.UUID, embedding: DummyValue.VECTOR, species: 'dog' }],
-    ],
-  })
-  async refreshPetFaces(
-    facesToAdd: (Insertable<AssetFaceTable> & { id: string; assetId: string })[],
-    embeddingsToAdd: { faceId: string; embedding: string; species: string | null }[],
-  ): Promise<void> {
-    if (facesToAdd.length !== embeddingsToAdd.length) {
-      throw new Error(
-        `refreshPetFaces requires one embedding per face, got ${facesToAdd.length} faces and ${embeddingsToAdd.length} embeddings`,
-      );
-    }
-
-    const faceIds = new Set(facesToAdd.map(({ id }) => id));
-    for (const { faceId } of embeddingsToAdd) {
-      if (!faceIds.has(faceId)) {
-        throw new Error(`refreshPetFaces got an embedding for unknown face ${faceId}`);
-      }
-    }
-
-    if (facesToAdd.length === 0) {
-      return;
-    }
-
-    await this.db.transaction().execute(async (trx) => {
-      await trx.insertInto('asset_face').values(facesToAdd).execute();
-
-      const embeddingRows: Insertable<PetSearchTable>[] = embeddingsToAdd.map(({ faceId, embedding, species }) => ({
-        faceId,
-        embedding,
-        species,
-      }));
-      await trx.insertInto('pet_search').values(embeddingRows).execute();
-    });
-  }
-
   async update(person: Updateable<PersonTable> & PersonId, db: Kysely<DB> | Transaction<DB> = this.db) {
     return db
       .updateTable('person')
@@ -1739,6 +1595,7 @@ export class PersonRepository {
       .where('person.ownerId', '=', person.ownerId)
       .where('person.personGroupId', '=', person.personGroupId)
       .returningAll()
+      .returning(personSidecarColumns())
       .executeTakeFirstOrThrow();
   }
 
@@ -1854,7 +1711,7 @@ export class PersonRepository {
       .select(['person.personGroupId', 'person.ownerId'])
       .where(sql`BTRIM("person"."name")`, '<>', '')
       .where('person.isHidden', '=', false)
-      .where('person.type', '=', 'person')
+      .where((eb) => eb.not(personIsPet()))
       .where((eb) =>
         eb.exists(
           eb
@@ -1903,34 +1760,6 @@ export class PersonRepository {
       .executeTakeFirst()) as { latestDate: string } | undefined;
 
     return result?.latestDate;
-  }
-
-  /**
-   * Pet-recognition equivalent of {@link getLatestFaceDate}, used by the nightly
-   * `handleQueuePetRecognition` skip check: pets have no `personsAssignedAt`-style column, so
-   * `petsDetectedAt` (stamped by `handlePetDetection`) is the closest analogue of "a pet was added
-   * since the last nightly run". Unlike the sibling, this returns the `Date` directly rather than
-   * pg-text (F11) — `state.lastRun` is an ISO string with a `T` separator, and comparing it against
-   * pg's `::text` timestamp format (space-separated) mis-ordered same-day timestamps. The service
-   * compares two `Date`s instead.
-   */
-  async getLatestPetDate(): Promise<Date | undefined> {
-    const result = await this.db
-      .selectFrom('asset_job_status')
-      .select((eb) => eb.fn.max('asset_job_status.petsDetectedAt').as('latestDate'))
-      .executeTakeFirst();
-
-    return result?.latestDate ?? undefined;
-  }
-
-  getByOwnerAndSpecies(ownerId: string, species: string) {
-    return this.db
-      .selectFrom('person')
-      .selectAll('person')
-      .where('person.ownerId', '=', ownerId)
-      .where('person.type', '=', 'pet')
-      .where('person.species', '=', species)
-      .executeTakeFirst();
   }
 
   async createAssetFace(face: Insertable<AssetFaceTable>, db: Kysely<DB> | Transaction<DB> = this.db): Promise<string> {
@@ -1998,6 +1827,7 @@ export class PersonRepository {
     return this.db
       .selectFrom('person')
       .selectAll('person')
+      .select(personSidecarColumns())
       .where('person.personGroupId', 'in', personGroupIds)
       .orderBy('person.ownerId')
       .execute();

@@ -97,7 +97,7 @@ export class SharedFeed {
   /** since when photos in a shared album count as new: this browser's last look */
   readonly since: number;
 
-  #me: FeedPerson;
+  #me!: FeedPerson;
   #feeds = $state.raw<SpaceFeed[]>([]);
   #reactions = $state.raw<FeedItem[]>([]);
   #fresh = $state.raw<FeedItem[]>([]);

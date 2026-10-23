@@ -135,6 +135,16 @@ patch_i18n() {
   local en_target="$i18n_dir/en.json"
   local tmp
 
+  # 0. Fold the Gallery overlay (i18n/gallery/, see merge.mjs there) into the upstream locale files,
+  #    so the steps below and verify-branding.sh brand the bundle that actually ships. The overlay is
+  #    then removed: a later merge (web build, mobile codegen) would otherwise re-apply its unbranded
+  #    values over the branded ones.
+  if [[ -f "$i18n_dir/gallery/merge.mjs" ]]; then
+    node "$i18n_dir/gallery/merge.mjs" --out "$i18n_dir"
+    rm -f "$i18n_dir"/gallery/*.json "$i18n_dir/gallery/overrides.txt"
+    echo "  Folded the Gallery i18n overlay into the upstream locale files"
+  fi
+
   # 1. Merge English overrides into en.json — the canonical branded fallback
   #    every other locale resolves to for any key it doesn't define.
   if [[ -f "$en_overrides" && -f "$en_target" ]]; then
@@ -912,6 +922,8 @@ patch_docker() {
       # Replace upstream image references
       sed -i "s|ghcr\.io/immich-app/immich-server|${DOCKER_REGISTRY}/${DOCKER_SERVER_IMAGE}|g" "$f"
       sed -i "s|ghcr\.io/immich-app/immich-machine-learning|${DOCKER_REGISTRY}/${DOCKER_ML_IMAGE}|g" "$f"
+      # Package page first: the generic repo rewrite below would keep the upstream package name.
+      sed -i "s|immich-app/immich/pkgs/container/immich-server|${REPO_NAME}/pkgs/container/${DOCKER_SERVER_IMAGE}|g" "$f"
       # Replace upstream repo references in environment variables
       sed -i "s|immich-app/immich|${REPO_NAME}|g" "$f"
       echo "  Patched $(basename "$f")"
@@ -975,6 +987,9 @@ patch_dockerfiles() {
   for dockerfile in "$REPO_ROOT/server/Dockerfile" "$REPO_ROOT/machine-learning/Dockerfile"; do
     if [[ -f "$dockerfile" ]]; then
       sed -i "s|immich-app/immich/actions/runs|${REPO_NAME}/actions/runs|g" "$dockerfile"
+      # Package pages first: the generic repo rewrite below would keep the upstream package names.
+      sed -i "s|immich-app/immich/pkgs/container/immich-server|${REPO_NAME}/pkgs/container/${DOCKER_SERVER_IMAGE}|g" "$dockerfile"
+      sed -i "s|immich-app/immich/pkgs/container/immich-machine-learning|${REPO_NAME}/pkgs/container/${DOCKER_ML_IMAGE}|g" "$dockerfile"
       sed -i "s|immich-app/immich/pkgs/container|${REPO_NAME}/pkgs/container|g" "$dockerfile"
       sed -i "s|ENV IMMICH_REPOSITORY=immich-app/immich|ENV IMMICH_REPOSITORY=${REPO_NAME}|g" "$dockerfile"
       sed -i "s|ENV IMMICH_REPOSITORY_URL=https://github.com/immich-app/immich|ENV IMMICH_REPOSITORY_URL=${REPO_URL}|g" "$dockerfile"
@@ -1006,7 +1021,9 @@ patch_versions() {
     if [[ -f "$pkg" ]]; then
       local tmp
       tmp=$(mktemp)
-      jq --arg v "$FORK_VERSION" '.version = $v' "$pkg" > "$tmp"
+      # Keep the upstream base (the source version) as immichVersion: the server reports it to stock
+      # Immich clients (server/src/gallery/utils/client-version.ts). `//=` keeps a second run idempotent.
+      jq --arg v "$FORK_VERSION" '.immichVersion //= .version | .version = $v' "$pkg" > "$tmp"
       chmod 644 "$tmp"
       mv "$tmp" "$pkg"
       echo "  Patched $(realpath --relative-to="$REPO_ROOT" "$pkg")"

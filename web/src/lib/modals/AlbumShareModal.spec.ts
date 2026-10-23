@@ -96,8 +96,8 @@ beforeEach(() => {
   localStorage.clear();
   sdkMock.getAllSharedLinks.mockResolvedValue([]);
   sdkMock.getAllSpaces.mockResolvedValue([library, family, friends, cousins]);
-  sdkMock.linkAlbum.mockResolvedValue('');
-  sdkMock.unlinkAlbum.mockResolvedValue('');
+  sdkMock.linkAlbum.mockResolvedValue(undefined as never);
+  sdkMock.unlinkAlbum.mockResolvedValue(undefined as never);
 });
 
 // `Modal` mounts a bits-ui dialog whose body scroll lock releases on a 24ms timer
@@ -110,7 +110,9 @@ describe('AlbumShareModal', () => {
   it('leads with the family Space, then the link, then people', async () => {
     await open();
 
-    const sections = [...document.querySelectorAll('.ws-sheet-section')].map((section) => section.dataset.testid);
+    const sections = [...document.querySelectorAll<HTMLElement>('.ws-sheet-section')].map(
+      (section) => section.dataset.testid,
+    );
     expect(sections).toEqual(['album-share-spaces', 'album-share-links', 'album-share-people']);
     expect(screen.getByRole('switch', { name: 'Show in Family' })).toBeInTheDocument();
     expect(screen.getByText('Only you so far. Family members see it once they have accounts.')).toBeInTheDocument();

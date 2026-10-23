@@ -45,7 +45,11 @@
 
       // Local Omarchy layer: what was removed can be put back, from the toast or the bar's undo (utils/undoable)
       if (removedIds.length === ids.length) {
-        removedFromAlbumDone(album.id, removedIds, $t('assets_removed_count', { values: { count: removedIds.length } }));
+        removedFromAlbumDone(
+          album.id,
+          removedIds,
+          $t('assets_removed_count', { values: { count: removedIds.length } }),
+        );
       } else if (removedIds.length > 0) {
         removedFromAlbumDone(
           album.id,

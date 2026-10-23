@@ -13,6 +13,7 @@ import {
   SourceType,
   VectorIndex,
 } from 'src/enum.js';
+import { personIdentityId, personIsPet, personSpecies, personType } from 'src/gallery/utils/person-sidecar.js';
 import { probes } from 'src/repositories/database.repository.js';
 import { DB } from 'src/schema/index.js';
 import { SharedSpaceAlbumTable } from 'src/schema/tables/shared-space-album.table.js';
@@ -29,6 +30,7 @@ import { reviewableAssetVisibility } from 'src/utils/face-review.js';
 import { retargetVerdictSpacePersonId } from 'src/utils/face-verdict-merge.js';
 import { without } from 'src/utils/filter-suggestions.js';
 import {
+  albumMembership,
   spaceAlbumAssetExists,
   spaceAssetPathBranches,
   spaceContributedAssetExists,
@@ -189,7 +191,7 @@ export type SpaceFaceAssignment = {
 
 // Slice 3 (spec §6.1): one row per live, visible face on an asset, joined to the space person
 // holding it in THIS space (if any) — never the owner's `person.name`. `isEditorDrawn` (Slice 9,
-// spec §6.6) is derived from `asset_face.createdBy IS NOT NULL` here, not left as the raw column
+// spec §6.6) is derived from the face having an `asset_face_creator` row here, not left as the raw column
 // — nothing above the repository needs to know WHO drew a box, only whether it is deletable.
 export type SpaceAssetFace = {
   id: string;
@@ -366,6 +368,36 @@ export class SharedSpaceRepository {
       return [];
     }
 
+    return this.contributableAssetsQuery(userId, [albumId], assetIds)
+      .select(['asset.id as assetId', 'link.spaceId as spaceId'])
+      .distinctOn('asset.id')
+      .orderBy('asset.id')
+      .execute();
+  }
+
+  /**
+   * Batched form of {@link getContributableAssetSpaces} for the add-to-album picker: per album in
+   * `albumIds`, how many of `assetIds` may be contributed to it. Albums with none are absent. Chunked
+   * on `assetIds`, so a caller must sum `count` per album across rows.
+   */
+  @GenerateSql({ params: [DummyValue.UUID, [DummyValue.UUID], [DummyValue.UUID]] })
+  @ChunkedArray({ paramIndex: 2 })
+  async getContributableAssetCounts(
+    userId: string,
+    albumIds: string[],
+    assetIds: string[],
+  ): Promise<{ albumId: string; count: number }[]> {
+    if (albumIds.length === 0 || assetIds.length === 0) {
+      return [];
+    }
+
+    return this.contributableAssetsQuery(userId, albumIds, assetIds)
+      .select((eb) => ['link.albumId as albumId', eb.fn.count<number>('asset.id').distinct().as('count')])
+      .groupBy('link.albumId')
+      .execute();
+  }
+
+  private contributableAssetsQuery(userId: string, albumIds: string[], assetIds: string[]) {
     return this.db
       .selectFrom('shared_space_album as link')
       .innerJoin('shared_space_member as m', (join) =>
@@ -383,7 +415,7 @@ export class SharedSpaceRepository {
             .on('asset.ownerId', '!=', userId) // owned assets take the ordinary album_asset path
             .on('asset.visibility', 'in', spaceVisibleAssetVisibilities), // gate out Hidden/Locked
       )
-      .where('link.albumId', '=', albumId)
+      .where('link.albumId', 'in', albumIds)
       .where((eb) =>
         eb.or([
           // Directly shared into the space's pool.
@@ -414,11 +446,7 @@ export class SharedSpaceRepository {
               .whereRef('aa2.assetId', '=', 'asset.id'),
           ),
         ]),
-      )
-      .select(['asset.id as assetId', 'link.spaceId as spaceId'])
-      .distinctOn('asset.id')
-      .orderBy('asset.id')
-      .execute();
+      );
   }
 
   // #752 P0-2: spaces that CURRENTLY link `albumId` and have `userId` as a live member — the
@@ -663,62 +691,32 @@ export class SharedSpaceRepository {
     return rows.map((r) => r.id);
   }
 
+  /**
+   * Assets visible in the space's timeline (direct pool, linked library, on-timeline linked album,
+   * cross-owner contribution), as one `asset` scan with EXISTS arms. Unlike a UNION of the four
+   * sources, nothing has to be deduplicated, so a count or a top-N stays a single pass.
+   */
+  private selectSpaceTimelineAssets(spaceId: string) {
+    return this.db
+      .selectFrom('asset')
+      .where('asset.deletedAt', 'is', null)
+      .where('asset.isOffline', '=', false)
+      .where('asset.visibility', 'in', visibleSpaceAssetVisibilities)
+      .where((eb) =>
+        eb.or(
+          spaceAssetPathBranches(eb, {
+            correlateAssetId: 'asset.id',
+            correlateLibraryId: 'asset.libraryId',
+            scope: { spaceId },
+            albumTimelineGate: 'space-tab',
+          }),
+        ),
+      );
+  }
+
   @GenerateSql({ params: [DummyValue.UUID] })
   async getAssetCount(spaceId: string): Promise<number> {
-    const result = await this.db
-      .selectFrom(
-        this.db
-          .selectFrom('shared_space_asset')
-          .innerJoin('asset', 'asset.id', 'shared_space_asset.assetId')
-          .select('asset.id')
-          .where('shared_space_asset.spaceId', '=', spaceId)
-          .where('asset.deletedAt', 'is', null)
-          .where('asset.isOffline', '=', false)
-          .where('asset.visibility', 'in', visibleSpaceAssetVisibilities)
-          .union(
-            this.db
-              .selectFrom('shared_space_library')
-              .innerJoin('asset', 'asset.libraryId', 'shared_space_library.libraryId')
-              .select('asset.id')
-              .where('shared_space_library.spaceId', '=', spaceId)
-              .where('asset.deletedAt', 'is', null)
-              .where('asset.isOffline', '=', false)
-              .where('asset.visibility', 'in', visibleSpaceAssetVisibilities),
-          )
-          .union(
-            this.db
-              .selectFrom('shared_space_album')
-              .innerJoin('album', (join) =>
-                join.onRef('album.id', '=', 'shared_space_album.albumId').on('album.deletedAt', 'is', null),
-              )
-              .innerJoin('album_asset', 'album_asset.albumId', 'shared_space_album.albumId')
-              .innerJoin('asset', 'asset.id', 'album_asset.assetId')
-              .select('asset.id')
-              .where('shared_space_album.spaceId', '=', spaceId)
-              .where('shared_space_album.showInTimeline', '=', true)
-              .where('asset.deletedAt', 'is', null)
-              .where('asset.isOffline', '=', false)
-              .where('asset.visibility', 'in', visibleSpaceAssetVisibilities),
-          )
-          .union(
-            this.db
-              .selectFrom('asset')
-              .select('asset.id')
-              // Cross-owner contributions (#764) live in album_space_asset, not album_asset. Every
-              // read/timeline surface unions them via the scope helper, so this surface must too.
-              .where((eb) =>
-                spaceContributedAssetExists(eb, {
-                  correlateAssetId: 'asset.id',
-                  scope: { spaceId },
-                  albumTimelineGate: 'space-tab',
-                }),
-              )
-              .where('asset.deletedAt', 'is', null)
-              .where('asset.isOffline', '=', false)
-              .where('asset.visibility', 'in', visibleSpaceAssetVisibilities),
-          )
-          .as('combined'),
-      )
+    const result = await this.selectSpaceTimelineAssets(spaceId)
       .select((eb) => eb.fn.countAll().as('count'))
       .executeTakeFirstOrThrow();
     return Number(result.count);
@@ -840,23 +838,12 @@ export class SharedSpaceRepository {
       .where('shared_space_album.spaceId', '=', spaceId)
       .where('album.deletedAt', 'is', null)
       .where((eb) =>
-        eb.or([
-          eb.exists(
-            eb
-              .selectFrom('album_asset')
-              .select('album_asset.assetId')
-              .whereRef('album_asset.albumId', '=', 'album.id')
-              .where('album_asset.assetId', 'in', assetIds),
-          ),
-          eb.exists(
-            eb
-              .selectFrom('album_space_asset')
-              .select('album_space_asset.assetId')
-              .whereRef('album_space_asset.albumId', '=', 'album.id')
-              .where('album_space_asset.spaceId', '=', spaceId)
-              .where('album_space_asset.assetId', 'in', assetIds),
-          ),
-        ]),
+        eb.exists(
+          eb
+            .selectFrom(albumMembership(eb, 'album.id', { spaceId }).as('album_members'))
+            .select('album_members.assetId')
+            .where('album_members.assetId', 'in', assetIds),
+        ),
       )
       .select(['album.id as albumId', 'album.albumName as albumName'])
       .distinct()
@@ -1915,70 +1902,11 @@ export class SharedSpaceRepository {
 
   @GenerateSql({ params: [DummyValue.UUID, 4] })
   getRecentAssets(spaceId: string, limit = 4) {
-    return this.db
-      .selectFrom(
-        this.db
-          .selectFrom('shared_space_asset')
-          .innerJoin('asset', 'asset.id', 'shared_space_asset.assetId')
-          .select(['asset.id', 'asset.thumbhash', 'asset.fileCreatedAt'])
-          .where('shared_space_asset.spaceId', '=', spaceId)
-          .where('asset.deletedAt', 'is', null)
-          .where('asset.isOffline', '=', false)
-          .where('asset.type', '=', AssetType.Image)
-          .where('asset.visibility', 'in', visibleSpaceAssetVisibilities)
-          .where('asset.thumbhash', 'is not', null)
-          .union(
-            this.db
-              .selectFrom('shared_space_library')
-              .innerJoin('asset', 'asset.libraryId', 'shared_space_library.libraryId')
-              .select(['asset.id', 'asset.thumbhash', 'asset.fileCreatedAt'])
-              .where('shared_space_library.spaceId', '=', spaceId)
-              .where('asset.deletedAt', 'is', null)
-              .where('asset.isOffline', '=', false)
-              .where('asset.type', '=', AssetType.Image)
-              .where('asset.visibility', 'in', visibleSpaceAssetVisibilities)
-              .where('asset.thumbhash', 'is not', null),
-          )
-          .union(
-            this.db
-              .selectFrom('shared_space_album')
-              .innerJoin('album', (j) =>
-                j.onRef('album.id', '=', 'shared_space_album.albumId').on('album.deletedAt', 'is', null),
-              )
-              .innerJoin('album_asset', 'album_asset.albumId', 'shared_space_album.albumId')
-              .innerJoin('asset', 'asset.id', 'album_asset.assetId')
-              .select(['asset.id', 'asset.thumbhash', 'asset.fileCreatedAt'])
-              .where('shared_space_album.spaceId', '=', spaceId)
-              .where('shared_space_album.showInTimeline', '=', true)
-              .where('asset.deletedAt', 'is', null)
-              .where('asset.isOffline', '=', false)
-              .where('asset.type', '=', AssetType.Image)
-              .where('asset.visibility', 'in', visibleSpaceAssetVisibilities)
-              .where('asset.thumbhash', 'is not', null),
-          )
-          .union(
-            this.db
-              .selectFrom('asset')
-              .select(['asset.id', 'asset.thumbhash', 'asset.fileCreatedAt'])
-              // Cross-owner contributions (#764) live in album_space_asset, not album_asset. Every
-              // read/timeline surface unions them via the scope helper, so this surface must too.
-              .where((eb) =>
-                spaceContributedAssetExists(eb, {
-                  correlateAssetId: 'asset.id',
-                  scope: { spaceId },
-                  albumTimelineGate: 'space-tab',
-                }),
-              )
-              .where('asset.deletedAt', 'is', null)
-              .where('asset.isOffline', '=', false)
-              .where('asset.type', '=', AssetType.Image)
-              .where('asset.thumbhash', 'is not', null)
-              .where('asset.visibility', 'in', visibleSpaceAssetVisibilities),
-          )
-          .as('combined'),
-      )
-      .select(['combined.id', 'combined.thumbhash'])
-      .orderBy('combined.fileCreatedAt', 'desc')
+    return this.selectSpaceTimelineAssets(spaceId)
+      .where('asset.type', '=', AssetType.Image)
+      .where('asset.thumbhash', 'is not', null)
+      .select(['asset.id', 'asset.thumbhash'])
+      .orderBy('asset.fileCreatedAt', 'desc')
       .limit(limit)
       .execute();
   }
@@ -2219,6 +2147,7 @@ export class SharedSpaceRepository {
 
   @GenerateSql({ params: [DummyValue.UUID] })
   getMemberActivity(spaceId: string) {
+    // The newest row per member gives both its time and its asset in one pass.
     return this.db
       .selectFrom('shared_space_asset')
       .innerJoin('asset', 'asset.id', 'shared_space_asset.assetId')
@@ -2226,24 +2155,14 @@ export class SharedSpaceRepository {
       .where('asset.deletedAt', 'is', null)
       .where('asset.isOffline', '=', false)
       .where('asset.visibility', 'in', visibleSpaceAssetVisibilities)
-      .groupBy('shared_space_asset.addedById')
+      .distinctOn('shared_space_asset.addedById')
       .select([
         'shared_space_asset.addedById',
-        (eb) => eb.fn.max('shared_space_asset.addedAt').as('lastAddedAt'),
-        (eb) =>
-          eb
-            .selectFrom('shared_space_asset as ssa2')
-            .innerJoin('asset as asset2', 'asset2.id', 'ssa2.assetId')
-            .whereRef('ssa2.addedById', '=', 'shared_space_asset.addedById')
-            .where('ssa2.spaceId', '=', spaceId)
-            .where('asset2.deletedAt', 'is', null)
-            .where('asset2.isOffline', '=', false)
-            .where('asset2.visibility', 'in', visibleSpaceAssetVisibilities)
-            .orderBy('ssa2.addedAt', 'desc')
-            .select('ssa2.assetId')
-            .limit(1)
-            .as('recentAssetId'),
+        'shared_space_asset.addedAt as lastAddedAt',
+        'shared_space_asset.assetId as recentAssetId',
       ])
+      .orderBy('shared_space_asset.addedById')
+      .orderBy('shared_space_asset.addedAt', 'desc')
       .execute();
   }
 
@@ -3107,9 +3026,10 @@ export class SharedSpaceRepository {
   }): Promise<SpacePersonPersonalThumbnail | undefined> {
     const ownThumbnail = await this.db
       .selectFrom('person')
+      .innerJoin('person_identity', 'person_identity.personGroupId', 'person.personGroupId')
       .select(['person.personGroupId as personId', 'person.thumbnailPath'])
       .where('person.ownerId', '=', input.userId)
-      .where('person.identityId', '=', input.identityId)
+      .where('person_identity.identityId', '=', input.identityId)
       .where('person.thumbnailPath', '!=', '')
       .orderBy('person.updatedAt', 'desc')
       .orderBy('person.personGroupId')
@@ -3121,10 +3041,11 @@ export class SharedSpaceRepository {
 
     return this.db
       .selectFrom('person')
+      .innerJoin('person_identity', 'person_identity.personGroupId', 'person.personGroupId')
       .innerJoin('asset_face', 'asset_face.id', 'person.faceAssetId')
       .innerJoin('asset', 'asset.id', 'asset_face.assetId')
       .select(['person.personGroupId as personId', 'person.thumbnailPath'])
-      .where('person.identityId', '=', input.identityId)
+      .where('person_identity.identityId', '=', input.identityId)
       .where('person.thumbnailPath', '!=', '')
       .where('asset_face.deletedAt', 'is', null)
       .where('asset_face.isVisible', '=', true)
@@ -3166,6 +3087,7 @@ export class SharedSpaceRepository {
 
     const personalCandidates = await this.db
       .selectFrom('person')
+      .innerJoin('person_identity', 'person_identity.personGroupId', 'person.personGroupId')
       .innerJoin('shared_space_member', (join) =>
         join
           .onRef('shared_space_member.userId', '=', 'person.ownerId')
@@ -3192,23 +3114,21 @@ export class SharedSpaceRepository {
         'shared_space_member.role',
         'person.name',
         'person.birthDate',
-        'person.type',
-        'person.species',
+        personType().as('type'),
+        personSpecies().as('species'),
         'person.updatedAt',
       ])
       .select((eb) => [
         eb.fn.count('shared_space_person.id').$castTo<number>().as('supportingFaceCount'),
         isAssetAdderSql.as('isAssetAdder'),
       ])
-      .where('person.identityId', '=', input.identityId)
+      .where('person_identity.identityId', '=', input.identityId)
       .groupBy([
         'person.personGroupId',
         'person.ownerId',
         'shared_space_member.role',
         'person.name',
         'person.birthDate',
-        'person.type',
-        'person.species',
         'person.updatedAt',
         'isAssetAdder',
       ])
@@ -3390,7 +3310,8 @@ export class SharedSpaceRepository {
       .innerJoin('asset_face', 'asset_face.id', 'shared_space_person_face.assetFaceId')
       .innerJoin('asset', 'asset.id', 'asset_face.assetId')
       .innerJoin('person', 'person.personGroupId', 'asset_face.personGroupId')
-      .select(['person.identityId', 'person.type'])
+      .innerJoin('person_identity', 'person_identity.personGroupId', 'person.personGroupId')
+      .select(['person_identity.identityId', personType().as('type')])
       .select((eb) => eb.fn.count('asset_face.id').$castTo<number>().as('supportingFaceCount'))
       .where('shared_space_person_face.personId', '=', spacePersonId)
       .where((eb) =>
@@ -3416,13 +3337,12 @@ export class SharedSpaceRepository {
           }),
         ]),
       )
-      .where('person.identityId', 'is not', null)
       .where('asset_face.deletedAt', 'is', null)
       .where('asset_face.isVisible', 'is', true)
       .where('asset.deletedAt', 'is', null)
       .where('asset.visibility', '=', sql.lit(AssetVisibility.Timeline))
-      .$if(!!candidateIdentityIds?.length, (qb) => qb.where('person.identityId', 'in', candidateIdentityIds!))
-      .groupBy(['person.identityId', 'person.type'])
+      .$if(!!candidateIdentityIds?.length, (qb) => qb.where('person_identity.identityId', 'in', candidateIdentityIds!))
+      .groupBy(['person_identity.identityId', personType()])
       .$castTo<SpacePersonIdentityEvidence>()
       .execute();
   }
@@ -3829,9 +3749,9 @@ export class SharedSpaceRepository {
    * Spec §6.4 (Slice 4): detach one face from one space person. Unlike the two bulk removals
    * above, this is the single-pair primitive the DELETE route uses.
    *
-   * Deliberately deletes ONLY the `shared_space_person_face` projection row — never
-   * `face_identity_face` (F-22). That link is the face's GLOBAL identity; blanking it here would
-   * mutate every other space sharing the same identity (§5.1).
+   * Deletes ONLY the `shared_space_person_face` projection row. Whether the face's
+   * `face_identity_face` link goes too is the service's call (`detachFaceFromSpacePerson`, §6.4
+   * revised): that link is the face's GLOBAL identity, shared by every space (§5.1).
    *
    * Must recount (F-32): `addPersonFaces` recounts on the way in, so a detach that skips this
    * leaves `faceCount`/`assetCount` overstated — columns the people-list ordering index and the
@@ -4202,7 +4122,7 @@ export class SharedSpaceRepository {
 
   @GenerateSql({ params: [] })
   async deleteAllPets() {
-    // Mirror PersonRepository.deleteAllPets() for the shared-space copies: a pet-detection
+    // Mirror PetFaceRepository.deleteAllPets() for the shared-space copies: a pet-detection
     // reset must clear propagated pet people from every space's People view too. Deleting the
     // shared_space_person row cascades to its shared_space_person_face and _alias children, so
     // only pet-typed rows are removed and human people are left untouched.
@@ -4503,7 +4423,7 @@ export class SharedSpaceRepository {
         'asset_face.assetId',
         'asset_face.personGroupId as personId',
         'face_identity_face.identityId',
-        'person.type',
+        personType().as('type'),
         'face_search.embedding',
       ])
       .where('asset_face.assetId', '=', assetId)
@@ -4870,6 +4790,7 @@ export class SharedSpaceRepository {
       .selectFrom('asset_face')
       .innerJoin('asset', 'asset.id', 'asset_face.assetId')
       .leftJoin('person', 'person.personGroupId', 'asset_face.personGroupId')
+      .leftJoin('asset_face_creator', 'asset_face_creator.assetFaceId', 'asset_face.id')
       // Hoisted above the derived join below on purpose: `reviewableAssetVisibility` takes an
       // ExpressionBuilder over `DB` itself, and the aliased subquery widens that to `DB & {
       // space_person }`. Where a predicate sits in the chain has no effect on the SQL.
@@ -4897,7 +4818,7 @@ export class SharedSpaceRepository {
         'asset_face.boundingBoxY2',
         'asset_face.imageWidth',
         'asset_face.imageHeight',
-        'asset_face.createdBy',
+        'asset_face_creator.userId as createdBy',
         'space_person.id as spacePersonId',
         'space_person.name as spacePersonName',
       ])
@@ -4923,12 +4844,12 @@ export class SharedSpaceRepository {
         'asset_face.id',
         'asset_face.assetId',
         'asset_face.personGroupId as personId',
-        'person.identityId',
-        'person.type',
+        personIdentityId().as('identityId'),
+        personType().as('type'),
       ])
       .where('asset_face.assetId', '=', assetId)
       .where('asset_face.deletedAt', 'is', null)
-      .where('person.type', '=', 'pet')
+      .where(personIsPet())
       .execute();
   }
 
@@ -4993,6 +4914,10 @@ export class SharedSpaceRepository {
     return map;
   }
 
+  // With no space context the caller is on a personal surface (/photos), which only resolves
+  // `space-person:` tokens from spaces shown on the viewer's timeline. When the asset is in several of
+  // the viewer's spaces, prefer one of those, so the Info panel's person chip filters by a person
+  // /photos can honour (#1115). The id tie-break keeps the pick stable.
   @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID] })
   async findSpaceForAssetAndUser(assetId: string, userId: string) {
     return this.db
@@ -5003,7 +4928,7 @@ export class SharedSpaceRepository {
           .innerJoin('asset', (join) =>
             join.onRef('asset.id', '=', 'shared_space_asset.assetId').on('asset.deletedAt', 'is', null),
           )
-          .select('shared_space_asset.spaceId')
+          .select(['shared_space_asset.spaceId', 'shared_space_member.showInTimeline'])
           .where('shared_space_asset.assetId', '=', assetId)
           .where('shared_space_member.userId', '=', userId)
           .union(
@@ -5017,7 +4942,7 @@ export class SharedSpaceRepository {
                   .on('asset.deletedAt', 'is', null)
                   .on('asset.isOffline', '=', false),
               )
-              .select('shared_space_library.spaceId')
+              .select(['shared_space_library.spaceId', 'shared_space_member.showInTimeline'])
               .where('shared_space_member.userId', '=', userId),
           )
           // The linked-album arm, which must exist here because it exists in
@@ -5031,7 +4956,7 @@ export class SharedSpaceRepository {
             this.db
               .selectFrom('shared_space_member')
               .innerJoin('asset', (join) => join.on('asset.id', '=', assetId).on('asset.deletedAt', 'is', null))
-              .select('shared_space_member.spaceId')
+              .select(['shared_space_member.spaceId', 'shared_space_member.showInTimeline'])
               .where('shared_space_member.userId', '=', userId)
               .where((eb) =>
                 spaceAlbumAssetExists(eb, {
@@ -5046,6 +4971,8 @@ export class SharedSpaceRepository {
           .as('combined'),
       )
       .select('combined.spaceId')
+      .orderBy('combined.showInTimeline', 'desc')
+      .orderBy('combined.spaceId', 'asc')
       .limit(1)
       .executeTakeFirst();
   }

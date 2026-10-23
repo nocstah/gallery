@@ -267,14 +267,18 @@ export class SharedSpaceService extends BaseService {
     const spaces = await this.sharedSpaceRepository.getAllByUserId(auth.user.id);
 
     const results: SharedSpaceResponseDto[] = [];
+    // Spaces stay one at a time so a user in many spaces does not take over the connection pool; the reads for
+    // one space are independent, so they run side by side, as in get() (#817).
     for (const space of spaces) {
-      const members = await this.sharedSpaceRepository.getMembers(space.id);
-      const assetCount = await this.sharedSpaceRepository.getAssetCount(space.id);
-      const recentAssets = await this.sharedSpaceRepository.getRecentAssets(space.id);
-      const albumCount = await this.sharedSpaceRepository.getLinkedAlbumCount(space.id);
-
-      // Recency badge data
-      const membership = await this.sharedSpaceRepository.getMember(space.id, auth.user.id);
+      const [members, assetCount, recentAssets, albumCount, membership, links] = await Promise.all([
+        this.sharedSpaceRepository.getMembers(space.id),
+        this.sharedSpaceRepository.getAssetCount(space.id),
+        this.sharedSpaceRepository.getRecentAssets(space.id),
+        this.sharedSpaceRepository.getLinkedAlbumCount(space.id),
+        // Recency badge data
+        this.sharedSpaceRepository.getMember(space.id, auth.user.id),
+        auth.user.isAdmin ? this.sharedSpaceRepository.getLinkedLibraries(space.id) : undefined,
+      ]);
       let newAssetCount: number;
       let lastContributor: { id: string; name: string } | null = null;
 
@@ -289,11 +293,11 @@ export class SharedSpaceService extends BaseService {
       }
 
       let linkedLibraries: SharedSpaceLinkedLibraryDto[] | undefined;
-      if (auth.user.isAdmin) {
-        const links = await this.sharedSpaceRepository.getLinkedLibraries(space.id);
+      if (links) {
+        const libraries = await Promise.all(links.map((link) => this.libraryRepository.get(link.libraryId)));
         linkedLibraries = [];
-        for (const link of links) {
-          const library = await this.libraryRepository.get(link.libraryId);
+        for (const [index, link] of links.entries()) {
+          const library = libraries[index];
           if (library) {
             linkedLibraries.push({
               libraryId: link.libraryId,
@@ -335,14 +339,17 @@ export class SharedSpaceService extends BaseService {
   async get(auth: AuthDto, id: string): Promise<SharedSpaceResponseDto> {
     const membership = await this.requireMembership(auth, id);
 
-    const space = await this.sharedSpaceRepository.getById(id);
+    // Independent reads; the two asset scans dominate, so run them side by side.
+    const [space, members, assetCount, recentAssets, newAssetCount] = await Promise.all([
+      this.sharedSpaceRepository.getById(id),
+      this.sharedSpaceRepository.getMembers(id),
+      this.sharedSpaceRepository.getAssetCount(id),
+      this.sharedSpaceRepository.getRecentAssets(id),
+      membership.lastViewedAt ? this.sharedSpaceRepository.getNewAssetCount(id, membership.lastViewedAt) : 0,
+    ]);
     if (!space) {
       throw new BadRequestException('Shared space not found');
     }
-
-    const members = await this.sharedSpaceRepository.getMembers(id);
-    const assetCount = await this.sharedSpaceRepository.getAssetCount(id);
-    const recentAssets = await this.sharedSpaceRepository.getRecentAssets(id);
 
     let { thumbnailAssetId } = space;
     if (thumbnailAssetId) {
@@ -352,10 +359,6 @@ export class SharedSpaceService extends BaseService {
         await this.sharedSpaceRepository.update(id, { thumbnailAssetId: null });
       }
     }
-
-    const newAssetCount = membership.lastViewedAt
-      ? await this.sharedSpaceRepository.getNewAssetCount(id, membership.lastViewedAt)
-      : 0;
 
     let hasPets: boolean | undefined;
     if (space.faceRecognitionEnabled) {
@@ -513,9 +516,11 @@ export class SharedSpaceService extends BaseService {
   async getMembers(auth: AuthDto, spaceId: string): Promise<SharedSpaceMemberResponseDto[]> {
     await this.requireMembership(auth, spaceId);
 
-    const members = await this.sharedSpaceRepository.getMembers(spaceId);
-    const contributions = await this.sharedSpaceRepository.getContributionCounts(spaceId);
-    const activity = await this.sharedSpaceRepository.getMemberActivity(spaceId);
+    const [members, contributions, activity] = await Promise.all([
+      this.sharedSpaceRepository.getMembers(spaceId),
+      this.sharedSpaceRepository.getContributionCounts(spaceId),
+      this.sharedSpaceRepository.getMemberActivity(spaceId),
+    ]);
 
     const countMap = new Map(contributions.map((c) => [c.addedById, Number(c.count)]));
     const activityMap = new Map(activity.map((a) => [a.addedById, a]));
@@ -1653,7 +1658,7 @@ export class SharedSpaceService extends BaseService {
       // Album ACCESS is the scope (checked above), never asset ownership: leaving userIds set would
       // hide the album owner's pins from a viewer of a shared album — the issue #656 bug class, which
       // album.service.ts:112-123 calls out by name. albumAccessIsBoundary opts the album branch out of
-      // albumSharedSpaceScope's shared-space re-gate (database.ts:713): album membership is already the
+      // albumConfinedToViewer's shared-space re-gate: album membership is already the
       // boundary here, matching the grid and the old map endpoint — see the comment above.
       userIds: dto.spaceId || dto.albumId ? undefined : [auth.user.id],
       // #763: the favourite overlay resolves against the CALLER, which userIds no longer names on
@@ -2123,9 +2128,10 @@ export class SharedSpaceService extends BaseService {
   }
 
   /**
-   * Spec §6.4 (Slice 4): detach a face from a space person. Removes only the space's own
-   * `shared_space_person_face` projection row — deliberately leaves `face_identity_face` alone,
-   * or the face's global identity would be blanked for every other space sharing it (§5.1, F-22).
+   * Spec §6.4 (Slice 4, revised): detach a face from a space person. Removes the space's
+   * `shared_space_person_face` projection row and, where the owner layer is the space's to touch,
+   * the face's `face_identity_face` link to this person's identity and the owner's tag. Like attach,
+   * the identity change reaches every space sharing that identity (§5.1).
    *
    * Writes a negative verdict first so the suggestion pipeline does not immediately re-offer the
    * face back to this same person, mirroring the reassign arm of `attachFaceToSpacePerson`.
@@ -2152,13 +2158,28 @@ export class SharedSpaceService extends BaseService {
       // owner-layer clear at the end of this transaction.
       const ownerLink = await this.facePersonVerdictRepository.getFaceOwnerLink(spaceId, assetFaceId, trx);
 
+      // §6.4 (revised): every person grid -- the owner's person page and the space's filtered timeline,
+      // which resolves a space person to its identity -- reads `face_identity_face`, so a detach that
+      // leaves the face linked to this person's identity keeps the photo on their grid. Take the link
+      // off whenever the owner layer is ours to touch, the same gate attach's `writeIdentity` uses: an
+      // owner who is a space member, or one who never named this face (the identity is then only what
+      // a space attach gave it). A non-member's own tag keeps its identity (§3).
+      const unlinkIdentity = !!person.identityId && (!!ownerLink?.ownerIsSpaceMember || !ownerLink?.personGroupId);
+
+      // With the link gone, the verdict is the only record that the face is not this human, so it
+      // carries the identity for identity-keyed readers too.
       await this.facePersonVerdictRepository.markRejectedForSpacePerson(
         person.id,
         assetFaceId,
-        { source: 'suggestion', actorId: auth.user.id },
+        { identityId: unlinkIdentity ? person.identityId : undefined, source: 'suggestion', actorId: auth.user.id },
         trx,
       );
       await this.sharedSpaceRepository.removePersonFace(person.id, assetFaceId, trx);
+      if (unlinkIdentity) {
+        // Conditional on the link still naming this person: a face whose identity is some other human
+        // was never a statement about the person being detached.
+        await this.faceIdentityRepository.unlinkFaceFromIdentity({ assetFaceId, identityId: person.identityId! }, trx);
+      }
 
       // §6.3.1 (revised): propagate the detach into the OWNER's layer, so a face unassigned in the
       // space also stops being tagged on the owner's own copy of the photo. Without this the space
@@ -2207,9 +2228,9 @@ export class SharedSpaceService extends BaseService {
    * the space's people list, the same failure mode `confirmSpacePersonFaceSuggestion` guards
    * against for the suggestion path.
    *
-   * F-33: the `(spaceId, identityId)` unique index is the trap. A face left over from an earlier
-   * attach/detach cycle (Task 1 deliberately never touches `face_identity_face`) or from ML
-   * backfill may already resolve to an identity that some OTHER space person here already holds.
+   * F-33: the `(spaceId, identityId)` unique index is the trap. A face whose identity a detach
+   * left in place (a non-member owner's own tag, §3), or one linked by ML backfill, may already
+   * resolve to an identity that some OTHER space person here already holds.
    * `createOrGetPersonForIdentity` is used whenever the seed face already carries an identity, so
    * that case returns the existing person instead of racing a plain insert into a duplicate key.
    */
@@ -2336,8 +2357,8 @@ export class SharedSpaceService extends BaseService {
    * misplaces boxes).
    *
    * The created face gets `personId = NULL` (never the owner's), `sourceType = Manual`, and
-   * `createdBy = auth.user.id` — the column §6.6 uses to decide whether the editor may later
-   * delete it, never `sourceType` (see that section's doc comment for why). It is then attached
+   * an `asset_face_creator` row for `auth.user.id` — the record §6.6 uses to decide whether the
+   * editor may later delete it, never `sourceType` (see that section's doc comment for why). It is then attached
    * to the target space person through `linkFaceToSpacePerson`, always with `writeIdentity:
    * true`: a face this call just created cannot already belong to one of the owner's own people
    * (§6.3.1), so the identity-skip override case never applies here.
@@ -2397,10 +2418,10 @@ export class SharedSpaceService extends BaseService {
           boundingBoxY1,
           boundingBoxY2,
           sourceType: SourceType.Manual,
-          createdBy: auth.user.id,
         },
         trx,
       );
+      await this.facePersonVerdictRepository.addFaceCreator(faceId, auth.user.id, trx);
 
       await this.linkFaceToSpacePerson(trx, person, faceId, { writeIdentity: true });
       return faceId;
@@ -2416,7 +2437,7 @@ export class SharedSpaceService extends BaseService {
       imageHeight,
       spacePersonId: person.id,
       spacePersonName: person.name,
-      // This call is the only writer of a face with createdBy set to the caller (§6.5) — always
+      // This call is the only writer of an asset_face_creator row (§6.5) — always
       // editor-drawn, never a detection.
       isEditorDrawn: true,
     };
@@ -2425,11 +2446,11 @@ export class SharedSpaceService extends BaseService {
   /**
    * Spec §6.6 (Slice 6, Task 3): delete a face box an EDITOR of this space drew (§6.5).
    *
-   * Deletable iff `asset_face.createdBy IS NOT NULL` AND the face is reachable in a space where
+   * Deletable iff the face has an `asset_face_creator` row AND the face is reachable in a space where
    * the actor is Owner/Editor — NEVER `sourceType`. `PersonService.createFace` already writes
    * `SourceType.Manual` for an OWNER-drawn box too, so gating on `sourceType === Manual` would let
    * a space editor delete boxes the owner drew by hand — the exact regression this whole design
-   * exists to avoid. A detected face (`createdBy IS NULL`) is refused: `FaceDelete` stays
+   * exists to avoid. A detected face (no creator row) is refused: `FaceDelete` stays
    * owner-only for those.
    *
    * Hard-deletes the row. `shared_space_person_face` and `face_identity_face` both cascade away
@@ -2627,12 +2648,12 @@ export class SharedSpaceService extends BaseService {
         throw new NotFoundException();
       }
 
-      const sourcePath = await this.getFaceThumbnailSource(face.assetId);
+      const sourcePath = await this.backendMedia.getFaceThumbnailSource(face.assetId);
       if (!sourcePath) {
         throw new NotFoundException();
       }
 
-      return this.generateFaceThumbnailResponse(face, sourcePath);
+      return this.backendMedia.generateFaceThumbnailResponse(face, sourcePath);
     }
 
     if (person.identityId) {
@@ -2643,7 +2664,7 @@ export class SharedSpaceService extends BaseService {
       });
 
       if (personalThumbnail) {
-        return this.serveFromBackend(
+        return this.backendMedia.serveFromBackend(
           personalThumbnail.thumbnailPath,
           mimeTypes.lookup(personalThumbnail.thumbnailPath),
           CacheControl.PrivateWithoutCache,
@@ -2670,12 +2691,12 @@ export class SharedSpaceService extends BaseService {
       throw new NotFoundException();
     }
 
-    const sourcePath = await this.getFaceThumbnailSource(face.assetId);
+    const sourcePath = await this.backendMedia.getFaceThumbnailSource(face.assetId);
     if (!sourcePath) {
       throw new NotFoundException();
     }
 
-    return this.generateFaceThumbnailResponse(face, sourcePath);
+    return this.backendMedia.generateFaceThumbnailResponse(face, sourcePath);
   }
 
   async getSpacePersonFaceThumbnail(
@@ -2694,12 +2715,12 @@ export class SharedSpaceService extends BaseService {
       throw new NotFoundException();
     }
 
-    const sourcePath = await this.getFaceThumbnailSource(face.assetId);
+    const sourcePath = await this.backendMedia.getFaceThumbnailSource(face.assetId);
     if (!sourcePath) {
       throw new NotFoundException();
     }
 
-    return this.generateFaceThumbnailResponse(face, sourcePath);
+    return this.backendMedia.generateFaceThumbnailResponse(face, sourcePath);
   }
 
   async updateSpacePerson(
@@ -2913,8 +2934,8 @@ export class SharedSpaceService extends BaseService {
 
     const prefixes = ['shared-space-face-match', 'space-identity-reconcile-'];
     const removed =
-      (await this.jobRepository.removeFailedJobsByJobIdPrefix(QueueName.PeopleBackfill, prefixes)) +
-      (await this.jobRepository.removeFailedJobsByJobIdPrefix(QueueName.FacialRecognition, prefixes));
+      (await this.queueMaintenanceRepository.removeFailedJobsByJobIdPrefix(QueueName.PeopleBackfill, prefixes)) +
+      (await this.queueMaintenanceRepository.removeFailedJobsByJobIdPrefix(QueueName.FacialRecognition, prefixes));
 
     if (removed > 0) {
       this.logger.log(
@@ -2942,7 +2963,10 @@ export class SharedSpaceService extends BaseService {
     }
 
     const prefixes = ['person-suggestion-scan/', 'space-person-suggestion-scan/'];
-    const removed = await this.jobRepository.removeFailedJobsByJobIdPrefix(QueueName.PeopleBackfill, prefixes);
+    const removed = await this.queueMaintenanceRepository.removeFailedJobsByJobIdPrefix(
+      QueueName.PeopleBackfill,
+      prefixes,
+    );
 
     if (removed > 0) {
       this.logger.log(`Removed ${removed} failed person-suggestion-scan job(s) that were blocking their dedup jobIds`);
@@ -3207,7 +3231,7 @@ export class SharedSpaceService extends BaseService {
       return;
     }
 
-    const matches = await this.searchRepository.searchFaces({
+    const matches = await this.faceSearchRepository.searchFaces({
       userIds: [input.memberUserId],
       embedding: input.spacePerson.embedding,
       maxDistance: input.maxDistance,
@@ -3648,7 +3672,7 @@ export class SharedSpaceService extends BaseService {
     // face-assign run) starts a parallel chain — doubling the work and reviving the
     // removeOnComplete/stalled-recovery orphan race on the shared pass-scoped jobIds.
     const pass = job.pass ?? 1;
-    if (pass === 1 && (await this.jobRepository.hasInFlightDedupChain(job.spaceId))) {
+    if (pass === 1 && (await this.queueMaintenanceRepository.hasInFlightDedupChain(job.spaceId))) {
       this.logger.debug(`Dedup skipped for space ${job.spaceId}: a dedup chain is already running`);
       return JobStatus.Skipped;
     }

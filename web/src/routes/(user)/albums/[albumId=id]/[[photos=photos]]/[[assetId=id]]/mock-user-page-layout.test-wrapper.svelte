@@ -14,7 +14,7 @@
     children?: Snippet;
   };
 
-  const { title, description, leading, buttons, children }: Props = $props();
+  const { title, description, leading, buttons, children, hideNavbar, barFitsNavbar, scrollbar }: Props = $props();
 </script>
 
 <header data-testid="mock-page-bar">
@@ -23,6 +23,6 @@
   {#if description}<span data-testid="page-header-description">{description}</span>{/if}
   {@render buttons?.()}
 </header>
-<main>
+<main data-hide-navbar={hideNavbar} data-bar-fits-navbar={barFitsNavbar} data-scrollbar={scrollbar}>
   {@render children?.()}
 </main>

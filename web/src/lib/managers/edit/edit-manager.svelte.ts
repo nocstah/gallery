@@ -11,6 +11,7 @@ import { mdiContentCut, mdiCropRotate } from '@mdi/js';
 import type { Component } from 'svelte';
 import TransformTool from '$lib/components/asset-viewer/editor/transform-tool/TransformTool.svelte';
 import TrimTool from '$lib/components/asset-viewer/editor/trim-tool/trim-tool.svelte';
+import { withImageAdjust } from '$lib/gallery/edit/image-adjust-manager.svelte';
 import { transformManager } from '$lib/managers/edit/transform-manager.svelte';
 import { trimManager } from '$lib/managers/edit/trim-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
@@ -28,6 +29,8 @@ export interface EditToolManager {
   hasChanges: boolean;
   canReset: boolean;
   edits: EditAction[];
+  /** Saves the tool's changes itself instead of through the asset edits endpoint. */
+  save?: (assetId: string) => Promise<unknown>;
 }
 
 export enum EditToolType {
@@ -48,7 +51,8 @@ export class EditManager {
       type: EditToolType.Transform,
       icon: mdiCropRotate,
       component: TransformTool,
-      manager: transformManager,
+      // Gallery: the Adjust panel's colour adjustment saves with the transform tool.
+      manager: withImageAdjust(transformManager),
     },
     {
       type: EditToolType.Trim,
@@ -134,7 +138,7 @@ export class EditManager {
   async applyEdits(): Promise<boolean> {
     this.isApplyingEdits = true;
 
-    const edits = this.selectedTool ? this.selectedTool.manager.edits : [];
+    const edits = this.tools.flatMap((tool) => tool.manager.edits);
     if (!this.currentAsset) {
       return false;
     }
@@ -152,14 +156,17 @@ export class EditManager {
       const timeout = this.currentAsset?.type === AssetTypeEnum.Video ? 30_000 : 10_000;
       const editCompleted = waitForWebsocketEvent('AssetEditReadyV2', (event) => event.asset.id === assetId, timeout);
 
-      await (edits.length === 0
-        ? removeAssetEdits({ id: assetId })
-        : editAsset({
-            id: assetId,
-            assetEditsCreateDto: {
-              edits,
-            },
-          }));
+      const tool = this.selectedTool?.manager;
+      await (tool?.save
+        ? tool.save(assetId)
+        : edits.length === 0
+          ? removeAssetEdits({ id: assetId })
+          : editAsset({
+              id: assetId,
+              assetEditsCreateDto: {
+                edits,
+              },
+            }));
 
       await editCompleted;
 

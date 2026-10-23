@@ -12,9 +12,11 @@ import AssetSelectControlBar from './AssetSelectControlBar.svelte';
 
 // Local Omarchy layer: the selection bar's count opens Show selected (modals/SelectionReviewModal)
 
+const { showModal } = vi.hoisted(() => ({ showModal: vi.fn() }));
+
 vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),
-  modalManager: { show: vi.fn() },
+  modalManager: { show: showModal },
 }));
 
 const count = () => screen.getByRole('button', { name: /selected_count/ });
@@ -29,7 +31,7 @@ const renderBar = (props: BarProps = {}) =>
 
 describe('AssetSelectControlBar', () => {
   beforeEach(() => {
-    vi.mocked(modalManager.show).mockReset();
+    showModal.mockReset();
     authManager.setPreferences(preferencesFactory.build());
     authManager.setUser(userAdminFactory.build({ id: 'me' }));
     assetMultiSelectManager.selectAssets(timelineAssetFactory.buildList(3));
@@ -40,20 +42,20 @@ describe('AssetSelectControlBar', () => {
   });
 
   it('opens Show selected from the count, with the page’s main actions: Share, New album, Add to album', async () => {
-    vi.mocked(modalManager.show).mockResolvedValue(undefined);
+    showModal.mockResolvedValue(undefined);
     renderBar();
 
     await fireEvent.click(count());
 
     expect(modalManager.show).toHaveBeenCalledWith(SelectionReviewModal, { actions: expect.any(Function) });
-    const { actions } = vi.mocked(modalManager.show).mock.calls[0][1] as { actions: () => ActionItem[] };
+    const { actions } = showModal.mock.calls[0][1] as { actions: () => ActionItem[] };
     expect(actions().map(({ title }) => title)).toEqual(['share', 'new_album_from_selection', 'add_to_album_or_space']);
   });
 
   it('runs the action chosen in the sheet once the sheet is gone', async () => {
     const action: ActionItem = { title: 'share', onAction: vi.fn() };
     const chosen = { action, event: new Event('click') };
-    vi.mocked(modalManager.show).mockResolvedValue(chosen);
+    showModal.mockResolvedValue(chosen);
     renderBar({ reviewActions: () => [action] });
 
     await fireEvent.click(count());
@@ -62,7 +64,7 @@ describe('AssetSelectControlBar', () => {
   });
 
   it('gives the focus back to the count when the sheet closes without an action', async () => {
-    vi.mocked(modalManager.show).mockResolvedValue(undefined);
+    showModal.mockResolvedValue(undefined);
     renderBar({ reviewActions: () => [] });
 
     await fireEvent.click(count());

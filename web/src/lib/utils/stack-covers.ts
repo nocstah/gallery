@@ -14,9 +14,7 @@ export type CoverChange = { from: string; stack: StackResponseDto };
  * only drops out of sight as before (its photos are untouched either way). */
 export const handOverCovers = async (assets: Leaving[]): Promise<CoverChange[]> => {
   const leaving = new Set(assets.map(({ id }) => id));
-  const stackIds = new Set(
-    assets.flatMap(({ id, stack }) => (stack && stack.primaryAssetId === id ? [stack.id] : [])),
-  );
+  const stackIds = new Set(assets.flatMap(({ id, stack }) => (stack && stack.primaryAssetId === id ? [stack.id] : [])));
   const changes: CoverChange[] = [];
   for (const id of stackIds) {
     try {

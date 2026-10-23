@@ -95,7 +95,9 @@ describe('SelectionShareModal', () => {
     await open({ assetIds: ['a1', 'a2'], ownedAssetIds: ['a1', 'a2'], excludedCount: 1 });
 
     expect(screen.getByText('Share 3 photos')).toBeInTheDocument();
-    const sections = [...document.querySelectorAll('.ws-sheet-section')].map((section) => section.dataset.testid);
+    const sections = [...document.querySelectorAll<HTMLElement>('.ws-sheet-section')].map(
+      (section) => section.dataset.testid,
+    );
     expect(sections).toEqual(['selection-share-spaces', 'selection-share-link']);
     expect(screen.getByRole('button', { name: 'Add to Family' })).toHaveClass('ws-sheet-primary');
     expect(screen.getByRole('button', { name: 'Add to Friends' })).toHaveClass('ws-sheet-quiet');

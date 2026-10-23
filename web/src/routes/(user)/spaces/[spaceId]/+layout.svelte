@@ -208,7 +208,9 @@
        entirely so the app doesn't nest inside itself. -->
   {@render children?.()}
 {:else}
-  <UserPageLayout hideNavbar={spaceUiManager.chromeHidden} title={space.name} scrollbar={false}>
+  <!-- Only the Photos tab hides the page scrollbar: its timeline scrolls itself and brings a scrubber.
+       Every other tab (albums, people, members, ...) scrolls the page and needs a visible scrollbar. -->
+  <UserPageLayout hideNavbar={spaceUiManager.chromeHidden} title={space.name} scrollbar={!onPhotos}>
     {#snippet leading()}
       {#if !spaceUiManager.chromeHidden}
         <IconButton

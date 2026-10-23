@@ -74,7 +74,14 @@ where
           and "neg"."status" in ($9, $10)
           and (
             "neg"."personGroupId" = $11
-            or "neg"."identityId" = "person"."identityId"
+            or "neg"."identityId" = (
+              SELECT
+                "person_identity"."identityId"
+              FROM
+                "person_identity"
+              WHERE
+                "person_identity"."personGroupId" = "person"."personGroupId"
+            )
           )
       )
   )
@@ -340,14 +347,27 @@ where
 -- FacePersonVerdictRepository.getPendingForPerson
 select
   "person"."personGroupId",
-  "person"."identityId"
+  (
+    SELECT
+      "person_identity"."identityId"
+    FROM
+      "person_identity"
+    WHERE
+      "person_identity"."personGroupId" = "person"."personGroupId"
+  ) as "identityId"
 from
   "person"
 where
   "person"."personGroupId" = $1
   and BTRIM("person"."name") <> $2
   and "person"."isHidden" = $3
-  and "person"."type" = $4
+  and not EXISTS (
+    SELECT
+    FROM
+      "person_pet"
+    WHERE
+      "person_pet"."personGroupId" = "person"."personGroupId"
+  )
 
 -- FacePersonVerdictRepository.getPendingForSpacePerson
 select
@@ -408,8 +428,8 @@ where
         from
           "shared_space_album"
           inner join "album_asset" on "album_asset"."albumId" = "shared_space_album"."albumId"
-          inner join "album" on "album"."id" = "shared_space_album"."albumId"
-          and "album"."deletedAt" is null
+          inner join "album" as "linked_album" on "linked_album"."id" = "shared_space_album"."albumId"
+          and "linked_album"."deletedAt" is null
         where
           "album_asset"."assetId" = "asset"."id"
           and "shared_space_album"."spaceId" = $9::uuid
@@ -421,8 +441,8 @@ where
           "shared_space_album"
           inner join "album_space_asset" on "album_space_asset"."albumId" = "shared_space_album"."albumId"
           and "album_space_asset"."spaceId" = "shared_space_album"."spaceId"
-          inner join "album" on "album"."id" = "shared_space_album"."albumId"
-          and "album"."deletedAt" is null
+          inner join "album" as "linked_album" on "linked_album"."id" = "shared_space_album"."albumId"
+          and "linked_album"."deletedAt" is null
         where
           "album_space_asset"."assetId" = "asset"."id"
           and "shared_space_album"."spaceId" = $10::uuid
@@ -497,8 +517,8 @@ where
         from
           "shared_space_album"
           inner join "album_asset" on "album_asset"."albumId" = "shared_space_album"."albumId"
-          inner join "album" on "album"."id" = "shared_space_album"."albumId"
-          and "album"."deletedAt" is null
+          inner join "album" as "linked_album" on "linked_album"."id" = "shared_space_album"."albumId"
+          and "linked_album"."deletedAt" is null
         where
           "album_asset"."assetId" = "asset"."id"
           and "shared_space_album"."spaceId" = $6::uuid
@@ -510,8 +530,8 @@ where
           "shared_space_album"
           inner join "album_space_asset" on "album_space_asset"."albumId" = "shared_space_album"."albumId"
           and "album_space_asset"."spaceId" = "shared_space_album"."spaceId"
-          inner join "album" on "album"."id" = "shared_space_album"."albumId"
-          and "album"."deletedAt" is null
+          inner join "album" as "linked_album" on "linked_album"."id" = "shared_space_album"."albumId"
+          and "linked_album"."deletedAt" is null
         where
           "album_space_asset"."assetId" = "asset"."id"
           and "shared_space_album"."spaceId" = $7::uuid
@@ -563,8 +583,8 @@ where
         from
           "shared_space_album"
           inner join "album_asset" on "album_asset"."albumId" = "shared_space_album"."albumId"
-          inner join "album" on "album"."id" = "shared_space_album"."albumId"
-          and "album"."deletedAt" is null
+          inner join "album" as "linked_album" on "linked_album"."id" = "shared_space_album"."albumId"
+          and "linked_album"."deletedAt" is null
         where
           "album_asset"."assetId" = "asset"."id"
           and "shared_space_album"."spaceId" = $7::uuid
@@ -576,8 +596,8 @@ where
           "shared_space_album"
           inner join "album_space_asset" on "album_space_asset"."albumId" = "shared_space_album"."albumId"
           and "album_space_asset"."spaceId" = "shared_space_album"."spaceId"
-          inner join "album" on "album"."id" = "shared_space_album"."albumId"
-          and "album"."deletedAt" is null
+          inner join "album" as "linked_album" on "linked_album"."id" = "shared_space_album"."albumId"
+          and "linked_album"."deletedAt" is null
         where
           "album_space_asset"."assetId" = "asset"."id"
           and "shared_space_album"."spaceId" = $8::uuid
@@ -588,7 +608,14 @@ where
 -- FacePersonVerdictRepository.getFaceOwnerLink
 select
   "asset_face"."personGroupId" as "personGroupId",
-  "person"."identityId" as "identityId",
+  (
+    SELECT
+      "person_identity"."identityId"
+    FROM
+      "person_identity"
+    WHERE
+      "person_identity"."personGroupId" = "person"."personGroupId"
+  ) as "identityId",
   "person"."name" as "ownerPersonName",
   "asset"."ownerId" as "assetOwnerId",
   exists (

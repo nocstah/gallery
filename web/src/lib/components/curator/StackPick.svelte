@@ -51,8 +51,8 @@
         status = mine.progress?.note ?? '';
         await new Promise((resolve) => setTimeout(resolve, POLL_MS));
       }
-    } catch (failure) {
-      error = failure instanceof Error ? failure.message : String(failure);
+    } catch (error_) {
+      error = error_ instanceof Error ? error_.message : String(error_);
     }
   };
 
@@ -81,8 +81,8 @@
       }
       done = true;
       onClose();
-    } catch (failure) {
-      error = failure instanceof Error ? failure.message : String(failure);
+    } catch (error_) {
+      error = error_ instanceof Error ? error_.message : String(error_);
     } finally {
       deciding = false;
     }

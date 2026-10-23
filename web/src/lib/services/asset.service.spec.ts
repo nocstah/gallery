@@ -44,7 +44,12 @@ vitest.mock('@immich/ui', () => ({
 }));
 
 vitest.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({
-  assetMultiSelectManager: { assets: [{ id: 'x1' }, { id: 'x2' }], selectionActive: true, clear: vitest.fn() },
+  assetMultiSelectManager: {
+    assets: [{ id: 'x1' }, { id: 'x2' }],
+    selectionActive: true,
+    isAllUserOwned: false,
+    clear: vitest.fn(),
+  },
 }));
 
 // Local Omarchy layer: N's album (utils/album-from-selection has its own spec)
@@ -300,16 +305,6 @@ describe('add to album/space entry points', () => {
     action.onAction({ action, event: new Event('click') });
     expect(modalManager.show).toHaveBeenCalledWith(AssetAddToCollectionModal, {
       assetIds: ['x1', 'x2'],
-      restrictToSpaceId: undefined,
-    });
-  });
-
-  it('bulk "+" carries the space restriction through to the modal when the selection is not all-owned', () => {
-    const action = getAssetBulkActions(((k: string) => k) as never, { restrictToSpaceId: 'space-1' }).AddToAlbum;
-    action.onAction({ action, event: new Event('click') });
-    expect(modalManager.show).toHaveBeenCalledWith(AssetAddToCollectionModal, {
-      assetIds: ['x1', 'x2'],
-      restrictToSpaceId: 'space-1',
     });
   });
 
@@ -330,7 +325,7 @@ describe('add to album/space entry points', () => {
     beforeEach(() => authManager.setPreferences(preferencesFactory.build()));
     afterEach(() => authManager.reset());
 
-    it('narrows the picker to the space when a space editor opens a photo they do not own', () => {
+    it('opens the same picker as the timeline when a space editor opens a photo they do not own (#1119)', () => {
       authManager.setUser(userAdminFactory.build({ id: 'editor-1' }));
       const asset = assetFactory.build({ id: 'not-mine', ownerId: 'someone-else' });
 
@@ -340,7 +335,6 @@ describe('add to album/space entry points', () => {
       expect(action.$if?.()).toBe(true);
       expect(modalManager.show).toHaveBeenCalledWith(AssetAddToCollectionModal, {
         assetIds: ['not-mine'],
-        restrictToSpaceId: 'space-1',
       });
     });
 
@@ -354,7 +348,6 @@ describe('add to album/space entry points', () => {
       expect(action.$if?.()).toBe(true);
       expect(modalManager.show).toHaveBeenCalledWith(AssetAddToCollectionModal, {
         assetIds: ['mine'],
-        restrictToSpaceId: undefined,
       });
     });
 
@@ -380,7 +373,6 @@ describe('add to album/space entry points', () => {
       expect(action.$if?.()).toBe(true);
       expect(modalManager.show).toHaveBeenCalledWith(AssetAddToCollectionModal, {
         assetIds: ['partners-photo'],
-        restrictToSpaceId: undefined,
       });
     });
   });
@@ -389,7 +381,7 @@ describe('add to album/space entry points', () => {
 // Local Omarchy layer: N, a new album of the selection (utils/album-from-selection)
 describe('bulk NewAlbum action (N)', () => {
   const selection = assetMultiSelectManager as unknown as { clear: () => void };
-  const newAlbum = (options?: { restrictToSpaceId?: string }) =>
+  const newAlbum = (options?: { fromSpaceId?: string }) =>
     getAssetBulkActions(((k: string) => k) as never, options).NewAlbum;
 
   beforeEach(() => {
@@ -405,8 +397,8 @@ describe('bulk NewAlbum action (N)', () => {
     expect(newAlbum().$if?.()).toBe(true);
   });
 
-  it('is not offered where the picker is narrowed to a Space: a new album could not hold the other members’ photos', () => {
-    expect(newAlbum({ restrictToSpaceId: 'space-1' }).$if?.()).toBe(false);
+  it('is not offered for other members’ photos in a Space', () => {
+    expect(newAlbum({ fromSpaceId: 'space-1' }).$if?.()).toBe(false);
   });
 
   it('is not offered while a field has the keyboard', () => {

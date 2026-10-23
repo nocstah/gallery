@@ -236,7 +236,7 @@ describe('kindAction', () => {
 });
 
 describe("the inbox's words for each kind", () => {
-  const I18N_DIR = path.resolve(process.cwd(), '../i18n');
+  const I18N_DIR = path.resolve(process.cwd(), '../i18n/gallery/merged');
   const read = (code: string) =>
     JSON.parse(fs.readFileSync(path.join(I18N_DIR, `${code}.json`), 'utf8')) as Record<string, unknown>;
 

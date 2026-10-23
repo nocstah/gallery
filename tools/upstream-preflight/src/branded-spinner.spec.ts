@@ -50,6 +50,8 @@ const SWAPPED_SET = [
   'routes/(user)/utilities/geolocation/+page.svelte',
   'routes/(user)/map/[[photos=photos]]/[[assetId=id]]/+page.svelte',
   'routes/(user)/memories/+page.svelte',
+  'routes/(user)/places/+page.svelte',
+  'routes/(user)/utilities/slips/+page.svelte',
   'lib/modals/SpaceLinkAlbumModal.svelte',
   'lib/modals/SpaceLinkLibraryModal.svelte',
 ];

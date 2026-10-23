@@ -299,6 +299,8 @@ jobs:
                 '',
                 'Each push publishes a new numbered tag, so update the image line to move to a newer RC. To roll back, point it at an earlier `rc.<n>` or delete the override and run `docker compose up -d` again.',
                 '',
+                'Before rolling back to an older image, undo the newer Gallery migrations with this RC image: https://docs.opennoodle.de/install/upgrading#rolling-back-to-an-earlier-release',
+                '',
                 '</details>',
               );
             }

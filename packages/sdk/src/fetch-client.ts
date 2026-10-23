@@ -1,6 +1,6 @@
 /**
  * Immich
- * 3.3.1
+ * 3.3.5
  * DO NOT MODIFY - This file has been generated using oazapfts.
  * See https://www.npmjs.com/package/oazapfts
  */
@@ -1299,6 +1299,24 @@ export type CreateAlbumDto = {
     /** Album description */
     description?: string | null;
 };
+export type AlbumAddTargetsDto = {
+    /** Candidate album IDs */
+    albumIds: string[];
+    /** Asset IDs the caller wants to add */
+    assetIds: string[];
+};
+export type AlbumAddTargetDto = {
+    /** How many of the requested assets this album accepts (already-present assets included) */
+    acceptedAssetCount: number;
+    /** Album ID */
+    albumId: string;
+};
+export type AlbumAddTargetsResponseDto = {
+    /** Requested albums that accept at least one of the assets; all others are omitted */
+    albums: AlbumAddTargetDto[];
+    /** How many of the requested assets the caller may place in any album, including a new one */
+    shareableAssetCount: number;
+};
 export type AlbumsAddAssetsDto = {
     /** Album IDs */
     albumIds: string[];
@@ -1804,6 +1822,26 @@ export type UpdateAssetDto = {
     rating?: number | null;
     visibility?: AssetVisibility;
 };
+export type AssetImageAdjustResponseDto = {
+    /** Contrast, -100 to 100 (CSS contrast, 0 = unchanged) */
+    contrast: number;
+    /** Exposure, -100 to 100 (CSS brightness, 0 = unchanged) */
+    exposure: number;
+    /** Invert the colours, for scanned film negatives */
+    invert: boolean;
+    /** Saturation, -100 to 100 (CSS saturate, 0 = unchanged) */
+    saturation: number;
+};
+export type AssetImageAdjustDto = {
+    /** Contrast, -100 to 100 (CSS contrast, 0 = unchanged) */
+    contrast?: number;
+    /** Exposure, -100 to 100 (CSS brightness, 0 = unchanged) */
+    exposure?: number;
+    /** Invert the colours, for scanned film negatives */
+    invert?: boolean;
+    /** Saturation, -100 to 100 (CSS saturate, 0 = unchanged) */
+    saturation?: number;
+};
 export type CropParameters = {
     /** Height of the crop */
     height: number;
@@ -1821,18 +1859,12 @@ export type RotateParameters = {
 export type MirrorParameters = {
     axis: MirrorAxis;
 };
-export type TrimParameters = {
-    /** End time in seconds */
-    endTime: number;
-    /** Start time in seconds */
-    startTime: number;
-};
 export type AssetEditActionItemResponseDto = {
     action: AssetEditAction;
     /** Asset edit ID */
     id: string;
-    /** List of edit actions to apply (crop, rotate, mirror, or trim) */
-    parameters: CropParameters | RotateParameters | MirrorParameters | TrimParameters;
+    /** List of edit actions to apply (crop, rotate, or mirror) */
+    parameters: CropParameters | RotateParameters | MirrorParameters;
 };
 export type AssetEditsResponseDto = {
     /** Asset ID these edits belong to */
@@ -1842,11 +1874,11 @@ export type AssetEditsResponseDto = {
 };
 export type AssetEditActionItemDto = {
     action: AssetEditAction;
-    /** List of edit actions to apply (crop, rotate, mirror, or trim) */
-    parameters: CropParameters | RotateParameters | MirrorParameters | TrimParameters;
+    /** List of edit actions to apply (crop, rotate, or mirror) */
+    parameters: CropParameters | RotateParameters | MirrorParameters;
 };
 export type AssetEditsCreateDto = {
-    /** List of edit actions to apply (crop, rotate, mirror, or trim) */
+    /** List of edit actions to apply (crop, rotate, or mirror) */
     edits: AssetEditActionItemDto[];
 };
 export type AssetMetadataResponseDto = {
@@ -1888,6 +1920,20 @@ export type AssetOcrResponseDto = {
     y3: number;
     /** Normalized y coordinate of box corner 4 (0-1) */
     y4: number;
+};
+export type AssetVideoTrimResponseDto = {
+    /** End of the kept part, in seconds from the start of the original video */
+    endTime: number;
+    /** Length of the untrimmed video, in seconds */
+    originalDuration: number;
+    /** Start of the kept part, in seconds from the start of the original video */
+    startTime: number;
+};
+export type AssetVideoTrimDto = {
+    /** End of the kept part, in seconds from the start of the original video */
+    endTime: number;
+    /** Start of the kept part, in seconds from the start of the original video */
+    startTime: number;
 };
 export type SignUpDto = {
     /** User email */
@@ -6019,6 +6065,21 @@ export function createAlbum({ createAlbumDto }: {
     })));
 }
 /**
+ * Resolve which albums accept the given assets
+ */
+export function getAlbumAddTargets({ albumAddTargetsDto }: {
+    albumAddTargetsDto: AlbumAddTargetsDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AlbumAddTargetsResponseDto;
+    }>("/albums/add-targets", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: albumAddTargetsDto
+    })));
+}
+/**
  * Add assets to albums
  */
 export function addAssetsToAlbums({ albumsAddAssetsDto }: {
@@ -6543,6 +6604,46 @@ export function updateAsset({ id, updateAssetDto }: {
     })));
 }
 /**
+ * Remove the colour adjustment of an image
+ */
+export function removeAssetAdjust({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/assets/${encodeURIComponent(id)}/adjust`, {
+        ...opts,
+        method: "DELETE"
+    }));
+}
+/**
+ * Retrieve the colour adjustment of an image
+ */
+export function getAssetAdjust({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AssetImageAdjustResponseDto;
+    }>(`/assets/${encodeURIComponent(id)}/adjust`, {
+        ...opts
+    }));
+}
+/**
+ * Adjust the colours of an image
+ */
+export function updateAssetAdjust({ id, assetImageAdjustDto }: {
+    id: string;
+    assetImageAdjustDto: AssetImageAdjustDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AssetImageAdjustResponseDto;
+    }>(`/assets/${encodeURIComponent(id)}/adjust`, oazapfts.json({
+        ...opts,
+        method: "PUT",
+        body: assetImageAdjustDto
+    })));
+}
+/**
  * Remove edits from an existing asset
  */
 export function removeAssetEdits({ id }: {
@@ -6693,6 +6794,46 @@ export function viewAsset({ edited, id, key, size, slug }: {
     }))}`, {
         ...opts
     }));
+}
+/**
+ * Remove the trim of a video
+ */
+export function removeAssetTrim({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/assets/${encodeURIComponent(id)}/trim`, {
+        ...opts,
+        method: "DELETE"
+    }));
+}
+/**
+ * Retrieve the trim of a video
+ */
+export function getAssetTrim({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AssetVideoTrimResponseDto;
+    }>(`/assets/${encodeURIComponent(id)}/trim`, {
+        ...opts
+    }));
+}
+/**
+ * Trim a video
+ */
+export function updateAssetTrim({ id, assetVideoTrimDto }: {
+    id: string;
+    assetVideoTrimDto: AssetVideoTrimDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AssetVideoTrimResponseDto;
+    }>(`/assets/${encodeURIComponent(id)}/trim`, oazapfts.json({
+        ...opts,
+        method: "PUT",
+        body: assetVideoTrimDto
+    })));
 }
 /**
  * Play asset video
@@ -11441,28 +11582,6 @@ export enum Permission {
     PartnerRead = "partner.read",
     PartnerUpdate = "partner.update",
     PartnerDelete = "partner.delete",
-    SharedSpaceCreate = "sharedSpace.create",
-    SharedSpaceRead = "sharedSpace.read",
-    SharedSpaceUpdate = "sharedSpace.update",
-    SharedSpaceDelete = "sharedSpace.delete",
-    SharedSpaceMemberCreate = "sharedSpaceMember.create",
-    SharedSpaceMemberUpdate = "sharedSpaceMember.update",
-    SharedSpaceMemberDelete = "sharedSpaceMember.delete",
-    SharedSpaceAssetCreate = "sharedSpaceAsset.create",
-    SharedSpaceAssetRead = "sharedSpaceAsset.read",
-    SharedSpaceAssetDelete = "sharedSpaceAsset.delete",
-    SharedSpaceLibraryCreate = "sharedSpaceLibrary.create",
-    SharedSpaceLibraryDelete = "sharedSpaceLibrary.delete",
-    SharedSpaceAlbumCreate = "sharedSpaceAlbum.create",
-    SharedSpaceAlbumUpdate = "sharedSpaceAlbum.update",
-    SharedSpaceAlbumDelete = "sharedSpaceAlbum.delete",
-    SharedSpaceAlbumFolderCreate = "sharedSpaceAlbumFolder.create",
-    SharedSpaceAlbumFolderUpdate = "sharedSpaceAlbumFolder.update",
-    SharedSpaceAlbumFolderDelete = "sharedSpaceAlbumFolder.delete",
-    UserGroupCreate = "userGroup.create",
-    UserGroupRead = "userGroup.read",
-    UserGroupUpdate = "userGroup.update",
-    UserGroupDelete = "userGroup.delete",
     PersonCreate = "person.create",
     PersonRead = "person.read",
     PersonUpdate = "person.update",
@@ -11542,7 +11661,29 @@ export enum Permission {
     AdminUserUpdate = "adminUser.update",
     AdminUserDelete = "adminUser.delete",
     AdminSessionRead = "adminSession.read",
-    AdminAuthUnlinkAll = "adminAuth.unlinkAll"
+    AdminAuthUnlinkAll = "adminAuth.unlinkAll",
+    SharedSpaceCreate = "sharedSpace.create",
+    SharedSpaceRead = "sharedSpace.read",
+    SharedSpaceUpdate = "sharedSpace.update",
+    SharedSpaceDelete = "sharedSpace.delete",
+    SharedSpaceMemberCreate = "sharedSpaceMember.create",
+    SharedSpaceMemberUpdate = "sharedSpaceMember.update",
+    SharedSpaceMemberDelete = "sharedSpaceMember.delete",
+    SharedSpaceAssetCreate = "sharedSpaceAsset.create",
+    SharedSpaceAssetRead = "sharedSpaceAsset.read",
+    SharedSpaceAssetDelete = "sharedSpaceAsset.delete",
+    SharedSpaceLibraryCreate = "sharedSpaceLibrary.create",
+    SharedSpaceLibraryDelete = "sharedSpaceLibrary.delete",
+    SharedSpaceAlbumCreate = "sharedSpaceAlbum.create",
+    SharedSpaceAlbumUpdate = "sharedSpaceAlbum.update",
+    SharedSpaceAlbumDelete = "sharedSpaceAlbum.delete",
+    SharedSpaceAlbumFolderCreate = "sharedSpaceAlbumFolder.create",
+    SharedSpaceAlbumFolderUpdate = "sharedSpaceAlbumFolder.update",
+    SharedSpaceAlbumFolderDelete = "sharedSpaceAlbumFolder.delete",
+    UserGroupCreate = "userGroup.create",
+    UserGroupRead = "userGroup.read",
+    UserGroupUpdate = "userGroup.update",
+    UserGroupDelete = "userGroup.delete"
 }
 export enum AssetFileType {
     Fullsize = "fullsize",
@@ -11581,8 +11722,7 @@ export enum Type {
 export enum AssetEditAction {
     Crop = "crop",
     Rotate = "rotate",
-    Mirror = "mirror",
-    Trim = "trim"
+    Mirror = "mirror"
 }
 export enum MirrorAxis {
     Horizontal = "horizontal",

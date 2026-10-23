@@ -199,7 +199,9 @@ const setupStrictReconciliationFixture = (
       },
     ]) as any,
   );
-  mocks.search.searchFaces.mockResolvedValue([{ id: 'local-face-1', personGroupId: 'local-person-1', distance: 0.2 }]);
+  mocks.faceSearch.searchFaces.mockResolvedValue([
+    { id: 'local-face-1', personGroupId: 'local-person-1', distance: 0.2 },
+  ]);
   mocks.person.getByGroupIdOnly.mockResolvedValue(
     factory.person({
       personGroupId: 'local-person-1',
@@ -2778,7 +2780,7 @@ describe(SharedSpaceService.name, () => {
       mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([ownedAssetId]));
       mocks.access.asset.checkAlbumAccess.mockResolvedValue(new Set());
       mocks.access.asset.checkPartnerAccess.mockResolvedValue(new Set());
-      mocks.access.asset.checkSpaceAccess.mockResolvedValue(new Set());
+      mocks.access.spaceAsset.checkSpaceAccess.mockResolvedValue(new Set());
 
       await expect(sut.addAssets(auth, spaceId, { assetIds: [ownedAssetId, foreignAssetId] })).rejects.toThrow();
 
@@ -2796,7 +2798,7 @@ describe(SharedSpaceService.name, () => {
       mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set());
       mocks.access.asset.checkPartnerAccess.mockResolvedValue(new Set());
       mocks.access.asset.checkAlbumAccess.mockResolvedValue(new Set([albumOnlyAssetId]));
-      mocks.access.asset.checkSpaceAccess.mockResolvedValue(new Set([albumOnlyAssetId]));
+      mocks.access.spaceAsset.checkSpaceAccess.mockResolvedValue(new Set([albumOnlyAssetId]));
 
       await expect(sut.addAssets(auth, spaceId, { assetIds: [albumOnlyAssetId] })).rejects.toBeInstanceOf(
         BadRequestException,
@@ -2805,7 +2807,7 @@ describe(SharedSpaceService.name, () => {
       expect(mocks.sharedSpace.addAssets).not.toHaveBeenCalled();
       // AssetShare must NOT consult the album/space READ arms — those are the escalation surface.
       expect(mocks.access.asset.checkAlbumAccess).not.toHaveBeenCalled();
-      expect(mocks.access.asset.checkSpaceAccess).not.toHaveBeenCalled();
+      expect(mocks.access.spaceAsset.checkSpaceAccess).not.toHaveBeenCalled();
     });
 
     it('allows an editor to add a partner-shared asset (AssetShare includes partner) (rbac-2)', async () => {
@@ -3032,7 +3034,7 @@ describe(SharedSpaceService.name, () => {
       mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([childId]));
       mocks.access.asset.checkAlbumAccess.mockResolvedValue(new Set());
       mocks.access.asset.checkPartnerAccess.mockResolvedValue(new Set());
-      mocks.access.asset.checkSpaceAccess.mockResolvedValue(new Set());
+      mocks.access.spaceAsset.checkSpaceAccess.mockResolvedValue(new Set());
 
       await expect(sut.addAssets(auth, spaceId, { assetIds: [childId] })).rejects.toThrow();
 
@@ -3697,7 +3699,7 @@ describe(SharedSpaceService.name, () => {
           embedding: '[1,2,3]',
         },
       ]);
-      mocks.search.searchFaces.mockResolvedValue([
+      mocks.faceSearch.searchFaces.mockResolvedValue([
         { id: 'local-face-1', personGroupId: 'local-person-1', distance: 0.2 },
       ]);
       mocks.person.getByGroupIdOnly.mockResolvedValue(
@@ -3713,7 +3715,7 @@ describe(SharedSpaceService.name, () => {
         sut.handleSharedSpaceIdentityReconciliation({ spaceId: space.id, userId: 'member-1' }),
       ).resolves.toBe(JobStatus.Success);
 
-      expect(mocks.search.searchFaces).toHaveBeenCalledWith(
+      expect(mocks.faceSearch.searchFaces).toHaveBeenCalledWith(
         expect.objectContaining({
           userIds: ['member-1'],
           embedding: '[1,2,3]',
@@ -3749,13 +3751,13 @@ describe(SharedSpaceService.name, () => {
         sut.handleSharedSpaceIdentityReconciliation({ spaceId: 'space-1', userId: 'removed-member' }),
       ).resolves.toBe(JobStatus.Success);
 
-      expect(mocks.search.searchFaces).not.toHaveBeenCalled();
+      expect(mocks.faceSearch.searchFaces).not.toHaveBeenCalled();
       expect(mocks.faceIdentity.mergeIdentities).not.toHaveBeenCalled();
     });
 
     it('should skip automatic merge when two local candidates match within threshold', async () => {
       setupStrictReconciliationFixture(mocks);
-      mocks.search.searchFaces.mockResolvedValue([
+      mocks.faceSearch.searchFaces.mockResolvedValue([
         { id: 'local-face-1', personGroupId: 'local-person-1', distance: 0.2 },
         { id: 'local-face-2', personGroupId: 'local-person-2', distance: 0.21 },
       ]);
@@ -3786,7 +3788,7 @@ describe(SharedSpaceService.name, () => {
 
       await sut.handleSharedSpaceIdentityReconciliation({ spaceId: 'space-1', userId: 'member-1' });
 
-      expect(mocks.search.searchFaces).not.toHaveBeenCalled();
+      expect(mocks.faceSearch.searchFaces).not.toHaveBeenCalled();
       expect(mocks.faceIdentity.mergeIdentities).not.toHaveBeenCalled();
     });
 
@@ -3950,7 +3952,7 @@ describe(SharedSpaceService.name, () => {
           },
         ],
       });
-      mocks.search.searchFaces.mockResolvedValue([
+      mocks.faceSearch.searchFaces.mockResolvedValue([
         { id: 'local-face-1', personGroupId: 'local-person-1', distance: 0.2 },
       ]);
       mocks.faceIdentity.ensurePersonIdentity.mockResolvedValue({ id: 'local-identity', type: 'person' } as any);
@@ -5366,15 +5368,15 @@ describe(SharedSpaceService.name, () => {
   describe('onBootstrap', () => {
     it('clears blocked failed face jobs from both pipeline queues and kicks identity maintenance', async () => {
       mocks.systemMetadata.get.mockResolvedValue(null);
-      mocks.job.removeFailedJobsByJobIdPrefix.mockResolvedValueOnce(1).mockResolvedValueOnce(2);
+      mocks.queueMaintenance.removeFailedJobsByJobIdPrefix.mockResolvedValueOnce(1).mockResolvedValueOnce(2);
 
       await sut.onBootstrap();
 
-      expect(mocks.job.removeFailedJobsByJobIdPrefix).toHaveBeenCalledWith(QueueName.PeopleBackfill, [
+      expect(mocks.queueMaintenance.removeFailedJobsByJobIdPrefix).toHaveBeenCalledWith(QueueName.PeopleBackfill, [
         'shared-space-face-match',
         'space-identity-reconcile-',
       ]);
-      expect(mocks.job.removeFailedJobsByJobIdPrefix).toHaveBeenCalledWith(QueueName.FacialRecognition, [
+      expect(mocks.queueMaintenance.removeFailedJobsByJobIdPrefix).toHaveBeenCalledWith(QueueName.FacialRecognition, [
         'shared-space-face-match',
         'space-identity-reconcile-',
       ]);
@@ -5386,7 +5388,7 @@ describe(SharedSpaceService.name, () => {
 
     it('does not kick identity maintenance when no blocked jobs were removed', async () => {
       mocks.systemMetadata.get.mockResolvedValue(null);
-      mocks.job.removeFailedJobsByJobIdPrefix.mockResolvedValue(0);
+      mocks.queueMaintenance.removeFailedJobsByJobIdPrefix.mockResolvedValue(0);
 
       await sut.onBootstrap();
 
@@ -5401,7 +5403,7 @@ describe(SharedSpaceService.name, () => {
 
       await sut.onBootstrap();
 
-      expect(mocks.job.removeFailedJobsByJobIdPrefix).not.toHaveBeenCalled();
+      expect(mocks.queueMaintenance.removeFailedJobsByJobIdPrefix).not.toHaveBeenCalled();
       expect(mocks.job.queue).not.toHaveBeenCalled();
       expect(mocks.systemMetadata.set).not.toHaveBeenCalled();
     });
@@ -5423,11 +5425,11 @@ describe(SharedSpaceService.name, () => {
             key === SystemMetadataKey.SharedSpaceFaceJobCleanupState ? { cleanedAt: '2026-07-25T00:00:00.000Z' } : null,
           ),
         );
-        mocks.job.removeFailedJobsByJobIdPrefix.mockResolvedValue(2);
+        mocks.queueMaintenance.removeFailedJobsByJobIdPrefix.mockResolvedValue(2);
 
         await sut.onBootstrap();
 
-        expect(mocks.job.removeFailedJobsByJobIdPrefix).toHaveBeenCalledWith(QueueName.PeopleBackfill, [
+        expect(mocks.queueMaintenance.removeFailedJobsByJobIdPrefix).toHaveBeenCalledWith(QueueName.PeopleBackfill, [
           'person-suggestion-scan/',
           'space-person-suggestion-scan/',
         ]);
@@ -5443,10 +5445,10 @@ describe(SharedSpaceService.name, () => {
 
         await sut.onBootstrap();
 
-        expect(mocks.job.removeFailedJobsByJobIdPrefix).not.toHaveBeenCalledWith(QueueName.PeopleBackfill, [
-          'person-suggestion-scan/',
-          'space-person-suggestion-scan/',
-        ]);
+        expect(mocks.queueMaintenance.removeFailedJobsByJobIdPrefix).not.toHaveBeenCalledWith(
+          QueueName.PeopleBackfill,
+          ['person-suggestion-scan/', 'space-person-suggestion-scan/'],
+        );
         expect(mocks.systemMetadata.set).not.toHaveBeenCalledWith(
           SystemMetadataKey.PersonSuggestionScanJobCleanupState,
           expect.anything(),
@@ -7016,7 +7018,7 @@ describe(SharedSpaceService.name, () => {
         personId: newUuid(),
         thumbnailPath: '/personal.jpg',
       });
-      vi.spyOn(sut as any, 'ensureLocalFile').mockResolvedValue({ localPath: '/preview.jpg', cleanup });
+      vi.spyOn((sut as any).backendMedia, 'ensureLocalFile').mockResolvedValue({ localPath: '/preview.jpg', cleanup });
       mocks.media.decodeImage.mockResolvedValue({
         data: Buffer.from('decoded-image'),
         info: { width: 250, height: 250, channels: 3 },
@@ -7066,7 +7068,7 @@ describe(SharedSpaceService.name, () => {
       mocks.asset.getForThumbnail.mockResolvedValue({
         path: '/path/to/asset/preview.jpg',
       } as any);
-      vi.spyOn(sut as any, 'ensureLocalFile').mockResolvedValue({
+      vi.spyOn((sut as any).backendMedia, 'ensureLocalFile').mockResolvedValue({
         localPath: '/tmp/preview.jpg',
         cleanup,
       });
@@ -7138,7 +7140,7 @@ describe(SharedSpaceService.name, () => {
       mocks.asset.getForThumbnail.mockResolvedValue({
         path: '/path/to/asset/preview.jpg',
       } as any);
-      vi.spyOn(sut as any, 'ensureLocalFile').mockResolvedValue({
+      vi.spyOn((sut as any).backendMedia, 'ensureLocalFile').mockResolvedValue({
         localPath: '/tmp/preview.jpg',
         cleanup,
       });
@@ -7216,7 +7218,7 @@ describe(SharedSpaceService.name, () => {
       mocks.asset.getForThumbnail
         .mockResolvedValueOnce({ path: null } as any)
         .mockResolvedValueOnce({ path: '/path/to/asset/thumbnail.jpg' } as any);
-      vi.spyOn(sut as any, 'ensureLocalFile').mockResolvedValue({
+      vi.spyOn((sut as any).backendMedia, 'ensureLocalFile').mockResolvedValue({
         localPath: '/tmp/thumbnail.jpg',
         cleanup,
       });
@@ -8182,6 +8184,17 @@ describe(SharedSpaceService.name, () => {
         { assetFaceId: 'face-1', personGroupId: null, expectedPersonGroupId: 'owner-person-1' },
         mocks.database,
       );
+      // Both owner layers move together: the person grids read the identity link, not the tag.
+      expect(mocks.faceIdentity.unlinkFaceFromIdentity).toHaveBeenCalledWith(
+        { assetFaceId: 'face-1', identityId: 'identity-1' },
+        mocks.database,
+      );
+      expect(mocks.facePersonVerdict.markRejectedForSpacePerson).toHaveBeenCalledWith(
+        'space-person-1',
+        'face-1',
+        expect.objectContaining({ identityId: 'identity-1' }),
+        mocks.database,
+      );
     });
 
     // The guard on the propagation above. An editor detaching space person "Uncle Tom" must never
@@ -8229,6 +8242,13 @@ describe(SharedSpaceService.name, () => {
 
       expect(mocks.sharedSpace.removePersonFace).toHaveBeenCalledWith('space-person-1', 'face-1', mocks.database);
       expect(mocks.person.setFaceOwnerPerson).not.toHaveBeenCalled();
+      expect(mocks.faceIdentity.unlinkFaceFromIdentity).not.toHaveBeenCalled();
+      expect(mocks.facePersonVerdict.markRejectedForSpacePerson).toHaveBeenCalledWith(
+        'space-person-1',
+        'face-1',
+        expect.objectContaining({ identityId: undefined }),
+        mocks.database,
+      );
     });
 
     // F-25 (spec §6.7): the detach twin of F-24. An editor un-naming a face on someone ELSE's
@@ -12124,7 +12144,7 @@ describe(SharedSpaceService.name, () => {
       const spaceId = newUuid();
       mocks.sharedSpace.getById.mockResolvedValue(factory.sharedSpace({ id: spaceId, faceRecognitionEnabled: true }));
       mocks.sharedSpace.getSpacePersonsWithEmbeddings.mockResolvedValue([]);
-      mocks.job.hasInFlightDedupChain.mockResolvedValue(true);
+      mocks.queueMaintenance.hasInFlightDedupChain.mockResolvedValue(true);
 
       const result = await sut.handleSharedSpacePersonDedup({ spaceId });
 
@@ -12141,7 +12161,7 @@ describe(SharedSpaceService.name, () => {
       mocks.sharedSpace.getById.mockResolvedValue(factory.sharedSpace({ id: spaceId, faceRecognitionEnabled: true }));
       mocks.sharedSpace.getSpacePersonsWithEmbeddings.mockResolvedValue([]);
       // A follow-up IS the running chain; gating it would stall dedup forever.
-      mocks.job.hasInFlightDedupChain.mockResolvedValue(true);
+      mocks.queueMaintenance.hasInFlightDedupChain.mockResolvedValue(true);
 
       const result = await sut.handleSharedSpacePersonDedup({ spaceId, pass: 2 });
 
@@ -13549,7 +13569,7 @@ describe(SharedSpaceService.name, () => {
         expect.objectContaining({
           albumIds: [albumId],
           // The whole point: with userIds unset, searchAssetBuilder takes its album branch
-          // (`albumIds && !userIds` -> albumSharedSpaceScope, database.ts:713). Owner-scoping an album
+          // (`albumIds && !userIds` -> albumConfinedToViewer). Owner-scoping an album
           // query hides the album owner's pins from a viewer of a shared album — issue #656.
           userIds: undefined,
         }),
@@ -13559,7 +13579,7 @@ describe(SharedSpaceService.name, () => {
     // The album map matches the album grid (issue #656 follow-up): album ACCESS (AlbumRead) is the
     // whole boundary for an album query, so it must NOT be re-gated by the caller's shared-space
     // timeline preference. Before this fix, an album query computed timelineSpaceIds and
-    // searchAssetBuilder fed it into albumSharedSpaceScope, so a shared album asset lost its pin
+    // searchAssetBuilder fed it into albumConfinedToViewer, so a shared album asset lost its pin
     // whenever the caller wasn't a member of that space, or had simply toggled it out of their
     // timeline — even though the grid kept showing it. Now the album branch opts out entirely via
     // albumAccessIsBoundary, so getSpaceIdsForTimeline is never even called for an album query.
@@ -13596,7 +13616,7 @@ describe(SharedSpaceService.name, () => {
     });
 
     // spaceId ∩ albumId is unsatisfiable by construction (see the decision note above): the space scope
-    // demands membership in shared_space_asset, albumSharedSpaceScope (timelineSpaceIds unset under a
+    // demands membership in shared_space_asset, albumConfinedToViewer (timelineSpaceIds unset under a
     // spaceId query) demands the opposite. Fail loudly instead of returning a silently empty map.
     //
     // Both access checks are armed to SUCCEED here so that the guard under test is the only thing that

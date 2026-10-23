@@ -168,7 +168,7 @@ vi.mock('$lib/modals/RepresentativeFacePickerModal.svelte', async () => {
   return { default: MockComponent };
 });
 
-vi.mock('$lib/modals/PersonSuggestionReviewModal.svelte', async () => {
+vi.mock('$lib/gallery/people/PersonSuggestionReviewModal.svelte', async () => {
   const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
   return { default: MockComponent };
 });
@@ -642,6 +642,73 @@ describe('Person detail page', () => {
     expect(await screen.findByText('set_date_of_birth')).toBeInTheDocument();
     expect(screen.getByText('hide_person')).toBeInTheDocument();
     expect(screen.getByText('select_representative_face')).toBeInTheDocument();
+  });
+
+  // #1098: a space editor naming a person from someone else's library owns none of the existing
+  // people, so an owner-only search suggested nothing.
+  it('suggests shared-space people while a space editor renames a space-primary person', async () => {
+    mockSpaceRoles({ 'editor-space-rename': SharedSpaceRole.Editor });
+    sdkMock.searchPerson.mockResolvedValue([
+      makePerson({
+        id: 'space-person-norgy',
+        name: 'Norgy',
+        primaryProfile: { type: Type.SpacePerson, id: 'space-person-norgy', spaceId: 'editor-space-rename' },
+      }),
+    ]);
+    renderPage({
+      person: makePerson({
+        id: 'space-person-1',
+        name: '',
+        primaryProfile: { type: Type.SpacePerson, id: 'space-person-1', spaceId: 'editor-space-rename' },
+      }),
+    });
+
+    await waitFor(() => expect(sdkMock.getAllSpaces).toHaveBeenCalled());
+    await userEvent.click(screen.getByTitle('edit_name'));
+    await userEvent.type(screen.getByPlaceholderText('add_a_name'), 'Norg');
+
+    expect(sdkMock.searchPerson).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'N', withSharedSpaces: true }),
+      expect.anything(),
+    );
+    const suggestion = await screen.findByRole('menuitem', { name: 'Norgy' });
+    expect(suggestion.querySelector('img')?.getAttribute('src')).toContain(
+      '/shared-spaces/editor-space-rename/people/space-person-norgy/thumbnail',
+    );
+  });
+
+  it('offers to merge into a shared-space person whose name the renamed person now matches', async () => {
+    mockSpaceRoles({ 'editor-space-merge': SharedSpaceRole.Editor });
+    const norgy = makePerson({
+      id: 'space-person-norgy',
+      name: 'Norgy',
+      primaryProfile: { type: Type.SpacePerson, id: 'space-person-norgy', spaceId: 'editor-space-merge' },
+    });
+    sdkMock.searchPerson.mockResolvedValue([norgy]);
+    vi.mocked(modalManager.show).mockResolvedValue(undefined as never);
+    sdkMock.updateSpacePerson.mockResolvedValue({ id: 'space-person-1', name: 'Norgy' } as never);
+    renderPage({
+      person: makePerson({
+        id: 'space-person-1',
+        name: '',
+        primaryProfile: { type: Type.SpacePerson, id: 'space-person-1', spaceId: 'editor-space-merge' },
+      }),
+    });
+
+    await waitFor(() => expect(sdkMock.getAllSpaces).toHaveBeenCalled());
+    await userEvent.click(screen.getByTitle('edit_name'));
+    await userEvent.type(screen.getByPlaceholderText('add_a_name'), 'Norgy');
+    await userEvent.keyboard('{Enter}');
+
+    await waitFor(() =>
+      expect(sdkMock.searchPerson).toHaveBeenCalledWith({ name: 'Norgy', withHidden: true, withSharedSpaces: true }),
+    );
+    await waitFor(() =>
+      expect(modalManager.show).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ personToBeMergedInto: norgy }),
+      ),
+    );
   });
 
   it('opens the representative face picker from the person menu', async () => {

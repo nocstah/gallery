@@ -3,10 +3,10 @@
 // ones, newest first, and Ctrl+Z takes back the newest. The history lasts as long as the page (a reload starts it
 // afresh) and keeps the last 30. An entry leaves once it is undone, from the bar, Ctrl+Z or its toast's own Undo
 // button alike, so nothing is taken back twice.
-import { page } from '$app/state';
 import { toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
+import { page } from '$app/state';
 import { handleError } from '$lib/utils/handle-error';
 
 export type UndoEntry = {

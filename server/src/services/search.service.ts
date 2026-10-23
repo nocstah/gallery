@@ -5,8 +5,6 @@ import { AuthDto } from 'src/dtos/auth.dto.js';
 import { SystemConfig } from 'src/dtos/config.dto.js';
 import { PersonResponseDto, mapPerson } from 'src/dtos/person.dto.js';
 import {
-  FilterSuggestionsRequestDto,
-  FilterSuggestionsResponseDto,
   LargeAssetSearchDto,
   MetadataSearchDto,
   PlacesResponseDto,
@@ -20,15 +18,19 @@ import {
   SearchSuggestionType,
   SmartSearchDto,
   SmartSearchFacetsDto,
-  SmartSearchFacetsResponseDto,
   StatisticsSearchDto,
-  TagSuggestionRequestDto,
-  TagSuggestionResponseDto,
   isFullyAlbumConfined,
   isNewShapeRequest,
   mapPlaces,
 } from 'src/dtos/search.dto.js';
 import { AssetOrder, AssetVisibility, Permission } from 'src/enum.js';
+import {
+  FilterSuggestionsRequestDto,
+  FilterSuggestionsResponseDto,
+  SmartSearchFacetsResponseDto,
+  TagSuggestionRequestDto,
+  TagSuggestionResponseDto,
+} from 'src/gallery/dtos/search.dto.js';
 import { AssetSearchScope } from 'src/repositories/search.repository.js';
 import { BaseService } from 'src/services/base.service.js';
 import { requireElevatedPermission } from 'src/utils/access.js';
@@ -37,7 +39,12 @@ import { favoriteViewerId, rejectSharedLinkFavoriteFilter } from 'src/utils/favo
 import { isSmartSearchEnabled } from 'src/utils/misc.js';
 import { decodeSearchCursor, encodeSearchCursor } from 'src/utils/search-cursor.js';
 import { applyLockedVisibilityPolicy, collectFilterIds } from 'src/utils/search-filter.js';
-import { ViewerScope } from 'src/utils/viewer-scope.js';
+import {
+  StructuredSearchRequest,
+  ViewerScope,
+  searchScopeV3,
+  structuredSearchViewerRequest,
+} from 'src/utils/viewer-scope.js';
 
 // Opt-in env flag for per-phase smart-search timing logs. Set
 // GALLERY_SEARCH_TIMING=true to emit one `log`-level line per smart search
@@ -50,7 +57,7 @@ type ResolvedSmartSearch = {
   options: Omit<SmartSearchDto, 'page' | 'size' | 'order' | 'visibility'> & {
     embedding: string;
     // Optional: an `albumIds` scope deliberately leaves this unset so the album access check is the
-    // boundary and `albumSharedSpaceScope` re-gates — see resolveSmartSearch.
+    // boundary and `albumConfinedToViewer` re-gates; see resolveSmartSearch.
     userIds?: string[];
     callerId?: string;
     authUserId: string;
@@ -67,32 +74,6 @@ type ResolvedSmartSearch = {
   encodeMs: number;
   timelineSpaceCount: number;
 };
-
-/**
- * ─── UPSTREAM SEARCH V3 — DORMANT ───────────────────────────────
- *
- * immich-30179 made the four search endpoints dispatch to V3 whenever the request body carries the
- * structured shape (`filter` / `orderBy` / `cursor`). Gallery stays on the legacy path for now:
- * V3's `searchAssetBuilder` scopes only by `asset.ownerId`, and on album-confined branches it drops
- * the ownership predicate entirely — so it has no shared-space arm and none of the Archive+Timeline
- * re-gating that `searchAssetBuilderLegacy` applies. Routing to it would put a second, un-gated
- * search path next to the gated one. Adopting V3 is a deliberate future project; the analysis and
- * the switch-over plan live in specs/2026-07-23-search-v3-coexistence-design.md.
- *
- * We REJECT rather than fall through to legacy: the legacy path ignores `filter` completely, so a
- * silent fallthrough would return a WIDER result set than the caller asked for.
- *
- * Upstream's V3 service and repository methods stay present and reachable only from here, so
- * upstream's own changes to them keep auto-merging. To adopt V3, delete this helper and restore
- * `return this.<x>V3(auth, dto)` at the four call sites.
- *
- * Guarded by the `search-v3-not-dispatched` ci-invariant in docs/fork/ownership.yml, so a careless
- * rebase resolution cannot silently re-enable V3.
- */
-const newShapeUnsupported = () =>
-  new BadRequestException(
-    'Structured search (filter/orderBy/cursor) is not supported on this server. Use the flat search fields.',
-  );
 
 @Injectable()
 export class SearchService extends BaseService {
@@ -182,7 +163,7 @@ export class SearchService extends BaseService {
 
   async searchMetadata(auth: AuthDto, dto: MetadataSearchDto): Promise<SearchResponseDto> {
     if (isNewShapeRequest(dto)) {
-      throw newShapeUnsupported();
+      return this.searchMetadataV3(auth, dto);
     }
     this.rejectTrashParamsForSpaceScope(dto);
 
@@ -244,7 +225,7 @@ export class SearchService extends BaseService {
 
   async searchStatistics(auth: AuthDto, dto: StatisticsSearchDto): Promise<SearchStatisticsResponseDto> {
     if (isNewShapeRequest(dto)) {
-      throw newShapeUnsupported();
+      return this.searchStatisticsV3(auth, dto);
     }
     this.rejectTrashParamsForSpaceScope(dto);
 
@@ -280,7 +261,7 @@ export class SearchService extends BaseService {
 
   async searchRandom(auth: AuthDto, dto: RandomSearchDto): Promise<AssetResponseDto[]> {
     if (isNewShapeRequest(dto)) {
-      throw newShapeUnsupported();
+      return this.searchRandomV3(auth, dto);
     }
     this.rejectTrashParamsForSpaceScope(dto);
 
@@ -351,7 +332,7 @@ export class SearchService extends BaseService {
 
   async searchSmart(auth: AuthDto, dto: SmartSearchDto): Promise<SearchResponseDto> {
     if (isNewShapeRequest(dto)) {
-      throw newShapeUnsupported();
+      return this.searchSmartV3(auth, dto);
     }
 
     const t0 = performance.now();
@@ -386,7 +367,7 @@ export class SearchService extends BaseService {
     });
     const tResolved = performance.now();
 
-    const result = await this.searchRepository.getSmartSearchFacets(options);
+    const result = await this.smartFacetRepository.getSmartSearchFacets(options);
     const tDb = performance.now();
 
     if (searchTimingEnabled) {
@@ -455,7 +436,7 @@ export class SearchService extends BaseService {
     const userIds = await this.getUserIdsToSearch(auth);
 
     const scope = await this.resolveViewerScope(auth, 'search', dto);
-    return this.searchRepository.getAccessibleTags(userIds, { ...dto, ...scope });
+    return this.filterSuggestionRepository.getAccessibleTags(userIds, { ...dto, ...scope });
   }
 
   async getFilterSuggestions(auth: AuthDto, dto: FilterSuggestionsRequestDto): Promise<FilterSuggestionsResponseDto> {
@@ -484,7 +465,7 @@ export class SearchService extends BaseService {
       ...dto,
       ...(await this.resolveViewerScope(auth, 'search', { ...dto, withFavoriteSpaces: true })),
     };
-    return await this.searchRepository.getFilterSuggestions(userIds, resolvedDto);
+    return await this.filterSuggestionRepository.getFilterSuggestions(userIds, resolvedDto);
   }
 
   private getSuggestions(
@@ -493,22 +474,22 @@ export class SearchService extends BaseService {
   ): Promise<Array<string | null>> {
     switch (dto.type) {
       case SearchSuggestionType.COUNTRY: {
-        return this.searchRepository.getCountries(userIds, dto);
+        return this.filterSuggestionRepository.getCountries(userIds, dto);
       }
       case SearchSuggestionType.STATE: {
-        return this.searchRepository.getStates(userIds, dto);
+        return this.filterSuggestionRepository.getStates(userIds, dto);
       }
       case SearchSuggestionType.CITY: {
-        return this.searchRepository.getCities(userIds, dto);
+        return this.filterSuggestionRepository.getCities(userIds, dto);
       }
       case SearchSuggestionType.CAMERA_MAKE: {
-        return this.searchRepository.getCameraMakes(userIds, dto);
+        return this.filterSuggestionRepository.getCameraMakes(userIds, dto);
       }
       case SearchSuggestionType.CAMERA_MODEL: {
-        return this.searchRepository.getCameraModels(userIds, dto);
+        return this.filterSuggestionRepository.getCameraModels(userIds, dto);
       }
       case SearchSuggestionType.CAMERA_LENS_MODEL: {
-        return this.searchRepository.getCameraLensModels(userIds, dto);
+        return this.filterSuggestionRepository.getCameraLensModels(userIds, dto);
       }
       default: {
         return Promise.resolve([]);
@@ -579,7 +560,7 @@ export class SearchService extends BaseService {
 
   private async resolveSearchScopeV3(
     auth: AuthDto,
-    dto: { filter?: SearchFilter },
+    dto: StructuredSearchRequest,
   ): Promise<{ filter: SearchFilter; scope: AssetSearchScope }> {
     const filter = dto.filter ?? {};
     const effectiveFilter = applyLockedVisibilityPolicy(auth, filter);
@@ -591,13 +572,22 @@ export class SearchService extends BaseService {
     }
 
     const albumIds = collectFilterIds(filter, 'albumIds');
-    const [userIds] = await Promise.all([
+    const [userIds, viewer] = await Promise.all([
       // a fully confined filter searches albums only, so the unused universe can skip the partner lookup
       fullyConfined ? [auth.user.id] : this.getUserIdsToSearch(auth),
+      this.resolveViewerScope(auth, 'search', structuredSearchViewerRequest(dto, albumIds)),
       albumIds.length > 0 ? this.requireAccess({ auth, ids: albumIds, permission: Permission.AlbumRead }) : undefined,
     ]);
 
-    return { filter: effectiveFilter, scope: { userIds, lockedOwnerId: auth.user.id, viewingUserId: auth.user.id } };
+    return {
+      filter: effectiveFilter,
+      scope: {
+        userIds,
+        lockedOwnerId: auth.user.id,
+        viewingUserId: auth.user.id,
+        ...searchScopeV3(auth, dto, viewer, userIds),
+      },
+    };
   }
 
   private async resolveEmbedding(
@@ -658,7 +648,7 @@ export class SearchService extends BaseService {
     /**
      * An `albumIds` scope makes the ALBUM the access boundary, exactly as `searchMetadata` already
      * treats it (see the matching branch there): check `AlbumRead` up front, then leave `userIds`
-     * unset so `albumSharedSpaceScope` re-gates the rows in the query builder.
+     * unset so `albumConfinedToViewer` re-gates the rows in the query builder.
      *
      * Keeping the owner-scoping `userIds` here instead was a filter-honesty bug. An album page
      * BROWSES by album access — timeline.service resolves `albumSpaceIds` from plain membership —
@@ -721,7 +711,7 @@ export class SearchService extends BaseService {
       ...dto,
       ...scope,
       // Undefined under an album scope — the AlbumRead check above is the boundary there, and
-      // `albumSharedSpaceScope` in the query builder is what re-gates visibility and trash.
+      // `albumConfinedToViewer` in the query builder is what re-gates visibility and trash.
       userIds: albumScoped ? undefined : await this.getUserIdsToSearch(auth, visibility),
       // Always set, unlike userIds: the facets' people list needs the viewer even when nothing is
       // owner-scoped. See SearchEmbeddingOptions.callerId.

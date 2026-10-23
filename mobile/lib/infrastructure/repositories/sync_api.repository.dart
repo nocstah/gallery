@@ -24,6 +24,20 @@ class SyncApiRepository {
     return _api.syncApi.deleteSyncAck(SyncAckDeleteDto(types: Optional.present(types)));
   }
 
+  /// The fork's original shared-space and library request types. Every fork server accepts them;
+  /// a stock Immich server does not.
+  static const _forkSyncTypes = [
+    SyncRequestType.sharedSpacesV1,
+    SyncRequestType.sharedSpaceMembersV1,
+    SyncRequestType.sharedSpaceAssetsV1,
+    SyncRequestType.sharedSpaceAssetExifsV1,
+    SyncRequestType.sharedSpaceToAssetsV1,
+    SyncRequestType.librariesV1,
+    SyncRequestType.libraryAssetsV1,
+    SyncRequestType.libraryAssetExifsV1,
+    SyncRequestType.sharedSpaceLibrariesV1,
+  ];
+
   /// The Phase-2B space-album request types that are safe to send from the `serverVersion >
   /// 5.0.0` fallback below: the original five that every fork server shipping version-gated
   /// space albums accepts, plus the per-member hidden-album rows from #1041, which ride the
@@ -110,25 +124,12 @@ class SyncApiRepository {
           if (serverVersion.supports(.syncAssetOcrV1)) SyncRequestType.assetOcrV1,
           // --- gallery-fork: shared-space + library sync types ---
           //
-          // PR 1 added the server emitters and the mobile dispatch handlers but
-          // never added these types to the mobile's request list, so the sync
-          // stream silently skipped them. PR 2's SpaceDetailPage UI switchover
-          // surfaced the bug because the new Drift-backed timeline depends on
-          // these tables being populated. Without these entries the
-          // shared_space_*, library_* tables stay empty forever.
-          //
-          // These are gallery-fork-only types — a stock Immich server will
-          // reject the request. The mobile build is intended to talk only to
-          // gallery-fork servers.
-          SyncRequestType.sharedSpacesV1,
-          SyncRequestType.sharedSpaceMembersV1,
-          SyncRequestType.sharedSpaceAssetsV1,
-          SyncRequestType.sharedSpaceAssetExifsV1,
-          SyncRequestType.sharedSpaceToAssetsV1,
-          SyncRequestType.librariesV1,
-          SyncRequestType.libraryAssetsV1,
-          SyncRequestType.libraryAssetExifsV1,
-          SyncRequestType.sharedSpaceLibrariesV1,
+          // A stock Immich server 400s the WHOLE /sync/stream request on any of these, so they ride
+          // the same declaration-or-version gate as the legacy space-album types below.
+          if (supportedSyncTypes != null)
+            ...(_forkSyncTypes.where((type) => supportedSyncTypes.contains(type.toJson())))
+          else if (serverVersion > const SemVer(major: 5, minor: 0, patch: 0))
+            ..._forkSyncTypes,
           // --- gallery-fork: shared-space album sync types (Phase 2B) ---
           //
           // mobile-1: gate the legacy 5 request types behind the fork-server version that
@@ -142,12 +143,12 @@ class SyncApiRepository {
           // is the last release WITHOUT space-albums; the feature (and its original five
           // enum values) ship in the next release, so gate on strictly-after-5.0.0, which
           // also admits the feature's release-candidates. See slice-5 plan §0.1 for the
-          // full evidence and the release-time reconciliation note. There is no
-          // complementary server-side defense: a slice-5 filter that dropped unknown
-          // request types was later reverted, so an older/skewed server's
-          // SyncRequestTypeSchema still 400s the WHOLE /sync/stream request on any
-          // unrecognized type. This client-side version gate is therefore the ONLY
-          // protection — every future gallery-fork-only request type MUST be gated the
+          // full evidence and the release-time reconciliation note.
+          // Servers from the unknown-type filter in server/src/dtos/sync.dto.ts onward DROP request
+          // types they do not know instead of rejecting the request, but every deployed server older
+          // than that still 400s the WHOLE /sync/stream request on any unrecognized type, so this
+          // client-side version gate remains the protection for those servers. Every future
+          // gallery-fork-only request type MUST be gated the
           // same way. CAVEAT: that was true only until capability signalling shipped — see
           // the M14 paragraph immediately below, which supersedes this instruction for any
           // request type introduced afterward. Do NOT add a new type to
@@ -174,8 +175,9 @@ class SyncApiRepository {
           // #763 per-user favorites stream. AssetFavoritesV1 was introduced AFTER capability
           // signalling shipped (v5.7.0), so — exactly like SharedSpaceAlbumFoldersV1 above — it
           // is sent ONLY behind an explicit server declaration, never on a version fallback: no
-          // pre-declaration server (fork 5.2.1–5.6.x) can accept it, and an unknown enum value
-          // 400s the WHOLE /sync/stream request. A null declaration therefore sends nothing here.
+          // pre-declaration server (fork 5.2.1–5.6.x) can accept it, and a pre-filter server 400s
+          // the WHOLE /sync/stream request on an unknown value. A null declaration therefore sends
+          // nothing here.
           // Membership is tested with `toJson()`, matching the space-album filter above — the
           // generated enum has no `.value`.
           if (supportedSyncTypes != null)
@@ -246,7 +248,20 @@ class SyncApiRepository {
         continue;
       }
 
-      data.add(SyncEvent(type: type, data: converter(dataJson), ack: ack));
+      // A Gallery server older than the trim endpoint sends trims as `AssetEditV1` rows whose action this client's
+      // enum no longer has; skipping that line keeps the rest of the stream syncing. Any other line fails as upstream.
+      final Object event;
+      try {
+        event = converter(dataJson);
+      } catch (error) {
+        if (type != SyncEntityType.assetEditV1) {
+          rethrow;
+        }
+        final id = dataJson is Map ? dataJson['id'] : null;
+        _logger.warning("Skipping undecodable $type line (id: $id): $error");
+        continue;
+      }
+      data.add(SyncEvent(type: type, data: event, ack: ack));
     }
 
     return data;

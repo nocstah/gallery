@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/memory.model.dart';
+import 'package:immich_mobile/extensions/datetime_extensions.dart';
 import 'package:immich_mobile/extensions/object_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/utils/memory_card_text.dart';
@@ -12,7 +13,7 @@ String getMemoryTitle(Translations t, Memory memory, {RemoteAsset? asset, bool p
       // Gallery: MemoryData is the fork's raw-map payload (#418), so `year` is nullable.
       MemoryTypeEnum.onThisDay =>
         preferDate
-            ? DateFormat.yMMMMd().format(memory.memoryAt)
+            ? DateFormat.yMMMMd(resolvedDateTimeLocale()).format(memory.memoryAt)
             : switch (memory.data.year) {
                 final year? => t.years_ago(years: DateTime.now().year - year),
                 null => t.memory,

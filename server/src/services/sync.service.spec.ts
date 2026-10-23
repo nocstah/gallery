@@ -1,9 +1,10 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Writable } from 'node:stream';
 import { AlbumUserRole, AssetVisibility, MemoryType, SyncEntityType, SyncRequestType } from 'src/enum.js';
-import { SYNC_TYPES_ORDER, SyncService, send } from 'src/services/sync.service.js';
+import { GallerySyncStreams } from 'src/gallery/utils/gallery-sync.streams.js';
+import { SYNC_TYPES_ORDER, SyncService } from 'src/services/sync.service.js';
 import { ClientDisconnectedError } from 'src/utils/response.js';
-import { serialize, toAck } from 'src/utils/sync.js';
+import { send, serialize, toAck } from 'src/utils/sync.js';
 import { authStub } from 'test/fixtures/auth.stub.js';
 import { newUuid } from 'test/small.factory.js';
 import { ServiceMocks, makeStream, newTestService } from 'test/utils.js';
@@ -201,8 +202,9 @@ const setupSyncMocks = (mocks: ServiceMocks) => {
     sharedSpaceAlbumToAsset: makeSub(),
   };
 
-  // Assign onto the mock
+  // Assign onto the mock; the fork streams live on GallerySyncRepository, backed by the same sub-mocks.
   Object.assign(mocks.sync, subs);
+  Object.assign(mocks.gallerySync, subs);
 
   return subs;
 };
@@ -210,6 +212,57 @@ const setupSyncMocks = (mocks: ServiceMocks) => {
 // A stock Immich client requests no gallery-fork-only sync type; a Gallery app always adds SharedSpacesV1.
 const stockClient = (...types: SyncRequestType[]) => types;
 const galleryClient = (...types: SyncRequestType[]) => [...types, SyncRequestType.SharedSpacesV1];
+
+describe('isForkAwareClient', () => {
+  const { isForkAwareClient } = GallerySyncStreams;
+
+  // upstream Immich v3.3.1's SyncRequestType: everything a stock client can send
+  const upstreamTypes = [
+    'AlbumsV1',
+    'AlbumsV2',
+    'AlbumUsersV1',
+    'AlbumToAssetsV1',
+    'AlbumAssetsV1',
+    'AlbumAssetsV2',
+    'AlbumAssetExifsV1',
+    'AssetsV1',
+    'AssetsV2',
+    'AssetExifsV1',
+    'AssetEditsV1',
+    'AssetMetadataV1',
+    'AssetOcrV1',
+    'AuthUsersV1',
+    'AuthUsersV2',
+    'MemoriesV1',
+    'MemoriesV2',
+    'MemoryToAssetsV1',
+    'MemoryToAssetsV2',
+    'PartnersV1',
+    'PartnerAssetsV1',
+    'PartnerAssetsV2',
+    'PartnerAssetExifsV1',
+    'PartnerStacksV1',
+    'StacksV1',
+    'UsersV1',
+    'PeopleV1',
+    'AssetFacesV1',
+    'AssetFacesV2',
+    'AssetFacesV3',
+    'UserMetadataV1',
+  ] as SyncRequestType[];
+
+  it('should be false for a request made only of upstream types', () => {
+    expect(isForkAwareClient({ types: upstreamTypes })).toBe(false);
+  });
+
+  it('should be true when any fork-only type is requested', () => {
+    const forkTypes = Object.values(SyncRequestType).filter((type) => !upstreamTypes.includes(type));
+    expect(forkTypes.length).toBeGreaterThan(0);
+    for (const type of forkTypes) {
+      expect(isForkAwareClient({ types: [SyncRequestType.AssetsV2, type] })).toBe(true);
+    }
+  });
+});
 
 describe(SyncService.name, () => {
   let sut: SyncService;
@@ -244,6 +297,16 @@ describe(SyncService.name, () => {
     return parseChunks(chunks)
       .filter((m: any) => m.type === entityType)
       .map((m: any) => m.data.type);
+  };
+
+  // Streams `types` and returns the messages of `entityType`.
+  const streamTypes = async (types: SyncRequestType[], entityType: SyncEntityType) => {
+    const { writable, chunks } = makeWritable();
+    mocks.session.isPendingSyncReset.mockResolvedValue(false);
+    mocks.syncCheckpoint.getAll.mockResolvedValue([]);
+    mocks.syncCheckpoint.getNow.mockResolvedValue({ nowId: 'now-id' });
+    await sut.stream(authStub.user1, writable, { types });
+    return parseChunks(chunks).filter((m: any) => m.type === entityType);
   };
 
   it('should exist', () => {
@@ -779,6 +842,25 @@ describe(SyncService.name, () => {
         // upstream's on_this_day-only and unscoped link queries must not serve either version
         expect(syncSubs.memoryToAsset.getUpsertsV1).not.toHaveBeenCalled();
         expect(syncSubs.memoryToAsset.getUpserts).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('stock Immich client gating', () => {
+      it('should ask for pet people and faces only for a Gallery client', async () => {
+        for (const [types, withPets] of [
+          [stockClient(SyncRequestType.PeopleV1, SyncRequestType.AssetFacesV2, SyncRequestType.AssetFacesV3), false],
+          [galleryClient(SyncRequestType.PeopleV1, SyncRequestType.AssetFacesV2, SyncRequestType.AssetFacesV3), true],
+        ] as const) {
+          syncSubs.person.getUpserts.mockClear();
+          syncSubs.assetFace.getUpsertsV2.mockClear();
+          syncSubs.assetFace.getUpsertsV3.mockClear();
+
+          await streamTypes([...types], SyncEntityType.PersonV1);
+
+          expect(syncSubs.person.getUpserts).toHaveBeenCalledWith(expect.anything(), withPets);
+          expect(syncSubs.assetFace.getUpsertsV2).toHaveBeenCalledWith(expect.anything(), withPets);
+          expect(syncSubs.assetFace.getUpsertsV3).toHaveBeenCalledWith(expect.anything(), withPets);
+        }
       });
     });
 

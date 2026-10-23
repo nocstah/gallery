@@ -29,7 +29,7 @@
 </p>
 
 > [!NOTE]
-> This is a community fork of [Immich](https://github.com/immich-app/immich) with extra features on top. It is currently based on Immich v3.3.1, and we rebase onto new upstream releases as they land. See [What's Different](#whats-different-from-upstream-immich) below.
+> This is a community fork of [Immich](https://github.com/immich-app/immich) with extra features on top. It is currently based on Immich v3.3.5, and we rebase onto new upstream releases as they land. See [What's Different](#whats-different-from-upstream-immich) below.
 
 > [!TIP]
 > **Already running Immich?** Switching to Gallery is a three-line config change: two image names in your `docker-compose.yml` and `IMMICH_VERSION=v5` in your `.env`. Your library and database are fully compatible. See the [install guide](https://opennoodle.de/install/#migrate-from-immich).
@@ -104,6 +104,8 @@ Filtering the timeline in the Immich mobile app means switching to a separate ta
 ## Switching to This Fork
 
 The switch is a small edit to your Docker Compose setup: the image names, and the version variable if you pin one. Your existing database, configuration and media files are fully compatible.
+
+Your Immich must be at v3.3.1 or older (Gallery's current upstream base); see the [switch guide](https://docs.opennoodle.de/guides/switch-to-gallery).
 
 ### Step 1: Back Up Your Database
 

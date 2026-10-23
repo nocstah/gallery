@@ -1,8 +1,12 @@
 import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+
+// The standalone build does not load SvelteKit's config, which normally creates this bundle.
+const mergedDir = resolve(import.meta.dirname, '../i18n/gallery/merged');
 
 /** Standalone public player: no Gallery shell, authentication manager, private API or SvelteKit runtime. */
 export default defineConfig({
@@ -17,6 +21,11 @@ export default defineConfig({
   plugins: [
     {
       name: 'memory-translations',
+      buildStart() {
+        execFileSync(process.execPath, [resolve(import.meta.dirname, '../i18n/gallery/merge.mjs')], {
+          stdio: 'inherit',
+        });
+      },
       resolveId(id) {
         return id.startsWith('virtual:memory-messages/') ? `\0${id}` : undefined;
       },
@@ -41,7 +50,7 @@ export default defineConfig({
           'loading',
           'retry',
         ]);
-        const messages = JSON.parse(readFileSync(resolve(import.meta.dirname, `../i18n/${match[1]}.json`), 'utf8'));
+        const messages = JSON.parse(readFileSync(resolve(mergedDir, `${match[1]}.json`), 'utf8'));
         const selected = Object.fromEntries(
           Object.entries(messages).filter(
             ([key]) => key.startsWith('memory_') || key.startsWith('memories_') || common.has(key),

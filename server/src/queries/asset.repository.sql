@@ -165,249 +165,6 @@ group by
 order by
   ("localDateTime" at time zone 'UTC')::date desc
 
--- AssetRepository.getMemoryAssetsForPerson
-select distinct
-  on ("asset"."id") "asset"."id",
-  "asset"."localDateTime"
-from
-  "asset"
-  inner join "asset_face" on "asset_face"."assetId" = "asset"."id"
-  inner join "asset_job_status" on "asset_job_status"."assetId" = "asset"."id"
-where
-  "asset"."ownerId" = $1
-  and "asset_face"."personGroupId" = $2
-  and "asset_face"."deletedAt" is null
-  and "asset_face"."isVisible" is true
-  and "asset"."visibility" = $3
-  and "asset"."deletedAt" is null
-  and "asset"."localDateTime" <= $4
-  and exists (
-    select
-      "asset_file"."assetId"
-    from
-      "asset_file"
-    where
-      "asset_file"."assetId" = "asset"."id"
-      and "asset_file"."type" = $5
-  )
-order by
-  "asset"."id",
-  "asset"."localDateTime" desc
-limit
-  $6
-
--- AssetRepository.getMemoryLocationClusters
-select
-  "asset_exif"."country" as "country",
-  "asset_exif"."city" as "city",
-  count(*)::int as "assetCount",
-  count(
-    distinct (asset."localDateTime" at time zone 'UTC')::date
-  )::int as "dayCount",
-  min(asset."localDateTime") as "firstDate",
-  max(asset."localDateTime") as "lastDate"
-from
-  "asset"
-  inner join "asset_exif" on "asset_exif"."assetId" = "asset"."id"
-where
-  "asset"."ownerId" = $1
-  and "asset"."visibility" = $2
-  and "asset"."deletedAt" is null
-  and "asset"."localDateTime" >= $3
-  and "asset"."localDateTime" <= $4
-  and "asset_exif"."country" is not null
-  and exists (
-    select
-      "asset_file"."assetId"
-    from
-      "asset_file"
-    where
-      "asset_file"."assetId" = "asset"."id"
-      and "asset_file"."type" = $5
-  )
-group by
-  "asset_exif"."country",
-  "asset_exif"."city"
-order by
-  "assetCount" desc
-
--- AssetRepository.getMemoryAssetsForLocation
-select
-  "asset"."id",
-  "asset"."localDateTime"
-from
-  "asset"
-  inner join "asset_exif" on "asset_exif"."assetId" = "asset"."id"
-where
-  "asset"."ownerId" = $1
-  and "asset"."visibility" = $2
-  and "asset"."deletedAt" is null
-  and "asset"."localDateTime" >= $3
-  and "asset"."localDateTime" <= $4
-  and "asset_exif"."country" = $5
-  and "asset_exif"."city" = $6
-  and exists (
-    select
-      "asset_file"."assetId"
-    from
-      "asset_file"
-    where
-      "asset_file"."assetId" = "asset"."id"
-      and "asset_file"."type" = $7
-  )
-order by
-  "asset"."localDateTime" asc
-
--- AssetRepository.getMemoryAssetsForPeriod
-select
-  "asset"."id",
-  "asset"."localDateTime",
-  "asset"."type",
-  "asset"."duration",
-  "asset_exif"."country" as "country",
-  "asset_exif"."city" as "city",
-  exists (
-    select
-      1 as "exists"
-    from
-      "asset_favorite"
-    where
-      "asset_favorite"."assetId" = "asset"."id"
-      and "asset_favorite"."userId" = $1::uuid
-  ) as "isFavorite",
-  extract(
-    year
-    from
-      (asset."localDateTime" at time zone 'UTC')
-  )::int as "year"
-from
-  "asset"
-  left join "asset_exif" on "asset_exif"."assetId" = "asset"."id"
-where
-  "asset"."ownerId" = $2
-  and "asset"."visibility" = $3
-  and "asset"."deletedAt" is null
-  and "asset"."localDateTime" <= $4
-  and extract(
-    month
-    from
-      (asset."localDateTime" at time zone 'UTC')
-  )::int in ($5)
-  and exists (
-    select
-      "asset_file"."assetId"
-    from
-      "asset_file"
-    where
-      "asset_file"."assetId" = "asset"."id"
-      and "asset_file"."type" = $6
-  )
-order by
-  "asset"."localDateTime" asc
-
--- AssetRepository.getMemoryFacesForPeriod
-select
-  "asset"."id" as "assetId",
-  "asset"."localDateTime",
-  "person"."personGroupId" as "personId",
-  "person"."name" as "personName",
-  extract(
-    year
-    from
-      (asset."localDateTime" at time zone 'UTC')
-  )::int as "year"
-from
-  "asset"
-  inner join "asset_face" on "asset_face"."assetId" = "asset"."id"
-  inner join "person" on "person"."personGroupId" = "asset_face"."personGroupId"
-where
-  "asset"."ownerId" = $1
-  and "asset"."visibility" = $2
-  and "asset"."deletedAt" is null
-  and "asset"."localDateTime" <= $3
-  and extract(
-    month
-    from
-      (asset."localDateTime" at time zone 'UTC')
-  )::int in ($4)
-  and "asset_face"."deletedAt" is null
-  and "asset_face"."isVisible" = $5
-  and "person"."ownerId" = $6
-  and "person"."name" != $7
-  and "person"."isHidden" = $8
-  and exists (
-    select
-      "asset_file"."assetId"
-    from
-      "asset_file"
-    where
-      "asset_file"."assetId" = "asset"."id"
-      and "asset_file"."type" = $9
-  )
-order by
-  "asset"."localDateTime" asc
-
--- AssetRepository.getMemoryPersonDailyCounts
-select
-  "asset_face"."personGroupId" as "personId",
-  date_trunc('day', asset."localDateTime" at time zone 'UTC') as "day",
-  count(distinct ("asset"."id")) as "count"
-from
-  "asset"
-  inner join "asset_face" on "asset_face"."assetId" = "asset"."id"
-where
-  "asset"."ownerId" = $1
-  and "asset"."visibility" = $2
-  and "asset"."deletedAt" is null
-  and "asset"."localDateTime" <= $3
-  and "asset_face"."personGroupId" in ($4)
-  and "asset_face"."deletedAt" is null
-  and "asset_face"."isVisible" = $5
-  and exists (
-    select
-      "asset_file"."assetId"
-    from
-      "asset_file"
-    where
-      "asset_file"."assetId" = "asset"."id"
-      and "asset_file"."type" = $6
-  )
-group by
-  "asset_face"."personGroupId",
-  "day"
-order by
-  "asset_face"."personGroupId",
-  "day" asc
-
--- AssetRepository.getMemoryAssetsForPersonWindow
-select distinct
-  on ("asset"."id") "asset"."id",
-  "asset"."localDateTime"
-from
-  "asset"
-  inner join "asset_face" on "asset_face"."assetId" = "asset"."id"
-where
-  "asset"."ownerId" = $1
-  and "asset_face"."personGroupId" = $2
-  and "asset_face"."deletedAt" is null
-  and "asset_face"."isVisible" = $3
-  and "asset"."visibility" = $4
-  and "asset"."deletedAt" is null
-  and "asset"."localDateTime" >= $5
-  and "asset"."localDateTime" < $6
-  and exists (
-    select
-      "asset_file"."assetId"
-    from
-      "asset_file"
-    where
-      "asset_file"."assetId" = "asset"."id"
-      and "asset_file"."type" = $7
-  )
-order by
-  "asset"."id",
-  "asset"."localDateTime" asc
-
 -- AssetRepository.getOwnedManifestAssets
 select
   "asset"."id",
@@ -436,15 +193,65 @@ limit
 
 -- AssetRepository.getByIds
 select
-  "asset".*
+  "asset".*,
+  coalesce(
+    (
+      select
+        "asset_video_trim"."duration"
+      from
+        "asset_video_trim"
+      where
+        "asset_video_trim"."assetId" = "asset"."id"
+    ),
+    "asset"."duration"
+  ) as "duration"
 from
   "asset"
 where
   "asset"."id" = any ($1::uuid[])
 
+-- AssetRepository.getByIds (with authUserId)
+select
+  "asset".*,
+  coalesce(
+    (
+      select
+        "asset_video_trim"."duration"
+      from
+        "asset_video_trim"
+      where
+        "asset_video_trim"."assetId" = "asset"."id"
+    ),
+    "asset"."duration"
+  ) as "duration",
+  exists (
+    select
+      1 as "exists"
+    from
+      "asset_favorite"
+    where
+      "asset_favorite"."assetId" = "asset"."id"
+      and "asset_favorite"."userId" = $1::uuid
+  ) as "isFavoriteForUser"
+from
+  "asset"
+where
+  "asset"."id" = any ($2::uuid[])
+
 -- AssetRepository.getByIdsWithAllRelationsButStacks
 select
   "asset".*,
+  coalesce(
+    (
+      select
+        "asset_video_trim"."duration"
+      from
+        "asset_video_trim"
+      where
+        "asset_video_trim"."assetId" = "asset"."id"
+    ),
+    "asset"."duration"
+  ) as "duration",
   (
     select
       coalesce(json_agg(agg), '[]')
@@ -457,7 +264,35 @@ select
           "asset_face"
           left join lateral (
             select
-              "person".*
+              "person".*,
+              (
+                SELECT
+                  "person_identity"."identityId"
+                FROM
+                  "person_identity"
+                WHERE
+                  "person_identity"."personGroupId" = "person"."personGroupId"
+              ) as "identityId",
+              (
+                CASE
+                  WHEN EXISTS (
+                    SELECT
+                    FROM
+                      "person_pet"
+                    WHERE
+                      "person_pet"."personGroupId" = "person"."personGroupId"
+                  ) THEN 'pet'
+                  ELSE 'person'
+                END
+              ) as "type",
+              (
+                SELECT
+                  "person_pet"."species"
+                FROM
+                  "person_pet"
+                WHERE
+                  "person_pet"."personGroupId" = "person"."personGroupId"
+              ) as "species"
             from
               "person"
             where
@@ -495,16 +330,7 @@ select
           "asset"."id" = "tag_asset"."assetId"
       ) as agg
   ) as "tags",
-  to_json("asset_exif") as "exifInfo",
-  exists (
-    select
-      1 as "exists"
-    from
-      "asset_favorite"
-    where
-      "asset_favorite"."assetId" = "asset"."id"
-      and "asset_favorite"."userId" = "asset"."ownerId"
-  ) as "isFavorite"
+  to_json("asset_exif") as "exifInfo"
 from
   "asset"
   left join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
@@ -514,6 +340,17 @@ where
 -- AssetRepository.getByIdsWithAllRelationsButStacks (with authUserId)
 select
   "asset".*,
+  coalesce(
+    (
+      select
+        "asset_video_trim"."duration"
+      from
+        "asset_video_trim"
+      where
+        "asset_video_trim"."assetId" = "asset"."id"
+    ),
+    "asset"."duration"
+  ) as "duration",
   (
     select
       coalesce(json_agg(agg), '[]')
@@ -526,7 +363,35 @@ select
           "asset_face"
           left join lateral (
             select
-              "person".*
+              "person".*,
+              (
+                SELECT
+                  "person_identity"."identityId"
+                FROM
+                  "person_identity"
+                WHERE
+                  "person_identity"."personGroupId" = "person"."personGroupId"
+              ) as "identityId",
+              (
+                CASE
+                  WHEN EXISTS (
+                    SELECT
+                    FROM
+                      "person_pet"
+                    WHERE
+                      "person_pet"."personGroupId" = "person"."personGroupId"
+                  ) THEN 'pet'
+                  ELSE 'person'
+                END
+              ) as "type",
+              (
+                SELECT
+                  "person_pet"."species"
+                FROM
+                  "person_pet"
+                WHERE
+                  "person_pet"."personGroupId" = "person"."personGroupId"
+              ) as "species"
             from
               "person"
             where
@@ -573,15 +438,6 @@ select
       "asset_favorite"
     where
       "asset_favorite"."assetId" = "asset"."id"
-      and "asset_favorite"."userId" = "asset"."ownerId"
-  ) as "isFavorite",
-  exists (
-    select
-      1 as "exists"
-    from
-      "asset_favorite"
-    where
-      "asset_favorite"."assetId" = "asset"."id"
       and "asset_favorite"."userId" = $3::uuid
   ) as "isFavoriteForUser"
 from
@@ -621,32 +477,40 @@ from
   "asset"
   inner join (
     select
+      "album_asset"."albumId" as "albumId",
       "album_asset"."assetId" as "assetId"
     from
       "album_asset"
     where
-      "album_asset"."albumId" = $1::uuid
+      "album_asset"."albumId" = any ($1::uuid[])
     union
     select
+      "album_space_asset"."albumId" as "albumId",
       "album_space_asset"."assetId" as "assetId"
     from
-      "album_space_asset"
+      "shared_space_album"
+      inner join "album_space_asset" on "album_space_asset"."albumId" = "shared_space_album"."albumId"
+      and "album_space_asset"."spaceId" = "shared_space_album"."spaceId"
+      inner join "album" as "linked_album" on "linked_album"."id" = "shared_space_album"."albumId"
+      and "linked_album"."deletedAt" is null
+      inner join "asset" on "asset"."id" = "album_space_asset"."assetId"
     where
-      "album_space_asset"."albumId" = $2::uuid
-      and "album_space_asset"."spaceId" = $3::uuid
+      "shared_space_album"."spaceId" = $2::uuid
+      and "asset"."visibility" in ($3, $4)
+      and "album_space_asset"."albumId" = any ($5::uuid[])
   ) as "album_members" on "album_members"."assetId" = "asset"."id"
   inner join "asset_face" on "asset_face"."assetId" = "asset"."id"
 where
   "asset"."deletedAt" is null
-  and "asset"."isOffline" = $4
+  and "asset"."isOffline" = $6
 group by
   "asset"."id"
 order by
   "asset"."id"
 limit
-  $5
+  $7
 offset
-  $6
+  $8
 
 -- AssetRepository.getByLibraryIdAndOriginalPath
 select
@@ -681,15 +545,7 @@ select
   "id",
   "stackId",
   "originalPath",
-  exists (
-    select
-      1 as "exists"
-    from
-      "asset_favorite"
-    where
-      "asset_favorite"."assetId" = "asset"."id"
-      and "asset_favorite"."userId" = $1::uuid
-  ) as "isFavorite",
+  "isFavorite",
   (
     select
       coalesce(json_agg(agg), '[]')
@@ -709,22 +565,24 @@ select
 from
   "asset"
 where
-  "id" = $2::uuid
+  "id" = $1::uuid
 limit
-  $3
+  $2
 
 -- AssetRepository.getById
 select
   "asset".*,
-  exists (
-    select
-      1 as "exists"
-    from
-      "asset_favorite"
-    where
-      "asset_favorite"."assetId" = "asset"."id"
-      and "asset_favorite"."userId" = "asset"."ownerId"
-  ) as "isFavorite"
+  coalesce(
+    (
+      select
+        "asset_video_trim"."duration"
+      from
+        "asset_video_trim"
+      where
+        "asset_video_trim"."assetId" = "asset"."id"
+    ),
+    "asset"."duration"
+  ) as "duration"
 from
   "asset"
 where
@@ -735,15 +593,17 @@ limit
 -- AssetRepository.getById (with authUserId)
 select
   "asset".*,
-  exists (
-    select
-      1 as "exists"
-    from
-      "asset_favorite"
-    where
-      "asset_favorite"."assetId" = "asset"."id"
-      and "asset_favorite"."userId" = "asset"."ownerId"
-  ) as "isFavorite",
+  coalesce(
+    (
+      select
+        "asset_video_trim"."duration"
+      from
+        "asset_video_trim"
+      where
+        "asset_video_trim"."assetId" = "asset"."id"
+    ),
+    "asset"."duration"
+  ) as "duration",
   exists (
     select
       1 as "exists"
@@ -959,7 +819,17 @@ with
   ),
   "cte" as (
     select
-      "asset"."duration",
+      coalesce(
+        (
+          select
+            "asset_video_trim"."duration"
+          from
+            "asset_video_trim"
+          where
+            "asset_video_trim"."assetId" = "asset"."id"
+        ),
+        "asset"."duration"
+      ) as "duration",
       "asset"."id",
       "asset"."visibility",
       exists (
@@ -1016,6 +886,8 @@ with
           and "stacked"."visibility" = $3
         group by
           "stacked"."stackId"
+        having
+          count(*) >= 2
       ) as "stacked_assets" on true
     order by
       (asset."localDateTime" AT TIME ZONE 'UTC')::date desc,
@@ -1064,7 +936,17 @@ with
   ),
   "cte" as (
     select
-      "asset"."duration",
+      coalesce(
+        (
+          select
+            "asset_video_trim"."duration"
+          from
+            "asset_video_trim"
+          where
+            "asset_video_trim"."assetId" = "asset"."id"
+        ),
+        "asset"."duration"
+      ) as "duration",
       "asset"."id",
       "asset"."visibility",
       exists (
@@ -1155,7 +1037,17 @@ with
   ),
   "cte" as (
     select
-      "asset"."duration",
+      coalesce(
+        (
+          select
+            "asset_video_trim"."duration"
+          from
+            "asset_video_trim"
+          where
+            "asset_video_trim"."assetId" = "asset"."id"
+        ),
+        "asset"."duration"
+      ) as "duration",
       "asset"."id",
       "asset"."visibility",
       exists (
@@ -1256,59 +1148,65 @@ from
 where
   (
     "asset"."ownerId" = $2::uuid
-    or exists (
-      select
-        1 as "exists"
-      from
-        "shared_space_asset"
-      where
-        "shared_space_asset"."assetId" = "asset"."id"
-        and "shared_space_asset"."spaceId" = any ($3::uuid[])
-    )
-    or exists (
-      select
-        1 as "exists"
-      from
-        "shared_space_library"
-      where
-        "shared_space_library"."libraryId" = "asset"."libraryId"
-        and "shared_space_library"."spaceId" = any ($4::uuid[])
-    )
     or (
-      exists (
-        select
-          1 as "exists"
-        from
-          "shared_space_album"
-          inner join "album_asset" on "album_asset"."albumId" = "shared_space_album"."albumId"
-          inner join "album" on "album"."id" = "shared_space_album"."albumId"
-          and "album"."deletedAt" is null
-        where
-          "album_asset"."assetId" = "asset"."id"
-          and "shared_space_album"."spaceId" = any ($5::uuid[])
-          and "shared_space_album"."showInTimeline" = $6
-      )
-      or exists (
-        select
-          1 as "exists"
-        from
-          "shared_space_album"
-          inner join "album_space_asset" on "album_space_asset"."albumId" = "shared_space_album"."albumId"
-          and "album_space_asset"."spaceId" = "shared_space_album"."spaceId"
-          inner join "album" on "album"."id" = "shared_space_album"."albumId"
-          and "album"."deletedAt" is null
-        where
-          "album_space_asset"."assetId" = "asset"."id"
-          and "shared_space_album"."spaceId" = any ($7::uuid[])
-          and "shared_space_album"."showInTimeline" = $8
+      "asset"."visibility" in ($3, $4)
+      and "asset"."deletedAt" is null
+      and (
+        exists (
+          select
+            1 as "exists"
+          from
+            "shared_space_asset"
+          where
+            "shared_space_asset"."assetId" = "asset"."id"
+            and "shared_space_asset"."spaceId" = any ($5::uuid[])
+        )
+        or exists (
+          select
+            1 as "exists"
+          from
+            "shared_space_library"
+          where
+            "shared_space_library"."libraryId" = "asset"."libraryId"
+            and "shared_space_library"."spaceId" = any ($6::uuid[])
+        )
+        or (
+          exists (
+            select
+              1 as "exists"
+            from
+              "shared_space_album"
+              inner join "album_asset" on "album_asset"."albumId" = "shared_space_album"."albumId"
+              inner join "album" as "linked_album" on "linked_album"."id" = "shared_space_album"."albumId"
+              and "linked_album"."deletedAt" is null
+            where
+              "album_asset"."assetId" = "asset"."id"
+              and "shared_space_album"."spaceId" = any ($7::uuid[])
+              and "shared_space_album"."showInTimeline" = $8
+          )
+          or exists (
+            select
+              1 as "exists"
+            from
+              "shared_space_album"
+              inner join "album_space_asset" on "album_space_asset"."albumId" = "shared_space_album"."albumId"
+              and "album_space_asset"."spaceId" = "shared_space_album"."spaceId"
+              inner join "album" as "linked_album" on "linked_album"."id" = "shared_space_album"."albumId"
+              and "linked_album"."deletedAt" is null
+            where
+              "album_space_asset"."assetId" = "asset"."id"
+              and "shared_space_album"."spaceId" = any ($9::uuid[])
+              and "shared_space_album"."showInTimeline" = $10
+          )
+        )
       )
     )
   )
-  and "visibility" = $9
-  and "type" = $10
+  and "visibility" = $11
+  and "type" = $12
   and "deletedAt" is null
 limit
-  $11
+  $13
 
 -- AssetRepository.getRecentlyCreatedAssetIds
 select
@@ -1476,7 +1374,6 @@ select
   "asset"."livePhotoVideoId",
   "asset"."originalPath",
   "asset"."originalFileName",
-  "asset"."duration",
   "asset_exif"."exifImageWidth",
   "asset_exif"."exifImageHeight",
   "asset_exif"."orientation",

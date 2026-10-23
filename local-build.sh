@@ -13,7 +13,7 @@ SRC=$(cd "$(dirname "$0")" && pwd)
 WORK=${GALLERY_BUILD_DIR:-$HOME/.cache/gallery-build}
 DEST=${GALLERY_WEB_DEST:-$HOME/immich/web-custom}
 PLAYER_DEST=${GALLERY_MEMORY_PLAYER_DEST:-$HOME/immich/memory-player}
-VERSION=$(git -C "$SRC" describe --tags --abbrev=0 2>/dev/null || echo v5.8.0-rc.1)
+VERSION=${GALLERY_FORK_VERSION:-$(git -C "$SRC" describe --tags --abbrev=0 2>/dev/null || echo v5.9.0)}
 
 mkdir -p "$WORK"
 rsync -a --delete --exclude node_modules --exclude .git --exclude 'web/build' --exclude 'web/build-memory-player' --exclude '.svelte-kit' \

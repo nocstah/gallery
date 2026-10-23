@@ -76,10 +76,10 @@ describe('leadSpace', () => {
 describe('spaceAudience', () => {
   const $t = ((key: string, options?: { values?: Record<string, unknown> }) =>
     `${key}${options?.values ? ' ' + JSON.stringify(options.values) : ''}`) as MessageFormatter;
-  const keys = { alone: 'alone', audience: 'audience' };
+  const keys = { alone: 'album_share_space_alone', audience: 'album_share_space_audience' } as const;
 
   it('says the family sees it once they have accounts while I am alone in the Space', () => {
-    expect(spaceAudience($t, 'en', family, ME, keys, { count: 2 })).toBe('alone {"count":2}');
+    expect(spaceAudience($t, 'en', family, ME, keys, { count: 2 })).toBe('album_share_space_alone {"count":2}');
   });
 
   it('names the other members, with their number for the verb', () => {
@@ -88,14 +88,16 @@ describe('spaceAudience', () => {
       member('anna', 'Anna'),
       member('ben', 'Ben'),
     ]);
-    expect(spaceAudience($t, 'en', shared, ME, keys)).toBe('audience {"names":"Anna and Ben","people":2}');
+    expect(spaceAudience($t, 'en', shared, ME, keys)).toBe(
+      'album_share_space_audience {"names":"Anna and Ben","people":2}',
+    );
   });
 
   it('names three and counts the rest once there are more than four', () => {
     const many = ['Anna', 'Ben', 'Cleo', 'Dan', 'Eve'].map((name) => member(name.toLowerCase(), name));
     const shared = space('family', 'Family', '', [member(ME, 'Me', SharedSpaceRole.Owner), ...many]);
     expect(spaceAudience($t, 'en', shared, ME, keys)).toBe(
-      String.raw`audience {"names":"Anna, Ben, Cleo, and share_more_people {\"count\":2}","people":5}`,
+      String.raw`album_share_space_audience {"names":"Anna, Ben, Cleo, and share_more_people {\"count\":2}","people":5}`,
     );
   });
 });

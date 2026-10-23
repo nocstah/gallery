@@ -10,7 +10,8 @@ Non-object JSON (`?query=42`, `?query=true`) parses, but the result is not a `Se
 
 ## Change
 
-`parseSearchTerms(raw)` replaces the bare `JSON.parse`:
+`parseSearchTerms(raw)` (`web/src/lib/gallery/search/parse-search-terms.ts`) replaces the bare
+`JSON.parse`; the upstream search page keeps only the import and the call:
 
 - JSON that parses to a plain object is used as the search terms, unchanged from before.
 - Anything else, invalid JSON or JSON that is not an object, becomes `{ query: raw }`, a text

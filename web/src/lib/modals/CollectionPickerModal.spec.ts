@@ -267,6 +267,34 @@ describe('CollectionPickerModal — expanding a space into its albums', () => {
     expect(screen.getAllByTestId('space-pool-child-s1').length).toBeGreaterThan(0);
   });
 
+  it('finds a linked album by search without expanding its space, fetching it only once (#1114)', async () => {
+    sdkMock.getAllSpaces.mockResolvedValue([spaceWithAlbums('s1', 'Family', 1)]);
+    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum('sa1', 'Sri Lanka New Year Trip')]);
+    render(CollectionPickerModal, { assetCount: 1, onClose: vi.fn() });
+    await screen.findAllByTestId('row-space-s1');
+    expect(sdkMock.getSharedSpaceAlbums).not.toHaveBeenCalled();
+
+    await fireEvent.input(screen.getByPlaceholderText('search'), { target: { value: 'Lanka' } });
+    await waitFor(() => expect(screen.getAllByTestId('row-album-sa1').length).toBeGreaterThan(0));
+
+    await fireEvent.input(screen.getByPlaceholderText('search'), { target: { value: 'Lanka N' } });
+    await waitFor(() => expect(screen.getAllByTestId('row-album-sa1').length).toBeGreaterThan(0));
+    expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps space-linked albums out of the unsearched list (#1114)', async () => {
+    sdkMock.getAllSpaces.mockResolvedValue([spaceWithAlbums('s1', 'Family', 1)]);
+    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum('sa1', 'Holiday')]);
+    render(CollectionPickerModal, { assetCount: 1, onClose: vi.fn() });
+    await screen.findAllByTestId('row-space-s1');
+
+    await fireEvent.input(screen.getByPlaceholderText('search'), { target: { value: 'Holi' } });
+    await waitFor(() => expect(screen.getAllByTestId('row-album-sa1').length).toBeGreaterThan(0));
+    await fireEvent.input(screen.getByPlaceholderText('search'), { target: { value: '' } });
+
+    await waitFor(() => expect(screen.queryAllByTestId('row-album-sa1')).toHaveLength(0));
+  });
+
   it('confirms with the linked album when one is chosen', async () => {
     const onClose = vi.fn();
     sdkMock.getAllSpaces.mockResolvedValue([spaceWithAlbums('s1', 'Family', 1)]);
@@ -586,5 +614,90 @@ describe('CollectionPickerModal — the last album', () => {
 
     loaded(albums());
     await waitFor(() => expect(onClose).toHaveBeenCalledWith([expect.objectContaining({ kind: 'album', id: 'a2' })]));
+  });
+});
+
+describe('CollectionPickerModal — valid targets for a known selection', () => {
+  const linkedAlbum = (id: string, name: string) =>
+    ({
+      id,
+      albumName: name,
+      assetCount: 2,
+      albumThumbnailAssetId: null,
+      shared: true,
+      updatedAt: '2024-01-01T00:00:00Z',
+      ownerId: 'someone-else',
+      showInTimeline: true,
+      addedById: 'me',
+      linkedAt: '2024-01-01T00:00:00Z',
+    }) as never;
+
+  const renderWithSelection = (assetIds: string[]) =>
+    render(CollectionPickerModal, { props: { assetCount: assetIds.length, assetIds, onClose: vi.fn() } });
+
+  it('hides albums that accept none of an owned selection, and shows no hint', async () => {
+    sdkMock.getAllAlbums.mockResolvedValue([album('a1', 'Trip'), albumSharedWithMe('a2', 'Viewer only')]);
+    sdkMock.getAllSpaces.mockResolvedValue([space('s1', 'Family')]);
+    sdkMock.getAlbumAddTargets.mockResolvedValue({
+      albums: [{ albumId: 'a1', acceptedAssetCount: 1 }],
+      shareableAssetCount: 1,
+    });
+
+    renderWithSelection(['mine']);
+
+    await waitFor(() => expect(screen.getAllByTestId('row-album-a1').length).toBeGreaterThan(0));
+    expect(screen.queryByTestId('row-album-a2')).toBeNull();
+    expect(screen.getAllByTestId('row-space-s1').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('non-owned-space-albums-only-notice')).toBeNull();
+    expect(sdkMock.getAlbumAddTargets).toHaveBeenCalledWith({
+      albumAddTargetsDto: { albumIds: ['a1', 'a2'], assetIds: ['mine'] },
+    });
+  });
+
+  it("another member's photo: offers only accepting space-linked albums, hides spaces and New album, shows the hint", async () => {
+    sdkMock.getAllAlbums.mockResolvedValue([album('personal', 'Personal')]);
+    sdkMock.getAllSpaces.mockResolvedValue([spaceWhereIAm('s1', 'Family', SharedSpaceRole.Editor)]);
+    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum('sa1', 'Holiday'), linkedAlbum('sa2', 'Other')]);
+    sdkMock.getAlbumAddTargets.mockImplementation(({ albumAddTargetsDto }) =>
+      Promise.resolve({
+        albums: albumAddTargetsDto.albumIds.includes('sa1') ? [{ albumId: 'sa1', acceptedAssetCount: 1 }] : [],
+        shareableAssetCount: 0,
+      }),
+    );
+
+    renderWithSelection(['theirs']);
+
+    await waitFor(() => expect(screen.getAllByTestId('row-album-sa1').length).toBeGreaterThan(0));
+    expect(screen.queryByTestId('row-album-sa2')).toBeNull();
+    expect(screen.queryByTestId('row-album-personal')).toBeNull();
+    expect(screen.queryByTestId('row-space-s1')).toBeNull();
+    expect(screen.queryByTestId('new-album-row')).toBeNull();
+    expect(screen.getByTestId('non-owned-space-albums-only-notice')).toBeTruthy();
+    expect(screen.getByText('add_to_collection_non_owned_space_albums_only')).toBeTruthy();
+  });
+
+  it('mixed selection keeps personal albums that take the owned part, and New album', async () => {
+    sdkMock.getAllAlbums.mockResolvedValue([album('personal', 'Personal')]);
+    sdkMock.getAllSpaces.mockResolvedValue([]);
+    sdkMock.getAlbumAddTargets.mockResolvedValue({
+      albums: [{ albumId: 'personal', acceptedAssetCount: 1 }],
+      shareableAssetCount: 1,
+    });
+
+    renderWithSelection(['mine', 'theirs']);
+
+    await waitFor(() => expect(screen.getByTestId('non-owned-space-albums-only-notice')).toBeTruthy());
+    expect(screen.getAllByTestId('row-album-personal').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('new-album-row')).toBeTruthy();
+  });
+
+  it('falls back to the unfiltered list when the targets request fails', async () => {
+    sdkMock.getAllAlbums.mockResolvedValue([album('a1', 'Trip')]);
+    sdkMock.getAlbumAddTargets.mockRejectedValue(new Error('old server'));
+
+    renderWithSelection(['x']);
+
+    await waitFor(() => expect(screen.getAllByTestId('row-album-a1').length).toBeGreaterThan(0));
+    expect(screen.queryByTestId('non-owned-space-albums-only-notice')).toBeNull();
   });
 });

@@ -390,7 +390,7 @@ export class FaceRepairService extends BaseService {
         return;
       }
       const candidates = await mapWithConcurrency(page, SCAN_SEARCH_CONCURRENCY, async (face) => {
-        const matches = await this.searchRepository.searchFaces({
+        const matches = await this.faceSearchRepository.searchFaces({
           userIds: [face.ownerId],
           embedding: face.embedding,
           maxDistance: options.maxDistance,
@@ -590,6 +590,9 @@ export class FaceRepairService extends BaseService {
   }
 
   async getLatestScanStatus() {
+    // Self-heal on read as well: a scan whose worker vanished (container restart, flushed Redis) otherwise
+    // stays "running" until someone triggers a new scan, and the console disables Re-scan while it does (#1105).
+    await this.faceRepairScanRepository.failStaleScans(STALE_SCAN_TIMEOUT_MS);
     const scan = await this.faceRepairScanRepository.getLatestScan();
     if (!scan) {
       return null;
@@ -1297,12 +1300,12 @@ export class FaceRepairService extends BaseService {
       throw new NotFoundException();
     }
 
-    const sourcePath = await this.getFaceThumbnailSource(face.assetId);
+    const sourcePath = await this.backendMedia.getFaceThumbnailSource(face.assetId);
     if (!sourcePath) {
       throw new NotFoundException();
     }
 
-    return this.generateFaceThumbnailResponse(face, sourcePath);
+    return this.backendMedia.generateFaceThumbnailResponse(face, sourcePath);
   }
 
   // Sibling of getAdminFaceThumbnail: same admin-only, face-keyed, ownership-free resolution, but serves
@@ -1320,14 +1323,14 @@ export class FaceRepairService extends BaseService {
       throw new NotFoundException();
     }
 
-    const sourcePath = await this.getFaceThumbnailSource(face.assetId);
+    const sourcePath = await this.backendMedia.getFaceThumbnailSource(face.assetId);
     if (!sourcePath) {
       throw new NotFoundException();
     }
 
     // serveFromBackend, not a bare ImmichFileResponse: the preview may live in S3, and the content type is
     // read from the file because image.preview.format is configurable (jpeg or webp).
-    return this.serveFromBackend(sourcePath, mimeTypes.lookup(sourcePath), CacheControl.PrivateWithCache);
+    return this.backendMedia.serveFromBackend(sourcePath, mimeTypes.lookup(sourcePath), CacheControl.PrivateWithCache);
   }
 
   private async collectClusterFaceIds(personGroupId: string): Promise<string[]> {

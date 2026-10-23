@@ -48,7 +48,7 @@ export const photoTransition = (navigation: NavigationLike) => {
   if (
     typeof document === 'undefined' ||
     !('startViewTransition' in document) ||
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    matchMedia('(prefers-reduced-motion: reduce)').matches
   ) {
     return;
   }
@@ -67,6 +67,7 @@ export const photoTransition = (navigation: NavigationLike) => {
 
   return new Promise<void>((resolve) => {
     name(start, NAME);
+    // eslint-disable-next-line tscompat/tscompat -- Guarded above; older browsers use the plain navigation.
     const transition = document.startViewTransition(async () => {
       resolve();
       await navigation.complete;
@@ -75,6 +76,7 @@ export const photoTransition = (navigation: NavigationLike) => {
       const end = await waitFor(() => (opening ? viewerFor(id) : tileFor(id)));
       name(end, NAME);
     });
+    // eslint-disable-next-line tscompat/tscompat -- Only reached after the View Transitions feature check.
     void transition.finished.finally(() => {
       for (const element of document.querySelectorAll<HTMLElement>('[style*="view-transition-name"]')) {
         if (element.style.viewTransitionName === NAME) {

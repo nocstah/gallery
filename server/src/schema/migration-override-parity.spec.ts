@@ -31,7 +31,11 @@ vi.mock('kysely', async () => {
 import {
   album_soft_delete_shared_space_album,
   album_space_asset_delete_audit,
+  asset_favorite_after_delete,
+  asset_favorite_after_insert,
   asset_favorite_delete_audit,
+  asset_is_favorite_after_write,
+  library_after_insert,
   shared_space_album_folder_delete_audit,
   shared_space_album_hidden_delete_audit,
   shared_space_member_after_insert_album,
@@ -39,9 +43,8 @@ import {
 // Static import (not dynamic `import()`): tsc's node16/nodenext resolution can't resolve a
 // `src/`-aliased specifier inside a dynamic import expression (TS2307), unlike a static
 // import. vitest hoists `vi.mock('kysely', ...)` above every import in this file regardless
-// of source position (same pattern as composite-migration-provider.spec.ts), so the mock is
-// already installed by the time this migration module's top-level `import { sql } from
-// 'kysely'` resolves.
+// of source position, so the mock is already installed by the time this migration module's
+// top-level `import { sql } from 'kysely'` resolves.
 import { up as upAlbumSoftDelete } from 'src/schema/migrations-gallery/1782050000000-AddAlbumSoftDeleteSharedSpaceAlbumTrigger.js';
 import { up as upAlbumSpaceAssetSyncAndAudit } from 'src/schema/migrations-gallery/1783100000000-AddAlbumSpaceAssetSyncAndAudit.js';
 import { up as upMemberJoinGrantCreateId } from 'src/schema/migrations-gallery/1783700000000-FixSharedSpaceMemberJoinGrantCreateId.js';
@@ -49,6 +52,8 @@ import { up as upRepairDrift } from 'src/schema/migrations-gallery/1784800000000
 import { up as upSharedSpaceAlbumHidden } from 'src/schema/migrations-gallery/1793000000000-AddSharedSpaceAlbumHidden.js';
 import { up as upSharedSpaceAlbumFolderAuditTable } from 'src/schema/migrations-gallery/1793200000000-SharedSpaceAlbumFolderAuditTable.js';
 import { up as upAddAssetFavoriteTables } from 'src/schema/migrations-gallery/1794000000000-AddAssetFavoriteTables.js';
+import { up as upDropLibraryCreateId } from 'src/schema/migrations-gallery/1798200000000-DropLibraryCreateId.js';
+import { up as upRestoreAssetIsFavorite } from 'src/schema/migrations-gallery/1798800000000-RestoreAssetIsFavoriteProjection.js';
 
 describe('1782050000000-AddAlbumSoftDeleteSharedSpaceAlbumTrigger override parity', () => {
   beforeEach(() => {
@@ -364,4 +369,56 @@ describe('1793000000000-AddSharedSpaceAlbumHidden override parity', () => {
     expect(executedTriggerDdl).toContain('FOR EACH STATEMENT');
     expect(executedTriggerDdl).not.toContain('WHEN (');
   });
+});
+
+// This migration REPLACED library_after_insert's body (it no longer copies the dropped library.createId).
+describe('1798200000000-DropLibraryCreateId override parity', () => {
+  beforeEach(() => {
+    capturedSql.length = 0;
+  });
+
+  it('executes and overrides the function with DDL byte-identical to functions.ts', async () => {
+    await upDropLibraryCreateId({} as any);
+
+    const [executedFunctionDdl, functionOverrideUpdate] = capturedSql;
+
+    expect(executedFunctionDdl).toBe(library_after_insert.expression);
+
+    const overrideValue = JSON.parse(functionOverrideUpdate.match(/SET "value" = '(.+)'::jsonb/s)![1]) as {
+      type: string;
+      name: string;
+      sql: string;
+    };
+    expect(overrideValue.sql).toBe(library_after_insert.expression);
+  });
+});
+
+describe('1798800000000-RestoreAssetIsFavoriteProjection override parity', () => {
+  beforeEach(() => {
+    capturedSql.length = 0;
+  });
+
+  it.each([asset_favorite_after_insert, asset_favorite_after_delete, asset_is_favorite_after_write])(
+    'executes and overrides $name with DDL byte-identical to functions.ts',
+    async (fn) => {
+      await upRestoreAssetIsFavorite({} as any);
+
+      expect(findSql('the CREATE FUNCTION', (s) => s.startsWith(`CREATE OR REPLACE FUNCTION ${fn.name}()`))).toBe(
+        fn.expression,
+      );
+      const override = findSql('the function override row', (s) => s.includes(`VALUES ('function_${fn.name}'`));
+      expect(parseOverrideValue(override).sql).toBe(fn.expression);
+    },
+  );
+
+  it.each(['asset_favorite_after_insert', 'asset_favorite_after_delete', 'asset_is_favorite_after_write'])(
+    'stores a trigger override row byte-identical to the %s trigger it executes',
+    async (name) => {
+      await upRestoreAssetIsFavorite({} as any);
+
+      const executed = findSql('the CREATE TRIGGER', (s) => s.startsWith(`CREATE OR REPLACE TRIGGER "${name}"`));
+      const override = findSql('the trigger override row', (s) => s.includes(`VALUES ('trigger_${name}'`));
+      expect(parseOverrideValue(override).sql).toBe(executed);
+    },
+  );
 });

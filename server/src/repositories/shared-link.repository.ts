@@ -14,17 +14,14 @@ import { InjectKysely } from 'nestjs-kysely';
 import { Album, columns } from 'src/database.js';
 import { ChunkedArray, DummyValue, GenerateSql } from 'src/decorators.js';
 import { AlbumUserRole, SharedLinkType } from 'src/enum.js';
+import { projectedDuration } from 'src/gallery/utils/projected-duration.js';
 import { DB } from 'src/schema/index.js';
 import { AssetExifTable } from 'src/schema/tables/asset-exif.table.js';
 import { AssetTable } from 'src/schema/tables/asset.table.js';
 import { SharedLinkTable } from 'src/schema/tables/shared-link.table.js';
 import { dummy } from 'src/utils/database.js';
-import {
-  asBaseEb,
-  sharedLinkAssetIsServable,
-  sharedLinkCreatorCanPublish,
-} from 'src/utils/shared-link-space-tether.js';
-import { spaceVisibilityGate } from 'src/utils/shared-space-album-scope.js';
+import { asBaseEb, sharedLinkAssetIsServable, sharedLinkPublisherRoles } from 'src/utils/shared-link-space-tether.js';
+import { albumMembership } from 'src/utils/shared-space-album-scope.js';
 
 export type SharedLinkSearchOptions = {
   userId: string;
@@ -44,6 +41,7 @@ const withSharedAssets = (eb: ExpressionBuilder<DB, 'shared_link'>) => {
       // withdrawn contribution drops out of both at the same moment.
       .where((eb) => sharedLinkAssetIsServable(asBaseEb(eb)))
       .selectAll('asset')
+      .select(projectedDuration)
       .orderBy('asset.fileCreatedAt', 'asc')
   );
 };
@@ -85,6 +83,7 @@ export class SharedLinkRepository {
   get(userId: string, id: string) {
     return this.db
       .selectFrom('shared_link')
+      .leftJoin('shared_link_space', 'shared_link_space.sharedLinkId', 'shared_link.id')
       .selectAll('shared_link')
       .select((eb) =>
         jsonArrayFrom(
@@ -96,36 +95,17 @@ export class SharedLinkRepository {
       .leftJoinLateral(
         (eb) =>
           withSharedLinkAlbum(eb)
-            // #1018: album contents = the album's own rows ∪ the cross-owner contributions (#764)
-            // made to the space this link was created from. LATERAL so the contributed arm can
-            // correlate to `shared_link.spaceId`; a link with no space matches no contribution and
-            // this collapses back to the pre-#1018 `album_asset` join. UNION (not ALL) dedupes an
-            // asset that is both an album row and a retained contribution.
+            // #1018: album contents = the album's own rows plus the cross-owner contributions (#764) made
+            // to the space this link was created from, while its creator (`userId`, pinned below) may
+            // still publish there. LATERAL so that arm can correlate to `shared_link_space.spaceId`; a
+            // link with no space reads `album_asset` alone.
             .leftJoinLateral(
               (eb) =>
-                eb
-                  .selectFrom('album_asset')
-                  .select('album_asset.assetId as assetId')
-                  .whereRef('album_asset.albumId', '=', 'album.id')
-                  .union(
-                    eb
-                      .selectFrom('album_space_asset')
-                      .innerJoin('shared_space_album', (join) =>
-                        join
-                          .onRef('shared_space_album.albumId', '=', 'album_space_asset.albumId')
-                          .onRef('shared_space_album.spaceId', '=', 'album_space_asset.spaceId'),
-                      )
-                      // The contributed arm returns another member's asset, so it carries the space
-                      // visibility gate: archive + timeline only, never hidden or locked. The album's
-                      // own rows above keep plain album semantics and are deliberately not gated.
-                      .innerJoin('asset', 'asset.id', 'album_space_asset.assetId')
-                      .where((eb) => spaceVisibilityGate(eb))
-                      .select('album_space_asset.assetId as assetId')
-                      .whereRef('album_space_asset.albumId', '=', 'album.id')
-                      .whereRef('album_space_asset.spaceId', '=', 'shared_link.spaceId')
-                      .where((eb) => sharedLinkCreatorCanPublish(asBaseEb(eb))),
-                  )
-                  .as('album_members'),
+                albumMembership(eb, 'album.id', {
+                  memberUserId: userId,
+                  memberRole: sharedLinkPublisherRoles,
+                  spaceIdRef: 'shared_link_space.spaceId',
+                }).as('album_asset'),
               (join) => join.onTrue(),
             )
             .leftJoinLateral(
@@ -133,7 +113,8 @@ export class SharedLinkRepository {
                 eb
                   .selectFrom('asset')
                   .selectAll('asset')
-                  .whereRef('album_members.assetId', '=', 'asset.id')
+                  .select(projectedDuration)
+                  .whereRef('album_asset.assetId', '=', 'asset.id')
                   .where('asset.deletedAt', 'is', null)
                   .innerJoinLateral(withExifInfo, (join) => join.onTrue())
                   .select((eb) => eb.fn.toJson(eb.table('exifInfo')).as('exifInfo'))
@@ -170,6 +151,7 @@ export class SharedLinkRepository {
   getAll({ userId, id, albumId }: SharedLinkSearchOptions) {
     return this.db
       .selectFrom('shared_link')
+      .leftJoin('shared_link_space', 'shared_link_space.sharedLinkId', 'shared_link.id')
       .selectAll('shared_link')
       .select((eb) => jsonArrayFrom(withSharedAssets(eb).limit(1)).as('assets'))
       .where('shared_link.userId', '=', userId)
@@ -199,12 +181,13 @@ export class SharedLinkRepository {
     return this.db
       .selectFrom('shared_link')
       .leftJoin('album', 'album.id', 'shared_link.albumId')
+      .leftJoin('shared_link_space', 'shared_link_space.sharedLinkId', 'shared_link.id')
       .where('album.deletedAt', 'is', null)
       .select((eb) => [
         'shared_link.id',
         'shared_link.userId',
         'shared_link.albumId',
-        'shared_link.spaceId',
+        'shared_link_space.spaceId',
         'shared_link.expiresAt',
         'shared_link.showExif',
         'shared_link.allowUpload',
@@ -217,19 +200,29 @@ export class SharedLinkRepository {
       .where((eb) => eb.or([eb('shared_link.type', '=', SharedLinkType.Individual), eb('album.id', 'is not', null)]));
   }
 
-  async create(entity: Insertable<SharedLinkTable> & { assetIds?: string[] }) {
-    const { id } = await this.db
-      .insertInto('shared_link')
-      .values(omit(entity, 'assetIds'))
-      .returningAll()
-      .executeTakeFirstOrThrow();
+  async create(entity: Insertable<SharedLinkTable> & { assetIds?: string[]; spaceId?: string | null }) {
+    // gallery-fork: one transaction, so a failed shared_link_space write cannot leave a space link behind
+    // that serves only the creator's assets.
+    const { id } = await this.db.transaction().execute(async (trx) => {
+      const link = await trx
+        .insertInto('shared_link')
+        .values(omit(entity, 'assetIds', 'spaceId'))
+        .returningAll()
+        .executeTakeFirstOrThrow();
 
-    if (entity.assetIds && entity.assetIds.length > 0) {
-      await this.db
-        .insertInto('shared_link_asset')
-        .values(entity.assetIds!.map((assetId) => ({ assetId, sharedLinkId: id })))
-        .execute();
-    }
+      if (entity.spaceId) {
+        await trx.insertInto('shared_link_space').values({ sharedLinkId: link.id, spaceId: entity.spaceId }).execute();
+      }
+
+      if (entity.assetIds && entity.assetIds.length > 0) {
+        await trx
+          .insertInto('shared_link_asset')
+          .values(entity.assetIds!.map((assetId) => ({ assetId, sharedLinkId: link.id })))
+          .execute();
+      }
+
+      return link;
+    });
 
     return this.getSharedLinks(id);
   }
@@ -283,6 +276,7 @@ export class SharedLinkRepository {
             .selectFrom('asset')
             .whereRef('asset.id', '=', 'shared_link_asset.assetId')
             .selectAll('asset')
+            .select(projectedDuration)
             .innerJoinLateral(withExifInfo, (join) => join.onTrue())
             .as('assets'),
         (join) => join.onTrue(),

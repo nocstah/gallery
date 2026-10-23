@@ -44,7 +44,7 @@ describe('newAlbumFromAssets (the N key)', () => {
     undoManager.entries = [];
     localStorage.removeItem('gallery.lastAlbum');
     sdkMock.createAlbum.mockResolvedValue(made(3));
-    sdkMock.deleteAlbum.mockResolvedValue();
+    sdkMock.deleteAlbum.mockResolvedValue(undefined as never);
   });
 
   it('makes one album of every selected photo, named by where and when they were taken', async () => {

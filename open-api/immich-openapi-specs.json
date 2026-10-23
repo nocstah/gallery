@@ -3303,6 +3303,62 @@
         "x-immich-state": "Stable"
       }
     },
+    "/albums/add-targets": {
+      "post": {
+        "description": "For each candidate album the caller may add to, returns how many of the given assets it would accept — assets the caller may share, plus assets they may contribute to a space-linked album as a space Owner or Editor. Albums that accept nothing are omitted. Nothing is written.",
+        "operationId": "getAlbumAddTargets",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlbumAddTargetsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlbumAddTargetsResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Resolve which albums accept the given assets",
+        "tags": [
+          "Albums"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          },
+          {
+            "version": "v2",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "albumAsset.create",
+        "x-immich-state": "Stable"
+      }
+    },
     "/albums/assets": {
       "put": {
         "description": "Send a list of asset IDs and album IDs to add each asset to each album.",
@@ -5574,6 +5630,176 @@
         "x-immich-state": "Deprecated"
       }
     },
+    "/assets/{id}/adjust": {
+      "delete": {
+        "description": "Restores the image colours; any crop, rotate or mirror stays.",
+        "operationId": "removeAssetAdjust",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Remove the colour adjustment of an image",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v1",
+            "state": "Added"
+          },
+          {
+            "version": "v1",
+            "state": "Beta"
+          }
+        ],
+        "x-immich-permission": "asset.edit.delete",
+        "x-immich-state": "Beta"
+      },
+      "get": {
+        "description": "Returns the exposure, contrast, saturation and invert applied to the image; all zero when none is.",
+        "operationId": "getAssetAdjust",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetImageAdjustResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Retrieve the colour adjustment of an image",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v1",
+            "state": "Added"
+          },
+          {
+            "version": "v1",
+            "state": "Beta"
+          }
+        ],
+        "x-immich-permission": "asset.edit.get",
+        "x-immich-state": "Beta"
+      },
+      "put": {
+        "description": "Sets the exposure, contrast, saturation and invert applied after any crop, rotate or mirror, replacing an earlier adjustment. All-neutral values remove it. The original file is not changed.",
+        "operationId": "updateAssetAdjust",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetImageAdjustDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetImageAdjustResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Adjust the colours of an image",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v1",
+            "state": "Added"
+          },
+          {
+            "version": "v1",
+            "state": "Beta"
+          }
+        ],
+        "x-immich-permission": "asset.edit.create",
+        "x-immich-state": "Beta"
+      }
+    },
     "/assets/{id}/edits": {
       "delete": {
         "description": "Removes all edit actions (crop, rotate, mirror) associated with the specified asset.",
@@ -6273,6 +6499,176 @@
         ],
         "x-immich-permission": "asset.view",
         "x-immich-state": "Stable"
+      }
+    },
+    "/assets/{id}/trim": {
+      "delete": {
+        "description": "Restores the full-length video.",
+        "operationId": "removeAssetTrim",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Remove the trim of a video",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v1",
+            "state": "Added"
+          },
+          {
+            "version": "v1",
+            "state": "Beta"
+          }
+        ],
+        "x-immich-permission": "asset.edit.delete",
+        "x-immich-state": "Beta"
+      },
+      "get": {
+        "description": "Returns the kept part of a trimmed video and the length of the original. Responds 404 when the video is not trimmed.",
+        "operationId": "getAssetTrim",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetVideoTrimResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Retrieve the trim of a video",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v1",
+            "state": "Added"
+          },
+          {
+            "version": "v1",
+            "state": "Beta"
+          }
+        ],
+        "x-immich-permission": "asset.edit.get",
+        "x-immich-state": "Beta"
+      },
+      "put": {
+        "description": "Keeps only the part of the video between startTime and endTime, replacing any earlier trim. The full range removes an earlier trim. The original file is not changed.",
+        "operationId": "updateAssetTrim",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetVideoTrimDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetVideoTrimResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Trim a video",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v1",
+            "state": "Added"
+          },
+          {
+            "version": "v1",
+            "state": "Beta"
+          }
+        ],
+        "x-immich-permission": "asset.edit.create",
+        "x-immich-state": "Beta"
       }
     },
     "/assets/{id}/video/playback": {
@@ -20850,7 +21246,7 @@
     },
     "/shared-spaces/{id}/people/{personId}/faces/{assetFaceId}": {
       "delete": {
-        "description": "Remove the face from the space person. Only the space projection row is removed -- the face's global identity is left untouched. Response reports whether it acted.",
+        "description": "Remove the face from the space person. The face's link to that person's identity goes too, unless the photo belongs to a non-member who named the face. Response reports whether it acted.",
         "operationId": "detachSpacePersonFace",
         "parameters": [
           {
@@ -26598,7 +26994,7 @@
   "info": {
     "title": "Immich",
     "description": "Immich API",
-    "version": "3.3.1",
+    "version": "3.3.5",
     "contact": {}
   },
   "tags": [
@@ -28398,6 +28794,74 @@
         ],
         "type": "object"
       },
+      "AlbumAddTargetDto": {
+        "properties": {
+          "acceptedAssetCount": {
+            "description": "How many of the requested assets this album accepts (already-present assets included)",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "albumId": {
+            "description": "Album ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "acceptedAssetCount",
+          "albumId"
+        ],
+        "type": "object"
+      },
+      "AlbumAddTargetsDto": {
+        "properties": {
+          "albumIds": {
+            "description": "Candidate album IDs",
+            "items": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "assetIds": {
+            "description": "Asset IDs the caller wants to add",
+            "items": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "albumIds",
+          "assetIds"
+        ],
+        "type": "object"
+      },
+      "AlbumAddTargetsResponseDto": {
+        "properties": {
+          "albums": {
+            "description": "Requested albums that accept at least one of the assets; all others are omitted",
+            "items": {
+              "$ref": "#/components/schemas/AlbumAddTargetDto"
+            },
+            "type": "array"
+          },
+          "shareableAssetCount": {
+            "description": "How many of the requested assets the caller may place in any album, including a new one",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "albums",
+          "shareableAssetCount"
+        ],
+        "type": "object"
+      },
       "AlbumNameDto": {
         "properties": {
           "albumName": {
@@ -29108,8 +29572,7 @@
         "enum": [
           "crop",
           "rotate",
-          "mirror",
-          "trim"
+          "mirror"
         ],
         "type": "string"
       },
@@ -29128,12 +29591,9 @@
               },
               {
                 "$ref": "#/components/schemas/MirrorParameters"
-              },
-              {
-                "$ref": "#/components/schemas/TrimParameters"
               }
             ],
-            "description": "List of edit actions to apply (crop, rotate, mirror, or trim)"
+            "description": "List of edit actions to apply (crop, rotate, or mirror)"
           }
         },
         "required": [
@@ -29163,12 +29623,9 @@
               },
               {
                 "$ref": "#/components/schemas/MirrorParameters"
-              },
-              {
-                "$ref": "#/components/schemas/TrimParameters"
               }
             ],
-            "description": "List of edit actions to apply (crop, rotate, mirror, or trim)"
+            "description": "List of edit actions to apply (crop, rotate, or mirror)"
           }
         },
         "required": [
@@ -29213,7 +29670,7 @@
       "AssetEditsCreateDto": {
         "properties": {
           "edits": {
-            "description": "List of edit actions to apply (crop, rotate, mirror, or trim)",
+            "description": "List of edit actions to apply (crop, rotate, or mirror)",
             "items": {
               "$ref": "#/components/schemas/AssetEditActionItemDto"
             },
@@ -29573,6 +30030,76 @@
         "required": [
           "assetId",
           "success"
+        ],
+        "type": "object"
+      },
+      "AssetImageAdjustDto": {
+        "properties": {
+          "contrast": {
+            "default": 0,
+            "description": "Contrast, -100 to 100 (CSS contrast, 0 = unchanged)",
+            "format": "double",
+            "maximum": 100,
+            "minimum": -100,
+            "type": "number"
+          },
+          "exposure": {
+            "default": 0,
+            "description": "Exposure, -100 to 100 (CSS brightness, 0 = unchanged)",
+            "format": "double",
+            "maximum": 100,
+            "minimum": -100,
+            "type": "number"
+          },
+          "invert": {
+            "default": false,
+            "description": "Invert the colours, for scanned film negatives",
+            "type": "boolean"
+          },
+          "saturation": {
+            "default": 0,
+            "description": "Saturation, -100 to 100 (CSS saturate, 0 = unchanged)",
+            "format": "double",
+            "maximum": 100,
+            "minimum": -100,
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "AssetImageAdjustResponseDto": {
+        "properties": {
+          "contrast": {
+            "description": "Contrast, -100 to 100 (CSS contrast, 0 = unchanged)",
+            "format": "double",
+            "maximum": 100,
+            "minimum": -100,
+            "type": "number"
+          },
+          "exposure": {
+            "description": "Exposure, -100 to 100 (CSS brightness, 0 = unchanged)",
+            "format": "double",
+            "maximum": 100,
+            "minimum": -100,
+            "type": "number"
+          },
+          "invert": {
+            "description": "Invert the colours, for scanned film negatives",
+            "type": "boolean"
+          },
+          "saturation": {
+            "description": "Saturation, -100 to 100 (CSS saturate, 0 = unchanged)",
+            "format": "double",
+            "maximum": 100,
+            "minimum": -100,
+            "type": "number"
+          }
+        },
+        "required": [
+          "contrast",
+          "exposure",
+          "invert",
+          "saturation"
         ],
         "type": "object"
       },
@@ -30282,6 +30809,55 @@
           "reject"
         ],
         "type": "string"
+      },
+      "AssetVideoTrimDto": {
+        "properties": {
+          "endTime": {
+            "description": "End of the kept part, in seconds from the start of the original video",
+            "format": "double",
+            "minimum": 0,
+            "type": "number"
+          },
+          "startTime": {
+            "description": "Start of the kept part, in seconds from the start of the original video",
+            "format": "double",
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "endTime",
+          "startTime"
+        ],
+        "type": "object"
+      },
+      "AssetVideoTrimResponseDto": {
+        "properties": {
+          "endTime": {
+            "description": "End of the kept part, in seconds from the start of the original video",
+            "format": "double",
+            "minimum": 0,
+            "type": "number"
+          },
+          "originalDuration": {
+            "description": "Length of the untrimmed video, in seconds",
+            "format": "double",
+            "minimum": 0,
+            "type": "number"
+          },
+          "startTime": {
+            "description": "Start of the kept part, in seconds from the start of the original video",
+            "format": "double",
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "endTime",
+          "originalDuration",
+          "startTime"
+        ],
+        "type": "object"
       },
       "AssetVisibility": {
         "description": "Asset visibility",
@@ -35722,28 +36298,6 @@
           "partner.read",
           "partner.update",
           "partner.delete",
-          "sharedSpace.create",
-          "sharedSpace.read",
-          "sharedSpace.update",
-          "sharedSpace.delete",
-          "sharedSpaceMember.create",
-          "sharedSpaceMember.update",
-          "sharedSpaceMember.delete",
-          "sharedSpaceAsset.create",
-          "sharedSpaceAsset.read",
-          "sharedSpaceAsset.delete",
-          "sharedSpaceLibrary.create",
-          "sharedSpaceLibrary.delete",
-          "sharedSpaceAlbum.create",
-          "sharedSpaceAlbum.update",
-          "sharedSpaceAlbum.delete",
-          "sharedSpaceAlbumFolder.create",
-          "sharedSpaceAlbumFolder.update",
-          "sharedSpaceAlbumFolder.delete",
-          "userGroup.create",
-          "userGroup.read",
-          "userGroup.update",
-          "userGroup.delete",
           "person.create",
           "person.read",
           "person.update",
@@ -35823,7 +36377,29 @@
           "adminUser.update",
           "adminUser.delete",
           "adminSession.read",
-          "adminAuth.unlinkAll"
+          "adminAuth.unlinkAll",
+          "sharedSpace.create",
+          "sharedSpace.read",
+          "sharedSpace.update",
+          "sharedSpace.delete",
+          "sharedSpaceMember.create",
+          "sharedSpaceMember.update",
+          "sharedSpaceMember.delete",
+          "sharedSpaceAsset.create",
+          "sharedSpaceAsset.read",
+          "sharedSpaceAsset.delete",
+          "sharedSpaceLibrary.create",
+          "sharedSpaceLibrary.delete",
+          "sharedSpaceAlbum.create",
+          "sharedSpaceAlbum.update",
+          "sharedSpaceAlbum.delete",
+          "sharedSpaceAlbumFolder.create",
+          "sharedSpaceAlbumFolder.update",
+          "sharedSpaceAlbumFolder.delete",
+          "userGroup.create",
+          "userGroup.read",
+          "userGroup.update",
+          "userGroup.delete"
         ],
         "type": "string"
       },
@@ -45797,27 +46373,6 @@
         },
         "required": [
           "count"
-        ],
-        "type": "object"
-      },
-      "TrimParameters": {
-        "properties": {
-          "endTime": {
-            "description": "End time in seconds",
-            "format": "double",
-            "minimum": 0,
-            "type": "number"
-          },
-          "startTime": {
-            "description": "Start time in seconds",
-            "format": "double",
-            "minimum": 0,
-            "type": "number"
-          }
-        },
-        "required": [
-          "endTime",
-          "startTime"
         ],
         "type": "object"
       },

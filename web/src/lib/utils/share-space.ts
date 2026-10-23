@@ -5,7 +5,7 @@
 // rule, since it is made first and stays. Only Spaces I can add to are offered (owner or editor), never Library, the
 // album folders' engine (managers/album-folders), and the rest follow the lead quietly, oldest first.
 import type { SharedSpaceResponseDto } from '@immich/sdk';
-import type { MessageFormatter } from 'svelte-i18n';
+import type { MessageFormatter, Translations } from 'svelte-i18n';
 import { isWritableSpace } from '$lib/components/shared-components/collection-selection/collection-selection-utils';
 import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
 
@@ -56,7 +56,7 @@ export const spaceAudience = (
   lang: string,
   space: SharedSpaceResponseDto,
   userId: string | null,
-  keys: { alone: string; audience: string },
+  keys: { alone: Translations; audience: Translations },
   values: Record<string, number> = {},
 ) => {
   const others = (space.members ?? []).filter((member) => member.userId !== userId).map(({ name }) => name);

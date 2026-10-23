@@ -15,6 +15,26 @@ with
       inner join lateral (
         select
           "asset".*,
+          coalesce(
+            (
+              select
+                "asset_video_trim"."duration"
+              from
+                "asset_video_trim"
+              where
+                "asset_video_trim"."assetId" = "asset"."id"
+            ),
+            "asset"."duration"
+          ) as "duration",
+          exists (
+            select
+              1 as "exists"
+            from
+              "asset_favorite"
+            where
+              "asset_favorite"."assetId" = "asset"."id"
+              and "asset_favorite"."userId" = $1::uuid
+          ) as "isFavoriteForUser",
           to_json("asset_exif") as "exifInfo",
           (
             select
@@ -42,7 +62,7 @@ with
       ) as "asset2" on true
     where
       "asset"."visibility" in ('archive', 'timeline')
-      and "asset"."ownerId" = $1::uuid
+      and "asset"."ownerId" = $2::uuid
       and "asset"."duplicateId" is not null
       and "asset"."deletedAt" is null
       and "asset"."stackId" is null
@@ -54,7 +74,7 @@ select
 from
   "duplicates"
 where
-  json_array_length("assets") > $2
+  json_array_length("assets") > $3
 
 -- DuplicateRepository.cleanupSingletonGroups
 with
@@ -94,6 +114,17 @@ from
   inner join lateral (
     select
       "asset".*,
+      coalesce(
+        (
+          select
+            "asset_video_trim"."duration"
+          from
+            "asset_video_trim"
+          where
+            "asset_video_trim"."assetId" = "asset"."id"
+        ),
+        "asset"."duration"
+      ) as "duration",
       to_json("asset_exif") as "exifInfo",
       (
         select
@@ -126,6 +157,17 @@ where
   and "asset"."stackId" is null
 group by
   "asset"."duplicateId"
+
+-- DuplicateRepository.hasOtherOwner
+select
+  "id"
+from
+  "asset"
+where
+  "duplicateId" = $1::uuid
+  and "ownerId" != $2::uuid
+limit
+  $3
 
 -- DuplicateRepository.delete
 update "asset"

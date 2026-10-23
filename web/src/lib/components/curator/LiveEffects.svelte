@@ -48,7 +48,14 @@
   const stillSrc = $derived(
     getAssetMediaUrl({ id: asset.id, size: AssetMediaSize.Preview, cacheKey: asset.thumbhash }),
   );
-  const effectName = (chosen: Effect | undefined) => (chosen ? $t(`live_effect_${chosen.replace('-', '_')}`) : '');
+  const effectLabels = {
+    loop: 'live_effect_loop',
+    bounce: 'live_effect_bounce',
+    'long-exposure': 'live_effect_long_exposure',
+    'key-photo': 'live_effect_key_photo',
+    cinematic: 'live_effect_cinematic',
+  } as const;
+  const effectName = (chosen: Effect | undefined) => (chosen ? $t(effectLabels[chosen]) : '');
   const resultIsClip = $derived(['loop', 'bounce', 'cinematic'].includes(effect ?? ''));
   const resultSrc = $derived.by(() => {
     if (!suggestion) {

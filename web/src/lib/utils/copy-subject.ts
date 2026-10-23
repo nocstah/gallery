@@ -1,10 +1,10 @@
 // Local Omarchy layer: subject lift (Curator's /api/subject, ~/code/curator/curator/subject.py). The photo's main
 // subject cut out of its background goes on the clipboard as a PNG; where the browser keeps the clipboard from the
 // page (Gallery opened over the network without HTTPS), it is downloaded instead.
-import { curatorSubject } from '$lib/utils/curator';
 import { toastManager } from '@immich/ui';
-import { get } from 'svelte/store';
 import { t } from 'svelte-i18n';
+import { get } from 'svelte/store';
+import { curatorSubject } from '$lib/utils/curator';
 
 export const copySubject = async (assetId: string, fileName: string) => {
   const $t = get(t);

@@ -31,7 +31,7 @@
   import type { TimelineAsset, TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
   import PersonMergeSuggestionModal from '$lib/modals/PersonMergeSuggestionModal.svelte';
   import PersonSuggestionBanner from '$lib/components/faces-page/person-suggestion-banner.svelte';
-  import PersonSuggestionReviewModal from '$lib/modals/PersonSuggestionReviewModal.svelte';
+  import PersonSuggestionReviewModal from '$lib/gallery/people/PersonSuggestionReviewModal.svelte';
   import RepresentativeFacePickerModal from '$lib/modals/RepresentativeFacePickerModal.svelte';
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
@@ -382,7 +382,7 @@
       return;
     }
 
-    const result = await searchPerson({ name: personName, withHidden: true });
+    const result = await searchPerson({ name: personName, withHidden: true, withSharedSpaces: true });
 
     const normalizedPersonName = normalizeSearchString(personName);
     const existingPerson = result.find(

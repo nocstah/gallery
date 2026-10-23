@@ -22,7 +22,8 @@
 
   onMount(async () => {
     try {
-      const tags = (await getAllTags()).filter((tag) => tag.value.startsWith('Auto/'));
+      const allTags = await getAllTags();
+      const tags = allTags.filter((tag) => tag.value.startsWith('Auto/'));
       const counted = await Promise.all(
         tags.map(async (tag) => ({ id: tag.id, name: tag.name, count: await archivedIn(tag.id) })),
       );

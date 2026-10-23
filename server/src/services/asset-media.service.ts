@@ -30,6 +30,7 @@ import {
   Permission,
   StorageFolder,
 } from 'src/enum.js';
+import { videoPlaybackCacheControl } from 'src/gallery/utils/video-playback.js';
 import { StorageBackend } from 'src/interfaces/storage-backend.interface.js';
 import { AuthRequest } from 'src/middleware/auth.guard.js';
 import { BaseService } from 'src/services/base.service.js';
@@ -191,7 +192,7 @@ export class AssetMediaService extends BaseService {
 
     const path = editedPath ?? originalPath!;
 
-    return this.serveFromBackend(
+    return this.backendMedia.serveFromBackend(
       path,
       mimeTypes.lookup(path),
       CacheControl.PrivateWithCache,
@@ -242,7 +243,7 @@ export class AssetMediaService extends BaseService {
       auth.sharedLink && !auth.sharedLink.showExif ? id : getFileNameWithoutExtension(originalFileName);
     const fileName = `${fileNameBase}_${size}${getFilenameExtension(path)}`;
 
-    return this.serveFromBackend(path, mimeTypes.lookup(path), CacheControl.PrivateWithCache, fileName);
+    return this.backendMedia.serveFromBackend(path, mimeTypes.lookup(path), CacheControl.PrivateWithCache, fileName);
   }
 
   async playbackVideo(auth: AuthDto, id: string, range?: string): Promise<ImmichMediaResponse> {
@@ -256,10 +257,10 @@ export class AssetMediaService extends BaseService {
 
     const filepath = asset.encodedVideoPath || asset.originalPath;
 
-    return this.serveFromBackend(
+    return this.backendMedia.serveFromBackend(
       filepath,
       mimeTypes.lookup(filepath),
-      CacheControl.PrivateWithCache,
+      videoPlaybackCacheControl(asset.encodedVideoPath),
       undefined,
       'inline',
       { range, acceptsRanges: true },
@@ -370,6 +371,7 @@ export class AssetMediaService extends BaseService {
       localDateTime: dto.fileCreatedAt,
 
       type: mimeTypes.assetType(file.originalPath),
+      isFavorite: dto.isFavorite,
       duration: dto.duration || null,
       visibility: dto.visibility ?? AssetVisibility.Timeline,
       livePhotoVideoId: dto.livePhotoVideoId,
@@ -380,18 +382,6 @@ export class AssetMediaService extends BaseService {
     let writeBackend: StorageBackend | undefined;
 
     try {
-      // #763 (E19): the uploader is always the owner, so this is the uploader's own overlay
-      // row. Placed as the first statement in this try block — not before it — so a failure
-      // here (or in anything after it) hits the same catch below, which removes the just-created
-      // asset row. That DELETE cascades onto asset_favorite via its FK, so no partial state
-      // (an orphaned favorite row for a rolled-back asset) can survive an upload failure. This
-      // whole method is a compensating-action pattern rather than a real DB transaction already
-      // (S3 upload + job queueing happen alongside the writes), so joining that existing
-      // contract is more consistent than opening a separate transaction just for this insert.
-      if (dto.isFavorite) {
-        await this.assetFavoriteRepository.addAll(ownerId, [asset.id]);
-      }
-
       if (dto.metadata?.length) {
         await this.assetRepository.upsertMetadata(asset.id, dto.metadata);
       }

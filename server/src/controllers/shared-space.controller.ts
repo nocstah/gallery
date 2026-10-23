@@ -604,8 +604,8 @@ export class SharedSpaceController {
   @Endpoint({
     summary: 'Detach a face from a person in a shared space',
     description:
-      'Remove the face from the space person. Only the space projection row is removed -- the ' +
-      "face's global identity is left untouched. Response reports whether it acted.",
+      "Remove the face from the space person. The face's link to that person's identity goes too, unless " +
+      'the photo belongs to a non-member who named the face. Response reports whether it acted.',
     history: new HistoryBuilder().added('v2').stable('v2'),
   })
   async detachSpacePersonFace(
@@ -654,7 +654,7 @@ export class SharedSpaceController {
   }
 
   // Spec §6.6 (Slice 6, Task 3). Same API-key scope as the sibling writes -- the real authority
-  // (Editor role + reachability + createdBy IS NOT NULL, never sourceType) is enforced in the
+  // (Editor role + reachability + an asset_face_creator row, never sourceType) is enforced in the
   // service. Detected faces stay refused; FaceDelete remains owner-only for those.
   @Delete(':id/faces/:assetFaceId')
   @Authenticated({ permission: Permission.SharedSpaceUpdate })

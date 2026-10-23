@@ -263,13 +263,16 @@ if [[ -f "$app_download_modal" ]]; then
   fi
 fi
 
-# Check Dockerfiles for upstream repo references
+# Check Dockerfiles and the dev compose file for upstream repo references
 echo "--- Checking Dockerfiles ---"
-for dockerfile in "server/Dockerfile" "machine-learning/Dockerfile"; do
+for dockerfile in "server/Dockerfile" "machine-learning/Dockerfile" "docker/docker-compose.dev.yml"; do
   filepath="$REPO_ROOT/$dockerfile"
   if [[ -f "$filepath" ]]; then
     if grep -q "immich-app/immich" "$filepath"; then
       echo "  WARN: Upstream repo reference found in $dockerfile"
+      EXIT_CODE=1
+    elif grep -q "pkgs/container/immich-" "$filepath"; then
+      echo "  WARN: Upstream package page found in $dockerfile"
       EXIT_CODE=1
     else
       echo "  OK: $dockerfile"
@@ -456,6 +459,17 @@ for notification_svc in \
     fi
   fi
 done
+
+# Stock Immich clients are told the upstream base version (server/src/gallery/utils/client-version.ts reads
+# immichVersion, falling back to version on an unstamped build); it must match the base the fork is on.
+base_version=$(jq -r '.immichVersion // .version' "$REPO_ROOT/server/package.json")
+expected_base=$(jq -r '.upstream.version' "$CONFIG")
+if [[ "$base_version" == "$expected_base" ]]; then
+  echo "  OK: server/package.json reports base version $base_version to stock clients"
+else
+  echo "  WARN: server/package.json base version '$base_version' != config.json upstream.version '$expected_base'"
+  EXIT_CODE=1
+fi
 
 echo "--- Checking mobile image assets ---"
 if ! bash "$SCRIPT_DIR/verify-mobile-assets.sh"; then

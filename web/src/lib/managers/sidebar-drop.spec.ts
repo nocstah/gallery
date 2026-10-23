@@ -240,7 +240,9 @@ describe('sidebar drop: over the sidebar', () => {
     vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 100, 256, 800));
     let scrollTop = 200;
     Object.defineProperty(panel, 'scrollTop', { get: () => scrollTop, configurable: true });
-    panel.scrollBy = ((_x: number, y: number) => (scrollTop += y)) as typeof panel.scrollBy;
+    panel.scrollBy = (options?: number | ScrollToOptions, y?: number) => {
+      scrollTop += typeof options === 'number' ? (y ?? 0) : (options?.top ?? 0);
+    };
 
     expect(sidebarDrop.over({ x: 100, y: 500 })).toBe(true);
     expect(sidebarDrop.over({ x: 400, y: 500 })).toBe(false);

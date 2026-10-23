@@ -151,6 +151,14 @@ This layer is a citizen of the desktop, not a brand. **Colour is not owned here.
 
 The layer began visual only: it styles upstream markup through stable hooks (`data-testid`, `data-thumbnail-focus-container`, ids) and `ws-` classes added to upstream components. It is now a deliberate fork (PRODUCT.md, Change scope) that also owns screens and flows: the Time Strip, the sidebar's Album Tree, its Pinned albums and photos carried to it, the Explorer of Tags and Folders, the Shared feed and the Share sheet, the special albums, Bank slips, the tool pages (Duplicates, Manage location, Large files, Workflows, Import), Album folders, the Space page, Photo books, the Adjust panel, the Memories cards and film, Room, and Curator's inbox and panels, each described under Components. A redesign may restructure a screen; every structural departure from upstream gets its entry under Components when it lands, so a merge of an upstream release knows what is ours.
 
+### Gallery v5.9 integration (2026-10-23)
+
+The official v5.9.0 server and ML images remain unmodified, including the separate Gallery migration ledger and fork tables. Curator reads `person_pet` and `asset_video_trim` through its query boundary; it still writes Gallery data through the API. The web SDK and WebSocket identify this client with `x-gallery-app`. Custom translations live in `i18n/gallery`, and all three web surfaces (Gallery, the standalone memory player and the public-link notices) consume the merged dictionaries. Raw `i18n/*.json` files retain upstream bytes.
+
+The custom Photos, Recently added, personal album, Space photos and Space album routes remain locally owned as complete screens. Their Time Strip, filter rail, stack grouping, selection and scroll restoration cannot be replaced by upstream's filtered-timeline extraction without losing the established behavior. New shared components and API fixes are adopted underneath them; future route changes must be reviewed against these local screens. Album grids use the upstream lazy chunks with measured local grid tracks. The diff against stock Immich remains intentionally larger in these routes; server and ML have no local delta against the Gallery release.
+
+Face review uses the upstream photo date, details and open-photo context inside the scrolling body. Enter alone selects Same person; arrows navigate, previous answers remain editable, and the footer stays fixed. M toggles details and O opens the photo in its proper personal or Space context. Name suggestions include shared Spaces and use each person's scoped thumbnail route. The richer local Adjust panel remains the photo editor; adopting the basic upstream adjustment UI is outside this upgrade.
+
 **Key Characteristics:**
 - One ground: the theme surface everywhere, divided by hairlines, never two-tone slabs.
 - One gap module (`--ws-gap`, Hyprland `gaps_in` x2) spaces the tiles and derives the header rhythm.

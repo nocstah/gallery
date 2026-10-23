@@ -17,7 +17,7 @@ const inBatches = async <T, R>(items: T[], size: number, run: (item: T) => Promi
  * Unlocking returns the video halves to hidden, where Gallery keeps them, not to the timeline.
  */
 export const setLockedWithCompanions = async (ids: string[], unlock: boolean): Promise<string[]> => {
-  const seen = [AssetVisibility.Timeline, AssetVisibility.Archive];
+  const seen = new Set([AssetVisibility.Timeline, AssetVisibility.Archive]);
   const photos = new Set(ids);
   const videos = new Set<string>();
   const stacks = new Set<string>();
@@ -37,7 +37,7 @@ export const setLockedWithCompanions = async (ids: string[], unlock: boolean): P
   for (const stack of stackInfos) {
     for (const mate of stack?.assets ?? []) {
       // only mates on the side being left: in the timeline or archive when locking, in the folder when unlocking
-      const onSide = unlock ? mate.visibility === AssetVisibility.Locked : seen.includes(mate.visibility);
+      const onSide = unlock ? mate.visibility === AssetVisibility.Locked : seen.has(mate.visibility);
       if (photos.has(mate.id) || mate.isTrashed || !onSide) {
         continue;
       }

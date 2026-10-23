@@ -174,7 +174,7 @@ export const attachThumbnailZoom = (element: HTMLElement) => {
     pending += event.deltaY;
     if (!frame) {
       frame = requestAnimationFrame(() => {
-        thumbnailZoomManager.scale = thumbnailZoomManager.scale * Math.exp(-pending * 0.0025);
+        thumbnailZoomManager.scale *= Math.exp(-pending * 0.0025);
         pending = 0;
         frame = 0;
       });
@@ -188,23 +188,36 @@ export const attachThumbnailZoom = (element: HTMLElement) => {
     if (document.querySelector('#immich-asset-viewer')) {
       return;
     }
-    if (event.key === '+' || event.key === '=') {
-      thumbnailZoomManager.step(1);
-    } else if (event.key === '-' || event.key === '_') {
-      thumbnailZoomManager.step(-1);
-    } else if (event.key === '0') {
-      thumbnailZoomManager.reset();
-    } else {
-      return;
+    switch (event.key) {
+      case '+':
+      case '=': {
+        thumbnailZoomManager.step(1);
+
+        break;
+      }
+      case '-':
+      case '_': {
+        thumbnailZoomManager.step(-1);
+
+        break;
+      }
+      case '0': {
+        thumbnailZoomManager.reset();
+
+        break;
+      }
+      default: {
+        return;
+      }
     }
     event.preventDefault();
   };
 
   element.addEventListener('wheel', onWheel, { passive: false });
-  window.addEventListener('keydown', onKeydown);
+  addEventListener('keydown', onKeydown);
   return () => {
     element.removeEventListener('wheel', onWheel);
-    window.removeEventListener('keydown', onKeydown);
+    removeEventListener('keydown', onKeydown);
     if (frame) {
       cancelAnimationFrame(frame);
     }

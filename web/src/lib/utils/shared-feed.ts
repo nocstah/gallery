@@ -209,8 +209,8 @@ export const freshItems = (album: AlbumResponseDto, assets: AssetResponseDto[], 
   const place: FeedPlace = { kind: 'album', id: album.id, name: album.albumName };
   const members = new Map(album.albumUsers.map(({ user }) => [user.id, toFeedPerson(user)]));
   members.set(me.id, me);
-  const items: Array<Extract<FeedItem, { kind: 'added' }>> = [];
-  const open = new Map<string, Extract<FeedItem, { kind: 'added' }>>();
+  const items: Array<Extract<FeedItem, { kind: 'added' | 'removed' }>> = [];
+  const open = new Map<string, Extract<FeedItem, { kind: 'added' | 'removed' }>>();
 
   for (const asset of newestFirst(assets)) {
     const current = open.get(asset.ownerId);

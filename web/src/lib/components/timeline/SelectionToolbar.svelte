@@ -229,11 +229,6 @@
   const tagsEnabled = $derived(authManager.authenticated ? authManager.preferences.tags.enabled : false);
   const caps = $derived(getSelectionCapabilities(ctx, tagsEnabled));
 
-  // Non-owned assets in the selection can only land as #764 contributions into an album linked
-  // to THIS space, so the picker is narrowed to those. `caps` already encodes the space-editor
-  // check; `space` is non-null whenever that flag is set.
-  const restrictToSpaceId = $derived(caps.addToAlbumRestrictedToSpace ? space?.id : undefined);
-
   // #1018: the same shape for sharing — when the selection reaches beyond what the caller owns and
   // they are a space Owner/Editor, the link is created against the space instead of being narrowed
   // to the owned subset. `caps` encodes the role check; `space` is non-null whenever it is set.
@@ -244,7 +239,6 @@
   // album stays out where the picker is narrowed to the space's albums)
   const reviewActions = () => {
     const { CreateSharedLink, NewAlbum, AddToAlbum } = getAssetBulkActions($t, {
-      restrictToSpaceId,
       editableSelectedAssetIds,
       shareSpaceId,
       fromSpaceId: space?.id,
@@ -256,7 +250,6 @@
 {#if assetInteraction.selectionActive}
   <AssetSelectControlBar {reviewActions}>
     {@const Actions = getAssetBulkActions($t, {
-      restrictToSpaceId,
       editableSelectedAssetIds,
       shareSpaceId,
       fromSpaceId: space?.id,

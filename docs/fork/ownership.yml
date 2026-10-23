@@ -5,7 +5,7 @@ metadata:
   upstream_branch: release/v3.3
   fork_remote: origin
   fork_branch: main
-  last_verified_fork_head: a8e6aa61001fcb9dfbd3273bf9de0103556cd1bb
+  last_verified_fork_head: 9582a1d2415d5d2f5383ec53f7b426ca26e756cd
 
 coverage_ignore:
   - specs/**
@@ -16,6 +16,8 @@ fork_surface:
       - server/src/gallery/**
     web:
       - web/src/lib/gallery/**
+      # the i18n overlay; web and mobile both read it, i18n/*.json stay upstream's
+      - i18n/gallery/**
     mobile:
       - mobile/lib/gallery/**
     database:
@@ -25,6 +27,25 @@ fork_surface:
       - .github/workflows/gallery-*.yml
 
 features:
+  local-omarchy:
+    title: Local Omarchy Interface And Curator Integration
+    risk: high
+    domains: [web]
+    owned_paths:
+      - DESIGN.md
+      - PRODUCT.md
+      - local-build.sh
+      - web/src/lib/components/omarchy/**
+      - web/src/lib/components/curator/**
+      - web/src/styles/omarchy-world.css
+      - web/src/routes/(user)/photos/**
+      - web/src/routes/(user)/recently-added/**
+      - web/src/routes/(user)/albums/[albumId=id]/**
+      - web/src/routes/(user)/spaces/*/*photos*/**
+      - web/src/routes/(user)/spaces/[spaceId]/albums/[albumId=id]/**
+      - web/memory-player/**
+      - web/vite.memory.config.ts
+    # These complete screens preserve the owner's accepted interaction model; see DESIGN.md.
   shared-spaces:
     title: Shared Spaces And Space Identity
     aliases:
@@ -57,6 +78,14 @@ features:
       - packages/plugin-gallery/**
       - server/src/services/gallery-workflow-host.service.ts
       - server/src/services/gallery-workflow-host.service.spec.ts
+      # Replay-owned: upstream files the fork owns outright. The fork-only people code lives in
+      # server/src/gallery/ (GalleryPeopleService/Controller, FaceIdentityMaintenanceService,
+      # PetFaceRepository); what remains here is upstream code rewritten for Option M and Spaces.
+      # Upstream changes to these files are not merged by conflict resolution: the preflight report
+      # lists every upstream commit touching them ("Touches shared-spaces owned path"), and each one
+      # is replayed by hand and recorded in that cycle's specs/upstream-reports/ entry.
+      - server/src/services/person.service.ts
+      - server/src/repositories/person.repository.ts
       - web/src/lib/components/SchemaSpacePicker.svelte
       - web/src/lib/components/SchemaSpacePicker.test-wrapper.svelte
       - web/src/lib/components/SchemaSpacePicker.spec.ts
@@ -125,7 +154,8 @@ features:
       - server/src/services/storage-migration.service.ts
       - server/src/controllers/storage-migration.controller.ts
       - server/src/backends/s3-storage.backend.ts
-      - server/src/gallery/storage-usage*.ts
+      - server/src/gallery/services/storage-usage.service*.ts
+      - server/src/gallery/utils/storage-usage*.ts
       - web/src/routes/admin/storage-migration/**
       - web/src/lib/components/import/**
       - web/src/lib/managers/import-manager.svelte.ts
@@ -296,6 +326,7 @@ features:
       - rc-build-workflow
       - split-mobile-server-release
       - environment-tagged-user-agent
+      - stock-client-version
       - fork-migration-compatibility
       - schema-functions
       - structured-json-logging
@@ -314,10 +345,18 @@ features:
       - .github/workflows/docs-deploy.yml
       - server/src/schema/migrations-gallery/**
       - server/bin/sync-gallery-migrations.mjs
+      - server/src/bin/gallery-migrations.ts
+      - server/src/schema/gallery-migration-ledger.ts
+      - server/src/schema/gallery.ts
       - tools/upstream-preflight/**
       - scripts/spec-citation-check.sh
       - scripts/upstream-review-pr.sh
       - Template/**
+      - server/src/gallery/utils/client-version*.ts
+      - server/src/gallery/repositories/stock-client-socket.spec.ts
+      - web/src/lib/gallery/client-header*.ts
+      - mobile/lib/gallery/gallery_app_header.dart
+      - mobile/test/gallery/gallery_app_header_test.dart
     upstream_extension_paths:
       - .github/workflows/**
       - packages/sdk/src/fetch-client.ts
@@ -327,6 +366,18 @@ features:
       - docker/**
       - server/src/config.ts
       - server/src/utils/fetch.ts
+      - server/src/constants.ts
+      - server/src/controllers/server.controller.ts
+      - server/src/maintenance/maintenance-worker.controller.ts
+      - server/src/maintenance/maintenance-worker.service.ts
+      - server/src/repositories/websocket.repository.ts
+      - server/src/services/version.service.ts
+      - server/src/services/job.service.ts
+      - web/src/lib/stores/websocket.ts
+      - web/src/lib/utils/server.ts
+      - mobile/lib/infrastructure/repositories/network.repository.dart
+      - mobile/lib/services/api.service.dart
+      - packages/cli/src/utils.ts
       - server/src/schema/functions.ts
       - server/helmet.json
       - web/vite.config.ts
@@ -388,7 +439,6 @@ features:
         - server/src/schema/migrations-gallery/1772810000000-AddSharedSpaceActivityTable.ts
         - server/src/schema/migrations-gallery/1772815000000-AddThumbnailCropYToSharedSpace.ts
         - server/src/schema/migrations-gallery/1772820000000-AddSharedSpaceFaceRecognition.ts
-        - server/src/schema/migrations-gallery/1773846750001-AddPersonNameTrigramIndex.ts
         - server/src/schema/migrations-gallery/1774215658876-AddSharedSpaceLibraryTable.ts
         - server/src/schema/migrations-gallery/1774300000000-CreateUserGroupTables.ts
         - server/src/schema/migrations-gallery/1775000000000-AddPetsEnabledToSharedSpace.ts
@@ -448,6 +498,15 @@ features:
         - server/src/schema/migrations-gallery/1794100000000-DropAssetIsFavoriteColumn.ts
         - server/src/schema/migrations-gallery/1796000000000-AddAssetFaceCreatedBy.ts
         - server/src/schema/migrations-gallery/1797000000000-AddAssetLocalDateTimeIndex.ts
+        - server/src/schema/migrations-gallery/1798000000000-AddSharedLinkSpaceTable.ts
+        - server/src/schema/migrations-gallery/1798100000000-AddAssetFaceCreatorTable.ts
+        - server/src/schema/migrations-gallery/1798200000000-DropLibraryCreateId.ts
+        - server/src/schema/migrations-gallery/1798500000000-AddAssetJobStatusGalleryTable.ts
+        - server/src/schema/migrations-gallery/1798600000000-AddPersonIdentityTable.ts
+        - server/src/schema/migrations-gallery/1798700000000-AddPersonPetTable.ts
+        - server/src/schema/migrations-gallery/1798800000000-RestoreAssetIsFavoriteProjection.ts
+        - server/src/schema/migrations-gallery/1798900000000-MoveVideoTrimToSidecar.ts
+        - server/src/schema/migrations-gallery/1799000000000-AddAssetImageAdjustTable.ts
     required_checks: [ci-invariants-check, fork-patches-check]
 
 checks:
@@ -534,24 +593,6 @@ ci_invariants:
       # not the viewer, so it is correct today — listed so a future edit toward the viewer form is
       # caught rather than silently uncovered.
       - server/src/repositories/asset.repository.ts
-    exceptions: []
-
-  # immich-30179 dispatches the four search endpoints to the dormant V3 builder whenever the request
-  # carries the structured shape. Gallery deliberately stays on searchAssetBuilderLegacy — V3 has no
-  # shared-space arm and drops the ownership predicate on album-confined branches — and rejects the
-  # new shape instead of falling through (legacy ignores `filter`, so a fallthrough would silently
-  # return a WIDER set than asked for). A rebase that resolves search.service.ts toward upstream
-  # would re-enable V3 with no conflict and no test failure; this catches that.
-  # Adopting V3 is a deliberate project: delete this invariant in the same change.
-  - id: search-v3-not-dispatched
-    title: Search V3 stays dormant; the flat path keeps the shared-space gate
-    forbidden_patterns:
-      - 'return this.searchMetadataV3(auth, dto);'
-      - 'return this.searchStatisticsV3(auth, dto);'
-      - 'return this.searchRandomV3(auth, dto);'
-      - 'return this.searchSmartV3(auth, dto);'
-    paths:
-      - server/src/services/search.service.ts
     exceptions: []
 
   # immich-31620 (+ immich-31902/31930/31931/31960) added person sharing: `person_user`, a trigger that

@@ -41,13 +41,15 @@
 
   // Escape with nothing left to close (the search's own Escape clears, then closes) folds the field
   const onKeyUp = (event: KeyboardEvent) => {
-    if (event.key === 'Escape' && !globalSearchManager.isOpen) {
+    if (box?.contains(event.target as Node) && event.key === 'Escape' && !globalSearchManager.isOpen) {
       fold(true);
     }
   };
 </script>
 
-<div class="ws-bar-search" data-open={open ? '' : undefined} bind:this={box} onfocusout={onFocusOut} onkeyup={onKeyUp}>
+<svelte:window onkeyup={onKeyUp} />
+
+<div role="search" class="ws-bar-search" data-open={open ? '' : undefined} bind:this={box} onfocusout={onFocusOut}>
   {#if open}
     <div class="ws-bar-search-field">
       <GlobalSearch manager={globalSearchManager} variant="dropdown" />

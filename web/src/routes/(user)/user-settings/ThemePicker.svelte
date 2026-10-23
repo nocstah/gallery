@@ -41,7 +41,8 @@
   };
 
   const fromFile = async (event: Event) => {
-    const file = (event.currentTarget as HTMLInputElement).files?.[0];
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) {
       return;
     }
@@ -50,7 +51,7 @@
     } catch (error) {
       toastManager.danger($t('theme_install_failed', { values: { reason: (error as Error).message } }));
     } finally {
-      (event.currentTarget as HTMLInputElement).value = '';
+      input.value = '';
     }
   };
 
@@ -78,6 +79,7 @@
   };
 
   const filters: Filter[] = ['all', 'dark', 'light', 'installed'];
+  const chromeLabels = { solid: 'chrome_solid', glass: 'chrome_glass', 'glass-hide': 'chrome_glass_hide' } as const;
 </script>
 
 <section class="themes">
@@ -86,7 +88,7 @@
     <div class="ws-seg" role="group" aria-label={$t('chrome_material')}>
       {#each CHROME_MODES as mode (mode)}
         <button type="button" aria-pressed={chrome.mode === mode} onclick={() => chrome.choose(mode)}>
-          {$t(`chrome_${mode.replace('-', '_')}`)}
+          {$t(chromeLabels[mode])}
         </button>
       {/each}
     </div>
