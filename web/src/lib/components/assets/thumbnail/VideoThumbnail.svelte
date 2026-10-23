@@ -2,10 +2,10 @@
   import { cleanClass } from '$lib';
   import { Icon } from '@immich/ui';
   import { mdiAlertCircleOutline, mdiPauseCircleOutline, mdiPlayCircleOutline } from '@mdi/js';
-  import { Duration } from 'luxon';
   import type { ClassValue } from 'svelte/elements';
   import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
   import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
+  import { formatDuration } from '$lib/utils/duration';
 
   interface Props {
     url: string;
@@ -103,15 +103,9 @@
 <div class="ws-tile-corner @container absolute inset-x-0 top-0 flex justify-end">
   <span class={['ws-tile-badge', badgeClass]}>
     {#if showTime}
-      <span class="ws-tile-badge-text hidden @min-[100px]:inline">
-        {#if remainingSeconds < 60}
-          {Duration.fromObject({ seconds: remainingSeconds }).toFormat('m:ss')}
-        {:else if remainingSeconds < 3600}
-          {Duration.fromObject({ seconds: remainingSeconds }).toFormat('mm:ss')}
-        {:else}
-          {Duration.fromObject({ seconds: remainingSeconds }).toFormat('h:mm:ss')}
-        {/if}
-      </span>
+      <!-- Local Omarchy layer: m:ss under an hour, h:mm:ss from one (utils/duration), every duration's one form; upstream
+           wrote 0:18 under a minute and 01:16 under an hour -->
+      <span class="ws-tile-badge-text hidden @min-[100px]:inline">{formatDuration(remainingSeconds)}</span>
     {/if}
 
     <!-- svelte-ignore a11y_no_static_element_interactions -->

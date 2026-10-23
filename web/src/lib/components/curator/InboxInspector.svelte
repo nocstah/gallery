@@ -2,6 +2,7 @@
   import { createInspectionZoom } from '$lib/actions/inspection-zoom';
   import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
   import { getAssetPlaybackUrl, getAssetUrl } from '$lib/utils';
+  import { formatDuration } from '$lib/utils/duration';
   import type { InspectionItem } from '$lib/utils/inbox-inspection';
   import { AssetTypeEnum, getAssetInfo } from '@immich/sdk';
   import { Icon } from '@immich/ui';
@@ -36,7 +37,8 @@
   let playing = $state(false);
   let time = $state(0);
   let duration = $state(0);
-  const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  // m:ss under an hour, h:mm:ss from one, every duration's one form (utils/duration)
+  const clock = formatDuration;
   const play = () => {
     if (!video) {
       return;

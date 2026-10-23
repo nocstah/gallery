@@ -22,6 +22,7 @@
   import { locale } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
   import { curatorIsMine } from '$lib/utils/curator';
+  import { formatDuration } from '$lib/utils/duration';
   import { getGlobalPersonHref } from '$lib/utils/global-person-route';
   import { lazyComponent } from '$lib/utils/lazy-component.svelte';
   import { getRepresentativeThumbnailUrl } from '$lib/utils/person-avatar';
@@ -205,7 +206,7 @@
   const fileFacts = $derived(asset ? fileFactsOf(asset, $locale) : []);
   const duration = $derived.by(() => {
     const seconds = Math.round((asset?.duration ?? 0) / 1000);
-    return seconds > 0 ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : '';
+    return seconds > 0 ? formatDuration(seconds) : '';
   });
 
   // Curator's story of the trip the photo belongs to, by its albums; Curator acts for its owner only

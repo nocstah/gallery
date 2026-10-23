@@ -4,6 +4,7 @@
   // The divider is a range input underneath, so arrow keys and touch move it too. A clip plays both versions in step,
   // with its own play button and position below the frame (native controls would be cut in half by the divider).
   import { restoredUrl, type Suggestion } from '$lib/utils/curator';
+  import { formatDuration } from '$lib/utils/duration';
   import { Icon } from '@immich/ui';
   import { mdiArrowLeftRight, mdiPause, mdiPlay, mdiFullscreen } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -78,7 +79,8 @@
       : undefined,
   );
 
-  const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  // m:ss under an hour, h:mm:ss from one, every duration's one form (utils/duration)
+  const clock = formatDuration;
 
   /** the original follows the restored clip, which carries the sound */
   const align = (always = false) => {
