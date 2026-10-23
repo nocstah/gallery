@@ -40,7 +40,7 @@
   },
 
   "assets": {
-    "_comment": "Each file in branding/kioku/assets/ replaces its counterparts in the build copy's web/static; a counterpart that is gone fails the build (upstream moved it). A file not drawn yet is a warning and Noodle's stays. Raster outputs are resized from the source; later entries overwrite earlier ones, so a hand-drawn small favicon beats the resized one. An optional source says what is made instead while it is not drawn: favicon.ico, for one, is assembled from the 16, 32 and 48 px PNGs.",
+    "_comment": "Each file in branding/kioku/assets/ replaces its counterparts in the build copy's web/static; a counterpart that is gone fails the build (upstream moved it), except a target marked new, a file the copy does not have (favicon-24.png, which apply-kioku.sh also links from app.html). A file not drawn yet is a warning and Noodle's stays. A source already at a target's size is copied byte for byte, any other resized (without timestamps). Later entries overwrite earlier ones, so a hand-drawn small favicon beats the resized one. An optional source says what is made instead while it is not drawn: favicon.ico, for one, is assembled from the 16, 24, 32 and 48 px PNGs.",
     "dir": "assets",
     "files": [
       {
@@ -53,13 +53,15 @@
           { "target": "web/static/favicon-96.png", "size": 96 },
           { "target": "web/static/favicon-48.png", "size": 48 },
           { "target": "web/static/favicon-32.png", "size": 32 },
+          { "target": "web/static/favicon-24.png", "size": 24, "new": true },
           { "target": "web/static/favicon-16.png", "size": 16 }
         ]
       },
       { "source": "favicon-48.png", "why": "the 48 px cut, drawn for its pixels", "optional": "made from favicon.png", "make": [{ "target": "web/static/favicon-48.png", "size": 48 }] },
       { "source": "favicon-32.png", "why": "the 32 px cut, drawn for its pixels", "optional": "made from favicon.png", "make": [{ "target": "web/static/favicon-32.png", "size": 32 }] },
+      { "source": "favicon-24.png", "why": "the 24 px cut, drawn for its pixels: new with Kioku, linked from app.html", "optional": "made from favicon.png", "make": [{ "target": "web/static/favicon-24.png", "size": 24, "new": true }] },
       { "source": "favicon-16.png", "why": "the 16 px cut, drawn for its pixels", "optional": "made from favicon.png", "make": [{ "target": "web/static/favicon-16.png", "size": 16 }] },
-      { "source": "favicon.ico", "why": "the legacy tab icon", "optional": "assembled from the 16, 32 and 48 px PNGs", "make": [{ "target": "web/static/favicon.ico" }] },
+      { "source": "favicon.ico", "why": "the legacy tab icon", "optional": "assembled from the 16, 24, 32 and 48 px PNGs", "make": [{ "target": "web/static/favicon.ico" }] },
       {
         "source": "app-icon.png",
         "why": "the installed app's icon: opaque, 1024 px, the mark inside the middle 80% (maskable)",
@@ -82,7 +84,7 @@
     ],
     "ico": {
       "target": "web/static/favicon.ico",
-      "from": ["web/static/favicon-16.png", "web/static/favicon-32.png", "web/static/favicon-48.png"]
+      "from": ["web/static/favicon-16.png", "web/static/favicon-24.png", "web/static/favicon-32.png", "web/static/favicon-48.png"]
     }
   },
 

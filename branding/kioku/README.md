@@ -106,15 +106,18 @@ unbranded build; so does a checkout without `branding/kioku/brand.json`. The def
 
 ## Assets
 
-`brand.json` lists each source under `assets` with what it replaces in `web/static`. A source not drawn yet is a
-warning, and Noodle's file stays; a counterpart the copy no longer has stops the build. Raster files are resized to
-each size (a hand-drawn 16, 32 or 48 px favicon beats the resized one), written without timestamps;
-`favicon.ico` is assembled from the 16, 32 and 48 px PNGs unless drawn.
+`brand.json` lists each source under `assets` with what it replaces in `web/static`. A source not drawn is a
+warning, and Noodle's file stays; a counterpart the copy no longer has stops the build, except a target marked new
+(`favicon-24.png`, which the copy's `app.html` then lists beside the other sizes). A source drawn at a target's size
+ships byte for byte; any other size is resized from it, written without timestamps, so a hand-drawn small favicon
+beats the resized one. `favicon.ico` ships as drawn, or is assembled from the 16, 24, 32 and 48 px PNGs.
+`verify-kioku.sh` checks each shipped file against its source.
 
 | Source                                     | Becomes                                                                      |
 | ------------------------------------------ | ---------------------------------------------------------------------------- |
-| `favicon.png` (square, 256 px or more)     | `favicon.png`, `favicon-{256,144,96,48,32,16}.png`, `favicon.ico`             |
-| `favicon-{48,32,16}.png` (optional)        | the small sizes, drawn for their pixels                                      |
+| `favicon.png` (square, 256 px or more)     | `favicon.png`, `favicon-{256,144,96,48,32,24,16}.png`                        |
+| `favicon-{48,32,24,16}.png` (optional)     | the small sizes, drawn for their pixels; 24 px is new with Kioku             |
+| `favicon.ico` (optional)                   | `favicon.ico`                                                                |
 | `app-icon.png` (opaque, 1024 px, maskable) | `manifest-icon-{512,192}.maskable.png`, `apple-icon-180.png`                 |
 | `apple-icon-180.png` (optional)            | `apple-icon-180.png`                                                         |
 | `feature-panel.png` (1200 × 630)           | the link preview of a shared link without a photo of its own                 |

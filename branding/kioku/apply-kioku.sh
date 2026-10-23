@@ -58,18 +58,25 @@ rule() {
   node "$ENGINE" rewrite "$ROOT" "$1" "$2"
 }
 
-# resize <source> <target> <px>: a square PNG at its real size, written without timestamps (a second run makes the
-# same bytes)
+# place <source> <target> <px>: a square PNG at that size, copied byte for byte when it is drawn at that size already,
+# otherwise resized and written without timestamps (a second run makes the same bytes); says which in $placed
 size_of() {
   "${MAGICK[@]}" identify -format '%wx%h' "$1[0]"
 }
-resize() {
+placed=""
+place() {
   local size
   size=$(size_of "$1")
   [[ ${size%x*} == "${size#*x}" ]] || die "${1#"$KIOKU_DIR"/} is $size: it must be square"
+  if [[ $size == "$3x$3" ]]; then
+    cp "$1" "$2"
+    placed="as drawn"
+    return
+  fi
   ((${size%x*} >= $3)) || echo "  warning: ${1#"$KIOKU_DIR"/} is $size, smaller than the $3px it makes"
   "${MAGICK[@]}" "$1" -resize "$3x$3" -strip -define png:exclude-chunks=date,time "$2"
   [[ $(size_of "$2") == "$3x$3" ]] || die "${2#"$ROOT"/} did not come out $3x$3"
+  placed="resized from $size"
 }
 
 echo "=== $NAME over $NOODLE: $ROOT ==="
@@ -184,8 +191,8 @@ echo "--- The phone app's banner ---"
 phone_source=$(jq -r '.phone_app_icon.source' "$BRAND")
 phone_target=$(jq -r '.phone_app_icon.target' "$BRAND")
 [[ -f $ROOT/$phone_source ]] || die "$phone_source is not in the copy (Noodle moved it): update brand.json"
-resize "$ROOT/$phone_source" "$ROOT/$phone_target" "$(jq -r '.phone_app_icon.size' "$BRAND")"
-echo "  $phone_source -> $phone_target"
+place "$ROOT/$phone_source" "$ROOT/$phone_target" "$(jq -r '.phone_app_icon.size' "$BRAND")"
+echo "  $phone_source -> $phone_target ($placed)"
 rule web/src/lib/components/shared-components/open-in-app-banner.svelte 1 <<'RULE'
 src="/apple-icon-180.png"
 =>
@@ -216,9 +223,9 @@ mv "$tmp" "$manifest"
 echo "  web/static/manifest.json: $NAME, $SHORT_NAME, «$DESCRIPTION», $BACKGROUND"
 
 echo "--- Assets ---"
-# Each file brand.json lists under assets replaces its counterparts in the copy, resized where a size is given (the
-# sizes apply-branding.sh makes, but each at its real size). PNGs are written without timestamps, so a second run makes
-# the same bytes.
+# Each file brand.json lists under assets replaces its counterparts in the copy: byte for byte, or resized where it is
+# drawn at another size than a target's (the sizes apply-branding.sh makes, but each at its real size), without
+# timestamps, so a second run makes the same bytes. A target marked new is one the copy does not have yet.
 assets="$KIOKU_DIR/$(jq -r '.assets.dir' "$BRAND")"
 missing=()
 optional=()
@@ -236,25 +243,48 @@ while IFS=$'\t' read -r source why instead; do
   if [[ $source == favicon*.png ]]; then
     favicon_drawn=yes
   fi
-  while IFS=$'\t' read -r target size; do
-    [[ -f $ROOT/$target ]] || die "$target is not in the copy (upstream moved it): update assets in brand.json"
-    if [[ -z $size ]]; then
+  while IFS=$'\t' read -r target size new; do
+    [[ $new == new || -f $ROOT/$target ]] || die "$target is not in the copy (upstream moved it): update brand.json"
+    if [[ $size == 0 ]]; then
       cp "$assets/$source" "$ROOT/$target"
+      placed="as drawn"
     else
-      resize "$assets/$source" "$ROOT/$target" "$size"
+      place "$assets/$source" "$ROOT/$target" "$size"
+      placed="${size}px, $placed"
     fi
-    echo "  assets/$source -> $target${size:+ (${size}px)}"
+    if [[ $new == new ]]; then
+      placed+=", new"
+    fi
+    echo "  assets/$source -> $target ($placed)"
     made=$((made + 1))
-  done < <(jq -r --arg source "$source" \
-    '.assets.files[] | select(.source == $source) | .make[] | [.target, (.size // "" | tostring)] | @tsv' "$BRAND")
+  done < <(jq -r --arg source "$source" '.assets.files[] | select(.source == $source) | .make[]
+    | [.target, (.size // 0 | tostring), (if .new then "new" else "-" end)] | @tsv' "$BRAND")
 done < <(jq -r '.assets.files[] | [.source, .why, (.optional // "")] | @tsv' "$BRAND")
-# favicon.ico, unless drawn: assembled from the 16, 32 and 48 px PNGs once a favicon is (Noodle's stays until then)
+# favicon.ico, unless drawn: assembled from the sizes brand.json lists for it, once a favicon is drawn (Noodle's stays
+# until then)
 if [[ ! -f $assets/favicon.ico && -n $favicon_drawn ]]; then
   ico="$ROOT/$(jq -r '.assets.ico.target' "$BRAND")"
-  mapfile -t ico_from < <(jq -r '.assets.ico.from[]' "$BRAND")
-  "${MAGICK[@]}" "${ico_from[@]/#/$ROOT/}" "$ico"
-  [[ $("${MAGICK[@]}" identify -format '%w ' "$ico") == "16 32 48 " ]] || die "favicon.ico is not 16, 32 and 48 px"
-  echo "  favicon.ico <- the 16, 32 and 48 px PNGs"
+  frames=()
+  while read -r frame; do
+    if [[ -f $ROOT/$frame ]]; then
+      frames+=("$ROOT/$frame")
+    fi
+  done < <(jq -r '.assets.ico.from[]' "$BRAND")
+  "${MAGICK[@]}" "${frames[@]}" "$ico"
+  sizes=$("${MAGICK[@]}" identify -format '%w ' "$ico")
+  [[ $(wc -w <<<"$sizes") -eq ${#frames[@]} ]] || die "favicon.ico did not take its ${#frames[@]} sizes"
+  echo "  favicon.ico <- the ${sizes% } px PNGs"
+fi
+# A 24 px favicon is new with Kioku: app.html lists it beside the other sizes, once there is one
+if [[ -f $ROOT/web/static/favicon-24.png ]]; then
+  rule web/src/app.html 1 <<'RULE'
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+=>
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="24x24" href="/favicon-24.png" />
+RULE
+else
+  echo "  no 24 px favicon drawn: app.html keeps its sizes"
 fi
 required=$(jq '[.assets.files[] | select(.optional | not)] | length' "$BRAND")
 if ((${#missing[@]} > 0)); then

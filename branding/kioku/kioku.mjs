@@ -777,7 +777,7 @@ const verify = (target) => {
     `«${brand.memory_player.memory_title}»`,
   );
   // The loader writes itself, so nothing spins it too, and the login card shows the still mark; a dark boot screen
-  // shows the loader drawn for a dark ground.
+  // shows the loader drawn for a dark ground; a 24 px favicon is listed once one ships.
   const boot = read(copyMode ? 'web/src/app.html' : 'web/index.html');
   expect('the boot screen: the loader not spun', !boot.includes('loadspin'), 'no loadspin');
   expect(
@@ -805,6 +805,67 @@ const verify = (target) => {
           : !/size:\s*[`'"]giant[`'"]\s*,\s*transparent\s*:/.test(code),
       ),
     'its Logo without transparent',
+  );
+  const has24 = fs.existsSync(path.join(root, copyMode ? 'web/static/favicon-24.png' : 'web/favicon-24.png'));
+  const link24 = boot.includes('<link rel="icon" type="image/png" sizes="24x24" href="/favicon-24.png"');
+  expect(
+    'the 24 px favicon',
+    has24 === link24,
+    has24
+      ? link24
+        ? 'shipped, listed in app.html'
+        : 'shipped, not listed'
+      : link24
+        ? 'listed, not shipped'
+        : 'not drawn',
+  );
+
+  // The drawn assets as they ship: each target from the last source brand.json lists for it that is drawn, byte for
+  // byte where it is drawn at the target's size, else at that size.
+  const assetsDir = path.join(here, brand.assets.dir);
+  const pngSize = (bytes) =>
+    bytes.length > 24 && bytes.toString('latin1', 1, 4) === 'PNG'
+      ? `${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`
+      : undefined;
+  const drawnFor = new Map();
+  for (const { source, make } of brand.assets.files) {
+    if (fs.existsSync(path.join(assetsDir, source))) {
+      for (const { target, size } of make) {
+        drawnFor.set(target, { source, size });
+      }
+    }
+  }
+  let asDrawn = 0;
+  let resized = 0;
+  const wrongAssets = [];
+  for (const [target, { source, size }] of drawnFor) {
+    const shipped = path.join(root, copyMode ? target : target.replace(/^web\/static\//, 'web/'));
+    if (!fs.existsSync(shipped)) {
+      wrongAssets.push(`${path.relative(root, shipped)} is missing`);
+      continue;
+    }
+    const drawn = fs.readFileSync(path.join(assetsDir, source));
+    const out = fs.readFileSync(shipped);
+    if (!size || pngSize(drawn) === `${size}x${size}`) {
+      if (out.equals(drawn)) {
+        asDrawn++;
+      } else {
+        wrongAssets.push(`${path.relative(root, shipped)} is not assets/${source} as drawn`);
+      }
+    } else if (pngSize(out) === `${size}x${size}`) {
+      resized++;
+    } else {
+      wrongAssets.push(`${path.relative(root, shipped)} is ${pngSize(out)}, not ${size}x${size}`);
+    }
+  }
+  expect(
+    'the drawn assets',
+    wrongAssets.length === 0,
+    wrongAssets.length > 0
+      ? wrongAssets.join('; ')
+      : drawnFor.size > 0
+        ? `${asDrawn} ship byte for byte as drawn, ${resized} resized from them`
+        : 'none drawn yet',
   );
 
   // 4. A build output's precompressed copies say what the files say (the server sends those first).
