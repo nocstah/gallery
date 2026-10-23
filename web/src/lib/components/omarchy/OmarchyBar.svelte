@@ -127,7 +127,7 @@
     <a class="ws-bar-mark" data-sveltekit-preload-data="hover" href={Route.photos()} aria-label={$t('photos')}>
       <!-- one step down the Logo scale (2.5rem -> 2rem): at 2.5rem the mark outweighed the 56px bar ("make the logo at
            the top slightly smaller") -->
-      <Logo variant={barSlot.content || !isExpandedLayout ? 'icon' : 'inline'} size="tiny" />
+      <Logo variant={barSlot.content || !isExpandedLayout ? 'icon' : 'inline'} size="tiny" ink />
     </a>
   </div>
 

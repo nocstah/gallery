@@ -5,10 +5,13 @@
     variant?: 'icon' | 'inline' | 'stacked';
     size?: 'tiny' | 'small' | 'medium' | 'large' | 'giant';
     transparent?: boolean;
+    // Local Omarchy layer: drawn in the surrounding text's colour, the logo file used only as a mask, so the bar's mark
+    // takes each theme's ink instead of the file's fixed ink or paper. Decorative: the link around it carries the name.
+    ink?: boolean;
     class?: string;
   };
 
-  const { variant = 'icon', size = 'medium', transparent = false, class: className }: Props = $props();
+  const { variant = 'icon', size = 'medium', transparent = false, ink = false, class: className }: Props = $props();
 
   const sizeClasses: Record<string, string> = {
     tiny: 'h-8',
@@ -44,4 +47,25 @@
   const classes = $derived([sizeClasses[size], variantClasses[variant], className].filter(Boolean).join(' '));
 </script>
 
-<img {src} class={classes} alt="Gallery logo" />
+{#if ink}
+  <!-- the hidden image gives the mask its width at the logo's own proportions -->
+  <span class="ws-logo-ink {classes}" style:--ws-logo-src="url({src})" aria-hidden="true">
+    <img {src} alt="" class="ws-logo-ink-size" />
+  </span>
+{:else}
+  <img {src} class={classes} alt="Gallery logo" />
+{/if}
+
+<style>
+  .ws-logo-ink {
+    display: inline-flex;
+    background-color: currentColor;
+    -webkit-mask: var(--ws-logo-src) center / contain no-repeat;
+    mask: var(--ws-logo-src) center / contain no-repeat;
+  }
+  .ws-logo-ink-size {
+    height: 100%;
+    width: auto;
+    visibility: hidden;
+  }
+</style>
