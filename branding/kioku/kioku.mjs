@@ -1,17 +1,21 @@
 #!/usr/bin/env node
-// Local Omarchy layer: the engine behind apply-kioku.sh (README.md beside it says what it does
+// Local Omarchy layer: the engine behind apply-kioku.sh and verify-kioku.sh (README.md beside them says what they do
 // and why). Node only, no dependencies, like i18n/gallery/merge.mjs; the words and the i18n classification it works by
 // are brand.json's, and the names it replaces are the ones Noodle's apply-branding.sh wrote (branding/config.json).
 //
 //   node kioku.mjs rewrite <root> <file> <count>   a literal rewrite of <root>/<file>, its rule on stdin: the old text,
 //                                                  a line "=>", the new text (@NAME@ and the like from brand.json)
 //   node kioku.mjs i18n <i18n dir>                 name the folded bundle Kioku by brand.json's classification
+//   node kioku.mjs verify <copy root | output>     list every brand name left where people see it; exit 1 on one that
+//                                                  is not on the keep list
 //
 // Every rewrite checks that it found what it was written against, as often as it was, and stops otherwise, naming the
 // file and the text: after a rebase, a rule that quietly matched nothing would ship the old name.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
+import zlib from 'node:zlib';
 
 class Stop extends Error {}
 const stop = (message) => {
@@ -63,6 +67,7 @@ const clip = (text, length = 90) => {
   const flat = text.replaceAll('\n', '⏎');
   return flat.length > length ? `${flat.slice(0, length - 1)}…` : flat;
 };
+const escapeRegExp = (text) => text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
 // ---- rewrite: one literal rule from apply-kioku.sh ----
 
@@ -493,6 +498,320 @@ const applyI18n = (dir) => {
   }
 };
 
+// ---- verify ----
+
+const keepEntries = brand.verify.keep.map((entry) => ({
+  ...entry,
+  near: entry.near ? new RegExp(entry.near) : undefined,
+  file: entry.file ? new RegExp(entry.file) : undefined,
+}));
+
+// Brand names in code and markup: Noodle's name, and the short name and upstream's name as words (an identifier such as
+// GalleryTheme or getMyImmichLink is not one). Lower-case forms are class names, paths and hostnames there.
+const codeMentionsIn = (text) => {
+  const found = [];
+  const word = (token) => new RegExp(`(?<![A-Za-z])${escapeRegExp(token)}(?![A-Za-z])`, 'g');
+  let rest = text;
+  for (const [token, pattern] of [
+    [NOODLE, new RegExp(escapeRegExp(NOODLE), 'g')],
+    [SHORT, word(SHORT)],
+    [UPSTREAM, word(UPSTREAM)],
+  ]) {
+    rest = rest.replaceAll(pattern, (match, at) => {
+      found.push({ token, at, length: match.length });
+      return '\u0000'.repeat(match.length);
+    });
+  }
+  return found.sort((a, b) => a.at - b.at);
+};
+
+// Comments in a source file, blanked to spaces so positions and lines stay: <!-- -->, /* */ and // (not a URL's //)
+const blankComments = (text) =>
+  text
+    .replaceAll(/<!--[\s\S]*?-->/g, (match) => match.replaceAll(/[^\n]/g, ' '))
+    .replaceAll(/\/\*[\s\S]*?\*\//g, (match) => match.replaceAll(/[^\n]/g, ' '))
+    .replaceAll(/(^|[\s;{}(),])\/\/[^\n]*/gm, (match, lead) => lead + ' '.repeat(match.length - lead.length));
+
+const lineOf = (text, at) => count(text.slice(0, at), '\n') + 1;
+
+// A JavaScript module that only holds data: no import, an export list at its end, and what it exports a tree of
+// strings under message keys. A locale's JSON becomes one: in the web a key per export, in the memory player a
+// default.
+const dataModule = (code) => {
+  const tail = /export\s*\{([^}]*)\}\s*;?\s*$/.exec(code);
+  // a bundler puts a module's imports at its very start; a translation saying "import" is no import
+  if (!tail || /^\s*import[\s{*"'`]/.test(code)) {
+    return undefined;
+  }
+  const names = tail[1]
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [local, exported = local] = entry.split(/\s+as\s+/);
+      return [exported.replaceAll(/^["']|["']$/g, ''), local];
+    });
+  if (names.length === 0 || !names.every(([, local]) => /^[\w$]+$/.test(local))) {
+    return undefined;
+  }
+  try {
+    const object = names.map(([exported, local]) => `${JSON.stringify(exported)}:${local}`).join(',');
+    const body = `${code.slice(0, tail.index)};({${object}})`;
+    const exports = vm.runInNewContext(body, Object.create(null), { timeout: 2000 });
+    const data = exports.default && typeof exports.default === 'object' ? exports.default : exports;
+    const leaves = leafEntries(data);
+    const words = leaves.filter(([key, value]) => /^[a-z][a-z0-9_.]*$/i.test(key) && typeof value === 'string');
+    return leaves.length >= 10 && words.length / leaves.length > 0.95 ? data : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const walk = (dir) =>
+  fs.existsSync(dir)
+    ? fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        const full = path.join(dir, entry.name);
+        return entry.isDirectory() ? walk(full) : [full];
+      })
+    : [];
+
+const TEXT = /\.(js|mjs|html|json|txt|css|svg|webmanifest|xml)$/;
+
+const verify = (target) => {
+  const root = path.resolve(target);
+  const copyMode = fs.existsSync(path.join(root, 'i18n', 'en.json')) && fs.existsSync(path.join(root, 'web', 'src'));
+  const buildMode = fs.existsSync(path.join(root, 'web', '_app'));
+  if (!copyMode && !buildMode) {
+    stop(`${root}: neither a build copy (i18n/, web/src/) nor local-build.sh's output (web/_app/, memory-player/)`);
+  }
+  const problems = [];
+  const lines = [];
+  const say = (line = '') => lines.push(line);
+  say(`${NAME} verify, ${copyMode ? 'build copy' : 'build output'}: ${root}`);
+
+  // 1. The i18n bundle: every brand name left is on the keep list.
+  const cls = classification();
+  let bundle;
+  const rawSources = [];
+  const localeFiles = new Set();
+  if (copyMode) {
+    if (fs.existsSync(path.join(root, 'i18n', 'gallery', 'en.json'))) {
+      problems.push(
+        'i18n/gallery/en.json is there: the overlay is not folded in, so this is a checkout, not a build copy',
+      );
+    }
+    bundle = loadBundle(path.join(root, 'i18n'));
+  } else {
+    bundle = new Map();
+    const modules = [...walk(path.join(root, 'web', '_app')), ...walk(path.join(root, 'memory-player'))];
+    for (const file of modules.filter((file) => file.endsWith('.js'))) {
+      const code = fs.readFileSync(file, 'utf8');
+      if (/^var [\w$]+=`<script[\s>]/.test(code)) {
+        rawSources.push(file); // a settings page's own source, which the settings search reads for its $t keys
+        continue;
+      }
+      const data = /\bexport\s*\{/.test(code) ? dataModule(code) : undefined;
+      if (data) {
+        bundle.set(path.relative(root, file), data);
+        localeFiles.add(file);
+      }
+    }
+    const web = [...bundle.keys()].filter((file) => file.startsWith('web/')).length;
+    if (web < 10 || web === bundle.size) {
+      problems.push(
+        `found ${web} locale bundles in web/_app and ${bundle.size - web} in memory-player, expected dozens and ten: ` +
+          "the build's chunks changed shape, so verify-kioku.sh cannot read the bundle out of them",
+      );
+    }
+  }
+  const { kept, unexpected, strings } = audit(bundle, cls.keepGroup);
+  say();
+  say(`i18n: ${bundle.size} locale ${copyMode ? 'files' : 'bundles'}, ${strings} strings name a brand`);
+  for (const [group, keys] of [...kept].sort()) {
+    say(`  kept  ${group} (${keys.size} keys): ${brand.i18n.keep[group]?._why ?? ''}`);
+    const list = [...keys].sort().map(([key, locales]) => `${key} (${locales.length})`);
+    for (let i = 0; i < list.length; i += 4) {
+      say(`          ${list.slice(i, i + 4).join(', ')}`);
+    }
+  }
+  if (unexpected.length > 0) {
+    say(`  UNEXPECTED, not on the keep list:\n${describeUnexpected(unexpected)}`);
+    problems.push(`${new Set(unexpected.map(({ key }) => key)).size} i18n key(s) name a brand off the keep list`);
+  }
+  if (copyMode) {
+    if (bundle.get('en')[CREDIT.key] !== CREDIT.text.en) {
+      problems.push(`i18n/en.json has no ${CREDIT.key}: apply-kioku.sh has not run on this copy`);
+    }
+  } else if (![...bundle.values()].some((data) => data[CREDIT.key] === CREDIT.text.en)) {
+    problems.push(`no locale bundle holds ${CREDIT.key}: the credit did not reach the build`);
+  }
+
+  // 2. Everything else people are shown: the surfaces of a copy (comments blanked), or the whole output.
+  const files = copyMode
+    ? brand.verify.surfaces.map((file) => path.join(root, file))
+    : [...walk(path.join(root, 'web')), ...walk(path.join(root, 'memory-player'))].filter(
+        (file) => TEXT.test(file) && !localeFiles.has(file) && !rawSources.includes(file),
+      );
+  const keptText = [];
+  const unexpectedText = [];
+  for (const file of files) {
+    const relative = path.relative(root, file);
+    if (!fs.existsSync(file)) {
+      problems.push(`${relative}: not in the copy any more (upstream moved it): update verify.surfaces in brand.json`);
+      continue;
+    }
+    const raw = fs.readFileSync(file, 'utf8');
+    const text = copyMode ? blankComments(raw) : raw;
+    for (const { token, at, length } of codeMentionsIn(text)) {
+      const around = text.slice(Math.max(0, at - 160), at + length + 160);
+      const entry = keepEntries.find((keep) =>
+        keep.file ? keep.file.test(relative) : keep.token === token && keep.near.test(around),
+      );
+      const where = `${relative}:${lineOf(text, at)}`;
+      const snippet = clip(text.slice(Math.max(0, at - 40), at + length + 40).trim(), 100);
+      (entry ? keptText : unexpectedText).push({ where, token, snippet, why: entry?.why });
+    }
+  }
+  say();
+  say(
+    `text: ${files.length} ${copyMode ? 'surface files' : 'files'} read` +
+      (rawSources.length > 0
+        ? ` (and ${rawSources.length} settings pages' raw source the settings search reads, never shown)`
+        : ''),
+  );
+  const keptByWhy = new Map();
+  for (const item of keptText) {
+    keptByWhy.set(item.why, [...(keptByWhy.get(item.why) ?? []), item]);
+  }
+  for (const [reason, items] of keptByWhy) {
+    say(`  kept  ${items[0].token}: ${reason}`);
+    for (const item of items.slice(0, 3)) {
+      say(`          ${item.where}  «${item.snippet}»`);
+    }
+    if (items.length > 3) {
+      say(`          … ${items.length - 3} more`);
+    }
+  }
+  if (unexpectedText.length > 0) {
+    say('  UNEXPECTED, not on the keep list:');
+    for (const item of unexpectedText) {
+      say(`    ${item.where}  ${item.token}  «${item.snippet}»`);
+    }
+    problems.push(`${unexpectedText.length} brand name(s) in the text off the keep list`);
+  }
+
+  // 3. And what should say Kioku does.
+  say();
+  say('expected:');
+  const expect = (what, ok, detail) => {
+    say(`  ${ok ? 'ok  ' : 'FAIL'}  ${what}${detail ? `: ${detail}` : ''}`);
+    if (!ok) {
+      problems.push(`${what}${detail ? ` (${detail})` : ''}`);
+    }
+  };
+  const read = (file) => (fs.existsSync(path.join(root, file)) ? fs.readFileSync(path.join(root, file), 'utf8') : '');
+  const scripts = copyMode
+    ? ''
+    : [...walk(path.join(root, 'web', '_app'))]
+        .filter((file) => file.endsWith('.js') && !localeFiles.has(file))
+        .map((file) => fs.readFileSync(file, 'utf8'))
+        .join('\n');
+  const player = copyMode
+    ? read('web/memory-player/src/SharedMemoryPlayer.svelte')
+    : walk(path.join(root, 'memory-player'))
+        .filter((file) => file.endsWith('.js'))
+        .map((file) => fs.readFileSync(file, 'utf8'))
+        .join('\n');
+  const manifestFile = copyMode ? 'web/static/manifest.json' : 'web/manifest.json';
+  const manifest = JSON.parse(read(manifestFile) || '{}');
+  expect(
+    `${manifestFile}`,
+    manifest.name === NAME &&
+      manifest.short_name === brand.short_name &&
+      manifest.description === brand.description &&
+      manifest.background_color === brand.manifest.background_color,
+    `name ${manifest.name}, short_name ${manifest.short_name}, description «${manifest.description}»`,
+  );
+  const noscript = read(copyMode ? 'web/src/app.html' : 'web/index.html');
+  expect('the no-JavaScript line', noscript.includes(`To use ${NAME},`), `«To use ${NAME}, …»`);
+  const titles = copyMode
+    ? [
+        'web/src/routes/+layout.svelte',
+        'web/src/routes/ErrorLayout.svelte',
+        'web/src/lib/components/pages/SharedLinkErrorPage.svelte',
+        'web/src/lib/components/pages/SharedLinkPage.svelte',
+      ].reduce((sum, file) => sum + count(read(file), ` - ${NAME}`), 0)
+    : count(scripts, ` - ${NAME}`);
+  expect('the tab titles', titles >= 4, `«… - ${NAME}» ${titles}× (the pages, the error pages, a shared link's page)`);
+  const defaultTitle = copyMode
+    ? read('web/src/routes/+layout.ts').includes(`title: '${NAME}'`)
+    : new RegExp(`\\btitle:\\s*[\`'"]${escapeRegExp(NAME)}[\`'"]`).test(scripts);
+  expect('a page without a title of its own', defaultTitle, `«${NAME}»`);
+  const inspector = copyMode ? read('web/src/lib/managers/inspector-link.svelte.ts') : scripts;
+  expect('the inspector window', inspector.includes(brand.inspector_title), `«${brand.inspector_title}»`);
+  const logos = copyMode
+    ? count(read('web/src/lib/components/shared-components/Logo.svelte'), `alt="${brand.logo_alt}"`) +
+      count(read('web/src/lib/components/layouts/AuthPageLayout.svelte'), `alt="${brand.logo_alt}"`)
+    : count(scripts, `alt="${brand.logo_alt}"`);
+  expect("the logos' alt text", logos >= 2, `«${brand.logo_alt}» ${logos}×`);
+  const theme = copyMode ? read('web/src/lib/theme/derive.ts') : scripts;
+  expect('a theme file that is not one', theme.includes(`not a ${NAME} theme`), `«not a ${NAME} theme …»`);
+  const help = copyMode ? read('web/src/lib/modals/HelpAndFeedbackModal.svelte') : scripts;
+  expect('Help › About: the credit', help.includes(CREDIT.key), `«${CREDIT.text.en}»`);
+  const playerPage = read(copyMode ? 'web/memory-player/index.html' : 'memory-player/index.html');
+  expect(
+    "the memory player's page",
+    playerPage.includes(`<title>${brand.memory_player.page_title}</title>`),
+    `«${brand.memory_player.page_title}»`,
+  );
+  const phoneIcon = placeholders.PHONE_APP_ICON;
+  const banner = copyMode ? read('web/src/lib/components/shared-components/open-in-app-banner.svelte') : scripts;
+  const phoneIconFile = copyMode ? brand.phone_app_icon.target : `web${phoneIcon}`;
+  expect(
+    "the open-in-app banner: the phone app's own icon",
+    banner.includes(`"${phoneIcon}"`) && fs.existsSync(path.join(root, phoneIconFile)),
+    phoneIconFile,
+  );
+  const [titleBefore, titleAfter] = brand.memory_player.memory_title.split('{title}');
+  expect(
+    "a memory's title",
+    (!titleBefore || player.includes(titleBefore)) && player.includes(titleAfter),
+    `«${brand.memory_player.memory_title}»`,
+  );
+
+  // 4. A build output's precompressed copies say what the files say (the server sends those first).
+  if (buildMode) {
+    let compared = 0;
+    const differ = [];
+    for (const file of walk(root).filter((file) => /\.(br|gz)$/.test(file))) {
+      const plain = file.replace(/\.(br|gz)$/, '');
+      if (!fs.existsSync(plain)) {
+        continue;
+      }
+      const packed = fs.readFileSync(file);
+      const unpacked = file.endsWith('.br') ? zlib.brotliDecompressSync(packed) : zlib.gunzipSync(packed);
+      compared++;
+      if (!unpacked.equals(fs.readFileSync(plain))) {
+        differ.push(path.relative(root, file));
+      }
+    }
+    expect(
+      'the precompressed copies',
+      differ.length === 0,
+      differ.length > 0 ? `${differ.join(', ')} differ from their files` : `${compared} match their files`,
+    );
+  }
+
+  say();
+  say(
+    problems.length === 0
+      ? `OK: nothing people see names ${NOODLE}, ${SHORT} or ${UPSTREAM} off the keep list`
+      : `FAIL:\n${problems.map((problem) => `  - ${problem}`).join('\n')}`,
+  );
+  console.log(lines.join('\n'));
+  return problems.length === 0;
+};
+
 // ---- the command line ----
 
 const readStdin = () => fs.readFileSync(0, 'utf8');
@@ -507,8 +826,10 @@ try {
     rewrite(args[0], args[1], wanted, readStdin());
   } else if (command === 'i18n' && args.length === 1) {
     applyI18n(path.resolve(args[0]));
+  } else if (command === 'verify' && args.length === 1) {
+    process.exitCode = verify(args[0]) ? 0 : 1;
   } else {
-    stop('usage: kioku.mjs rewrite <root> <file> <count> < rule | i18n <i18n dir>');
+    stop('usage: kioku.mjs rewrite <root> <file> <count> < rule | i18n <i18n dir> | verify <copy root | output>');
   }
 } catch (error) {
   if (error instanceof Stop) {

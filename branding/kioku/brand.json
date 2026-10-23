@@ -266,5 +266,38 @@
       { "locale": "pl", "keys": ["admin.maintenance_integrity_untracked_file_description"], "from": "Noodle Gallerya", "to": "Kioku" },
       { "locale": "fr", "from": "d'Noodle Gallery", "to": "de Kioku" }
     ]
+  },
+
+  "verify": {
+    "_comment": [
+      "What verify-kioku.sh passes outside the i18n bundle's keep list, each with the text around it that makes it what it is (near: a regular expression the 160 characters on either side must match), so the same word anywhere else still fails.",
+      "surfaces are the source files a build copy's check reads (titles, the manifest, app.html, the memory player, and the files apply-kioku.sh rewrites); a build output is read whole."
+    ],
+    "keep": [
+      { "token": "Noodle Gallery", "near": "id:\\s*[`'\"]immich[`'\"],\\s*title:\\s*[`'\"]Noodle Gallery", "why": "About › Server details lists the server's own version, Noodle Gallery's (ServerAboutModal)" },
+      { "token": "Immich", "near": "github\\.com/immich-app/immich[`'\"]", "why": "Help › About: the upstream project's own link, for the owner (the AGPL credit)" },
+      { "token": "Immich", "near": "%22(author|name)%22%3A%22Immich%22", "why": "the Obtainium link names the phone app as upstream did; the phone app is Noodle's to rename" },
+      { "token": "Immich", "near": "alt=\"Immich logo\"", "why": "@immich/ui's own Logo, which only a Modal given icon={true} draws, and no page does; it is installed in the image, out of a source rewrite's reach" },
+      { "token": "Gallery", "near": "/\\* Gallery theme:", "why": "a comment heading a theme's generated CSS, never shown" },
+      { "file": "^web/\\.well-known/security\\.txt$", "why": "the server software's security contact, Noodle's" }
+    ],
+    "surfaces": [
+      "web/static/manifest.json",
+      "web/src/app.html",
+      "web/src/routes/+layout.svelte",
+      "web/src/routes/+layout.ts",
+      "web/src/routes/ErrorLayout.svelte",
+      "web/src/lib/components/pages/SharedLinkErrorPage.svelte",
+      "web/src/lib/components/pages/SharedLinkPage.svelte",
+      "web/src/lib/managers/inspector-link.svelte.ts",
+      "web/src/routes/inspector/+page.ts",
+      "web/src/lib/components/shared-components/Logo.svelte",
+      "web/src/lib/components/layouts/AuthPageLayout.svelte",
+      "web/src/lib/theme/derive.ts",
+      "web/src/lib/modals/HelpAndFeedbackModal.svelte",
+      "web/memory-player/index.html",
+      "web/memory-player/src/SharedMemoryPlayer.svelte",
+      "web/memory-player/src/main.ts"
+    ]
   }
 }
