@@ -1,9 +1,10 @@
 <script lang="ts">
   // Local Omarchy layer: a link in the Share sheet, ready to hand on ("QR invite"): its QR, at a size a phone reads off
-  // a screen, beside the address it opens, Copy link, and the link's options and Delete. The address is the public one
-  // the rest of the app gives out (asUrl: the external domain), so the code works away from home; while no external
-  // domain is set it can only be the address on this network, and the panel says so. The code is drawn black on a
-  // white quiet zone whatever the theme, the one fixed colour pair outside a photo's caption: a camera needs the
+  // a screen, beside the address it opens, Copy link, and the link's options and Delete (Turn off, on the memory Share
+  // sheet, which asks in its own words and then says the link is off: modals/MemoryShareModal). The address is the
+  // public one the rest of the app gives out (asUrl: the external domain), so the code works away from home; while no
+  // external domain is set it can only be the address on this network, and the panel says so. The code is drawn black
+  // on a white quiet zone whatever the theme, the one fixed colour pair outside a photo's caption: a camera needs the
   // contrast, and a dark theme would otherwise run into the code's edge.
   import SharedLinkEditModal from '$lib/modals/SharedLinkEditModal.svelte';
   import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
@@ -11,16 +12,20 @@
   import { locale } from '$lib/stores/preferences.store';
   import type { SharedLinkResponseDto } from '@immich/sdk';
   import { Icon, modalManager } from '@immich/ui';
-  import { mdiContentCopy, mdiPencilOutline, mdiTrashCanOutline } from '@mdi/js';
+  import { mdiContentCopy, mdiLinkOff, mdiPencilOutline, mdiTrashCanOutline } from '@mdi/js';
   import { DateTime } from 'luxon';
   import QRCode from 'qrcode';
   import { t } from 'svelte-i18n';
 
   type Props = {
     sharedLink: SharedLinkResponseDto;
+    /** Turn off in place of Delete link: the sheet asks, deletes the link and says what is true then (the memory sheet) */
+    onTurnOff?: () => void;
+    /** while the sheet is turning it off */
+    turningOff?: boolean;
   };
 
-  const { sharedLink }: Props = $props();
+  const { sharedLink, onTurnOff, turningOff = false }: Props = $props();
 
   const url = $derived(asUrl(sharedLink));
   // drawn as SVG, so it stays sharp on every screen and at every zoom
@@ -87,10 +92,17 @@
         <Icon icon={mdiPencilOutline} size="18" aria-hidden="true" />
         {$t('edit_link')}
       </button>
-      <button type="button" class="ws-sheet-quiet" onclick={(event) => Delete.onAction({ action: Delete, event })}>
-        <Icon icon={mdiTrashCanOutline} size="18" aria-hidden="true" />
-        {$t('delete_link')}
-      </button>
+      {#if onTurnOff}
+        <button type="button" class="ws-sheet-quiet" disabled={turningOff} onclick={onTurnOff}>
+          <Icon icon={mdiLinkOff} size="18" aria-hidden="true" />
+          {$t('share_link_turn_off')}
+        </button>
+      {:else}
+        <button type="button" class="ws-sheet-quiet" onclick={(event) => Delete.onAction({ action: Delete, event })}>
+          <Icon icon={mdiTrashCanOutline} size="18" aria-hidden="true" />
+          {$t('delete_link')}
+        </button>
+      {/if}
     </div>
   </div>
 </div>
