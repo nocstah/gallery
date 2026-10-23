@@ -1,9 +1,10 @@
 <script lang="ts">
   // Local Omarchy layer: the one bar's view menu. What you set now and then, not every minute, lives here instead of
   // in the bar: the order (on a page that can be sorted), and for photo grids the thumbnail size, day labels,
-  // expanded stacks and the compact grid; then the theme (following Omarchy, the default, or held light or dark),
-  // rounded corners, the inspector window and Cast (when a cast target is around). Shift+wheel, Ctrl+wheel and + - 0 resize
-  // the thumbnails directly.
+  // expanded stacks and the compact grid; then the theme (following Omarchy, the default, or held light or dark: the one
+  // light/dark control, which Settings › Theme points to) and All themes, the way to Settings › Theme, rounded corners,
+  // the inspector window and Cast (when a cast target is around). Shift+wheel, Ctrl+wheel and + - 0 resize the
+  // thumbnails directly.
   import { page } from '$app/state';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
@@ -14,7 +15,7 @@
   import { FOLLOW_OMARCHY, galleryThemes } from '$lib/theme/theme-manager.svelte';
   import { getSearchablePageState } from '$lib/utils/searchable-page-search';
   import { Icon, ThemePreference, themeManager } from '@immich/ui';
-  import { mdiCast, mdiEyeSettingsOutline } from '@mdi/js';
+  import { mdiCast, mdiChevronRight, mdiEyeSettingsOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   let open = $state(false);
@@ -157,6 +158,12 @@
           {$t('dark')}
         </button>
       </div>
+      <!-- the themes to wear, where they are chosen (Settings › Theme); a link, so the menu closes behind it as it does
+           behind Cast -->
+      <a class="ws-view-row" href="/user-settings?isOpen=theme" onclick={() => (open = false)}>
+        <span>{$t('view_menu_all_themes')}</span>
+        <Icon icon={mdiChevronRight} size="16" aria-hidden />
+      </a>
       <button
         type="button"
         class="ws-view-row"
@@ -273,7 +280,8 @@
     font-weight: 500;
     text-align: start;
   }
-  button.ws-view-row:hover {
+  button.ws-view-row:hover,
+  a.ws-view-row:hover {
     background: color-mix(in oklab, var(--ws-accent) 16%, transparent);
   }
   .ws-view-row:focus-visible,

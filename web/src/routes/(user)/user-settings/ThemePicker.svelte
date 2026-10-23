@@ -2,7 +2,8 @@
   // Local Omarchy layer: the theme picker (lib/theme). "Follow Omarchy" keeps Gallery in step with the desktop's
   // theme; any other card wears that theme in this browser, at once, whatever the desktop does. Themes can be
   // installed from a .json file or a URL (checked field by field: colours, numbers and names only) and downloaded
-  // to share.
+  // to share. Light or dark is not chosen here: a theme brings its own, and the View menu (Display options, in the bar)
+  // holds one or follows the desktop, the one light/dark control (the owner's, 2026-10-23), which a line here names.
   import { CHROME_MODES, chrome } from '$lib/theme/chrome.svelte';
   import { swatches, type GalleryTheme } from '$lib/theme/derive';
   import { FOLLOW_OMARCHY, galleryThemes } from '$lib/theme/theme-manager.svelte';
@@ -93,6 +94,8 @@
       {/each}
     </div>
   </div>
+
+  <p class="themes-mode">{$t('theme_light_dark_hint', { values: { menu: $t('display_options') } })}</p>
 
   <div class="themes-bar">
     <div class="ws-seg" role="group" aria-label={$t('theme')}>
@@ -204,6 +207,13 @@
   }
   .themes-chrome .ws-seg {
     margin-inline-start: 0;
+  }
+  /* where light and dark are chosen, in muted meta */
+  .themes-mode {
+    margin: 0;
+    color: var(--immich-ui-muted);
+    font-size: var(--ws-text-meta);
+    line-height: 1.45;
   }
   .themes-bar {
     display: flex;

@@ -35,6 +35,13 @@ describe('AppSettings — crop faces switch', () => {
     expect(get(cropFacesFromAsset)).toBe(false);
   });
 
+  // Local Omarchy layer: light or dark is the View menu's one control, so App settings keeps no switch of its own
+  it('leaves light and dark to the View menu', () => {
+    renderWithTooltips(AppSettings, {});
+    expect(screen.queryByRole('switch', { name: 'theme_selection' })).not.toBeInTheDocument();
+    expect(screen.queryByText('theme_selection')).not.toBeInTheDocument();
+  });
+
   it('reflects an already-off store on mount', () => {
     cropFacesFromAsset.set(false);
     renderWithTooltips(AppSettings, {});
