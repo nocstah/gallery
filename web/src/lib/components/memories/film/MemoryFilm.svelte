@@ -32,6 +32,7 @@
   import { t } from 'svelte-i18n';
   import { fade, fly } from 'svelte/transition';
   import { thumbhashBackdrop } from './film-backdrop';
+  import { BREATH_FADE_MS, HAND_ON_MS, handOnTiming } from './film-breath';
   import { filmKeyAction, type FilmAction, type FilmDress } from './film-keys';
   import { FilmMusic } from './film-music.svelte';
   import type { FilmMedia } from './film-media';
@@ -159,8 +160,6 @@
   const WAIT_MS = 1200;
   /** the film waits this long at most for a photo to decode, then shows it as it is */
   const READY_MS = 6000;
-  /** a film in a chain fades its picture and its music to black over this before the next one takes over */
-  const HAND_ON_MS = 650;
 
   let film: HTMLElement | undefined = $state();
   // what the shade and the lift are measured from: the words' rulers, the top bar's scrim and words
@@ -237,8 +236,10 @@
 
   let wakeTimer: ReturnType<typeof setTimeout> | undefined;
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
-  // a film in a chain, fading to black before the next one takes over
-  let leaving = $state(false);
+  // a film in a chain, fading to black before the next one takes over: 'cut' when a person moved on, 'breath' when the
+  // film ended by itself (film-breath.ts), which fades more slowly and holds the black a moment
+  let leaving = $state<'cut' | 'breath' | false>(false);
+  let veilMs = $state(HAND_ON_MS);
   let handOnTimer: ReturnType<typeof setTimeout> | undefined;
   // the room dress shows the pointer while the mouse moves, and hides it again once it rests
   let pointerSeen = $state(false);
@@ -664,7 +665,7 @@
       music?.fadeOut(Math.max(0, (plan.duration - time) * 1000));
     }
     if (moment.ended) {
-      finish();
+      finish(true);
       return;
     }
     if (moment.shot !== shotIndex) {
@@ -673,7 +674,8 @@
     schedule();
   };
 
-  const finish = () => {
+  /** The film's end: `byItself` when its clock ran out, rather than a person stepping past its last photo. */
+  const finish = (byItself = false) => {
     clockStop();
     clearTimeout(wakeTimer);
     if (plan) {
@@ -688,28 +690,28 @@
       music?.fadeOut(1500);
     }
     if (onNextFilm) {
-      handOn(onNextFilm);
+      handOn(onNextFilm, byItself);
       return;
     }
     showControls();
   };
 
   /** A film in a chain hands on: the picture and the music fade to black, then the next film (or the one before)
-   * takes over. */
-  const handOn = (to: (() => void) | undefined) => {
+   * takes over. Local Omarchy layer: a film that ended by itself breathes first (film-breath.ts), a slower fade and a
+   * moment of black; a person moving on is answered as fast as before. */
+  const handOn = (to: (() => void) | undefined, byItself = false) => {
     if (!to || leaving) {
       return;
     }
-    leaving = true;
-    music?.fadeOut(HAND_ON_MS);
-    handOnTimer = setTimeout(
-      () => {
-        if (!destroyed) {
-          to();
-        }
-      },
-      reducedMotion ? 150 : HAND_ON_MS,
-    );
+    const timing = handOnTiming(byItself, reducedMotion);
+    veilMs = timing.fadeMs;
+    leaving = byItself ? 'breath' : 'cut';
+    music?.fadeOut(byItself ? BREATH_FADE_MS : HAND_ON_MS);
+    handOnTimer = setTimeout(() => {
+      if (!destroyed) {
+        to();
+      }
+    }, timing.waitMs);
   };
 
   const pauseLayers = () => {
@@ -1563,7 +1565,7 @@
   </div>
 
   <!-- a film in a chain goes to black before the next one takes over -->
-  <div class="film-veil" class:is-on={leaving} aria-hidden="true"></div>
+  <div class="film-veil" class:is-on={!!leaving} style:--film-veil-ms="{veilMs}ms" aria-hidden="true"></div>
 </section>
 
 <style>
@@ -1975,7 +1977,7 @@
     pointer-events: none;
     background: #000;
     opacity: 0;
-    transition: opacity 650ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity var(--film-veil-ms, 650ms) cubic-bezier(0.4, 0, 0.2, 1);
   }
   .film-veil.is-on {
     opacity: 1;

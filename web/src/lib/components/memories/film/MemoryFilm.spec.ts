@@ -359,7 +359,9 @@ describe('MemoryFilm', () => {
       for (let step = 0; step < 3; step++) {
         await fireEvent.keyDown(document, { key: 'ArrowRight' });
       }
-      expect(film).toHaveAttribute('data-leaving');
+      // Local Omarchy layer: stepping past the last photo is a person moving on, answered as fast as before; only a
+      // film that ends by itself breathes (film-breath.ts)
+      expect(film).toHaveAttribute('data-leaving', 'cut');
       expect(screen.queryByRole('button', { name: 'memories_start_over' })).not.toBeInTheDocument();
       await waitFor(() => expect(onNextFilm).toHaveBeenCalledOnce());
     });
@@ -372,6 +374,7 @@ describe('MemoryFilm', () => {
 
       await fireEvent.keyDown(document, { key: 'ArrowDown' });
       await fireEvent.keyDown(document, { key: 'ArrowDown' });
+      expect(await screen.findByTestId('memory-film')).toHaveAttribute('data-leaving', 'cut');
       await waitFor(() => expect(onNextFilm).toHaveBeenCalledOnce());
       expect(onPreviousFilm).not.toHaveBeenCalled();
       first.unmount();
