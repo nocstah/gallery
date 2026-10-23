@@ -2144,9 +2144,9 @@ body.ws-dragging
   }
 }
 
-/* ---- settings (SettingAccordion: Settings, and Administration > Settings): a section is a row on the ground like the
-   AI inbox's, split by hairlines, not a card. Its title is ink in the heading role with the description in muted meta
-   below; the icon is muted until the section is open. An open section keeps its row and lays its controls under the
+/* ---- settings (SettingAccordion: Settings, and Administration > Settings): a section is a row on the ground like
+   Utilities' tools, split by hairlines, not a card. Its title is ink at the ui size with what the section changes in
+   muted meta below; the icon, centred on both, is muted until the section is open. An open section keeps its row and lays its controls under the
    title, a hairline closing it. Labels are ink (upstream paints them in the accent, which here marks focus only), a
    switch that is on is inverted like every active thing, and every control takes the theme's corner. A section inside
    a section (Features > Albums) is a smaller row in the same grammar. ---- */
@@ -2166,7 +2166,8 @@ body.ws-dragging
 }
 .ws-setting-head {
   gap: 1rem;
-  padding: 0.95rem 0.75rem 0.95rem 0.5rem;
+  min-height: 3.5rem;
+  padding: 0.6rem 0.75rem 0.6rem 0.5rem;
   border-radius: var(--ws-radius);
   transition: background-color 140ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -2180,6 +2181,20 @@ body.ws-dragging
 .ws-setting-head .ws-setting-text > div {
   gap: 0.75rem;
 }
+/* a row with an icon is a Utilities row (2026-10-23): the icon centred on the title and the line under it, which says
+   what the section changes; upstream's 24px accent icon sat at the title's top, over "Manage your …" */
+.ws-setting-head:has(.ws-setting-icon) .ws-setting-text {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  column-gap: 0.75rem;
+  align-items: center;
+}
+.ws-setting-head:has(.ws-setting-icon) .ws-setting-text > div {
+  display: contents;
+}
+.ws-setting-head:has(.ws-setting-icon) .ws-setting-icon {
+  grid-row: 1 / span 2;
+}
 .ws-setting-icon {
   flex: none;
   width: 20px;
@@ -2191,21 +2206,21 @@ body.ws-dragging
 .ws-setting-head:hover .ws-setting-icon {
   color: var(--immich-ui-dark) !important;
 }
+/* the section's name at the ui size, as a Utilities row names its tool (it was the heading role, 18px) */
 .ws-setting-title {
-  font-size: var(--ws-text-heading);
+  font-size: var(--ws-text-ui);
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.3;
   color: var(--immich-ui-dark) !important;
 }
 .ws-setting-subtitle {
-  margin-top: 0.2rem !important;
+  margin-top: 0.15rem !important;
   font-size: var(--ws-text-meta) !important;
   line-height: 1.45;
   color: var(--immich-ui-muted) !important;
 }
-/* the description sits under the title, past the icon (20px + the 0.75rem between them) */
 .ws-setting-head:has(.ws-setting-icon) .ws-setting-subtitle {
-  margin-inline-start: calc(20px + 0.75rem);
+  grid-column: 2;
 }
 .ws-setting-chevron {
   flex: none;
@@ -2226,10 +2241,12 @@ body.ws-dragging
   padding-inline-start: 0.5rem;
 }
 .ws-setting-body .ws-setting-head {
-  padding-block: 0.7rem;
+  min-height: 3rem;
+  padding-block: 0.55rem;
 }
+/* a section inside a section (Features > Albums): the same row a step quieter */
 .ws-setting-body .ws-setting-title {
-  font-size: var(--ws-text-ui);
+  font-weight: 500;
 }
 .ws-setting-body .ws-setting:last-child {
   border-bottom: 0 !important;

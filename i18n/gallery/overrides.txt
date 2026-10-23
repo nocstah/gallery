@@ -53,6 +53,7 @@ bugs_and_feature_requests
 bulk_delete_duplicates_confirmation exclusive
 bulk_keep_duplicates_confirmation exclusive
 bulk_trash_duplicates_confirmation exclusive
+cast_description
 confirm_delete_face exclusive
 confirm_keep_this_delete_others exclusive
 create_new_person_hint exclusive
@@ -99,6 +100,7 @@ errors.unable_to_trash_asset exclusive
 errors.unable_to_update_album_cover en:8e68c919
 errors.unable_to_update_album_info en:0ef54d40
 failed_to_load_assets exclusive
+folders_feature_description
 geolocation_instruction_location exclusive
 hide_asset_owners exclusive
 include_shared_partner_assets exclusive
@@ -122,6 +124,7 @@ memories_upcoming en:5f1a2542
 new_album exclusive
 no_assets_to_show exclusive
 no_name exclusive
+people_feature_description
 permanent_deletion_warning_setting_description exclusive
 permanently_delete_assets_count exclusive
 permanently_delete_assets_prompt exclusive
@@ -131,6 +134,7 @@ photos_and_videos exclusive
 play_original_video_setting_description exclusive
 rate_asset exclusive
 rate_asset_description exclusive
+rating_description
 reassigned_assets_to_existing_person exclusive
 reassigned_assets_to_new_person exclusive
 reassing_hint exclusive
@@ -152,6 +156,7 @@ some_assets_already_have_a_location_warning exclusive
 sort_items exclusive
 stacked_assets_count exclusive
 tag_assets exclusive
+tag_feature_description
 tagged_assets exclusive
 trash_all exclusive
 trash_delete_asset exclusive

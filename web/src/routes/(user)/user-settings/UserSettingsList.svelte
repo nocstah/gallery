@@ -49,7 +49,8 @@
     oauth.isCallback(location) || $page.url.searchParams.get(QueryParameter.OPEN_SETTING) === OpenQueryParam.OAUTH;
 </script>
 
-<!-- Local Omarchy layer: Gallery's theme, following Omarchy or one of the installed themes -->
+<!-- Local Omarchy layer: each row says what its section changes, in the family's words (user_settings_*_description),
+     where upstream's said "Manage your …"; Gallery's theme follows Omarchy or wears one of the installed themes -->
 <SettingAccordion icon={mdiPaletteOutline} key="theme" title={$t('theme')} subtitle={$t('theme_settings_description')}>
   <ThemePicker />
 </SettingAccordion>
@@ -58,12 +59,17 @@
   icon={mdiCogOutline}
   key="app-settings"
   title={$t('app_settings')}
-  subtitle={$t('manage_the_app_settings')}
+  subtitle={$t('user_settings_app_description')}
 >
   <AppSettings />
 </SettingAccordion>
 
-<SettingAccordion icon={mdiAccountOutline} key="account" title={$t('account')} subtitle={$t('manage_your_account')}>
+<SettingAccordion
+  icon={mdiAccountOutline}
+  key="account"
+  title={$t('account')}
+  subtitle={$t('user_settings_account_description')}
+>
   <UserProfileSettings />
 </SettingAccordion>
 
@@ -71,12 +77,17 @@
   icon={mdiServerOutline}
   key="user-usage-info"
   title={$t('user_usage_stats')}
-  subtitle={$t('user_usage_stats_description')}
+  subtitle={$t('user_settings_usage_description')}
 >
   <UserUsageStatistic />
 </SettingAccordion>
 
-<SettingAccordion icon={mdiApi} key="api-keys" title={$t('api_keys')} subtitle={$t('manage_your_api_keys')}>
+<SettingAccordion
+  icon={mdiApi}
+  key="api-keys"
+  title={$t('api_keys')}
+  subtitle={$t('user_settings_api_keys_description')}
+>
   <UserApiKeyList bind:keys />
 </SettingAccordion>
 
@@ -84,7 +95,7 @@
   icon={mdiDevices}
   key="authorized-devices"
   title={$t('authorized_devices')}
-  subtitle={$t('manage_your_devices')}
+  subtitle={$t('user_settings_devices_description')}
 >
   <DeviceList bind:devices={sessions} />
 </SettingAccordion>
@@ -93,7 +104,7 @@
   icon={mdiDownload}
   key="download-settings"
   title={$t('download_settings')}
-  subtitle={$t('download_settings_description')}
+  subtitle={$t('user_settings_download_description')}
 >
   <DownloadSettings />
 </SettingAccordion>
@@ -102,7 +113,7 @@
   icon={mdiFeatureSearchOutline}
   key="feature"
   title={$t('features')}
-  subtitle={$t('features_setting_description')}
+  subtitle={$t('user_settings_features_description')}
 >
   <FeatureSettings />
 </SettingAccordion>
@@ -111,7 +122,7 @@
   icon={mdiBellOutline}
   key={OpenQueryParam.NOTIFICATIONS}
   title={$t('notifications')}
-  subtitle={$t('notifications_setting_description')}
+  subtitle={$t('user_settings_notifications_description')}
 >
   <NotificationsSettings />
 </SettingAccordion>
@@ -121,7 +132,7 @@
     icon={mdiTwoFactorAuthentication}
     key={OpenQueryParam.OAUTH}
     title={$t('oauth')}
-    subtitle={$t('manage_your_oauth_connection')}
+    subtitle={$t('user_settings_oauth_description')}
     isOpen={oauthOpen || undefined}
   >
     <OauthSettings />
@@ -132,7 +143,7 @@
   icon={mdiFormTextboxPassword}
   key="password"
   title={$t('password')}
-  subtitle={$t('change_your_password')}
+  subtitle={$t('user_settings_password_description')}
 >
   <ChangePasswordSettings />
 </SettingAccordion>
@@ -141,7 +152,7 @@
   icon={mdiAccountMultipleOutline}
   key="user-groups"
   title={$t('user_groups')}
-  subtitle={$t('manage_user_groups')}
+  subtitle={$t('user_settings_groups_description')}
 >
   <GroupSettings user={authManager.user} />
 </SettingAccordion>
@@ -150,7 +161,7 @@
   icon={mdiLockSmart}
   key="user-pin-code-settings"
   title={$t('user_pin_code_settings')}
-  subtitle={$t('user_pin_code_settings_description')}
+  subtitle={$t('user_settings_pin_code_description')}
   autoScrollTo={true}
 >
   <ChangePinCodeSettings />
@@ -164,7 +175,7 @@
   icon={mdiAccountGroupOutline}
   key={OpenQueryParam.SHARING}
   title={$t('sharing')}
-  subtitle={$t('manage_sharing_with_other_users')}
+  subtitle={$t('user_settings_sharing_description')}
 >
   <SharingSettings />
 </SettingAccordion>
