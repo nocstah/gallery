@@ -13,6 +13,7 @@
   import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineGrouping, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
   import { desktopMotion, type WorkspaceMotion } from '$lib/utils/desktop-motion';
+  import { cutAtEnds } from '$lib/utils/strip-ends';
   import { YearSlide, type YearSlideMoves } from '$lib/utils/year-slide';
   import { Icon } from '@immich/ui';
   import { mdiChevronLeft, mdiChevronRight } from '@mdi/js';
@@ -174,10 +175,35 @@
   let touched = 0;
   const HANDS_OFF = 2000; // ms after a hand on the strip before it follows the photos again
 
+  // a year the strip's ends would cut in two ("2015 20›" on the Dell) gives way whole: one not wholly clear of the ends'
+  // fades, where the chevrons lie, fades out until the strip brings it in, so the strip ends on whole years
+  let cut = $state<ReadonlySet<number>>(new Set());
+  let cutKey = '';
+  const cutEnds = () => {
+    if (!track) {
+      return;
+    }
+    const inset = track.parentElement?.querySelector<HTMLElement>('.ws-step')?.offsetWidth ?? 0;
+    const cells = [...track.querySelectorAll<HTMLElement>('.ws-cell-year')];
+    const next = cutAtEnds(
+      track.getBoundingClientRect(),
+      cells.map((cell) => [Number(cell.dataset.year), cell.getBoundingClientRect()] as const),
+      atStart ? 0 : inset,
+      atEnd ? 0 : inset,
+    );
+    // in the strip's order, so the same years cut read the same and change nothing
+    const key = [...next].join(' ');
+    if (key !== cutKey) {
+      cutKey = key;
+      cut = next;
+    }
+  };
+
   const edges = () => {
     if (track) {
       atStart = track.scrollLeft <= 1;
       atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+      cutEnds();
     }
   };
 
@@ -215,6 +241,13 @@
     resized.observe(track);
     edges();
     return () => resized.disconnect();
+  });
+
+  // the years themselves can change (a first photo of a new year), which moves where the ends cut
+  $effect(() => {
+    void years.length;
+    const frame = requestAnimationFrame(edges);
+    return () => cancelAnimationFrame(frame);
   });
 
   // an upright wheel turns the strip sideways (the bar has nothing else to scroll)
@@ -377,6 +410,7 @@
             class="ws-cell ws-cell-year"
             data-year={year}
             data-decade={year % 10 === 0 ? '' : undefined}
+            data-cut={cut.has(year) ? '' : undefined}
             aria-current={year === current.year ? 'true' : undefined}
             aria-describedby="{uid}-year-{year}"
             title={itemsLabel(count)}
@@ -428,9 +462,17 @@
     font-variant-numeric: tabular-nums;
     line-height: 1.5rem;
     color: var(--immich-ui-muted);
+    /* a year the keys reach is brought clear of the ends' fades, where it would be cut */
+    scroll-margin-inline: 1.375rem;
     transition:
       background-color 120ms,
-      color 120ms;
+      color 120ms,
+      opacity 120ms;
+  }
+  /* a year the strip's ends would cut in two waits, faded out, until it comes in whole (unless the keys are on it) */
+  .ws-cell-year[data-cut]:not(:focus-visible) {
+    opacity: 0;
+    pointer-events: none;
   }
   .ws-cell:not(:disabled):hover {
     color: var(--immich-ui-dark);
@@ -540,6 +582,11 @@
     .ws-years,
     .ws-time :global(.ws-overviews) {
       display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ws-cell {
+      transition: none;
     }
   }
 </style>
