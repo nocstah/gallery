@@ -4,15 +4,18 @@
   // folder: the Space that leads (utils/share-space; Family, as a rule) is a switch with who sees it, the others follow
   // quietly. Then a link anyone can open without an account, made in one go and shown with its QR, to scan off the
   // screen (components/omarchy/ShareLinkPanel). Then people with their own Gallery account (editors who can add photos,
-  // or viewers). It takes over the album's Share button from the Options box, which keeps the album's settings.
-  import AlbumSharedLink from '$lib/components/album-page/AlbumSharedLink.svelte';
+  // or viewers). It takes over the album's Share button from the Options box, which keeps the album's settings. An
+  // album's older links follow as rows with the line every link is told in (SharedLinkFacts: who can open it, when it
+  // ends), where upstream's row (album-page/AlbumSharedLink, kept in the tree) gave the day it was made with no word
+  // on what that day was.
+  import SharedLinkFacts from '$lib/components/omarchy/SharedLinkFacts.svelte';
   import ShareLinkPanel from '$lib/components/omarchy/ShareLinkPanel.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { getAlbumActions, handleRemoveUserFromAlbum, handleUpdateUserAlbumRole } from '$lib/services/album.service';
-  import { makeSharedLink, shareLinkExpiry } from '$lib/services/shared-link.service';
+  import { getSharedLinkActions, makeSharedLink, shareLinkExpiry } from '$lib/services/shared-link.service';
   import { lang } from '$lib/stores/preferences.store';
   import { handleError } from '$lib/utils/handle-error';
   import { leadSpace, rememberShareSpace, shareableSpaces, spaceAudience } from '$lib/utils/share-space';
@@ -29,7 +32,7 @@
     type SharedSpaceResponseDto,
     type UserResponseDto,
   } from '@immich/sdk';
-  import { Field, Icon, Modal, ModalBody, Select, Switch, type SelectOption } from '@immich/ui';
+  import { ActionButton, Field, Icon, Modal, ModalBody, Select, Switch, type SelectOption } from '@immich/ui';
   import { mdiLinkVariantPlus, mdiPlus } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -199,7 +202,18 @@
           {:else}
             <ShareLinkPanel sharedLink={links[0]} />
             {#each links.slice(1) as sharedLink (sharedLink.id)}
-              <AlbumSharedLink {album} {sharedLink} />
+              {@const { ViewQrCode, Copy, Delete } = getSharedLinkActions($t, sharedLink)}
+              <div class="ws-share-older" data-testid="album-share-older-link">
+                <div class="ws-share-older-text">
+                  <p class="ws-share-older-name">{sharedLink.description || album.albumName}</p>
+                  <SharedLinkFacts {sharedLink} download />
+                </div>
+                <div class="ws-share-older-actions">
+                  <ActionButton action={ViewQrCode} />
+                  <ActionButton action={Copy} />
+                  <ActionButton action={Delete} />
+                </div>
+              </div>
             {/each}
           {/if}
         </section>
@@ -246,3 +260,31 @@
     </div>
   </ModalBody>
 </Modal>
+
+<style>
+  /* an older link: its name over its line, its actions at the row's end */
+  .ws-share-older {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 2.75rem;
+  }
+  .ws-share-older-text {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  .ws-share-older-name {
+    overflow: hidden;
+    color: var(--immich-ui-dark);
+    font-size: var(--ws-text-ui);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-share-older-actions {
+    display: flex;
+    flex: none;
+  }
+</style>

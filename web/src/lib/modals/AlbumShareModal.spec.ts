@@ -218,6 +218,8 @@ describe('AlbumShareModal', () => {
       expect.stringMatching(/^data:image\/svg\+xml/),
     );
     expect(screen.queryByRole('button', { name: 'Make a link' })).not.toBeInTheDocument();
+    // Local Omarchy layer: an older link is told as every link is, when it ends included
+    expect(within(screen.getByTestId('album-share-older-link')).getByText('Never ends')).toBeInTheDocument();
   });
 
   it('lists people last, with Add user', async () => {

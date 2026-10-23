@@ -3,13 +3,13 @@
   // critique's P1). One sentence at the top says what a link shares, worded from the choices as they change: who
   // (anyone with the link, and its password once one is set), what (this memory's photos and its music as a film, or
   // one video file) and when the link ends, in the words Shared links says it in (utils/shared-link-words: "The link
-  // ends Nov 22.", "… in 5 days.", "… never ends."). Then the format, how long the link stays open
-  // as the layer's segmented control (30 days chosen, as on every link the Share sheets make: shareLinkExpiry), a
-  // switch that adds a password, and one action, Make a link; a video format also downloads its file, which shares
-  // nothing. The link made shows in place with its QR, Copy, Edit and Turn off (components/omarchy/ShareLinkPanel),
-  // under a receipt worded from the link Gallery holds (its password, its end) and Curator's count; a memory already
-  // shared opens on its live link. A failure names its step: the video, keeping it to share, Gallery's link, Curator's
-  // film for the link, turning it off.
+  // ends Nov 22.", "… in 5 days.", "… never ends."). Then the format, how long the link stays open as the layer's
+  // segmented control (30 days chosen, as on every link the Share sheets make: shareLinkExpiry), a switch that adds a
+  // password, and one action, Make a link; a video format also downloads its file, which shares nothing. The link made
+  // shows in place with its QR, Copy, Edit and Turn off (components/omarchy/ShareLinkPanel), under a receipt worded
+  // from the link Gallery holds (its password, its end) and Curator's count; a memory already shared opens on its live
+  // link. A failure names its step: the video, keeping it to share, Gallery's link, Curator's film for the link,
+  // turning it off.
   import OnEvents from '$lib/components/OnEvents.svelte';
   import ShareLinkPanel from '$lib/components/omarchy/ShareLinkPanel.svelte';
   import {
