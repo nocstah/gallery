@@ -74,10 +74,18 @@ class PeopleRanking {
     return this.#loading;
   }
 
-  /** `items` in the People page's order once it is known; as they came until then. */
+  /**
+   * `items` in the People page's order once it is known, anyone it does not know after the rest; as they came until
+   * then, or when it knows fewer than half of them: a Space's own people (its photos' rail) go by ids of the Space's,
+   * which the People page's list does not hold, and one of them leading the rest A to Z would read as no order at all.
+   */
   order<T extends { id: string }>(items: T[]): T[] {
     const positions = this.positions;
-    return positions ? inPeopleOrder(items, positions) : items;
+    if (!positions) {
+      return items;
+    }
+    const known = items.filter(({ id }) => positions.has(id)).length;
+    return known * 2 < items.length ? items : inPeopleOrder(items, positions);
   }
 
   #update(person: PersonResponseDto) {

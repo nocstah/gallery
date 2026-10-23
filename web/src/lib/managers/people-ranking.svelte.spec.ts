@@ -60,6 +60,14 @@ describe('peopleRanking', () => {
     ]);
   });
 
+  it("leaves a list as it came when it knows fewer than half of it, as a Space's own people", async () => {
+    sdkMock.getAllPeople.mockResolvedValue(people([person('anna', 'Anna', 2), person('ben', 'Ben', 300)]));
+    await peopleRanking.load();
+    const spacePeople = [{ id: 'sp-1' }, { id: 'person:anna' }, { id: 'sp-2' }, { id: 'sp-3' }];
+
+    expect(peopleRanking.order(spacePeople)).toBe(spacePeople);
+  });
+
   it('leaves a list as it came when the people cannot be had', async () => {
     sdkMock.getAllPeople.mockReturnValue(undefined as never);
     const options = [{ id: 'person:b' }, { id: 'person:a' }];
