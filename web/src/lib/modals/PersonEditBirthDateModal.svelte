@@ -38,7 +38,7 @@
   <div class="my-2 flex flex-col gap-2">
     <Field label={$t('date_of_birth')}>
       <input type="hidden" name="birthDate" value={birthDate?.toISODate() ?? ''} />
-      <DatePicker bind:value={birthDate} maxDate={DateTime.now()} />
+      <DatePicker bind:value={birthDate} maxDate={DateTime.now()} locale="en-GB" />
       <HelperText>{$t('birthdate_set_description')}</HelperText>
     </Field>
     {#if hasBirthDate}

@@ -1,5 +1,6 @@
+import { getLocale, setLocale } from '@immich/ui';
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach } from 'vitest';
 import PersonEditBirthDateModal from './PersonEditBirthDateModal.svelte';
@@ -9,13 +10,32 @@ afterEach(async () => {
 });
 
 describe('PersonEditBirthDateModal', () => {
-  it('submits the current date input value without requiring blur first', async () => {
+  it('shows day, month, year even when the browser uses month first', () => {
+    const initialLocale = getLocale();
+    setLocale('en-US');
+    try {
+      render(PersonEditBirthDateModal, { props: { birthDate: '1990-06-15', onClose: vi.fn() } });
+      const segments = screen.getAllByRole('spinbutton');
+      expect(segments.map((segment) => segment.dataset.segment)).toEqual(['day', 'month', 'year']);
+      expect(segments.map((segment) => segment.textContent)).toEqual(['15', '06', '1990']);
+    } finally {
+      setLocale(initialLocale ?? 'default');
+    }
+  });
+
+  it('submits a typed day/month/year as an ISO date without requiring blur first', async () => {
     const onSave = vi.fn().mockResolvedValue(true);
     const onClose = vi.fn();
     render(PersonEditBirthDateModal, { props: { birthDate: null, onSave, onClose } });
 
-    const input = document.querySelector('input[name="birthDate"]') as HTMLInputElement;
-    await fireEvent.input(input, { target: { value: '1990-06-15' } });
+    const user = userEvent.setup();
+    const [day, month, year] = screen.getAllByRole('spinbutton');
+    await user.click(day);
+    await user.keyboard('15');
+    await user.click(month);
+    await user.keyboard('06');
+    await user.click(year);
+    await user.keyboard('1990');
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledWith('1990-06-15'));

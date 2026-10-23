@@ -11,6 +11,71 @@ index 3920100df9ac3e98746e81cd9b554d73f4278cc9..5cf5d36a162368cb1ee88dae0ac3c7e1
      {item.title}
    </p>
  </a>
+diff --git a/dist/internal/DatePicker.svelte b/dist/internal/DatePicker.svelte
+index d31913389ec12b648a0853da9f70e7ebecbf8f09..4127616085d4b638635c108344c355104ad7183d 100644
+--- a/dist/internal/DatePicker.svelte
++++ b/dist/internal/DatePicker.svelte
+@@ -15,6 +15,7 @@
+   import { tv } from 'tailwind-variants';
+ 
+   type Props = {
++    locale?: string;
+     onChange?: (date?: DateValue) => void;
+     minDate?: DateValue;
+     maxDate?: DateValue;
+@@ -25,6 +26,7 @@
+   };
+ 
+   let {
++    locale: localeOverride,
+     onChange,
+     minDate,
+     maxDate,
+@@ -58,7 +60,7 @@
+     maxValue={maxDate}
+     bind:value={date}
+     readonly={readOnly}
+-    locale={getLocale()}
++    locale={localeOverride ?? getLocale()}
+     {disabled}
+   >
+     {#if label}
+@@ -132,7 +134,7 @@
+                     class="focus-visible:ring-2 flex items-center gap-1 bg-transparent border-none font-semibold cursor-pointer outline-none rounded-lg px-1 text-inherit hover:bg-light-200 dark:hover:bg-light-300"
+                   >
+                     <span
+-                      >{new Intl.DateTimeFormat(getLocale(), { month: 'long' }).format(
++                      >{new Intl.DateTimeFormat(localeOverride ?? getLocale(), { month: 'long' }).format(
+                         new Date(2000, current.month - 1),
+                       )}</span
+                     >
+@@ -144,12 +146,12 @@
+                       {#each Array.from({ length: 12 }, (_, i) => i + 1) as month (month)}
+                         <Select.Item
+                           value={month.toString()}
+-                          label={new Intl.DateTimeFormat(getLocale(), { month: 'long' }).format(
++                          label={new Intl.DateTimeFormat(localeOverride ?? getLocale(), { month: 'long' }).format(
+                             new Date(2000, month - 1),
+                           )}
+                           class="px-2 py-1 hover:bg-light-200 dark:hover:bg-light-300 cursor-pointer rounded-md data-highlighted:bg-light-300 outline-none text-sm font-medium"
+                         >
+-                          {new Intl.DateTimeFormat(getLocale(), { month: 'long' }).format(new Date(2000, month - 1))}
++                          {new Intl.DateTimeFormat(localeOverride ?? getLocale(), { month: 'long' }).format(new Date(2000, month - 1))}
+                         </Select.Item>
+                       {/each}
+                     </Select.Group>
+diff --git a/dist/internal/DatePicker.svelte.d.ts b/dist/internal/DatePicker.svelte.d.ts
+index 4f4a1372f2b52e8cc98427a8289f133906d9d6c7..8d3e6f4f3e79ca6d67f5680543080c529a3b4af4 100644
+--- a/dist/internal/DatePicker.svelte.d.ts
++++ b/dist/internal/DatePicker.svelte.d.ts
+@@ -2,6 +2,7 @@ import type { Shape, Size } from '../types.js';
+ import type { DateValue } from '@internationalized/date';
+ import { DatePicker } from 'bits-ui';
+ type Props = {
++    locale?: string;
+     onChange?: (date?: DateValue) => void;
+     minDate?: DateValue;
+     maxDate?: DateValue;
 diff --git a/dist/services/command-palette-manager.svelte.js b/dist/services/command-palette-manager.svelte.js
 index c6b4ed1e1cf5beebd5b7aebbde4fe98aa1dced92..63340f75d5cb02f6f93008bf2e9631819dde08ea 100644
 --- a/dist/services/command-palette-manager.svelte.js
@@ -34,3 +99,15 @@ index c6b4ed1e1cf5beebd5b7aebbde4fe98aa1dced92..63340f75d5cb02f6f93008bf2e963181
              on(document.body, 'keydown', (event) => this.#handleKeydown(event));
          }
      }
+diff --git a/dist/types.d.ts b/dist/types.d.ts
+index 4760a596c93fdf2f0951845077b5437ace44fc1c..3ae30d0887dd451cc441e6c0e46202dcfa12ca57 100644
+--- a/dist/types.d.ts
++++ b/dist/types.d.ts
+@@ -306,6 +306,7 @@ export type ContextMenuProps = ContextMenuBaseProps & {
+     onClose: () => void;
+ };
+ export type DatePickerProps = {
++    locale?: string;
+     onChange?: (date: DateTime | undefined) => void;
+     value?: DateTime | undefined;
+     minDate?: DateTime;
