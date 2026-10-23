@@ -6261,6 +6261,51 @@ describe('prefix scoping — bare @ suggestions', () => {
     expect(getAllPeopleSpy).toHaveBeenCalledTimes(1);
   });
 
+  // Local Omarchy layer: one people ranking. Bare @ offers the People page's first ten in its order (favourites, then
+  // the most photos), so it asks for everyone; it had sorted the server's first ten, A to Z, on their own
+  it('bare @ offers the People page order: favourites, then the most photos', async () => {
+    const m = new GlobalSearchManager();
+    const getAllPeopleSpy = vi.mocked(getAllPeople);
+    getAllPeopleSpy.mockResolvedValue({
+      people: [
+        { ...mockPerson('few', 'Anna'), numberOfAssets: 3 },
+        { ...mockPerson('most', 'Zoe'), numberOfAssets: 3714 },
+        { ...mockPerson('favourite', 'Yann'), numberOfAssets: 1, isFavorite: true },
+        { ...mockPerson('unnamed', ''), numberOfAssets: 9000 },
+        { ...mockPerson('some', 'Ben'), numberOfAssets: 250 },
+      ],
+      total: 5,
+      hidden: 0,
+      hasNextPage: false,
+    });
+
+    m.setQuery('@');
+    await vi.advanceTimersByTimeAsync(150);
+    await vi.runAllTimersAsync();
+
+    expect(getAllPeopleSpy).toHaveBeenCalledWith({ size: 1000, withSharedSpaces: true }, expect.anything());
+    const items = (m.sections.people as { items: { id: string }[] }).items;
+    expect(items.map((i) => i.id)).toEqual(['favourite', 'most', 'some', 'few', 'unnamed']);
+  });
+
+  it('@ with a name ranks the best match first, then the People page order', async () => {
+    const m = new GlobalSearchManager();
+    vi.mocked(searchPerson).mockResolvedValue([
+      { ...mockPerson('inside', 'Marianne'), numberOfAssets: 900 },
+      { ...mockPerson('word', 'Lee Ann'), numberOfAssets: 5 },
+      { ...mockPerson('start-few', 'Annika'), numberOfAssets: 2 },
+      { ...mockPerson('start-many', 'Anna'), numberOfAssets: 40 },
+      { ...mockPerson('exact', 'Ann'), numberOfAssets: 1 },
+    ] as never);
+
+    m.setQuery('@ann');
+    await vi.advanceTimersByTimeAsync(150);
+    await vi.runAllTimersAsync();
+
+    const items = (m.sections.people as { items: { id: string }[] }).items;
+    expect(items.map((i) => i.id)).toEqual(['exact', 'start-many', 'start-few', 'word', 'inside']);
+  });
+
   it('concurrent bare @ joins same peoplePromise (getAllPeople fires once)', async () => {
     const m = new GlobalSearchManager();
     const getAllPeopleSpy = vi.mocked(getAllPeople);

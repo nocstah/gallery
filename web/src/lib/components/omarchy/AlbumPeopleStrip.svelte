@@ -7,6 +7,7 @@
   // screen reader and its name shown over it while it holds the keyboard's focus or a finger rests on it. More people
   // than the row holds end it with +N, which opens the filters, where People lists them all.
   import { portal } from '$lib/elements/Portal.svelte';
+  import { peopleRanking } from '$lib/managers/people-ranking.svelte';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { locale } from '$lib/stores/preferences.store';
   import { buildAlbumDetailFilterConfig } from '$lib/utils/album-filter-config';
@@ -26,15 +27,16 @@
 
   const MAX_FACES = 16;
   let everyone = $state<Person[]>([]);
-  const people = $derived(everyone.slice(0, MAX_FACES));
+  // in the People page's order (managers/people-ranking), as the rail's People: the row is its first sixteen
+  const people = $derived(peopleRanking.order(everyone).slice(0, MAX_FACES));
   const more = $derived(everyone.length - people.length);
 
   $effect(() => {
     const config = buildAlbumDetailFilterConfig(albumId);
     let current = true;
-    void config
-      .baselineProvider?.()
-      .then((result) => {
+    // the faces wait for the order (2 s at most), so none moves once they show
+    void Promise.all([config.baselineProvider?.(), peopleRanking.load()])
+      .then(([result]) => {
         if (current) {
           everyone = result?.people ?? [];
         }

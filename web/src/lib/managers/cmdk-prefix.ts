@@ -1,5 +1,5 @@
 import type { PersonResponseDto } from '@immich/sdk';
-import { comparePeopleByFavoriteAndName } from '$lib/utils/people-utils';
+import { comparePeopleMatches, compareInPeopleOrder } from '$lib/utils/people-order';
 
 export type Scope = 'all' | 'people' | 'tags' | 'collections' | 'nav';
 export type ParsedQuery = { scope: Scope; payload: string };
@@ -25,8 +25,12 @@ export function parseScope(rawText: string): ParsedQuery {
 
 /**
  * Sort comparator for the bare-`@` suggestions list.
- * Keys (in priority order): favorite first, named people alpha, unnamed people, id alpha.
+ * Local Omarchy layer: the People page's order (utils/people-order): favourites first, then the most photos (or names
+ * A to Z when the People page is set so), named before unnamed, id last. It had been favourites, then A to Z.
  */
 export function personSuggestionsComparator(a: PersonResponseDto, b: PersonResponseDto): number {
-  return comparePeopleByFavoriteAndName(a, b);
+  return compareInPeopleOrder(a, b);
 }
+
+/** Local Omarchy layer: people found for what was typed after `@`, the best match first, then the People page's order. */
+export const personMatchComparator = (query: string) => comparePeopleMatches(query);

@@ -1,6 +1,6 @@
 import type { PersonResponseDto } from '@immich/sdk';
 import { describe, expect, it } from 'vitest';
-import { parseScope, personSuggestionsComparator, type ParsedQuery } from './cmdk-prefix';
+import { parseScope, personMatchComparator, personSuggestionsComparator, type ParsedQuery } from './cmdk-prefix';
 
 describe('parseScope', () => {
   const cases: Array<{ input: string; expected: ParsedQuery; why: string }> = [
@@ -79,5 +79,44 @@ describe('personSuggestionsComparator', () => {
     const a = p({ id: 'a', name: 'Bob' });
     const b = p({ id: 'b', name: 'Alice' });
     expect([a, b].sort(personSuggestionsComparator)).toEqual([b, a]);
+  });
+});
+
+// Local Omarchy layer: the People page's order (utils/people-order), favourites first, then the most photos
+describe('personSuggestionsComparator, the People page order', () => {
+  it('ranks favourites first, then the named people with the most photos, then the unnamed', () => {
+    const people = [
+      p({ id: 'unnamed', name: '', numberOfAssets: 900 }),
+      p({ id: 'few', name: 'Anna', numberOfAssets: 2 }),
+      p({ id: 'favourite', name: 'Zelda', isFavorite: true, numberOfAssets: 1 }),
+      p({ id: 'many', name: 'Ben', numberOfAssets: 300 }),
+    ];
+
+    expect(people.sort(personSuggestionsComparator).map((person) => person.id)).toEqual([
+      'favourite',
+      'many',
+      'few',
+      'unnamed',
+    ]);
+  });
+});
+
+describe('personMatchComparator', () => {
+  it('ranks the whole name, then its start, a word, anywhere, then the People page order within each', () => {
+    const people = [
+      p({ id: 'inside', name: 'Marianne', numberOfAssets: 900 }),
+      p({ id: 'word', name: 'Lee Ann', numberOfAssets: 5 }),
+      p({ id: 'start-few', name: 'Annika', numberOfAssets: 2 }),
+      p({ id: 'start-many', name: 'Anna', numberOfAssets: 40 }),
+      p({ id: 'exact', name: 'ann', numberOfAssets: 1 }),
+    ];
+
+    expect(people.sort(personMatchComparator('Ann')).map((person) => person.id)).toEqual([
+      'exact',
+      'start-many',
+      'start-few',
+      'word',
+      'inside',
+    ]);
   });
 });

@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { peopleRanking } from '$lib/managers/people-ranking.svelte';
+  import { bestMatchFirst } from '$lib/utils/people-order';
   import { Icon } from '@immich/ui';
   import { mdiMagnify } from '@mdi/js';
+  import { onMount } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
   import { t } from 'svelte-i18n';
   import type { PersonOption } from './filter-panel';
@@ -42,14 +45,29 @@
       }),
   );
 
-  let filteredPeople = $derived(
-    searchQuery.trim() ? people.filter((p) => p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())) : people,
-  );
+  // Local Omarchy layer: in the People page's order (managers/people-ranking: favourites first, then the most photos),
+  // where Gallery sends the rail its people A to Z; while searching, the best match first, then that order. The list
+  // waits for the order (2 s at most), so no row moves under the reader's eyes once it shows.
+  onMount(() => void peopleRanking.load());
+  const ranked = $derived(peopleRanking.order(people));
+  let filteredPeople = $derived.by(() => {
+    const query = searchQuery.trim();
+    if (!query) {
+      return ranked;
+    }
+    return bestMatchFirst(
+      ranked.filter((p) => p.name.toLowerCase().includes(query.toLowerCase())),
+      query,
+    );
+  });
 
   // Selected people are hoisted out of the truncated head for the same reason tags-filter hoists
   // selected tags: with the head only five rows long, a person filter applied from anywhere but this
   // list (a contextual filter clicked in the viewer, a shared link, typed search) was invisible here.
   let visiblePeople = $derived.by(() => {
+    if (!peopleRanking.settled) {
+      return [];
+    }
     if (searchQuery.trim() || showAll) {
       return filteredPeople;
     }
@@ -63,7 +81,7 @@
     return [...selected, ...rest].slice(0, Math.max(INITIAL_SHOW_COUNT, selected.length));
   });
 
-  let remainingCount = $derived(filteredPeople.length - visiblePeople.length);
+  let remainingCount = $derived(peopleRanking.settled ? filteredPeople.length - visiblePeople.length : 0);
 
   function getInitial(name: string): string {
     return name.charAt(0).toUpperCase();

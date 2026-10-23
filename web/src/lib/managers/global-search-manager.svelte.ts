@@ -66,7 +66,13 @@ import {
   type TypedSearchTokenSpan,
 } from '$lib/utils/typed-search/typed-search-parser';
 import { resolveTypedSearchFilters, type TypedSearchChoice } from '$lib/utils/typed-search/typed-search-resolver';
-import { parseScope, personSuggestionsComparator, type ParsedQuery, type Scope } from './cmdk-prefix';
+import {
+  parseScope,
+  personMatchComparator,
+  personSuggestionsComparator,
+  type ParsedQuery,
+  type Scope,
+} from './cmdk-prefix';
 import { commandContextManager } from './command-context-manager.svelte';
 import { COMMAND_ITEMS, isAlmostExactCommandMatch, type CommandItem } from './command-items';
 import { monthJumpParam, parseMonthJump, type MonthJump } from './month-jump';
@@ -156,6 +162,9 @@ const ALBUMS_TOP_N = 5;
 // Slice size for the spaces section. Same rationale as ALBUMS_TOP_N — pin the
 // buildProviders `topN` and the runSpaces slice to a single source of truth.
 const SPACES_TOP_N = 5;
+// Local Omarchy layer: bare @ asks for everyone the People page lists (the server's most at once, named people first),
+// so its ten are the People page's first ten in its order
+const PEOPLE_SUGGESTIONS_PAGE = 1000;
 // Per-provider fetch timeout. Smart search on CPU-only ML (e.g. Mac mini M1) can
 // take 6–8s for text encode; 15s gives cold-cache runs headroom without stranding
 // a stuck fetch indefinitely.
@@ -937,7 +946,9 @@ export class GlobalSearchManager {
     // the section in 'loading' forever until the palette closes.
     const signal = AbortSignal.any([this.closeSignal, AbortSignal.timeout(PROVIDER_TIMEOUT_MS)]);
     try {
-      const response = await getAllPeople({ size: 10, withSharedSpaces: true }, { signal });
+      // Local Omarchy layer: everyone the People page lists, so the ten offered are its first ten in its order (favourites,
+      // then the most photos); ten of the server's (favourites, then A to Z) had been sorted on their own
+      const response = await getAllPeople({ size: PEOPLE_SUGGESTIONS_PAGE, withSharedSpaces: true }, { signal });
       this.peopleSuggestionsCache = [...response.people].sort(personSuggestionsComparator);
     } catch (error: unknown) {
       // Distinguish three rejection modes:
@@ -2986,7 +2997,8 @@ export class GlobalSearchManager {
         }
         try {
           const results = await searchPerson({ name: query, withHidden: false, withSharedSpaces: true }, { signal });
-          const sortedResults = [...results].sort(personSuggestionsComparator);
+          // Local Omarchy layer: the best match first, then the People page's order (cmdk-prefix)
+          const sortedResults = [...results].sort(personMatchComparator(query));
           return results.length === 0
             ? { status: 'empty' }
             : { status: 'ok', items: sortedResults.slice(0, 5), total: sortedResults.length };
