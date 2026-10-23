@@ -70,7 +70,10 @@ export const periodRank = (candidate: PeriodCandidate, verdict: PeriodVerdict | 
   const dim = isDim(candidate.thumbhash) ? 1 : 0;
   switch (verdict.kind) {
     case FaceKind.Photo: {
-      return candidate.tier === PeriodTier.Video ? undefined : [candidate.tier, 0, dim, candidate.order];
+      // a camera's photo of a document is a page of words too (critique 2026-10-23: identity papers fronted months)
+      return candidate.tier === PeriodTier.Video || verdict.textHeavy === true
+        ? undefined
+        : [candidate.tier, 0, dim, candidate.order];
     }
     case FaceKind.Plain: {
       return candidate.tier === PeriodTier.Video || verdict.textHeavy === true
@@ -190,9 +193,10 @@ export const choosePeriodFaces = async (
     }
   };
 
-  // a plain picture leading its period is asked about its words; one that is a page of words gives way, and the plain
-  // picture after it, if it leads then, is asked in turn. Asked only before a round that depends on whether a period
-  // has a face at all, and at the end, so a plain picture a camera's photo overtakes is never asked about
+  // the picture leading its period is asked about its words, a camera's photo as well as a plain picture (a camera's
+  // photo of a page, a passport or a screen held up to it has a camera's data); one that is a page of words gives way,
+  // and the picture after it, if it leads then, is asked in turn. Asked only before a round that depends on whether a
+  // period has a face at all, and at the end, so a picture that is overtaken is never asked about
   const settleWords = async () => {
     for (;;) {
       const asked = [
@@ -201,7 +205,10 @@ export const choosePeriodFaces = async (
             .map((timeBucket) => best(timeBucket)?.candidate.id)
             .filter((id): id is string => {
               const verdict = id === undefined ? undefined : verdicts.get(id);
-              return verdict?.kind === FaceKind.Plain && verdict.textHeavy === undefined;
+              return (
+                (verdict?.kind === FaceKind.Plain || verdict?.kind === FaceKind.Photo) &&
+                verdict.textHeavy === undefined
+              );
             }),
         ),
       ];
@@ -255,20 +262,34 @@ export const choosePeriodFaces = async (
       );
     }
 
-    // the oldest of each kind a period has, where a bright camera photo of it would improve on what it has
-    const older = photoTiers.map((tier) => ({
-      pick: { tier, order: AssetOrder.Asc },
-      timeBuckets: all.filter(
-        (timeBucket) => has(timeBucket, tier) && improvable(timeBucket, [tier, 0, 0, ORDER_OLDEST]),
-      ),
-    }));
-    if (older.some(({ timeBuckets }) => timeBuckets.length > 0)) {
-      await ask(older, ORDER_OLDEST);
-      await classify(older.flatMap(({ timeBuckets }) => timeBuckets));
-    }
+    // the oldest of each kind a period has, where a bright camera photo of it would improve on what it has; each period
+    // and kind asked once
+    const olderAsked = new Set<string>();
+    const askOlder = async (timeBuckets: string[]) => {
+      const older = photoTiers.map((tier) => ({
+        pick: { tier, order: AssetOrder.Asc },
+        timeBuckets: timeBuckets.filter(
+          (timeBucket) =>
+            !olderAsked.has(`${tier} ${timeBucket}`) &&
+            has(timeBucket, tier) &&
+            improvable(timeBucket, [tier, 0, 0, ORDER_OLDEST]),
+        ),
+      }));
+      for (const { pick, timeBuckets: asked } of older) {
+        for (const timeBucket of asked) {
+          olderAsked.add(`${pick.tier} ${timeBucket}`);
+        }
+      }
+      if (older.some(({ timeBuckets: asked }) => asked.length > 0)) {
+        await ask(older, ORDER_OLDEST);
+        await classify(older.flatMap(({ timeBuckets: asked }) => asked));
+      }
+    };
+    await askOlder(all);
     await settleWords();
-    // a period whose plain favourite turned out a page of words: the photos it had passed over
+    // a period whose leading picture turned out a page of words: the other end of it, then the photos it had passed over
     const lost = all.filter((timeBucket) => !best(timeBucket));
+    await askOlder(lost);
     await classify(lost);
     await settleWords();
 

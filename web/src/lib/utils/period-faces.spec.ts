@@ -152,8 +152,19 @@ describe('choosePeriodFaces', () => {
       verdicts: { scan: plain, camera: photo },
     });
     expect(camera.face).toBe('camera');
-    // the plain picture never led, so its words were not asked for
-    expect(camera.calls.textHeavy).toEqual([]);
+    // the camera's photo led, so its words were asked for; the plain picture never led, so its were not
+    expect(camera.calls.textHeavy).toEqual(['camera']);
+  });
+
+  it("gives a camera's photo of a page of words up too (a document photographed has a camera's data)", async () => {
+    const { face, calls } = await faceOf({
+      covers: { '2025-03-01': { 'photo-newest': picture('passport'), 'photo-oldest': picture('beach') } },
+      verdicts: { passport: photo, beach: photo },
+      words: { passport: true, beach: false },
+    });
+
+    expect(face).toBe('beach');
+    expect(calls.textHeavy).toEqual(['passport', 'beach']);
   });
 
   it("lists a period whose ends do not qualify and asks about its likeliest pictures: favourites, a camera's Live Photos", async () => {
@@ -196,8 +207,8 @@ describe('choosePeriodFaces', () => {
 
     expect(face).toBe('kept');
     expect(calls.list).toEqual(['2025-03-01 favourites']);
-    // the plain favourite was overtaken by camera photos before its words were asked for
-    expect(calls.textHeavy).toEqual([]);
+    // only a picture that led was asked about its words; the plain favourite was overtaken before it led
+    expect(calls.textHeavy).toEqual(['night', 'kept']);
   });
 
   it('does not list a period too large to, and shows a video only where there is nothing else', async () => {

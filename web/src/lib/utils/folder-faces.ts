@@ -166,17 +166,16 @@ export const chooseFaces = async (albums: FaceAlbum[], sources: FaceSources): Pr
       .then((heavy) => !heavy)
       .catch(failed);
 
-  // an album's favourite: the first with a camera's data, else the first plain one that is no page of words
+  // an album's favourite: the first with a camera's data, else the first plain one, that is no page of words (a camera's
+  // photo of a document has a camera's data too)
   const favouriteOf = async (album: FaceAlbum) => {
     const favourites = await sources.favourites(album.id).catch(failed);
     const pictures = (favourites ?? []).filter(({ id }) => !used.has(id));
-    const photo = pictures.find((picture) => faceKind(picture) === FaceKind.Photo);
-    if (photo) {
-      return photo.id;
-    }
-    for (const picture of pictures) {
-      if (faceKind(picture) === FaceKind.Plain && (await clean(picture.id))) {
-        return picture.id;
+    for (const kind of [FaceKind.Photo, FaceKind.Plain]) {
+      for (const picture of pictures) {
+        if (faceKind(picture) === kind && (await clean(picture.id))) {
+          return picture.id;
+        }
       }
     }
   };
@@ -189,9 +188,7 @@ export const chooseFaces = async (albums: FaceAlbum[], sources: FaceSources): Pr
     }
     const photo = picture.isFavorite ? Rank.Favourite : Rank.Photo;
     switch (faceKind(picture)) {
-      case FaceKind.Photo: {
-        return photo;
-      }
+      case FaceKind.Photo:
       case FaceKind.Plain: {
         const words = await clean(picture.id);
         return words === undefined ? undefined : words ? photo : Rank.Last;

@@ -164,8 +164,21 @@ describe('chooseFaces', () => {
     });
 
     expect(await facesOf(albums, sources)).toEqual(['cover-trip']);
-    // only a picture without a camera's data has its text read
-    expect(asked.textHeavy).toEqual(['cover-notes']);
+    // a cover that could front the folder has its text read, a camera's photo as well as a plain picture
+    expect(asked.textHeavy).toEqual(['cover-notes', 'cover-trip']);
+  });
+
+  it("keeps out a camera's photo of a page of words, favourite or cover (a document photographed)", async () => {
+    const { sources } = fake({
+      favourites: { a: [picture('fav-passport', { isFavorite: true }), picture('fav-beach', { isFavorite: true })] },
+      pictures: [picture('cover-letter'), picture('cover-garden')],
+      text: ['fav-passport', 'cover-letter'],
+    });
+
+    expect(await facesOf([album('a'), album('b', 'cover-letter'), album('c', 'cover-garden')], sources)).toEqual([
+      'fav-beach',
+      'cover-garden',
+    ]);
   });
 
   it('takes a picture without a camera when its text says it is a photo', async () => {
