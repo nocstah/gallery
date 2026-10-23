@@ -12,7 +12,8 @@
   import { monthInView } from '$lib/managers/timeline-heading.svelte';
   import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineGrouping, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
-  import { desktopMotion } from '$lib/utils/desktop-motion';
+  import { desktopMotion, type WorkspaceMotion } from '$lib/utils/desktop-motion';
+  import { YearSlide, type YearSlideMoves } from '$lib/utils/year-slide';
   import { Icon } from '@immich/ui';
   import { mdiChevronLeft, mdiChevronRight } from '@mdi/js';
   import { untrack } from 'svelte';
@@ -83,48 +84,72 @@
   // years arrive from the right. Only the inner timeline layer moves; the scroll container is left
   // alone. Reduced motion, or the desktop's workspace animation off, cuts straight to it. A year opens
   // at its first month in timeline order.
-  let switching = false;
-  const switchTo = async (year: number) => {
-    const target = timelineManager.months.find((m) => m.yearMonth.year === year);
-    if (!target || !current || year === current.year || switching) {
+  //
+  // No press is lost while a year slides (2026-10-23): every press, or click on a year, steps on from the year the
+  // strip is heading for (utils/year-slide), so three quick presses land three years on.
+  const yearSlide = new YearSlide();
+  const monthOf = (year: number) => timelineManager.months.find((m) => m.yearMonth.year === year);
+  const jump = (year: number) => {
+    const target = monthOf(year);
+    if (target) {
+      timelineManager.scrollTo(monthTarget(target.top));
+    }
+  };
+
+  const moves = (layer: HTMLElement, workspace: WorkspaceMotion): YearSlideMoves => {
+    const shift = workspace.shift * 100;
+    const faded = workspace.fade ? 0 : 1;
+    let away: Animation | undefined;
+    return {
+      away: async (side) => {
+        away = layer.animate(
+          [
+            { translate: '0 0', opacity: 1 },
+            { translate: `${side * shift}% 0`, opacity: faded },
+          ],
+          {
+            duration: workspace.duration * 0.4,
+            easing: 'cubic-bezier(0.55, 0, 1, 0.45)',
+            fill: 'forwards',
+          },
+        );
+        await away.finished;
+      },
+      jump,
+      arrive: async (side) => {
+        const arriving = layer.animate(
+          [
+            { translate: `${side * shift}% 0`, opacity: faded },
+            { translate: '0 0', opacity: 1 },
+          ],
+          { duration: workspace.duration * 0.6, easing: workspace.ease },
+        );
+        // the slide away held the layer until now, in the same task, so no frame shows it between the two
+        away?.cancel();
+        away = undefined;
+        await arriving.finished;
+      },
+      done: () => {
+        for (const animation of layer.getAnimations()) {
+          animation.cancel();
+        }
+      },
+    };
+  };
+
+  const switchTo = (year: number) => {
+    if (!current || !monthOf(year)) {
       return;
     }
-    const sign = year < current.year ? 1 : -1;
     const layer = document.querySelector<HTMLElement>('#virtual-timeline');
     const { workspace } = desktopMotion();
     if (!layer || reducedMotion || workspace.duration === 0) {
-      timelineManager.scrollTo(monthTarget(target.top));
+      if (yearSlide.heading !== undefined || year !== current.year) {
+        yearSlide.cutTo(year, jump);
+      }
       return;
     }
-    const shift = workspace.shift * 100;
-    const faded = workspace.fade ? 0 : 1;
-    switching = true;
-    try {
-      await layer.animate(
-        [
-          { translate: '0 0', opacity: 1 },
-          { translate: `${-sign * shift}% 0`, opacity: faded },
-        ],
-        {
-          duration: workspace.duration * 0.4,
-          easing: 'cubic-bezier(0.55, 0, 1, 0.45)',
-          fill: 'forwards',
-        },
-      ).finished;
-      timelineManager.scrollTo(monthTarget(target.top));
-      await layer.animate(
-        [
-          { translate: `${sign * shift}% 0`, opacity: faded },
-          { translate: '0 0', opacity: 1 },
-        ],
-        { duration: workspace.duration * 0.6, easing: workspace.ease },
-      ).finished;
-    } finally {
-      for (const animation of layer.getAnimations()) {
-        animation.cancel();
-      }
-      switching = false;
-    }
+    void yearSlide.slideTo(year, current.year, moves(layer, workspace));
   };
 
   // ---- the year strip: it scrolls under the wheel, a drag, its arrows and the keys; the year in view is brought to
@@ -289,11 +314,12 @@
     if ((event.key !== '[' && event.key !== ']') || !current) {
       return;
     }
-    const index = years.findIndex(({ year }) => year === current.year);
-    const next = years[index + (event.key === '[' ? 1 : -1)];
+    // from the year the strip is heading for while it slides, so no press is lost (above)
+    const index = years.findIndex(({ year }) => year === (yearSlide.heading ?? current.year));
+    const next = index === -1 ? undefined : years[index + (event.key === '[' ? 1 : -1)];
     if (next) {
       event.preventDefault();
-      void switchTo(next.year);
+      switchTo(next.year);
     }
   };
 </script>
@@ -341,7 +367,7 @@
             aria-current={year === current.year ? 'true' : undefined}
             title={itemsLabel(count)}
             tabindex={year === current.year ? 0 : -1}
-            onclick={() => void switchTo(year)}
+            onclick={() => switchTo(year)}
           >
             {year}
           </button>
