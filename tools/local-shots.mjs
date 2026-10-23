@@ -23,6 +23,14 @@
 // anything else is a 404), --contrast (measure the text that lies on a photo, as WCAG
 // does: see below).
 //
+// Read-only by default: every request a page makes to Gallery (/api) or Curator (:2290) passes a write guard. Reads
+// (GET, HEAD, OPTIONS) and Gallery's read-only searches (POST /api/search/...) go on; anything else fails in the page
+// and is listed ("write blocked: PATCH .../shared-spaces/<id>/view": opening a Space's Photos marks it viewed), with a
+// count at the end of the run. --allow-writes lets them through, for a run that must. --signed-out shoots with no
+// session (the sign-in pages; routes are plain paths); --family reads the signed-in account as a family member's
+// (`isAdmin` false, in the headless browser only); --stub FILE answers Gallery's GET requests from a JSON map of path
+// to answer. A route step end: scrolls the timeline (#asset-grid) to its end, again as its months load.
+//
 // --contrast: before each shot the page lists its visible text whose ground, under the middle of each line, is a
 // photo (an img, a video, a canvas or a background picture) rather than an opaque colour, with its colour, size and
 // weight; right after the shot a second capture is taken with every text and its shadows made transparent, the plate,
@@ -65,6 +73,15 @@ const CHROMIUM = process.env.GALLERY_SHOTS_CHROMIUM || '/usr/bin/chromium';
 const ROOT = join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'gallery-shots');
 const PROFILE = join(ROOT, 'profile');
 
+const BLOCKED = [];
+const STUBS = (() => {
+  const at = process.argv.indexOf('--stub');
+  return at >= 0 ? JSON.parse(readFileSync(process.argv[at + 1], 'utf8')) : null;
+})();
+process.on('exit', () => {
+  if (BLOCKED.length) console.error(`writes blocked: ${BLOCKED.length} (${[...new Set(BLOCKED)].join(', ')})`);
+  else console.error('writes blocked: none');
+});
 const VIEWPORTS = {
   aorus: { width: 2560, height: 1440, scale: 1, hidpi: 1.5, mobile: false, label: 'AORUS 32″, 2560×1440' },
   dell: { width: 1296, height: 2304, scale: 1, hidpi: 1.666667, mobile: false, label: 'Dell portrait, 1296×2304' },
@@ -278,6 +295,11 @@ function parseRoute(spec) {
 
 /** @album, @photo and @person become real paths, asked of Gallery with the session's own cookie. */
 async function resolveRoutes(page, base, routes) {
+  if (flag('signed-out')) {
+    await page.visit(`${base}/auth/login`);
+    if (!flag('keep-storage')) await page.evaluate('localStorage.clear(); sessionStorage.clear()');
+    return routes.filter((route) => !route.target.startsWith('@')).map((route) => ({ ...route, path: route.target }));
+  }
   const landed = await page.visit(`${base}/photos`);
   if (landed.startsWith('/auth/')) throw new Error('not logged in: run ./local-dev.sh login once');
   if (!flag('keep-storage')) await page.evaluate('localStorage.clear(); sessionStorage.clear()');
@@ -387,17 +409,62 @@ async function pageSession(cdp, sessionId) {
   await send('Network.enable');
   await send('Runtime.enable');
   const curator = curatorAnswers();
-  if (curator) {
-    await send('Fetch.enable', { patterns: [{ urlPattern: '*://*:2290/*', requestStage: 'Request' }] });
-    cdp.on((message) => {
-      if (message.sessionId === sessionId && message.method === 'Fetch.requestPaused') {
-        answerCurator(send, message.params, curator).catch((error) => {
-          console.error(`--curator: ${message.params.request.url}: ${error.message}`);
-          return send('Fetch.failRequest', { requestId: message.params.requestId, errorReason: 'Failed' });
+  const family = flag('family');
+  const patterns = [
+    { urlPattern: '*/api/*', requestStage: 'Request' },
+    { urlPattern: '*://*:2290/*', requestStage: 'Request' },
+  ];
+  if (family) patterns.push({ urlPattern: '*/api/users/me', requestStage: 'Response' });
+  await send('Fetch.enable', { patterns });
+  const reads = new Set(['GET', 'HEAD', 'OPTIONS']);
+  const readOnlyPost = (url) => url.port !== '2290' && url.pathname.startsWith('/api/search/');
+  cdp.on((message) => {
+    if (message.sessionId !== sessionId || message.method !== 'Fetch.requestPaused') return;
+    const params = message.params;
+    const { requestId, request } = params;
+    const url = new URL(request.url);
+    const handle = async () => {
+      if (params.responseStatusCode !== undefined) {
+        // --family: the signed-in account read as a family member's (not the server's admin)
+        const { body, base64Encoded } = await send('Fetch.getResponseBody', { requestId });
+        const user = JSON.parse(base64Encoded ? Buffer.from(body, 'base64').toString('utf8') : body);
+        user.isAdmin = false;
+        const text = Buffer.from(JSON.stringify(user));
+        return send('Fetch.fulfillRequest', {
+          requestId,
+          responseCode: params.responseStatusCode,
+          responseHeaders: (params.responseHeaders ?? []).filter((h) => !/^content-(length|encoding)$/i.test(h.name)),
+          body: text.toString('base64'),
         });
       }
+      if (!flag('allow-writes') && !reads.has(request.method) && !(request.method === 'POST' && readOnlyPost(url))) {
+        BLOCKED.push(`${request.method} ${url.host}${url.pathname}`);
+        console.error(`  write blocked: ${request.method} ${url.host}${url.pathname}`);
+        return send('Fetch.failRequest', { requestId, errorReason: 'BlockedByClient' });
+      }
+      const stubbed = STUBS && request.method === 'GET' && url.port !== '2290'
+        ? Object.entries(STUBS).find(([key]) => (url.pathname + url.search).startsWith(key))
+        : undefined;
+      if (stubbed) {
+        const body = Buffer.from(JSON.stringify(stubbed[1]));
+        return send('Fetch.fulfillRequest', {
+          requestId,
+          responseCode: 200,
+          responseHeaders: [
+            { name: 'content-type', value: 'application/json' },
+            { name: 'content-length', value: String(body.length) },
+          ],
+          body: body.toString('base64'),
+        });
+      }
+      if (curator && url.port === '2290') return answerCurator(send, params, curator);
+      return send('Fetch.continueRequest', { requestId });
+    };
+    handle().catch((error) => {
+      console.error(`guard: ${request.url}: ${error.message}`);
+      return send('Fetch.failRequest', { requestId, errorReason: 'Failed' }).catch(() => {});
     });
-  }
+  });
   const inflight = new Set();
   let lastActivity = Date.now();
   cdp.on((message) => {
@@ -516,6 +583,22 @@ async function pageSession(cdp, sessionId) {
       } else if (kind === 'release') {
         await mouse('mouseReleased', pointerAt.x, pointerAt.y, { button: 'left', buttons: 0, clickCount: 1 });
         held = false;
+      } else if (kind === 'end') {
+        await evaluate(`(async () => {
+          const grid = document.querySelector('#asset-grid');
+          if (!grid) return 'no #asset-grid';
+          let still = 0;
+          let last = -1;
+          for (let round = 0; round < 80 && still < 4; round++) {
+            grid.scrollTop = grid.scrollHeight;
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            const at = grid.scrollTop + grid.clientHeight;
+            still = Math.abs(grid.scrollHeight - at) < 2 && grid.scrollHeight === last ? still + 1 : 0;
+            last = grid.scrollHeight;
+          }
+          return 'ok';
+        })()`);
+        await settle();
       } else if (kind === 'hover' || kind === 'click' || kind === 'rclick') {
         const point = await centre(arg);
         if (!point) return `${kind}: nothing matches ${arg}`;
