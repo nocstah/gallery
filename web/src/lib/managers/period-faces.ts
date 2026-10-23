@@ -119,6 +119,8 @@ export class PeriodFaceManager {
     }
 
     const fallback = server();
+    // read only once the choice is made: a failure meanwhile is no unhandled rejection
+    void fallback.catch(() => undefined);
     let chosen: Map<string, PeriodPicture> | undefined;
     if (chooses(scope)) {
       let patience: ReturnType<typeof setTimeout> | undefined;
