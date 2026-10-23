@@ -26,6 +26,8 @@ export const FILM_TIMING = {
   titleIn: 0.5,
   /** a sentence of the story comes after its photo (or the title's words, going) has begun */
   storyDelay: 0.8,
+  /** leave enough time for the story to fade out before the next scene */
+  storyOut: 0.35,
   /** a sentence needs this long at least to be read: slots shorter than it are left out */
   storyLeast: 1.5,
   /** the first song fades in, one song fades into the next, and the music fades over the film's last seconds */
@@ -96,12 +98,17 @@ export type FilmPlan = {
 
 export type FilmAsset = {
   id: string;
+  /** Identical imported files may have different asset ids. */
+  checksum?: string;
   kind: 'photo' | 'video';
   /** width over height as shown, null when unknown (then the photo is shown whole) */
   ratio: number | null;
   /** a video's length in seconds */
   seconds?: number | null;
 };
+
+/** Existing story words linked to the source media that supports them. */
+export type FilmStoryCue = { text: string; assetIds: string[] };
 
 export type FilmTrack = {
   id: string;
@@ -125,6 +132,8 @@ export type FilmPlanInput = {
   title: { text: string; line: string };
   /** the story, a sentence at a time (splitSentences) */
   sentences?: string[];
+  /** When provided, only source-linked sentences are shown. An empty list deliberately has no scene text. */
+  storyCues?: FilmStoryCue[];
   /** the songs, the one to play first first */
   tracks?: FilmTrack[];
   /** the tempo the cuts follow (the first song's when the film began; a skip keeps it, so the shots keep their
@@ -332,20 +341,34 @@ export const buildFilmPlan = (input: FilmPlanInput): FilmPlan => {
 
   type Entry = { asset: FilmAsset; index: number; opening: boolean; seconds: number };
   const entries: Entry[] = [];
-  const coverIndex = input.cover ? input.assets.findIndex(({ id }) => id === input.cover) : -1;
-  // a cover that is not the first photo opens the film on its own, and comes again in its place
-  const coverOpens = !!input.cover && coverIndex !== 0;
-  if (coverOpens && (coverIndex >= 0 || input.assets.length > 0)) {
-    const asset =
-      coverIndex >= 0 ? input.assets[coverIndex] : { id: input.cover!, kind: 'photo' as const, ratio: null };
-    entries.push({ asset: { ...asset, kind: 'photo' }, index: coverIndex, opening: true, seconds: titleSeconds });
+  const seenIds = new Set<string>();
+  const seenChecksums = new Set<string>();
+  const cover = input.assets.find(({ id }) => id === input.cover);
+  const ordered = cover ? [cover, ...input.assets] : input.assets;
+  const assets = ordered.filter((asset) => {
+    const duplicate = seenIds.has(asset.id) || (!!asset.checksum && seenChecksums.has(asset.checksum));
+    seenIds.add(asset.id);
+    if (asset.checksum) {
+      seenChecksums.add(asset.checksum);
+    }
+    return !duplicate;
+  });
+  const separateCover = !!input.cover && !cover && assets.length > 0;
+  if (separateCover) {
+    entries.push({
+      asset: { id: input.cover!, kind: 'photo', ratio: null },
+      index: -1,
+      opening: true,
+      seconds: titleSeconds,
+    });
   }
-  for (const [index, asset] of input.assets.entries()) {
+  // The cover gets time for its title and its scene in one shot, then each remaining photo appears once.
+  for (const [index, asset] of assets.entries()) {
     const seconds =
       asset.kind === 'video'
         ? onBeat(videoSeconds(asset.seconds, photoSeconds), beat, true)
         : onBeat(photoSeconds, beat);
-    const opening = !coverOpens && index === 0;
+    const opening = !separateCover && index === 0;
     entries.push({ asset, index, opening, seconds: opening ? titleSeconds + seconds : seconds });
   }
 
@@ -404,7 +427,25 @@ export const buildFilmPlan = (input: FilmPlanInput): FilmPlan => {
       end: round(shot.start + shot.duration),
     }))
     .filter((slot) => slot.end - slot.start >= FILM_TIMING.storyLeast);
-  texts.push(...storyTexts(input.sentences ?? [], slots));
+  if (input.storyCues === undefined) {
+    texts.push(...storyTexts(input.sentences ?? [], slots));
+  } else {
+    for (const shot of shots) {
+      const text = input.storyCues
+        .filter((cue) => cue.assetIds.includes(shot.assetId))
+        .map((cue) => cue.text.trim())
+        .filter(Boolean)
+        .join(' ');
+      // Wait until the incoming picture is visible; finish the text's fade before the next scene starts.
+      const start = round(
+        Math.max(shot.start + Math.max(shot.fade, FILM_TIMING.storyDelay), titleEnd + FILM_TIMING.storyDelay),
+      );
+      const end = round(shot.start + shot.duration - FILM_TIMING.storyOut);
+      if (text && end - start >= FILM_TIMING.storyLeast) {
+        texts.push({ kind: 'story', text, start, end });
+      }
+    }
+  }
 
   return {
     version: FILM_PLAN_VERSION,
@@ -471,11 +512,9 @@ export const filmChanges = (plan: FilmPlan): number[] => {
   return [...times].filter((time) => time >= 0 && time <= plan.duration).sort((a, b) => a - b);
 };
 
-/** The shot that shows a photo (its first time, after a cover that opens on its own). */
-export const shotOfAsset = (plan: FilmPlan, assetId: string) => {
-  const index = plan.shots.findIndex((shot) => shot.assetId === assetId && (!shot.opening || shot.index === 0));
-  return index === -1 ? plan.shots.findIndex((shot) => shot.assetId === assetId) : index;
-};
+/** The one shot that shows this photo. */
+export const shotOfAsset = (plan: FilmPlan, assetId: string) =>
+  plan.shots.findIndex((shot) => shot.assetId === assetId);
 
 const percent = (value: number) => `${round(value, 3)}%`;
 

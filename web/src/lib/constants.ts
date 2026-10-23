@@ -68,6 +68,7 @@ export enum QueryParameter {
 export enum SessionStorageKey {
   INFINITE_SCROLL_PAGE = 'infiniteScrollPage',
   SCROLL_POSITION = 'scrollPosition',
+  SCROLL_ANCHOR = 'scrollAnchor',
 }
 
 // TODO split into user settings vs system settings

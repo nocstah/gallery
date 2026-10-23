@@ -185,7 +185,7 @@ export class TimelineMonth {
         bucketAssets.localOffsetHours[i],
       );
 
-      const timelineAsset: TimelineAsset = {
+      let timelineAsset: TimelineAsset = {
         city: bucketAssets.city?.[i] ?? null,
         country: bucketAssets.country?.[i] ?? null,
         duration: bucketAssets.duration[i],
@@ -226,6 +226,7 @@ export class TimelineMonth {
         timelineAsset.longitude = bucketAssets.longitude?.[i];
       }
 
+      timelineAsset = this.timelineManager.decoratePersonStack(timelineAsset);
       if (this.timelineManager.isExcluded(timelineAsset)) {
         continue;
       }

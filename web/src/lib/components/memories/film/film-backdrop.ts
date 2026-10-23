@@ -1,5 +1,5 @@
 import { thumbHashToRGBA } from 'thumbhash';
-import { decodeBase64 } from '$lib/utils';
+import { decodeThumbhash } from './film-media';
 
 // Local Omarchy layer: what a photo shown whole lies on in the film (DESIGN.md, Memories, The film): its thumbhash,
 // the blurred miniature every asset carries, a little richer and dimmed in its pixels, drawn once into a small PNG. The
@@ -37,7 +37,7 @@ export const thumbhashBackdrop = (thumbhash: string | null | undefined): string 
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     if (context) {
-      const { w, h, rgba } = thumbHashToRGBA(decodeBase64(thumbhash));
+      const { w, h, rgba } = thumbHashToRGBA(decodeThumbhash(thumbhash));
       canvas.width = w;
       canvas.height = h;
       const pixels = context.createImageData(w, h);

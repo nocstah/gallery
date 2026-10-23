@@ -4,6 +4,8 @@
 // as the browser plays them), this follows the job and has the browser save "<title>.mp4" once it is ready.
 // components/omarchy/FilmVideoPanel.svelte shows how far it has got in the bottom-left corner, as the videos for chat
 // apps and the photo books do, and it lives as long as the page.
+import { modalManager } from '@immich/ui';
+import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
 import {
   curator,
   CuratorError,
@@ -31,6 +33,10 @@ export type FilmItem = {
   error?: string;
   /** longer than Curator saves: never asked for */
   tooLong?: boolean;
+  action: 'download' | 'share' | 'prepare';
+  sharing?: boolean;
+  shareError?: string;
+  assetId?: string;
 };
 
 const POLL_MS = 1500;
@@ -51,6 +57,7 @@ export const filmProgress = (job: Pick<FilmJob, 'status' | 'progress'>) => {
 };
 
 class FilmVideoManager {
+  shareDialogOpen = $state(false);
   items = $state<FilmItem[]>([]);
   #available = $state(false);
   #checked = false;
@@ -73,10 +80,22 @@ class FilmVideoManager {
   }
 
   /** Save the film as video, then the file. A film of the same memory already being made is left to finish. */
-  start(request: FilmRequest, label: string) {
-    const key = request.memoryId;
-    if (this.#item(key)?.status === 'making') {
-      return;
+  start(request: FilmRequest, label: string, action: FilmItem['action'] = 'download') {
+    const key = JSON.stringify({ ...request, title: request.title ?? label });
+    const previous = this.#item(key);
+    if (previous?.status === 'making') {
+      if (action === 'share') {
+        previous.action = 'share';
+      }
+      return previous;
+    }
+    if (previous?.status === 'ready') {
+      if (action === 'share') {
+        void this.share(previous);
+      } else if (action === 'download') {
+        this.save(previous);
+      }
+      return previous;
     }
     const tooLong = request.plan.duration > FILM_MOST_SECONDS;
     const item: FilmItem = {
@@ -87,11 +106,25 @@ class FilmVideoManager {
       stage: 'waiting',
       progress: 0,
       tooLong,
+      action,
     };
     this.items = [item, ...this.items.filter((other) => other.key !== key)];
     if (!tooLong) {
       void this.#make(key);
     }
+    return this.#item(key)!;
+  }
+
+  /** Prepare privately while the sharing sheet shows progress; publishing remains the sheet's action. */
+  async prepare(request: FilmRequest, label: string) {
+    const item = this.start(request, label, 'prepare');
+    while (item.status === 'making') {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    if (item.status !== 'ready' || item.jobId === undefined) {
+      throw new Error(item.error ?? 'The memory video could not be prepared');
+    }
+    return item;
   }
 
   #item(key: string) {
@@ -137,7 +170,11 @@ class FilmVideoManager {
           live.status = 'ready';
           live.result = row.result;
           live.label = row.result.name.replace(/\.mp4$/, '');
-          this.save(live);
+          if (live.action === 'share') {
+            await this.share(live);
+          } else if (live.action === 'download') {
+            this.save(live);
+          }
           return;
         }
         if (row.status !== 'queued' && row.status !== 'running') {
@@ -166,16 +203,39 @@ class FilmVideoManager {
     link.remove();
   }
 
+  /** Prepare a private archive copy, then let the owner create an expiring/password-protected public link. */
+  async share(item: FilmItem) {
+    if (item.jobId === undefined || item.sharing || !curatorIsMine()) {
+      return;
+    }
+    item.sharing = true;
+    item.shareError = undefined;
+    try {
+      const kept = item.assetId ? { assetId: item.assetId } : await curator.keepFilm(item.jobId);
+      const { assetId } = kept;
+      item.assetId = assetId;
+      if (curatorIsMine()) {
+        this.shareDialogOpen = true;
+        await modalManager.show(SharedLinkCreateModal, { assetIds: [assetId] });
+      }
+    } catch (error) {
+      item.shareError = error instanceof Error ? error.message : String(error);
+    } finally {
+      this.shareDialogOpen = false;
+      item.sharing = false;
+    }
+  }
+
   retry(key: string) {
     const item = this.#item(key);
     if (item && !item.tooLong) {
-      this.start(item.request, item.request.title ?? item.label);
+      this.start(item.request, item.request.title ?? item.label, item.action);
     }
   }
 
   /** The panel's close: the finished ones go, those still being made stay. */
   clearDone() {
-    this.items = this.items.filter((item) => item.status === 'making');
+    this.items = this.items.filter((item) => item.status === 'making' || item.sharing);
   }
 }
 

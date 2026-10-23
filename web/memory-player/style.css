@@ -1,0 +1,211 @@
+@import 'tailwindcss';
+@import '@immich/ui/theme/default.css';
+@source "./src";
+@source "../src/lib/components/memories/film";
+@source "../node_modules/@immich/ui";
+
+@font-face {
+  font-family: 'Mona Sans';
+  src: url('/gallery-fonts/MonaSansVF.woff2') format('woff2');
+  font-weight: 200 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bricolage Grotesque Variable';
+  src: url('/gallery-fonts/bricolage-grotesque-latin-standard-normal.woff2') format('woff2');
+  font-weight: 200 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'GoogleSansCode';
+  src: url('/gallery-fonts/GoogleSansCode.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --ws-font-body: 'Mona Sans', sans-serif;
+  --ws-font-display: 'Bricolage Grotesque Variable', sans-serif;
+  --ws-font-data: 'GoogleSansCode', monospace;
+  --font-sans: var(--ws-font-body);
+  --font-display: var(--ws-font-display);
+  --ws-text-ui: 0.875rem;
+  --ws-text-bar: 1.25rem;
+  --ws-text-meta: 0.8125rem;
+  --ws-text-data: 0.75rem;
+  --ws-text-display: clamp(2.25rem, 1rem + 3vw, 4rem);
+  --ws-radius: 0px;
+  --ws-border: 2px;
+  --ws-accent: #f5f3ee;
+  --ws-glass: rgb(10 10 12 / 0.42);
+  --ws-glass-strong: rgb(10 10 12 / 0.64);
+  --ws-glass-hover: rgb(10 10 12 / 0.8);
+  --ws-glass-edge: rgb(255 255 255 / 0.08);
+  --ws-glass-blur: blur(18px) saturate(1.3);
+  --immich-ui-light: #111;
+  --immich-ui-dark: #f5f3ee;
+  background: #111;
+  color: #f5f3ee;
+  font-family: var(--ws-font-body);
+}
+body {
+  margin: 0;
+}
+button,
+input {
+  font: inherit;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+::selection {
+  background: #f5f3ee;
+  color: #111;
+}
+* {
+  scrollbar-color: #777 #111;
+  scrollbar-width: thin;
+}
+.memory-cover {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  min-height: 26rem;
+}
+.memory-cover > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.memory-cover-shade {
+  position: absolute;
+  inset: 35% 0 0;
+  background: linear-gradient(transparent, #000e);
+}
+.memory-cover-content {
+  position: absolute;
+  left: max(1.5rem, env(safe-area-inset-left));
+  right: 1.5rem;
+  bottom: max(2rem, env(safe-area-inset-bottom));
+}
+.memory-cover h1 {
+  font: 800 clamp(2rem, 5vw, 6rem)/1.05 var(--ws-font-display);
+  max-width: 14ch;
+  text-wrap: balance;
+}
+.memory-cover p {
+  margin-block: 1rem 1.5rem;
+  font-family: var(--ws-font-data);
+  font-size: 0.875rem;
+}
+.memory-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0.65rem 1.1rem;
+  background: #f5f3ee;
+  color: #111;
+  border: 1px solid transparent;
+  border-radius: var(--ws-radius);
+  font-weight: 600;
+}
+.memory-play:hover {
+  background: #d8d6d1;
+}
+.memory-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+}
+.memory-grid-page {
+  min-height: 100svh;
+  padding: 1rem;
+}
+.memory-grid-page header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.memory-grid-page h1 {
+  flex: 1;
+  font: 700 1.125rem var(--ws-font-display);
+}
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: 0.5rem;
+}
+.memory-grid button {
+  position: relative;
+  aspect-ratio: 1;
+}
+.memory-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.memory-grid span {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  padding: 0.25rem;
+  background: #000b;
+}
+.memory-access {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+.memory-access h1 {
+  font: 700 2rem/1.15 var(--ws-font-display);
+  text-wrap: balance;
+}
+.memory-access p {
+  max-width: 35rem;
+  line-height: 1.6;
+}
+.memory-access form {
+  display: grid;
+  gap: 1rem;
+  text-align: left;
+  width: min(100%, 24rem);
+}
+.memory-access input {
+  border: 1px solid #777;
+  padding: 0.75rem;
+  min-height: 48px;
+  border-radius: var(--ws-radius);
+}
+@media (max-width: 600px) {
+  .memory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .memory-grid-page header {
+    flex-wrap: wrap;
+  }
+  .memory-grid-page header .memory-play {
+    margin-left: 3.75rem;
+  }
+}

@@ -1,6 +1,6 @@
 import { thumbHashToRGBA } from 'thumbhash';
-import { decodeBase64 } from '$lib/utils';
 import { deepen } from './film-backdrop';
+import { decodeThumbhash } from './film-media';
 import { coverWindow, type FilmCamera, type FilmShot } from './film-plan';
 
 // Local Omarchy layer: how much black the film lays under its words on each photo (DESIGN.md, Memories, The film: the
@@ -117,7 +117,7 @@ export const thumbhashPicture = (thumbhash: string | null | undefined): FilmPict
   }
   let value: FilmPicture | null = null;
   try {
-    const { w, h, rgba } = thumbHashToRGBA(decodeBase64(thumbhash));
+    const { w, h, rgba } = thumbHashToRGBA(decodeThumbhash(thumbhash));
     const backdrop = { w, h, rgba: deepen(Uint8Array.from(rgba)) };
     value = { photo: { w, h, rgba }, backdrop, ratio: w / h, exact: false };
   } catch {

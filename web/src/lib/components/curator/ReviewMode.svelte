@@ -104,6 +104,9 @@
   const DECISION_KEYS = new Set(['a', 'arrowright', 'r', 'arrowleft', 's', ' ', 'u', 'backspace']);
 
   const onKeydown = (event: KeyboardEvent) => {
+    if (event.defaultPrevented || document.querySelector('dialog[data-inbox-inspector][open]')) {
+      return;
+    }
     if (event.ctrlKey || event.metaKey || event.altKey) {
       return;
     }

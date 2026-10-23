@@ -18,6 +18,7 @@
     tone?: 'danger';
     /** Local Omarchy layer: a test hook, for a control that moved from the bar into a menu and keeps its id */
     testId?: string;
+    disabled?: boolean;
   }
 
   let {
@@ -31,6 +32,7 @@
     shortcutLabel = '',
     tone,
     testId,
+    disabled = false,
   }: Props = $props();
 
   let id: string = generateId();
@@ -38,16 +40,22 @@
   let isActive = $derived($selectedIdStore === id);
 
   const handleClick = (event: MouseEvent) => {
+    if (disabled) {
+      return;
+    }
+    // Svelte props can be lazy getters. Resolve the action while the menu's selection still exists, before closing
+    // clears it (for example a video download whose handler captures the selected clips).
+    const action = onClick;
     // eslint-disable-next-line unicorn/no-optional-chaining-on-undeclared-variable
     $optionClickCallbackStore?.();
-    onClick(event);
+    action(event);
   };
 
   if (shortcut && !shortcutLabel) {
     shortcutLabel = computeShortcutLabel(shortcut);
   }
   const bindShortcutIfSet = shortcut
-    ? (n: HTMLElement) => bindShortcut(n, { shortcut, onShortcut: onClick })
+    ? (n: HTMLElement) => bindShortcut(n, { shortcut, onShortcut: (event) => !disabled && onClick(event) })
     : () => {};
 </script>
 
@@ -64,6 +72,8 @@
     ? activeColor
     : 'bg-slate-100'}"
   role="menuitem"
+  aria-disabled={disabled || undefined}
+  class:opacity-50={disabled}
   data-tone={tone}
   data-testid={testId}
 >

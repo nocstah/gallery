@@ -6,6 +6,8 @@ import type { MemoryTrack } from '$lib/utils/curator';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { reactiveProps } from '@test-data/reactive-props.svelte';
 import MemoryFilm from './MemoryFilm.svelte';
+import { storyOf, type FilmPlan, type FilmStoryCue } from './film-plan';
+import { privateFilmMedia } from './private-film-media';
 
 vi.mock('$lib/managers/auth-manager.svelte', () => ({
   authManager: { authenticated: false, params: {}, preferences: { memories: { duration: 5 } } },
@@ -50,12 +52,14 @@ type FilmProps = {
   dress?: 'screen' | 'room';
   caption?: string;
   story?: string | null;
+  storyCues?: FilmStoryCue[];
   allPhotos?: boolean;
   onNextFilm?: () => void;
   onPreviousFilm?: () => void;
 };
 
 const filmProps = (props: FilmProps = {}) => ({
+  media: privateFilmMedia,
   memory: memory(),
   assetId: 'asset-0',
   active: props.active ?? true,
@@ -64,6 +68,7 @@ const filmProps = (props: FilmProps = {}) => ({
   title: 'Siem Reap · October 2025',
   settled: true,
   story: props.story === undefined ? 'Temples at dawn. Then lunch by the river.' : props.story,
+  storyCues: props.storyCues,
   tracks: props.tracks ?? [],
   dress: props.dress,
   caption: props.caption,
@@ -251,6 +256,33 @@ describe('MemoryFilm', () => {
     // the cuts on the beat of the song it goes with (96 BPM: a beat is 0.625 s; the title card's 5 s is 8 of them)
     expect(saved?.plan.shots[1].start).toBeCloseTo(0.625 * Math.round(10 / 0.625), 3);
     expect(saved?.plan.texts[0]).toMatchObject({ kind: 'title', text: 'Siem Reap', line: 'October 2025 · 3 photos' });
+    const portrait: FilmPlan = component.videoPlan(9 / 16)!.plan;
+    expect(portrait.aspect).toBe(0.5625);
+    expect(new Set(portrait.shots.map(({ assetId }) => assetId)).size).toBe(portrait.shots.length);
+    expect(component.shareState().trackIds).toEqual(['b', 'a']);
+  });
+
+  it('keeps linked story text on its photo in playback and the exported video', async () => {
+    const { component } = renderFilm({
+      story: 'The story may describe scenes out of order.',
+      storyCues: [{ text: 'Lunch by the river.', assetIds: ['asset-1'] }],
+    });
+    await started();
+    await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    expect(
+      await screen.findByText('Lunch by the river.', { ignore: 'script, style, .film-ruler *' }, { timeout: 2500 }),
+    ).toBeInTheDocument();
+    await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    await waitFor(() =>
+      expect(
+        screen.queryByText('Lunch by the river.', { ignore: 'script, style, .film-ruler *' }),
+      ).not.toBeInTheDocument(),
+    );
+    const saved = component.videoPlan()!.plan;
+    const cues = storyOf(saved);
+    expect(cues).toHaveLength(1);
+    expect(cues[0].start).toBeGreaterThanOrEqual(saved.shots[1].start + saved.shots[1].fade);
+    expect(cues[0].end).toBeLessThan(saved.shots[2].start);
   });
 
   it('pauses while it is off screen and plays on when it is back', async () => {

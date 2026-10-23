@@ -2,8 +2,10 @@ import {
   AssetOrder,
   AssetOrderBy,
   getAssetInfo,
+  getTimeBucket,
   getTimeBucketCovers,
   getTimeBuckets,
+  TimeBucketSize,
   type AssetResponseDto,
   type TimeBucketCoverResponseDto,
   type TimeBucketsResponseDto,
@@ -21,7 +23,7 @@ import {
 import { updateTimelineMonthViewportProximity } from '$lib/managers/timeline-manager/internal/intersection-support.svelte';
 import { updateGeometry } from '$lib/managers/timeline-manager/internal/layout-support.svelte';
 import { loadFromTimeBuckets } from '$lib/managers/timeline-manager/internal/load-support.svelte';
-import { toTimeBucketsRequest } from '$lib/managers/timeline-manager/internal/request-options';
+import { toTimeBucketRequest, toTimeBucketsRequest } from '$lib/managers/timeline-manager/internal/request-options';
 import {
   findClosestTimelineMonthForDate,
   findTimelineMonthForAsset as findTimelineMonthForAssetUtil,
@@ -31,15 +33,19 @@ import {
   retrieveRange as retrieveRangeUtil,
 } from '$lib/managers/timeline-manager/internal/search-support.svelte';
 import { WebsocketSupport } from '$lib/managers/timeline-manager/internal/websocket-support.svelte';
+import { PersonPhotos } from '$lib/managers/timeline-manager/person-photos';
+import { PersonStackIndex } from '$lib/managers/timeline-manager/person-stacks';
 import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
 import { updateStackedAssetInTimeline } from '$lib/utils/actions';
 import { CancellableTask } from '$lib/utils/cancellable-task';
+import { curator } from '$lib/utils/curator';
 import type { PeriodGrid } from '$lib/utils/period-grid';
 import {
   getOrderingDate,
   isAssetResponseDto,
   setDifference,
   toTimelineAsset,
+  toISOYearMonthUTC,
   type TimelineDateTime,
   type TimelineYearMonth,
 } from '$lib/utils/timeline-util';
@@ -113,6 +119,8 @@ export class TimelineManager extends VirtualScrollManager {
   });
 
   isInitialized = $state(false);
+  /** All matching photos, including folded members, for actions such as Add all to album. */
+  ungroupedAssetCount = $state(0);
   /** Increments on every (re)load. Views `{#key}` their bucket DOM on it to drop stale nodes. */
   reloadToken = $state(0);
   isScrollingOnLoad = false;
@@ -143,6 +151,9 @@ export class TimelineManager extends VirtualScrollManager {
   #unsubscribes: Array<() => void> = [];
   #initSequence = 0;
   #destroyed = false;
+  #personStacks: PersonStackIndex | undefined;
+  #personPhotos: PersonPhotos | undefined;
+  #personReload: ReturnType<typeof setTimeout> | undefined;
   // eslint-disable-next-line svelte/prefer-svelte-reactivity
   #coverRequested = new Set<string>();
 
@@ -164,15 +175,29 @@ export class TimelineManager extends VirtualScrollManager {
     this.#unsubscribes.push(
       eventManager.on({
         AssetUpdate: (asset: AssetResponseDto) => {
+          if (this.refreshPersonStacks()) {
+            return;
+          }
           const timelineAsset = toTimelineAsset(asset);
-          if (this.#options.albumId || this.#options.personId) {
+          if (this.#options.albumId || this.#options.personId || this.#options.personIds?.length) {
             this.#updateAssets([timelineAsset]);
           } else {
             this.upsertAssets([timelineAsset]);
           }
         },
-        AssetsUnarchive: (assets) => this.upsertAssets(assets),
-        AssetsChanged: (assets) => this.#reconcile(assets),
+        AssetsUnarchive: (assets) => {
+          if (!this.refreshPersonStacks()) {
+            this.upsertAssets(assets);
+          }
+        },
+        AssetsChanged: (assets) => {
+          if (!this.refreshPersonStacks()) {
+            this.#reconcile(assets);
+          }
+        },
+        AssetsDelete: () => this.refreshPersonStacks(),
+        AssetsArchive: () => this.refreshPersonStacks(),
+        PersonAssetDelete: () => this.refreshPersonStacks(),
         AlbumRemoveAssets: ({ assetIds, albumIds }) => {
           if (this.#options.albumId && albumIds.includes(this.#options.albumId)) {
             this.removeAssets(assetIds);
@@ -186,11 +211,17 @@ export class TimelineManager extends VirtualScrollManager {
           }
         },
         StackCreate: (stack) => {
+          if (this.refreshPersonStacks()) {
+            return;
+          }
           if (this.#options.withStacked) {
             updateStackedAssetInTimeline(this, stack);
           }
         },
         StackDelete: ({ assets }) => {
+          if (this.refreshPersonStacks()) {
+            return;
+          }
           if (!this.#options.withStacked) {
             return;
           }
@@ -201,6 +232,9 @@ export class TimelineManager extends VirtualScrollManager {
           this.upsertAssets(assets.map((asset) => toTimelineAsset(asset)));
         },
         StackUpdate: (stack) => {
+          if (this.refreshPersonStacks()) {
+            return;
+          }
           if (!this.#options.withStacked) {
             return;
           }
@@ -351,14 +385,17 @@ export class TimelineManager extends VirtualScrollManager {
     const bucketSize = getTimeBucketSizeForGrouping(grouping);
     const requestOptions = toTimeBucketsRequest(this.#options, bucketSize);
     const albumQueryOptions = getTimelineAlbumQueryOptions(this.#options, bucketSize);
-    const [timebuckets, albumTimebuckets] = await Promise.all([
-      getTimeBuckets(
-        {
-          ...authManager.params,
-          ...requestOptions,
-        },
-        { signal },
-      ),
+    const searchPersonPhotos = this.#options.personPhotoSearch && this.#options.personIds?.length === 1;
+    const [timebuckets, albumTimebuckets, personGroups, personPhotos] = await Promise.all([
+      searchPersonPhotos
+        ? Promise.resolve([])
+        : getTimeBuckets(
+            {
+              ...authManager.params,
+              ...requestOptions,
+            },
+            { signal },
+          ),
       albumQueryOptions
         ? getTimeBuckets(
             {
@@ -368,17 +405,31 @@ export class TimelineManager extends VirtualScrollManager {
             { signal },
           )
         : Promise.resolve([]),
+      this.#options.groupPersonStacks && this.#options.personIds?.length === 1
+        ? curator
+            .personStacks(this.#options.personIds[0], AbortSignal.any([signal, AbortSignal.timeout(10_000)]))
+            // An unavailable Curator must never make photos disappear or prevent opening the person.
+            .catch(() => undefined)
+        : Promise.resolve(undefined),
+      searchPersonPhotos ? PersonPhotos.load(this.#options.personIds![0], signal) : Promise.resolve(undefined),
     ]);
     if (signal.aborted || this.#destroyed || sequence !== this.#initSequence) {
       return;
     }
+    this.#personPhotos = personPhotos;
+    const mainTimebuckets = personPhotos?.buckets(grouping) ?? timebuckets;
     const mergedTimebuckets =
-      albumTimebuckets.length > 0 ? mergeTimeBuckets(timebuckets, albumTimebuckets, this.#options.order) : timebuckets;
+      albumTimebuckets.length > 0
+        ? mergeTimeBuckets(mainTimebuckets, albumTimebuckets, this.#options.order)
+        : mainTimebuckets;
+    this.ungroupedAssetCount = mergedTimebuckets.reduce((total, bucket) => total + bucket.count, 0);
+    this.#personStacks = personGroups ? new PersonStackIndex(personGroups) : undefined;
+    const visibleBuckets = this.#personStacks?.buckets(mergedTimebuckets, grouping) ?? mergedTimebuckets;
 
     this.#coverRequested.clear();
-    this.timelineBuckets = mergedTimebuckets.map((timeBucket) => new TimelineBucket(this, grouping, timeBucket));
+    this.timelineBuckets = visibleBuckets.map((timeBucket) => new TimelineBucket(this, grouping, timeBucket));
     this.#layoutBuckets();
-    this.months = grouping === 'day' ? this.#createTimelineMonthsFromDayBuckets(mergedTimebuckets) : [];
+    this.months = grouping === 'day' ? this.#createTimelineMonthsFromDayBuckets(visibleBuckets) : [];
     this.albumAssets.clear();
     this.updateViewportGeometry(false);
   }
@@ -453,6 +504,8 @@ export class TimelineManager extends VirtualScrollManager {
     // is correct, but the DOM keeps an old month — they overlap). Remounting on reload clears it.
     this.reloadToken++;
     this.isInitialized = false;
+    this.#personStacks = undefined;
+    this.#personPhotos = undefined;
     this.disconnect();
     this.initTask.cancel();
     this.grouping = options.grouping ?? DEFAULT_TIMELINE_GROUPING;
@@ -472,7 +525,7 @@ export class TimelineManager extends VirtualScrollManager {
       return;
     }
     this.isInitialized = true;
-    if (this.#options.albumId || this.#options.personId || this.#options.spaceId) {
+    if (this.#options.albumId || this.#options.personId || this.#options.personIds?.length || this.#options.spaceId) {
       return;
     }
     this.connect();
@@ -480,6 +533,7 @@ export class TimelineManager extends VirtualScrollManager {
 
   public override destroy() {
     this.#destroyed = true;
+    clearTimeout(this.#personReload);
     this.#initSequence++;
     this.initTask.cancel();
     this.disconnect();
@@ -557,6 +611,13 @@ export class TimelineManager extends VirtualScrollManager {
     if (grouping === 'day') {
       return;
     }
+    if (this.#personPhotos) {
+      const covers = this.#personPhotos.covers(timeBuckets, grouping, this.#personStacks);
+      for (const cover of covers) {
+        this.timelineBuckets.find((bucket) => bucket.timeBucket === cover.timeBucket)?.setRepresentative(cover);
+      }
+      return;
+    }
     const todo = timeBuckets.filter((tb) => !this.#coverRequested.has(tb));
     if (todo.length === 0) {
       return;
@@ -580,6 +641,29 @@ export class TimelineManager extends VirtualScrollManager {
           ? getTimeBucketCovers({ ...authManager.params, ...albumOptions, timeBuckets: todo })
           : Promise.resolve([]),
       ]);
+      const index = this.#personStacks;
+      if (index) {
+        // A period's usual cover can be folded under a representative in a different period.
+        // Pick a visible photo from that exact period instead; never bring a hidden member back.
+        mainCovers = await Promise.all(
+          mainCovers.map(async (cover) => {
+            if (!cover.representativeAssetId || !index.isHidden(cover.representativeAssetId)) {
+              return cover;
+            }
+            const assets = await getTimeBucket({
+              ...authManager.params,
+              ...toTimeBucketRequest(this.#options, cover.timeBucket, bucketSize),
+            });
+            const position = assets.id.findIndex((id) => !index.isHidden(id));
+            return {
+              timeBucket: cover.timeBucket,
+              representativeAssetId: assets.id[position] ?? null,
+              representativeRatio: assets.ratio[position] ?? null,
+              representativeThumbhash: assets.thumbhash[position] ?? null,
+            };
+          }),
+        );
+      }
     } catch {
       for (const tb of todo) {
         this.#coverRequested.delete(tb);
@@ -619,7 +703,12 @@ export class TimelineManager extends VirtualScrollManager {
     }
 
     const executionStatus = await timelineMonth.loader?.execute(async (signal: AbortSignal) => {
-      await loadFromTimeBuckets(this, timelineMonth, this.#options, signal);
+      if (this.#personPhotos) {
+        signal.throwIfAborted();
+        timelineMonth.addAssets(this.#personPhotos.bucket(toISOYearMonthUTC(yearMonth), TimeBucketSize.Month), false);
+      } else {
+        await loadFromTimeBuckets(this, timelineMonth, this.#options, signal);
+      }
     }, cancelable);
     if (executionStatus === 'LOADED') {
       updateGeometry(this, timelineMonth, { invalidateHeight: false });
@@ -632,7 +721,7 @@ export class TimelineManager extends VirtualScrollManager {
       return;
     }
 
-    const notUpdated = this.#updateAssets(assets);
+    const notUpdated = this.#updateAssets(assets.map((asset) => this.decoratePersonStack(asset)));
     // Local Omarchy layer: nor a stack's other photos while stacks are folded (a change to one, made in the viewer or
     // by an undo, would lay it out beside its own stack)
     const notExcluded = notUpdated.filter((asset) => !this.isExcluded(asset) && !this.#folded(asset));
@@ -944,6 +1033,7 @@ export class TimelineManager extends VirtualScrollManager {
       isMismatched(this.#options.visibility, asset.visibility) ||
       isMismatched(this.#options.isFavorite, asset.isFavorite) ||
       isMismatched(this.#options.isTrashed, asset.isTrashed) ||
+      !!this.#personStacks?.isHidden(asset.id) ||
       (this.#options.tagId && asset.tags && !asset.tags.includes(this.#options.tagId)) ||
       (this.#options.assetFilter !== undefined && !this.#options.assetFilter.has(asset.id))
     );
@@ -958,6 +1048,7 @@ export class TimelineManager extends VirtualScrollManager {
     if (
       this.#options.albumId ||
       this.#options.personId ||
+      this.#options.personIds?.length ||
       this.#options.timelineAlbumId ||
       this.#options.spaceId ||
       this.#options.timelineSpaceId
@@ -972,6 +1063,44 @@ export class TimelineManager extends VirtualScrollManager {
 
   getAssetOrder() {
     return this.#options.order ?? AssetOrder.Desc;
+  }
+
+  decoratePersonStack(asset: TimelineAsset) {
+    return this.#personStacks?.decorate(asset) ?? asset;
+  }
+
+  personStackMembers(stackId: string): Set<string> | undefined {
+    const group = this.#personStacks?.groups.get(stackId);
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- immutable membership snapshot
+    return group ? new Set(group.members.map(({ id }) => id)) : undefined;
+  }
+
+  setPersonStackExpanded(stackId: string, expanded: boolean) {
+    if (expanded) {
+      this.#personStacks?.expanded.add(stackId);
+    } else {
+      this.#personStacks?.expanded.delete(stackId);
+    }
+  }
+
+  /** A direct link can open a folded child: next/previous still follows the visible timeline. */
+  navigationAsset(asset: AssetDescriptor | AssetResponseDto): AssetDescriptor | AssetResponseDto {
+    const index = this.#personStacks;
+    return index?.isHidden(asset.id) ? { id: index.byAsset.get(asset.id)!.representativeId } : asset;
+  }
+
+  /** Recompute after curation, so removing a representative promotes another matching photo. */
+  refreshPersonStacks() {
+    if ((!this.#options.groupPersonStacks && !this.#options.personPhotoSearch) || this.#destroyed) {
+      return false;
+    }
+    clearTimeout(this.#personReload);
+    this.#personReload = setTimeout(() => {
+      if (!this.#destroyed) {
+        void this.initTask.reset().then(() => this.#init(this.#options));
+      }
+    }, 150);
+    return true;
   }
 
   getOrderBy() {

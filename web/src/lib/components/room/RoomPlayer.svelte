@@ -14,12 +14,14 @@
   // account's Room is silent. Nothing here changes anything: no hearts, no edits, no Save as video.
   import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
   import MemoryFilm from '$lib/components/memories/film/MemoryFilm.svelte';
+  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
+  import { privateFilmMedia } from '$lib/components/memories/film/private-film-media';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { memoryFacts } from '$lib/managers/memory-facts.svelte';
   import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
   import { memoryLaneTitle } from '$lib/utils';
-  import { curator, curatorIsMine, type MemoryTrack } from '$lib/utils/curator';
+  import { curator, curatorIsMine, type MemoryTrack, type Story } from '$lib/utils/curator';
   import { memoryCardCount } from '$lib/utils/memory-cards';
   import { formatMemoryTime, memoryCount, memoryFilmWords, type MemoryFilmWords } from '$lib/utils/memory-title';
   import { AssetTypeEnum, getAlbumInfo, getAssetInfo, isHttpError, type AssetResponseDto } from '@immich/sdk';
@@ -185,7 +187,7 @@
 
   // ---- what Curator knows: a memory's facts, story and songs, an album's story (its owner only) ----
 
-  const stories = new SvelteMap<string, string | null>();
+  const stories = new SvelteMap<string, Story | null>();
   const songs = new SvelteMap<string, MemoryTrack[]>();
   const asked = new SvelteSet<string>();
 
@@ -197,7 +199,7 @@
     const subject = target.kind === 'memory' ? { memory: target.memory.id } : { album: target.album.id };
     curator
       .story(subject)
-      .then((answer) => stories.set(target.key, answer.story?.text ?? null))
+      .then((answer) => stories.set(target.key, answer.story ?? null))
       .catch(() => stories.set(target.key, null));
     if (target.kind === 'memory') {
       curator
@@ -217,7 +219,9 @@
   })();
 
   const settledOf = (target: RoomReel) =>
-    target.kind !== 'memory' || !curatorIsMine() || (memoryFacts.settled(target.memory.id) && songs.has(target.key));
+    target.kind !== 'memory' ||
+    !curatorIsMine() ||
+    (memoryFacts.settled(target.memory.id) && songs.has(target.key) && stories.has(target.key));
 
   // ---- what each film says: its title, the title card's name and line ----
 
@@ -515,6 +519,9 @@
   {#if filmReel && filmSource && filmWords}
     {#key filmKey}
       <MemoryFilm
+        media={privateFilmMedia}
+        language={$locale}
+        reducedMotion={mediaQueryManager.reducedMotion}
         bind:this={film}
         bind:current={filmAsset}
         bind:paused={filmPaused}
@@ -529,7 +536,12 @@
         cover={filmFacts?.cover}
         focus={filmFocus}
         settled={settledOf(filmReel)}
-        story={storyHidden ? null : (stories.get(filmReel.key) ?? null)}
+        story={storyHidden ? null : (stories.get(filmReel.key)?.text ?? null)}
+        storyCues={filmReel.kind === 'memory'
+          ? storyHidden
+            ? []
+            : (stories.get(filmReel.key)?.cues ?? [])
+          : undefined}
         tracks={songs.get(filmReel.key) ?? []}
         photoSeconds={authManager.preferences.memories.duration}
         {caption}

@@ -5,16 +5,17 @@
   // with its own play button and position below the frame (native controls would be cut in half by the divider).
   import { restoredUrl, type Suggestion } from '$lib/utils/curator';
   import { Icon } from '@immich/ui';
-  import { mdiArrowLeftRight, mdiPause, mdiPlay } from '@mdi/js';
+  import { mdiArrowLeftRight, mdiPause, mdiPlay, mdiFullscreen } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {
     suggestion: Suggestion;
     /** a card in the inbox, or review mode's stage */
-    size: 'card' | 'stage';
+    size: 'card' | 'stage' | 'inspect';
+    onInspect?: () => void;
   }
 
-  let { suggestion, size }: Props = $props();
+  let { suggestion, size, onInspect }: Props = $props();
 
   type Payload = {
     variant?: string;
@@ -36,9 +37,31 @@
   );
   const effectClip = $derived(['loop', 'bounce', 'cinematic', 'animation'].includes(payload.variant ?? ''));
   // photos are asked for at about twice the width they are shown at, for sharp edges on HiDPI screens
-  const across = $derived(size === 'stage' ? 2560 : 960);
+  const across = $derived(size === 'inspect' ? undefined : size === 'stage' ? 2560 : 960);
 
   let split = $state(50);
+  let press: { x: number; y: number; moved: boolean } | undefined;
+  let failed = $state(false);
+  let retry = $state(0);
+  const inspect = () => {
+    after?.pause();
+    before?.pause();
+    onInspect?.();
+  };
+  const pointerDown = (event: PointerEvent) => {
+    press = { x: event.clientX, y: event.clientY, moved: false };
+  };
+  const pointerMove = (event: PointerEvent) => {
+    if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6) {
+      press.moved = true;
+    }
+  };
+  const clickPreview = () => {
+    if (press && !press.moved) {
+      inspect();
+    }
+    press = undefined;
+  };
   let before = $state<HTMLVideoElement>();
   let after = $state<HTMLVideoElement>();
   let clipRatio = $state<number>();
@@ -101,97 +124,178 @@
   };
 </script>
 
-<figure class="restore {size === 'stage' ? 'is-stage' : 'is-card'}" style:--ratio={ratio}>
-  {#if effect}
-    <div class="restore-frame">
-      {#if effectClip}
-        <!-- svelte-ignore a11y_media_has_caption -->
-        <video class="restore-media" src={restoredUrl(suggestion.id, 'after', 'mp4')} autoplay loop muted playsinline
-        ></video>
-      {:else}
-        <img class="restore-media" src={restoredUrl(suggestion.id, 'after', 'jpg', across)} alt="" loading="lazy" />
-      {/if}
-    </div>
-  {:else}
-    <div class="restore-frame" style:--split="{split}%">
-      {#if clip}
-        <video
-          bind:this={before}
-          class="restore-media"
-          src={restoredUrl(suggestion.id, 'before', 'mp4')}
-          muted
-          playsinline
-          preload="metadata"
-        ></video>
-        <video
-          bind:this={after}
-          class="restore-media restore-after"
-          src={restoredUrl(suggestion.id, 'after', 'mp4')}
-          playsinline
-          preload="metadata"
-          onloadedmetadata={onMetadata}
-          ontimeupdate={() => {
-            time = after?.currentTime ?? 0;
-            align();
-          }}
-          onplay={() => (playing = true)}
-          onpause={onPause}
-          onended={onPause}
-        ></video>
-      {:else}
-        <img class="restore-media" src={restoredUrl(suggestion.id, 'before', 'jpg', across)} alt="" loading="lazy" />
-        <img
-          class="restore-media restore-after"
-          src={restoredUrl(suggestion.id, 'after', 'jpg', across)}
-          alt=""
-          loading="lazy"
-        />
-      {/if}
-      <span class="restore-line" aria-hidden="true">
-        <span class="restore-handle"><Icon icon={mdiArrowLeftRight} size="16" /></span>
-      </span>
-      <span class="restore-label">{$t('ai_inbox_now')}</span>
-      <span class="restore-label restore-label-after">{$t('ai_inbox_proposed')}</span>
-      <input
-        class="restore-range"
-        type="range"
-        min="0"
-        max="100"
-        step="0.5"
-        bind:value={split}
-        aria-label={$t('ai_inbox_compare')}
-      />
-    </div>
-    {#if clip}
-      <div class="restore-controls">
-        <button
-          type="button"
-          class="ws-btn-quiet restore-play"
-          onclick={toggle}
-          aria-label={playing ? $t('pause') : $t('play')}
-        >
-          <Icon icon={playing ? mdiPause : mdiPlay} size="18" />
-        </button>
-        <input
-          class="restore-seek"
-          type="range"
-          min="0"
-          max={duration || 0}
-          step="0.04"
-          value={time}
-          oninput={seek}
-          aria-label={$t('ai_inbox_clip_position')}
-        />
-        <span class="ws-inbox-meta">{clock(time)} / {clock(duration)}</span>
+{#snippet expand()}
+  <button
+    type="button"
+    class="restore-expand"
+    onclick={inspect}
+    aria-label={$t('ai_inbox_inspect')}
+    title={$t('ai_inbox_inspect')}><Icon icon={mdiFullscreen} size="22" /></button
+  >
+{/snippet}
+
+<figure
+  class="restore {size === 'card' ? 'is-card' : 'is-stage'}"
+  class:is-inspect={size === 'inspect'}
+  style:--ratio={ratio}
+>
+  {#key retry}
+    {#if effect}
+      <div class="restore-frame">
+        {#if onInspect}<button
+            type="button"
+            class="restore-open-surface"
+            aria-label={$t('ai_inbox_inspect')}
+            onclick={inspect}
+          ></button>{/if}
+        {#if effectClip}
+          <video
+            class="restore-media"
+            onerror={() => (failed = true)}
+            src={restoredUrl(suggestion.id, 'after', 'mp4')}
+            autoplay
+            loop
+            muted
+            playsinline
+          ></video>
+        {:else}
+          <img
+            class="restore-media"
+            onerror={() => (failed = true)}
+            src={restoredUrl(suggestion.id, 'after', 'jpg', across)}
+            alt=""
+            loading="lazy"
+          />
+        {/if}
+        {#if onInspect}{@render expand()}{/if}
       </div>
-    {:else if enlarged}
-      <figcaption class="ws-inbox-meta">{enlarged}</figcaption>
+    {:else}
+      <div class="restore-frame" style:--split="{split}%">
+        {#if clip}
+          <video
+            bind:this={before}
+            class="restore-media"
+            onerror={() => (failed = true)}
+            src={restoredUrl(suggestion.id, 'before', 'mp4')}
+            muted
+            playsinline
+            preload="metadata"
+          ></video>
+          <div class="restore-after">
+            <!-- svelte-ignore a11y_media_has_caption -->
+            <video
+              bind:this={after}
+              class="restore-media"
+              onerror={() => (failed = true)}
+              src={restoredUrl(suggestion.id, 'after', 'mp4')}
+              playsinline
+              preload="metadata"
+              onloadedmetadata={onMetadata}
+              ontimeupdate={() => {
+                time = after?.currentTime ?? 0;
+                align();
+              }}
+              onplay={() => (playing = true)}
+              onpause={onPause}
+              onended={onPause}
+            ></video>
+          </div>
+        {:else}
+          <img
+            class="restore-media"
+            onerror={() => (failed = true)}
+            src={restoredUrl(suggestion.id, 'before', 'jpg', across)}
+            alt=""
+            loading="lazy"
+          />
+          <div class="restore-after">
+            <img
+              class="restore-media"
+              onerror={() => (failed = true)}
+              src={restoredUrl(suggestion.id, 'after', 'jpg', across)}
+              alt=""
+              loading="lazy"
+            />
+          </div>
+        {/if}
+        <span class="restore-line" aria-hidden="true">
+          <span class="restore-handle"><Icon icon={mdiArrowLeftRight} size="16" /></span>
+        </span>
+        <span class="restore-label">{$t('ai_inbox_now')}</span>
+        <span class="restore-label restore-label-after">{$t('ai_inbox_proposed')}</span>
+        {#if size !== 'inspect'}
+          <input
+            class="restore-range"
+            onpointerdown={pointerDown}
+            onpointermove={pointerMove}
+            onpointercancel={() => (press = undefined)}
+            onclick={clickPreview}
+            type="range"
+            min="0"
+            max="100"
+            step="0.5"
+            bind:value={split}
+            aria-label={$t('ai_inbox_compare')}
+          />
+        {/if}
+        {#if onInspect}{@render expand()}{/if}
+      </div>
+      {#if size === 'inspect'}
+        <label class="restore-compare-control"
+          ><span>{$t('ai_inbox_now')}</span><input
+            type="range"
+            min="0"
+            max="100"
+            step="0.5"
+            bind:value={split}
+            aria-label={$t('ai_inbox_compare')}
+          /><span>{$t('ai_inbox_proposed')}</span></label
+        >
+      {/if}
+      {#if clip}
+        <div class="restore-controls">
+          <button
+            type="button"
+            class="ws-btn-quiet restore-play"
+            onclick={toggle}
+            aria-label={playing ? $t('pause') : $t('play')}
+          >
+            <Icon icon={playing ? mdiPause : mdiPlay} size="18" />
+          </button>
+          <input
+            class="restore-seek"
+            type="range"
+            min="0"
+            max={duration || 0}
+            step="0.04"
+            value={time}
+            oninput={seek}
+            aria-label={$t('ai_inbox_clip_position')}
+          />
+          <span class="ws-inbox-meta">{clock(time)} / {clock(duration)}</span>
+        </div>
+      {:else if enlarged}
+        <figcaption class="ws-inbox-meta">{enlarged}</figcaption>
+      {/if}
     {/if}
+  {/key}
+  {#if failed}
+    <div class="restore-error" role="status">
+      <span>{$t('error_loading_image')}</span><button
+        class="ws-btn"
+        type="button"
+        onclick={() => {
+          failed = false;
+          retry++;
+        }}>{$t('retry')}</button
+      >
+    </div>
   {/if}
 </figure>
 
 <style>
   .restore {
+    position: relative;
     display: grid;
     gap: 0.5rem;
     justify-items: center;
@@ -232,6 +336,9 @@
     object-fit: contain;
   }
   .restore-after {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
     clip-path: inset(0 0 0 var(--split));
   }
   .restore-line {
@@ -286,6 +393,70 @@
     opacity: 0;
     cursor: ew-resize;
     touch-action: pan-y;
+  }
+  .restore.is-inspect {
+    grid-template-rows: minmax(0, 1fr) auto auto;
+  }
+  .is-inspect .restore-frame {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+  .is-inspect .restore-media {
+    transform: var(--inspect-transform);
+  }
+  .restore-media {
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .restore-open-surface {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    cursor: zoom-in;
+  }
+  .restore-expand {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    z-index: 2;
+    background: var(--immich-ui-light);
+    color: var(--immich-ui-dark);
+    border-radius: var(--ws-radius);
+    cursor: zoom-in;
+  }
+  .restore-expand:focus-visible {
+    outline: 2px solid var(--ws-accent);
+    outline-offset: 2px;
+  }
+  .restore-compare-control {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: min(100%, 40rem);
+    min-height: 44px;
+    padding-inline: 0.5rem;
+    color: #fff;
+  }
+  .restore-compare-control input {
+    min-height: 44px;
+    flex: 1;
+    min-width: 0;
+    accent-color: var(--ws-accent);
+  }
+  .restore-error {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 1rem;
+    text-align: center;
+    background: var(--immich-ui-light);
   }
   .restore-controls {
     display: flex;

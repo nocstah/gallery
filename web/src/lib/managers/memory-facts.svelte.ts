@@ -79,6 +79,13 @@ class MemoryFactsManager {
     }
   }
 
+  /** A memory gained or lost photos: request fresh facts without dropping the rest of the page. */
+  refresh(memoryId: string) {
+    this.#asked.delete(memoryId);
+    this.#facts.delete(memoryId);
+    this.request([memoryId]);
+  }
+
   async #flush() {
     this.#queued = false;
     const ids = [...this.#queue];

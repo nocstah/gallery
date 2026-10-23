@@ -96,15 +96,33 @@ class StackExpandManager {
     }
     const inserted = this.#expanded.get(stackId);
     if (inserted) {
+      manager.setPersonStackExpanded(stackId, false);
       manager.removeAssets(inserted);
       this.#forget(stackId);
       this.#relayout(manager, coverId);
       return;
     }
     this.#pending.add(stackId);
+    const generation = manager.reloadToken;
     try {
       const stack = await getStack({ id: stackId });
-      const members = stack.assets.filter((asset) => asset.id !== coverId).map((asset) => toTimelineAsset(asset));
+      if (manager !== this.timelineManager || generation !== manager.reloadToken) {
+        return;
+      }
+      const allowed = manager.personStackMembers(stackId);
+      const matching = allowed ? stack.assets.filter((asset) => allowed.has(asset.id)) : stack.assets;
+      const members = matching.filter((asset) => asset.id !== coverId).map((asset) => toTimelineAsset(asset));
+      if (allowed) {
+        // Load an existing month before inserting into it, otherwise a partial month looks loaded.
+        const months = new Map(
+          members.map((asset) => [`${asset.localDateTime.year}-${asset.localDateTime.month}`, asset.localDateTime]),
+        );
+        await Promise.all([...months.values()].map((month) => manager.loadTimelineMonth(month, { cancelable: false })));
+        if (manager !== this.timelineManager || generation !== manager.reloadToken) {
+          return;
+        }
+      }
+      manager.setPersonStackExpanded(stackId, true);
       manager.upsertAssets(members);
       this.#relayout(manager, coverId);
       for (const member of members) {
@@ -117,7 +135,7 @@ class StackExpandManager {
       this.#covers.set(coverId, stackId);
       // numbered in the order the timeline lays them out (newest first, unless the timeline runs oldest first)
       const ascending = manager.getAssetOrder() === AssetOrder.Asc;
-      const byTime = [...stack.assets]
+      const byTime = [...matching]
         .sort((a, b) => a.fileCreatedAt.localeCompare(b.fileCreatedAt) * (ascending ? 1 : -1))
         .map((asset) => asset.id);
       this.#order.set(stackId, byTime);
@@ -136,6 +154,10 @@ class StackExpandManager {
     if (!manager || ids.length === 0) {
       return;
     }
+    if (manager.refreshPersonStacks()) {
+      return;
+    }
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup for this request
     const stackIds = new Set<string>();
     const unknown: string[] = [];
     for (const id of ids) {
@@ -188,8 +210,9 @@ class StackExpandManager {
   /** Make a photo its stack's cover. The timeline's StackUpdate handler collapses the stack onto it. */
   async makeCover(stackId: string, assetId: string) {
     try {
-      const before =
-        [...this.#covers].find(([, id]) => id === stackId)?.[0] ?? (await getStack({ id: stackId })).primaryAssetId;
+      // A person page's displayed representative can differ from the stack's real cover.
+      const previous = await getStack({ id: stackId });
+      const before = previous.primaryAssetId;
       const stack = await updateStack({ id: stackId, stackUpdateDto: { primaryAssetId: assetId } });
       eventManager.emit('StackUpdate', stack);
       // the old cover can be had back from the bar's undo (utils/undoable)

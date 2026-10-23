@@ -60,6 +60,46 @@ const isInside = (shot: FilmShot, camera: FilmCamera, aspect: number) => {
 };
 
 describe('buildFilmPlan', () => {
+  it('anchors reordered story sentences to their photos and leaves an unrelated video without them', () => {
+    const film = plan({
+      assets: [...photos(3), { id: 'evening-video', kind: 'video', ratio: 1.5, seconds: 28 }],
+      sentences: ['An introduction.', 'She held up two fingers.', 'A boy sat in the rain.'],
+      storyCues: [
+        { text: 'She held up two fingers.', assetIds: ['p2'] },
+        { text: 'A boy sat in the rain.', assetIds: ['p1'] },
+      ],
+    });
+    const cues = storyOf(film);
+    expect(cues.map(({ text }) => text)).toEqual(['A boy sat in the rain.', 'She held up two fingers.']);
+    for (const [index, cue] of cues.entries()) {
+      const shot = film.shots[index + 1];
+      expect(cue.start).toBeGreaterThanOrEqual(shot.start + shot.fade);
+      expect(cue.end + 0.35).toBeLessThanOrEqual(shot.start + shot.duration);
+      expect(filmMomentAt(film, cue.start).shot).toBe(index + 1);
+    }
+    expect(filmMomentAt(film, film.shots[3].start + 2).story).toBe(-1);
+  });
+
+  it('does not invent scene timing when links are missing or their source photo was removed', () => {
+    expect(storyOf(plan({ sentences: ['Not linked.'], storyCues: [] }))).toEqual([]);
+    expect(storyOf(plan({ storyCues: [{ text: 'A removed photo.', assetIds: ['gone'] }] }))).toEqual([]);
+  });
+
+  it('shows the cover story after the title in the same shot, once, at every tempo', () => {
+    for (const bpm of [null, 96, 127]) {
+      const film = plan({
+        cover: 'p2',
+        bpm,
+        storyCues: [{ text: 'The cover photo, in its proper place.', assetIds: ['p2'] }],
+      });
+      const cues = storyOf(film);
+      expect(cues).toHaveLength(1);
+      expect(filmMomentAt(film, cues[0].start).shot).toBe(0);
+      expect(cues[0].start).toBeGreaterThan(film.texts[0].end);
+      expect(cues[0].end).toBeLessThan(film.duration);
+    }
+  });
+
   it('opens on the first photo with the title over it, then gives every photo its time', () => {
     const film = plan();
 
@@ -80,18 +120,33 @@ describe('buildFilmPlan', () => {
     });
   });
 
-  it("opens on Curator's cover on its own, and shows it again in its place", () => {
+  it("opens on Curator's cover and shows every photo exactly once", () => {
     const film = plan({ cover: 'p2' });
 
     expect(film.shots.map(({ assetId, opening }) => [assetId, opening])).toEqual([
       ['p2', true],
       ['p0', false],
       ['p1', false],
-      ['p2', false],
     ]);
-    expect(film.shots[0]).toMatchObject({ index: 2, duration: FILM_TIMING.title });
-    expect(shotOfAsset(film, 'p2')).toBe(3);
+    expect(film.shots[0]).toMatchObject({ index: 0, duration: FILM_TIMING.title + 5 });
+    expect(shotOfAsset(film, 'p2')).toBe(0);
     expect(shotOfAsset(film, 'p0')).toBe(1);
+  });
+
+  it('removes repeated ids and identical imports, even when an identical import is the cover', () => {
+    const film = plan({
+      assets: [
+        { ...photos(1)[0], checksum: 'same-file' },
+        ...photos(2),
+        { id: 'copy', kind: 'photo', ratio: 1.5, checksum: 'same-file' },
+      ],
+      cover: 'copy',
+    });
+    expect(film.shots.map(({ assetId, index }) => [assetId, index])).toEqual([
+      ['copy', 0],
+      ['p1', 1],
+    ]);
+    expect(film.duration).toBe(15);
   });
 
   it('opens on a cover that is not one of the photos, shown whole', () => {

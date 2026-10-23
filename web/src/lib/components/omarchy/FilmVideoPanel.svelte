@@ -10,7 +10,7 @@
   import { locale } from '$lib/stores/preferences.store';
   import { getByteUnitString } from '$lib/utils/byte-units';
   import { Icon } from '@immich/ui';
-  import { mdiClose, mdiDownload, mdiReload } from '@mdi/js';
+  import { mdiClose, mdiDownload, mdiReload, mdiShareVariant } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import { fly } from 'svelte/transition';
 
@@ -23,7 +23,7 @@
   const stateOf = (item: FilmItem) => (item.stage === 'frames' ? `${Math.round(item.progress * 100)}%` : $t('waiting'));
 </script>
 
-{#if filmVideos.items.length > 0}
+{#if filmVideos.items.length > 0 && !filmVideos.shareDialogOpen}
   <section class="ws-films" aria-label={$t('memory_film_videos')} transition:fly={{ y: 12, duration: 200 }}>
     <header class="ws-films-head">
       <h2>{$t('memory_film_videos')}</h2>
@@ -45,7 +45,19 @@
             {#if item.status === 'making'}
               <span class="ws-films-state">{stateOf(item)}</span>
             {:else if item.status === 'ready' && item.result}
-              <span class="ws-films-state">{getByteUnitString(item.result.size, $locale)}</span>
+              <span class="ws-films-state"
+                >{item.sharing ? $t('loading') : getByteUnitString(item.result.size, $locale)}</span
+              >
+              <button
+                type="button"
+                class="ws-films-tool"
+                aria-label={$t('memory_film_share')}
+                title={$t('memory_film_share')}
+                disabled={item.sharing}
+                onclick={() => filmVideos.share(item)}
+              >
+                <Icon icon={mdiShareVariant} size="16" />
+              </button>
               <button
                 type="button"
                 class="ws-films-tool"
@@ -72,6 +84,9 @@
           </div>
           {#if item.tooLong}
             <p class="ws-films-note">{$t('memory_film_too_long')}</p>
+          {/if}
+          {#if item.shareError}
+            <p class="ws-films-note" role="alert">{item.shareError}</p>
           {/if}
           {#if item.status === 'making'}
             <span class="ws-films-bar" style:--done={item.progress} aria-hidden="true"></span>
@@ -151,8 +166,8 @@
     display: grid;
     flex: none;
     place-items: center;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: var(--ws-radius);
     color: var(--immich-ui-muted);
   }

@@ -4,7 +4,16 @@ import type { AssetApiGetTimeBucketRequest, AssetApiGetTimeBucketsRequest, Timel
 function getApiRequestOptions(options: TimelineManagerOptions): Omit<AssetApiGetTimeBucketsRequest, 'bucketSize'> {
   return Object.fromEntries(
     Object.entries(options).filter(
-      ([key]) => !['grouping', 'timelineAlbumId', 'timelineSpaceId', 'deferInit', 'assetFilter'].includes(key),
+      ([key]) =>
+        ![
+          'grouping',
+          'timelineAlbumId',
+          'timelineSpaceId',
+          'deferInit',
+          'assetFilter',
+          'groupPersonStacks',
+          'personPhotoSearch',
+        ].includes(key),
     ),
   ) as Omit<AssetApiGetTimeBucketsRequest, 'bucketSize'>;
 }

@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T15:11:37+00:00",
+  "title": "Design System: Noodle Gallery (local Omarchy layer)",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Theme Accent",
+        "canonical": "var(--ws-accent)",
+        "source": "--omarchy-accent, else --immich-ui-primary-500; runtime: admin Custom CSS from ~/.local/bin/immich-omarchy-theme (Omarchy theme-set hook); frontmatter value is the build fallback",
+        "tonalRamp": [
+          "#052a6b",
+          "#073688",
+          "#0842a0",
+          "#0a4dba",
+          "#0b57d0",
+          "#4285f4",
+          "#abc8fb",
+          "#eaf1fc"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Theme Surface",
+        "canonical": "var(--immich-ui-light)",
+        "source": "runtime: admin Custom CSS from ~/.local/bin/immich-omarchy-theme (Omarchy theme-set hook); frontmatter value is the build fallback",
+        "tonalRamp": [
+          "#131314",
+          "#1e1f20",
+          "#2d2e31",
+          "#3c3f43",
+          "#5f6368",
+          "#9aa0a6",
+          "#dde3ea",
+          "#f8fafd"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Theme Ink",
+        "canonical": "var(--immich-ui-dark)",
+        "source": "runtime: admin Custom CSS from ~/.local/bin/immich-omarchy-theme (Omarchy theme-set hook); frontmatter value is the build fallback",
+        "tonalRamp": [
+          "#131314",
+          "#1e1f20",
+          "#2d2e31",
+          "#3c3f43",
+          "#5f6368",
+          "#9aa0a6",
+          "#dde3ea",
+          "#f8fafd"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "var(--immich-ui-muted)",
+        "source": "runtime: admin Custom CSS from ~/.local/bin/immich-omarchy-theme (Omarchy theme-set hook); frontmatter value is the build fallback (contrast-pushed to >= 4.6:1)",
+        "tonalRamp": [
+          "#131314",
+          "#1e1f20",
+          "#2d2e31",
+          "#3c3f43",
+          "#5f6368",
+          "#9aa0a6",
+          "#dde3ea",
+          "#f8fafd"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "var(--ws-hairline)",
+        "source": "omarchy-world.css: color-mix(in oklab, var(--immich-ui-dark) 13%, transparent)"
+      },
+      "caption-scrim": {
+        "role": "neutral",
+        "displayName": "Caption Scrim",
+        "canonical": "linear-gradient(to top, rgb(0 0 0 / 0.55), transparent)",
+        "source": "fixed; on-photo only"
+      },
+      "caption-ink": {
+        "role": "neutral",
+        "displayName": "Caption Ink",
+        "canonical": "#ffffff",
+        "source": "fixed; on-photo only"
+      },
+      "public-memory-ground": {
+        "role": "neutral",
+        "displayName": "Public Memory Ground",
+        "canonical": "#111",
+        "source": "web/memory-player/style.css; fixed public-viewer role, not a desktop-theme fallback. Standalone recipient cover, film and grid ground.",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(37% 0 0)",
+          "oklch(49% 0 0)",
+          "oklch(61% 0 0)",
+          "oklch(73% 0 0)",
+          "oklch(85% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "public-memory-ink": {
+        "role": "neutral",
+        "displayName": "Public Memory Ink",
+        "canonical": "#f5f3ee",
+        "source": "web/memory-player/style.css; fixed public-viewer role, not a desktop-theme fallback. Standalone recipient text, focus and inverted action fill.",
+        "tonalRamp": [
+          "oklch(15% 0.008 95)",
+          "oklch(25% 0.008 95)",
+          "oklch(37% 0.008 95)",
+          "oklch(49% 0.008 95)",
+          "oklch(61% 0.008 95)",
+          "oklch(73% 0.008 95)",
+          "oklch(85% 0.008 95)",
+          "oklch(95% 0.008 95)"
+        ]
+      },
+      "public-memory-hover": {
+        "role": "neutral",
+        "displayName": "Public Memory Action Hover",
+        "canonical": "#d8d6d1",
+        "source": "web/memory-player/style.css; fixed public-viewer role, not a desktop-theme fallback. Standalone recipient inverted action hover.",
+        "tonalRamp": [
+          "oklch(15% 0.008 95)",
+          "oklch(25% 0.008 95)",
+          "oklch(37% 0.008 95)",
+          "oklch(49% 0.008 95)",
+          "oklch(61% 0.008 95)",
+          "oklch(73% 0.008 95)",
+          "oklch(85% 0.008 95)",
+          "oklch(95% 0.008 95)"
+        ]
+      },
+      "public-memory-boundary": {
+        "role": "neutral",
+        "displayName": "Public Memory Boundary",
+        "canonical": "#777",
+        "source": "web/memory-player/style.css; fixed public-viewer role, not a desktop-theme fallback. Standalone recipient input borders and scrollbars.",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(25% 0 0)",
+          "oklch(37% 0 0)",
+          "oklch(49% 0 0)",
+          "oklch(61% 0 0)",
+          "oklch(73% 0 0)",
+          "oklch(85% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      }
+    },
+    "geometryMeta": {
+      "gap": {
+        "canonical": "var(--ws-gap)",
+        "source": "Hyprland general:gaps_in x2 via immich-omarchy-theme; fallback 10px"
+      },
+      "window": {
+        "canonical": "var(--ws-radius)",
+        "source": "Hyprland decoration:rounding; fallback 0px"
+      },
+      "pill": {
+        "canonical": "calc(var(--ws-radius) + 5px)"
+      },
+      "control": {
+        "canonical": "calc(var(--ws-radius) + 6px)"
+      },
+      "segmented": {
+        "canonical": "calc(var(--ws-radius) + 8px)"
+      },
+      "border": {
+        "canonical": "var(--ws-border)",
+        "source": "Hyprland general:border_size (min 1px); fallback 2px"
+      },
+      "font-data": {
+        "canonical": "var(--ws-font-data)",
+        "source": "--omarchy-font-mono from omarchy-font-current (font-set hook)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display Year",
+        "purpose": "The year in view in the timeline header."
+      },
+      "display-month": {
+        "displayName": "Display Month",
+        "purpose": "Month name beside the year; weight contrast only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Empty-state titles."
+      },
+      "title": {
+        "displayName": "Day Label",
+        "purpose": "Timeline day labels; short form below 768px."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Explanatory copy, max 60ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Layer-owned button and link text."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "Counts, years-as-data, dates, EXIF, workspace numbers in the desktop monospace."
+      }
+    },
+    "shadows": [
+      {
+        "name": "popup",
+        "value": "0 12px 32px -8px rgb(0 0 0 / 0.28)",
+        "purpose": "Menus, dialogs, listboxes and the floating grouping control, with a 1px hairline border. Nothing on the ground is shadowed."
+      }
+    ],
+    "motion": [
+      {
+        "name": "focus",
+        "value": "140ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Tile focus border and place caption fade."
+      },
+      {
+        "name": "pill",
+        "value": "120ms",
+        "purpose": "Year pill colour/background changes."
+      },
+      {
+        "name": "workspace-out",
+        "value": "170ms cubic-bezier(0.55, 0, 1, 0.45)",
+        "purpose": "Timeline layer slides out a full width when switching year."
+      },
+      {
+        "name": "workspace-in",
+        "value": "240ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "New year slides in from the opposite side; older years arrive from the right."
+      },
+      {
+        "name": "heading-fly",
+        "value": "260ms cubicOut, 40px",
+        "purpose": "Month heading enters in the direction of travel."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "cut",
+        "purpose": "Every transition and slide is removed under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      },
+      {
+        "name": "coarse-pointer",
+        "value": "(pointer: coarse) and tile container >= 200px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Photo Tile",
+      "kind": "card",
+      "refersTo": "photo-tile",
+      "description": "Every photo is a window: inset hairline at rest, inset accent border on hover/focus, place caption on focus.",
+      "html": "<div class=\"ds-tile\" tabindex=\"0\"><div class=\"ds-tile-img\"></div><p class=\"ds-place\">Phnom Penh, Cambodia</p></div>",
+      "css": ".ds-tile{position:relative;width:220px;height:160px;border-radius:var(--ws-radius,0px);overflow:hidden;container-type:inline-size}.ds-tile-img{position:absolute;inset:0;background:linear-gradient(135deg,#6b7a8f,#c9b38a)}.ds-tile::after{content:'';position:absolute;inset:0;z-index:2;border-radius:var(--ws-radius,0px);box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--immich-ui-dark,#1f1f1f) 13%,transparent);pointer-events:none;transition:box-shadow 140ms cubic-bezier(0.22,1,0.36,1)}.ds-tile:hover::after,.ds-tile:focus-visible::after{box-shadow:inset 0 0 0 var(--ws-border,2px) var(--omarchy-accent,#0b57d0)}.ds-tile:focus-visible{outline:none}.ds-place{position:absolute;inset-inline:0;bottom:0;z-index:2;margin:0;padding:1.5rem .6rem .45rem;background:linear-gradient(to top,rgb(0 0 0 / .55),transparent);color:#fff;font:600 12px/1.2 'Mona Sans',ui-sans-serif,sans-serif;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity 140ms}.ds-tile:hover .ds-place,.ds-tile:focus-visible .ds-place{opacity:1}"
+    },
+    {
+      "name": "Year Workspace Strip",
+      "kind": "nav",
+      "refersTo": "year-pill",
+      "description": "Month in view at display scale with its mono count, and the years as workspace pills; the active one inverted.",
+      "html": "<div class=\"ds-ws\"><div class=\"ds-now\"><span class=\"ds-month\">December</span> <span class=\"ds-year\">2018</span> <span class=\"ds-count\">59 items</span></div><nav class=\"ds-strip\"><button class=\"ds-pill\" aria-current=\"true\">2018</button><button class=\"ds-pill\">2017</button><button class=\"ds-pill\">2016</button><button class=\"ds-pill\">2015</button></nav></div>",
+      "css": ".ds-ws{display:flex;align-items:flex-end;gap:calc(var(--ws-gap,10px)*2.4);padding:calc(var(--ws-gap,10px)*.6) 0 calc(var(--ws-gap,10px)*.8);background:var(--immich-ui-light,#fff)}.ds-now{display:flex;align-items:baseline;gap:.45em;white-space:nowrap}.ds-month,.ds-year{font-family:'Bricolage Grotesque Variable','Mona Sans',sans-serif;font-size:4rem;line-height:.85;font-weight:800;font-stretch:75%;font-variation-settings:'wdth' 75,'opsz' 96;letter-spacing:-.035em;color:var(--immich-ui-dark,#1f1f1f)}.ds-month{font-weight:500}.ds-count{align-self:flex-end;padding-bottom:.3em;font:12px var(--omarchy-font-mono,'JetBrainsMono Nerd Font'),ui-monospace,monospace;color:var(--immich-ui-muted,#5f6368)}.ds-strip{display:flex;gap:calc(var(--ws-gap,10px)*.4)}.ds-pill{border:0;background:transparent;cursor:pointer;font:600 12px var(--omarchy-font-mono,'JetBrainsMono Nerd Font'),ui-monospace,monospace;font-variant-numeric:tabular-nums;padding:.3rem .55rem;border-radius:calc(var(--ws-radius,0px) + 5px);color:var(--immich-ui-muted,#5f6368);transition:background-color 120ms,color 120ms}.ds-pill:hover{color:var(--immich-ui-dark,#1f1f1f);background:color-mix(in oklab,var(--immich-ui-dark,#1f1f1f) 7%,transparent)}.ds-pill[aria-current='true']{background:var(--immich-ui-dark,#1f1f1f);color:var(--immich-ui-light,#fff)}.ds-pill:focus-visible{outline:var(--ws-border,2px) solid var(--omarchy-accent,#0b57d0);outline-offset:2px}"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "segmented-control",
+      "description": "Years / Months / All as workspace pills in a hairline shell; pressed option inverted.",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg-opt\">Years</button><button class=\"ds-seg-opt\">Months</button><button class=\"ds-seg-opt\" aria-pressed=\"true\">All</button></div>",
+      "css": ".ds-seg{display:inline-flex;gap:2px;padding:3px;border:1px solid color-mix(in oklab,var(--immich-ui-dark,#1f1f1f) 13%,transparent);border-radius:calc(var(--ws-radius,0px) + 8px);background:transparent}.ds-seg-opt{border:0;background:transparent;cursor:pointer;padding:.35rem .8rem;font:500 .9rem 'Mona Sans',ui-sans-serif,sans-serif;border-radius:calc(var(--ws-radius,0px) + 5px);color:var(--immich-ui-muted,#5f6368)}.ds-seg-opt:hover{color:var(--immich-ui-dark,#1f1f1f)}.ds-seg-opt[aria-pressed='true']{background:var(--immich-ui-dark,#1f1f1f);color:var(--immich-ui-light,#fff)}.ds-seg-opt:focus-visible{outline:var(--ws-border,2px) solid var(--omarchy-accent,#0b57d0);outline-offset:2px}"
+    },
+    {
+      "name": "Sidebar Item",
+      "kind": "nav",
+      "refersTo": "sidebar-item-active",
+      "description": "Compact icon nav on the shared ground; the active item inverts like the Omarchy bar.",
+      "html": "<nav class=\"ds-side\"><a class=\"ds-side-item\" data-active=\"true\" href=\"#\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M22 16V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2m-11-4 2 2.7 3-3.7 4 5H8zM2 6v14a2 2 0 0 0 2 2h14v-2H4V6z\"/></svg></a><a class=\"ds-side-item\" href=\"#\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5A5.5 5.5 0 0 1 7.5 3c1.74 0 3.41.81 4.5 2.09A6 6 0 0 1 16.5 3 5.5 5.5 0 0 1 22 8.5c0 3.78-3.4 6.86-8.55 11.54z\"/></svg></a></nav>",
+      "css": ".ds-side{display:flex;flex-direction:column;gap:6px;padding:8px;background:var(--immich-ui-light,#fff);border-inline-end:1px solid color-mix(in oklab,var(--immich-ui-dark,#1f1f1f) 13%,transparent);width:max-content}.ds-side-item{display:grid;place-items:center;width:42px;height:42px;border-radius:calc(var(--ws-radius,0px) + 6px);color:var(--immich-ui-dark,#1f1f1f);font-weight:500}.ds-side-item:hover{background:color-mix(in oklab,var(--immich-ui-dark,#1f1f1f) 7%,transparent)}.ds-side-item[data-active='true']{background:var(--immich-ui-dark,#1f1f1f);color:var(--immich-ui-light,#fff)}.ds-side-item:focus-visible{outline:var(--ws-border,2px) solid var(--omarchy-accent,#0b57d0);outline-offset:2px}"
+    },
+    {
+      "name": "Empty State",
+      "kind": "custom",
+      "refersTo": "empty-action",
+      "description": "A sentence of why and one next step: headline, muted body, one inverted action and one underlined link.",
+      "html": "<div class=\"ds-empty\"><h2 class=\"ds-empty-title\">Nothing has come back around yet</h2><p class=\"ds-empty-body\">They surface by themselves: a day from years ago, a trip, a face you haven't seen in a while.</p><div class=\"ds-empty-actions\"><button class=\"ds-empty-action\">Choose which memories appear</button><a class=\"ds-empty-link\" href=\"#\">See what's still processing</a></div></div>",
+      "css": ".ds-empty{max-width:34rem;padding-inline:1.5rem}.ds-empty-title{margin:0;font-family:'Bricolage Grotesque Variable','Mona Sans',sans-serif;font-size:2.25rem;font-weight:750;font-variation-settings:'wdth' 80,'opsz' 72;letter-spacing:-.03em;line-height:1.05;text-wrap:balance;color:var(--immich-ui-dark,#1f1f1f)}.ds-empty-body{margin:.9rem 0 0;font:1rem/1.55 'Mona Sans',ui-sans-serif,sans-serif;max-width:60ch;color:var(--immich-ui-muted,#5f6368)}.ds-empty-actions{display:flex;flex-wrap:wrap;align-items:center;gap:1.25rem;margin-top:1.75rem}.ds-empty-action{border:0;cursor:pointer;padding:.55rem 1rem;border-radius:calc(var(--ws-radius,0px) + 6px);background:var(--immich-ui-dark,#1f1f1f);color:var(--immich-ui-light,#fff);font:600 .9rem 'Mona Sans',ui-sans-serif,sans-serif}.ds-empty-action:hover{background:color-mix(in oklab,var(--immich-ui-dark,#1f1f1f) 85%,var(--omarchy-accent,#0b57d0))}.ds-empty-link{font:500 .9rem 'Mona Sans',ui-sans-serif,sans-serif;color:var(--immich-ui-dark,#1f1f1f);text-decoration:underline;text-underline-offset:.25em;text-decoration-color:color-mix(in oklab,var(--immich-ui-dark,#1f1f1f) 13%,transparent)}.ds-empty-link:hover{text-decoration-color:var(--omarchy-accent,#0b57d0)}.ds-empty-action:focus-visible,.ds-empty-link:focus-visible{outline:var(--ws-border,2px) solid var(--omarchy-accent,#0b57d0);outline-offset:3px}"
+    },
+    {
+      "name": "Person Name Field",
+      "kind": "input",
+      "refersTo": "person-name",
+      "description": "Borderless name field; placeholder shows on the pointed card or on focus; accent outline on focus.",
+      "html": "<div class=\"ds-pcard\"><div class=\"ds-face\"></div><input class=\"ds-pname\" placeholder=\"Add a name\"></div>",
+      "css": ".ds-pcard{display:grid;gap:8px;width:140px;padding:8px}.ds-face{aspect-ratio:1;border-radius:var(--ws-radius,0px);background:linear-gradient(135deg,#8a7360,#d8c1a3)}.ds-pname{width:100%;text-align:center;padding:.5rem;font:600 .875rem 'Mona Sans',ui-sans-serif,sans-serif;background:transparent;border:1px solid transparent;border-radius:calc(var(--ws-radius,0px) + 6px);color:var(--immich-ui-dark,#1f1f1f)}.ds-pname::placeholder{color:var(--immich-ui-muted,#5f6368);opacity:0;transition:opacity 140ms}.ds-pcard:hover .ds-pname::placeholder,.ds-pname:focus::placeholder{opacity:1}.ds-pname:focus{background:color-mix(in oklab,var(--immich-ui-dark,#1f1f1f) 6%,transparent);outline:var(--ws-border,2px) solid var(--omarchy-accent,#0b57d0)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Tiled Workspace",
+    "overview": "The archive is a workspace you live in, drawn in the grammar of the owner's own Omarchy/Hyprland desktop. Years are workspaces you switch between; photos are windows tiled on one even gap; the theme accent is the active border and lights only what has focus. The chrome is the same ground as the content, split by 1px hairlines, so the photos stay the brightest thing on screen.\n\nThis layer is a citizen of the desktop, not a brand. **Colour is not owned here.** The palette (`--immich-ui-light`, `--immich-ui-dark`, `--immich-ui-muted`, `--immich-ui-gray`, `--immich-ui-default-border`, the `--immich-ui-primary-*` ramp, the `--color-gray-*` ramp, `--omarchy-accent`, `--omarchy-on-accent`) and the desktop geometry and font (`--ws-gap`, `--ws-radius`, `--ws-border`, `--omarchy-font-mono`) arrive at runtime as admin Custom CSS that `~/.local/bin/immich-omarchy-theme` generates from the active Omarchy theme and Hyprland config (run by the theme-set and font-set hooks). `web/src/styles/omarchy-world.css` owns type, geometry rules, material, components, layout and motion, and only reads those tokens. Every theme colour and geometry value in the frontmatter is the build's **fallback** (the light face of `gallery-theme.css`, and the `:root` defaults in `omarchy-world.css`), shown when the hook has not run. Never hard-code a value from one theme. The standalone public memory viewer has its own fixed neutral roles (`public-memory-*`), without the owner's desktop hook; its scoped exception is described under Colors and Memories.\n\nThe layer is visual only and rebaseable: it styles upstream markup through stable hooks (`data-testid`, `data-thumbnail-focus-container`, ids) and a small set of `ws-` classes added to upstream components, and adds one component of its own (the year workspace strip).",
+    "keyCharacteristics": [
+      "One ground: the theme surface everywhere, divided by hairlines, never two-tone slabs.",
+      "One gap module (`--ws-gap`, Hyprland `gaps_in` x2) spaces the tiles and derives the header rhythm.",
+      "Tiles take the desktop's window radius and border width.",
+      "Active state is inversion (ink fill, surface text), like the Omarchy bar's active workspace; the accent is reserved for focus.",
+      "Scale contrast carries hierarchy: condensed heavy numerals at display size against 12px monospace data.",
+      "Depth only on what floats (menus, dialogs, the floating grouping control)."
+    ],
+    "rules": [
+      {
+        "name": "The Desktop Decides Rule",
+        "body": "No colour literal enters the build except the on-photo scrims (the caption's, a sheet's over the photos), a QR code's black on white and the standalone public memory viewer's fixed neutral roles (`public-memory-*`). New authenticated surfaces take roles (`--immich-ui-*`, `--ws-accent`, `--ws-hairline`), never hex values from the theme you happen to be looking at. The public viewer's exception does not change the owner's theme or the private sharing sheet.",
+        "section": "colors"
+      },
+      {
+        "name": "The Active Border Rule",
+        "body": "The accent marks focus and only focus. Selection of a mode, a year or a nav item is shown by inversion (ink fill, surface text), never by accent fill.",
+        "section": "colors"
+      },
+      {
+        "name": "The Hairline Rule",
+        "body": "Separation is a 1px hairline or nothing. No tinted panels, no slabs, no second background tone for chrome.",
+        "section": "colors"
+      },
+      {
+        "name": "The Scale Contrast Rule",
+        "body": "Hierarchy comes from the jump between 6rem condensed numerals and 12px data, not from a ladder of medium sizes.",
+        "section": "typography"
+      },
+      {
+        "name": "The Data Is Mono Rule",
+        "body": "A number that is information (count, year, date, EXIF) is set in the desktop's monospace. A number that is a heading (the year in view, a day label) is set in the display face.",
+        "section": "typography"
+      },
+      {
+        "name": "The Floats Only Rule",
+        "body": "A shadow means the element floats over the ground and can be dismissed. Anything that lives on the ground is flat.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** read authenticated surfaces' colours from the runtime roles (`--immich-ui-light`, `--immich-ui-dark`, `--immich-ui-muted`, `--ws-accent`, `--ws-hairline`) and keep the fallbacks as fallbacks; reserve `public-memory-*` for the standalone recipient viewer.",
+      "**Do** space tiles and derive header rhythm from `--ws-gap`; size tile corners and focus borders from `--ws-radius` and `--ws-border`.",
+      "**Do** show the active/selected state by inversion (ink fill, surface text).",
+      "**Do** set counts, years-as-data, dates and EXIF in the desktop monospace at 12px.",
+      "**Do** give every motion a reduced-motion cut (no transition, no slide).",
+      "**Do** style upstream markup through stable hooks and `ws-` classes so the layer rebases cleanly."
+    ],
+    "donts": [
+      "**Don't** hard-code a theme's hex values, or add a brand colour of the layer's own.",
+      "**Don't** use the accent as a fill for selected modes, nav items or years; it is the focus border.",
+      "**Don't** put chrome on a second background tone or a rounded card slab; split the one ground with a hairline.",
+      "**Don't** shadow anything that sits on the ground (tiles, rows, headers, the sidebar).",
+      "**Don't** draw tile focus outset; it clips inside contained day sections."
+    ]
+  }
+}

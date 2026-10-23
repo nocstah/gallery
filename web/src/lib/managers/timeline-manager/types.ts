@@ -16,6 +16,10 @@ export type TimelineManagerOptions = Omit<AssetApiGetTimeBucketsRequest, 'bucket
   timelineSpaceId?: string;
   deferInit?: boolean;
   assetFilter?: Set<string>;
+  /** Local person page only: collapse each stack onto a photo matching that person. */
+  groupPersonStacks?: boolean;
+  /** Face pages include matches in albums hidden from the home timeline. */
+  personPhotoSearch?: boolean;
 };
 
 export type TimelineBucketDate = { year: number; month?: number; day?: number };

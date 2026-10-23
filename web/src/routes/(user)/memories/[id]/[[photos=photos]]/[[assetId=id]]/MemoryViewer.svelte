@@ -1,10 +1,13 @@
 <script lang="ts">
+  import MemoryShareModal from '$lib/modals/MemoryShareModal.svelte';
   import { goto } from '$app/navigation';
   import { scrollMemoryClearer } from '$lib/actions/scroll-memory';
   import { shortcuts } from '$lib/actions/shortcut';
   import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
   import BirthdayConfetti from '$lib/components/memories/BirthdayConfetti.svelte';
   import MemoryFilm from '$lib/components/memories/film/MemoryFilm.svelte';
+  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
+  import { privateFilmMedia } from '$lib/components/memories/film/private-film-media';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import GalleryViewer from '$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte';
@@ -27,12 +30,20 @@
   import { getAssetBulkActions } from '$lib/services/asset.service';
   import { locale } from '$lib/stores/preferences.store';
   import { handlePromiseError, memoryLaneTitle } from '$lib/utils';
-  import { curator, curatorIsMine, type MemoryTrack } from '$lib/utils/curator';
+  import { curator, curatorIsMine, type MemoryTrack, type Story } from '$lib/utils/curator';
   import { memoryCardCount } from '$lib/utils/memory-cards';
   import { memoryCount, memoryFilmWords } from '$lib/utils/memory-title';
   import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
-  import { type AssetResponseDto, getAssetInfo, MemoryType } from '@immich/sdk';
-  import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton } from '@immich/ui';
+  import { addMemoryAssets, BulkIdErrorReason, type AssetResponseDto, getAssetInfo, MemoryType } from '@immich/sdk';
+  import {
+    ActionButton,
+    CommandPaletteDefaultProvider,
+    Icon,
+    IconButton,
+    modalManager,
+    toastManager,
+  } from '@immich/ui';
+  import { handleError } from '$lib/utils/handle-error';
   import {
     mdiCardsOutline,
     mdiClose,
@@ -42,6 +53,8 @@
     mdiImageMinusOutline,
     mdiImageSearch,
     mdiMovieOpenOutline,
+    mdiImageMultipleOutline,
+    mdiShareVariant,
     mdiPlay,
     mdiSelectAll,
     mdiTextBoxOutline,
@@ -120,7 +133,7 @@
   };
 
   // each answer is kept with the memory it answers, so a film never takes the one before's story or songs
-  let told = $state<{ memoryId: string; text: string | null }>();
+  let told = $state<{ memoryId: string; story: Story | null }>();
   let songs = $state<{ memoryId: string; tracks: MemoryTrack[] }>();
 
   $effect(() => {
@@ -133,12 +146,12 @@
       .story({ memory: id })
       .then((answer) => {
         if (live) {
-          told = { memoryId: id, text: answer.story?.text ?? null };
+          told = { memoryId: id, story: answer.story ?? null };
         }
       })
       .catch(() => {
         if (live) {
-          told = { memoryId: id, text: null };
+          told = { memoryId: id, story: null };
         }
       });
     curator
@@ -158,14 +171,15 @@
     };
   });
 
-  const story = $derived(told && told.memoryId === memoryId ? told.text : null);
+  const story = $derived(told && told.memoryId === memoryId ? told.story : null);
   const tracks = $derived(songs && songs.memoryId === memoryId ? songs.tracks : []);
   const settled = $derived(
     !memoryId ||
       !curatorIsMine() ||
       (memoryFacts.settledAll(members.map(({ id }) => id)) &&
         memoryFacts.settled(memoryId) &&
-        songs?.memoryId === memoryId),
+        songs?.memoryId === memoryId &&
+        told?.memoryId === memoryId),
   );
 
   // ---- its title: facts, place and time (utils/memory-title, as Room says them) ----
@@ -253,10 +267,61 @@
 
   // Save as video (Curator's owner, once Curator says it saves films): the film's own plan and the song playing, drawn
   // into an MP4 by Curator; the corner panel follows it and the browser saves "<title>.mp4" (managers/film-video-manager)
-  const saveAsVideo = () => {
-    const saved = film?.videoPlan();
-    if (current && saved) {
-      filmVideos.start({ memoryId: current.memory.id, ...saved, title: cardTitle }, cardTitle);
+  const shareMemory = (initialMode: 'memory' | 'portrait' = 'memory') => {
+    if (!current) {
+      return;
+    }
+    film?.pause();
+    const memory = current.memory;
+    void modalManager.show(MemoryShareModal, {
+      memoryId: memory.id,
+      initialMode,
+      presentation: {
+        assetIds: [...new Set(memory.assets.map(({ id }) => id))],
+        name: filmName,
+        title: cardTitle,
+        line: filmLine,
+        cover: facts?.cover ?? null,
+        focus: focus ?? {},
+        story: storyHidden ? null : (story?.text ?? null),
+        storyCues: storyHidden ? [] : (story?.cues ?? []),
+        trackIds: tracks.map(({ id }) => id),
+        photoSeconds: authManager.preferences.memories.duration,
+        language: $locale === 'default' ? 'en' : $locale,
+        ...film?.shareState(),
+      },
+      getVideo: (aspect: number) => {
+        const saved = film?.videoPlan(aspect);
+        return saved ? { memoryId: memory.id, ...saved, title: cardTitle } : undefined;
+      },
+    });
+  };
+
+  let expanding = $state(false);
+  const expandEvent = async () => {
+    const id = memoryId;
+    if (!id || expanding) {
+      return;
+    }
+    expanding = true;
+    try {
+      const { ids } = await curator.memoryExpansion(id);
+      // Curator selects; Gallery applies the addition with the owner's signed-in session.
+      const results = ids.length > 0 ? await addMemoryAssets({ id, bulkIdsDto: { ids } }) : [];
+      const updated = await memoryManager.refreshMemory(id);
+      if (results.some((result) => !result.success && result.error !== BulkIdErrorReason.Duplicate)) {
+        throw new Error($t('memory_event_failed'));
+      }
+      const added = results.filter((result) => result.success).length;
+      toastManager.primary(
+        added
+          ? $t('memory_event_added', { values: { count: added, total: updated.assets.length } })
+          : $t('memory_event_no_more'),
+      );
+    } catch (error) {
+      handleError(error, $t('memory_event_failed'));
+    } finally {
+      expanding = false;
     }
   };
 
@@ -315,6 +380,9 @@
       {/if}
 
       <MemoryFilm
+        media={privateFilmMedia}
+        language={$locale}
+        reducedMotion={mediaQueryManager.reducedMotion}
         bind:this={film}
         bind:current={filmAsset}
         memory={current.memory}
@@ -326,7 +394,8 @@
         cover={facts?.cover}
         {focus}
         {settled}
-        story={storyHidden ? null : story}
+        story={storyHidden ? null : (story?.text ?? null)}
+        storyCues={storyHidden ? [] : (story?.cues ?? [])}
         {tracks}
         {place}
         photoSeconds={authManager.preferences.memories.duration}
@@ -336,6 +405,16 @@
         onNextMemory={current.nextMemory ? () => goto(current.nextMemory!.href) : undefined}
       >
         {#snippet actions()}
+          {#if filmVideos.available}
+            <IconButton
+              icon={mdiShareVariant}
+              shape="round"
+              variant="ghost"
+              color="secondary"
+              aria-label={$t('memory_share')}
+              onclick={() => shareMemory()}
+            />
+          {/if}
           <IconButton
             icon={current.memory.isSaved ? mdiHeart : mdiHeartOutline}
             shape="round"
@@ -382,10 +461,17 @@
                 />
               {/if}
               {#if filmVideos.available}
+                <MenuOption onClick={() => shareMemory()} text={$t('memory_share')} icon={mdiShareVariant} />
                 <MenuOption
-                  onClick={() => saveAsVideo()}
+                  onClick={() => shareMemory('portrait')}
                   text={$t('memory_film_save_video')}
                   icon={mdiMovieOpenOutline}
+                />
+                <MenuOption
+                  onClick={() => expandEvent()}
+                  text={expanding ? $t('loading') : $t('memory_event_expand')}
+                  icon={mdiImageMultipleOutline}
+                  disabled={expanding}
                 />
               {/if}
               {#if story}

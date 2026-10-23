@@ -4,14 +4,17 @@
   // name shows the face group beside photos it was found in, a merge shows
   // every face group being joined, a restored photo or clip shares one frame with its original, an album of people
   // seen together (a smart album Curator proposes) shows their faces before photos of them together. Each photo
-  // opens in Gallery in a new tab, so the review keeps its place (the link says so). Resting the pointer on a photo
+  // opens in a zoomable inspector that keeps the review in place; modified clicks still open Gallery in a new tab. Resting the pointer on a photo
   // shows it large, whole, in the middle of the screen, until the pointer moves off it. A picture with nothing to show
   // is a quiet placeholder (InboxTile).
   import InboxTile from '$lib/components/curator/InboxTile.svelte';
+  import InboxInspector from '$lib/components/curator/InboxInspector.svelte';
+  import { inspectionItems } from '$lib/utils/inbox-inspection';
   import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
   import { reelUrl, type Suggestion } from '$lib/utils/curator';
   import { getAssetMediaUrl } from '$lib/utils';
   import { AssetMediaSize } from '@immich/sdk';
+  import { onDestroy } from 'svelte';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -19,6 +22,20 @@
   }
 
   let { suggestion }: Props = $props();
+  let inspecting = $state<number>();
+  const inspectItems = $derived(inspectionItems(suggestion));
+  const inspectPhoto = (id: string, turn = 0) => {
+    inspecting = Math.max(
+      0,
+      inspectItems.findIndex((item) => item.assetId === id && (item.turn ?? 0) === turn),
+    );
+  };
+  const inspectFace = (src: string) => {
+    inspecting = Math.max(
+      0,
+      inspectItems.findIndex((item) => item.src === src),
+    );
+  };
 
   const thumbnail = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
   const preview = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Preview });
@@ -33,6 +50,7 @@
     clearTimeout(peekTimer);
     peek = undefined;
   };
+  onDestroy(unpeek);
   const face = (personId: string) => `/api/people/${personId}/thumbnail`;
 
   const payload = $derived(suggestion.payload as Record<string, unknown>);
@@ -56,10 +74,18 @@
     target="_blank"
     rel="noopener"
     style:width="{size}px"
-    aria-label={label ? undefined : $t('ai_inbox_open_photo')}
+    aria-label={label ? `${label}: ${$t('ai_inbox_inspect')}` : $t('ai_inbox_inspect')}
     onmouseenter={() => peekAt(id, turn)}
     onmouseleave={unpeek}
-    onclick={unpeek}
+    onclick={(event) => {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+        return;
+      }
+      event.preventDefault();
+      unpeek();
+      inspectPhoto(id, turn);
+    }}
+    title={$t('ai_inbox_inspect')}
   >
     <InboxTile src={thumbnail(id)} {size} {turn} />
     {#if label}
@@ -79,17 +105,34 @@
 <div class="ws-strip visual">
   {#if suggestion.kind === 'reel.publish' && suggestion.status === 'pending'}
     <!-- the reel itself, watched before it goes into Gallery; its poster is the opening photo -->
-    <video
-      class="visual-reel"
-      src={reelUrl(suggestion.id)}
-      poster={photos[0] ? thumbnail(photos[0]) : undefined}
-      controls
-      preload="none"
-      playsinline
-    ></video>
+    <div class="visual-video">
+      <!-- svelte-ignore a11y_media_has_caption -->
+      <video
+        class="visual-reel"
+        src={reelUrl(suggestion.id)}
+        poster={photos[0] ? thumbnail(photos[0]) : undefined}
+        controls
+        preload="none"
+        playsinline
+      ></video><button
+        type="button"
+        class="ws-btn-quiet"
+        onclick={(event) => {
+          event.currentTarget.parentElement?.querySelector('video')?.pause();
+          inspecting = 0;
+        }}>{$t('ai_inbox_inspect')}</button
+      >
+    </div>
   {:else if suggestion.kind === 'restore.publish' && suggestion.status === 'pending'}
     <!-- the original and the restored version in one frame, a divider between them -->
-    <RestoreCompare {suggestion} size="card" />
+    <RestoreCompare
+      {suggestion}
+      size="card"
+      onInspect={() => {
+        unpeek();
+        inspecting = 0;
+      }}
+    />
   {:else if suggestion.kind === 'stack.cover' && suggestion.asset_ids.length > 1}
     {@render photo(suggestion.asset_ids[1], 112, $t('ai_inbox_now'))}
     {@render photo(suggestion.asset_ids[0], 112, $t('ai_inbox_proposed'))}
@@ -98,11 +141,23 @@
     {@render photo(suggestion.asset_ids[0], 112, $t('ai_inbox_proposed'), rotation)}
   {:else if suggestion.kind === 'person.portrait'}
     <!-- the person's icon now beside the face it would be cut from next (Gallery's exact face crop) -->
-    <figure class="visual-tile" style:width="112px">
+    <button
+      type="button"
+      class="visual-tile"
+      style:width="112px"
+      aria-label={`${$t('ai_inbox_now')}: ${$t('ai_inbox_inspect')}`}
+      onclick={() => inspectFace(face(suggestion.target_id))}
+    >
       <img class="ws-strip-tile visual-face" src={face(suggestion.target_id)} alt="" width="112" height="112" />
-      <figcaption class="ws-inbox-meta">{$t('ai_inbox_now')}</figcaption>
-    </figure>
-    <figure class="visual-tile" style:width="112px">
+      <span class="ws-inbox-meta">{$t('ai_inbox_now')}</span>
+    </button>
+    <button
+      type="button"
+      class="visual-tile"
+      style:width="112px"
+      aria-label={`${$t('ai_inbox_proposed')}: ${$t('ai_inbox_inspect')}`}
+      onclick={() => inspectFace(`/api/people/${suggestion.target_id}/faces/${payload.face_id}/thumbnail`)}
+    >
       <img
         class="ws-strip-tile visual-face"
         src="/api/people/{suggestion.target_id}/faces/{payload.face_id}/thumbnail"
@@ -110,11 +165,24 @@
         width="112"
         height="112"
       />
-      <figcaption class="ws-inbox-meta">{$t('ai_inbox_proposed')}</figcaption>
-    </figure>
+      <span class="ws-inbox-meta">{$t('ai_inbox_proposed')}</span>
+    </button>
   {:else if ['person.name', 'person.merge', 'person.hide'].includes(suggestion.kind)}
     {#each [...new Set(faces)] as personId (personId)}
-      <img class="ws-strip-tile visual-face" src={face(personId)} alt="" loading="lazy" width="72" height="72" />
+      <button
+        type="button"
+        class="visual-tile"
+        aria-label={$t('ai_inbox_inspect')}
+        onclick={() => inspectFace(face(personId))}
+        ><img
+          class="ws-strip-tile visual-face"
+          src={face(personId)}
+          alt=""
+          loading="lazy"
+          width="72"
+          height="72"
+        /></button
+      >
     {/each}
     {#if suggestion.kind === 'person.name' || suggestion.kind === 'person.hide'}
       {#each photos.slice(0, 4) as id (id)}
@@ -123,7 +191,20 @@
     {/if}
   {:else if together.length > 0}
     {#each together as personId (personId)}
-      <img class="ws-strip-tile visual-face" src={face(personId)} alt="" loading="lazy" width="72" height="72" />
+      <button
+        type="button"
+        class="visual-tile"
+        aria-label={$t('ai_inbox_inspect')}
+        onclick={() => inspectFace(face(personId))}
+        ><img
+          class="ws-strip-tile visual-face"
+          src={face(personId)}
+          alt=""
+          loading="lazy"
+          width="72"
+          height="72"
+        /></button
+      >
     {/each}
     {#each photos.slice(0, 4) as id (id)}
       {@render photo(id, 72)}
@@ -137,7 +218,23 @@
   {/if}
 </div>
 
+{#if inspecting !== undefined && inspectItems.length > 0}
+  <InboxInspector
+    items={inspectItems}
+    initialIndex={inspecting}
+    title={suggestion.title}
+    onClose={() => (inspecting = undefined)}
+  />
+{/if}
+
 <style>
+  .visual-video {
+    display: grid;
+    gap: 0.25rem;
+  }
+  .visual-tile {
+    cursor: zoom-in;
+  }
   .visual {
     align-items: flex-start;
   }

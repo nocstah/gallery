@@ -401,6 +401,9 @@
   // button or photo in it), and J or K with nothing in particular focused starts on the first card, so the keys work as
   // soon as the page is there. A field keeps its keys, and review mode has its own.
   const onWindowKeydown = (event: KeyboardEvent) => {
+    if (event.defaultPrevented || document.querySelector('dialog[data-inbox-inspector][open]')) {
+      return;
+    }
     if (reviewing || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.defaultPrevented) {
       return;
     }

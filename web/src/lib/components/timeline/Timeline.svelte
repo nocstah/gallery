@@ -250,6 +250,8 @@
   // Local Omarchy layer: stack badges expand in place against this timeline (stack-expand-manager)
   $effect(() => {
     const manager = timelineManager;
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- reset expansions when this query reloads
+    manager.reloadToken;
     if (withStacked) {
       // untracked: reset touches the manager's own reactive maps, which must not re-trigger this
       untrack(() => stackExpandManager.reset(manager));

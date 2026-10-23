@@ -143,7 +143,14 @@ describe('RoomPlayer', () => {
 
   it('never captions what the story line over it already says', async () => {
     vi.mocked(curator.story).mockResolvedValue({
-      story: { text: 'Anna was in Siem Reap, Cambodia on 18 October 2025. The rain stopped by noon.', model: 'text' },
+      story: {
+        text: 'Anna was in Siem Reap, Cambodia on 18 October 2025. The rain stopped by noon.',
+        model: 'text',
+        cues: [
+          { text: 'Anna was in Siem Reap, Cambodia on 18 October 2025.', assetIds: ['m1-1'] },
+          { text: 'The rain stopped by noon.', assetIds: ['m1-3'] },
+        ],
+      },
     } as never);
     vi.mocked(loadToday).mockResolvedValue([memoryReel(memory('m1', 2025, 4))]);
     render(RoomPlayer, { request: today });

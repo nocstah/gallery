@@ -1,11 +1,14 @@
 import type { AssetResponseDto } from '@immich/sdk';
 import type { AdjustSettings } from '$lib/components/curator/adjust-math';
 import type { FilmPlan } from '$lib/components/memories/film/film-plan';
+import type { MemoryPresentation } from '$lib/components/memories/memory-sharing';
 import { authManager } from '$lib/managers/auth-manager.svelte';
+import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-stacks';
 
 // Local Omarchy layer: client for Curator (~/code/curator), the local AI service behind the AI inbox. Curator runs
-// beside Gallery on port 2290 of the same host and authenticates the browser's Gallery session cookie, so every call
-// goes out with credentials. Nothing here writes to Gallery directly: accepting a suggestion asks Curator to apply it.
+// beside Gallery on port 2290 locally, or behind /curator on its private HTTPS address. It authenticates the browser's
+// Gallery session cookie, so every call goes out with credentials. Nothing here writes to Gallery directly:
+// accepting a suggestion asks Curator to apply it.
 
 /**
  * Local Omarchy layer: whether Curator works for whoever is signed in. Curator acts for its owner only (curator/api.py
@@ -53,7 +56,14 @@ export type Suggestion = {
 };
 
 /** What stories.write told for an event, a trip or a memory (written by the text model from the captions). */
-export type Story = { text: string; model: string; written_at: string; event_id?: number };
+export type Story = {
+  text: string;
+  model: string;
+  written_at: string;
+  event_id?: number;
+  /** Scene-specific sentences, linked to their source photos/clips; null until alignment is available. */
+  cues?: { text: string; assetIds: string[] }[] | null;
+};
 
 /**
  * What Curator knows of a memory (GET /api/memories/facts), for its title and its film: the places worth naming (most
@@ -289,7 +299,13 @@ export type BookJob = {
 
 /** A memory's film saved as video (Curator's curator/film.py): the plan the film plays, the song playing, and the
  * title the file is named after. Curator takes five minutes of film at most. */
-export type FilmRequest = { memoryId: string; plan: FilmPlan; trackId?: string; title?: string };
+export type FilmRequest = {
+  memoryId: string;
+  plan: FilmPlan;
+  trackId?: string;
+  title?: string;
+  size?: '720p' | '1080p' | '2160p';
+};
 export const FILM_MOST_SECONDS = 300;
 
 /** What film.render made: the film as an MP4, 1080p at 30 fps, kept a week. */
@@ -471,7 +487,10 @@ export class CuratorError extends Error {
   }
 }
 
-const origin = () => `${location.protocol}//${location.hostname}:2290`;
+// HTTPS access uses the same origin for API calls, streams and downloads. The local Curator listener is HTTP;
+// guessing https://host:2290 breaks those features when Gallery is reached through Tailscale Serve.
+const origin = () =>
+  location.protocol === 'https:' ? `${location.origin}/curator` : `${location.protocol}//${location.hostname}:2290`;
 const base = () => `${origin()}/api`;
 
 /** A song Curator serves (a MemoryTrack's `src`, a path on its origin), for an <audio> element: no crossorigin, so the
@@ -535,6 +554,8 @@ const call = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
 const post = <T>(path: string, body: unknown) => call<T>(path, { method: 'POST', body: JSON.stringify(body) });
 
 export const curator = {
+  personStacks: (personId: string, signal?: AbortSignal) =>
+    call<PersonStackGroup[]>(`/people/${encodeURIComponent(personId)}/stacks`, { signal }),
   health: () => call<Health>('/health'),
   inbox: () => call<InboxGroup[]>('/inbox'),
   group: (key: string, status = 'pending', limit = 100, offset = 0) =>
@@ -574,6 +595,7 @@ export const curator = {
   /** up to `n` songs from the owner's library for a memory's film, best first; none when nothing fits */
   memoryMusic: (memoryId: string, n = 3) =>
     call<{ tracks: MemoryTrack[] }>(`/memories/${encodeURIComponent(memoryId)}/music?n=${n}`),
+  memoryExpansion: (memoryId: string) => call<{ ids: string[] }>(`/memories/${encodeURIComponent(memoryId)}/expansion`),
   /** the story of a memory, of an album (by the event its photos come from) or of an event; null until written */
   story: (subject: { memory: string } | { album: string } | { event: number }) =>
     call<{ story: Story | null }>(
@@ -622,7 +644,10 @@ export const curator = {
   /** a photo book being made, or made */
   book: (jobId: number) => call<BookJob>(`/books/${jobId}`),
   /** a memory's film saved as video (film.render on Curator's applier); follow it with film() */
+  shareMemory: (memoryId: string, body: { linkId: string; key: string; presentation: MemoryPresentation }) =>
+    post<{ ready: boolean; count: number }>(`/memories/${encodeURIComponent(memoryId)}/share`, body),
   saveFilm: (request: FilmRequest) => post<{ job: number }>('/films', request),
+  keepFilm: (jobId: number) => post<{ assetId: string }>(`/films/${jobId}/gallery`, {}),
   /** a film being saved as video, or saved */
   film: (jobId: number) => call<FilmJob>(`/films/${jobId}`),
   /** Look Up: what the photo shows that has a name (the kept answer unless `again`) */

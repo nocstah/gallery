@@ -13,6 +13,7 @@
   import { liveEffects } from '$lib/components/curator/live-effects.svelte';
   import { lookUp } from '$lib/components/curator/look-up.svelte';
   import { shareVideos } from '$lib/managers/share-video-manager.svelte';
+  import { canShareVideo } from '$lib/utils/share-video';
   import { copySubject } from '$lib/utils/copy-subject';
   import LoadingDots from '$lib/components/LoadingDots.svelte';
   import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
@@ -172,13 +173,7 @@
   });
   // Local Omarchy layer: a video (or a Live Photo's clip) made ready by Curator for a chat app and saved: H.264 and AAC
   // in an MP4 sized for the app (managers/share-video-manager); the download itself is the original
-  const shareable = $derived(
-    lookUp.available &&
-      isOwner &&
-      !sharedLink &&
-      !asset.isTrashed &&
-      (asset.type === AssetTypeEnum.Video || !!asset.livePhotoVideoId),
-  );
+  const shareable = $derived(!sharedLink && canShareVideo(asset));
   const ForWhatsApp: ActionItem = $derived({
     title: $t('download_for_app', { values: { app: 'WhatsApp' } }),
     icon: mdiWhatsapp,

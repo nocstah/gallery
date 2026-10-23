@@ -11,13 +11,8 @@
   // metres (a far bigger title, the photo's "names · place · date" caption at the foot, bigger controls, the pointer
   // hidden, a remote's OK and Back), and `onNextFilm`/`onPreviousFilm` chain it: its end, ↓ and ↑ hand on to the film
   // after or before, the picture and the music fading to black first, where a lone film offers what to do next.
-  import { locale } from '$lib/stores/preferences.store';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
-  import { musicUrl, type MemoryTrack } from '$lib/utils/curator';
-  import { getAltText } from '$lib/utils/thumbnail-util';
-  import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
-  import { AssetMediaSize, AssetTypeEnum, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
+  import type { MemoryTrack } from '$lib/utils/curator';
+  import { AssetTypeEnum, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
   import { Icon, isModalOpen } from '@immich/ui';
   import {
     mdiChevronLeft,
@@ -39,6 +34,7 @@
   import { thumbhashBackdrop } from './film-backdrop';
   import { filmKeyAction, type FilmAction, type FilmDress } from './film-keys';
   import { FilmMusic } from './film-music.svelte';
+  import type { FilmMedia } from './film-media';
   import {
     FOOT_SCRIM,
     headScrimAt,
@@ -55,6 +51,7 @@
   } from './film-shade';
   import {
     buildFilmPlan,
+    FILM_TIMING,
     filmChanges,
     filmMomentAt,
     shotFrame,
@@ -64,9 +61,13 @@
     type FilmAsset,
     type FilmPlan,
     type FilmShot,
+    type FilmStoryCue,
   } from './film-plan';
 
   interface Props {
+    media: FilmMedia;
+    language?: string;
+    reducedMotion?: boolean;
     /** a memory, or any run of photos with an id of its own (Room's albums and years) */
     memory: Pick<MemoryResponseDto, 'id' | 'assets'>;
     /** the photo the address names: the film starts there (on the first photo, with its title card) and goes there
@@ -86,6 +87,7 @@
     /** the film plans its opening once these are in, or after a moment without them */
     settled: boolean;
     story: string | null;
+    storyCues?: FilmStoryCue[];
     tracks: MemoryTrack[];
     /** where the photo on screen was taken ("Siem Reap, Cambodia"), when it is known */
     place?: string;
@@ -118,6 +120,9 @@
   }
 
   let {
+    media,
+    language = 'en',
+    reducedMotion = false,
     memory,
     assetId,
     active,
@@ -128,6 +133,7 @@
     focus,
     settled,
     story,
+    storyCues,
     tracks,
     place,
     photoSeconds = 5,
@@ -155,8 +161,6 @@
   const READY_MS = 6000;
   /** a film in a chain fades its picture and its music to black over this before the next one takes over */
   const HAND_ON_MS = 650;
-
-  const reducedMotion = $derived(mediaQueryManager.reducedMotion);
 
   let film: HTMLElement | undefined = $state();
   // what the shade and the lift are measured from: the words' rulers, the top bar's scrim and words
@@ -242,13 +246,14 @@
   const filmAssets = $derived<FilmAsset[]>(
     memory.assets.map((asset) => ({
       id: asset.id,
+      checksum: asset.checksum,
       kind: asset.type === AssetTypeEnum.Video ? 'video' : 'photo',
       ratio: asset.width && asset.height ? asset.width / asset.height : null,
       seconds: asset.type === AssetTypeEnum.Video && asset.duration ? asset.duration / 1000 : null,
     })),
   );
-  const sentences = $derived(splitSentences(story, $locale));
-  const total = $derived(memory.assets.length);
+  const sentences = $derived(splitSentences(story, language));
+  const total = $derived(plan?.shots.filter((shot) => shot.index >= 0).length ?? memory.assets.length);
 
   const shot = $derived(plan?.shots[shotIndex]);
   /** where the film is, for "3/20": a cover opening on its own is the film's start */
@@ -256,7 +261,9 @@
   const shownAsset = $derived<AssetResponseDto | undefined>(shot ? assetsById.get(shot.assetId) : undefined);
   const shownDate = $derived(
     shownAsset
-      ? fromISODateTimeUTC(shownAsset.localDateTime).toLocaleString(DateTime.DATE_FULL, { locale: $locale })
+      ? DateTime.fromISO(shownAsset.localDateTime, { zone: 'UTC' }).toLocaleString(DateTime.DATE_FULL, {
+          locale: language,
+        })
       : '',
   );
 
@@ -274,6 +281,7 @@
       focus: frozen?.focus ?? focus,
       title: { text: name, line },
       sentences,
+      storyCues,
       tracks: music?.available ? [...music.tracks.slice(music.index), ...music.tracks.slice(0, music.index)] : [],
       bpm: beatBpm,
       musicFrom,
@@ -281,10 +289,10 @@
       reducedMotion,
     });
 
-  /** The film as "Save as video" hands it to Curator, which draws the same film into a 16:9 MP4: the shots planned
+  /** The film as "Save as video" hands it to Curator, replanned for the chosen frame: the shots planned
    * for that frame from what this film was planned from (its cover and faces, its photos' time), the songs from the
    * one playing, from the film's start, and the cuts on that song's beat. Nothing until the film has begun. */
-  export const videoPlan = (): { plan: FilmPlan; trackId?: string } | undefined => {
+  export const videoPlan = (exportAspect = 16 / 9): { plan: FilmPlan; trackId?: string } | undefined => {
     if (!plan) {
       return undefined;
     }
@@ -292,11 +300,12 @@
     const saved = buildFilmPlan({
       memoryId: memory.id,
       assets: filmAssets,
-      aspect: 16 / 9,
+      aspect: exportAspect,
       cover: frozen?.cover ?? cover,
       focus: frozen?.focus ?? focus,
       title: { text: name, line },
       sentences,
+      storyCues,
       tracks: songs,
       photoSeconds: frozen?.photoSeconds ?? photoSeconds,
       reducedMotion,
@@ -304,15 +313,24 @@
     return { plan: saved, trackId: saved.music[0]?.trackId };
   };
 
+  /** Preserve the composition and the selected song when publishing a playable memory. */
+  export const shareState = () => ({
+    cover: frozen?.cover ?? cover ?? null,
+    focus: frozen?.focus ?? focus ?? {},
+    photoSeconds: frozen?.photoSeconds ?? photoSeconds,
+    trackIds: music?.available
+      ? [...music.tracks.slice(music.index), ...music.tracks.slice(0, music.index)].map(({ id }) => id)
+      : [],
+  });
+
   // a photo shown whole lies on its own colours, drawn from its thumbhash (film-backdrop.ts: no CSS blur under a drift)
   const backdropOf = (id: string) => thumbhashBackdrop(assetsById.get(id)?.thumbhash);
 
-  const preview = (id: string) =>
-    getAssetMediaUrl({ id, size: AssetMediaSize.Preview, cacheKey: assetsById.get(id)?.thumbhash });
-  const thumbnail = (id: string) => getAssetMediaUrl({ id, cacheKey: assetsById.get(id)?.thumbhash });
+  const preview = (id: string) => media.preview(id, assetsById.get(id)?.thumbhash);
+  const thumbnail = (id: string) => media.thumbnail(id, assetsById.get(id)?.thumbhash);
   const altOf = (id: string) => {
     const asset = assetsById.get(id);
-    return asset ? $getAltText(toTimelineAsset(asset)) : '';
+    return asset ? media.alt(asset) : '';
   };
 
   // ---- each photo laid out for its words (film-shade.ts): the shade that keeps them at AA on it, and a photo shown
@@ -1053,7 +1071,7 @@
       if (music || list.length === 0) {
         return;
       }
-      music = new FilmMusic(list, musicUrl);
+      music = new FilmMusic(list, media.music);
       if (began && plan) {
         musicFrom = clockTime();
         plan = makePlan(plan.aspect);
@@ -1073,6 +1091,7 @@
   // the story and the title as they come in: the shots keep their times
   $effect(() => {
     void sentences;
+    void storyCues;
     void name;
     void line;
     untrack(() => {
@@ -1268,10 +1287,7 @@
                 style:width={frame.width}
                 style:height={frame.height}
                 style:translate={!frame.fill && layer.lift > 0 ? `0 ${-layer.lift * 100}%` : undefined}
-                src={getAssetPlaybackUrl({
-                  id: layer.shot.assetId,
-                  cacheKey: assetsById.get(layer.shot.assetId)?.thumbhash,
-                })}
+                src={media.video(layer.shot.assetId, assetsById.get(layer.shot.assetId)?.thumbhash)}
                 poster={preview(layer.shot.assetId)}
                 aria-label={altOf(layer.shot.assetId)}
                 muted
@@ -1334,7 +1350,7 @@
       <p class="film-where-name">{title}</p>
       <!-- across the room the photo's date and place are its caption, at the foot -->
       {#if dress !== 'room'}
-        <p class="film-where-data" lang={$locale}>
+        <p class="film-where-data" lang={language}>
           <span>{shownDate}{@render extra?.()}</span>{#if place}<span class="film-where-place">{place}</span>{/if}
         </p>
       {/if}
@@ -1358,16 +1374,16 @@
       <div class="film-title film-ruler" aria-hidden="true" bind:this={titleRuler}>
         <p class="film-title-name">{name}</p>
         {#if line}
-          <p class="film-title-line" lang={$locale}>{line}</p>
+          <p class="film-title-line" lang={language}>{line}</p>
         {/if}
       </div>
       <div class="film-lines film-ruler" aria-hidden="true" bind:this={linesRuler}>
         {#if longestStory}
-          <p class="film-story" lang={$locale}>{longestStory}</p>
+          <p class="film-story" lang={language}>{longestStory}</p>
         {/if}
         <!-- a caption's line is there whether or not this photo has one, so the lines' place holds still -->
         {#if dress === 'room'}
-          <p class="film-caption" lang={$locale}>{caption || '\u{A0}'}</p>
+          <p class="film-caption" lang={language}>{caption || '\u{A0}'}</p>
         {/if}
       </div>
       {#if ended && !onNextFilm}
@@ -1404,7 +1420,7 @@
           >
             <h1 class="film-title-name">{name}</h1>
             {#if line}
-              <p class="film-title-line" lang={$locale}>{line}</p>
+              <p class="film-title-line" lang={language}>{line}</p>
             {/if}
           </div>
         {/if}
@@ -1412,7 +1428,12 @@
         <div class="film-lines">
           {#key storyIndex}
             {#if storyText && !titleShown}
-              <p class="film-story" lang={$locale} in:fade={{ duration: 600 }} out:fade={{ duration: 350 }}>
+              <p
+                class="film-story"
+                lang={language}
+                in:fade={{ duration: 600 }}
+                out:fade={{ duration: FILM_TIMING.storyOut * 1000 }}
+              >
                 {storyText}
               </p>
             {/if}
@@ -1422,7 +1443,7 @@
             {#key caption}
               <p
                 class="film-caption"
-                lang={$locale}
+                lang={language}
                 data-testid="memory-film-caption"
                 in:fade={{ duration: 600, delay: reducedMotion ? 0 : 450 }}
                 out:fade={{ duration: 300 }}
@@ -1494,7 +1515,7 @@
         </button>
         <span class="film-position" data-testid="memory-film-position">
           {$t('x_of_total', {
-            values: { x: (position + 1).toLocaleString($locale), total: total.toLocaleString($locale) },
+            values: { x: (position + 1).toLocaleString(language), total: total.toLocaleString(language) },
           })}
         </span>
         {#if song}

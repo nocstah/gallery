@@ -11,6 +11,7 @@ export async function getAssetWithOffset(
   interval: 'asset' | 'day' | 'month' | 'year' = 'asset',
   direction: Direction,
 ): Promise<TimelineAsset | undefined> {
+  assetDescriptor = timelineManager.navigationAsset(assetDescriptor);
   const timelineMonth = await timelineManager.findTimelineMonthForAsset(assetDescriptor);
   if (!timelineMonth) {
     return;

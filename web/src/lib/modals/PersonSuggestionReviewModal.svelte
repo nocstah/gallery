@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { beforeNavigate } from '$app/navigation';
+  import { shouldIgnoreEvent } from '$lib/actions/shortcut';
   import FaceCrop from '$lib/components/faces-page/face-crop.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import { getContentMetrics } from '$lib/utils/container-utils';
@@ -20,7 +22,7 @@
     mdiEyeOffOutline,
   } from '@mdi/js';
   import { onMount } from 'svelte';
-  import { SvelteSet } from 'svelte/reactivity';
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { t } from 'svelte-i18n';
 
   type PageReq = { page: number; size: number };
@@ -50,40 +52,48 @@
   const PAGE_SIZE = 50;
   const PREFETCH = 3;
 
-  // D8: the server drains a face's pending row the instant it's confirmed/dismissed/ignored, so paging by a
-  // fixed offset (page 2, page 3, ...) walks a moving target and silently drops however many rows shifted out
-  // from under it. The only stable cursor is the HEAD of the list — every fetch below always re-reads page 1.
-  // `items` is append-only (acted rows are never spliced out) so back-navigation can still render them,
-  // read-only; `actedFaceIds` both drives that read-only state and skips rows this client already resolved
-  // but the server hasn't settled yet (the classic just-acted-then-refetched race).
-  const actedFaceIds = new SvelteSet<string>();
+  type Choice = 'confirm' | 'dismiss' | 'ignore';
+  const choiceLabels = {
+    confirm: 'face_suggestion_same',
+    dismiss: 'face_suggestion_different',
+    ignore: 'face_suggestion_ignore',
+  } as const;
+
+  // Native confirmation drains the suggestion and cannot be replayed to undo an assignment.
+  // Keep choices editable until closing; submit only the final choice for each face.
+  const choices = new SvelteMap<string, Choice>();
+  // A partial save must never replay requests that have already succeeded.
+  const savedFaceIds = new SvelteSet<string>();
 
   let items = $state<PersonFaceSuggestionResponseDto[]>([]);
   let total = $state(0);
+  let nextPage = 1;
+  let hasMore = $state(true);
   let index = $state(0);
   let loading = $state(true);
   let busy = $state(false);
+  let saving = $state(false);
+  let saveFailed = $state(false);
+  let saveCurrent = $state(0);
+  let saveTotal = $state(0);
   let confirmed = $state(0);
-
   let imgEl = $state<HTMLImageElement | undefined>(undefined);
   let imgReady = $state(false);
+  let photoWidth = $state(0);
+  let photoHeight = $state(0);
 
   const current = $derived(items[index]);
-  const currentActed = $derived(current ? actedFaceIds.has(current.assetFaceId) : false);
+  const currentChoice = $derived(current ? choices.get(current.assetFaceId) : undefined);
+  const currentSaved = $derived(current ? savedFaceIds.has(current.assetFaceId) : false);
+  const pendingCount = $derived(choices.size - savedFaceIds.size);
   const photoUrl = $derived(current ? getAssetMediaUrl({ id: current.assetId, size: AssetMediaSize.Preview }) : '');
-  // S11.6: the queue is empty — either it started that way or reviewing drained it — and the initial load has
-  // settled. `onClose` still fires (unchanged, see advance()/onMount below); this only controls what renders
-  // in the instant before/around that.
   const allDone = $derived(!loading && !current);
-
-  // `total` is the server's PENDING count — it shrinks as rows are acted on server-side, while `index` walks
-  // the append-only `items` buffer and only grows. Rendering `total` directly as the counter denominator makes
-  // it possible for the numerator to exceed it mid-session ("74 of 73"). `displayTotal` — pending remaining
-  // plus everything this session has already acted on — approximates the original total and is monotonic, so
-  // the numerator never outruns it.
-  const displayTotal = $derived(total + actedFaceIds.size);
+  const displayTotal = $derived(Math.max(total, items.length));
 
   const highlight = $derived.by(() => {
+    // The contained image and its overlay must track a resized photo frame.
+    void photoWidth;
+    void photoHeight;
     if (!current || !imgReady || !imgEl) {
       return undefined;
     }
@@ -103,23 +113,26 @@
     )[0];
   });
 
-  // Always page 1: acted rows have drained server-side, so a fresh page-1 read is the only reliable view of
-  // what's still pending. Appends rather than replaces — rows already in `items` (acted or not) keep their
-  // position, so `index` never gets silently invalidated out from under the user — and only rows that are
-  // neither already local nor already acted-on-but-not-yet-settled get added.
-  async function fetchHead() {
-    const res = await loadPage({ page: 1, size: PAGE_SIZE });
-    total = res.total;
-    const existingIds = new Set(items.map((it) => it.assetFaceId));
-    const newOnes = res.items.filter((it) => !actedFaceIds.has(it.assetFaceId) && !existingIds.has(it.assetFaceId));
-    if (newOnes.length > 0) {
-      items = [...items, ...newOnes];
+  // Drafts leave the queue intact, so normal pagination is safe. After a partial save, restart
+  // at page 1 and skip buffered faces: saved rows have then shifted the server's offsets.
+  async function fetchNext() {
+    while (hasMore) {
+      const res = await loadPage({ page: nextPage, size: PAGE_SIZE });
+      total = res.total + savedFaceIds.size;
+      hasMore = res.items.length > 0 && nextPage * PAGE_SIZE < res.total;
+      nextPage++;
+      const existingIds = new Set(items.map((it) => it.assetFaceId));
+      const newOnes = res.items.filter((it) => !existingIds.has(it.assetFaceId));
+      if (newOnes.length > 0) {
+        items = [...items, ...newOnes];
+        return;
+      }
     }
   }
 
   onMount(async () => {
     try {
-      await fetchHead();
+      await fetchNext();
     } catch (error) {
       handleError(error, $t('errors.unable_to_load_face_suggestions'));
       onClose({ confirmed });
@@ -132,73 +145,99 @@
     }
   });
 
-  // Close only when a FRESH fetch confirms nothing unacted is left — never on a stale `items.length >= total`,
-  // which the server's own shrinking total makes meaningless (D8).
   async function advance() {
     index++;
-    if (index >= items.length - PREFETCH) {
+    if (hasMore && index >= items.length - PREFETCH) {
       try {
-        await fetchHead();
+        await fetchNext();
       } catch (error) {
         if (index >= items.length) {
-          // Buffer exhausted AND the top-up failed (e.g. a network blip): falling through to the close check
-          // below would report a false "complete" while more may still be pending server-side. Back off to
-          // the last valid item, surface the error, and let the user retry (re-act or navigate) instead.
           index--;
-          handleError(error, $t('errors.unable_to_load_face_suggestions'));
-          return;
         }
-        /* buffer still has a valid next item — keep going; the close check below won't fire */
+        handleError(error, $t('errors.unable_to_load_face_suggestions'));
       }
     }
-    if (index >= items.length) {
-      onClose({ confirmed });
-    }
+    // Stay open at the end so Previous can still correct the very last face.
   }
 
-  // F24: stop inferring intent from a status code. The one thing the OLD code got dangerously wrong — treating
-  // every `{ status: 400 }` as "already resolved" — is gone: EVERY 4xx/5xx now surfaces via handleError, with
-  // the face left unacted so it can be retried. The acted/no-op distinction comes from the resolved value on
-  // the SUCCESS path only (`acted`), which the server states explicitly in the body.
-  async function act(kind: 'confirm' | 'dismiss' | 'ignore') {
-    if (busy || !current || currentActed) {
+  async function act(kind: Choice) {
+    if (loading || busy || !current || currentSaved) {
       return;
     }
     busy = true;
-    const face = current.assetFaceId;
+    choices.set(current.assetFaceId, kind);
     try {
-      const result =
-        kind === 'confirm' ? await confirm(face) : kind === 'dismiss' ? await dismiss(face) : await ignore(face);
-      actedFaceIds.add(face);
-      busy = false;
-      // acted = the call changed something; !acted = no-op (already resolved, feature disabled, ...). Only
-      // `confirm` has a counter/toast — dismiss/ignore mark the face acted and advance identically either way.
-      if (kind === 'confirm' && result.acted) {
-        confirmed++;
-        toastManager.primary($t('face_suggestion_confirmed_toast', { values: { count: 1 } }));
-      }
       await advance();
-    } catch (error) {
+    } finally {
       busy = false;
-      // A genuine failure (400 auth/ownership, 403, 500, network drop, ...): surface it and leave `current`
-      // exactly as it was so the user can retry. No status code is inspected here — the server's success-path
-      // `acted` field (handled above) is the ONLY acted/no-op signal now.
-      handleError(error, $t('errors.unable_to_process_face_suggestion'));
     }
   }
 
   const canPrev = $derived(index > 0);
-  const canNext = $derived(index < items.length - 1);
+  const canNext = $derived(!!current && (index < items.length - 1 || hasMore || !!currentChoice));
 
-  function step(delta: number) {
-    if (busy) {
+  async function step(delta: number) {
+    if (loading || busy) {
       return;
     }
-    const next = index + delta;
-    if (next >= 0 && next < items.length) {
-      index = next;
+    if (delta < 0 && canPrev) {
+      index--;
+    } else if (delta > 0 && canNext) {
+      busy = true;
+      try {
+        await advance();
+      } finally {
+        busy = false;
+      }
     }
   }
+
+  async function saveAndClose() {
+    if (loading || busy) {
+      return;
+    }
+    busy = true;
+    saving = true;
+    saveFailed = false;
+    const pending = [...choices].filter(([face]) => !savedFaceIds.has(face));
+    saveTotal = pending.length;
+    let savingFace: string | undefined;
+    try {
+      for (const [offset, [face, kind]] of pending.entries()) {
+        saveCurrent = offset + 1;
+        savingFace = face;
+        const result =
+          kind === 'confirm' ? await confirm(face) : kind === 'dismiss' ? await dismiss(face) : await ignore(face);
+        savedFaceIds.add(face);
+        if (kind === 'confirm' && result.acted) {
+          confirmed++;
+        }
+      }
+      if (confirmed > 0) {
+        toastManager.primary($t('face_suggestion_confirmed_toast', { values: { count: confirmed } }));
+      }
+      onClose({ confirmed });
+    } catch (error) {
+      // Every failure stays visible and retryable; a 400 is NOT an already-resolved signal.
+      saveFailed = true;
+      if (savingFace) {
+        index = items.findIndex((it) => it.assetFaceId === savingFace);
+      }
+      nextPage = 1;
+      hasMore = true;
+      handleError(error, $t('errors.unable_to_process_face_suggestion'));
+    } finally {
+      saving = false;
+      busy = false;
+    }
+  }
+
+  // Closing the dialog saves. Browser navigation/reload must not silently discard an unfinished session.
+  beforeNavigate((navigation) => {
+    if (pendingCount > 0 || saving) {
+      navigation.cancel();
+    }
+  });
 
   $effect(() => {
     void current?.assetFaceId;
@@ -206,31 +245,42 @@
   });
 
   function onKeydown(event: KeyboardEvent) {
+    if (
+      event.defaultPrevented ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.shiftKey ||
+      shouldIgnoreEvent(event)
+    ) {
+      return;
+    }
+    if (event.key === 'Enter') {
+      if (event.target instanceof Element && event.target.closest('[data-testid="suggestion-save-btn"]')) {
+        return;
+      }
+      // Cancel native activation of whichever button has focus: Enter always means Same person.
+      event.preventDefault();
+      if (!loading && !event.repeat) {
+        void act('confirm');
+      }
+      return;
+    }
     if (loading) {
       return;
     }
     switch (event.key) {
-      case 'ArrowRight': {
-        event.preventDefault();
-        void act('confirm');
-        break;
-      }
-      case 'ArrowLeft': {
-        event.preventDefault();
-        void act('dismiss');
-        break;
-      }
-      case 'ArrowDown': {
-        event.preventDefault();
-        void act('ignore');
-        break;
-      }
+      case 'ArrowRight':
       case ']': {
-        step(1);
+        event.preventDefault();
+        void step(1);
         break;
       }
+      case 'ArrowLeft':
       case '[': {
-        step(-1);
+        event.preventDefault();
+        void step(-1);
         break;
       }
     }
@@ -244,44 +294,63 @@
     ? $t('face_suggestion_modal_title', { values: { name: person.name } })
     : $t('face_suggestion_modal_title_unnamed')}
   size="large"
-  onClose={() => onClose({ confirmed })}
+  class="person-suggestion-review"
+  onClose={() => void saveAndClose()}
+  onEscapeKeydown={(event) => {
+    event.preventDefault();
+    void saveAndClose();
+  }}
 >
-  <ModalBody>
-    <div class="min-h-96">
-      {#if loading}
-        <div data-testid="suggestion-loading" class="h-96 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-800"></div>
-      {:else if current}
-        <div class="flex flex-col gap-4">
-          <p
-            data-testid="suggestion-progress"
-            data-current={index + 1}
-            data-total={displayTotal}
-            aria-live="polite"
-            class="text-center text-sm text-gray-500 dark:text-gray-400"
+  <ModalBody class="person-suggestion-review-body">
+    <div class="suggestion-review-content">
+      {#if saveFailed}
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p role="alert" class="text-sm">{$t('face_suggestion_save_error')}</p>
+          <Button
+            variant="ghost"
+            class="shrink-0"
+            disabled={busy}
+            data-testid="suggestion-discard-btn"
+            onclick={() => onClose({ confirmed })}
           >
-            {$t('face_suggestion_progress', { values: { current: index + 1, total: displayTotal } })}
-          </p>
-
-          {#if currentActed}
+            {$t('face_suggestion_discard_unsaved')}
+          </Button>
+        </div>
+      {/if}
+      {#if loading}
+        <div
+          data-testid="suggestion-loading"
+          class="min-h-0 flex-1 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-800"
+        ></div>
+      {:else if current}
+        <div class="suggestion-review-candidate">
+          <div class="suggestion-review-status">
             <p
-              data-testid="suggestion-reviewed-badge"
-              class="text-center text-xs font-semibold text-green-600 dark:text-green-400"
+              data-testid="suggestion-progress"
+              data-current={index + 1}
+              data-total={displayTotal}
+              aria-live="polite"
+              class="text-center text-sm text-gray-500 dark:text-gray-400"
             >
-              {$t('face_suggestion_reviewed')}
+              {$t('face_suggestion_progress', { values: { current: index + 1, total: displayTotal } })}
             </p>
-          {/if}
 
-          <!--
-            The stacked footer costs ~100px on a phone; capping the context photo lower there keeps it, both
-            face crops and the buttons on screen together, which is the whole comparison the user is making.
-          -->
-          <div class="relative mx-auto max-h-[40vh] sm:max-h-[60vh]">
+            {#if currentChoice}
+              <p data-testid="suggestion-reviewed-badge" aria-live="polite" class="text-center text-sm font-semibold">
+                {$t('face_suggestion_selected', { values: { choice: $t(choiceLabels[currentChoice]) } })}
+                {#if currentSaved}
+                  · {$t('saved')}{/if}
+              </p>
+            {/if}
+          </div>
+
+          <div class="suggestion-review-photo" bind:clientWidth={photoWidth} bind:clientHeight={photoHeight}>
             <img
               bind:this={imgEl}
               data-testid="suggestion-full-photo"
               src={photoUrl}
               alt={$t('face_suggestion_candidate')}
-              class="max-h-[40vh] w-auto rounded-lg object-contain sm:max-h-[60vh]"
+              class="absolute inset-0 size-full rounded-lg object-contain"
               onload={() => (imgReady = true)}
             />
             {#if highlight}
@@ -330,76 +399,160 @@
           </div>
         </div>
       {:else if allDone}
-        <div data-testid="suggestion-all-done" class="flex h-96 flex-col items-center justify-center gap-2">
-          <p class="text-center text-sm text-gray-500 dark:text-gray-400">{$t('face_suggestion_all_done')}</p>
+        <div data-testid="suggestion-all-done" class="flex min-h-0 flex-1 flex-col items-center justify-center gap-2">
+          <p class="text-center text-sm text-gray-500 dark:text-gray-400">
+            {$t(choices.size === items.length ? 'face_suggestion_all_done' : 'face_suggestion_end')}
+          </p>
         </div>
       {/if}
     </div>
   </ModalBody>
 
-  <ModalFooter>
-    <div class="flex w-full items-center justify-between gap-2 sm:gap-3">
-      <IconButton
-        variant="ghost"
-        shape="round"
-        icon={mdiChevronLeft}
-        aria-label={$t('previous')}
-        disabled={busy || !canPrev}
-        data-testid="suggestion-prev-btn"
-        onclick={() => step(-1)}
-      />
-      <!--
+  <ModalFooter class="shrink-0">
+    <div class="flex w-full flex-col gap-3">
+      <div class="flex w-full items-center justify-between gap-2 sm:gap-3">
+        <IconButton
+          variant="ghost"
+          shape="round"
+          icon={mdiChevronLeft}
+          aria-label={$t('previous')}
+          aria-keyshortcuts="ArrowLeft ["
+          disabled={busy || !canPrev}
+          data-testid="suggestion-prev-btn"
+          onclick={() => step(-1)}
+        />
+        <!--
         A single non-wrapping row of three labelled pills does not fit a phone, and the modal's @immich/ui Card
         is `overflow-hidden` — so the overflow CLIPPED the trailing (primary) button rather than scrolling it.
         Below `sm` the verdicts therefore stack full-width in the space between the two chevrons; from `sm` up
         `grow-0` + `flex-row` restores the original centred row exactly.
       -->
-      <div
-        data-testid="suggestion-actions"
-        class="flex min-w-0 grow flex-col gap-2 sm:grow-0 sm:flex-row sm:justify-center sm:gap-3"
-      >
-        <Button
-          class="w-full sm:w-auto"
+        <div
+          data-testid="suggestion-actions"
+          class="flex min-w-0 grow flex-col gap-2 sm:grow-0 sm:flex-row sm:justify-center sm:gap-3"
+        >
+          <Button
+            class="w-full sm:w-auto"
+            shape="round"
+            color="secondary"
+            disabled={busy || !current || currentSaved}
+            aria-pressed={currentChoice === 'dismiss'}
+            leadingIcon={mdiAccountRemoveOutline}
+            data-testid="suggestion-different-btn"
+            onclick={() => act('dismiss')}
+          >
+            {$t('face_suggestion_different')}
+          </Button>
+          <Button
+            class="w-full sm:w-auto"
+            shape="round"
+            color="secondary"
+            disabled={busy || !current || currentSaved}
+            aria-pressed={currentChoice === 'ignore'}
+            leadingIcon={mdiEyeOffOutline}
+            data-testid="suggestion-ignore-btn"
+            onclick={() => act('ignore')}
+          >
+            {$t('face_suggestion_ignore')}
+          </Button>
+          <Button
+            class="w-full sm:w-auto"
+            shape="round"
+            disabled={busy || !current || currentSaved}
+            aria-pressed={currentChoice === 'confirm'}
+            leadingIcon={mdiAccountCheckOutline}
+            data-testid="suggestion-same-btn"
+            aria-keyshortcuts="Enter"
+            onclick={() => act('confirm')}
+          >
+            {$t('face_suggestion_same')}
+          </Button>
+        </div>
+        <IconButton
+          variant="ghost"
           shape="round"
+          icon={mdiChevronRight}
+          aria-label={$t('next')}
+          aria-keyshortcuts="ArrowRight ]"
+          disabled={busy || !canNext}
+          data-testid="suggestion-next-btn"
+          onclick={() => step(1)}
+        />
+      </div>
+
+      <div class="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <p aria-live="polite" class="grid text-sm text-gray-600 dark:text-gray-300">
+          <!-- Reserve the helper's space while the shorter saving progress is shown. -->
+          <span class="col-start-1 row-start-1" class:invisible={saving} aria-hidden={saving}>
+            {$t('face_suggestion_edit_until_save')}
+          </span>
+          {#if saving}
+            <span class="col-start-1 row-start-1">
+              {$t('face_suggestion_saving', { values: { current: saveCurrent, total: saveTotal } })}
+            </span>
+          {/if}
+        </p>
+        <Button
           color="secondary"
-          disabled={busy || !current || currentActed}
-          leadingIcon={mdiAccountRemoveOutline}
-          data-testid="suggestion-different-btn"
-          onclick={() => act('dismiss')}
+          class="shrink-0"
+          disabled={loading || busy}
+          data-testid="suggestion-save-btn"
+          onclick={saveAndClose}
         >
-          {$t('face_suggestion_different')}
-        </Button>
-        <Button
-          class="w-full sm:w-auto"
-          shape="round"
-          color="secondary"
-          disabled={busy || !current || currentActed}
-          leadingIcon={mdiEyeOffOutline}
-          data-testid="suggestion-ignore-btn"
-          onclick={() => act('ignore')}
-        >
-          {$t('face_suggestion_ignore')}
-        </Button>
-        <Button
-          class="w-full sm:w-auto"
-          shape="round"
-          disabled={busy || !current || currentActed}
-          leadingIcon={mdiAccountCheckOutline}
-          data-testid="suggestion-same-btn"
-          onclick={() => act('confirm')}
-        >
-          {$t('face_suggestion_same')}
+          {$t('face_suggestion_save_and_close')}
         </Button>
       </div>
-      <IconButton
-        variant="ghost"
-        shape="round"
-        icon={mdiChevronRight}
-        aria-label={$t('next')}
-        disabled={busy || !canNext}
-        data-testid="suggestion-next-btn"
-        onclick={() => step(1)}
-      />
     </div>
   </ModalFooter>
 </Modal>
+
+<style>
+  /* A viewport-sized frame keeps the footer at one screen position for every candidate and state. */
+  :global(.person-suggestion-review) {
+    height: 100dvh;
+  }
+
+  :global(.person-suggestion-review > div) {
+    min-height: 0;
+  }
+
+  :global(.person-suggestion-review .person-suggestion-review-body) {
+    flex: 1 1 0%;
+    min-height: 0;
+    height: auto;
+  }
+
+  .suggestion-review-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .suggestion-review-candidate {
+    display: grid;
+    grid-template-rows: minmax(2.75rem, auto) minmax(6rem, 1fr) auto;
+    gap: 1rem;
+    flex: 1;
+    min-height: 18rem;
+  }
+
+  .suggestion-review-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .suggestion-review-photo {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  @media (min-width: 40rem) {
+    :global(.person-suggestion-review) {
+      height: calc(100dvh - 2rem);
+    }
+  }
+</style>

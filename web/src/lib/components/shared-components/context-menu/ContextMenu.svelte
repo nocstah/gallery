@@ -49,7 +49,7 @@
   };
   const toBody = (node: HTMLElement, enabled: boolean) => {
     if (enabled) {
-      document.body.append(node);
+      (document.fullscreenElement ?? document.body).append(node);
     }
     return { destroy: () => enabled && node.remove() };
   };
@@ -70,11 +70,14 @@
     // around the list, not the list alone; where it does not fit after the cursor it opens before it (above, or to the
     // other side), like a desktop menu, and only a menu taller than the window scrolls.
     const style = getComputedStyle(menuScrollView);
+    // CSS lengths include px; Number('8px') would make the menu position NaN.
+    /* eslint-disable unicorn/prefer-number-coercion */
     const frame =
       Number.parseFloat(style.paddingTop) +
       Number.parseFloat(style.paddingBottom) +
       Number.parseFloat(style.borderTopWidth) +
       Number.parseFloat(style.borderBottomWidth);
+    /* eslint-enable unicorn/prefer-number-coercion */
     const height = menuElement.scrollHeight + frame;
     const width = rect.width;
 
@@ -111,15 +114,17 @@
     position.needScrollBar ? 'overflow-auto' : 'overflow-hidden',
   ]}
   style:left="{position.left}px"
-  style:visibility={menuScrollView && menuElement ? undefined : 'hidden'}
+  style:z-index={portal ? 2_147_483_000 : undefined}
+  style:visibility={isVisible && menuScrollView && menuElement ? undefined : 'hidden'}
   style:top="{position.top}px"
   style:max-height={isVisible ? `${position.maxHeight}px` : '0px'}
-  style:transition-property="max-height"
+  style:transition-property="none"
   style:scrollbar-color="rgba(85, 86, 87, 0.408) transparent"
   use:clickOutside={{ onOutclick: onClose }}
   use:watchSize
   use:toBody={portal}
   data-menu-portal={portal ? true : undefined}
+  inert={!isVisible}
   tabindex="-1"
 >
   <ul

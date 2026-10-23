@@ -26,6 +26,7 @@
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
+  import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineAsset, TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
   import PersonMergeSuggestionModal from '$lib/modals/PersonMergeSuggestionModal.svelte';
@@ -53,6 +54,7 @@
     runScopedMergeWithCrossOwnerConfirmation,
   } from '$lib/utils/cross-owner-merge';
   import { handleError } from '$lib/utils/handle-error';
+  import { curatorIsMine } from '$lib/utils/curator';
   import { isSpaceScopedPerson, toScopedPersonRef } from '$lib/utils/scoped-person-ref';
   import { normalizeSearchString } from '$lib/utils/string-utils';
   import { getTimelineBucketZoomTarget, type ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
@@ -116,7 +118,11 @@
   let timelineManager = $state<TimelineManager>() as TimelineManager;
   let timelineGrouping = $state<TimelineGrouping>('day');
   let temporalAnchor = $state<TimelineTemporalAnchor | undefined>();
-  let numberOfAssets = $derived(timelineManager?.isInitialized ? timelineManager.assetCount : data.statistics.assets);
+  let totalMatchingAssets = $derived(
+    timelineManager?.isInitialized ? timelineManager.ungroupedAssetCount : data.statistics.assets,
+  );
+  let numberOfAssets = $derived(totalMatchingAssets);
+  const groupPersonStacks = $derived(curatorIsMine() && !thumbnailZoomManager.expandStacks);
 
   const handleAddAllToCollection = () => {
     void modalManager.show(SearchAddAllToCollectionModal, {
@@ -125,7 +131,7 @@
         personIds: [data.person.filterId ?? data.person.id],
         withSharedSpaces: true,
       },
-      total: numberOfAssets,
+      total: totalMatchingAssets,
       smartSearchEnabled: false,
       language: $lang,
     });
@@ -139,6 +145,8 @@
   const options = $derived({
     ...baseTimelineOptions,
     grouping: timelineGrouping,
+    groupPersonStacks,
+    personPhotoSearch: true,
   });
 
   let viewMode: PersonPageViewMode = $state(PersonPageViewMode.VIEW_ASSETS);
@@ -713,7 +721,7 @@
       grouping={timelineGrouping}
       hidden={assetMultiSelectManager.selectionActive || viewMode !== PersonPageViewMode.VIEW_ASSETS}
       class="ps-0"
-      resultCount={numberOfAssets}
+      resultCount={totalMatchingAssets}
       onGroupingChange={handleTimelineGroupingChange}
       onAddAllToCollection={handleAddAllToCollection}
     />
@@ -724,6 +732,7 @@
           {person}
           bind:timelineManager
           {options}
+          withStacked={groupPersonStacks}
           assetInteraction={assetMultiSelectManager}
           onEscape={handleEscape}
           {temporalAnchor}

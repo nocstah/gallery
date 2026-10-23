@@ -1,5 +1,6 @@
 <script lang="ts">
   import VideoNativeViewer from '$lib/components/asset-viewer/VideoNativeViewer.svelte';
+  import VideoContextMenu from '$lib/components/asset-viewer/VideoContextMenu.svelte';
   import VideoPanoramaViewer from '$lib/components/asset-viewer/VideoPanoramaViewer.svelte';
   import { ProjectionType } from '$lib/constants';
   import type { AssetResponseDto } from '@immich/sdk';
@@ -42,22 +43,24 @@
   const effectiveAssetId = $derived(assetId ?? asset.id);
 </script>
 
-{#if projectionType === ProjectionType.EQUIRECTANGULAR}
-  <VideoPanoramaViewer {asset} />
-{:else}
-  <VideoNativeViewer
-    {loopVideo}
-    {cacheKey}
-    {asset}
-    assetId={effectiveAssetId}
-    {playOriginalVideo}
-    {extendedControls}
-    {onPreviousAsset}
-    {onNextAsset}
-    {onVideoEnded}
-    {onVideoStarted}
-    {onClose}
-    {spaceId}
-    {canEditSpacePeople}
-  />
-{/if}
+<VideoContextMenu {asset}>
+  {#if projectionType === ProjectionType.EQUIRECTANGULAR}
+    <VideoPanoramaViewer {asset} />
+  {:else}
+    <VideoNativeViewer
+      {loopVideo}
+      {cacheKey}
+      {asset}
+      assetId={effectiveAssetId}
+      {playOriginalVideo}
+      {extendedControls}
+      {onPreviousAsset}
+      {onNextAsset}
+      {onVideoEnded}
+      {onVideoStarted}
+      {onClose}
+      {spaceId}
+      {canEditSpacePeople}
+    />
+  {/if}
+</VideoContextMenu>

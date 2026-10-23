@@ -12,28 +12,41 @@ import {
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { addMessages } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { getAnimateMock } from '$lib/__mocks__/animate.mock';
 import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import { clearPeopleFaceStatisticsInfoCache } from '$lib/components/people/people-face-statistics-info-cache';
-import { PEOPLE_PAGE_SIZE } from '$lib/constants';
+import { PEOPLE_PAGE_SIZE, SessionStorageKey } from '$lib/constants';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { PeopleFilterBy, PeopleSortBy, peopleViewSettings } from '$lib/stores/preferences.store';
 import { userInteraction } from '$lib/stores/user.svelte';
+import { handleError } from '$lib/utils/handle-error';
 import { personFactory } from '@test-data/factories/person-factory';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
 import { userAdminFactory } from '@test-data/factories/user-factory';
 import PeoplePage from './+page.svelte';
 
-const { gotoMock, pageStore, featureFlagsMock } = vi.hoisted(() => {
+const { gotoMock, pageStore, navigatingStore, featureFlagsMock } = vi.hoisted(() => {
   let pageValue = {
     url: new URL('http://localhost/people'),
     route: { id: '/(user)/people' },
   };
 
+  const navigationSubscribers = new Set<(value: { to: { url: URL } } | null) => void>();
   return {
+    navigatingStore: {
+      set: (value: { to: { url: URL } } | null) => {
+        for (const subscriber of navigationSubscribers) subscriber(value);
+      },
+      subscribe: (run: (value: { to: { url: URL } } | null) => void) => {
+        navigationSubscribers.add(run);
+        run(null);
+        return () => navigationSubscribers.delete(run);
+      },
+    },
     gotoMock: vi.fn(),
     pageStore: {
       setUrl: (url: string) => {
@@ -48,8 +61,9 @@ const { gotoMock, pageStore, featureFlagsMock } = vi.hoisted(() => {
   };
 });
 
+vi.mock('$lib/utils/handle-error', () => ({ handleError: vi.fn() }));
 vi.mock('$app/navigation', () => ({ goto: gotoMock }));
-vi.mock('$app/stores', () => ({ page: pageStore }));
+vi.mock('$app/stores', () => ({ page: pageStore, navigating: navigatingStore }));
 vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
   featureFlagsManager: featureFlagsMock,
 }));
@@ -64,7 +78,7 @@ vi.mock('@immich/ui', async (importOriginal) => {
 });
 
 vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+  const { default: MockComponent } = await import('./people-page-layout.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
@@ -206,8 +220,18 @@ function renderPaginatedPage() {
 }
 
 describe('Global people page', () => {
+  beforeAll(() => {
+    addMessages('dev', {
+      cmdk_preview_photo_count: '{count, plural, one {# photo} other {# photos}}',
+      cmdk_unnamed_person: 'Unnamed person',
+      person_tile_label: '{name}, {count, plural, one {# photo} other {# photos}}, {years}',
+      person_tile_label_count: '{name}, {count, plural, one {# photo} other {# photos}}',
+    });
+  });
+
   beforeEach(() => {
     vi.resetAllMocks();
+    sessionStorage.clear();
     userInteraction.recentSpaces = undefined;
     peopleViewSettings.set({ sortBy: PeopleSortBy.PhotoCount, filterBy: PeopleFilterBy.All });
     clearPeopleFaceStatisticsInfoCache();
@@ -332,9 +356,26 @@ describe('Global people page', () => {
     expect(screen.queryByText('search_no_people')).toBeNull();
   });
 
-  // Local Omarchy layer: people who share a name are told apart by how many photos they are in and the years those
-  // span (DESIGN.md, People); read-only, and a name nobody else bears says nothing more
-  it('tells apart people who share a name by their photos and years, and leaves a unique name alone', async () => {
+  it('shows counts for named and unnamed faces without additional requests, including singular and zero', () => {
+    renderPage([
+      makePerson({ id: 'count-alice', name: 'Alice', numberOfAssets: 12 }),
+      makePerson({ id: 'count-unnamed', name: '', numberOfAssets: 1 }),
+      makePerson({ id: 'count-empty', name: 'Empty', numberOfAssets: 0 }),
+      makePerson({ id: 'count-unknown', name: 'Unknown', numberOfAssets: undefined }),
+    ]);
+
+    expect(screen.getByRole('link', { name: 'Alice, 12 photos' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Unnamed person, 1 photo' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Empty, 0 photos' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Unknown' })).toBeInTheDocument();
+    expect(screen.getByText('12 photos')).toBeVisible();
+    expect(screen.getByText('1 photo')).toBeVisible();
+    expect(screen.getAllByText('0 photos')).toHaveLength(1);
+    expect(sdkMock.getTimeBuckets).not.toHaveBeenCalled();
+    expect(sdkMock.getPerson).not.toHaveBeenCalled();
+  });
+
+  it('adds years for repeated names while keeping the listed photo counts on every face', async () => {
     sdkMock.getTimeBuckets.mockImplementation(({ personIds }) =>
       Promise.resolve(
         personIds?.[0] === 'daniel-a'
@@ -346,20 +387,20 @@ describe('Global people page', () => {
       ),
     );
     renderPage([
-      makePerson({ id: 'daniel-a', name: 'Daniel', numberOfAssets: 140 }),
+      makePerson({ id: 'daniel-a', name: 'Daniel', numberOfAssets: 150 }),
       makePerson({ id: 'daniel-b', name: 'daniel', numberOfAssets: 29 }),
       makePerson({ id: 'kim', name: 'Kim', numberOfAssets: 11 }),
     ]);
 
-    await waitFor(() =>
-      expect(screen.getAllByTestId('person-span').map((line) => line.textContent?.trim())).toEqual([
-        '140 · 2010–2026',
-        '29 · 2015',
-      ]),
-    );
+    expect(screen.getByText('150 photos')).toBeVisible();
+    expect(screen.getByText('29 photos')).toBeVisible();
+    expect(screen.getByText('11 photos')).toBeVisible();
+    await waitFor(() => expect(screen.getByText('2010–2026')).toBeVisible());
+    expect(screen.getByText('2015')).toBeVisible();
     // a screen reader hears the same: the tiles' links say the count and the years with the name
-    expect(screen.getAllByRole('link', { name: 'person_tile_label' })).toHaveLength(2);
-    expect(screen.getByRole('link', { name: 'Kim' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Daniel, 150 photos, 2010–2026' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'daniel, 29 photos, 2015' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Kim, 11 photos' })).toBeInTheDocument();
     expect(sdkMock.getTimeBuckets).toHaveBeenCalledTimes(2);
     expect(sdkMock.updatePerson).not.toHaveBeenCalled();
   });
@@ -733,7 +774,7 @@ describe('Global people page', () => {
       }),
     ]);
 
-    expect(screen.getByRole('link', { name: 'Shared Alice' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Shared Alice, 4 photos' })).toHaveAttribute(
       'href',
       '/people/space-person-1?previousRoute=%2Fpeople',
     );
@@ -828,6 +869,98 @@ describe('Global people page', () => {
     expect(screen.queryByText('to_favorite')).not.toBeInTheDocument();
     expect(screen.queryByText('hide_person')).not.toBeInTheDocument();
   });
+
+  it('restores the second page before scrolling back to a face', async () => {
+    sessionStorage.setItem(SessionStorageKey.INFINITE_SCROLL_PAGE, '2');
+    sessionStorage.setItem(SessionStorageKey.SCROLL_POSITION, '2400');
+    let resolvePage!: (result: PeopleResponseDto) => void;
+    sdkMock.getAllPeople.mockReturnValue(new Promise((resolve) => (resolvePage = resolve)));
+    const scroll = vi.spyOn(HTMLElement.prototype, 'scroll').mockImplementation(function () {
+      // Restoration must happen after the additional rows have been rendered, not just fetched.
+      expect(screen.getByDisplayValue('Carol')).toBeInTheDocument();
+    });
+    renderPage([makePerson()], null, true);
+    await waitFor(() => expect(sdkMock.getAllPeople).toHaveBeenCalledOnce());
+    expect(scroll).not.toHaveBeenCalled();
+    resolvePage({ people: [makePerson({ id: 'p2', name: 'Carol' })], total: 2, hidden: 0, hasNextPage: false });
+    await waitFor(() => expect(scroll).toHaveBeenCalledWith({ top: 2400, behavior: 'instant' }));
+    expect(sessionStorage.getItem(SessionStorageKey.SCROLL_POSITION)).toBeNull();
+    expect(sessionStorage.getItem(SessionStorageKey.INFINITE_SCROLL_PAGE)).toBeNull();
+    scroll.mockRestore();
+  });
+
+  it('restores every saved page with the active filter and saves the next browsing position', async () => {
+    sessionStorage.setItem(SessionStorageKey.INFINITE_SCROLL_PAGE, '3');
+    sessionStorage.setItem(SessionStorageKey.SCROLL_POSITION, '5200');
+    peopleViewSettings.set({ sortBy: PeopleSortBy.PhotoCount, filterBy: PeopleFilterBy.Pets });
+    sdkMock.getAllPeople
+      .mockResolvedValueOnce({
+        people: [makePerson({ id: 'p2', name: 'Cat' })],
+        total: 3,
+        hidden: 0,
+        hasNextPage: true,
+      })
+      .mockResolvedValueOnce({
+        people: [makePerson({ id: 'p3', name: 'Dog' })],
+        total: 3,
+        hidden: 0,
+        hasNextPage: false,
+      });
+    const scroll = vi.spyOn(HTMLElement.prototype, 'scroll');
+    renderPage([makePerson()], null, true);
+    await waitFor(() => expect(scroll).toHaveBeenCalledWith({ top: 5200, behavior: 'instant' }));
+    expect(sdkMock.getAllPeople.mock.calls.map(([request]) => request)).toEqual([
+      { withHidden: true, withSharedSpaces: true, page: 2, size: PEOPLE_PAGE_SIZE, $type: 'pet' },
+      { withHidden: true, withSharedSpaces: true, page: 3, size: PEOPLE_PAGE_SIZE, $type: 'pet' },
+    ]);
+    screen.getByTestId('people-scroll').scrollTop = 5800;
+    navigatingStore.set({ to: { url: new URL('http://localhost/people/p3') } });
+    expect(sessionStorage.getItem(SessionStorageKey.SCROLL_POSITION)).toBe('5800');
+    expect(sessionStorage.getItem(SessionStorageKey.INFINITE_SCROLL_PAGE)).toBe('3');
+    scroll.mockRestore();
+  });
+
+  it('keeps loaded rows and allows paging to retry after a restoration request fails', async () => {
+    sessionStorage.setItem(SessionStorageKey.INFINITE_SCROLL_PAGE, '3');
+    sessionStorage.setItem(SessionStorageKey.SCROLL_POSITION, '2400');
+    const error = new Error('Unable to fetch page 3');
+    sdkMock.getAllPeople
+      .mockResolvedValueOnce({
+        people: [makePerson({ id: 'p3', name: 'Carol' })],
+        total: 4,
+        hidden: 0,
+        hasNextPage: true,
+      })
+      .mockRejectedValueOnce(error)
+      .mockResolvedValueOnce({
+        people: [makePerson({ id: 'p4', name: 'Dave' })],
+        total: 4,
+        hidden: 0,
+        hasNextPage: false,
+      });
+    const scroll = vi.spyOn(HTMLElement.prototype, 'scroll');
+    const { intersect } = renderPaginatedPage();
+    await waitFor(() => expect(scroll).toHaveBeenCalledWith({ top: 2400, behavior: 'instant' }));
+    expect(handleError).toHaveBeenCalledWith(error, 'errors.failed_to_load_people');
+    expect(screen.getByDisplayValue('Carol')).toBeInTheDocument();
+    await intersect();
+    await waitFor(() => expect(screen.getByDisplayValue('Dave')).toBeInTheDocument());
+    expect(sdkMock.getAllPeople.mock.calls.map(([request]) => request.page)).toEqual([2, 3, 3]);
+    scroll.mockRestore();
+  });
+
+  it.each([null, '1', 'invalid', '3'])(
+    'finishes restoring a single-page list with saved page %s',
+    async (savedPage) => {
+      if (savedPage) sessionStorage.setItem(SessionStorageKey.INFINITE_SCROLL_PAGE, savedPage);
+      sessionStorage.setItem(SessionStorageKey.SCROLL_POSITION, '700');
+      const scroll = vi.spyOn(HTMLElement.prototype, 'scroll');
+      renderPage([makePerson()], null, false);
+      await waitFor(() => expect(scroll).toHaveBeenCalledWith({ top: 700, behavior: 'instant' }));
+      expect(sdkMock.getAllPeople).not.toHaveBeenCalled();
+      scroll.mockRestore();
+    },
+  );
 
   it('requests the next page at the shared size and merges the rows across the boundary', async () => {
     // The initial load fetched page 1 at PEOPLE_PAGE_SIZE; infinite scroll must continue with the

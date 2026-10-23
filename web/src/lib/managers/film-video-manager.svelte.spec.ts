@@ -7,10 +7,17 @@ import { CuratorError, type FilmJob, type FilmResult } from '$lib/utils/curator'
 // made is left to finish. Offered to Curator's owner only (utils/curator's curatorIsMine), once Curator lists
 // film.render.
 
-const { curatorMock, mine } = vi.hoisted(() => ({
-  curatorMock: { kinds: vi.fn(), saveFilm: vi.fn(), film: vi.fn() },
+const { curatorMock, mine, showModal } = vi.hoisted(() => ({
+  curatorMock: { kinds: vi.fn(), saveFilm: vi.fn(), film: vi.fn(), keepFilm: vi.fn() },
   mine: { current: true },
+  showModal: vi.fn(),
 }));
+
+vi.mock('@immich/ui', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@immich/ui')>()),
+  modalManager: { show: showModal },
+}));
+vi.mock('$lib/modals/SharedLinkCreateModal.svelte', () => ({ default: {} }));
 
 vi.mock('$lib/utils/curator', async (importOriginal) => ({
   ...(await importOriginal<typeof import('$lib/utils/curator')>()),
@@ -100,6 +107,79 @@ describe('asking whether Curator saves films', () => {
 });
 
 describe('saving a film', () => {
+  it('prepares distinct orientations privately and reuses only the matching render', async () => {
+    curatorMock.saveFilm.mockResolvedValue({ job: 41 });
+    curatorMock.film.mockResolvedValue(job({ status: 'done', result }));
+    const { filmVideos } = await fresh();
+    const landscape = { memoryId: 'memory-1', plan: plan(), size: '720p' as const };
+    const portrait = { ...landscape, plan: { ...plan(), aspect: 0.5625 } };
+    const first = filmVideos.prepare(landscape, 'Memory');
+    const second = filmVideos.prepare(portrait, 'Memory');
+    await vi.advanceTimersByTimeAsync(1750);
+    const [wide, tall] = await Promise.all([first, second]);
+    expect(wide.key).not.toBe(tall.key);
+    expect(curatorMock.saveFilm).toHaveBeenCalledTimes(2);
+    await filmVideos.prepare(portrait, 'Memory');
+    expect(curatorMock.saveFilm).toHaveBeenCalledTimes(2);
+    expect(clicked).toEqual([]);
+    expect(curatorMock.keepFilm).not.toHaveBeenCalled();
+    expect(showModal).not.toHaveBeenCalled();
+  });
+
+  it('keeps the progress panel out of the share dialog and prevents a second dialog until it closes', async () => {
+    let close!: () => void;
+    showModal.mockImplementationOnce(() => new Promise<void>((resolve) => (close = resolve)));
+    curatorMock.saveFilm.mockResolvedValue({ job: 41 });
+    curatorMock.film.mockResolvedValue(job({ status: 'done', result }));
+    curatorMock.keepFilm.mockResolvedValue({ assetId: 'private-film' });
+    const { filmVideos } = await fresh();
+    filmVideos.start({ memoryId: 'memory-1', plan: plan() }, 'Siem Reap', 'share');
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(filmVideos.shareDialogOpen).toBe(true);
+    await filmVideos.share(filmVideos.items[0]);
+    expect(showModal).toHaveBeenCalledOnce();
+    close();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(filmVideos.shareDialogOpen).toBe(false);
+    expect(filmVideos.items[0].sharing).toBe(false);
+  });
+
+  it('prepares a private copy and opens the share dialog without downloading or creating a public link', async () => {
+    curatorMock.saveFilm.mockResolvedValue({ job: 41 });
+    curatorMock.film.mockResolvedValue(job({ status: 'done', result }));
+    curatorMock.keepFilm.mockResolvedValue({ assetId: 'private-film' });
+    const { filmVideos } = await fresh();
+    const request = { memoryId: 'memory-1', plan: plan(), title: 'Siem Reap' };
+    filmVideos.start(request, 'Siem Reap', 'share');
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(filmVideos.items[0]).toMatchObject({ status: 'ready', assetId: 'private-film', sharing: false });
+    expect(curatorMock.keepFilm).toHaveBeenCalledWith(41);
+    expect(showModal).toHaveBeenCalledWith(expect.anything(), { assetIds: ['private-film'] });
+    expect(clicked).toEqual([]);
+
+    filmVideos.start(request, 'Siem Reap', 'share');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(curatorMock.saveFilm).toHaveBeenCalledTimes(1);
+    expect(curatorMock.keepFilm).toHaveBeenCalledTimes(1);
+    expect(showModal).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a ready video when preparing the share fails and retries without rendering it again', async () => {
+    curatorMock.saveFilm.mockResolvedValue({ job: 41 });
+    curatorMock.film.mockResolvedValue(job({ status: 'done', result }));
+    curatorMock.keepFilm.mockRejectedValueOnce(new CuratorError('Gallery is restarting', 502));
+    const { filmVideos } = await fresh();
+    filmVideos.start({ memoryId: 'memory-1', plan: plan() }, 'Siem Reap', 'share');
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(filmVideos.items[0]).toMatchObject({ status: 'ready', shareError: 'Gallery is restarting' });
+    expect(showModal).not.toHaveBeenCalled();
+    curatorMock.keepFilm.mockResolvedValue({ assetId: 'private-film' });
+    await filmVideos.share(filmVideos.items[0]);
+    expect(showModal).toHaveBeenCalledOnce();
+    expect(curatorMock.saveFilm).toHaveBeenCalledOnce();
+    expect(filmVideos.items[0].shareError).toBeUndefined();
+  });
+
   it('measures how far a film has got: the photos read, then its frames', async () => {
     const { filmProgress } = await fresh();
     expect(filmProgress({ status: 'queued', progress: null })).toBe(0);
@@ -121,7 +201,7 @@ describe('saving a film', () => {
       'Siem Reap',
     );
     const item = () => filmVideos.items[0];
-    expect(item()).toMatchObject({ key: 'memory-1', status: 'making', stage: 'waiting', progress: 0 });
+    expect(item()).toMatchObject({ status: 'making', stage: 'waiting', progress: 0 });
     // the plan goes as it is: plain JSON, its song the one playing
     expect(curatorMock.saveFilm).toHaveBeenCalledWith({
       memoryId: 'memory-1',
@@ -165,7 +245,7 @@ describe('saving a film', () => {
     filmVideos.start({ memoryId: 'memory-1', plan: long }, 'Siem Reap');
     expect(filmVideos.items[0]).toMatchObject({ status: 'failed', tooLong: true });
     expect(curatorMock.saveFilm).not.toHaveBeenCalled();
-    filmVideos.retry('memory-1');
+    filmVideos.retry(filmVideos.items[0].key);
     expect(curatorMock.saveFilm).not.toHaveBeenCalled();
   });
 
@@ -179,7 +259,7 @@ describe('saving a film', () => {
 
     curatorMock.saveFilm.mockResolvedValue({ job: 42 });
     curatorMock.film.mockResolvedValue(job({ id: 42, status: 'running' }));
-    filmVideos.retry('memory-1');
+    filmVideos.retry(filmVideos.items[0].key);
     expect(filmVideos.items[0]).toMatchObject({ status: 'making' });
     expect(curatorMock.saveFilm).toHaveBeenCalledTimes(2);
   });
@@ -193,7 +273,7 @@ describe('saving a film', () => {
 
     curatorMock.saveFilm.mockResolvedValue({ job: 43 });
     curatorMock.film.mockRejectedValue(new CuratorError('Curator is not answering', 0));
-    filmVideos.retry('memory-1');
+    filmVideos.retry(filmVideos.items[0].key);
     await vi.advanceTimersByTimeAsync(1500 * 4);
     expect(filmVideos.items[0]).toMatchObject({ status: 'making' });
     await vi.advanceTimersByTimeAsync(1500);
@@ -210,7 +290,7 @@ describe('saving a film', () => {
     filmVideos.start({ memoryId: 'memory-2', plan: plan(70) }, 'Too long');
     expect(filmVideos.items).toHaveLength(2);
     filmVideos.clearDone();
-    expect(filmVideos.items.map(({ key }) => key)).toEqual(['memory-1']);
+    expect(filmVideos.items.map(({ request }) => request.memoryId)).toEqual(['memory-1']);
   });
 
   it('waits while another account is signed in, and goes on once the owner is back', async () => {

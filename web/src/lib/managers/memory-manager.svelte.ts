@@ -8,6 +8,7 @@ import {
   deleteMemory,
   type BulkIdResponseDto,
   type MemoryResponseDto,
+  getMemory,
   removeMemoryAssets,
   searchMemories,
   updateMemory,
@@ -148,6 +149,13 @@ class MemoryManager {
 
   refresh() {
     return this.initialize();
+  }
+
+  async refreshMemory(id: string) {
+    const updated = await getMemory({ id });
+    this.memories = this.memories.map((memory) => (memory.id === id ? updated : memory));
+    memoryFacts.refresh(id);
+    return updated;
   }
 
   applyPreferences() {

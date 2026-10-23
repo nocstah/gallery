@@ -26,7 +26,7 @@
   import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import { copySubject } from '$lib/utils/copy-subject';
   import { curatorIsMine } from '$lib/utils/curator';
-  import { lookUp } from '$lib/components/curator/look-up.svelte';
+  import { canShareVideo } from '$lib/utils/share-video';
   import { shareVideos } from '$lib/managers/share-video-manager.svelte';
   import {
     mdiArrowCollapseHorizontal,
@@ -186,22 +186,22 @@
   };
 
   // Local Omarchy layer: the picked videos (and Live Photos' clips) made ready for a chat app by Curator and saved, when
-  // all of them are the owner's and there are few enough to wait for (managers/share-video-manager); lookUp.available
-  // also keeps them for Curator's owner
+  // all of them are the owner's and there are few enough to wait for (managers/share-video-manager).
   const SHARE_AT_MOST = 10;
-  lookUp.check(); // whether Curator answers, asked once for the whole page and only by Curator's owner
   const shareable = $derived.by(() => {
-    if (!lookUp.available || picked.length === 0 || picked.length > SHARE_AT_MOST || !authManager.authenticated) {
+    if (picked.length === 0 || picked.length > SHARE_AT_MOST) {
       return [];
     }
-    const me = authManager.user.id;
-    return picked.every((asset) => asset.ownerId === me && (asset.isVideo || !!asset.livePhotoVideoId)) ? picked : [];
+    return picked.every(canShareVideo) ? picked : [];
   });
-  const shareClips = (clips: TimelineAsset[], app: 'whatsapp' | 'telegram') => {
-    for (const clip of clips) {
-      shareVideos.start(clip.id, app, day(clip));
-    }
-  };
+  // MenuOption closes the menu before calling us, which clears `picked` and `shareable`. Capture the clips when
+  // rendering the item, not after that close, so right-click downloads actually start.
+  const shareClips = (clips: TimelineAsset[], app: 'whatsapp' | 'telegram') => () =>
+    onStackAction(() => {
+      for (const clip of clips) {
+        shareVideos.start(clip.id, app, day(clip));
+      }
+    });
 
   const close = () => {
     // also drops an open that is still waiting on the server
@@ -358,16 +358,15 @@
       <!-- the downloads and the copies, together -->
       {@render downloads?.()}
       {#if shareable.length > 0}
-        {@const clips = shareable}
         <MenuOption
           icon={mdiWhatsapp}
           text={$t('download_for_app', { values: { app: 'WhatsApp' } })}
-          onClick={() => onStackAction(() => shareClips(clips, 'whatsapp'))}
+          onClick={shareClips(shareable, 'whatsapp')}
         />
         <MenuOption
           icon={mdiSendOutline}
           text={$t('download_for_app', { values: { app: 'Telegram' } })}
-          onClick={() => onStackAction(() => shareClips(clips, 'telegram'))}
+          onClick={shareClips(shareable, 'telegram')}
         />
       {/if}
       {#if liftAsset}

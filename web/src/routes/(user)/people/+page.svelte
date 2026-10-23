@@ -30,7 +30,7 @@
   import { clearQueryParam } from '$lib/utils/navigation';
   import { peopleFilterToTypeParam as filterToTypeParam, resolvePeopleFilterBy } from '$lib/utils/people-filter';
   import { appendUniqueById, sortPeople } from '$lib/utils/people-utils';
-  import { isRepeatedName, personSpanLine, repeatedNames } from '$lib/utils/person-names';
+  import { isRepeatedName, repeatedNames } from '$lib/utils/person-names';
   import { formatPeopleHeaderDescription } from '$lib/utils/people-statistics';
   import { placeYears } from '$lib/utils/place-stats';
   import {
@@ -100,48 +100,35 @@
     });
   });
 
-  const loadInitialScroll = () =>
-    new Promise<void>((resolve) => {
-      // Load up to previously loaded page when returning.
-      let newNextPage = sessionStorage.getItem(SessionStorageKey.INFINITE_SCROLL_PAGE);
-      if (newNextPage && nextPage) {
-        let startingPage = nextPage,
-          pagesToLoad = Number.parseInt(newNextPage) - nextPage;
+  const loadInitialScroll = async () => {
+    // Save/restore the last loaded page, inclusive. The scroll offset can only be restored once
+    // those rows exist again; page 1 alone is too short for a position farther down the list.
+    const lastPage = Number(sessionStorage.getItem(SessionStorageKey.INFINITE_SCROLL_PAGE));
+    if (!Number.isSafeInteger(lastPage) || lastPage < 2 || nextPage === null) {
+      return;
+    }
 
-        if (pagesToLoad) {
-          loadingPage = true;
-          handlePromiseError(
-            Promise.all(
-              Array.from({ length: pagesToLoad }, (_, i) => {
-                return getAllPeople({
-                  withHidden: true,
-                  withSharedSpaces: true,
-                  page: startingPage + i,
-                  size: PEOPLE_PAGE_SIZE,
-                  // Restoring scroll must page over the SAME filtered list the first page came
-                  // from; without this, returning to a filtered grid appends unfiltered people.
-                  $type: filterToTypeParam(peopleFilterBy),
-                });
-              }),
-            )
-              .then((pages) => {
-                for (const page of pages) {
-                  people = appendUniqueById(people, page.people);
-                }
-                currentPage = startingPage + pagesToLoad - 1;
-                nextPage = pages.at(-1)?.hasNextPage ? startingPage + pagesToLoad : null;
-                resolve(); // wait until extra pages are loaded
-              })
-              .finally(() => {
-                loadingPage = false;
-              }),
-          );
-        } else {
-          resolve();
-        }
-        sessionStorage.removeItem(SessionStorageKey.INFINITE_SCROLL_PAGE);
+    loadingPage = true;
+    try {
+      while (nextPage !== null && nextPage <= lastPage) {
+        const page: number = nextPage;
+        const result = await getAllPeople({
+          withHidden: true,
+          withSharedSpaces: true,
+          page,
+          size: PEOPLE_PAGE_SIZE,
+          $type: filterToTypeParam(peopleFilterBy),
+        });
+        people = appendUniqueById(people, result.people);
+        currentPage = page;
+        nextPage = result.hasNextPage ? page + 1 : null;
       }
-    });
+    } catch (error) {
+      handleError(error, $t('errors.failed_to_load_people'));
+    } finally {
+      loadingPage = false;
+    }
+  };
 
   const loadNextPage = async () => {
     if (loadingPage || !nextPage) {
@@ -276,8 +263,8 @@
   );
   let showPeople = $derived(sortPeople(searchName ? searchedPeopleLocal : visiblePeople, peopleSortBy));
 
-  // Local Omarchy layer: where a name repeats among the people shown, each one's tile says how many photos they are in
-  // and the years those span (utils/person-names, managers/person-spans), so two Daniels can be told apart; read-only
+  // Every face shows its photo count from the list response. Only repeated names need an
+  // additional timeline request for the years that help tell two Daniels apart.
   let repeated = $derived(repeatedNames(showPeople));
   $effect(() => {
     personSpans.request(
@@ -286,23 +273,27 @@
         .map((person) => ({ id: person.id, filterId: person.filterId })),
     );
   });
-  const spanLine = (person: PersonResponseDto) =>
-    isRepeatedName(repeated, person.name)
-      ? personSpanLine(personSpans.get(person.id), person.numberOfAssets, $locale)
-      : undefined;
-  const accessibleNameOf = (person: PersonResponseDto) => {
+  const yearsOf = (person: PersonResponseDto) => {
     if (!isRepeatedName(repeated, person.name)) {
       return undefined;
     }
     const span = personSpans.get(person.id);
-    if (span && span.count > 0) {
+    return span && span.count > 0 ? placeYears(span) : undefined;
+  };
+  const countOf = (person: PersonResponseDto) => person.numberOfAssets ?? personSpans.get(person.id)?.count;
+  const accessibleNameOf = (person: PersonResponseDto) => {
+    const count = countOf(person);
+    const name = person.name || $t('cmdk_unnamed_person');
+    if (count === undefined) {
+      return name;
+    }
+    const years = yearsOf(person);
+    if (years) {
       return $t('person_tile_label', {
-        values: { name: person.name, count: span.count, years: placeYears(span) },
+        values: { name, count, years },
       });
     }
-    return person.numberOfAssets === undefined
-      ? undefined
-      : $t('person_tile_label_count', { values: { name: person.name, count: person.numberOfAssets } });
+    return $t('person_tile_label_count', { values: { name, count } });
   };
 
   // People-page type filter. Server-side rather than a filter over `people`: the grid is paged
@@ -491,6 +482,7 @@
       scrollMemory,
       {
         routeStartsWith: Route.people(),
+        anchorSelector: 'a[href^="/people/"]',
         beforeSave: () => {
           if (currentPage) {
             sessionStorage.setItem(SessionStorageKey.INFINITE_SCROLL_PAGE, currentPage.toString());
@@ -499,7 +491,7 @@
         beforeClear: () => {
           sessionStorage.removeItem(SessionStorageKey.INFINITE_SCROLL_PAGE);
         },
-        beforeLoad: loadInitialScroll,
+        beforeScroll: loadInitialScroll,
       },
     ],
   ]}
@@ -566,12 +558,16 @@
       onNameSubmit={onNameChangeSubmit}
     >
       {#snippet detail(person)}
-        {#if isRepeatedName(repeated, person.name)}
-          <!-- the line keeps its height while the years are asked for, so nothing moves when they come -->
-          <p class="ws-person-span" aria-hidden="true" lang={$locale} data-testid="person-span">
-            {spanLine(person) ?? ''}
-          </p>
-        {/if}
+        {@const count = countOf(person)}
+        <p class="ws-person-span" aria-hidden="true" lang={$locale} data-testid="person-span">
+          {#if count !== undefined}
+            {$t('cmdk_preview_photo_count', { values: { count } })}
+          {/if}
+          {#if isRepeatedName(repeated, person.name)}
+            <!-- Reserve the years' line while loading; a narrow tile never clips the count. -->
+            <span class="ws-person-years">{yearsOf(person) ?? ''}</span>
+          {/if}
+        </p>
       {/snippet}
       {#snippet actions(person)}
         {@const Actions = getPersonActions($t, person)}
@@ -602,7 +598,7 @@
 </UserPageLayout>
 
 <style>
-  /* what tells apart people who share a name: their count and years in data type, muted, under the name */
+  /* Photo counts under every face, with years on their own line for names that repeat. */
   .ws-person-span {
     min-height: calc(var(--ws-text-data) * 1.5);
     margin-top: 0.125rem;
@@ -614,5 +610,10 @@
     color: var(--immich-ui-muted);
     text-align: center;
     white-space: nowrap;
+  }
+
+  .ws-person-years {
+    display: block;
+    min-height: calc(var(--ws-text-data) * 1.5);
   }
 </style>

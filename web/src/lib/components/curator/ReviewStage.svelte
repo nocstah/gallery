@@ -2,7 +2,9 @@
   // Local Omarchy layer: one suggestion, large, for review mode. Each kind shows what the decision is about at the
   // size it needs: two covers side by side, a photo before and after its turn, a face beside the photos it was named
   // from, copies next to each other, an album's spread of photos, the reel itself, a restored version over its
-  // original. Photos open in Gallery.
+  // original. Each piece of evidence opens in the zoomable inspector.
+  import InboxInspector from '$lib/components/curator/InboxInspector.svelte';
+  import { inspectionItems } from '$lib/utils/inbox-inspection';
   import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import { reelUrl, type Suggestion } from '$lib/utils/curator';
@@ -14,6 +16,20 @@
   }
 
   let { suggestion }: Props = $props();
+  let inspecting = $state<number>();
+  const inspectItems = $derived(inspectionItems(suggestion));
+  const inspectPhoto = (id: string, turn = 0) => {
+    inspecting = Math.max(
+      0,
+      inspectItems.findIndex((item) => item.assetId === id && (item.turn ?? 0) === turn),
+    );
+  };
+  const inspectFace = (src: string) => {
+    inspecting = Math.max(
+      0,
+      inspectItems.findIndex((item) => item.src === src),
+    );
+  };
 
   const preview = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Preview });
   const thumbnail = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
@@ -36,18 +52,25 @@
 </script>
 
 {#snippet big(id: string, label?: string, turn = 0)}
-  <a class="stage-big" href="/photos/{id}" target="_blank" rel="noopener">
+  <button
+    type="button"
+    class="stage-big"
+    aria-label={label ? `${label}: ${$t('ai_inbox_inspect')}` : $t('ai_inbox_inspect')}
+    onclick={() => inspectPhoto(id, turn)}
+  >
     <img src={preview(id)} alt="" style:rotate={turn ? `${turn}deg` : undefined} />
     {#if label}
       <span class="ws-inbox-meta">{label}</span>
     {/if}
-  </a>
+  </button>
 {/snippet}
 
 {#snippet grid(ids: string[])}
   <div class="stage-grid">
     {#each ids as id (id)}
-      <a href="/photos/{id}" target="_blank" rel="noopener"><img src={thumbnail(id)} alt="" /></a>
+      <button type="button" aria-label={$t('ai_inbox_inspect')} onclick={() => inspectPhoto(id)}
+        ><img src={thumbnail(id)} alt="" /></button
+      >
     {/each}
   </div>
 {/snippet}
@@ -55,9 +78,18 @@
 <div class="stage" data-kind={suggestion.kind}>
   {#if suggestion.kind === 'reel.publish' && suggestion.status === 'pending'}
     <!-- svelte-ignore a11y_media_has_caption -->
-    <video class="stage-reel" src={reelUrl(suggestion.id)} controls preload="metadata" playsinline></video>
+    <div class="stage-reel-wrap">
+      <video class="stage-reel" src={reelUrl(suggestion.id)} controls preload="metadata" playsinline></video><button
+        type="button"
+        class="ws-btn-quiet"
+        onclick={(event) => {
+          event.currentTarget.parentElement?.querySelector('video')?.pause();
+          inspecting = 0;
+        }}>{$t('ai_inbox_inspect')}</button
+      >
+    </div>
   {:else if suggestion.kind === 'restore.publish' && suggestion.status === 'pending'}
-    <RestoreCompare {suggestion} size="stage" />
+    <RestoreCompare {suggestion} size="stage" onInspect={() => (inspecting = 0)} />
   {:else if suggestion.kind === 'stack.cover' && photos.length > 1}
     <div class="stage-pair">
       {@render big(suggestion.asset_ids[1], $t('ai_inbox_now'))}
@@ -74,11 +106,25 @@
         {@render big(id)}
       {/each}
     </div>
+  {:else if suggestion.kind === 'person.portrait'}
+    <div class="stage-pair">
+      {#each inspectItems.slice(0, 2) as item (item.src)}
+        <button
+          type="button"
+          class="stage-big"
+          aria-label={`${$t(item.label!)}: ${$t('ai_inbox_inspect')}`}
+          onclick={() => inspectFace(item.src!)}
+          ><img src={item.src} alt="" /><span class="ws-inbox-meta">{$t(item.label!)}</span></button
+        >
+      {/each}
+    </div>
   {:else if ['person.name', 'person.merge', 'person.hide'].includes(suggestion.kind)}
     <div class="stage-people">
       <div class="stage-faces">
         {#each [...new Set(faces)] as personId (personId)}
-          <img class="stage-face" src={face(personId)} alt="" />
+          <button type="button" aria-label={$t('ai_inbox_inspect')} onclick={() => inspectFace(face(personId))}
+            ><img class="stage-face" src={face(personId)} alt="" /></button
+          >
         {/each}
       </div>
       {#if photos.length > 0}
@@ -92,7 +138,25 @@
   {/if}
 </div>
 
+{#if inspecting !== undefined && inspectItems.length > 0}
+  <InboxInspector
+    items={inspectItems}
+    initialIndex={inspecting}
+    title={suggestion.title}
+    onClose={() => (inspecting = undefined)}
+  />
+{/if}
+
 <style>
+  .stage-reel-wrap {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    justify-items: center;
+    max-height: 100%;
+  }
+  .stage button {
+    cursor: zoom-in;
+  }
   .stage {
     display: grid;
     place-items: center;
@@ -154,8 +218,8 @@
     outline: 1px solid var(--ws-hairline);
     outline-offset: -1px;
   }
-  .stage-grid a:hover img,
-  .stage-grid a:focus-visible img {
+  .stage-grid button:hover img,
+  .stage-grid button:focus-visible img {
     outline: var(--ws-border) solid var(--ws-accent);
     outline-offset: calc(var(--ws-border) * -1);
   }
