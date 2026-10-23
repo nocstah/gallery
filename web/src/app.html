@@ -38,12 +38,14 @@
         width: 100%;
       }
 
+      /* Local Omarchy layer: the first paint stands on the theme's own ground (custom.css, linked below and read
+         before the first paint), with black and white for a server the theme hook has not reached */
       html.dark {
-        background-color: black;
+        background-color: var(--immich-ui-light, black);
       }
 
       html.light {
-        background-color: white;
+        background-color: var(--immich-ui-light, white);
       }
 
       body,
