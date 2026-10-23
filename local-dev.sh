@@ -35,6 +35,9 @@ start() {
     return
   fi
   docker rm -f "$NAME" >/dev/null 2>&1 || true
+  # svelte.config.js writes the i18n overlay's merged bundle into i18n/gallery/merged/ (gitignored) whenever it loads:
+  # here into a tmpfs over that folder, so a fresh checkout (a worktree has no merged/) starts with i18n read-only
+  mkdir -p "$SRC/i18n/gallery/merged"
   docker run -d --name "$NAME" \
     -p "127.0.0.1:$PORT:$PORT" \
     --add-host host.docker.internal:host-gateway \
@@ -43,6 +46,7 @@ start() {
     -v "$SRC/web/src:/usr/src/app/web/src:ro" \
     -v "$SRC/web/static:/usr/src/app/web/static:ro" \
     -v "$SRC/i18n:/usr/src/app/i18n:ro" \
+    --tmpfs /usr/src/app/i18n/gallery/merged \
     "$IMAGE" sh -c "cd web && npx svelte-kit sync >/dev/null && exec npx vite dev --host 0.0.0.0 --port $PORT --strictPort" \
     >/dev/null
   # the first start compiles the app: wait until it answers
