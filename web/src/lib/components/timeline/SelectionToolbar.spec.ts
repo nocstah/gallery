@@ -14,6 +14,17 @@ import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import type { TimelineDateTime } from '$lib/utils/timeline-util';
 import SelectionToolbar from './SelectionToolbar.svelte';
 
+// Local Omarchy layer: a closed menu keeps its rows, hidden and inert (ContextMenu), and a hidden row has no accessible
+// name for a role query to match, so what a menu offers is read from its rows' own words (its key hints left out)
+const menuRow = (name: string) =>
+  screen.queryAllByRole('menuitem', { hidden: true }).find((row) => {
+    const copy = row.cloneNode(true) as HTMLElement;
+    for (const hint of copy.querySelectorAll('[aria-hidden="true"]')) {
+      hint.remove();
+    }
+    return copy.textContent?.trim() === name;
+  }) ?? null;
+
 // #734: SelectionToolbar resolves `editableSelectedAssetIds` itself via `POST /assets/editable`
 // (`resolveEditableAssetIds`) whenever the selection isn't all-owned — mock the SDK call so
 // tests control the response instead of hitting the network.
@@ -166,17 +177,17 @@ describe('SelectionToolbar', () => {
     });
 
     expect(screen.getByLabelText('select_all')).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'download' })).toBeInTheDocument();
+    expect(menuRow('download')).toBeInTheDocument();
 
     expect(screen.queryByLabelText('share')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'add_to_album_or_space' })).not.toBeInTheDocument();
     // Shown even for a viewer on someone else's asset: a favorite is the viewer's own
     // `asset_favorite` overlay row (#763), so it is not owner-gated.
     expect(screen.getByLabelText('to_favorite')).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'delete' })).not.toBeInTheDocument();
+    expect(menuRow('delete')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('remove_from_space')).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'set_as_space_cover' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'set_as_album_cover' })).not.toBeInTheDocument();
+    expect(menuRow('set_as_space_cover')).not.toBeInTheDocument();
+    expect(menuRow('set_as_album_cover')).not.toBeInTheDocument();
   });
 
   it('Given a space editor selecting their own single asset in a direct space, When the toolbar renders, Then Share/Add-to-album/Favorite/Delete/Remove-from-space/Cover are all shown', () => {
@@ -195,13 +206,13 @@ describe('SelectionToolbar', () => {
     });
 
     expect(screen.getByLabelText('select_all')).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'download' })).toBeInTheDocument();
+    expect(menuRow('download')).toBeInTheDocument();
     expect(screen.getByLabelText('share')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'add_to_album_or_space' })).toBeInTheDocument();
     expect(screen.getByLabelText('to_favorite')).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'delete' })).toBeInTheDocument();
+    expect(menuRow('delete')).toBeInTheDocument();
     expect(screen.getByLabelText('remove_from_space')).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'set_as_space_cover' })).toBeInTheDocument();
+    expect(menuRow('set_as_space_cover')).toBeInTheDocument();
   });
 
   it('Given the space-person surface (same editor+own-asset context but no onSetCover passed), When the toolbar renders, Then Cover is absent even though caps.canSetCover is true', () => {
@@ -219,8 +230,8 @@ describe('SelectionToolbar', () => {
 
     expect(screen.getByLabelText('share')).toBeInTheDocument();
     expect(screen.getByLabelText('remove_from_space')).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'set_as_space_cover' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'set_as_album_cover' })).not.toBeInTheDocument();
+    expect(menuRow('set_as_space_cover')).not.toBeInTheDocument();
+    expect(menuRow('set_as_album_cover')).not.toBeInTheDocument();
   });
 
   it('Given a space-album manager viewing a not-owned asset, When the toolbar renders, Then Remove-from-album is shown and Remove-from-space is absent', () => {
@@ -236,14 +247,14 @@ describe('SelectionToolbar', () => {
     });
 
     expect(screen.getByLabelText('select_all')).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'download' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'remove_from_album' })).toBeInTheDocument();
+    expect(menuRow('download')).toBeInTheDocument();
+    expect(menuRow('remove_from_album')).toBeInTheDocument();
     expect(screen.queryByLabelText('remove_from_space')).not.toBeInTheDocument();
     // Share is present since #1018 — the space Owner/Editor role carries it, like add-to-album.
     expect(screen.getByLabelText('share')).toBeInTheDocument();
     // Favorites are a per-user overlay row (#763), so they are never owner-gated.
     expect(screen.getByLabelText('to_favorite')).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'delete' })).not.toBeInTheDocument();
+    expect(menuRow('delete')).not.toBeInTheDocument();
   });
 
   it('Given a space editor with a MIXED selection, When the toolbar renders, Then both Share and Add-to-album are shown', () => {
@@ -262,7 +273,7 @@ describe('SelectionToolbar', () => {
     // Shown regardless of ownership: a favorite is the viewer's own `asset_favorite` row (#763).
     expect(screen.getByLabelText('to_favorite')).toBeInTheDocument();
     // Still hidden: this mutates every selected asset and the server refuses the non-owned ones.
-    expect(screen.queryByRole('menuitem', { name: 'delete' })).not.toBeInTheDocument();
+    expect(menuRow('delete')).not.toBeInTheDocument();
   });
 
   it("Given a space editor selecting only other members' assets, When the toolbar renders, Then both Add-to-album and Share are shown — the space role covers both (#764 contribution, #1018 link)", () => {
@@ -344,8 +355,8 @@ describe('SelectionToolbar — #734 editable-subset resolution', () => {
       space: { id: 'space-1', canWrite: true },
     });
 
-    expect(screen.getByRole('menuitem', { name: 'rotate_right' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'to_archive' })).toBeInTheDocument();
+    expect(menuRow('rotate_right')).toBeInTheDocument();
+    expect(menuRow('to_archive')).toBeInTheDocument();
 
     // Advance well past the 250ms debounce window used for a non-all-owned selection: if the
     // resolution effect took that path instead of the synchronous one, this is where it would
@@ -368,15 +379,15 @@ describe('SelectionToolbar — #734 editable-subset resolution', () => {
 
     // Pending: editableSelectedAssetIds hasn't resolved yet, so canEditMetadata (hasEditable) is
     // false — the action must not pop in before the request lands (W-11).
-    expect(screen.queryByRole('menuitem', { name: 'rotate_right' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: 'to_archive' })).not.toBeInTheDocument();
+    expect(menuRow('rotate_right')).not.toBeInTheDocument();
+    expect(menuRow('to_archive')).not.toBeInTheDocument();
 
     await vi.advanceTimersByTimeAsync(250);
 
     expect(getEditableAssets).toHaveBeenCalledWith({ assetEditableDto: { assetIds: ['mine', 'theirs'] } });
-    expect(screen.getByRole('menuitem', { name: 'rotate_right' })).toBeInTheDocument();
+    expect(menuRow('rotate_right')).toBeInTheDocument();
     // Still absent: canSetVisibility stays isAllUserOwned-only regardless of what resolves.
-    expect(screen.queryByRole('menuitem', { name: 'to_archive' })).not.toBeInTheDocument();
+    expect(menuRow('to_archive')).not.toBeInTheDocument();
   });
 
   it('W-14: discards a stale response that resolves after the selection has already changed', async () => {
@@ -414,14 +425,14 @@ describe('SelectionToolbar — #734 editable-subset resolution', () => {
 
     // Fires the second (fresh) debounced request, which resolves to nothing editable.
     await vi.advanceTimersByTimeAsync(250);
-    expect(screen.queryByRole('menuitem', { name: 'rotate_right' })).not.toBeInTheDocument();
+    expect(menuRow('rotate_right')).not.toBeInTheDocument();
 
     // The stale first request now settles, claiming both original assets are editable. If it
     // were applied on top of the fresh (empty) answer, Rotate would incorrectly reappear.
     resolveStaleRequest?.({ editableAssetIds: ['a', 'b'] });
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(screen.queryByRole('menuitem', { name: 'rotate_right' })).not.toBeInTheDocument();
+    expect(menuRow('rotate_right')).not.toBeInTheDocument();
   });
 
   it('a mixed selection that resolves to nothing editable never shows Rotate', async () => {
@@ -438,6 +449,6 @@ describe('SelectionToolbar — #734 editable-subset resolution', () => {
 
     await vi.advanceTimersByTimeAsync(250);
 
-    expect(screen.queryByRole('menuitem', { name: 'rotate_right' })).not.toBeInTheDocument();
+    expect(menuRow('rotate_right')).not.toBeInTheDocument();
   });
 });

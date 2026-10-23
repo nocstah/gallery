@@ -103,7 +103,8 @@ const buttonsIn = (element: HTMLElement) =>
   within(element)
     .queryAllByRole('button')
     .map((button) => nameOf(button));
-const menuRows = () => screen.queryAllByRole('menuitem').map((row) => nameOf(row));
+// a closed menu keeps its rows, hidden and inert (ContextMenu), so what it offers is read with the hidden ones
+const menuRows = () => screen.queryAllByRole('menuitem', { hidden: true }).map((row) => nameOf(row));
 
 /** every action the bar offers, wherever it sits (the ⋮'s rows are in the page whether it is open or not) */
 const everyAction = () => new Set([...screen.queryAllByRole('button').map((button) => nameOf(button)), ...menuRows()]);

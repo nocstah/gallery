@@ -18,6 +18,17 @@ import { userAdminFactory } from '@test-data/factories/user-factory';
 import { reactivePageMock as mockPage } from '@test-data/mocks/reactive-page.mock.svelte';
 import AlbumPage from './+page.svelte';
 
+// Local Omarchy layer: a closed menu keeps its rows, hidden and inert (ContextMenu), and a hidden row has no accessible
+// name for a role query to match, so what a menu offers is read from its rows' own words (its key hints left out)
+const menuRow = (name: string) =>
+  screen.queryAllByRole('menuitem', { hidden: true }).find((row) => {
+    const copy = row.cloneNode(true) as HTMLElement;
+    for (const hint of copy.querySelectorAll('[aria-hidden="true"]')) {
+      hint.remove();
+    }
+    return copy.textContent?.trim() === name;
+  }) ?? null;
+
 const {
   registerAlbumContextMock,
   registerSelectionContextMock,
@@ -1104,7 +1115,7 @@ describe('album detail filter panel route', () => {
       qrManager.albumId = album.id;
       renderPage(album);
 
-      await waitFor(() => expect(screen.getByRole('menuitem', { name: 'slideshow' })).toBeInTheDocument());
+      await waitFor(() => expect(menuRow('slideshow')).toBeInTheDocument());
       expect(screen.queryByTestId('album-room')).not.toBeInTheDocument();
     });
 
@@ -1123,7 +1134,7 @@ describe('album detail filter panel route', () => {
 
       await waitFor(() => expect(screen.getByRole('button', { name: 'back' })).toBeInTheDocument());
       expect(screen.queryByRole('button', { name: 'play' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('menuitem', { name: 'slideshow' })).not.toBeInTheDocument();
+      expect(menuRow('slideshow')).not.toBeInTheDocument();
     });
   });
 });
