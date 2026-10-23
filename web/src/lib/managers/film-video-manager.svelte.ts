@@ -122,7 +122,8 @@ class FilmVideoManager {
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
     if (item.status !== 'ready' || item.jobId === undefined) {
-      throw new Error(item.error ?? 'The memory video could not be prepared');
+      // the sheet says what failed (the video); this carries only Curator's reason, when it gave one
+      throw new Error(item.error ?? '');
     }
     return item;
   }

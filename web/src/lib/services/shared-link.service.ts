@@ -75,9 +75,14 @@ export const shareLinkExpiry = (now = Date.now()) =>
 
 /**
  * Local Omarchy layer: makes the link and hands it back, for the Share sheet (components/share/ShareLinkPanel), which
- * shows it with its QR in place; `handleCreateSharedLink` shows the QR in a dialog of its own instead.
+ * shows it with its QR in place; `handleCreateSharedLink` shows the QR in a dialog of its own instead. With `rethrow`
+ * a failure comes back to the caller instead of a toast, for a sheet that says in place what failed (the memory Share
+ * sheet).
  */
-export const makeSharedLink = async (dto: SharedLinkCreateDto): Promise<SharedLinkResponseDto | undefined> => {
+export const makeSharedLink = async (
+  dto: SharedLinkCreateDto,
+  { rethrow = false }: { rethrow?: boolean } = {},
+): Promise<SharedLinkResponseDto | undefined> => {
   const $t = await getFormatter();
 
   try {
@@ -96,6 +101,9 @@ export const makeSharedLink = async (dto: SharedLinkCreateDto): Promise<SharedLi
 
     return sharedLink;
   } catch (error) {
+    if (rethrow) {
+      throw error;
+    }
     handleError(error, $t('errors.failed_to_create_shared_link'));
   }
 };
