@@ -9,7 +9,9 @@
     withBackdrop?: boolean;
   }
 
-  let { title, children, withHeader = true, withBackdrop = true }: Props = $props();
+  // Local Omarchy layer: the card stands on the theme's bare ground (DESIGN.md, Ink: the sign-in page), where upstream
+  // blurred the mark into a cloud behind it; the cloud stays here for a page that asks for it
+  let { title, children, withHeader = true, withBackdrop = false }: Props = $props();
 </script>
 
 <section class="relative isolate flex min-h-dvh min-w-dvw items-center justify-center">
