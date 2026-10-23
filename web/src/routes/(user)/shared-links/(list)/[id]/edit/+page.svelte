@@ -3,7 +3,7 @@
   import SharedLinkFormFields from '$lib/components/SharedLinkFormFields.svelte';
   import { Route } from '$lib/route';
   import { handleUpdateSharedLink } from '$lib/services/shared-link.service';
-  import { SharedLinkType } from '@immich/sdk';
+  import { linkName } from '$lib/utils/shared-link-words';
   import { FormModal } from '@immich/ui';
   import { mdiLink } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -23,7 +23,7 @@
   let showMetadata = $state(sharedLink.showMetadata);
   let password = $state(sharedLink.password ?? '');
   let slug = $state(sharedLink.slug ?? '');
-  let shareType = sharedLink.album ? SharedLinkType.Album : SharedLinkType.Individual;
+  const named = $derived(linkName($t, { ...sharedLink, description }));
   let expiresAt = $state(sharedLink.expiresAt);
 
   const onClose = async () => {
@@ -47,21 +47,12 @@
 </script>
 
 <FormModal title={$t('edit_link')} icon={mdiLink} {onClose} {onSubmit} submitText={$t('confirm')} size="small">
-  {#if shareType === SharedLinkType.Album}
-    <div class="text-sm">
-      {$t('public_album')} |
-      <span class="text-primary">{sharedLink.album?.albumName}</span>
-    </div>
-  {/if}
-
-  {#if shareType === SharedLinkType.Individual}
-    <div class="text-sm">
-      {$t('individual_share')}
-      {#if description !== ''}
-        | <span class="text-primary">{description}</span>
-      {/if}
-    </div>
-  {/if}
+  <!-- Local Omarchy layer: what the link shows, in the Shared links page's words (utils/shared-link-words), where
+       upstream said "Public album" or "Individual share" -->
+  <p class="text-sm" data-testid="shared-link-edit-name">
+    {#if named.what}<span class="text-muted">{named.what} ·</span>{/if}
+    <span class="font-semibold">{named.name}</span>
+  </p>
 
   <SharedLinkFormFields
     bind:slug

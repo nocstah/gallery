@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
-  import SharedLinkCard from './SharedLinkCard.svelte';
+  import SharedLinkRow from '$lib/components/omarchy/SharedLinkRow.svelte';
   import { type SharedLinkTab } from '$lib/constants';
   import GroupTab from '$lib/elements/GroupTab.svelte';
   import { Route } from '$lib/route';
@@ -29,10 +29,11 @@
     await refresh();
   });
 
+  // Local Omarchy layer: the links that are not an album's are photos (a memory's among them), not "Individual shares"
   const filterMap: Record<SharedLinkTab, string> = {
     all: $t('all'),
     album: $t('albums'),
-    individual: $t('individual_shares'),
+    individual: $t('photos'),
   };
 
   let filters = Object.keys(filterMap);
@@ -81,7 +82,8 @@
     </div>
   {/snippet}
 
-  <!-- Local Omarchy layer: one column on the page's gutter; no links yet is an empty state with where links come from -->
+  <!-- Local Omarchy layer: one column on the page's gutter, a calm row per link (components/omarchy/SharedLinkRow); no
+       links yet is an empty state with where links come from -->
   <div class="ws-page-column">
     {#if sharedLinks.length === 0}
       <div class="ws-empty">
@@ -92,11 +94,11 @@
         </div>
       </div>
     {:else}
-      <div class="flex flex-col">
+      <ul class="ws-link-list">
         {#each filteredSharedLinks as sharedLink (sharedLink.id)}
-          <SharedLinkCard {sharedLink} />
+          <SharedLinkRow {sharedLink} />
         {/each}
-      </div>
+      </ul>
     {/if}
 
     {@render children?.()}
