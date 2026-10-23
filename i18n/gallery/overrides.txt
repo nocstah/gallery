@@ -26,6 +26,8 @@ album_updated_setting_description exclusive
 album_upload_assets exclusive
 albums_default_sort_order_description exclusive
 albums_feature_description exclusive
+api_key
+api_key_empty
 api_keys exclusive
 app_settings exclusive
 asset_day_count exclusive
@@ -54,10 +56,15 @@ bulk_delete_duplicates_confirmation exclusive
 bulk_keep_duplicates_confirmation exclusive
 bulk_trash_duplicates_confirmation exclusive
 cast_description
+change_password
 confirm_delete_face exclusive
 confirm_keep_this_delete_others exclusive
+copy_image
+copy_to_clipboard
 create_new_person_hint exclusive
+date_and_time
 deduplicate_all exclusive
+deselect_all
 display_original_photos_setting_description exclusive
 download_settings_description exclusive
 downloading_asset_filename exclusive
@@ -99,11 +106,13 @@ errors.unable_to_save_album en:3b55f0df
 errors.unable_to_trash_asset exclusive
 errors.unable_to_update_album_cover en:8e68c919
 errors.unable_to_update_album_info en:0ef54d40
+exit_slideshow
 failed_to_load_assets exclusive
 folders_feature_description
 geolocation_instruction_location exclusive
 hide_asset_owners exclusive
 include_shared_partner_assets exclusive
+invite_people
 items_count exclusive
 keep_all exclusive
 kept_this_deleted_others exclusive
@@ -113,6 +122,7 @@ log_out_all_devices exclusive
 login_form_server_empty
 login_form_server_error
 login_has_been_disabled
+maintenance_title
 manage_oauth_account exclusive
 manage_people en:64c793d0
 map_location_service_disabled_content exclusive
@@ -120,8 +130,12 @@ map_marker_with_image en:72511fdc
 map_no_location_permission_content exclusive
 memories_current en:e0d1b682
 memories_show_upcoming en:0f87babc
+memories_start_over
 memories_upcoming en:5f1a2542
+mute_memories
+navigate_to_time
 new_album exclusive
+new_api_key
 no_assets_to_show exclusive
 no_name exclusive
 people_feature_description
@@ -131,7 +145,10 @@ permanently_delete_assets_prompt exclusive
 permanently_deleted_asset exclusive
 permanently_deleted_assets_count exclusive
 photos_and_videos exclusive
+play_motion_photo
 play_original_video_setting_description exclusive
+prepared_archives
+public_share
 rate_asset exclusive
 rate_asset_description exclusive
 rating_description
@@ -139,6 +156,7 @@ reassigned_assets_to_existing_person exclusive
 reassigned_assets_to_new_person exclusive
 reassing_hint exclusive
 recently_added_description exclusive
+recently_added_page_title
 remove_assets_album_confirmation exclusive
 remove_assets_shared_link_confirmation exclusive
 remove_assets_title exclusive
@@ -146,17 +164,22 @@ removed_from_stack exclusive
 removed_tagged_assets exclusive
 reset_sqlite_error_hint en:0546b1f2
 restored_asset exclusive
+saved_api_key
 search_by_context exclusive
 search_by_ocr exclusive
+set_slideshow_to_fullscreen
 set_stack_primary_asset exclusive
 shift_to_permanent_delete exclusive
 show_asset_panel_on_map exclusive
+show_progress_bar
 sign_out exclusive
 some_assets_already_have_a_location_warning exclusive
 sort_items exclusive
 stacked_assets_count exclusive
+stop_motion_photo
 tag_assets exclusive
 tag_feature_description
+tag_people
 tagged_assets exclusive
 trash_all exclusive
 trash_delete_asset exclusive
@@ -168,6 +191,7 @@ trigger_asset_uploaded exclusive
 trigger_asset_uploaded_description exclusive
 unknown_country exclusive
 unknown_year exclusive
+unmute_memories
 unnamed_album exclusive
 unstacked_assets_count exclusive
 update_location_action_prompt exclusive
@@ -181,4 +205,7 @@ view_all exclusive
 view_asset_owners exclusive
 view_next_asset exclusive
 view_previous_asset exclusive
+view_stack
+viewer_remove_from_stack
 workflows_help_text exclusive
+zoom_image
