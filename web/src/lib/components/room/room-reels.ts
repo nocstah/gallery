@@ -110,6 +110,20 @@ export const todayReels = (cards: MemoryCard[], albums: AlbumResponseDto[], mont
   ...livingAlbums(albums, month).map((album) => albumReel(album)),
 ];
 
+/**
+ * The evening's chain with every film whose opening fails the gate before the TV (room-opening) moved to its end, in
+ * the order they had, so the evening opens on one that passes (2026-10-23, the owner's "Room's front door"). Only while
+ * another film passes it or may: a film not known to fail (an album or a year, read when it comes up; a memory whose
+ * opening is not in yet) stays where it is, and a chain whose every film fails is left as it is. Each film keeps its
+ * photos' order and opens on its best picture when its turn comes.
+ */
+export const dimFilmsLast = <T>(films: T[], fails: (film: T) => boolean): T[] => {
+  const failing = films.filter((film) => fails(film));
+  return failing.length === 0 || failing.length === films.length
+    ? films
+    : [...films.filter((film) => !fails(film)), ...failing];
+};
+
 // ---- a year: its favourites spread through its months, or a sample of it by month ----
 
 /** A year's film holds this many photos at most; with fewer favourites than `few` it is a sample of the year. */

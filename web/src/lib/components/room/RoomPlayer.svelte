@@ -40,8 +40,16 @@
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { fade } from 'svelte/transition';
   import { ScreenAwake } from './room-awake';
-  import { roomOpening, wantsCamera } from './room-opening';
-  import { albumReel, roomCaption, yearReel, type RoomReel, type RoomRequest, type YearFilm } from './room-reels';
+  import { passesGate, roomOpening, wantsCamera } from './room-opening';
+  import {
+    albumReel,
+    dimFilmsLast,
+    roomCaption,
+    yearReel,
+    type RoomReel,
+    type RoomRequest,
+    type YearFilm,
+  } from './room-reels';
   import { loadAlbumAssets, loadToday, loadYear } from './room-source';
 
   interface Props {
@@ -115,6 +123,7 @@
         memoryFacts.request(
           found.filter((reel): reel is MemoryReel => reel.kind === 'memory').map((reel) => reel.memory.id),
         );
+        found = await brightFirst(found);
       } else if (request.kind === 'album') {
         const albumId = request.albumId;
         const album = await getAlbumInfo({ id: albumId }).catch((error: unknown) => {
@@ -273,10 +282,33 @@
       clearTimeout(patience);
     }
     const cover = target.kind === 'memory' ? memoryFacts.get(target.memory.id)?.cover : undefined;
-    openings.set(
-      target.key,
-      roomOpening(assets, { cover, camera: await camera, aspect: innerWidth / Math.max(1, innerHeight) }) ?? null,
-    );
+    const known = await camera;
+    const opening = roomOpening(assets, { cover, camera: known, aspect: innerWidth / Math.max(1, innerHeight) });
+    const picture = assets.find(({ id }) => id === opening);
+    openingFails.set(target.key, !picture || !passesGate(picture, known));
+    openings.set(target.key, opening ?? null);
+  };
+
+  // Local Omarchy layer: the evening opens on a film that passes the gate (the owner's "Room's front door",
+  // 2026-10-23): today's films are given their openings before the first plays, and one whose opening fails the gate
+  // goes to the end of the chain while another passes (room-reels' dimFilmsLast), to open so when its turn comes. A
+  // film whose opening is not in within the wait stays where it is, as do the albums, read when they come up.
+  /** Room waits this long at most for today's openings before it plays */
+  const ORDER_PATIENCE_MS = 1500;
+  const openingFails = new SvelteMap<string, boolean>();
+
+  const brightFirst = async (chain: RoomReel[]) => {
+    const memories = chain.filter((reel): reel is MemoryReel => reel.kind === 'memory');
+    if (chain.length < 2 || memories.length === 0) {
+      return chain;
+    }
+    let patience: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      Promise.all(memories.map((reel) => chooseOpening(reel, reel.memory.assets))),
+      new Promise<void>((resolve) => (patience = setTimeout(resolve, ORDER_PATIENCE_MS))),
+    ]);
+    clearTimeout(patience);
+    return dimFilmsLast(chain, (reel) => openingFails.get(reel.key) === true);
   };
 
   // ---- what each film says: its title, the title card's name and line ----

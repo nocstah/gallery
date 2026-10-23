@@ -9,6 +9,7 @@ import { memoryCards } from '$lib/utils/memory-cards';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { BRIGHT } from '@test-data/thumbhash';
 import {
+  dimFilmsLast,
   inTimeOrder,
   livingAlbums,
   LIVING_ALBUM,
@@ -180,6 +181,20 @@ describe(todayReels.name, () => {
 
   it('is nothing with nothing to play', () => {
     expect(todayReels([], [album('Bali')], 10)).toEqual([]);
+  });
+});
+
+describe(dimFilmsLast.name, () => {
+  const failing = (film: string) => film.startsWith('dim');
+
+  it('moves the films whose opening fails the gate to the end of the chain, in their order', () => {
+    expect(dimFilmsLast(['dim-1', 'a', 'dim-2', 'album'], failing)).toEqual(['a', 'album', 'dim-1', 'dim-2']);
+  });
+
+  it('leaves the chain as it is when none fails, or every one does', () => {
+    expect(dimFilmsLast(['a', 'b'], failing)).toEqual(['a', 'b']);
+    expect(dimFilmsLast(['dim-2', 'dim-1'], failing)).toEqual(['dim-2', 'dim-1']);
+    expect(dimFilmsLast([], failing)).toEqual([]);
   });
 });
 

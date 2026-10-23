@@ -170,6 +170,26 @@ describe('RoomPlayer', () => {
     await waitFor(() => expect(shown()).toBe('m1-2'));
   });
 
+  // Local Omarchy layer: the evening opens on a film that passes the gate (the owner's "Room's front door")
+  it('plays a film whose opening fails the gate after the others, when another passes it', async () => {
+    const lit = memory('m2', 2019);
+    lit.assets = lit.assets.map((asset) => ({
+      ...asset,
+      isFavorite: true,
+      originalMimeType: 'image/heic',
+      thumbhash: BRIGHT,
+    }));
+    vi.mocked(loadToday).mockResolvedValue([memoryReel(memory('m1', 2025)), memoryReel(lit)]);
+    render(RoomPlayer, { request: today });
+
+    await playing('October 2019');
+    expect(screen.getByTestId('room-next')).toHaveTextContent('October 2025');
+    await fireEvent.keyDown(document, { key: 'ArrowDown' });
+    await playing('October 2025');
+    await fireEvent.keyDown(document, { key: 'ArrowDown' });
+    await playing('October 2019');
+  });
+
   it('says what comes next, and goes there on a press', async () => {
     vi.mocked(loadToday).mockResolvedValue([memoryReel(memory('m1', 2025)), memoryReel(memory('m2', 2019))]);
     render(RoomPlayer, { request: today });

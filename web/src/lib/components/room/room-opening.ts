@@ -12,7 +12,8 @@ import { thumbhashLight, DIM_BELOW } from '$lib/utils/thumbhash-light';
 // photos, those that fill Room's frame first (a crop keeping FILL_KEEPS of them, as the film fills its frame), then
 // in the film's order. Where nothing passes, the brightest favourite or camera photo that is not a screenshot, else the
 // cover or the first photo as before. The rest of the film keeps its order: the film's plan moves the opening to the
-// front and plays every other photo where it was.
+// front and plays every other photo where it was. A film whose opening fails the gate waits for the end of the
+// evening's chain while another passes (room-reels' dimFilmsLast), and opens so when its turn comes.
 
 /** The short side, in pixels, a picture needs to open a film across the room: a 1080p screen's height. */
 export const SHARP_SIDE = 1080;
