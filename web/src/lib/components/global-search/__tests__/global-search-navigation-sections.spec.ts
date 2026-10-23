@@ -6,7 +6,7 @@ import CommandRootWrapper from './test-harness/command-root-wrapper.svelte';
 
 beforeAll(async () => {
   // Load en so `$t('cmdk_section_*')` resolves to English headings
-  // ("System Settings", "Admin", "Navigation", "Actions") rather than raw keys.
+  // ("System settings", "Admin", "Navigation", "Actions") rather than raw keys.
   register('en-US', () => import('$i18n/en.json'));
   await init({ fallbackLocale: 'en-US' });
   await waitLocale('en-US');
@@ -65,7 +65,7 @@ describe('global-search-navigation-sections', () => {
     const headings = [...container.querySelectorAll('[data-command-group-heading]')];
     const order = headings.map((h) => (h as HTMLElement).textContent?.trim());
     // With the en bundle loaded in beforeAll, $t(key) renders the English string.
-    expect(order).toEqual(['System Settings', 'Admin', 'Navigation']);
+    expect(order).toEqual(['System settings', 'Admin', 'Navigation']);
   });
 
   it('omits empty categories entirely (no heading, no group)', () => {
@@ -122,7 +122,7 @@ describe('global-search-navigation-sections', () => {
     });
     const headings = [...container.querySelectorAll('[data-command-group-heading]')];
     expect(headings).toHaveLength(2);
-    expect(headings[0].textContent?.trim()).toBe('System Settings');
+    expect(headings[0].textContent?.trim()).toBe('System settings');
     expect(headings[1].textContent?.trim()).toBe('Navigation');
   });
 
