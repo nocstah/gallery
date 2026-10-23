@@ -65,7 +65,7 @@
 
   // the line: what it is (where the title does not say), who can open it, when it ends, then what it lets a visitor
   // do beyond looking
-  type Fact = { text: string; ended?: boolean; title?: string };
+  type Fact = { text: string; end?: boolean; ended?: boolean; title?: string };
   // between two facts, as text (spaces and all), so they read apart
   const separator = ' · ';
   const facts = $derived.by(() => {
@@ -75,7 +75,7 @@
     }
     list.push(
       { text: $t('shared_links_row_who', { values: { password: sharedLink.password ? 'yes' : 'no' } }) },
-      { text: endWords, ended, title: endTitle },
+      { text: endWords, end: true, ended, title: endTitle },
     );
     if (sharedLink.allowUpload) {
       list.push({ text: $t('shared_links_row_upload') });
@@ -142,7 +142,7 @@
     {/if}
     <p class="ws-link-facts" data-testid="shared-link-facts">
       {#each facts as fact, index (index)}{#if index > 0}{separator}{/if}<span
-          class={{ 'ws-link-ended': fact.ended }}
+          class={{ 'ws-link-end': fact.end, 'ws-link-ended': fact.ended }}
           title={fact.title}>{fact.text}</span
         >{/each}
     </p>
@@ -241,6 +241,10 @@
     color: var(--immich-ui-muted);
     font-size: var(--ws-text-meta);
     line-height: 1.45;
+  }
+  /* when it ends keeps its words together ("Ends Nov 17" had broken after "Nov" on a phone) */
+  .ws-link-end {
+    white-space: nowrap;
   }
   .ws-link-ended {
     color: var(--ws-danger);
