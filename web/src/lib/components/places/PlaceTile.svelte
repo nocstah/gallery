@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { placeFaces } from '$lib/managers/place-faces.svelte';
   import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl } from '$lib/utils';
@@ -13,7 +14,8 @@
   // filtered to the place, the country with the city so the filter nests it (#989).
 
   interface Props {
-    /** the place's photo (GET /search/cities: one per city) */
+    /** the place's photo as Gallery lists it (GET /search/cities: one per city), shown where no photo of the place
+     * qualifies as its face */
     assetId: string;
     city: string;
     country?: string | null;
@@ -27,6 +29,39 @@
   const label = $derived(
     stats ? $t('place_tile_label', { values: { place: city, count: stats.count, years: placeYears(stats) } }) : city,
   );
+
+  // Local Omarchy layer: the place's face, a photo without people by the folder rule (managers/place-faces), asked for
+  // once the tile comes within half a screen of the view (Places asks for its first screen itself, most photos first);
+  // until it is chosen the tile keeps its quiet ground, so a tile never shows one photo and then another
+  const face = $derived(placeFaces.get({ city, country }));
+  const shown = $derived(face === undefined ? undefined : (face ?? assetId));
+  // the box the tile scrolls in: the screen ahead is measured from it (the window would clip the tile there)
+  const scrollerOf = (node: HTMLElement) => {
+    for (let box = node.parentElement; box; box = box.parentElement) {
+      if (/auto|scroll/.test(getComputedStyle(box).overflowY)) {
+        return box;
+      }
+    }
+    return null;
+  };
+  const nearView = (node: HTMLElement) => {
+    const ask = () => placeFaces.request([{ city, country }]);
+    if (typeof IntersectionObserver === 'undefined') {
+      ask();
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some(({ isIntersecting }) => isIntersecting)) {
+          observer.disconnect();
+          ask();
+        }
+      },
+      { root: scrollerOf(node), rootMargin: '50% 0px' },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  };
 </script>
 
 <a
@@ -35,8 +70,11 @@
   draggable="false"
   aria-label={label}
   data-testid="place-tile"
+  {@attach nearView}
 >
-  <img src={getAssetMediaUrl({ id: assetId, size: AssetMediaSize.Thumbnail })} alt="" loading="lazy" />
+  {#if shown}
+    <img src={getAssetMediaUrl({ id: shown, size: AssetMediaSize.Thumbnail })} alt="" loading="lazy" />
+  {/if}
   <span class="ws-place-tile-caption" aria-hidden="true">
     <span class="ws-place-tile-name">{city}</span>
     {#if stats}

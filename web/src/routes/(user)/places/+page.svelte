@@ -1,6 +1,7 @@
 <script lang="ts">
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
+  import { placeFaces } from '$lib/managers/place-faces.svelte';
   import { placeStats } from '$lib/managers/place-stats.svelte';
   import PlacesControls from './PlacesControls.svelte';
   import type { PageData } from './$types';
@@ -45,7 +46,11 @@
         PATIENCE_MS,
       )
       .then(() => {
-        order = rankPlaces(items, keyOf, (place) => placeStats.get(place), $locale).map(({ id }) => id);
+        const ranked = rankPlaces(items, keyOf, (place) => placeStats.get(place), $locale);
+        order = ranked.map(({ id }) => id);
+        // Local Omarchy layer: the first screen's faces asked for first, the places with the most photos first
+        // (managers/place-faces); each tile asks for its own as it comes near the view
+        placeFaces.request(ranked.slice(0, placeFaces.firstScreen()).map((item) => keyOf(item)));
       });
   });
   let places = $derived.by(() => {
