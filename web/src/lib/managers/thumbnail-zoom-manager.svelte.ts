@@ -1,6 +1,6 @@
 // Local Omarchy layer: Mac-Photos-style thumbnail zoom for the timeline, and the day-label toggle.
 // One scale per form factor (desktop / narrow), multiplied onto the timeline's base row height and
-// remembered per browser. Ctrl+wheel and trackpad pinch (which browsers deliver as Ctrl+wheel) zoom
+// remembered per browser. Shift+wheel, Ctrl+wheel and trackpad pinch (delivered as Ctrl+wheel) zoom
 // continuously; + / - step and 0 resets; TimelineWorkspaces renders a slider bound to `scale`.
 import { browser } from '$app/environment';
 
@@ -159,19 +159,34 @@ export const thumbnailZoomManager = new ThumbnailZoomManager();
 const isTyping = (target: EventTarget | null) =>
   target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable]') !== null;
 
-/** Wires Ctrl+wheel / pinch on the timeline's scroll container and + / - / 0 on the window. */
+/** Wires Shift+wheel / Ctrl+wheel / pinch on the timeline and + / - / 0 on the window. */
 export const attachThumbnailZoom = (element: HTMLElement) => {
   let pending = 0;
   let frame = 0;
 
   const onWheel = (event: WheelEvent) => {
-    if (!event.ctrlKey) {
+    if (
+      (!event.shiftKey && !event.ctrlKey) ||
+      event.altKey ||
+      event.metaKey ||
+      event.defaultPrevented ||
+      isTyping(event.target) ||
+      document.querySelector('#immich-asset-viewer')
+    ) {
       return;
     }
-    // stop the browser's page zoom; this gesture belongs to the photos
+
+    // Some browsers report Shift+wheel on the horizontal axis. Prefer Y so diagonal gestures
+    // are counted once; an ordinary horizontal swipe without Shift never resizes the grid.
+    const delta = event.deltaY || (event.shiftKey ? event.deltaX : 0);
+    if (!delta) {
+      return;
+    }
+    // Stop page scrolling / browser zoom: this gesture belongs to the photos, even at the size limits.
     event.preventDefault();
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element.clientHeight : 1;
     // a mouse wheel notch is ~100px, a pinch frame a few px: one exponential curve serves both
-    pending += event.deltaY;
+    pending += delta * unit;
     if (!frame) {
       frame = requestAnimationFrame(() => {
         thumbnailZoomManager.scale *= Math.exp(-pending * 0.0025);

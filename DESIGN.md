@@ -288,6 +288,7 @@ Things move the way the owner's desktop moves them. The theme hook reads Hyprlan
 
 ### Photo Tile (signature)
 Every photo is a window.
+- **Thumbnail size** (2026-10-23): Shift + mouse wheel over a photo grid enlarges on scroll up and shrinks on scroll down. It shares the View menu slider’s remembered size and limits, keeps the current month in view, and handles browsers that report Shift + wheel on the horizontal axis. Ctrl + wheel, trackpad pinch and + / − / 0 remain available; ordinary scrolling, fields and the open photo viewer keep their own gestures.
 - **Shape:** window radius (`--ws-radius`) on the container, image and focus layer.
 - **Rest:** inset 1px hairline.
 - **Focus / Hover:** inset `--ws-border` in the theme accent (hover counts as focus, like focus-follows-mouse); default outline suppressed. 140ms `cubic-bezier(0.22, 1, 0.36, 1)`; reduced motion: no transition.

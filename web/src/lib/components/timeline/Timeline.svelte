@@ -203,7 +203,7 @@
       !drawerOpen,
   );
 
-  // Local Omarchy layer: the base row height is scaled by the thumbnail zoom (Ctrl+wheel / pinch,
+  // Local Omarchy layer: the base row height is scaled by the thumbnail zoom (Shift+wheel / Ctrl+wheel / pinch,
   // + - 0, the header slider). A zoom keeps the month in view, and the place within it, on screen.
   let lastZoom: number | undefined;
   $effect(() => {
