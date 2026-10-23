@@ -24,7 +24,14 @@
   import { curator, curatorIsMine, type MemoryTrack, type Story } from '$lib/utils/curator';
   import { memoryCardCount } from '$lib/utils/memory-cards';
   import { formatMemoryTime, memoryCount, memoryFilmWords, type MemoryFilmWords } from '$lib/utils/memory-title';
-  import { AssetTypeEnum, getAlbumInfo, getAssetInfo, isHttpError, type AssetResponseDto } from '@immich/sdk';
+  import {
+    AssetTypeEnum,
+    getAlbumInfo,
+    getAssetInfo,
+    isHttpError,
+    searchAssets,
+    type AssetResponseDto,
+  } from '@immich/sdk';
   import { Icon, isModalOpen } from '@immich/ui';
   import { mdiClose, mdiFullscreen, mdiFullscreenExit, mdiPlay, mdiRefresh, mdiSkipNext } from '@mdi/js';
   import { DateTime } from 'luxon';
@@ -33,6 +40,7 @@
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { fade } from 'svelte/transition';
   import { ScreenAwake } from './room-awake';
+  import { roomOpening, wantsCamera } from './room-opening';
   import { albumReel, roomCaption, yearReel, type RoomReel, type RoomRequest, type YearFilm } from './room-reels';
   import { loadAlbumAssets, loadToday, loadYear } from './room-source';
 
@@ -219,9 +227,57 @@
   })();
 
   const settledOf = (target: RoomReel) =>
-    target.kind !== 'memory' ||
-    !curatorIsMine() ||
-    (memoryFacts.settled(target.memory.id) && songs.has(target.key) && stories.has(target.key));
+    openings.has(target.key) &&
+    (target.kind !== 'memory' ||
+      !curatorIsMine() ||
+      (memoryFacts.settled(target.memory.id) && songs.has(target.key) && stories.has(target.key)));
+
+  // ---- the opening: the picture under the title card, by the gate before the TV (room-opening.ts) ----
+
+  /** of a film's photos, those asked about a camera's data at most (the first ones the gate would pass) */
+  const CAMERA_ASKED = 48;
+  /** the opening waits this long for Curator's cover at most */
+  const COVER_PATIENCE_MS = 1000;
+  const openings = new SvelteMap<string, string | null>();
+  const openingAsked = new SvelteSet<string>();
+
+  const chooseOpening = async (target: RoomReel, assets: AssetResponseDto[]) => {
+    if (openingAsked.has(target.key)) {
+      return;
+    }
+    openingAsked.add(target.key);
+    const asked = assets
+      .filter((asset) => wantsCamera(asset))
+      .slice(0, CAMERA_ASKED)
+      .map(({ id }) => id);
+    const camera =
+      asked.length === 0
+        ? Promise.resolve(new Set<string>())
+        : searchAssets({
+            metadataSearchDto: {
+              // the photos of my own, my partners' and the Spaces on my timeline, as Room plays them
+              withSharedSpaces: true,
+              filter: { or: asked.map((id) => ({ id: { eq: id } })), make: { ne: null } },
+              size: asked.length,
+            },
+          })
+            .then(({ assets: found }) => new Set(found.items.map(({ id }) => id)))
+            // without it, the favourites and Live Photos still pass the gate
+            .catch(() => new Set<string>());
+    if (target.kind === 'memory' && curatorIsMine()) {
+      let patience: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        memoryFacts.settle([target.memory.id]),
+        new Promise<void>((resolve) => (patience = setTimeout(resolve, COVER_PATIENCE_MS))),
+      ]);
+      clearTimeout(patience);
+    }
+    const cover = target.kind === 'memory' ? memoryFacts.get(target.memory.id)?.cover : undefined;
+    openings.set(
+      target.key,
+      roomOpening(assets, { cover, camera: await camera, aspect: innerWidth / Math.max(1, innerHeight) }) ?? null,
+    );
+  };
 
   // ---- what each film says: its title, the title card's name and line ----
 
@@ -283,6 +339,17 @@
   });
   const nextReel = $derived(status === 'playing' && reels.length > 1 ? reels[(index + 1) % reels.length] : undefined);
   const nextTitle = $derived(nextReel ? wordsOf(nextReel, holdOf(nextReel)).title : undefined);
+
+  // the film on screen is given its opening once its photos are in, and the next one while it plays
+  $effect(() => {
+    const targets = [reel, nextReel].filter((target): target is RoomReel => !!target);
+    for (const target of targets) {
+      const assets = holdOf(target)?.assets;
+      if (assets && assets.length > 0) {
+        untrack(() => void chooseOpening(target, assets));
+      }
+    }
+  });
 
   // ---- the caption: who, where and when, for the photo on screen (its details, asked once, the next two ahead) ----
 
@@ -533,7 +600,7 @@
         name={filmWords.name}
         line={filmWords.line}
         title={filmWords.title}
-        cover={filmFacts?.cover}
+        cover={openings.get(filmReel.key) ?? filmFacts?.cover}
         focus={filmFocus}
         settled={settledOf(filmReel)}
         story={storyHidden ? null : (stories.get(filmReel.key)?.text ?? null)}

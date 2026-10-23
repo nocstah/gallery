@@ -1,9 +1,18 @@
-import { AssetTypeEnum, getAlbumInfo, getAssetInfo, MemoryType, type MemoryResponseDto } from '@immich/sdk';
+import {
+  AssetTypeEnum,
+  getAlbumInfo,
+  getAssetInfo,
+  MemoryType,
+  searchAssets,
+  type MemoryResponseDto,
+  type SearchResponseDto,
+} from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
 import { curator } from '$lib/utils/curator';
 import { assetFactory } from '@test-data/factories/asset-factory';
+import { BRIGHT, DIM } from '@test-data/thumbhash';
 import RoomPlayer from './RoomPlayer.svelte';
 import { memoryReel, type RoomRequest } from './room-reels';
 import { loadAlbumAssets, loadToday } from './room-source';
@@ -45,6 +54,7 @@ vi.mock('@immich/sdk', async (original) => ({
   ...(await original<typeof import('@immich/sdk')>()),
   getAlbumInfo: vi.fn(),
   getAssetInfo: vi.fn(),
+  searchAssets: vi.fn(),
 }));
 
 const memory = (id: string, year: number, count = 3): MemoryResponseDto =>
@@ -64,6 +74,8 @@ const memory = (id: string, year: number, count = 3): MemoryResponseDto =>
         width: 4000,
         height: 3000,
         localDateTime: `${year}-10-18T10:00:00.000Z`,
+        // nothing known of its light: no photo passes the gate before the TV, so the film opens as it always did
+        thumbhash: null,
       }),
     ),
   }) as MemoryResponseDto;
@@ -88,6 +100,7 @@ describe('RoomPlayer', () => {
     released = vi.fn(() => Promise.resolve());
     requested = vi.fn(() => Promise.resolve({ released: false, release: released }));
     Object.defineProperty(navigator, 'wakeLock', { value: { request: requested }, configurable: true });
+    vi.mocked(searchAssets).mockResolvedValue({ assets: { items: [] } } as unknown as SearchResponseDto);
     vi.mocked(getAssetInfo).mockImplementation(({ id }) =>
       Promise.resolve({
         id,
@@ -117,6 +130,44 @@ describe('RoomPlayer', () => {
     await playing('October 2025');
     await fireEvent.keyDown(document, { key: 'ArrowUp' });
     await playing('October 2019');
+  });
+
+  // Local Omarchy layer: a film opens on its best bright photo (room-opening.ts), the rest in their order
+  it('opens a film on a bright photo a camera took where its first is dim, the others in their order', async () => {
+    const lit = memory('m1', 2025, 3);
+    lit.assets = lit.assets.map((asset, index) => ({
+      ...asset,
+      isFavorite: false,
+      livePhotoVideoId: null,
+      originalMimeType: 'image/heic',
+      thumbhash: index === 0 ? DIM : BRIGHT,
+    }));
+    vi.mocked(searchAssets).mockImplementation(({ metadataSearchDto }) =>
+      Promise.resolve({
+        assets: { items: (metadataSearchDto.filter?.or ?? []).map(({ id }) => ({ id: id?.eq })) },
+      } as unknown as SearchResponseDto),
+    );
+    vi.mocked(loadToday).mockResolvedValue([memoryReel(lit)]);
+    render(RoomPlayer, { request: today });
+    await playing('October 2025');
+
+    // the camera's data is asked of the photos the gate would let in once they have it
+    expect(searchAssets).toHaveBeenCalledWith({
+      metadataSearchDto: {
+        withSharedSpaces: true,
+        filter: { or: [{ id: { eq: 'm1-1' } }, { id: { eq: 'm1-2' } }], make: { ne: null } },
+        size: 2,
+      },
+    });
+    const shown = () =>
+      [...document.querySelectorAll<HTMLElement>('.film-layer')].sort(
+        (a, b) => Number(b.style.zIndex) - Number(a.style.zIndex),
+      )[0]?.dataset.assetId;
+    await waitFor(() => expect(shown()).toBe('m1-1'));
+    await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    await waitFor(() => expect(shown()).toBe('m1-0'));
+    await fireEvent.keyDown(document, { key: 'ArrowRight' });
+    await waitFor(() => expect(shown()).toBe('m1-2'));
   });
 
   it('says what comes next, and goes there on a press', async () => {
