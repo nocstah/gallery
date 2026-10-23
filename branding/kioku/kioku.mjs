@@ -806,6 +806,21 @@ const verify = (target) => {
       ),
     'its Logo without transparent',
   );
+  // the bar's mark in its two layers (Logo's ink mode): the ink files a mask in the theme's ink, the colour on top
+  const layerFiles = [
+    ...new Set(
+      brand.assets.files
+        .flatMap(({ make }) => make.map(({ target }) => target))
+        .filter((target) => /\/gallery-logo-[a-z]+-(ink|colour)\.svg$/.test(target))
+        .map((target) => `/${path.posix.relative('web/static', target)}`),
+    ),
+  ];
+  const bar = copyMode ? read('web/src/lib/components/shared-components/Logo.svelte') : scripts;
+  expect(
+    "the bar's mark: its two layers",
+    layerFiles.length === 4 && layerFiles.every((file) => bar.includes(file)),
+    layerFiles.join(', '),
+  );
   const has24 = fs.existsSync(path.join(root, copyMode ? 'web/static/favicon-24.png' : 'web/favicon-24.png'));
   const link24 = boot.includes('<link rel="icon" type="image/png" sizes="24x24" href="/favicon-24.png"');
   expect(

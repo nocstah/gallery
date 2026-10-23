@@ -61,6 +61,11 @@ A second run changes nothing.
 
 `verify-kioku.sh` lists each of these with its reason every time it runs.
 
+The bar draws its mark in two layers (`Logo`'s `ink` mode, in the source, for both brands): the variant's ink file is a
+mask over the theme's ink and its colour file an image on top, so a mark keeps a colour of its own while its ink
+follows the theme. The committed layer files are the light logo and an empty colour, so an unbranded build draws the
+mark as before; Kioku ships its own from `assets/`.
+
 The boot screen's loader is drawn for a dark ground when the screen is dark (a `<picture>` with a
 `prefers-color-scheme: dark` source in `web/src/app.html`). That is in the source, for both brands, since the ink
 loader vanished on a dark boot screen whatever the name.
@@ -124,6 +129,8 @@ beats the resized one. `favicon.ico` ships as drawn, or is assembled from the 16
 | `logo-mark.svg`, `logo-mark-dark.svg`      | `gallery-logo-mark{,-dark}.svg`: the still mark (the login card and its backdrop, the icon-sized logos; the bar draws it as a mask in the theme's ink) |
 | `loader.svg`, `loader-dark.svg`            | `gallery-loader{,-dark}.svg`: the mark writing itself while a page loads, and on the boot screen |
 | `logo-inline-{light,dark}.svg`             | `gallery-logo-inline-{light,dark}.svg`: mark and wordmark, the bar on a wide screen |
+| `mark-ink.svg`, `mark-colour.svg` (optional) | `gallery-logo-mark-{ink,colour}.svg`: the bar's mark in two layers, the ink a mask in the theme's ink (the whole of `logo-mark.svg` unless drawn), the colour drawn over it as it is (none unless drawn) |
+| `inline-ink.svg`, `inline-colour.svg` (optional) | `gallery-logo-inline-{ink,colour}.svg`: the bar's wordmark in the same two layers (the ink from `logo-inline-light.svg` unless drawn) |
 | `logo-stacked.svg`, `logo-stacked-dark.svg` | `gallery-logo-stacked{,-dark}.svg`                                          |
 
 ## On the desktop, by hand
