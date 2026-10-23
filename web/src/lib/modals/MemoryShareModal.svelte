@@ -624,6 +624,10 @@
   .ws-memory-share-choice.chosen {
     background: color-mix(in oklab, var(--immich-ui-dark) 6%, transparent);
   }
+  /* muted ink on the tint measured 4.2:1: the chosen row's line is ink, which also says it is the one on */
+  .ws-memory-share-choice.chosen small {
+    color: var(--immich-ui-dark);
+  }
   /* the accent for the keyboard's focus only, not after a click */
   .ws-memory-share-choice:has(input:focus-visible) {
     outline: var(--ws-border) solid var(--ws-accent);
