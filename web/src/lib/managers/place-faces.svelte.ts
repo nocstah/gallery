@@ -1,21 +1,23 @@
-import { searchAssets } from '@immich/sdk';
+import { searchAssets, searchSmart } from '@immich/sdk';
 import { SvelteMap } from 'svelte/reactivity';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
-import { choosePlaceFace, type PlaceAt } from '$lib/utils/place-faces';
+import { choosePlaceFace, PLACE_LOOK, type PlaceAt } from '$lib/utils/place-faces';
 import { placeKey } from '$lib/utils/place-stats';
 
 // Local Omarchy layer: the photo each place tile shows on Places and in Explore's row (utils/place-faces), asked for
-// once the tile comes near the screen (PlaceTile; the pages ask for their first screen, most photos first), a few places
-// at a time, each once per page load, so the two pages
-// show a place alike and a tile never changes photo once it has shown one: it keeps its quiet ground until its face is
-// chosen. A place without a photo that qualifies, or whose question failed, shows the server's photo. One or two small
-// searches a place (about 2 KB each). Forgotten on sign-out.
+// once the tile comes near the screen (PlaceTile; Places asks for its first screen itself, most photos first), a few
+// places at a time, each once per page load, so the two pages show a place alike and a tile never changes photo once
+// it has shown one: it keeps its quiet ground until its face is chosen. A place without a photo that qualifies, or
+// whose questions failed, shows the server's photo. One image search a place (about 5 KB), or two small metadata
+// searches where Gallery's machine learning does not answer in time. Forgotten on sign-out.
 
 /** places asked about at once */
 const AT_ONCE = 6;
 /** a question not answered by then counts as failed */
 const QUESTION_MS = 8000;
+/** the image search is given up on sooner (its model may be loading), for the metadata searches */
+const LOOKS_MS = 5000;
 /** a place tile with its share of the gap, in CSS pixels squared (9rem and 10px, each way) */
 const TILE_AREA = 154 * 154;
 
@@ -93,21 +95,23 @@ class PlaceFaceManager {
 
   async #load(place: PlaceAt) {
     const key = placeKey(place);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), QUESTION_MS);
     try {
-      const face = await choosePlaceFace(place, (filter, size) =>
-        searchAssets(
-          // the places' own reach: my photos, my partners' and the Spaces on my timeline (GET /search/cities')
-          { metadataSearchDto: { filter, size, withSharedSpaces: true } },
-          { signal: controller.signal },
-        ).then(({ assets }) => assets.items),
-      );
+      // the places' own reach: my photos, my partners' and the Spaces on my timeline (as GET /search/cities')
+      const face = await choosePlaceFace(place, {
+        looks: (filter, size) =>
+          searchSmart(
+            { smartSearchDto: { query: PLACE_LOOK, filter, size, withSharedSpaces: true } },
+            { signal: AbortSignal.timeout(LOOKS_MS) },
+          ).then(({ assets }) => assets.items),
+        newest: (filter, size) =>
+          searchAssets(
+            { metadataSearchDto: { filter, size, withSharedSpaces: true } },
+            { signal: AbortSignal.timeout(QUESTION_MS) },
+          ).then(({ assets }) => assets.items),
+      });
       this.#faces.set(key, face ?? null);
     } catch {
       this.#faces.set(key, null);
-    } finally {
-      clearTimeout(timer);
     }
   }
 
