@@ -9,7 +9,8 @@
     mdiMessageBadgeOutline,
     mdiSync,
   } from '@mdi/js';
-  import { DateTime } from 'luxon';
+  import { relativeTime } from '$lib/utils/relative-time';
+  import { locale } from 'svelte-i18n';
 
   interface Props {
     notification: NotificationDto;
@@ -84,19 +85,10 @@
     }
   };
 
-  const formatRelativeTime = (dateString: string): string => {
-    try {
-      const date = DateTime.fromISO(dateString);
-      if (!date.isValid) {
-        return dateString; // Return original string if parsing fails
-      }
-      // Use Luxon's toRelative with the current locale
-      return date.setLocale('en').toRelative() || dateString;
-    } catch (error) {
-      console.error('Error formatting relative time:', error);
-      return dateString; // Fallback to original string on error
-    }
-  };
+  // Local Omarchy layer: how long ago by the calendar, in the reader's language (utils/relative-time), as every time that
+  // says so; upstream counted elapsed time in English ("1 day ago" for the day before yesterday's evening)
+  const formatRelativeTime = (dateString: string): string =>
+    relativeTime(dateString, Date.now(), $locale ?? undefined) || dateString;
 </script>
 
 <button

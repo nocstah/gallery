@@ -15,7 +15,6 @@ import {
   linkItems,
   MERGE_GAP_MS,
   reactionItems,
-  relativeTime,
   sortItems,
   spaceItems,
   takeSharedVisit,
@@ -249,25 +248,6 @@ describe('withoutPhotos', () => {
     expect(left).toHaveLength(1);
     expect(left[0]).toMatchObject({ count: 4, photoIds: ['p2'] });
     expect(withoutPhotos(items, new Set())).toBe(items);
-  });
-});
-
-describe('relativeTime', () => {
-  const now = Date.parse('2026-10-16T12:00:00.000Z');
-  const ago = (seconds: number) => new Date(now - seconds * 1000).toISOString();
-
-  it('says how long ago in a few characters, never "yesterday"', () => {
-    expect(relativeTime(ago(20), now, 'en')).toBe('now');
-    expect(relativeTime(ago(5 * 60), now, 'en')).toBe('5m ago');
-    expect(relativeTime(ago(2 * 3600 + 59), now, 'en')).toBe('2h ago');
-    expect(relativeTime(ago(30 * 3600), now, 'en')).toBe('1d ago');
-    expect(relativeTime(ago(15 * 86_400), now, 'en')).toBe('2w ago');
-    expect(relativeTime(ago(100 * 86_400), now, 'en')).toBe('3mo ago');
-    expect(relativeTime(ago(800 * 86_400), now, 'en')).toBe('2y ago');
-  });
-
-  it('takes the short style where the narrow one is a signed number', () => {
-    expect(relativeTime(ago(2 * 3600), now, 'fr')).not.toMatch(/^[-−]/);
   });
 });
 

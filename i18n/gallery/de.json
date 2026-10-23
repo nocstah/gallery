@@ -551,7 +551,7 @@
   "ai_inbox_junk": "Müll",
   "ai_inbox_keys": "J K vor/zurück · A {accept} · R Ablehnen · U Rückgängig",
   "ai_inbox_keys_trash": "J K vor/zurück · A {accept} · R Ablehnen · D Löschen · U Rückgängig",
-  "ai_inbox_last_backup": "Letzte Sicherung vor {hours} Std.",
+  "ai_inbox_last_backup": "Letzte Sicherung {when}",
   "ai_inbox_list_failed": "Die Vorschläge konnten nicht geladen werden.",
   "ai_inbox_list_loading": "Vorschläge werden geladen…",
   "ai_inbox_no_backup": "Noch keine Datenbanksicherung",

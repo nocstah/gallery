@@ -88,6 +88,30 @@ describe('SharedFeed', () => {
     expect(within(rows[0]).getByText('2h ago')).toHaveAttribute('datetime', iso(NOW - 2 * HOUR));
   });
 
+  // the critique's case: a Wednesday evening had read "1d ago" under "Wednesday" on a Friday morning
+  it('says when by the calendar, so a time agrees with the day it is listed under', () => {
+    const friday = new Date(2026, 9, 16, 9, 0).getTime();
+    vi.setSystemTime(friday);
+    const wednesdayEvening = new Date(2026, 9, 14, 21, 11).getTime();
+    const yesterdayLate = new Date(2026, 9, 15, 23, 40).getTime();
+    render(SharedFeed, {
+      items: sortItems(
+        spaceItems(space, [add(mom, yesterdayLate, 1, ['p1']), add(dad, wednesdayEvening, 2, ['p2', 'p3'])]),
+      ),
+      meId: 'me',
+      canShowMore: false,
+      onShowMore: vi.fn(),
+      photoHref: (id: string) => `/sharing/photos/${id}`,
+    });
+
+    expect(screen.getAllByRole('heading', { level: 2 }).map(({ textContent }) => textContent)).toEqual([
+      'Yesterday',
+      'Wednesday',
+    ]);
+    const rows = screen.getAllByTestId('feed-item');
+    expect(rows.map((row) => row.querySelector('.ws-feed-when')?.textContent?.trim())).toEqual(['yesterday', '2d ago']);
+  });
+
   it('shows six of the photos as tiles that open in the viewer, then how many more and where', async () => {
     const onOpenPhoto = vi.fn();
     renderFeed({ onOpenPhoto });

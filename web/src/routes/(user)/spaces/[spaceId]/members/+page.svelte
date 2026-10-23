@@ -6,7 +6,7 @@
   import { getAssetMediaUrl } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
   import { spaceRoleLabelKey } from '$lib/utils/space-utils';
-  import { formatTimeAgo } from '$lib/utils/timesince';
+  import { relativeTime } from '$lib/utils/relative-time';
   import {
     removeMember,
     SharedSpaceRole,
@@ -15,7 +15,7 @@
     type SharedSpaceMemberResponseDto,
   } from '@immich/sdk';
   import { Field, modalManager, Select, type SelectOption } from '@immich/ui';
-  import { t } from 'svelte-i18n';
+  import { locale, t } from 'svelte-i18n';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -103,7 +103,7 @@
               <span class="ws-inbox-meta">
                 {$t('space_album_photo_count', { values: { count: member.contributionCount ?? 0 } })}
                 {#if member.lastActiveAt}
-                  · {formatTimeAgo(member.lastActiveAt)}
+                  · {relativeTime(member.lastActiveAt, Date.now(), $locale ?? undefined)}
                 {/if}
               </span>
             </span>

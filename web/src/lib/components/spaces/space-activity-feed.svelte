@@ -1,12 +1,12 @@
 <script lang="ts">
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
-  import { formatTimeAgo } from '$lib/utils/timesince';
+  import { relativeTime } from '$lib/utils/relative-time';
   import { UserAvatarColor, type SharedSpaceActivityResponseDto } from '@immich/sdk';
   import { Button } from '@immich/ui';
   import { mdiChevronDown } from '@mdi/js';
   import type { Snippet } from 'svelte';
-  import { t, type MessageFormatter } from 'svelte-i18n';
+  import { locale, t, type MessageFormatter } from 'svelte-i18n';
 
   interface Props {
     activities: SharedSpaceActivityResponseDto[];
@@ -17,6 +17,10 @@
   }
 
   let { activities, onLoadMore, hasMore, emptyActions }: Props = $props();
+
+  // Local Omarchy layer: how long ago by the calendar, in the reader's language (utils/relative-time), so a time agrees
+  // with the day it is listed under: an evening two days back read "1d ago" under its date
+  const when = (iso: string) => relativeTime(iso, Date.now(), $locale ?? undefined);
 
   const HIGH_IMPACT_TYPES = new Set(['asset_add', 'asset_remove']);
   const MEDIUM_TYPES = new Set([
@@ -201,7 +205,7 @@
                   {/if}
                 {/if}
               </div>
-              <span class="ws-activity-time">{formatTimeAgo(activity.createdAt)}</span>
+              <span class="ws-activity-time">{when(activity.createdAt)}</span>
             </li>
           {:else if MEDIUM_TYPES.has(activity.type)}
             <li class="ws-activity-row" data-tier="medium" data-testid="activity-item-{activity.id}">
@@ -209,14 +213,14 @@
               <div class="ws-activity-text">
                 <p>{getDescription(activity, $t)}</p>
               </div>
-              <span class="ws-activity-time">{formatTimeAgo(activity.createdAt)}</span>
+              <span class="ws-activity-time">{when(activity.createdAt)}</span>
             </li>
           {:else}
             <li class="ws-activity-row ws-activity-quiet" data-tier="low" data-testid="activity-item-{activity.id}">
               <div class="ws-activity-text">
                 <p>{getDescription(activity, $t)}</p>
               </div>
-              <span class="ws-activity-time">{formatTimeAgo(activity.createdAt)}</span>
+              <span class="ws-activity-time">{when(activity.createdAt)}</span>
             </li>
           {/if}
         {/each}

@@ -550,7 +550,7 @@
   "ai_inbox_junk": "Junk",
   "ai_inbox_keys": "J K move · A {accept} · R Reject · U Undo",
   "ai_inbox_keys_trash": "J K move · A {accept} · R Reject · D Delete · U Undo",
-  "ai_inbox_last_backup": "Last backup {hours} h ago",
+  "ai_inbox_last_backup": "Last backup {when}",
   "ai_inbox_list_failed": "Couldn't load the suggestions.",
   "ai_inbox_list_loading": "Loading the suggestions…",
   "ai_inbox_no_backup": "No database backup yet",

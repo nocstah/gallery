@@ -562,7 +562,7 @@
   "ai_inbox_junk": "丟棄",
   "ai_inbox_keys": "J K 上下移動 · A {accept} · R 拒絕 · U 還原",
   "ai_inbox_keys_trash": "J K 上下移動 · A {accept} · R 拒絕 · D 刪除 · U 還原",
-  "ai_inbox_last_backup": "上次備份於 {hours} 小時前",
+  "ai_inbox_last_backup": "上次備份於{when}",
   "ai_inbox_list_failed": "無法載入建議。",
   "ai_inbox_list_loading": "正在載入建議…",
   "ai_inbox_no_backup": "尚無資料庫備份",

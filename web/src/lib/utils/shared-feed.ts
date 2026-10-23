@@ -1,8 +1,8 @@
 // Local Omarchy layer: Shared as a feed (the owner's choice, 2026-10-16: "Shared as a feed" over sections and a New
 // strip). Newest first: who added what to which Space or shared album, the comments and hearts left on shared albums,
 // the photos new in them since this browser last looked, and the links I made, each with a strip of its photos. This
-// file is the feed's shape (the items each source makes, how they merge, the time they show); managers/shared-feed
-// fetches the sources.
+// file is the feed's shape (the items each source makes, how they merge, the full time in a tooltip); managers/shared-feed
+// fetches the sources, and utils/relative-time says how long ago, by the calendar.
 import {
   ReactionType,
   SharedLinkType,
@@ -306,64 +306,6 @@ export const withoutPhotos = (items: FeedItem[], gone: ReadonlySet<string>): Fee
         }
         return [{ ...item, photoIds }];
       });
-
-const relativeFormats = new Map<string, { auto: Intl.RelativeTimeFormat; always: Intl.RelativeTimeFormat }>();
-
-const relativeFormat = (locale?: string) => {
-  const cached = relativeFormats.get(locale ?? '');
-  if (cached) {
-    return cached;
-  }
-  const make = (style: Intl.RelativeTimeFormatStyle, numeric: Intl.RelativeTimeFormatNumeric) => {
-    try {
-      return new Intl.RelativeTimeFormat(locale, { style, numeric });
-    } catch {
-      return new Intl.RelativeTimeFormat(undefined, { style, numeric });
-    }
-  };
-  // the narrow style is the data type's ("2h ago"), but some locales write its past as a signed number ("-2 h"),
-  // which reads as arithmetic: those take the short one ("il y a 2 h")
-  const style = /^[-+−]/.test(make('narrow', 'always').format(-2, 'hour')) ? 'short' : 'narrow';
-  const formats = { auto: make(style, 'auto'), always: make(style, 'always') };
-  relativeFormats.set(locale ?? '', formats);
-  return formats;
-};
-
-const MINUTE = 60;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-
-/**
- * How long ago, in the reader's language and the data type's few characters: "now", "5m ago", "2h ago", "3d ago",
- * "2w ago", "4mo ago", "2y ago". Never "yesterday": under a day's heading the elapsed time is the point, and an
- * evening 30 hours back would read "yesterday" under Monday.
- */
-export const relativeTime = (iso: string, now: number, locale?: string) => {
-  const { auto, always } = relativeFormat(locale);
-  const seconds = (ms(iso) - now) / 1000;
-  const elapsed = Math.abs(seconds);
-  const sign = seconds < 0 ? -1 : 1;
-  const step = (size: number) => sign * Math.trunc(elapsed / size);
-  if (elapsed < MINUTE) {
-    return auto.format(0, 'second');
-  }
-  if (elapsed < HOUR) {
-    return always.format(step(MINUTE), 'minute');
-  }
-  if (elapsed < DAY) {
-    return always.format(step(HOUR), 'hour');
-  }
-  if (elapsed < 7 * DAY) {
-    return always.format(step(DAY), 'day');
-  }
-  if (elapsed < 30 * DAY) {
-    return always.format(step(7 * DAY), 'week');
-  }
-  if (elapsed < 365 * DAY) {
-    return always.format(step(30 * DAY), 'month');
-  }
-  return always.format(step(365 * DAY), 'year');
-};
 
 /** The full date and time, for a time's tooltip. */
 export const fullTime = (iso: string, locale?: string) => {

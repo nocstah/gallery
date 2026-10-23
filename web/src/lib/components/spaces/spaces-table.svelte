@@ -2,11 +2,11 @@
   import RoleBadge from '$lib/components/spaces/role-badge.svelte';
   import SpaceCollage from '$lib/components/spaces/space-collage.svelte';
   import { Route } from '$lib/route';
-  import { formatTimeAgo } from '$lib/utils/timesince';
+  import { relativeTime } from '$lib/utils/relative-time';
   import type { SharedSpaceResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiDotsVertical, mdiPin, mdiPinOff } from '@mdi/js';
-  import { t } from 'svelte-i18n';
+  import { locale, t } from 'svelte-i18n';
 
   interface Props {
     spaces: SharedSpaceResponseDto[];
@@ -189,7 +189,8 @@
           <Icon icon={mdiDotsVertical} size="16" />
         </button>
       {:else}
-        {space.lastActivityAt ? formatTimeAgo(space.lastActivityAt) : '—'}
+        <!-- Local Omarchy layer: how long ago by the calendar, in the reader's language (utils/relative-time) -->
+        {space.lastActivityAt ? relativeTime(space.lastActivityAt, Date.now(), $locale ?? undefined) : '—'}
       {/if}
 
       {#if openMenuId === space.id}

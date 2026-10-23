@@ -553,7 +553,7 @@
   "ai_inbox_junk": "丢弃",
   "ai_inbox_keys": "J K 上下移动 · A {accept} · R 拒绝 · U 撤销",
   "ai_inbox_keys_trash": "J K 上下移动 · A {accept} · R 拒绝 · D 删除 · U 撤销",
-  "ai_inbox_last_backup": "上次备份于 {hours} 小时前",
+  "ai_inbox_last_backup": "上次备份于{when}",
   "ai_inbox_list_failed": "无法加载建议。",
   "ai_inbox_list_loading": "正在加载建议…",
   "ai_inbox_no_backup": "尚无数据库备份",

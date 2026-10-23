@@ -4,6 +4,7 @@
   import { getDatabaseBackupActions, handleRestoreDatabaseBackup } from '$lib/services/database-backups.service';
   import { locale } from '$lib/stores/preferences.store';
   import { getBytesWithUnit } from '$lib/utils/byte-units';
+  import { relativeTime as sinceByCalendar } from '$lib/utils/relative-time';
   import { Button, Card, CardBody, ContextMenuButton, HStack, Icon, Stack, Text } from '@immich/ui';
   import { mdiAlertCircle, mdiCheckCircle, mdiDatabaseRefreshOutline } from '@mdi/js';
   import { DateTime } from 'luxon';
@@ -29,7 +30,9 @@
   });
 
   const timeDisplay = $derived(backupDateTime?.toLocaleString(DateTime.TIME_SIMPLE));
-  const relativeTime = $derived(backupDateTime?.toRelative({ locale: $locale }));
+  // Local Omarchy layer: how long ago by the calendar (utils/relative-time), so it agrees with the date the backup is
+  // listed under; upstream counted elapsed time ("1 day ago" under the day before yesterday)
+  const relativeTime = $derived(backupDateTime ? sinceByCalendar(backupDateTime.toMillis(), Date.now(), $locale) : '');
 
   const version = $derived(filename.match(/-v(.*)-/)?.[1]);
 

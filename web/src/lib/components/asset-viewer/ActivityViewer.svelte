@@ -9,6 +9,7 @@
   import { getAssetMediaUrl } from '$lib/utils';
   import { getAssetType } from '$lib/utils/asset-utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { relativeTime } from '$lib/utils/relative-time';
   import { isTenMinutesApart } from '$lib/utils/timesince';
   import { ReactionType, type ActivityResponseDto, type AlbumUserResponseDto, type AssetTypeEnum } from '@immich/sdk';
   import { ContextMenuButton, Icon, IconButton, Textarea, toastManager } from '@immich/ui';
@@ -19,8 +20,6 @@
   import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
   import UserAvatar from '../shared-components/UserAvatar.svelte';
 
-  const units: Intl.RelativeTimeFormatUnit[] = ['year', 'month', 'week', 'day', 'hour', 'minute', 'second'];
-
   const shouldGroup = (currentDate: string, nextDate: string): boolean => {
     const currentDateTime = luxon.DateTime.fromISO(currentDate, { locale: $locale });
     const nextDateTime = luxon.DateTime.fromISO(nextDate, { locale: $locale });
@@ -28,15 +27,9 @@
     return currentDateTime.hasSame(nextDateTime, 'hour') || currentDateTime.toRelative() === nextDateTime.toRelative();
   };
 
-  const timeSince = (dateTime: luxon.DateTime) => {
-    const diff = dateTime.diffNow().shiftTo(...units);
-    const unit = units.find((unit) => diff.get(unit) !== 0) || 'second';
-
-    const relativeFormatter = new Intl.RelativeTimeFormat($locale, {
-      numeric: 'auto',
-    });
-    return relativeFormatter.format(Math.trunc(diff.as(unit)), unit);
-  };
+  // Local Omarchy layer: how long ago by the calendar (utils/relative-time), as every time that says so: "yesterday"
+  // had stood for anything from 24 to 48 hours back, so a comment from the day before yesterday could read yesterday
+  const timeSince = (dateTime: luxon.DateTime) => relativeTime(dateTime.toMillis(), Date.now(), $locale);
 
   interface Props {
     assetId?: string | undefined;

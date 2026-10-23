@@ -549,7 +549,7 @@
   "ai_inbox_junk": "Da buttare",
   "ai_inbox_keys": "J K avanti/indietro · A {accept} · R Rifiuta · U Annulla",
   "ai_inbox_keys_trash": "J K avanti/indietro · A {accept} · R Rifiuta · D Elimina · U Annulla",
-  "ai_inbox_last_backup": "Ultimo backup {hours} h fa",
+  "ai_inbox_last_backup": "Ultimo backup {when}",
   "ai_inbox_list_failed": "Impossibile caricare i suggerimenti.",
   "ai_inbox_list_loading": "Caricamento dei suggerimenti…",
   "ai_inbox_no_backup": "Ancora nessun backup del database",

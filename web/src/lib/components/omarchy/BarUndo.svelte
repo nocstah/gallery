@@ -5,6 +5,7 @@
   // pages without this bar (an album).
   import { undoManager } from '$lib/managers/undo-manager.svelte';
   import { locale } from '$lib/stores/preferences.store';
+  import { relativeTime } from '$lib/utils/relative-time';
   import { Icon } from '@immich/ui';
   import { mdiUndoVariant } from '@mdi/js';
   import { tick } from 'svelte';
@@ -24,7 +25,7 @@
     }
   });
 
-  // the times read "now", "3 min. ago"... and move on while the sheet is open
+  // the times read "now", "3m ago"... and move on while the sheet is open
   $effect(() => {
     if (!open) {
       return;
@@ -34,15 +35,8 @@
     return () => clearInterval(clock);
   });
 
-  const ago = (at: number) => {
-    const format = new Intl.RelativeTimeFormat($locale, { numeric: 'auto', style: 'short' });
-    const seconds = Math.round((at - now) / 1000);
-    if (seconds > -60) {
-      return format.format(seconds > -10 ? 0 : seconds, 'second');
-    }
-    const minutes = Math.round(seconds / 60);
-    return minutes > -60 ? format.format(minutes, 'minute') : format.format(Math.round(minutes / 60), 'hour');
-  };
+  // how long ago, as every time that says so (utils/relative-time): minutes and hours today, then by the calendar
+  const ago = (at: number) => relativeTime(at, now, $locale);
 
   const toggle = async () => {
     open = !open;

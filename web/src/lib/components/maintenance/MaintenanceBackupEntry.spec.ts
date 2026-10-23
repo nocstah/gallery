@@ -2,6 +2,7 @@ import { screen } from '@testing-library/svelte';
 import { DateTime } from 'luxon';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { locale } from '$lib/stores/preferences.store';
+import { relativeTime } from '$lib/utils/relative-time';
 import { renderWithTooltips } from '$tests/helpers';
 import MaintenanceBackupEntry from './MaintenanceBackupEntry.svelte';
 
@@ -24,20 +25,18 @@ describe('MaintenanceBackupEntry', () => {
     vi.useRealTimers();
   });
 
+  // Local Omarchy layer: the relative time is the calendar's (utils/relative-time), as every one in the app
   it('renders relative backup time using the user timezone instead of UTC', () => {
     const backupTimestamp = '20260324T110000';
+    const since = (zone: string) =>
+      relativeTime(
+        DateTime.fromFormat(backupTimestamp, "yyyyMMdd'T'HHmmss", { zone }).toLocal().toMillis(),
+        Date.now(),
+        'en',
+      );
 
-    const expectedRelativeTime = DateTime.fromFormat(backupTimestamp, "yyyyMMdd'T'HHmmss", {
-      zone: 'Asia/Tokyo',
-    })
-      .toLocal()
-      .toRelative({ locale: 'en' });
-
-    const utcRelativeTime = DateTime.fromFormat(backupTimestamp, "yyyyMMdd'T'HHmmss", {
-      zone: 'UTC',
-    })
-      .toLocal()
-      .toRelative({ locale: 'en' });
+    const expectedRelativeTime = since('Asia/Tokyo');
+    const utcRelativeTime = since('UTC');
 
     expect(expectedRelativeTime).toBeTruthy();
     expect(expectedRelativeTime).not.toEqual(utcRelativeTime);

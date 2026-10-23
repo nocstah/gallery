@@ -7,10 +7,10 @@
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import { Route } from '$lib/route';
   import { getAssetMediaUrl } from '$lib/utils';
+  import { relativeTime } from '$lib/utils/relative-time';
   import {
     fullTime,
     groupByDay,
-    relativeTime,
     type FeedComment,
     type FeedItem,
     type FeedPerson,

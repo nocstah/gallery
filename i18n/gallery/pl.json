@@ -549,7 +549,7 @@
   "ai_inbox_junk": "Do usunięcia",
   "ai_inbox_keys": "J K dalej/wstecz · A {accept} · R Odrzuć · U Cofnij",
   "ai_inbox_keys_trash": "J K dalej/wstecz · A {accept} · R Odrzuć · D Usuń · U Cofnij",
-  "ai_inbox_last_backup": "Ostatnia kopia {hours} godz. temu",
+  "ai_inbox_last_backup": "Ostatnia kopia {when}",
   "ai_inbox_list_failed": "Nie udało się wczytać sugestii.",
   "ai_inbox_list_loading": "Wczytywanie sugestii…",
   "ai_inbox_no_backup": "Brak kopii zapasowej bazy danych",

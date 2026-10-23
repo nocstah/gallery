@@ -549,7 +549,7 @@
   "ai_inbox_junk": "Weg",
   "ai_inbox_keys": "J K volgende/vorige · A {accept} · R Afwijzen · U Ongedaan maken",
   "ai_inbox_keys_trash": "J K volgende/vorige · A {accept} · R Afwijzen · D Verwijder · U Ongedaan maken",
-  "ai_inbox_last_backup": "Laatste back-up {hours} u geleden",
+  "ai_inbox_last_backup": "Laatste back-up {when}",
   "ai_inbox_list_failed": "De suggesties konden niet worden geladen.",
   "ai_inbox_list_loading": "Suggesties laden…",
   "ai_inbox_no_backup": "Nog geen databaseback-up",

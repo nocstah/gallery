@@ -549,7 +549,7 @@
   "ai_inbox_junk": "À jeter",
   "ai_inbox_keys": "J K suivant/précédent · A {accept} · R Refuser · U Annuler",
   "ai_inbox_keys_trash": "J K suivant/précédent · A {accept} · R Refuser · D Supprimer · U Annuler",
-  "ai_inbox_last_backup": "Dernière sauvegarde il y a {hours} h",
+  "ai_inbox_last_backup": "Dernière sauvegarde {when}",
   "ai_inbox_list_failed": "Impossible de charger les suggestions.",
   "ai_inbox_list_loading": "Chargement des suggestions…",
   "ai_inbox_no_backup": "Aucune sauvegarde de la base de données",

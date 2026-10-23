@@ -549,7 +549,7 @@
   "ai_inbox_junk": "Мусор",
   "ai_inbox_keys": "J K вперёд/назад · A {accept} · R Отклонить · U Отменить",
   "ai_inbox_keys_trash": "J K вперёд/назад · A {accept} · R Отклонить · D Удалить · U Отменить",
-  "ai_inbox_last_backup": "Последняя копия {hours} ч назад",
+  "ai_inbox_last_backup": "Последняя копия {when}",
   "ai_inbox_list_failed": "Не удалось загрузить предложения.",
   "ai_inbox_list_loading": "Загрузка предложений…",
   "ai_inbox_no_backup": "Резервной копии базы данных ещё нет",

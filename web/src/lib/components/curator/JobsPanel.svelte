@@ -5,6 +5,7 @@
   // Health tab's count of them lead), since the routine runs push them out of the recent list within hours. The list
   // refreshes itself while anything is queued or running.
   import { curator, type Health, type JobKind, type JobRow } from '$lib/utils/curator';
+  import { relativeTime } from '$lib/utils/relative-time';
   import { onDestroy, onMount, tick } from 'svelte';
   import { locale, t, type Translations } from 'svelte-i18n';
 
@@ -71,8 +72,10 @@
     if (!health.last_backup) {
       return $t('ai_inbox_no_backup');
     }
-    const hours = (Date.now() / 1000 - health.last_backup.at) / 3600;
-    return $t('ai_inbox_last_backup', { values: { hours: Math.max(0, Math.round(hours)) } });
+    // how long ago by the calendar (utils/relative-time): "Last backup 9h ago", "Last backup yesterday", where it had
+    // counted hours past a day ("Last backup 30 h ago")
+    const when = relativeTime(health.last_backup.at * 1000, Date.now(), $locale ?? undefined);
+    return $t('ai_inbox_last_backup', { values: { when } });
   });
 
   onMount(async () => {

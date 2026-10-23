@@ -549,7 +549,7 @@
   "ai_inbox_junk": "Descartar",
   "ai_inbox_keys": "J K siguiente/anterior · A {accept} · R Rechazar · U Deshacer",
   "ai_inbox_keys_trash": "J K siguiente/anterior · A {accept} · R Rechazar · D Eliminar · U Deshacer",
-  "ai_inbox_last_backup": "Última copia hace {hours} h",
+  "ai_inbox_last_backup": "Última copia {when}",
   "ai_inbox_list_failed": "No se pudieron cargar las sugerencias.",
   "ai_inbox_list_loading": "Cargando las sugerencias…",
   "ai_inbox_no_backup": "Aún no hay copia de seguridad de la base de datos",

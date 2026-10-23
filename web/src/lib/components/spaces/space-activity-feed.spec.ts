@@ -69,6 +69,29 @@ describe('SpaceActivityFeed', () => {
     expect(screen.getByTestId('day-header-0')).toBeInTheDocument();
   });
 
+  // Local Omarchy layer: the time at a row's end counts calendar days (utils/relative-time), so it agrees with the
+  // day header above it; an evening two days back had read "1d ago"
+  it('says how long ago by the calendar, as the day header does', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date(2026, 9, 23, 9, 0));
+      const activities = [
+        makeActivity({ id: 'late', createdAt: new Date(2026, 9, 22, 23, 40).toISOString() }),
+        makeActivity({ id: 'evening', createdAt: new Date(2026, 9, 21, 21, 11).toISOString() }),
+      ];
+      renderFeed({ activities, spaceColor: 'primary', onLoadMore: vi.fn(), hasMore: false });
+      expect(screen.getByTestId('day-header-0')).toHaveTextContent('Yesterday');
+      expect(screen.getByTestId('activity-item-late').querySelector('.ws-activity-time')).toHaveTextContent(
+        'yesterday',
+      );
+      expect(screen.getByTestId('activity-item-evening').querySelector('.ws-activity-time')).toHaveTextContent(
+        '2d ago',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('should show load more button when hasMore is true', () => {
     renderFeed({ activities: [makeActivity()], spaceColor: 'primary', onLoadMore: vi.fn(), hasMore: true });
     expect(screen.getByTestId('load-more-button')).toBeInTheDocument();
