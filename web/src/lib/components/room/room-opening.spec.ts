@@ -1,6 +1,14 @@
 import { AssetTypeEnum } from '@immich/sdk';
 import { BRIGHT, DIM, flatThumbhash } from '@test-data/thumbhash';
-import { mayOpen, passesGate, roomOpening, SHARP_SIDE, wantsCamera, type OpeningPicture } from './room-opening';
+import {
+  mayOpen,
+  opensLit,
+  passesGate,
+  roomOpening,
+  SHARP_SIDE,
+  wantsCamera,
+  type OpeningPicture,
+} from './room-opening';
 
 // Local Omarchy layer: the picture each of Room's films opens on, by the gate before the TV (room-opening.ts)
 const picture = (id: string, more: Partial<OpeningPicture> = {}): OpeningPicture => ({
@@ -75,5 +83,19 @@ describe('roomOpening', () => {
     expect(roomOpening([picture('sent'), picture('sent too')], { ...tv, cover: 'sent too' })).toBe('sent too');
     expect(roomOpening([picture('sent')], tv)).toBe('sent');
     expect(roomOpening([], tv)).toBeUndefined();
+  });
+});
+
+describe(opensLit.name, () => {
+  it('says a film opens in the light when one of its images passes the floors, a camera unasked', () => {
+    // a photo no one kept and no camera is known for yet: Room asks for the camera's data, the cards cannot
+    expect(opensLit([picture('night', { thumbhash: DIM }), picture('day')])).toBe(true);
+    expect(opensLit([picture('night', { thumbhash: DIM }), picture('unknown', { thumbhash: null })])).toBe(false);
+    expect(opensLit([picture('small', { width: 1600, height: SHARP_SIDE - 1 })])).toBe(false);
+    expect(opensLit([picture('clip', { type: AssetTypeEnum.Video })])).toBe(false);
+    expect(
+      opensLit([picture('png', { originalMimeType: 'image/png' }), picture('tall', { width: 1179, height: 2556 })]),
+    ).toBe(false);
+    expect(opensLit([])).toBe(false);
   });
 });

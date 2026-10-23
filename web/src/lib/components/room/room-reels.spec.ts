@@ -1,6 +1,13 @@
-import { MemoryType, type AlbumResponseDto, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
+import {
+  AssetTypeEnum,
+  MemoryType,
+  type AlbumResponseDto,
+  type AssetResponseDto,
+  type MemoryResponseDto,
+} from '@immich/sdk';
 import { memoryCards } from '$lib/utils/memory-cards';
 import { assetFactory } from '@test-data/factories/asset-factory';
+import { BRIGHT } from '@test-data/thumbhash';
 import {
   inTimeOrder,
   livingAlbums,
@@ -134,6 +141,35 @@ describe(todayReels.name, () => {
     expect(reel.memory.id).toBe('d1');
     expect(reel.memory.assets.map(({ id }) => id)).toEqual(['p1', 'p2', 'p3']);
     expect(reel.card?.members.map(({ id }) => id)).toEqual(['d1', 'd2']);
+  });
+
+  it("chains today's memories in the cards' one order: a trip before a day that holds more photos", () => {
+    // photos that open a film in the light (room-opening), each on its own day
+    const lit = (id: string, count: number) =>
+      Array.from({ length: count }, (_, index) =>
+        assetFactory.build({
+          id: `${id}-${index}`,
+          type: AssetTypeEnum.Image,
+          width: 4032,
+          height: 3024,
+          originalMimeType: 'image/heic',
+          thumbhash: BRIGHT,
+          localDateTime: `2023-10-${String(index + 10).padStart(2, '0')}T10:00:00.000Z`,
+        }),
+      );
+    const day = {
+      id: 'day',
+      type: MemoryType.OnThisDay,
+      assets: lit('day', 8).map((photo) => ({ ...photo, localDateTime: '2001-10-18T10:00:00.000Z' })),
+    } as MemoryResponseDto;
+    const trip = {
+      id: 'trip',
+      type: MemoryType.Rule,
+      data: { ruleId: 'trip_anniversary' },
+      assets: lit('trip', 4),
+    } as MemoryResponseDto;
+
+    expect(todayReels(cardsOf([day, trip]), [], 10).map(({ key }) => key)).toEqual(['memory:trip', 'memory:day']);
   });
 
   it('keeps a memory not due yet out of the chain', () => {

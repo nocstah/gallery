@@ -1,14 +1,16 @@
 import { MemoryType, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
 import type { MessageFormatter } from 'svelte-i18n';
+import { opensLit } from '$lib/components/room/room-opening';
 import { getMemoryCardSubtitle } from '$lib/utils/memory-card';
 
 // Local Omarchy layer: the cards the memories are shown as (DESIGN.md, Memories). The server makes a memory per rule
 // and per day, so one trip a year ago came back as four cards that read "Siem Reap · October 2025": the day before
 // yesterday's on-this-day, yesterday's, the trip's anniversary and the month's favourites. Memories whose titles read
 // the same (one place and month, utils/memory-title) are one card here, and the card plays all their photos as one
-// film, each photo once, in the order they were taken. Today's come first, then the earlier days' the server still
-// keeps, then the upcoming ones (generated a few days ahead) when the reader shows them. Each card's line says what kind
-// of memory it is: "On this day · 1 year ago", "Trip · 1 year ago · 4 days".
+// film, each photo once, in the order they were taken. Today's come first, in the one order the Memories page, Explore
+// and Room all show them in (todayRank below), then the earlier days' the server still keeps, then the upcoming ones
+// (generated a few days ahead) when the reader shows them. Each card's line says what kind of memory it is: "On this
+// day · 1 year ago", "Trip · 1 year ago · 4 days".
 
 /** Where a card stands: shown today, shown on an earlier day and still kept, or not due yet. */
 export type MemorySection = 'today' | 'earlier' | 'upcoming';
@@ -84,6 +86,68 @@ const rankOf = (memory: MemoryResponseDto) => {
   return rank === -1 ? KIND_RANK.length : rank;
 };
 
+// ---- the one order of today's cards (2026-10-23, the owner's "Room's front door"): the server's order had opened
+// the evening on two dim films and put the day's trip a minute into Room ----
+
+/** The first and last day a memory covers ('YYYY-MM-DD'), as Curator's facts tell them (managers/memory-facts). */
+export type MemorySpan = { start: string; end: string };
+
+const TRIP_KINDS = new Set(['trip_anniversary', 'recent_trip']);
+/** a day whatever its photos' dates: a birthday (its photos of several years), on this day (in a place: of one day in
+ * several years) */
+const DAY_KINDS = new Set(['birthday', 'on_this_day', 'on_this_day_place']);
+const DAY = /^\d{4}-\d{2}-\d{2}/;
+
+/**
+ * Whether a card is a memory of several days: a trip, or one of the wider looks back (a month's, a season's, two people
+ * together) whose days run over more than one, by Curator's span where the page has it, else by its photos' days. On
+ * this day is a day, even on a card of two days of one place and month: the Memories page folds in the earlier days'
+ * memories that Room does not ask for, and both rank a card alike.
+ */
+const ofSeveralDays = (card: MemoryCard, spanOf?: (memory: MemoryResponseDto) => MemorySpan | null | undefined) => {
+  let first: string | undefined;
+  let last: string | undefined;
+  for (const member of card.members) {
+    const kind = memoryKind(member);
+    if (TRIP_KINDS.has(kind)) {
+      return true;
+    }
+    if (DAY_KINDS.has(kind)) {
+      continue;
+    }
+    const span = spanOf?.(member);
+    const days =
+      span && DAY.test(span.start) && DAY.test(span.end)
+        ? [span.start, span.end]
+        : member.assets.map(({ localDateTime }) => localDateTime ?? '').filter((day) => DAY.test(day));
+    for (const value of days) {
+      const day = value.slice(0, 10);
+      first = first === undefined || day < first ? day : first;
+      last = last === undefined || day > last ? day : last;
+    }
+  }
+  return first !== last;
+};
+
+type TodayRank = { dim: number; kind: number; count: number };
+
+/**
+ * Where a card of today's stands, the first difference deciding: a film that would open dim across the room (none of
+ * its pictures passes Room's light gate, components/room/room-opening) after every other; then a birthday, a trip or a
+ * memory of several days, the rest; then the one that holds more photos: the most any of its memories stands for (a
+ * trip's whole count, `weight`), or the photos it plays when those are more (Room's cards hold only today's memories,
+ * and what a memory stands for is the same there); then as the server sent them.
+ */
+const todayRank = (
+  card: MemoryCard,
+  weight: (memory: MemoryResponseDto) => number,
+  spanOf?: (memory: MemoryResponseDto) => MemorySpan | null | undefined,
+): TodayRank => ({
+  dim: opensLit(card.assets) ? 0 : 1,
+  kind: memoryKind(card.lead) === 'birthday' ? 0 : ofSeveralDays(card, spanOf) ? 1 : 2,
+  count: Math.max(card.assets.length, ...card.members.map((member) => weight(member))),
+});
+
 /** Photos in the order they were taken, each once. */
 const unionInTimeOrder = (members: MemoryResponseDto[]): AssetResponseDto[] => {
   const byId = new Map<string, AssetResponseDto>();
@@ -98,19 +162,22 @@ const unionInTimeOrder = (members: MemoryResponseDto[]): AssetResponseDto[] => {
 };
 
 /**
- * The cards, in the order the page shows them: today's (a birthday first, then as the server sent them: the newest
- * days first), the earlier ones, then the upcoming ones (the soonest first). `keyOf` is what a card is known by, the
- * title of facts; memories with the same key in today's and the earlier ones are one card, which stands with today's
- * when any of them is today's, and the upcoming ones are put together only with each other, so a film of today never
- * holds a day still to come. Memories without a key (a birthday, one with nothing to title it by) stand alone, and an
- * empty memory is not shown, as upstream never shows one. `weight` is how much a memory stands for (its photos, or
- * Curator's count of them); between memories of one kind the heavier leads.
+ * The cards, in the order every page shows them: today's in their one order (todayRank: a film that would open dim
+ * last, before it a birthday, a trip or a memory of several days, then the rest, each by the photos it holds), the
+ * earlier ones (a birthday first, then as the server sent them: the newest days first), then the upcoming ones (the
+ * soonest first). `keyOf` is what a card is known by, the title of facts; memories with the same key in today's and
+ * the earlier ones are one card, which stands with today's when any of them is today's, and the upcoming ones are put
+ * together only with each other, so a film of today never holds a day still to come. Memories without a key (a
+ * birthday, one with nothing to title it by) stand alone, and an empty memory is not shown, as upstream never shows
+ * one. `weight` is how much a memory stands for (its photos, or Curator's count of them); between memories of one kind
+ * the heavier leads. `spanOf` is the days a memory covers by Curator's facts, where the page has them.
  */
 export const memoryCards = (
   memories: MemoryResponseDto[],
   keyOf: (memory: MemoryResponseDto) => string | undefined,
   now: number,
   weight: (memory: MemoryResponseDto) => number = (memory) => memory.assets.length,
+  spanOf?: (memory: MemoryResponseDto) => MemorySpan | null | undefined,
 ): MemoryCard[] => {
   type Group = { members: { memory: MemoryResponseDto; index: number; section: MemorySection }[] };
   const groups = new Map<string, Group>();
@@ -146,7 +213,8 @@ export const memoryCards = (
     };
     const first = Math.min(...members.map(({ index }) => index));
     const soonest = Math.min(...members.map(({ memory }) => (memory.showAt ? Date.parse(memory.showAt) : Infinity)));
-    return { card, first, soonest };
+    const rank = section === 'today' ? todayRank(card, weight, spanOf) : undefined;
+    return { card, first, soonest, rank };
   });
 
   const sectionRank = (section: MemorySection) => MEMORY_SECTIONS.indexOf(section);
@@ -159,6 +227,9 @@ export const memoryCards = (
       }
       if (a.card.section === 'upcoming') {
         return a.soonest - b.soonest || a.first - b.first;
+      }
+      if (a.rank && b.rank) {
+        return a.rank.dim - b.rank.dim || a.rank.kind - b.rank.kind || b.rank.count - a.rank.count || a.first - b.first;
       }
       return birthday(a.card) - birthday(b.card) || a.first - b.first;
     })

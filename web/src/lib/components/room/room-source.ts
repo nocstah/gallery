@@ -43,8 +43,9 @@ export const loadToday = async ({ memories, today }: { memories: boolean; today:
     throw found.reason;
   }
   const list = found.status === 'fulfilled' ? found.value : [];
-  // the cards are keyed by the facts' title, in one locale, as the memory manager keys them (managers/memory-manager);
-  // without Curator (a family account, Curator not answering in time) each memory titles itself
+  // the cards are keyed by the facts' title, in one locale, and ranked by the facts' spans, as the memory manager keys
+  // and ranks them (managers/memory-manager); without Curator (a family account, Curator not answering in time) each
+  // memory titles itself and its photos say its days
   if (list.length > 0) {
     let patience: ReturnType<typeof setTimeout> | undefined;
     await Promise.race([
@@ -58,6 +59,7 @@ export const loadToday = async ({ memories, today }: { memories: boolean; today:
     (memory) => memoryTitle(memory, memoryFacts.get(memory.id), 'en-US')?.title,
     wallClockAsUtc(today.toJSDate()),
     (memory) => memoryCount(memory, memoryFacts.get(memory.id)),
+    (memory) => memoryFacts.get(memory.id),
   );
   return todayReels(cards, albums.status === 'fulfilled' ? albums.value : [], today.month);
 };

@@ -1,4 +1,4 @@
-import { MemoryType, type MemoryResponseDto } from '@immich/sdk';
+import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import type { MessageFormatter } from 'svelte-i18n';
 import {
   cardOfMemory,
@@ -9,6 +9,7 @@ import {
   wallClockAsUtc,
 } from '$lib/utils/memory-cards';
 import { assetFactory } from '@test-data/factories/asset-factory';
+import { BRIGHT, DIM } from '@test-data/thumbhash';
 
 // the reader's Saturday 18 October 2026, mid-morning, as the server reads the wall clock
 const NOW = Date.UTC(2026, 9, 18, 10, 0, 0);
@@ -92,8 +93,9 @@ describe(memoryCards.name, () => {
 
     const cards = memoryCards([other, today, trip], keyOf, NOW);
 
-    expect(ids(cards)).toEqual([['oslo'], ['trip', 'day-16']]);
-    const [, merged] = cards;
+    // the trip's card first: a trip leads today's cards (below)
+    expect(ids(cards)).toEqual([['trip', 'day-16'], ['oslo']]);
+    const [merged] = cards;
     expect(merged.lead.id).toBe('trip');
     // their photos once each, in the order they were taken
     expect(merged.assets.map(({ id }) => id)).toEqual(['a', 'b', 'c', 'd']);
@@ -189,6 +191,125 @@ describe(memoryCards.name, () => {
 
     expect(cardOfMemory(cards, 'b')).toBe(cards[0]);
     expect(cardOfMemory(cards, 'nope')).toBeUndefined();
+  });
+});
+
+describe("today's one order", () => {
+  /** The memory with every photo an image that opens a film in the light (room-opening), or with `dim` a dim one. */
+  const lighten = (made: MemoryResponseDto, dim = false) =>
+    ({
+      ...made,
+      assets: made.assets.map((asset) => ({
+        ...asset,
+        type: AssetTypeEnum.Image,
+        width: 4032,
+        height: 3024,
+        originalMimeType: 'image/heic',
+        thumbhash: dim ? DIM : BRIGHT,
+      })),
+    }) as MemoryResponseDto;
+  const lit = (id: string, photos: string[], options: Options = {}, dim = false) =>
+    lighten(memory(id, { photos, ...options }), dim);
+  /** `count` photos on as many days, one a day from the 10th of October 2023 */
+  const days = (id: string, count: number) =>
+    Array.from({ length: count }, (_, index) => `${id}-${index}@2023-10-${String(10 + index).padStart(2, '0')}`);
+  /** `count` photos of one day */
+  const oneDay = (id: string, count: number, day = '2001-10-18') =>
+    Array.from({ length: count }, (_, index) => `${id}-${index}@${day}`);
+  const birthday = { type: MemoryType.Birthday, data: { year: 1990 } as never };
+  const order = (memories: MemoryResponseDto[], spanOf?: Parameters<typeof memoryCards>[4]) =>
+    memoryCards(memories, () => undefined, NOW, undefined, spanOf).map(({ lead }) => lead.id);
+
+  it('puts a birthday first, then a trip or a memory of several days, then the rest by the photos they hold', () => {
+    const memories = [
+      lit('day-4', oneDay('a', 4, '2025-10-18')),
+      lit('day-8', oneDay('b', 8)),
+      lighten(rule('trip', 'trip_anniversary', { yearsAgo: 3, dayCount: 7 }, { photos: days('c', 4) })),
+      lighten(rule('together', 'people_together', { year: 2025, month: 10 }, { photos: days('d', 6) })),
+      lit('birthday', oneDay('e', 3), birthday),
+    ];
+
+    expect(order(memories)).toEqual(['birthday', 'together', 'trip', 'day-8', 'day-4']);
+  });
+
+  it('puts last a memory whose film would open dim, whatever it is, in the same order among them', () => {
+    const memories = [
+      lit('dim-day', oneDay('a', 12), {}, true),
+      lit('dim-birthday', oneDay('b', 3), birthday, true),
+      lit('day', oneDay('c', 2)),
+    ];
+
+    expect(order(memories)).toEqual(['day', 'dim-birthday', 'dim-day']);
+  });
+
+  it("tells a memory of several days by Curator's span where the page has it, else by its photos' days", () => {
+    // its photos of one day, its span a week
+    const together = lighten(rule('together', 'people_together', {}, { photos: oneDay('a', 3, '2025-10-12') }));
+    const day = lit('day', oneDay('b', 5));
+    const span = (made: MemoryResponseDto) =>
+      made.id === 'together' ? { start: '2025-10-08', end: '2025-10-16' } : { start: '2001-10-18', end: '2001-10-18' };
+
+    expect(order([day, together])).toEqual(['day', 'together']);
+    expect(order([day, together], span)).toEqual(['together', 'day']);
+  });
+
+  it('takes on this day for a day: in a place over several years, and two days of one place and month', () => {
+    const place = lighten(
+      rule(
+        'place',
+        'on_this_day_place',
+        { city: 'Riverton' },
+        { photos: ['a@2013-10-18', 'b@2015-10-18', 'c@2019-10-18'] },
+      ),
+    );
+    expect(order([place, lit('single', oneDay('d', 5))])).toEqual(['single', 'place']);
+
+    // two days' on this day of one place and month on one card: still a day, after a day of more photos, as Room
+    // ranks it (it asks only for today's memories, so its card holds one of the two)
+    const cards = memoryCards(
+      [
+        lit('town-16', oneDay('f', 2, '2025-10-16')),
+        lit('town-17', oneDay('g', 2, '2025-10-17')),
+        lit('day', oneDay('e', 6)),
+      ],
+      (made) => (made.id.startsWith('town') ? 'Riverton · October 2025' : undefined),
+      NOW,
+    );
+    expect(ids(cards)).toEqual([['day'], ['town-16', 'town-17']]);
+  });
+
+  it('counts what a card stands for, a trip its whole, or the photos it plays when those are more', () => {
+    const trip = lighten(rule('trip', 'trip_anniversary', {}, { photos: days('a', 4) }));
+    const together = lighten(rule('together', 'people_together', {}, { photos: days('b', 6) }));
+    const weight = (made: MemoryResponseDto) => (made.id === 'trip' ? 50 : made.assets.length);
+
+    expect(order([together, trip])).toEqual(['together', 'trip']);
+    expect(memoryCards([together, trip], () => undefined, NOW, weight).map(({ lead }) => lead.id)).toEqual([
+      'trip',
+      'together',
+    ]);
+  });
+
+  it('keeps the earlier ones a birthday first then as the server sent them, the upcoming ones soonest first', () => {
+    const cards = memoryCards(
+      [
+        lit('up-20', days('a', 3), { day: '2026-10-20' }),
+        lit('up-19', oneDay('b', 1), { day: '2026-10-19' }, true),
+        lit('small', oneDay('c', 1), { day: '2026-10-16' }),
+        lighten(rule('trip', 'trip_anniversary', {}, { day: '2026-10-15', photos: days('d', 9) })),
+        lit('birthday', oneDay('e', 3), { ...birthday, day: '2026-10-14' }),
+      ],
+      () => undefined,
+      NOW,
+    );
+
+    expect(cards.map(({ section, lead }) => `${section}:${lead.id}`)).toEqual([
+      'earlier:birthday',
+      'earlier:small',
+      'earlier:trip',
+      'upcoming:up-19',
+      'upcoming:up-20',
+    ]);
   });
 });
 

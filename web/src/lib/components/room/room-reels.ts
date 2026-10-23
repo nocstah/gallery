@@ -96,9 +96,10 @@ export const livingAlbums = (albums: AlbumResponseDto[], month: number): AlbumRe
 };
 
 /**
- * Plain Room's chain: today's memories as their cards (utils/memory-cards: a birthday first, then as the server sent
- * them; memories that read the same play as one film, all their photos in the order taken, under the lead memory, whose
- * story and songs it has), then the living albums. Cards not due yet stay out.
+ * Plain Room's chain: today's memories as their cards, in the one order every surface shows them in (utils/memory-cards:
+ * a birthday, a trip or a memory of several days, then the rest, each by the photos it holds, and last a film that
+ * would open dim; memories that read the same play as one film, all their photos in the order taken, under the lead
+ * memory, whose story and songs it has), then the living albums. Cards not due yet stay out.
  */
 export const todayReels = (cards: MemoryCard[], albums: AlbumResponseDto[], month: number): RoomReel[] => [
   ...cards
