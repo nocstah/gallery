@@ -14,11 +14,13 @@
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
   import { Route } from '$lib/route';
   import { getAssetMediaUrl } from '$lib/utils';
+  import { backupCopy, backupWhen, databaseBackup, type BackupFacts } from '$lib/utils/command-words';
   import {
     curator,
     type CuratorOverview,
     type HealthItem,
     type InboxGroup,
+    type JobKind,
     type JobRow,
     type LibraryHealth,
   } from '$lib/utils/curator';
@@ -36,7 +38,7 @@
   } from '@mdi/js';
   import { DateTime } from 'luxon';
   import { onDestroy, onMount } from 'svelte';
-  import { t } from 'svelte-i18n';
+  import { t, type Translations } from 'svelte-i18n';
   import type { PageData } from './$types';
 
   interface Props {
@@ -48,6 +50,8 @@
   let overview = $state<CuratorOverview>();
   let groups = $state<InboxGroup[]>([]);
   let jobs = $state<JobRow[]>([]);
+  // what each kind of job is called, so a running job reads by its name, not its key (faces.cluster)
+  let kinds = $state<JobKind[]>([]);
   let health = $state<LibraryHealth>();
   let memory = $state<MemoryResponseDto>();
   let offline = $state(false);
@@ -72,6 +76,10 @@
   onMount(() => {
     void refreshFast();
     void refreshSlow();
+    void curator
+      .kinds()
+      .then((found) => (kinds = found))
+      .catch(() => undefined);
     void searchMemories({ $for: DateTime.now().toISODate() ?? undefined })
       .then((found) => (memory = found.find((m) => m.assets.length > 0)))
       .catch(() => undefined);
@@ -123,12 +131,39 @@
     ].filter((group) => group.items.length > 0),
   );
   const number = (value: number) => value.toLocaleString();
-  // a backup's last good run, short ("13 Oct, 07:37"); three days without one is worth a look (curator-health says so)
-  const when = (iso: string | null) =>
-    iso
-      ? DateTime.fromISO(iso).toLocaleString({ day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-      : '';
-  const stale = (iso: string | null) => !iso || DateTime.fromISO(iso) < DateTime.now().minus({ days: 3 });
+  const jobTitle = (kind: string) => kinds.find((entry) => entry.kind === kind)?.title ?? kind;
+  // the backups in words: which copy, when it last went well as a person says it the morning after ("last night"),
+  // and whether that is fine ("Last night's backup to the My Book: fine, 02:10"), where the page showed the
+  // database dump's file name and "OK, Oct 23, 02:30 AM". The copies' names are the owner's disk and service.
+  const COPY_NAMES = { mybook: 'My Book', b2: 'B2' };
+  const backupWords = (key: Translations, facts: BackupFacts, target?: string) =>
+    $t(key, {
+      values: {
+        state: facts.state,
+        when: facts.at ? backupWhen(facts.at) : 'date',
+        last: facts.at ? 'yes' : 'no',
+        date: facts.at?.toLocaleString({ day: 'numeric', month: 'short' }) ?? '',
+        time: facts.at?.toFormat('HH:mm') ?? '',
+        target: target ?? '',
+      },
+    });
+  const backups = $derived.by(() => {
+    const database = databaseBackup(item('backup'));
+    const list = [{ key: 'database', words: backupWords('command_backup_database', database), facts: database }];
+    if (overview?.backups) {
+      const disk = backupCopy(overview.backups.mybook);
+      const offsite = backupCopy(overview.backups.b2);
+      list.push(
+        { key: 'disk', words: backupWords('command_backup_disk', disk, COPY_NAMES.mybook), facts: disk },
+        { key: 'offsite', words: backupWords('command_backup_offsite', offsite, COPY_NAMES.b2), facts: offsite },
+      );
+    }
+    return list;
+  });
+  // trouble, in the danger tone: no backup, an old one, a copy that failed (an off-site copy not set up is a fact)
+  const trouble = (backup: { key: string; facts: BackupFacts }) =>
+    backup.facts.state === 'failed' ||
+    (backup.key !== 'offsite' && (backup.facts.state === 'stale' || backup.facts.state === 'none'));
   const memoryLabel = (found: MemoryResponseDto) => {
     // a featured memory's title, a trip's place, an "on this day" memory's year
     const data = (found.data ?? {}) as { year?: number; title?: string; context?: { placeLabel?: string } };
@@ -248,7 +283,7 @@
         <ul class="command-jobs">
           {#each active.slice(0, 6) as job (job.id)}
             <li>
-              <span class="job-kind">{job.kind}</span>
+              <span class="job-kind">{jobTitle(job.kind)}</span>
               <span class="job-note"
                 >{job.status === 'queued' ? $t('command_job_queued') : (job.progress?.note ?? '')}</span
               >
@@ -325,7 +360,12 @@
           {#if overview?.gpu}
             <dt>{$t('command_gpu')}</dt>
             <dd>
-              {(overview.gpu.used_mib / 1024).toFixed(1)} / {(overview.gpu.total_mib / 1024).toFixed(0)} GB
+              {$t('command_gpu_in_use', {
+                values: {
+                  used: (overview.gpu.used_mib / 1024).toFixed(1),
+                  total: (overview.gpu.total_mib / 1024).toFixed(0),
+                },
+              })}
               <div class="ws-meter"><span style:width="{gpuShare * 100}%"></span></div>
             </dd>
           {/if}
@@ -339,40 +379,18 @@
             <dt>{$t('command_disk')}</dt>
             <dd>{item('disk')?.detail}</dd>
           {/if}
-          {#if item('backup')}
-            <dt>{$t('command_db_backup')}</dt>
-            <!-- none, or none for a day and a half (Curator's health says when): real trouble -->
-            <dd class:attention={item('backup')?.attention}>{item('backup')?.detail}</dd>
-          {/if}
-          {#if overview?.backups}
-            {@const { mybook, b2 } = overview.backups}
-            <dt>{$t('command_local_backup')}</dt>
-            <dd class:attention={!mybook.last_ok || mybook.ok === false || stale(mybook.last_ok)}>
-              {#if !mybook.last_ok && mybook.ok === null}
-                {$t('command_backup_none')}
-              {:else}
-                {mybook.ok === false ? $t('command_offsite_failed') : $t('command_offsite_ok')}
-                {when(mybook.last_ok)}
-              {/if}
-            </dd>
-            <dt>{$t('command_offsite')}</dt>
-            <!-- not set up yet is a fact, not trouble; a copy that failed is -->
-            <dd class:attention={b2.configured && b2.ok === false} class:quiet={!b2.configured}>
-              {#if !b2.configured}
-                {$t('command_offsite_not_set_up')}
-              {:else if !b2.last_ok && b2.ok === null}
-                {$t('command_backup_none')}
-              {:else}
-                {b2.ok === false ? $t('command_offsite_failed') : $t('command_offsite_ok')}
-                {when(b2.last_ok)}
-              {/if}
-            </dd>
-          {/if}
           {#if overview?.paused}
             <dt>{$t('command_paused')}</dt>
             <dd>{$t('command_paused_detail')}</dd>
           {/if}
         </dl>
+        <!-- the backups, each a sentence: which copy, when it last went well and whether that is fine; trouble (none,
+             old, failed) in the danger tone, an off-site copy not set up yet a muted fact -->
+        <ul class="command-backups" data-testid="command-backups">
+          {#each backups as backup (backup.key)}
+            <li class:attention={trouble(backup)} class:quiet={backup.facts.state === 'unset'}>{backup.words}</li>
+          {/each}
+        </ul>
       </section>
 
       <!-- today -->
@@ -489,34 +507,41 @@
   .command-panel.wide {
     grid-column: 1 / -1;
   }
+  /* a panel's name in the heading role over a hairline, as the inbox's Jobs and Health tabs head theirs; it was the
+     data role in capitals, so on a phone, where the poster steps aside, nothing on the page read as a heading */
   .command-panel h2 {
     margin-bottom: calc(var(--ws-gap) * 0.8);
-    padding-bottom: 0.4rem;
+    padding-bottom: calc(var(--ws-gap) * 0.8);
     border-bottom: 1px solid var(--ws-hairline);
-    font-family: var(--ws-font-data);
-    font-size: var(--ws-text-data);
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--immich-ui-muted);
+    font-size: var(--ws-text-heading);
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--immich-ui-dark);
   }
+  /* the inbox's biggest kinds: calm rows split by hairlines in as many columns as fit, where each was a framed card */
   .command-batches {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
-    gap: var(--ws-gap);
+    column-gap: calc(var(--ws-gap) * 2.4);
+  }
+  .command-batches li {
+    border-bottom: 1px solid var(--ws-hairline);
   }
   .command-batches a {
     display: grid;
     grid-template-columns: auto 1fr auto;
     gap: 0.75rem;
     align-items: center;
-    padding: 0.5rem;
-    border: 1px solid var(--ws-hairline);
+    padding: 0.5rem 0.25rem;
     border-radius: var(--ws-radius);
-    transition: border-color 0.15s;
+    transition: background-color 140ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   .command-batches a:hover {
-    border-color: var(--ws-accent);
+    background: color-mix(in oklab, var(--immich-ui-dark) 4%, transparent);
+  }
+  .command-batches a:focus-visible {
+    outline: var(--ws-border) solid var(--ws-accent);
+    outline-offset: calc(var(--ws-border) * -1);
   }
   .batch-thumbs {
     display: flex;
@@ -694,11 +719,21 @@
     display: grid;
     gap: 0.3rem;
   }
-  .command-facts dd.attention {
+  /* the backups, a sentence each in meta: ink while fine, the danger tone for trouble, muted for what is not set up */
+  .command-backups {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.9rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--ws-hairline);
+    font-size: var(--ws-text-meta);
+    line-height: 1.45;
+  }
+  .command-backups .attention {
     color: var(--ws-danger);
     font-weight: 600;
   }
-  .command-facts dd.quiet {
+  .command-backups .quiet {
     color: var(--immich-ui-muted);
   }
   .command-memory {
