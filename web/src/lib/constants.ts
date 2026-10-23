@@ -86,9 +86,13 @@ export const maximumLengthSearchPeople = 100;
 // Number of people fetched per page on the global People page. Every `getAllPeople` call that
 // participates in that page's pagination (initial load, infinite-scroll next page, and the
 // restore-on-return catch-up) MUST share this value — the server paginates by `page * size`, so a
-// mismatch between call sites would skip or duplicate people across page boundaries. Kept modest so
-// first paint hydrates/serializes/transfers a small batch; the rest streams in on scroll.
-export const PEOPLE_PAGE_SIZE = 150;
+// mismatch between call sites would skip or duplicate people across page boundaries.
+// Local Omarchy layer: the server's most at once (it was 150, a small first batch). The page sorts what it has loaded
+// by the People page's order (the most photos by default), and the server pages favourites, then names A to Z: with
+// 150 a page, the first screen ranked the first 150 names, and the person with the second most photos, further down the
+// alphabet, came only on scrolling to the end (the owner's 214 named people; DESIGN.md, People). Named people come
+// first, so one page now holds every one of them in a library of up to a thousand.
+export const PEOPLE_PAGE_SIZE = 1000;
 
 export const MAX_SPACE_ASSETS_PER_REQUEST = 50_000;
 

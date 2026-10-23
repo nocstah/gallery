@@ -514,7 +514,9 @@ describe('Global people page', () => {
   it('reads the header totals from the filtered load rather than the overview statistics', () => {
     peopleViewSettings.set({ sortBy: PeopleSortBy.PhotoCount, filterBy: PeopleFilterBy.Pets });
 
-    renderPage([makePerson({ id: 'pet-1', name: 'Rex' })], { total: 120, hidden: 20, detectedFaceCount: 2901 }, false, {
+    // Local Omarchy layer: while more pages remain, the header counts from the totals (once every person is in, it
+    // counts the faces shown: see below)
+    renderPage([makePerson({ id: 'pet-1', name: 'Rex' })], { total: 120, hidden: 20, detectedFaceCount: 2901 }, true, {
       total: 4,
       hidden: 1,
     });
@@ -523,15 +525,30 @@ describe('Global people page', () => {
   });
 
   it('shows visible people and detected faces in the heading', () => {
-    renderPage([makePerson({ id: 'p1' })], { total: 12, hidden: 2, detectedFaceCount: 2901 });
+    renderPage([makePerson({ id: 'p1' })], { total: 12, hidden: 2, detectedFaceCount: 2901 }, true);
 
     expect(screen.getByTestId('user-page-layout')).toHaveAttribute('data-description', '(10) \u{B7} 2,901 faces');
   });
 
   it('derives the heading person count from overview statistics instead of loaded rows', () => {
-    renderPage([makePerson({ id: 'p1' })], { total: 60, hidden: 4, detectedFaceCount: 100 });
+    renderPage([makePerson({ id: 'p1' })], { total: 60, hidden: 4, detectedFaceCount: 100 }, true);
 
     expect(screen.getByTestId('user-page-layout')).toHaveAttribute('data-description', '(56) \u{B7} 100 faces');
+  });
+
+  // Local Omarchy layer: the owner's "counts that match the cards". Gallery's totals count a person as hidden only when
+  // every profile of theirs is, while the grid hides one whose own profile is, so they had read "(562)" over 244 faces
+  it('counts the faces the grid shows once every person is in', () => {
+    renderPage(
+      [
+        makePerson({ id: 'p1', name: 'Alice' }),
+        makePerson({ id: 'p2', name: 'Bob' }),
+        makePerson({ id: 'p3', name: 'Cleo', isHidden: true }),
+      ],
+      { total: 3, hidden: 0, detectedFaceCount: 40 },
+    );
+
+    expect(screen.getByTestId('user-page-layout')).toHaveAttribute('data-description', '(2) \u{B7} 40 faces');
   });
 
   it('shows detected faces when all people are hidden', () => {
@@ -627,7 +644,7 @@ describe('Global people page', () => {
 
   it('renders a detailed face statistics error while keeping the primary face count in the header', async () => {
     sdkMock.getPeopleFaceStatistics.mockRejectedValue(new Error('network'));
-    renderPage([makePerson({ id: 'p1' })], { total: 12, hidden: 2, detectedFaceCount: 2901 });
+    renderPage([makePerson({ id: 'p1' })], { total: 12, hidden: 2, detectedFaceCount: 2901 }, true);
 
     await userEvent.click(screen.getByRole('button', { name: 'view_face_statistics_details' }));
 
@@ -712,7 +729,7 @@ describe('Global people page', () => {
 
   it('omits the face count from the header when the peopleStatistics feature flag is disabled', () => {
     featureFlagsMock.value.peopleStatistics = false;
-    renderPage([makePerson({ id: 'p1' })], { total: 12, hidden: 2, detectedFaceCount: 2901 });
+    renderPage([makePerson({ id: 'p1' })], { total: 12, hidden: 2, detectedFaceCount: 2901 }, true);
 
     expect(screen.getByTestId('user-page-layout')).toHaveAttribute('data-description', '(10)');
   });

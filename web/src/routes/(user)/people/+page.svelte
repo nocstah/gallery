@@ -223,8 +223,16 @@
   let hasUnsupportedStatsFilter = $derived(
     !!$page.url.searchParams.get(QueryParameter.SEARCHED_PEOPLE) || !!searchName.trim(),
   );
+  // Local Omarchy layer: once every person is in (a page holds a library's thousand, PEOPLE_PAGE_SIZE), the bar counts
+  // the faces the grid shows (2026-10-23, the owner's "counts that match the cards"). Gallery's totals count a person as
+  // hidden only when every profile of theirs is, while the grid hides one whose own profile is: they read "(562)" over
+  // 244 faces
   let countVisiblePeople = $derived(
-    searchName ? searchedPeopleLocal.length : peopleCountStatistics.total - peopleCountStatistics.hidden,
+    searchName
+      ? searchedPeopleLocal.length
+      : nextPage === null
+        ? visiblePeople.length
+        : peopleCountStatistics.total - peopleCountStatistics.hidden,
   );
   let peopleStatisticsEnabled = $derived(featureFlagsManager.value.peopleStatistics);
   let headerDescription = $derived(
