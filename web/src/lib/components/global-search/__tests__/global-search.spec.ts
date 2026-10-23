@@ -1050,6 +1050,52 @@ describe('global-search root', () => {
     expect(screen.getByText(/^command_title$/i)).toBeInTheDocument();
   });
 
+  // Local Omarchy layer: Villa and QR are the owner's own special albums (managers/special-albums' ownerOnly), so a
+  // family account's quick links keep To do, everyone's, and leave them out, as its sidebar does
+  it('quick links keep To do for a family account and leave out the owner’s Villa and QR', () => {
+    const m = new GlobalSearchManager();
+    m.open();
+    const { unmount } = render(GlobalSearch, { props: { manager: m } });
+    expect(screen.getByText(/^todo$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^villa$/i)).toBeNull();
+    expect(screen.queryByText(/^qr$/i)).toBeNull();
+    unmount();
+
+    mockUser.current = { id: 'test-user', isAdmin: true };
+    const owner = new GlobalSearchManager();
+    owner.open();
+    render(GlobalSearch, { props: { manager: owner } });
+    expect(screen.getByText(/^todo$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^villa$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^qr$/i)).toBeInTheDocument();
+  });
+
+  it('leaves a Villa recent out of a family account’s recents', () => {
+    addEntry({
+      kind: 'navigate',
+      id: 'nav:userPages:villa',
+      route: '/villa',
+      labelKey: 'villa',
+      icon: 'x',
+      adminOnly: false,
+      lastUsed: 2,
+    });
+    addEntry({
+      kind: 'navigate',
+      id: 'nav:userPages:todo',
+      route: '/todo',
+      labelKey: 'todo',
+      icon: 'x',
+      adminOnly: false,
+      lastUsed: 1,
+    });
+    const m = new GlobalSearchManager();
+    m.open();
+    render(GlobalSearch, { props: { manager: m } });
+    expect(screen.getByText(/^todo$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^villa$/i)).toBeNull();
+  });
+
   it('quick-links fallback is replaced by recents once any recent exists', () => {
     // Recents take priority — the empty-empty nav fallback is only the cold
     // path, so a single recent entry must collapse it.

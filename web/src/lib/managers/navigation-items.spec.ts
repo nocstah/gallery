@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Route } from '$lib/route';
 import { isAlmostExactNavMatch, NAVIGATION_ITEMS } from './navigation-items';
+import { specialAlbums } from './special-albums.svelte';
 
 // __dirname is not defined in ESM (vitest default). Derive it from import.meta.url.
 const here = dirname(fileURLToPath(import.meta.url));
@@ -172,10 +173,10 @@ describe('NAVIGATION_ITEMS schema', () => {
     expect(resolveRoute('/admin/server-status')).toBe(true);
   });
 
-  // Local Omarchy layer: the owner's tools are the owner's only ("Owner tools only for me"); every other user page is
-  // for every account
-  it('user-pages items are admin-only exactly for the owner tools', () => {
-    const ownerTools = new Set([
+  // Local Omarchy layer: the owner's tools are the owner's only ("Owner tools only for me"), and so are the owner's own
+  // special albums, Villa and QR; every other user page is for every account
+  it('user-pages items are admin-only exactly for the owner tools and the owner’s special albums', () => {
+    const ownerOnly = new Set([
       'nav:userPages:command',
       'nav:userPages:inbox',
       'nav:userPages:inbox_jobs',
@@ -185,12 +186,25 @@ describe('NAVIGATION_ITEMS schema', () => {
       'nav:userPages:duplicates',
       'nav:userPages:utilities',
       'nav:userPages:import',
+      'nav:userPages:villa',
+      'nav:userPages:qr',
     ]);
     const items = NAVIGATION_ITEMS.filter((i) => i.category === 'userPages');
     expect(items).toHaveLength(30);
     for (const item of items) {
-      expect(item.adminOnly, item.id).toBe(ownerTools.has(item.id));
+      expect(item.adminOnly, item.id).toBe(ownerOnly.has(item.id));
     }
+  });
+
+  // Local Omarchy layer: Ctrl+K offers a special album as the sidebar does (managers/special-albums' ownerOnly, through
+  // `offered`): To do to every account, Villa and QR to the owner alone
+  it('offers each special album’s page to the accounts its sidebar row is offered to', () => {
+    for (const special of specialAlbums) {
+      const item = NAVIGATION_ITEMS.find((i) => i.route === special.route);
+      expect(item, special.route).toBeDefined();
+      expect(item?.adminOnly, special.route).toBe(special.ownerOnly);
+    }
+    expect(NAVIGATION_ITEMS.find((i) => i.route === '/todo')?.adminOnly).toBe(false);
   });
 
   it("no source file references the migrated 'nav:theme' literal", () => {

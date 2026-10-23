@@ -52,6 +52,7 @@ import {
 } from '@mdi/js';
 import { Route } from '$lib/route';
 import { isAlmostExactWordMatch } from './cmdk-match';
+import { qrManager, todoManager, villaManager } from './special-albums.svelte';
 
 export type NavigationCategory = 'systemSettings' | 'admin' | 'userPages';
 
@@ -262,7 +263,9 @@ const USER_PAGES: readonly NavigationItem[] = [
     route: '/favorites',
     adminOnly: false,
   },
-  // Local Omarchy layer: the special albums, photos kept out of Photos (managers/special-albums)
+  // Local Omarchy layer: the special albums, photos kept out of Photos (managers/special-albums), offered as the sidebar
+  // offers them: To do to every account, Villa and QR to the owner alone (their `ownerOnly`: the owner is the server's
+  // admin), so a family account finds neither by name, among the quick links or in its recents
   {
     id: 'nav:userPages:todo',
     category: 'userPages',
@@ -270,7 +273,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_todo_description',
     icon: mdiClipboardTextClockOutline,
     route: '/todo',
-    adminOnly: false,
+    adminOnly: todoManager.ownerOnly,
   },
   {
     id: 'nav:userPages:villa',
@@ -279,7 +282,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_villa_description',
     icon: mdiHomeOutline,
     route: '/villa',
-    adminOnly: false,
+    adminOnly: villaManager.ownerOnly,
   },
   {
     id: 'nav:userPages:qr',
@@ -288,7 +291,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     descriptionKey: 'cmdk_nav_qr_description',
     icon: mdiQrcode,
     route: '/qr',
-    adminOnly: false,
+    adminOnly: qrManager.ownerOnly,
   },
   {
     id: 'nav:userPages:archive',

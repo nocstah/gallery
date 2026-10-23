@@ -3871,6 +3871,95 @@ describe('runNavigationProvider', () => {
   });
 });
 
+// Local Omarchy layer: Villa and QR are the owner's own special albums (managers/special-albums' ownerOnly), so a family
+// account's palette never offers them, as its sidebar does not: not typed, not under a bare `>`, not as the top result
+// and not from a recent; To do is everyone's
+describe('special albums for a family account', () => {
+  const family = { id: 'family-member', isAdmin: false };
+  const owner = { id: 'test-user', isAdmin: true };
+  const special = ['nav:userPages:todo', 'nav:userPages:villa', 'nav:userPages:qr'];
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    localStorage.clear();
+    resetRecentStore();
+    mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
+    mockI18nLocale.current = 'en';
+  });
+
+  const typed = (query: string) => {
+    const m = new GlobalSearchManager();
+    const result = (
+      m as unknown as { runNavigationProvider: (p: string, s: 'all' | 'nav') => ProviderStatus<unknown> }
+    ).runNavigationProvider(query, 'all');
+    return result.status === 'ok' ? result.items.map((item) => (item as { id: string }).id) : [];
+  };
+
+  it('finds To do by name, never Villa or QR; the owner finds all three', () => {
+    mockUser.current = family;
+    expect(typed('todo')).toContain('nav:userPages:todo');
+    expect(typed('villa')).not.toContain('nav:userPages:villa');
+    expect(typed('qr')).not.toContain('nav:userPages:qr');
+
+    mockUser.current = owner;
+    expect(typed('todo')).toContain('nav:userPages:todo');
+    expect(typed('villa')).toContain('nav:userPages:villa');
+    expect(typed('qr')).toContain('nav:userPages:qr');
+  });
+
+  it('lists To do under a bare `>`, without Villa or QR', async () => {
+    const pages = async () => {
+      const m = new GlobalSearchManager();
+      m.open();
+      m.setQuery('>');
+      await flushMicrotasks();
+      const section = m.sections.navigation;
+      return section.status === 'ok' ? section.items.map((item) => item.id).filter((id) => special.includes(id)) : [];
+    };
+
+    mockUser.current = family;
+    expect(await pages()).toEqual(['nav:userPages:todo']);
+    mockUser.current = owner;
+    expect(new Set(await pages())).toEqual(new Set(special));
+  });
+
+  it('never promotes Villa to the top result', () => {
+    mockUser.current = family;
+    const m = new GlobalSearchManager();
+    m.open();
+    m.setQuery('villa');
+    expect(m.topNavigationMatch?.id).not.toBe('nav:userPages:villa');
+
+    mockUser.current = owner;
+    const theirs = new GlobalSearchManager();
+    theirs.open();
+    theirs.setQuery('villa');
+    expect(theirs.topNavigationMatch?.id).toBe('nav:userPages:villa');
+  });
+
+  it('drops a Villa recent instead of opening it', () => {
+    mockUser.current = family;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entry = {
+      kind: 'navigate' as const,
+      id: 'nav:userPages:villa',
+      route: '/villa',
+      labelKey: 'villa',
+      icon: 'x',
+      adminOnly: false,
+      lastUsed: 1,
+    };
+    addEntry(entry);
+    const m = new GlobalSearchManager();
+    m.open();
+    m.activateRecent(entry);
+
+    expect(goto).not.toHaveBeenCalled();
+    expect(getEntries().some((e) => e.id === 'nav:userPages:villa')).toBe(false);
+    warn.mockRestore();
+  });
+});
+
 describe('commands provider', () => {
   let manager: GlobalSearchManager;
 
