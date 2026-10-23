@@ -1,0 +1,270 @@
+{
+  "_comment": "Local Omarchy layer: Kioku (記憶, 'memory'), the name this family's archive goes by. local-build.sh applies it to its build copy after Noodle's apply-branding.sh (apply-kioku.sh), unless GALLERY_BRAND=noodle; verify-kioku.sh lists what still names Noodle Gallery, Gallery or Immich. README.md says what changes, what cannot, and how to classify a new string. The words below are read by both scripts: a name, title or alt here goes into code, so it holds no quotes, backticks, $, <, >, braces or backslashes.",
+
+  "name": "Kioku",
+  "short_name": "Kioku",
+  "description": "The family's photos and videos",
+  "inspector_title": "Kioku inspector",
+  "logo_alt": "Kioku logo",
+  "memory_player": {
+    "_comment": "The shared memory player's tab: page_title until a memory has loaded, then memory_title, {title} being the memory's own.",
+    "page_title": "Kioku · Memory",
+    "memory_title": "{title} · Kioku"
+  },
+  "manifest": {
+    "_comment": "The installed app's splash ground, the theme's paper. No theme_color: the pages' own theme-color meta follows light and dark, and a fixed one would paint a dark window's bar white.",
+    "background_color": "#ffffff"
+  },
+  "phone_app_icon": {
+    "_comment": "The open-in-app banner offers the phone app, which stays Noodle Gallery's, beside an icon. apple-icon-180.png becomes the Kioku web app's own (assets), so the banner shows the phone app's icon instead, made from Noodle's iOS launcher icon.",
+    "source": "branding/assets/app-icon-ios.png",
+    "target": "web/static/noodle-app-icon-180.png",
+    "size": 180
+  },
+
+  "about_credit": {
+    "_comment": "Help › About, for the owner (the section only the admin sees, with the projects' links): the AGPL credit to the software Kioku runs on. Added to the bundle as its own key, in the ten maintained languages; the others fall back to English.",
+    "key": "kioku_about_credit",
+    "text": {
+      "en": "Kioku is built on Noodle Gallery and Immich",
+      "de": "Kioku basiert auf Noodle Gallery und Immich",
+      "fr": "Kioku repose sur Noodle Gallery et Immich",
+      "it": "Kioku si basa su Noodle Gallery e Immich",
+      "nl": "Kioku is gebouwd op Noodle Gallery en Immich",
+      "pl": "Kioku powstało na bazie Noodle Gallery i Immich",
+      "es": "Kioku se basa en Noodle Gallery e Immich",
+      "ru": "Kioku основан на Noodle Gallery и Immich",
+      "zh_Hans": "Kioku 基于 Noodle Gallery 和 Immich 构建",
+      "zh_Hant": "Kioku 基於 Noodle Gallery 和 Immich 打造"
+    }
+  },
+
+  "assets": {
+    "_comment": "Each file in branding/kioku/assets/ replaces its counterparts in the build copy's web/static; a counterpart that is gone fails the build (upstream moved it). A file not drawn yet is a warning and Noodle's stays. Raster outputs are resized from the source; later entries overwrite earlier ones, so a hand-drawn small favicon beats the resized one. An optional source says what is made instead while it is not drawn: favicon.ico, for one, is assembled from the 16, 32 and 48 px PNGs.",
+    "dir": "assets",
+    "files": [
+      {
+        "source": "favicon.png",
+        "why": "the tab and bookmark icon: square, transparent, 256 px or more",
+        "make": [
+          { "target": "web/static/favicon.png", "size": 256 },
+          { "target": "web/static/favicon-256.png", "size": 256 },
+          { "target": "web/static/favicon-144.png", "size": 144 },
+          { "target": "web/static/favicon-96.png", "size": 96 },
+          { "target": "web/static/favicon-48.png", "size": 48 },
+          { "target": "web/static/favicon-32.png", "size": 32 },
+          { "target": "web/static/favicon-16.png", "size": 16 }
+        ]
+      },
+      { "source": "favicon-48.png", "why": "the 48 px cut, drawn for its pixels", "optional": "made from favicon.png", "make": [{ "target": "web/static/favicon-48.png", "size": 48 }] },
+      { "source": "favicon-32.png", "why": "the 32 px cut, drawn for its pixels", "optional": "made from favicon.png", "make": [{ "target": "web/static/favicon-32.png", "size": 32 }] },
+      { "source": "favicon-16.png", "why": "the 16 px cut, drawn for its pixels", "optional": "made from favicon.png", "make": [{ "target": "web/static/favicon-16.png", "size": 16 }] },
+      { "source": "favicon.ico", "why": "the legacy tab icon", "optional": "assembled from the 16, 32 and 48 px PNGs", "make": [{ "target": "web/static/favicon.ico" }] },
+      {
+        "source": "app-icon.png",
+        "why": "the installed app's icon: opaque, 1024 px, the mark inside the middle 80% (maskable)",
+        "make": [
+          { "target": "web/static/manifest-icon-512.maskable.png", "size": 512 },
+          { "target": "web/static/manifest-icon-192.maskable.png", "size": 192 },
+          { "target": "web/static/apple-icon-180.png", "size": 180 }
+        ]
+      },
+      { "source": "apple-icon-180.png", "why": "the home-screen icon on an iPhone", "optional": "made from app-icon.png", "make": [{ "target": "web/static/apple-icon-180.png", "size": 180 }] },
+      { "source": "feature-panel.png", "why": "the link preview for a shared link without a photo of its own (1200 × 630); the server's own share tags point at it too", "make": [{ "target": "web/static/feature-panel.png" }] },
+      { "source": "logo-mark.svg", "why": "the mark: the login backdrop, the bar on a narrow screen, every icon-sized logo (light)", "make": [{ "target": "web/static/gallery-logo-mark.svg" }] },
+      { "source": "logo-mark-dark.svg", "why": "the mark on a dark theme", "make": [{ "target": "web/static/gallery-logo-mark-dark.svg" }] },
+      { "source": "loader.svg", "why": "the mark while a page loads, and the login card's logo (light)", "make": [{ "target": "web/static/gallery-loader.svg" }] },
+      { "source": "loader-dark.svg", "why": "the loader on a dark theme", "make": [{ "target": "web/static/gallery-loader-dark.svg" }] },
+      { "source": "logo-inline-light.svg", "why": "mark and wordmark in a row: the bar on a wide screen (light)", "make": [{ "target": "web/static/gallery-logo-inline-light.svg" }] },
+      { "source": "logo-inline-dark.svg", "why": "the inline logo on a dark theme", "make": [{ "target": "web/static/gallery-logo-inline-dark.svg" }] },
+      { "source": "logo-stacked.svg", "why": "mark over wordmark (light)", "make": [{ "target": "web/static/gallery-logo-stacked.svg" }] },
+      { "source": "logo-stacked-dark.svg", "why": "the stacked logo on a dark theme", "make": [{ "target": "web/static/gallery-logo-stacked-dark.svg" }] }
+    ],
+    "ico": {
+      "target": "web/static/favicon.ico",
+      "from": ["web/static/favicon-16.png", "web/static/favicon-32.png", "web/static/favicon-48.png"]
+    }
+  },
+
+  "i18n": {
+    "_comment": [
+      "Every string in the folded bundle (i18n/*.json after apply-branding.sh) that names a brand is listed here exactly once, and apply-kioku.sh stops the build on one that is not: a new upstream or overlay string is classified by a person, never guessed. It also stops on a listed key that no longer exists or no longer names a brand, so a rule cannot go quiet after a rebase.",
+      "kioku: the web experience, where the name means this archive, its pages, its library or its database. Noodle Gallery (noodle_gallery) or the bare word Gallery (gallery) becomes Kioku, in every locale. Bare Gallery is only ever the brand in these keys; as a common noun ('Hide gallery') it is never touched.",
+      "keep: where Noodle Gallery means something that stays Noodle's: the phone app, the server's releases and versions, the project's support and purchase pages, and credits. verify-kioku.sh lists them and passes them.",
+      "restore: apply-branding's lower-case rewrite also took the ~/immich directory for the brand in the Curator messages; the path is put back.",
+      "phrases: grammar the swap alone would break, applied first, each where it is listed: an article or a demonstrative that agreed with Gallery, a case ending glued to the name. A phrase without keys applies to every Kioku key of its locale. The ten maintained locales are reviewed; the others get the word swapped, with whatever endings apply-branding left."
+    ],
+    "kioku": {
+      "noodle_gallery": {
+        "_why": "this archive as the family and the owner use it in the browser: its pages, library, database, maintenance and look",
+        "keys": [
+          "about",
+          "admin.asset_offline_description",
+          "admin.backup_onboarding_description",
+          "admin.backup_onboarding_footer",
+          "admin.confirm_delete_library_assets",
+          "admin.maintenance_integrity_checksum_mismatch_description",
+          "admin.maintenance_integrity_missing_file_description",
+          "admin.maintenance_integrity_untracked_file_description",
+          "admin.maintenance_restore_backup_description",
+          "admin.maintenance_settings_description",
+          "admin.notification_email_from_address_description",
+          "admin.storage_template_option_none_description",
+          "admin.theme_custom_css_settings_description",
+          "admin.theme_settings_description",
+          "asset_offline_description",
+          "empty_trash_confirmation",
+          "immich_logo",
+          "immich_web_interface",
+          "import_option_skip_duplicates",
+          "maintenance_description",
+          "my_immich_description",
+          "my_immich_title",
+          "no_libraries_message",
+          "recently_added_description",
+          "reset_pin_code_description",
+          "search_type_description",
+          "welcome_to_immich"
+        ]
+      },
+      "gallery": {
+        "_why": "the overlay's own strings, where the bare word Gallery is the archive's name",
+        "keys": [
+          "ai_inbox_accept_all_hint",
+          "ai_inbox_schema_drift",
+          "album_share_people_hint",
+          "cmdk_placeholder",
+          "error_page_failed_body",
+          "error_page_offline_body",
+          "error_page_offline_title",
+          "help_owner_named",
+          "help_owner_unnamed",
+          "help_owner_you",
+          "inspector_point_at_photo",
+          "memory_share_film_failed",
+          "memory_share_keep_failed",
+          "memory_share_link_failed",
+          "memory_share_turn_off_failed",
+          "people_all_hidden_body",
+          "people_empty_body",
+          "people_no_pets_body",
+          "room_error_title",
+          "spaces_onboarding_invite_members_description",
+          "user_settings_features_description"
+        ]
+      }
+    },
+    "keep": {
+      "phone_app": {
+        "_why": "the phone app's own screens (no web page shows these): the app on the phone is Noodle Gallery's, built and named by Noodle",
+        "keys": [
+          "advanced_settings_proxy_headers_subtitle",
+          "advanced_settings_sync_remote_deletions_subtitle",
+          "assets_deleted_permanently_from_server",
+          "assets_trashed_from_server",
+          "background_location_permission_content",
+          "backup_background_blocked_body",
+          "backup_background_reminder_body",
+          "backup_background_stale_body",
+          "backup_background_warning_body",
+          "backup_controller_page_background_battery_info_message",
+          "cache_settings_subtitle",
+          "cleanup_confirm_description",
+          "cleanup_step4_summary",
+          "control_bottom_app_bar_delete_from_immich",
+          "delete_dialog_alert",
+          "delete_dialog_alert_local",
+          "delete_dialog_alert_local_ios",
+          "delete_dialog_alert_local_non_backed_up",
+          "delete_dialog_alert_remote",
+          "download_sucess_android",
+          "ignore_icloud_photos_description",
+          "location_permission_content",
+          "manage_media_access_subtitle",
+          "map_location_service_disabled_content",
+          "map_no_location_permission_content",
+          "notification_enabled_list_tile_content",
+          "notification_permission_dialog_content",
+          "ocr_body",
+          "open_in_immich_body",
+          "open_in_immich_title",
+          "permission_onboarding_permission_denied",
+          "permission_onboarding_permission_limited",
+          "permission_onboarding_request",
+          "reset_sqlite_done",
+          "settings_require_restart",
+          "sync_upload_album_setting_subtitle",
+          "trash_page_empty_trash_dialog_content",
+          "upload_to_album_body",
+          "upload_to_immich",
+          "whats_new_settings_subtitle"
+        ]
+      },
+      "phone_app_on_web": {
+        "_why": "web pages about the phone app, which the family installs and finds under Noodle Gallery's name: the open-in-app banner, the app's download page and onboarding step, Obtainium",
+        "keys": [
+          "install_app_title",
+          "mobile_app_download_onboarding_note",
+          "obtainium_configurator_instructions",
+          "open_in_app_banner_title"
+        ]
+      },
+      "server_releases": {
+        "_why": "the server software's releases and versions: Noodle Gallery publishes them, and the server image stays Noodle's",
+        "keys": [
+          "admin.maintenance_restore_backup_different_version",
+          "support_third_party_description",
+          "version_announcement_message"
+        ]
+      },
+      "purchase": {
+        "_why": "supporting and buying a licence for the project behind it",
+        "keys": [
+          "buy",
+          "purchase_activated_subtitle",
+          "purchase_button_buy_immich",
+          "purchase_discord_title",
+          "purchase_github_description",
+          "purchase_license_subtitle",
+          "purchase_panel_info_1",
+          "purchase_panel_info_2",
+          "supporter"
+        ]
+      },
+      "credits": {
+        "_why": "credits and the project's own documentation and resources",
+        "keys": ["link_to_docs", "official_immich_resources"]
+      }
+    },
+    "identifiers": {
+      "_why": "lower-case forms that are paths, not the brand, beside the hostnames and schemes apply-branding.sh shields (its UPSTREAM_IDENTIFIERS_JSON)",
+      "keep": ["~/immich"]
+    },
+    "restore": [
+      {
+        "_why": "the owner's Curator lives under ~/immich; apply-branding read the directory as the brand in nine locales",
+        "keys": ["ai_inbox_offline_body", "chat_offline_body"],
+        "from": "~/Noodle Gallery",
+        "to": "~/immich"
+      }
+    ],
+    "phrases": [
+      { "locale": "en", "keys": ["help_owner_named", "help_owner_unnamed"], "from": "runs this Gallery", "to": "runs Kioku" },
+      { "locale": "en", "keys": ["help_owner_you"], "from": "run this Gallery", "to": "run Kioku" },
+      { "locale": "de", "keys": ["help_owner_named", "help_owner_unnamed", "help_owner_you"], "from": "diese Gallery", "to": "Kioku" },
+      { "locale": "fr", "keys": ["help_owner_named", "help_owner_unnamed", "help_owner_you"], "from": "cette Gallery", "to": "Kioku" },
+      { "locale": "it", "keys": ["help_owner_named"], "from": "questa Gallery", "to": "Kioku" },
+      { "locale": "it", "keys": ["help_owner_unnamed"], "from": "Questa Gallery è gestita", "to": "Kioku è gestito" },
+      { "locale": "it", "keys": ["help_owner_you"], "from": "Questa Gallery la gestisci tu", "to": "Kioku lo gestisci tu" },
+      { "locale": "nl", "keys": ["help_owner_named", "help_owner_unnamed", "help_owner_you"], "from": "deze Gallery", "to": "Kioku" },
+      { "locale": "es", "keys": ["help_owner_named", "help_owner_unnamed", "help_owner_you"], "from": "esta Gallery", "to": "Kioku" },
+      { "locale": "zh_Hans", "keys": ["help_owner_named", "help_owner_unnamed", "help_owner_you"], "from": "这个 Gallery", "to": "Kioku" },
+      { "locale": "zh_Hant", "keys": ["help_owner_named", "help_owner_unnamed", "help_owner_you"], "from": "這個 Gallery", "to": "Kioku" },
+      { "locale": "ru", "keys": ["ai_inbox_schema_drift"], "from": "Gallery изменила", "to": "Kioku изменил" },
+      { "locale": "ru", "keys": ["memory_share_film_failed"], "from": "Gallery создала", "to": "Kioku создал" },
+      { "locale": "nl", "keys": ["admin.maintenance_integrity_untracked_file_description"], "from": "Noodle Gallery' mappen", "to": "Kioku's mappen" },
+      { "locale": "pl", "keys": ["admin.maintenance_integrity_untracked_file_description"], "from": "Noodle Gallerya", "to": "Kioku" },
+      { "locale": "fr", "from": "d'Noodle Gallery", "to": "de Kioku" }
+    ]
+  }
+}
