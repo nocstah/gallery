@@ -62,6 +62,19 @@
 
   const itemsLabel = (count: number) => $t('items_count', { values: { count } });
 
+  // a year as a screen reader hears it beside its numeral (2026-10-23): its count, as its tooltip says, and the years
+  // without photos on either side of it, as the dotted breaks show them ("1979–1988, no photos"), which it had never
+  // heard: from 1989 the arrow keys went on to 1978 without a word of the ten years between
+  const uid = $props.id();
+  const aboutYear = (index: number) =>
+    [
+      itemsLabel(years[index].count),
+      ...(index > 0 && skippedAfter(index - 1) > 0 ? [skippedSpan(index - 1)] : []),
+      ...(skippedAfter(index) > 0 ? [skippedSpan(index)] : []),
+    ]
+      .map((part, at) => (at === 0 ? part : `${part}, ${$t('timeline_overview_no_photos')}`))
+      .join('; ');
+
   // Where a month's top must go so it starts just below the chrome: the month's own position (logical, not the
   // scrubber's percentage scale), less whatever floats over the top of the grid (the glass bar; nothing when solid)
   const monthTarget = (top: number) => {
@@ -365,12 +378,14 @@
             data-year={year}
             data-decade={year % 10 === 0 ? '' : undefined}
             aria-current={year === current.year ? 'true' : undefined}
+            aria-describedby="{uid}-year-{year}"
             title={itemsLabel(count)}
             tabindex={year === current.year ? 0 : -1}
             onclick={() => switchTo(year)}
           >
             {year}
           </button>
+          <span id="{uid}-year-{year}" hidden>{aboutYear(index)}</span>
           {#if skippedAfter(index) > 0}
             <span class="ws-skip" aria-hidden="true" title={skippedSpan(index)} style:--ws-skipped={skippedAfter(index)}
             ></span>

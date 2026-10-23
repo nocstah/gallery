@@ -103,6 +103,35 @@ export const weekYears = (
     });
 };
 
+/**
+ * The runs of years without photos this week between two years of a row (2005 to 2009 between 2010 and 2004), each by
+ * the year it comes before in the row: only where every year between has none (`all`, every year of this week with
+ * photos), so a spread's years left out for room, which All N years shows, mark nothing.
+ */
+export const weekGaps = (
+  shown: Pick<WeekYear, 'year'>[],
+  all: Pick<WeekYear, 'year'>[],
+): Map<number, { from: number; to: number }> => {
+  const withPhotos = new Set(all.map(({ year }) => year));
+  const gaps = new Map<number, { from: number; to: number }>();
+  for (let index = 1; index < shown.length; index++) {
+    const [before, after] = [shown[index - 1].year, shown[index].year];
+    const from = Math.min(before, after) + 1;
+    const to = Math.max(before, after) - 1;
+    if (from > to) {
+      continue;
+    }
+    let none = true;
+    for (let year = from; year <= to && none; year++) {
+      none = !withPhotos.has(year);
+    }
+    if (none) {
+      gaps.set(after, { from, to });
+    }
+  }
+  return gaps;
+};
+
 /** "Oct 13 – 18", or one day, in the reader's language. */
 export const weekYearDays = ({ first, last }: Pick<WeekYear, 'first' | 'last'>, locale?: string) => {
   const parse = (key: string) => new Date(`${key}T12:00:00.000Z`);

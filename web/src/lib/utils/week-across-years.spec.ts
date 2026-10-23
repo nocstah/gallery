@@ -2,6 +2,7 @@ import {
   thisWeek,
   weekAround,
   weekDaysAcrossYears,
+  weekGaps,
   weekSpread,
   weekYearDays,
   weekYears,
@@ -169,5 +170,28 @@ describe(weekSpread.name, () => {
       expect(row.at(-1)).toBe(1990);
       expect(row[0]).toBe(2025);
     }
+  });
+});
+
+// Local Omarchy layer: the row's runs of years without photos this week, marked as the year strip marks its own
+describe(weekGaps.name, () => {
+  const years = (...list: number[]) => list.map((year) => ({ year }));
+
+  it('finds the runs between two years where no year between has photos this week', () => {
+    const all = years(2025, 2023, 2010, 2004, 2003, 2001);
+    expect(weekGaps(all, all)).toEqual(
+      new Map([
+        [2023, { from: 2024, to: 2024 }],
+        [2010, { from: 2011, to: 2022 }],
+        [2004, { from: 2005, to: 2009 }],
+        [2001, { from: 2002, to: 2002 }],
+      ]),
+    );
+  });
+
+  it('marks nothing where a spread left a year with photos out for room, which All N years shows', () => {
+    const all = years(2025, 2024, 2023, 2019, 2010);
+    expect(weekGaps(years(2025, 2023, 2010), all)).toEqual(new Map());
+    expect(weekGaps(years(2025, 2019), all)).toEqual(new Map());
   });
 });

@@ -32,7 +32,7 @@
   import { workspaceGap } from '$lib/managers/VirtualScrollManager/VirtualScrollManager.svelte';
   import { pxOf } from '$lib/utils/review-grid';
   import { tileRowColumns } from '$lib/utils/tile-row';
-  import { weekSpread, weekYearDays } from '$lib/utils/week-across-years';
+  import { weekGaps, weekSpread, weekYearDays } from '$lib/utils/week-across-years';
   import { onMount, tick } from 'svelte';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
@@ -98,6 +98,11 @@
   let weekSlots = $state(1);
   let weekOpen = $state(false);
   const weekShown = $derived(weekOpen ? data.week : weekSpread(data.week, weekSlots, new Date().getFullYear()));
+  // where years without photos this week lie between two of the row, a dotted break in the gap before the older, as the
+  // year strip draws one, and a screen reader hears the run with that year ("2005–2009, no photos"); it had been told by
+  // the numerals alone (2026-10-23)
+  const weekGapOf = $derived(weekGaps(weekShown, data.week));
+  const weekSpan = ({ from, to }: { from: number; to: number }) => (from === to ? String(from) : `${from}–${to}`);
 
   // recently added: square tiles of at least 9rem (the Places tiles'), as many as fit one row; fewer than it holds are
   // widened a little to fill it (utils/tile-row: the server sends twelve, the AORUS's row holds fourteen)
@@ -230,20 +235,35 @@
         <div id="explore-week-years">
           <SingleGridRow bind:itemCount={weekSlots} class="grid grid-cols-5 gap-(--ws-gap) md:grid-auto-fill-48">
             {#each weekShown as year (year.year)}
-              <a class="ws-explore-tile ws-week-year" href={Route.photos({ at: year.assetId })} draggable="false">
-                <img
-                  src={getAssetMediaUrl({
-                    id: year.assetId,
-                    size: AssetMediaSize.Thumbnail,
-                    cacheKey: year.thumbhash ?? undefined,
-                  })}
-                  alt=""
-                  loading="lazy"
-                />
-                <span class="ws-week-year-caption">
-                  <span class="ws-week-year-number">{year.year}</span>
-                  <span class="ws-week-year-days" lang={$locale}>{weekYearDays(year, $locale)}</span>
+              {@const gap = weekGapOf.get(year.year)}
+              <a
+                class="ws-explore-tile ws-week-year"
+                href={Route.photos({ at: year.assetId })}
+                draggable="false"
+                data-gap={gap ? '' : undefined}
+                style:--ws-skipped={gap ? gap.to - gap.from + 1 : undefined}
+                aria-describedby={gap ? `explore-week-gap-${year.year}` : undefined}
+              >
+                <span class="ws-week-year-frame">
+                  <img
+                    src={getAssetMediaUrl({
+                      id: year.assetId,
+                      size: AssetMediaSize.Thumbnail,
+                      cacheKey: year.thumbhash ?? undefined,
+                    })}
+                    alt=""
+                    loading="lazy"
+                  />
+                  <span class="ws-week-year-caption">
+                    <span class="ws-week-year-number">{year.year}</span>
+                    <span class="ws-week-year-days" lang={$locale}>{weekYearDays(year, $locale)}</span>
+                  </span>
                 </span>
+                {#if gap}
+                  <span id="explore-week-gap-{year.year}" hidden>
+                    {weekSpan(gap)}, {$t('timeline_overview_no_photos')}
+                  </span>
+                {/if}
               </a>
             {/each}
           </SingleGridRow>
@@ -450,6 +470,25 @@
      type (left to its label on a tile too narrow for them: a phone's row of five) */
   .ws-week-year {
     container-type: inline-size;
+    /* the frame clips the photo, so the break before the tile can stand in the gap */
+    overflow: visible;
+  }
+  .ws-week-year-frame {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: inherit;
+  }
+  /* years without photos this week between two of the row: a dotted break in the gap before the older, at the
+     numerals' foot, taller for more of them (a year, a short one; ten or more, the numerals' height), as the year strip
+     breaks its line; a spread's years left out for room mark nothing */
+  .ws-week-year[data-gap]::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: calc(var(--ws-gap) / -2 - 0.5px);
+    bottom: clamp(0.35rem, 5cqi, 0.6rem);
+    height: calc(0.35rem + min(var(--ws-skipped, 1), 10) * 0.2rem);
+    border-inline-start: 1px dotted var(--immich-ui-muted);
   }
   /* the scrim holds at least 48% black behind the numeral and the days, so over a white wall the numeral keeps 3:1 and
      the days 4.5:1 (it faded from behind the numeral: 1.8:1 at the brightest), and eases out in the band above them */
