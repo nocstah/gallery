@@ -1,8 +1,10 @@
-<script lang="ts" generics="T extends { id: string }">
+<script lang="ts" generics="T extends SortablePerson">
   import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
   import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import SearchBar from '$lib/elements/SearchBar.svelte';
   import { handleError } from '$lib/utils/handle-error';
+  import { bestMatchFirst, sortInPeopleOrder } from '$lib/utils/people-order';
+  import type { SortablePerson } from '$lib/utils/people-utils';
   import { Button, Icon, IconButton, modalManager, toastManager } from '@immich/ui';
   import { mdiCallMerge, mdiMerge, mdiSwapHorizontal, mdiSwapVertical } from '@mdi/js';
   import { onMount } from 'svelte';
@@ -54,7 +56,13 @@
   const hasSelection = $derived(selectedPeople.length > 0);
   const peopleToNotShow = $derived([...selectedPeople, person]);
   const visiblePeople = $derived.by(() => {
-    const source = searchName ? searchedPeople : people;
+    // Local Omarchy layer: in the People page's order unless sorted by likeness, the best match first while a name is
+    // typed (utils/people-order)
+    const source = searchName
+      ? bestMatchFirst(sortInPeopleOrder(searchedPeople), searchName)
+      : sortBySimilarity
+        ? people
+        : sortInPeopleOrder(people);
     return source.filter((person) => peopleToNotShow.every((hiddenPerson) => hiddenPerson.id !== person.id));
   });
 

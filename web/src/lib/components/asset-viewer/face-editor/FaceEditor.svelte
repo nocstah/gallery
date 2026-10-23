@@ -12,7 +12,7 @@
     computeSelectorPosition,
   } from '$lib/utils/face-box-drag';
   import { handleError } from '$lib/utils/handle-error';
-  import { normalizeSearchString } from '$lib/utils/string-utils';
+  import { pickPeople } from '$lib/utils/people-order';
   import { createFace, getAllPeople, type PersonResponseDto } from '@immich/sdk';
   import { Button, Input, modalManager, toastManager } from '@immich/ui';
   import { Canvas, InteractiveFabricObject, Rect } from 'fabric';
@@ -41,11 +41,8 @@
   let searchTerm = $state('');
   let faceBoxPosition = $state({ left: 0, top: 0, width: 0, height: 0 });
 
-  let filteredCandidates = $derived(
-    searchTerm
-      ? candidates.filter((person) => normalizeSearchString(person.name).includes(normalizeSearchString(searchTerm)))
-      : candidates,
-  );
+  // Local Omarchy layer: in the People page's order, the best match first while a name is typed (utils/people-order)
+  let filteredCandidates = $derived(pickPeople(candidates, searchTerm));
 
   const configureControlStyle = () => {
     InteractiveFabricObject.ownDefaults = {

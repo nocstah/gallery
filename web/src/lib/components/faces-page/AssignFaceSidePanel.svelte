@@ -6,6 +6,7 @@
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { getPeopleThumbnailUrl, handlePromiseError } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { comparePeopleMatches, sortInPeopleOrder } from '$lib/utils/people-order';
   import { orderPickerCandidates, zoomImageToBase64 } from '$lib/utils/people-utils';
   import { getPersonNameWithHiddenValue, searchNameLocal } from '$lib/utils/person';
   import {
@@ -126,7 +127,12 @@
     }
   };
 
-  let showPeople = $derived(searchName ? searchedPeople : allPeople.filter((person) => !person.isHidden));
+  // Local Omarchy layer: in the People page's order, the best match first while a name is typed (utils/people-order)
+  let showPeople = $derived(
+    searchName
+      ? [...searchedPeople].sort(comparePeopleMatches(searchName))
+      : sortInPeopleOrder(allPeople.filter((person) => !person.isHidden)),
+  );
   let showPeopleCandidates: PickerCandidate[] = $derived(
     orderPickerCandidates(
       showPeople

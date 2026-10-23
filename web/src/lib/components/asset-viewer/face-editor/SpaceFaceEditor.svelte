@@ -10,7 +10,7 @@
   import { handleError } from '$lib/utils/handle-error';
   import { refreshAssetPeople } from '$lib/utils/refresh-asset-people';
   import { getSpacePersonThumbnailUrl } from '$lib/utils/global-person-route';
-  import { normalizeSearchString } from '$lib/utils/string-utils';
+  import { pickPeople } from '$lib/utils/people-order';
   import CreateSpaceFaceModal from '$lib/modals/CreateSpaceFaceModal.svelte';
   import { createSpaceAssetFace, getSpacePeople, type SharedSpacePersonResponseDto } from '@immich/sdk';
   import { Button, Input, modalManager, toastManager } from '@immich/ui';
@@ -54,11 +54,8 @@
   let searchTerm = $state('');
   let faceBoxPosition = $state({ left: 0, top: 0, width: 0, height: 0 });
 
-  let filteredCandidates = $derived(
-    searchTerm
-      ? candidates.filter((person) => normalizeSearchString(person.name).includes(normalizeSearchString(searchTerm)))
-      : candidates,
-  );
+  // Local Omarchy layer: in the People page's order, the best match first while a name is typed (utils/people-order)
+  let filteredCandidates = $derived(pickPeople(candidates, searchTerm));
 
   const configureControlStyle = () => {
     InteractiveFabricObject.ownDefaults = {

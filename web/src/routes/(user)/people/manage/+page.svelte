@@ -5,6 +5,7 @@
   import { visibilitiesDone } from '$lib/services/person.service';
   import { getPeopleThumbnailUrl } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { sortInPeopleOrder } from '$lib/utils/people-order';
   import { getAllPeople, updatePeople, type PersonResponseDto } from '@immich/sdk';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
@@ -15,7 +16,9 @@
 
   const { data }: Props = $props();
 
-  let people = $derived(data.people.people);
+  // Local Omarchy layer: in the People page's order (utils/people-order), set once as they load, so showing or hiding
+  // someone never moves their tile
+  let people = $derived(sortInPeopleOrder(data.people.people));
   const totalPeopleCount = $derived(data.people.total);
   let nextPage = $state(data.people.hasNextPage ? 2 : null);
   let loading = $state(false);
@@ -60,7 +63,7 @@
     loading = true;
     try {
       const { people: newPeople, hasNextPage } = await getAllPeople({ withHidden: true, page: nextPage });
-      people = people.concat(newPeople);
+      people = people.concat(sortInPeopleOrder(newPeople));
       nextPage = hasNextPage ? nextPage + 1 : null;
     } catch (error) {
       handleError(error, $t('errors.failed_to_load_people'));

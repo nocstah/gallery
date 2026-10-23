@@ -1,5 +1,6 @@
 <script lang="ts">
   import SearchPeople from '$lib/components/faces-page/PeopleSearch.svelte';
+  import { bestMatchFirst, sortInPeopleOrder } from '$lib/utils/people-order';
   import { type PersonResponseDto } from '@immich/sdk';
   import { t } from 'svelte-i18n';
   import FaceThumbnail from './FaceThumbnail.svelte';
@@ -18,10 +19,15 @@
   let sortBySimilarirty = $state(false);
   let name = $state('');
 
+  // Local Omarchy layer: in the People page's order unless sorted by likeness, the best match first while a name is
+  // typed (utils/people-order)
   const showPeople = $derived(
-    (name ? searchedPeopleLocal : people).filter((person) =>
-      peopleToNotShow.every((unselectedPerson) => unselectedPerson.id !== person.id),
-    ),
+    (name
+      ? bestMatchFirst(sortInPeopleOrder(searchedPeopleLocal), name)
+      : sortBySimilarirty
+        ? people
+        : sortInPeopleOrder(people)
+    ).filter((person) => peopleToNotShow.every((unselectedPerson) => unselectedPerson.id !== person.id)),
   );
 </script>
 

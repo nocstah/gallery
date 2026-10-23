@@ -6,6 +6,7 @@
   import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { handleError } from '$lib/utils/handle-error';
+  import { bestMatchFirst, sortInPeopleOrder } from '$lib/utils/people-order';
   import { appendUniqueById, orderPickerCandidates, zoomImageToBase64 } from '$lib/utils/people-utils';
   import { getSpacePersonThumbnailUrl } from '$lib/utils/global-person-route';
   import { normalizeSearchString } from '$lib/utils/string-utils';
@@ -184,9 +185,10 @@
 
   // `getSpacePeople` already serves named people first, but ordering here too keeps this picker and
   // the owner's reading identically off one helper rather than off the endpoint's ordering holding.
+  // Local Omarchy layer: in the People page's order, the best match first while a name is typed (utils/people-order)
   let pickerCandidates: PickerCandidate[] = $derived(
     orderPickerCandidates(
-      spaceCandidates.map((person) => ({
+      sortInPeopleOrder(spaceCandidates).map((person) => ({
         id: person.id,
         name: person.name,
         isHidden: person.isHidden,
@@ -204,7 +206,10 @@
     if (!query) {
       return pickerCandidates;
     }
-    return pickerCandidates.filter((candidate) => normalizeSearchString(candidate.name).includes(query));
+    return bestMatchFirst(
+      pickerCandidates.filter((candidate) => normalizeSearchString(candidate.name).includes(query)),
+      query,
+    );
   });
 </script>
 
