@@ -2,7 +2,7 @@
   // Local Omarchy layer: one suggestion, large, for review mode. Each kind shows what the decision is about at the
   // size it needs: two covers side by side, a photo before and after its turn, a face beside the photos it was named
   // from, copies next to each other, an album's spread of photos, the reel itself, a restored version over its
-  // original. Each piece of evidence opens in the zoomable inspector.
+  // original. Each piece of evidence opens in the zoomable inspector, titled as review mode heads the suggestion.
   import InboxInspector from '$lib/components/curator/InboxInspector.svelte';
   import { inspectionItems } from '$lib/utils/inbox-inspection';
   import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
@@ -13,9 +13,11 @@
 
   interface Props {
     suggestion: Suggestion;
+    /** how review mode heads it, for the inspector's title (Curator's title by default) */
+    title?: string;
   }
 
-  let { suggestion }: Props = $props();
+  let { suggestion, title }: Props = $props();
   let inspecting = $state<number>();
   const inspectItems = $derived(inspectionItems(suggestion));
   const inspectPhoto = (id: string, turn = 0) => {
@@ -142,7 +144,7 @@
   <InboxInspector
     items={inspectItems}
     initialIndex={inspecting}
-    title={suggestion.title}
+    title={title ?? suggestion.title}
     onClose={() => (inspecting = undefined)}
   />
 {/if}

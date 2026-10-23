@@ -3,12 +3,16 @@
   // screen and large, decided from the keyboard: A or → does what the kind's button says (Archive, Publish, Make album:
   // kindAction), R or ← rejects, S or Space skips, U takes back the last decision (an accepted change is undone and
   // waits again, a rejection is reopened), Esc closes; the arrows belong to a slider while it has focus. A held key
-  // acts once (its repeats are ignored). The next suggestion's photos load while this one is on screen.
+  // acts once (its repeats are ignored). The next suggestion's photos load while this one is on screen. A suggestion
+  // about one photo or clip is headed by when and where, as its card in the list is (utils/inbox-facts, the list's
+  // facts: the next one's asked for while this one is on screen), and the buttons are described by it.
   import ReviewStage from '$lib/components/curator/ReviewStage.svelte';
   import StoryText from '$lib/components/curator/StoryText.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
   import { curator, type Suggestion } from '$lib/utils/curator';
   import { kindAction, waitingIn, type KindAction } from '$lib/utils/curator-inbox';
+  import { locale as dateLocale } from '$lib/stores/preferences.store';
+  import { cardWords, photoSubject, type InboxFactsLoader } from '$lib/utils/inbox-facts';
   import { AssetMediaSize } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiClose } from '@mdi/js';
@@ -21,10 +25,12 @@
     title: string;
     /** what accepting does for the kind, in words */
     action: KindAction;
+    /** what Gallery says of the suggestions' photos, kept by the list for its page */
+    facts?: InboxFactsLoader;
     onClose: () => void;
   }
 
-  let { keys, title, action, onClose }: Props = $props();
+  let { keys, title, action, facts, onClose }: Props = $props();
 
   let items = $state<Suggestion[]>([]);
   let index = $state(0);
@@ -38,6 +44,16 @@
   const done = $derived(decided.length);
   /** the card's own words: the chat's batch holds every kind of change */
   const own = $derived(current && action.verb === 'apply' ? kindAction('', current.kind) : action);
+  const subject = $derived(current ? photoSubject(current) : undefined);
+  /** its heading and line: by when and where for a suggestion about one photo (utils/inbox-facts) */
+  const said = $derived(
+    current ? cardWords(current.title, subject ? facts?.get(subject) : undefined, $t, $dateLocale) : undefined,
+  );
+  // this one's facts and the next one's, so moving on finds them in
+  $effect(() => {
+    const next = items[index + 1];
+    facts?.request(subject, next ? photoSubject(next) : undefined);
+  });
 
   const preload = (suggestion: Suggestion | undefined) => {
     for (const id of suggestion?.asset_ids.slice(0, 2) ?? []) {
@@ -193,7 +209,7 @@
   <div class="review-stage">
     {#if current}
       {#key current.id}
-        <ReviewStage suggestion={current} />
+        <ReviewStage suggestion={current} title={said?.heading} />
       {/key}
     {:else if loaded}
       <div class="ws-empty">
@@ -208,7 +224,11 @@
   {#if current}
     <footer class="review-foot">
       <div class="review-text">
-        <span class="ws-inbox-row-title">{current.title}</span>
+        <span class="ws-inbox-row-title" id="review-title">{said?.heading ?? current.title}</span>
+        {#if subject}
+          <!-- reserved while the facts are on their way, as on the card -->
+          <span class="ws-inbox-meta review-facts" id="review-facts">{said?.line}</span>
+        {/if}
         {#if current.detail}
           <p class="ws-inbox-row-body">{current.detail}</p>
         {/if}
@@ -229,19 +249,34 @@
         >
           {$t('undo')}
         </button>
-        <button type="button" class="ws-btn-quiet" aria-keyshortcuts="S" disabled={busy} onclick={advance}>
+        <button
+          type="button"
+          class="ws-btn-quiet"
+          aria-keyshortcuts="S"
+          aria-describedby={said?.line ? 'review-title review-facts' : 'review-title'}
+          disabled={busy}
+          onclick={advance}
+        >
           {$t('skip')}
         </button>
         <button
           type="button"
           class="ws-btn-quiet"
           aria-keyshortcuts="R"
+          aria-describedby={said?.line ? 'review-title review-facts' : 'review-title'}
           disabled={busy}
           onclick={() => decide('reject')}
         >
           {$t('ai_inbox_reject')}
         </button>
-        <button type="button" class="ws-btn" aria-keyshortcuts="A" disabled={busy} onclick={() => decide('accept')}>
+        <button
+          type="button"
+          class="ws-btn"
+          aria-keyshortcuts="A"
+          aria-describedby={said?.line ? 'review-title review-facts' : 'review-title'}
+          disabled={busy}
+          onclick={() => decide('accept')}
+        >
           {$t(own.button)}
         </button>
       </div>
@@ -300,6 +335,11 @@
     display: flex;
     gap: 0.4rem;
     align-items: center;
+  }
+  /* the photo as Gallery has it, under its heading: the line is held while the facts are on their way */
+  .review-facts {
+    min-height: 1lh;
+    overflow-wrap: anywhere;
   }
   .review-message {
     font-size: var(--ws-text-ui);

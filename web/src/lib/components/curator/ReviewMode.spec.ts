@@ -1,8 +1,11 @@
+import { AssetTypeEnum, AssetVisibility } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import type { Suggestion } from '$lib/utils/curator';
 import { kindAction } from '$lib/utils/curator-inbox';
+import { InboxFactsLoader } from '$lib/utils/inbox-facts';
+import { assetFactory } from '@test-data/factories/asset-factory';
 import ReviewMode from './ReviewMode.svelte';
 
 // Local Omarchy layer: review mode decides from the keyboard, one suggestion at a time; a held key decides once (its
@@ -107,5 +110,44 @@ describe('ReviewMode', () => {
 
     expect(curatorMock.decide).toHaveBeenNthCalledWith(1, [101], 'accept');
     expect(curatorMock.decide).toHaveBeenNthCalledWith(2, [102], 'reject');
+  });
+
+  // Local Omarchy layer (the owner's "Inbox cards by when and where"): a suggestion about one clip is headed by when
+  // and where, as its card is, the next one's facts asked for while this one is on screen
+  it('heads a clip by when and where, and describes the buttons by it', async () => {
+    const fetchAsset = vi.fn((id: string) =>
+      Promise.resolve(
+        assetFactory.build({
+          id,
+          type: AssetTypeEnum.Video,
+          localDateTime: '2019-10-11T15:55:06.000Z',
+          exifInfo: { city: 'Riverton', country: 'Testland' },
+          duration: 100,
+          originalFileName: `IMG_${5398 + Number(id.replace('asset-', ''))}.MOV`,
+          visibility: AssetVisibility.Timeline,
+          isTrashed: false,
+          livePhotoVideoId: null,
+          stack: null,
+        }),
+      ),
+    );
+    render(ReviewMode, {
+      keys: ['asset.archive:short:2026-10-11'],
+      title: 'Very short clips',
+      action: kindAction('asset.archive:short', 'asset.archive'),
+      facts: new InboxFactsLoader(fetchAsset),
+      onClose: vi.fn(),
+    });
+
+    expect(await screen.findByText('Oct 11, 2019 · Riverton · 0.1 s')).toBeInTheDocument();
+    expect(screen.getByText('IMG_5399.MOV')).toHaveClass('ws-inbox-meta');
+    expect(fetchAsset.mock.calls.map(([id]) => id)).toEqual(['asset-1', 'asset-2']);
+    expect(screen.getByRole('button', { name: 'Archive' })).toHaveAccessibleDescription(
+      'Oct 11, 2019 · Riverton · 0.1 s IMG_5399.MOV',
+    );
+
+    await key('s');
+    await waitFor(() => expect(screen.getByText('IMG_5400.MOV')).toBeInTheDocument());
+    expect(fetchAsset.mock.calls.map(([id]) => id)).toEqual(['asset-1', 'asset-2', 'asset-3']);
   });
 });
