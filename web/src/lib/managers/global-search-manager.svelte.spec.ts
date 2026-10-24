@@ -5431,11 +5431,15 @@ describe('album catalog fetch', () => {
     localStorage.clear();
   });
 
-  it('dedupes by id, preferring the shared record', async () => {
+  // Local Omarchy layer: the names list gives every album its caller belongs to twice, the owner's own albums
+  // included (their owner role puts them in its shared half), so preferring the shared record had every album say Shared
+  it("dedupes by id, keeping the owner's own record, so only an album shared with the caller says Shared", async () => {
     const response = [
-      { id: 'a1', albumName: 'Beach', shared: false, albumThumbnailAssetId: null, assetCount: 1 },
-      { id: 'a1', albumName: 'Beach', shared: true, albumThumbnailAssetId: 't', assetCount: 1 },
+      { id: 'a1', albumName: 'Beach', shared: false, albumThumbnailAssetId: 't', assetCount: 1 },
       { id: 'a2', albumName: 'Solo', shared: false, albumThumbnailAssetId: null, assetCount: 0 },
+      { id: 'a1', albumName: 'Beach', shared: true, albumThumbnailAssetId: 't', assetCount: 1 },
+      { id: 'a2', albumName: 'Solo', shared: true, albumThumbnailAssetId: null, assetCount: 0 },
+      { id: 'a3', albumName: "Anna's trip", shared: true, albumThumbnailAssetId: null, assetCount: 4 },
     ];
     vi.mocked(getAlbumNames).mockResolvedValue(response as unknown as Awaited<ReturnType<typeof getAlbumNames>>);
 
@@ -5443,12 +5447,11 @@ describe('album catalog fetch', () => {
     sut.open();
     await sut.ensureAlbumsCache();
 
-    expect(sut.albumsCache).toHaveLength(2);
-    expect(sut.albumsCache?.find((a) => a.id === 'a1')).toMatchObject({
-      shared: true,
-      albumThumbnailAssetId: 't',
-    });
-    expect(sut.albumsCache?.find((a) => a.id === 'a2')).toMatchObject({ shared: false });
+    expect(sut.albumsCache?.map(({ id, shared }) => [id, shared])).toEqual([
+      ['a1', false],
+      ['a2', false],
+      ['a3', true],
+    ]);
   });
 
   it("waits for QR's bank slips before the albums show, so no row wears one for its cover", async () => {

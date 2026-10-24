@@ -888,9 +888,11 @@ export class GlobalSearchManager {
 
   /**
    * Fetch `GET /albums/names` and dedupe the concatenated owned+shared response by
-   * album id, preferring the `shared: true` record when both variants are present.
-   * Local Omarchy layer: the rows wait for QR's bank slips, so no album wears one for its
-   * cover (utils/slips).
+   * album id, keeping the owner's own record (`shared: false`) when both variants are
+   * present. Local Omarchy layer: the shared half lists every album its caller is a
+   * member of, the owner's own albums included (their owner role), so preferring it had
+   * every album say Shared; now only an album shared with the caller says so. The rows
+   * wait for QR's bank slips too, so no album wears one for its cover (utils/slips).
    * On AbortError (palette closed mid-fetch) the section status stays untouched so
    * reopening the palette is a clean slate; other errors flip the section to
    * `'error'` and rethrow so the caller sees the failure.
@@ -905,7 +907,7 @@ export class GlobalSearchManager {
       const byId = new SvelteMap<string, AlbumNameDto>();
       for (const record of response) {
         const existing = byId.get(record.id);
-        if (existing === undefined || (record.shared && !existing.shared)) {
+        if (existing === undefined || (existing.shared && !record.shared)) {
           byId.set(record.id, record);
         }
       }
