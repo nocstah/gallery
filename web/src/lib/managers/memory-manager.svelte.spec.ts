@@ -2,12 +2,13 @@
 // A memory leaves the page at once and Gallery deletes it only once its toast has gone, so the toast's Undo puts it back
 // exactly; an Undo after that makes it again from what it held. A photo is taken out of a memory at once and added
 // back. Every Gallery call here is a mock: no memory is touched.
-import { AssetTypeEnum, BulkIdErrorReason, MemoryType, type MemoryResponseDto } from '@immich/sdk';
+import { AssetTypeEnum, BulkIdErrorReason, MemorySearchOrder, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
 import { goto } from '$app/navigation';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import { memoryManager } from '$lib/managers/memory-manager.svelte';
 import { undoManager } from '$lib/managers/undo-manager.svelte';
+import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
 import { assetFactory } from '@test-data/factories/asset-factory';
 import { reactivePageMock as mockPage } from '@test-data/mocks/reactive-page.mock.svelte';
 
@@ -297,5 +298,33 @@ describe('removing a memory, and taking it back', () => {
     expect(memoryManager.removable(card)).toBe(true);
     expect(memoryManager.removable(card, 'd')).toBe(true);
     expect(memoryManager.removable(card, 'a')).toBe(false);
+  });
+});
+
+// Local Omarchy layer: the Memories page keeps to this browser's Memories settings (utils/memory-cards'
+// memoriesPageSearch), which Room does not (roomMemoriesSearch, components/room/room-source: it plays everything)
+describe("the Memories page and this browser's Memories settings", () => {
+  afterEach(() => {
+    userPreferencesManager.memories = { showUpcoming: false, onlyFavorites: false };
+    auth.authManager.authenticated = false;
+  });
+
+  it('asks for the kept memories alone while the reader keeps to them, and the upcoming ones while shown', async () => {
+    auth.authManager.authenticated = true;
+    sdkMock.searchMemories.mockResolvedValue([]);
+    sdkMock.memoriesStatistics.mockResolvedValue({ total: 0 });
+
+    userPreferencesManager.memories = { showUpcoming: false, onlyFavorites: true };
+    await memoryManager.applyPreferences();
+    expect(sdkMock.searchMemories).toHaveBeenLastCalledWith({
+      order: MemorySearchOrder.Desc,
+      isSaved: true,
+      isUpcoming: false,
+      page: 1,
+    });
+
+    userPreferencesManager.memories = { showUpcoming: true, onlyFavorites: false };
+    await memoryManager.applyPreferences();
+    expect(sdkMock.searchMemories).toHaveBeenLastCalledWith({ order: MemorySearchOrder.Desc, page: 1 });
   });
 });

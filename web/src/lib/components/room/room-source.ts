@@ -12,8 +12,7 @@ import {
 } from '@immich/sdk';
 import type { DateTime } from 'luxon';
 import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
-import { cardsByFacts, memoriesPageSearch, wallClockAsUtc } from '$lib/utils/memory-cards';
+import { cardsByFacts, roomMemoriesSearch, wallClockAsUtc } from '$lib/utils/memory-cards';
 import {
   inTimeOrder,
   monthOf,
@@ -33,15 +32,15 @@ import {
 const FACTS_PATIENCE_MS = 2000;
 
 /**
- * Today's films: the Memories page's Today cards (when the person keeps memories on), each whole, then Curator's living
- * albums. Room asks what the Memories page asks (utils/memory-cards' memoriesPageSearch, as the reader's Memories
- * settings in this browser have it) and makes the same cards of it (cardsByFacts), so a trip whose anniversary or
- * earlier days are still kept plays as the Memories page's film of its card: all their photos, under the lead memory.
- * It fails only when Gallery answered neither.
+ * Today's films: the Today cards of every memory (when the person keeps memories on), each whole, then Curator's living
+ * albums. Room asks for every memory that has come due, whatever the Memories page's settings in this browser say
+ * (utils/memory-cards' roomMemoriesSearch: it always plays everything), and makes the Memories page's cards of them
+ * (cardsByFacts), so a trip whose anniversary or earlier days are still kept plays as the Memories page's film of its
+ * card: all their photos, under the lead memory. It fails only when Gallery answered neither.
  */
 export const loadToday = async ({ memories, today }: { memories: boolean; today: DateTime }): Promise<RoomReel[]> => {
   const [found, albums] = await Promise.allSettled([
-    memories ? searchMemories(memoriesPageSearch(userPreferencesManager.memories)) : Promise.resolve([]),
+    memories ? searchMemories(roomMemoriesSearch()) : Promise.resolve([]),
     getAllAlbums({}),
   ]);
   if (found.status === 'rejected' && albums.status === 'rejected') {

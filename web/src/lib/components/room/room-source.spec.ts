@@ -15,6 +15,7 @@ import {
 } from '@immich/sdk';
 import { DateTime } from 'luxon';
 import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
+import { memoriesPageSearch } from '$lib/utils/memory-cards';
 import { YEAR_FILM } from './room-reels';
 import { loadAlbumAssets, loadToday, loadYear } from './room-source';
 
@@ -68,14 +69,36 @@ describe(loadToday.name, () => {
     expect(reels.map(({ key }) => key)).toEqual(['memory:m1', 'album:tv']);
   });
 
-  it("asks as the reader's Memories settings in this browser have it", async () => {
-    vi.mocked(searchMemories).mockClear().mockResolvedValue([]);
+  // 2026-10-24, the owner's "always play everything": the Memories page's settings are the page's own
+  it("plays every memory whatever this browser's Memories settings say, where the Memories page keeps to them", async () => {
     vi.mocked(getAllAlbums).mockResolvedValue([]);
-    userPreferencesManager.memories = { showUpcoming: true, onlyFavorites: true };
+    vi.mocked(searchMemories).mockResolvedValue([
+      { ...onThisDay('kept', '2026-10-18', [asset('k', '2025-10-18')]), isSaved: true },
+      { ...onThisDay('not-kept', '2026-10-18', [asset('n', '2013-10-18')]), isSaved: false },
+    ]);
 
-    await loadToday({ memories: true, today });
+    for (const settings of [
+      { showUpcoming: false, onlyFavorites: false },
+      { showUpcoming: true, onlyFavorites: false },
+      { showUpcoming: false, onlyFavorites: true },
+      { showUpcoming: true, onlyFavorites: true },
+    ]) {
+      userPreferencesManager.memories = settings;
+      vi.mocked(searchMemories).mockClear();
 
-    expect(searchMemories).toHaveBeenCalledWith({ order: MemorySearchOrder.Desc, isSaved: true });
+      const reels = await loadToday({ memories: true, today });
+
+      // every memory that has come due, kept or not (an upcoming one never joins a Today card)
+      expect(searchMemories).toHaveBeenCalledExactlyOnceWith({ order: MemorySearchOrder.Desc, isUpcoming: false });
+      expect(reels.map(({ key }) => key)).toEqual(['memory:kept', 'memory:not-kept']);
+    }
+
+    // the Memories page, with the same settings, asks for the kept ones alone and the upcoming ones too
+    expect(memoriesPageSearch(userPreferencesManager.memories)).toEqual({
+      order: MemorySearchOrder.Desc,
+      isSaved: true,
+      isUpcoming: undefined,
+    });
   });
 
   it("plays a Today card whole: today's memory with the earlier days' that read the same, under the lead", async () => {

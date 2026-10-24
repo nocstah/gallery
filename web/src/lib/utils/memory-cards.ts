@@ -13,8 +13,8 @@ import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
 // film, each photo once, in the order they were taken. Today's come first, in the one order the Memories page, Explore
 // and Room all show them in (todayRank below), then the earlier days' the server still keeps, then the upcoming ones
 // (generated a few days ahead) when the reader shows them. Each card's line says what kind of memory it is: "On this
-// day · 1 year ago", "Trip · 1 year ago · 4 days". Room's films are the Today cards, whole (memoriesPageSearch and
-// cardsByFacts below, the memory manager's own).
+// day · 1 year ago", "Trip · 1 year ago · 4 days". Room's films are the Today cards, whole, made by the memory
+// manager's own cardsByFacts below from every memory, whatever the Memories page's settings (roomMemoriesSearch).
 
 /** Where a card stands: shown today, shown on an earlier day and still kept, or not due yet. */
 export type MemorySection = 'today' | 'earlier' | 'upcoming';
@@ -247,15 +247,25 @@ export const cardOfMemory = (cards: MemoryCard[], memoryId: string): MemoryCard 
 // today, six photos ----
 
 /**
- * What the Memories page asks Gallery for (the memory manager's applyPreferences), and so Room, whose films are its
- * Today cards (components/room/room-source): every memory the server still keeps, the newest first, the upcoming ones
- * only while the reader shows them, and only the kept ones while the reader keeps to those. Not a day's (`for`): a
- * Today card also holds the earlier days' memories that read the same.
+ * What the Memories page asks Gallery for (the memory manager's applyPreferences): every memory the server still keeps,
+ * the newest first, the upcoming ones only while the reader shows them, and only the kept ones while the reader keeps
+ * to those. Not a day's (`for`): a Today card also holds the earlier days' memories that read the same.
  */
 export const memoriesPageSearch = ({ showUpcoming, onlyFavorites }: MemoriesPreferences) => ({
   order: MemorySearchOrder.Desc,
   isSaved: onlyFavorites ? true : undefined,
   isUpcoming: showUpcoming ? undefined : false,
+});
+
+/**
+ * What Room asks Gallery for (components/room/room-source), whose films are the Today cards (2026-10-24, the owner's
+ * "always play everything"): every memory the server keeps that has come due, the newest first, kept or not, whatever
+ * the Memories page's settings in this browser say. They are the page's own (favourites only, upcoming shown or not),
+ * and had kept Room to the favourites alone; an upcoming memory never joins a Today card, so none is asked for.
+ */
+export const roomMemoriesSearch = () => ({
+  order: MemorySearchOrder.Desc,
+  isUpcoming: false,
 });
 
 /**
