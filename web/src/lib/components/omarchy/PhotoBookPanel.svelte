@@ -125,12 +125,10 @@
   /* the videos for sharing' frame: the theme's corners, rows split by hairlines from edge to edge */
   .ws-books {
     width: min(21rem, calc(100vw - 1.5rem));
-    border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);
+    border: 1px solid var(--ws-hairline);
     border-radius: var(--ws-radius);
     background: var(--immich-ui-light);
-    box-shadow:
-      0 4px 12px -4px rgb(0 0 0 / 0.25),
-      0 24px 48px -12px rgb(0 0 0 / 0.45);
+    box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
     color: var(--immich-ui-dark);
   }
   .ws-books-head {

@@ -288,12 +288,10 @@
     min-width: 16.5rem;
     max-width: min(24rem, calc(100vw - 1rem));
     padding: 6px;
-    border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);
+    border: 1px solid var(--ws-hairline);
     border-radius: var(--ws-radius);
     background: var(--immich-ui-light);
-    box-shadow:
-      0 4px 12px -4px rgb(0 0 0 / 0.25),
-      0 24px 48px -12px rgb(0 0 0 / 0.45);
+    box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
     text-align: start;
   }
   .ws-albums-view-sheet hr {

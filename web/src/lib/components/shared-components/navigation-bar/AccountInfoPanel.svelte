@@ -133,13 +133,11 @@
     right: 0;
     z-index: 60;
     width: min(17.5rem, calc(100vw - 1rem));
-    border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);
+    border: 1px solid var(--ws-hairline);
     border-radius: var(--ws-radius);
     background: var(--immich-ui-light);
     color: var(--immich-ui-dark);
-    box-shadow:
-      0 4px 12px -4px rgb(0 0 0 / 0.25),
-      0 24px 48px -12px rgb(0 0 0 / 0.45);
+    box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
     overflow: hidden;
   }
   /* the person: the ring, the name in ink, the address under it */

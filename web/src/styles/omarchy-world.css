@@ -1645,8 +1645,10 @@ section.ws-filter-sheet-panel {
   }
 }
 
-/* ---- every context menu (stock ones hard-code a light slate in both modes): a smoked-glass sheet with a soft
-   two-layer shadow; rows flat on it, the hovered/keyboard-active row washed in the accent with its icon lit, shortcut
+/* ---- every context menu (stock ones hard-code a light slate in both modes): a smoked-glass sheet that floats as
+   the house's popups do, the popup shadow in a hairline frame (2026-10-24, the owner: the right-click menus take
+   the lighter shadow too; the sheet had a two-layer one, 0 4px 12px -4px at 25% and 0 24px 48px -12px at 45%, in a
+   frame of 12% ink); rows flat on it, the hovered/keyboard-active row washed in the accent with its icon lit, shortcut
    hints in mono at the right, a destructive row (MenuOption tone="danger") in the danger role. Nothing inside a menu is a fixed
    popup, so the sheet may carry its own backdrop-filter. ---- */
 /* text on the glass holds AA over any photo (2026-10-18, the critique's "the menu's key hints fail AA"): the sheet keeps
@@ -1661,11 +1663,9 @@ div.z-70:has(> ul[role='menu']) {
   background: color-mix(in oklab, var(--immich-ui-light) 94%, transparent);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   backdrop-filter: blur(24px) saturate(1.4);
-  border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 12%, transparent);
+  border: 1px solid var(--ws-hairline);
   border-radius: var(--ws-radius);
-  box-shadow:
-    0 4px 12px -4px rgb(0 0 0 / 0.25),
-    0 24px 48px -12px rgb(0 0 0 / 0.45);
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
   padding: 6px;
 }
 /* the list inside the sheet is no second frame (the general [role='menu'] rule would draw one) */
