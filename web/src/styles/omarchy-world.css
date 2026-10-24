@@ -447,18 +447,20 @@ div[role='listbox'][data-select-content] {
 /* ---- modals (@immich/ui Modal): square Omarchy windows. The role=dialog element is only the positioning wrapper
    (the rule above would draw a stray frame around it); the panel inside carries one hairline frame and the shadow,
    and everything in it (fields, buttons, switches, the timezone picker) takes the theme's corner, square here. No
-   transform or filter on the panel: its pickers are fixed popups. ---- */
+   transform or filter on the panel: its pickers are fixed popups. The frame and the shadow are the house's popup
+   ones, as menus, sheets and the sign-in card float (2026-10-24, the owner's "one shadow vocabulary"): the dimmed
+   backdrop behind every modal does the separating, where the panel had a heavier two-layer shadow of its own (a 4px
+   and a 64px one, at 30% and 55% black) and a frame of 14% ink beside the hairline's 13%. Every modal, form and
+   confirmation takes it here, Ctrl+K's palette too. ---- */
 div[role='dialog']:has(> div > div.overflow-hidden) {
   border: 0;
   box-shadow: none;
 }
 div[role='dialog'] > div > div.overflow-hidden {
-  border: 1px solid color-mix(in oklab, var(--immich-ui-dark) 14%, transparent) !important;
+  border: 1px solid var(--ws-hairline) !important;
   border-radius: var(--ws-radius) !important;
   background: var(--immich-ui-light);
-  box-shadow:
-    0 4px 12px -4px rgb(0 0 0 / 0.3),
-    0 28px 64px -16px rgb(0 0 0 / 0.55) !important;
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28) !important;
 }
 /* the admin shell's account (upstream's NavigationBar) as the one bar draws it: a quiet ring with the initial in ink
    (a picture fills it), where upstream's colour disc was the one colour on the bar the theme did not give */
