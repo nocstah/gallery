@@ -4,8 +4,10 @@
 
   interface Props {
     item: AssetResponseDto;
+    /** Local Omarchy layer: the thumbnail waits on the house's quiet ground (a recent not yet checked: utils/slips) */
+    withheld?: boolean;
   }
-  let { item }: Props = $props();
+  let { item, withheld = false }: Props = $props();
 
   const subtitle = $derived(
     [item.exifInfo?.dateTimeOriginal?.slice(0, 10), item.exifInfo?.city].filter(Boolean).join(' · '),
@@ -22,7 +24,15 @@
 <div
   class="flex h-[52px] items-center gap-3 rounded-lg px-3 py-2 transition-colors duration-80 ease-out group-data-selected:bg-primary/10"
 >
-  <img src={thumbUrl} alt="" class="size-10 rounded-md object-cover" loading="lazy" />
+  {#if withheld}
+    <div
+      class="ws-album-icon-cover size-10 shrink-0 rounded-md"
+      aria-hidden="true"
+      data-testid="photo-row-withheld"
+    ></div>
+  {:else}
+    <img src={thumbUrl} alt="" class="size-10 rounded-md object-cover" loading="lazy" />
+  {/if}
   <div class="min-w-0 flex-1">
     <div class="truncate text-sm font-medium">{item.originalFileName}</div>
     {#if subtitle}

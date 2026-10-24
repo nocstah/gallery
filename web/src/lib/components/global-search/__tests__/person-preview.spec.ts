@@ -1,4 +1,4 @@
-import { searchAssets } from '@immich/sdk';
+import { AssetVisibility, searchAssets } from '@immich/sdk';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { goto } from '$app/navigation';
@@ -37,8 +37,11 @@ describe('person-preview', () => {
     expect(searchAssets).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(150);
     expect(searchAssets).toHaveBeenCalledOnce();
+    // Local Omarchy layer: the photos the person's page shows, on the timeline (utils/slips)
     expect(searchAssets).toHaveBeenCalledWith(
-      { metadataSearchDto: { personIds: ['p1'], size: 4, withSharedSpaces: true } },
+      {
+        metadataSearchDto: { personIds: ['p1'], size: 4, withSharedSpaces: true, visibility: AssetVisibility.Timeline },
+      },
       expect.anything(),
     );
   });
@@ -73,6 +76,7 @@ describe('person-preview', () => {
           personIds: ['space-person:space-person-1'],
           size: 4,
           withSharedSpaces: true,
+          visibility: AssetVisibility.Timeline,
         },
       },
       expect.anything(),

@@ -8,6 +8,17 @@ vi.mock('@immich/ui', async (orig) => ({
   IconButton: vi.fn(() => ({ $$typeof: Symbol.for('svelte.component') })),
 }));
 
+// Local Omarchy layer: one of QR's bank slips, as the palette reads them (managers/slip-covers)
+const { slips } = vi.hoisted(() => ({ slips: { known: true } }));
+vi.mock('$lib/managers/slip-covers.svelte', () => ({
+  slipCovers: {
+    isSlip: (assetId: string | null | undefined) => assetId === 'a-slip',
+    get known() {
+      return slips.known;
+    },
+  },
+}));
+
 beforeAll(async () => {
   // Load the real en bundle so `$t('cmdk_preview_photo_count')` and
   // `$t('cmdk_preview_member_count')` resolve to English ICU output rather than raw keys.
@@ -107,5 +118,24 @@ describe('SpacePreview', () => {
       props: { item: baseItem({ lastContributor: { id: 'u1', name: 'Alice' } }) } as never,
     });
     expect(screen.queryByText(/Alice added/)).toBeNull();
+  });
+
+  // Local Omarchy layer: never one of QR's bank slips in the collage, which waits until they are known (utils/slips)
+  it("leaves QR's slips out of the collage, and shows the Space's mark until they are known", () => {
+    const item = baseItem({ recentAssetIds: ['a-slip', 'a2'], recentAssetThumbhashes: ['h1', 'h2'] });
+    const { container, unmount } = render(SpacePreview, { props: { item } as never });
+    const shown = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src') ?? '');
+    expect(shown.some((src) => src.includes('a-slip'))).toBe(false);
+    expect(shown.some((src) => src.includes('a2'))).toBe(true);
+    unmount();
+
+    slips.known = false;
+    try {
+      const waiting = render(SpacePreview, { props: { item } as never });
+      expect(waiting.container.querySelector('img')).toBeNull();
+      expect(waiting.container.querySelector('[data-testid="space-preview-gradient"]')).toBeInTheDocument();
+    } finally {
+      slips.known = true;
+    }
   });
 });

@@ -41,6 +41,12 @@ vi.mock('$app/navigation', () => ({
   goto: vi.fn(),
 }));
 
+// Local Omarchy layer: QR's bank slips as the palette reads them when it opens (managers/slip-covers): known at once
+// here, and none, so no test reads QR's album
+vi.mock('$lib/managers/slip-covers.svelte', () => ({
+  slipCovers: { isSlip: () => false, load: () => Promise.resolve(), known: true },
+}));
+
 // The manager subscribes to svelte-i18n's locale on construction; stub it to a
 // deterministic value so the constructor does not attach to the real store.
 vi.mock('svelte-i18n', async (orig) => {

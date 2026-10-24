@@ -33,6 +33,17 @@ describe('recent-row', () => {
     expect(screen.getByText('sunset.jpg')).toBeInTheDocument();
   });
 
+  // Local Omarchy layer: a recent photo's thumbnail waits until the palette has checked it is no bank slip
+  it("withholds a recent photo's thumbnail until the palette has checked it", () => {
+    const entry = { kind: 'photo', id: 'photo:a1', assetId: 'a1', label: 'sunset.jpg', lastUsed: 1 } as const;
+    const { container, unmount } = render(RecentRow, { props: { entry, withheld: true } });
+    expect(container.querySelector('img')).toBeNull();
+    unmount();
+
+    const checked = render(RecentRow, { props: { entry, withheld: false } });
+    expect(checked.container.querySelector('img')).not.toBeNull();
+  });
+
   it('dispatches to PersonRow for person kind', () => {
     render(RecentRow, {
       props: { entry: { kind: 'person', id: 'person:p1', personId: 'p1', label: 'Alice', lastUsed: 1 } },

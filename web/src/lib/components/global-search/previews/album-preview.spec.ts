@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { qrManager } from '$lib/managers/special-albums.svelte';
 import AlbumPreview from './album-preview.svelte';
 
 vi.mock('@immich/ui', async (orig) => ({
@@ -86,5 +87,25 @@ describe('AlbumPreview', () => {
       } as never,
     });
     expect(screen.getByText(/2 photos/)).toBeInTheDocument();
+  });
+
+  // Local Omarchy layer: QR's bank slips are not for looking at: its cover is its icon, never a slip at preview size
+  it("wears QR's icon for QR, never a photo of one of its slips", () => {
+    qrManager.albumId = 'qr';
+    try {
+      const { container } = render(AlbumPreview, {
+        props: {
+          item: { id: 'qr', albumName: 'QR', assetCount: 446, shared: false, albumThumbnailAssetId: 't' },
+        } as never,
+      });
+
+      expect(container.querySelector('img')).toBeNull();
+      expect(container.querySelector(':scope [data-testid="album-preview-icon-cover"] svg path')).toHaveAttribute(
+        'd',
+        qrManager.icon,
+      );
+    } finally {
+      qrManager.albumId = undefined;
+    }
   });
 });

@@ -244,6 +244,10 @@
     }
   });
 
+  // Local Omarchy layer: a recent photo's thumbnail waits until the manager has checked it is still among the photos
+  // the palette offers, no bank slip of QR's (validatePhotoRecents, utils/slips)
+  const recentWithheld = (entry: RecentEntry) =>
+    entry.kind === 'photo' && !manager.recentPhotosShown.has(entry.assetId);
   // Render-time filter: drop unreachable navigate recents before they hit the DOM.
   // Mirrors the live-catalog logic in activateRecent — an admin demotion, a disabled
   // feature flag, or an upstream upgrade that removed a page would otherwise leave
@@ -822,7 +826,7 @@
                   <Command.GroupItems>
                     {#each recentEntries as entry (entry.id)}
                       <Command.Item value={entry.id} onSelect={() => manager.activateRecent(entry)} class="group">
-                        <RecentRow {entry} />
+                        <RecentRow {entry} withheld={recentWithheld(entry)} />
                       </Command.Item>
                     {/each}
                   </Command.GroupItems>
@@ -1240,7 +1244,7 @@
                           onSelect={() => manager.activateRecent(entry)}
                           class="group relative"
                         >
-                          <RecentRow {entry} />
+                          <RecentRow {entry} withheld={recentWithheld(entry)} />
                           <!-- Per-row remove affordance. Hidden by default, surfaced on
                              hover OR when the row is keyboard-selected (data-selected
                              from bits-ui) so both input modes have a visible target.

@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { slipCovers } from '$lib/managers/slip-covers.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
+  import { iconCoverOf } from '$lib/utils/slips';
   import { Icon } from '@immich/ui';
   import { mdiImageMultipleOutline } from '@mdi/js';
   import { AssetMediaSize, type AlbumNameDto } from '@immich/sdk';
@@ -11,8 +13,13 @@
   }
   let { item, isPending }: Props = $props();
 
+  // Local Omarchy layer: QR, and an album whose cover is one of QR's slips, wear QR's icon on the house's quiet cover,
+  // as wherever an album's cover shows (utils/slips). Until QR's slips are known (a recent, drawn as the palette opens)
+  // a cover is that quiet ground alone, so no slip shows even for a moment
+  const iconCover = $derived(iconCoverOf(item.id, item.albumThumbnailAssetId));
+  const looking = $derived(!iconCover && !!item.albumThumbnailAssetId && !slipCovers.known);
   const thumbUrl = $derived(
-    item.albumThumbnailAssetId
+    item.albumThumbnailAssetId && !iconCover && !looking
       ? getAssetMediaUrl({ id: item.albumThumbnailAssetId, size: AssetMediaSize.Thumbnail })
       : '',
   );
@@ -24,7 +31,17 @@
     isPending && 'opacity-50',
   ]}
 >
-  {#if thumbUrl}
+  {#if iconCover}
+    <div class="ws-album-icon-cover size-10 shrink-0 rounded-md" aria-hidden="true" data-testid="album-icon-cover">
+      <Icon icon={iconCover.icon} size="1.125em" />
+    </div>
+  {:else if looking}
+    <div
+      class="ws-album-icon-cover size-10 shrink-0 rounded-md"
+      aria-hidden="true"
+      data-testid="album-cover-looking"
+    ></div>
+  {:else if thumbUrl}
     <img src={thumbUrl} alt="" class="size-10 rounded-md object-cover" loading="lazy" />
   {:else}
     <div class="flex size-10 items-center justify-center rounded-md bg-subtle/40" aria-hidden="true">

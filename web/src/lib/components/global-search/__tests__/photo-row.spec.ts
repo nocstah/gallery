@@ -39,4 +39,14 @@ describe('photo-row', () => {
     });
     expect(screen.getByText('plain.jpg')).toBeInTheDocument();
   });
+
+  // Local Omarchy layer: a recent's thumbnail waits until the palette has checked it is no bank slip (utils/slips)
+  it("withholds the thumbnail on the house's quiet ground while withheld", () => {
+    const { container } = render(PhotoRow, {
+      props: { item: { id: 'a1', originalFileName: 'x.jpg' } as never, withheld: true },
+    });
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('[data-testid="photo-row-withheld"]')).toBeInTheDocument();
+    expect(screen.getByText('x.jpg')).toBeInTheDocument();
+  });
 });

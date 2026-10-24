@@ -1,6 +1,8 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { slipCovers } from '$lib/managers/slip-covers.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
+  import { iconCoverOf } from '$lib/utils/slips';
   import { AssetMediaSize, type AlbumNameDto } from '@immich/sdk';
   import { Button, Icon } from '@immich/ui';
   import { mdiImageMultipleOutline } from '@mdi/js';
@@ -12,8 +14,12 @@
   }
   let { item }: Props = $props();
 
+  // Local Omarchy layer: QR, and an album whose cover is one of QR's slips, wear QR's icon on the house's quiet cover
+  // (utils/slips), never the slip at preview size; until QR's slips are known a cover is that quiet ground alone
+  const iconCover = $derived(iconCoverOf(item.id, item.albumThumbnailAssetId));
+  const looking = $derived(!iconCover && !!item.albumThumbnailAssetId && !slipCovers.known);
   const thumbUrl = $derived(
-    item.albumThumbnailAssetId
+    item.albumThumbnailAssetId && !iconCover && !looking
       ? getAssetMediaUrl({ id: item.albumThumbnailAssetId, size: AssetMediaSize.Preview })
       : '',
   );
@@ -35,7 +41,17 @@
 </script>
 
 <div data-cmdk-preview-album class="flex flex-col gap-3 p-5">
-  {#if thumbUrl}
+  {#if iconCover}
+    <div
+      class="ws-album-icon-cover h-[180px] w-full rounded-md"
+      aria-hidden="true"
+      data-testid="album-preview-icon-cover"
+    >
+      <Icon icon={iconCover.icon} size="36%" />
+    </div>
+  {:else if looking}
+    <div class="ws-album-icon-cover h-[180px] w-full rounded-md" aria-hidden="true"></div>
+  {:else if thumbUrl}
     <div class="flex h-[180px] w-full items-center justify-center overflow-hidden rounded-md bg-subtle/40">
       <img src={thumbUrl} alt="" class="max-h-full max-w-full object-contain" loading="lazy" />
     </div>

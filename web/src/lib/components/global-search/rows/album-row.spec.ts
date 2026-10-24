@@ -1,10 +1,22 @@
 import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { qrManager } from '$lib/managers/special-albums.svelte';
 import AlbumRow from './album-row.svelte';
 
 vi.mock('@immich/ui', async (orig) => ({
   ...(await (orig as () => Promise<Record<string, unknown>>)()),
   IconButton: vi.fn(() => ({ $$typeof: Symbol.for('svelte.component') })),
+}));
+
+// Local Omarchy layer: QR's bank slips as the palette reads them (managers/slip-covers)
+const { slips } = vi.hoisted(() => ({ slips: { ids: new Set<string>(), known: true } }));
+vi.mock('$lib/managers/slip-covers.svelte', () => ({
+  slipCovers: {
+    isSlip: (assetId: string | null | undefined) => !!assetId && slips.ids.has(assetId),
+    get known() {
+      return slips.known;
+    },
+  },
 }));
 
 describe('album-row', () => {
@@ -58,5 +70,47 @@ describe('album-row', () => {
     });
     const nameEl = screen.getByText(longName);
     expect(nameEl.className).toMatch(/truncate|line-clamp/);
+  });
+
+  // Local Omarchy layer: QR's bank slips are not for looking at, so QR, and an album whose cover is one of them, wear
+  // QR's icon as wherever an album's cover shows (utils/slips)
+  describe('bank slips', () => {
+    afterEach(() => {
+      qrManager.albumId = undefined;
+      slips.ids.clear();
+      slips.known = true;
+    });
+
+    it("wears QR's icon for QR, never a photo of one of its slips", () => {
+      qrManager.albumId = 'qr';
+      const { container } = render(AlbumRow, {
+        props: { ...baseProps, item: { ...baseProps.item, id: 'qr', albumName: 'QR' } } as never,
+      });
+
+      expect(container.querySelector('img')).toBeNull();
+      expect(container.querySelector(':scope [data-testid="album-icon-cover"] svg path')).toHaveAttribute(
+        'd',
+        qrManager.icon,
+      );
+    });
+
+    it("wears QR's icon for an album whose cover is one of QR's slips", () => {
+      slips.ids.add('t1');
+      const { container } = render(AlbumRow, { props: baseProps as never });
+
+      expect(container.querySelector('img')).toBeNull();
+      expect(container.querySelector(':scope [data-testid="album-icon-cover"] svg path')).toHaveAttribute(
+        'd',
+        qrManager.icon,
+      );
+    });
+
+    it("holds a cover back on the quiet ground until QR's slips are known", () => {
+      slips.known = false;
+      const { container } = render(AlbumRow, { props: baseProps as never });
+
+      expect(container.querySelector('img')).toBeNull();
+      expect(container.querySelector('[data-testid="album-cover-looking"]')).toBeInTheDocument();
+    });
   });
 });

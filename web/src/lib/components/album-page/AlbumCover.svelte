@@ -2,9 +2,8 @@
   import { cleanClass } from '$lib';
   import AssetCover from '$lib/components/sharedlinks-page/covers/AssetCover.svelte';
   import NoCover from '$lib/components/sharedlinks-page/covers/NoCover.svelte';
-  import { slipCovers } from '$lib/managers/slip-covers.svelte';
-  import { qrManager, specialAlbumOf } from '$lib/managers/special-albums.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
+  import { iconCoverOf } from '$lib/utils/slips';
   import { type AlbumResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { t } from 'svelte-i18n';
@@ -22,11 +21,8 @@
     album.albumThumbnailAssetId ? getAssetMediaUrl({ id: album.albumThumbnailAssetId }) : null,
   );
   // Local Omarchy layer: a special album whose photos are not for looking at (QR's bank slips) is covered by its icon,
-  // and so is an album whose cover is one of them (the bank apps' albums: managers/slip-covers)
-  const special = $derived(specialAlbumOf(album.id));
-  const iconCover = $derived(
-    special?.iconCover ? special : slipCovers.isSlip(album.albumThumbnailAssetId) ? qrManager : undefined,
-  );
+  // and so is an album whose cover is one of them (the bank apps' albums: managers/slip-covers, utils/slips)
+  const iconCover = $derived(iconCoverOf(album.id, album.albumThumbnailAssetId));
 </script>
 
 {#if iconCover}

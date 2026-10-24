@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
   import SpaceCollage from '$lib/components/spaces/space-collage.svelte';
+  import { slipCovers } from '$lib/managers/slip-covers.svelte';
   import { Route } from '$lib/route';
   import { UserAvatarColor, type SharedSpaceResponseDto } from '@immich/sdk';
   import { Button, Icon } from '@immich/ui';
@@ -15,11 +16,17 @@
 
   const MAX_AVATARS = 4;
 
+  // Local Omarchy layer: never one of QR's bank slips in the collage (utils/slips), so it waits until they are known,
+  // the Space's mark standing in until then
   const collageAssets = $derived(
-    (item.recentAssetIds ?? []).map((id, i) => ({
-      id,
-      thumbhash: item.recentAssetThumbhashes?.[i] ?? null,
-    })),
+    slipCovers.known
+      ? (item.recentAssetIds ?? [])
+          .map((id, i) => ({
+            id,
+            thumbhash: item.recentAssetThumbhashes?.[i] ?? null,
+          }))
+          .filter(({ id }) => !slipCovers.isSlip(id))
+      : [],
   );
 
   const visibleMembers = $derived((item.members ?? []).slice(0, MAX_AVATARS));

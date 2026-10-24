@@ -12,14 +12,16 @@
 
   interface Props {
     entry: RecentEntry;
+    /** Local Omarchy layer: a recent photo's thumbnail waits until the palette has checked it is no slip (utils/slips) */
+    withheld?: boolean;
   }
-  let { entry }: Props = $props();
+  let { entry, withheld = false }: Props = $props();
 </script>
 
 {#if entry.kind === 'query'}
   <QueryRow {entry} />
 {:else if entry.kind === 'photo'}
-  <PhotoRow item={{ id: entry.assetId, originalFileName: entry.label } as never} />
+  <PhotoRow item={{ id: entry.assetId, originalFileName: entry.label } as never} {withheld} />
 {:else if entry.kind === 'person'}
   <PersonRow item={{ id: entry.personId, name: entry.label } as never} />
 {:else if entry.kind === 'place'}

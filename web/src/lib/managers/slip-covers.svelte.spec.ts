@@ -77,4 +77,27 @@ describe('SlipCoverManager', () => {
     expect(qr.ready).not.toHaveBeenCalled();
     expect(searchAssets).not.toHaveBeenCalled();
   });
+
+  // Local Omarchy layer: Ctrl+K holds a cover back until QR's slips are known (utils/slips)
+  it('knows the slips once they are read, or tried, and at once for an account without QR', async () => {
+    const slips = new SlipCoverManager();
+    expect(slips.known).toBe(false);
+    vi.mocked(searchAssets).mockRejectedValueOnce(new Error('offline'));
+
+    await slips.load();
+
+    expect(slips.known).toBe(true);
+    const fresh = new SlipCoverManager();
+    vi.mocked(searchAssets).mockResolvedValueOnce(page(['s1']));
+    await fresh.load();
+    expect([fresh.known, fresh.isSlip('s1')]).toEqual([true, true]);
+
+    const none = new SlipCoverManager();
+    qr.ready.mockResolvedValueOnce(undefined);
+    await none.load();
+    expect(none.known).toBe(true);
+
+    qr.offered = false;
+    expect(new SlipCoverManager().known).toBe(true);
+  });
 });

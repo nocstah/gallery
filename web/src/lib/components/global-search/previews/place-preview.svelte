@@ -1,6 +1,13 @@
 <script lang="ts">
   import { getAssetMediaUrl } from '$lib/utils';
-  import { AssetMediaSize, searchAssets, type AssetResponseDto, type PlacesResponseDto } from '@immich/sdk';
+  import { shownAmongPhotos } from '$lib/utils/slips';
+  import {
+    AssetMediaSize,
+    AssetVisibility,
+    searchAssets,
+    type AssetResponseDto,
+    type PlacesResponseDto,
+  } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiMapMarker } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -24,12 +31,15 @@
       void (async () => {
         const ctrl = new AbortController();
         try {
+          // Local Omarchy layer: the place's photos as Photos shows them, on the timeline, never one of QR's bank slips
+          // (utils/slips): without a visibility the search had let in what Photos keeps out
           const response = await searchAssets(
             {
               metadataSearchDto: {
                 city: cityName,
                 state: stateName ?? undefined,
                 size: 4,
+                visibility: AssetVisibility.Timeline,
               },
             },
             { signal: ctrl.signal },
@@ -37,7 +47,7 @@
           if (gen !== generation) {
             return;
           }
-          photos = response.assets.items;
+          photos = response.assets.items.filter((photo) => shownAmongPhotos(photo));
         } catch {
           // ignore
         } finally {

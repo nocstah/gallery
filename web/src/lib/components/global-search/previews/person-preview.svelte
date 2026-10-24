@@ -2,7 +2,14 @@
   import { goto } from '$app/navigation';
   import { getAssetMediaUrl } from '$lib/utils';
   import { getGlobalPersonHref, getGlobalPersonThumbnailUrl } from '$lib/utils/global-person-route';
-  import { AssetMediaSize, searchAssets, type AssetResponseDto, type PersonResponseDto } from '@immich/sdk';
+  import { shownAmongPhotos } from '$lib/utils/slips';
+  import {
+    AssetMediaSize,
+    AssetVisibility,
+    searchAssets,
+    type AssetResponseDto,
+    type PersonResponseDto,
+  } from '@immich/sdk';
   import { Button } from '@immich/ui';
   import { t } from 'svelte-i18n';
 
@@ -36,14 +43,23 @@
       void (async () => {
         const ctrl = new AbortController();
         try {
+          // Local Omarchy layer: the photos the person's page shows, on the timeline, never one of QR's bank slips
+          // (utils/slips): without a visibility the search had let in what Photos keeps out
           const response = await searchAssets(
-            { metadataSearchDto: { personIds: [id], size: 4, withSharedSpaces: true } },
+            {
+              metadataSearchDto: {
+                personIds: [id],
+                size: 4,
+                withSharedSpaces: true,
+                visibility: AssetVisibility.Timeline,
+              },
+            },
             { signal: ctrl.signal },
           );
           if (gen !== generation) {
             return;
           }
-          photos = response.assets.items;
+          photos = response.assets.items.filter((photo) => shownAmongPhotos(photo));
         } catch {
           // ignore — preview is best-effort
         } finally {

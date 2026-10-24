@@ -121,6 +121,7 @@ afterEach(() => {
   commandContextManager.setAlbum(null);
   commandContextManager.setSpace(null);
   commandContextManager.setSelection(null);
+  slipsMock.ids.clear();
 });
 
 vi.mock('@immich/sdk', async () => ({
@@ -151,6 +152,20 @@ vi.mock('$app/navigation', () => ({
 vi.mock('$lib/utils/curator', async (importOriginal) => ({
   ...(await importOriginal<typeof import('$lib/utils/curator')>()),
   curator: { ask: vi.fn(), warmAsk: vi.fn(() => Promise.resolve({ warming: true })) },
+}));
+
+// Local Omarchy layer: QR's bank slips as the palette reads them (managers/slip-covers), known at once here and none
+// unless a test names some, so no test reads QR's album
+const { slipsMock } = vi.hoisted(() => ({ slipsMock: { ids: new Set<string>(), loads: 0 } }));
+vi.mock('$lib/managers/slip-covers.svelte', () => ({
+  slipCovers: {
+    isSlip: (assetId: string | null | undefined) => !!assetId && slipsMock.ids.has(assetId),
+    load: () => {
+      slipsMock.loads++;
+      return Promise.resolve();
+    },
+    known: true,
+  },
 }));
 
 const { mockPage } = vi.hoisted(() => ({
@@ -3194,6 +3209,102 @@ describe('photo recents revalidation', () => {
 
     await vi.waitFor(() => expect(getEntries()).toEqual([]));
   });
+
+  // Local Omarchy layer: and whatever else the palette's searches would not hand back (utils/slips): a photo filed into
+  // QR since it was opened (archived, tagged QR), or archived as Gallery's receipts are
+  it.each([
+    ['archived', { visibility: AssetVisibility.Archive }],
+    ['hidden', { visibility: AssetVisibility.Hidden }],
+    ["one of QR's, by its tag", { visibility: AssetVisibility.Timeline, tags: [{ id: 't', name: 'QR', value: 'QR' }] }],
+  ])('drops a photo recent that is %s', async (_kind, asset) => {
+    addEntry(photoEntry);
+    vi.mocked(getAssetInfo).mockResolvedValue({ id: 'a1', ...asset } as unknown as Awaited<
+      ReturnType<typeof getAssetInfo>
+    >);
+
+    const m = new GlobalSearchManager();
+    await m.validatePhotoRecents();
+
+    expect(getEntries()).toEqual([]);
+    expect(m.recentPhotosShown.has('a1')).toBe(false);
+  });
+
+  it("drops a photo recent QR holds, as last read, and keeps the rest's thumbnails once they are checked", async () => {
+    slipsMock.ids.add('a-slip');
+    addEntry(photoEntry);
+    addEntry({ kind: 'photo', id: 'photo:a-slip', assetId: 'a-slip', label: 'IMG_2.jpg', lastUsed: 2 });
+    vi.mocked(getAssetInfo).mockImplementation(({ id }) =>
+      Promise.resolve({ id, visibility: AssetVisibility.Timeline } as unknown as Awaited<
+        ReturnType<typeof getAssetInfo>
+      >),
+    );
+
+    const m = new GlobalSearchManager();
+    // no thumbnail and no preview before the check
+    expect(m.recentPhotosShown.size).toBe(0);
+    m.activeItemId = 'photo:a1';
+    expect(m.getActiveItem()).toBeNull();
+
+    await m.validatePhotoRecents();
+
+    expect(getEntries().map((entry) => entry.id)).toEqual(['photo:a1']);
+    expect([...m.recentPhotosShown]).toEqual(['a1']);
+    expect(m.getActiveItem()).toMatchObject({ kind: 'photo', data: { id: 'a1' } });
+  });
+});
+
+// Local Omarchy layer: QR's bank slips are not for looking at (DESIGN.md, Special albums), so the palette's photos
+// leave them out whichever way it searches (utils/slips): QR's photos as read, and whatever Photos keeps out
+describe("photos leave QR's bank slips out", () => {
+  const items = [
+    { id: 'a-slip', visibility: AssetVisibility.Timeline },
+    { id: 'archived', visibility: AssetVisibility.Archive },
+    { id: 'photo', visibility: AssetVisibility.Timeline },
+  ];
+  const run = (m: GlobalSearchManager, mode: SearchMode) =>
+    (m as unknown as { providers: Record<keyof Sections, Provider> }).providers.photos.run(
+      'qr',
+      mode,
+      new AbortController().signal,
+    );
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    localStorage.clear();
+    slipsMock.ids.add('a-slip');
+    slipsMock.loads = 0;
+  });
+
+  it.each(['smart', 'metadata', 'description', 'ocr'] as const)('in %s mode', async (mode) => {
+    vi.mocked(searchSmart).mockResolvedValue({ assets: { items, nextPage: null } } as unknown as Awaited<
+      ReturnType<typeof searchSmart>
+    >);
+    vi.mocked(searchAssets).mockResolvedValue({ assets: { items, nextPage: null } } as unknown as Awaited<
+      ReturnType<typeof searchAssets>
+    >);
+
+    const result = await run(new GlobalSearchManager(), mode);
+
+    expect(result).toEqual({ status: 'ok', items: [items[2]], total: 1 });
+    // QR's slips are read beside the search
+    expect(slipsMock.loads).toBe(1);
+  });
+
+  it('in ask mode, counting what Curator found less what stays out', async () => {
+    vi.mocked(curator.ask).mockResolvedValue({ assets: items, total: 9 } as unknown as AskResult);
+
+    const result = await run(new GlobalSearchManager(), 'ask');
+
+    expect(result).toEqual({ status: 'ok', items: [items[2]], total: 7 });
+  });
+
+  it('says there is nothing when only slips were found', async () => {
+    vi.mocked(searchSmart).mockResolvedValue({ assets: { items: [items[0]], nextPage: null } } as unknown as Awaited<
+      ReturnType<typeof searchSmart>
+    >);
+
+    expect(await run(new GlobalSearchManager(), 'smart')).toEqual({ status: 'empty' });
+  });
 });
 
 describe('removeRecent()', () => {
@@ -5063,10 +5174,16 @@ describe('getActiveItem recent-entry preview lookup (cold open)', () => {
     resetRecentStore();
   });
 
-  it('synthesizes a photo ActiveItem from a photo recent when the query is empty', () => {
+  it('synthesizes a photo ActiveItem from a photo recent when the query is empty', async () => {
     addEntry({ kind: 'photo', id: 'photo:a1', assetId: 'a1', label: 'sunset.jpg', lastUsed: 1 });
+    // Local Omarchy layer: once the recent is checked to be no bank slip (validatePhotoRecents, utils/slips)
+    vi.mocked(getAssetInfo).mockResolvedValue({
+      id: 'a1',
+      visibility: AssetVisibility.Timeline,
+    } as unknown as Awaited<ReturnType<typeof getAssetInfo>>);
     const m = new GlobalSearchManager();
     m.open();
+    await m.validatePhotoRecents();
     m.activeItemId = 'photo:a1';
     const active = m.getActiveItem();
     expect(active).not.toBeNull();
@@ -5332,6 +5449,19 @@ describe('album catalog fetch', () => {
       albumThumbnailAssetId: 't',
     });
     expect(sut.albumsCache?.find((a) => a.id === 'a2')).toMatchObject({ shared: false });
+  });
+
+  it("waits for QR's bank slips before the albums show, so no row wears one for its cover", async () => {
+    vi.mocked(getAlbumNames).mockResolvedValue([] as unknown as Awaited<ReturnType<typeof getAlbumNames>>);
+    slipsMock.loads = 0;
+
+    const sut = new GlobalSearchManager();
+    sut.open();
+    const opened = slipsMock.loads;
+    await sut.ensureAlbumsCache();
+
+    expect(opened).toBe(1);
+    expect(slipsMock.loads).toBe(2);
   });
 
   it('returns the same in-flight promise across concurrent ensureAlbumsCache() calls', async () => {

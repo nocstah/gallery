@@ -17,6 +17,7 @@ import {
   searchPlaces,
   searchSmart,
   type AlbumNameDto,
+  type AssetResponseDto,
   type MetadataSearchDto,
   type PersonResponseDto,
   type SharedSpaceResponseDto,
@@ -35,6 +36,7 @@ import { createFilterState } from '$lib/components/filter-panel/filter-panel';
 import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
+import { slipCovers } from '$lib/managers/slip-covers.svelte';
 import { Route } from '$lib/route';
 import { addEntry, getEntries, makePlaceId, removeEntry, type RecentEntry } from '$lib/stores/cmdk-recent';
 import { curator, curatorIsMine } from '$lib/utils/curator';
@@ -46,6 +48,7 @@ import {
   getSearchablePageState,
   type SearchablePageSortOrder,
 } from '$lib/utils/searchable-page-search';
+import { shownAmongPhotos } from '$lib/utils/slips';
 import {
   isLiveTypedSearchToken,
   liveTypedSearchChoiceValue,
@@ -387,6 +390,12 @@ export class GlobalSearchManager {
    * store cannot signal on its own (plain functions, not a Svelte store).
    */
   recentsRevision = $state(0);
+  /**
+   * Local Omarchy layer: the recent photos `validatePhotoRecents` has found still among the photos the palette offers
+   * in this page load (on the timeline, no bank slip of QR's: utils/slips). A recent photo's thumbnail and its preview
+   * wait for that, so a photo filed into QR since it was opened never shows, even while the check is under way.
+   */
+  recentPhotosShown = new SvelteSet<string>();
   /**
    * True while any provider in the current batch (or a mode-switch re-run) is in flight.
    * Drives the progress stripe on the palette header.
@@ -778,6 +787,9 @@ export class GlobalSearchManager {
       this.mlProbed = true;
       void this.probeMlHealth();
     }
+    // Local Omarchy layer: QR's bank slips, read once a page load (the owner's only), so none shows as a photo, a
+    // cover or in a preview here (managers/slip-covers, utils/slips)
+    void slipCovers.load();
     void this.validatePhotoRecents();
   }
 
@@ -801,6 +813,10 @@ export class GlobalSearchManager {
    *    leave the row up for 15+ minutes right after the user locked it. Gating on the
    *    visibility instead also matches the palette's searches, which pin Timeline, so a
    *    locked photo is not reachable from the palette by any route.
+   *  - Local Omarchy layer: it resolves but is no photo the palette offers: out of Photos
+   *    (archived, as QR's bank slips are filed, or hidden) or one of QR's own
+   *    (utils/slips). Each photo that stays joins `recentPhotosShown`, which its
+   *    thumbnail and preview wait for.
    *
    * A network failure leaves history intact rather than erasing it on a dropped
    * connection, and an abort (palette closed mid-flight) is a no-op because the next open
@@ -817,9 +833,14 @@ export class GlobalSearchManager {
       photos.map(async (entry) => {
         try {
           const asset = await getAssetInfo({ id: entry.assetId }, { signal: this.closeSignal });
-          if (asset.visibility === AssetVisibility.Locked) {
+          // Local Omarchy layer: and whatever else the palette's searches would not hand back, a photo taken out of
+          // Photos (archived, as QR's bank slips are, or hidden) or one of QR's own (utils/slips)
+          if (asset.visibility === AssetVisibility.Locked || !shownAmongPhotos(asset)) {
+            this.recentPhotosShown.delete(entry.assetId);
             removeEntry(entry.id);
             this.recentsRevision++;
+          } else {
+            this.recentPhotosShown.add(entry.assetId);
           }
         } catch (error: unknown) {
           if (error instanceof Error && error.name === 'AbortError') {
@@ -868,13 +889,15 @@ export class GlobalSearchManager {
   /**
    * Fetch `GET /albums/names` and dedupe the concatenated owned+shared response by
    * album id, preferring the `shared: true` record when both variants are present.
+   * Local Omarchy layer: the rows wait for QR's bank slips, so no album wears one for its
+   * cover (utils/slips).
    * On AbortError (palette closed mid-fetch) the section status stays untouched so
    * reopening the palette is a clean slate; other errors flip the section to
    * `'error'` and rethrow so the caller sees the failure.
    */
   private async fetchAlbumsCatalog(): Promise<void> {
     try {
-      const response = await getAlbumNames({ signal: this.closeSignal });
+      const [response] = await Promise.all([getAlbumNames({ signal: this.closeSignal }), slipCovers.load()]);
       // SvelteMap instead of plain Map to satisfy the `svelte/prefer-svelte-reactivity`
       // ESLint rule — it flags any Map instance inside .svelte.ts files regardless of
       // whether it's reactive state. This is a local dedupe accumulator; the SvelteMap
@@ -1321,6 +1344,10 @@ export class GlobalSearchManager {
   private activeItemFromRecent(entry: RecentEntry): ActiveItem | null {
     switch (entry.kind) {
       case 'photo': {
+        // Local Omarchy layer: no preview until the photo is known to be no bank slip (validatePhotoRecents)
+        if (!this.recentPhotosShown.has(entry.assetId)) {
+          return null;
+        }
         return {
           kind: 'photo',
           data: { id: entry.assetId, originalFileName: entry.label } as unknown,
@@ -2920,6 +2947,14 @@ export class GlobalSearchManager {
   }
 
   protected buildProviders(): Record<keyof Sections, Provider> {
+    // Local Omarchy layer: a photo shows once QR's bank slips are known (read beside the search, once a page load), and
+    // never one of them, nor one Photos keeps out (utils/slips)
+    const withSlipsKnown = async <T>(search: Promise<T>) => {
+      const [found] = await Promise.all([search, slipCovers.load()]);
+      return found;
+    };
+    const offered = <T extends AssetResponseDto>(assets: T[]) => assets.filter((asset) => shownAmongPhotos(asset));
+
     const photos: Provider = {
       key: 'photos',
       topN: 5,
@@ -2927,9 +2962,10 @@ export class GlobalSearchManager {
       run: async (query, mode, signal) => {
         try {
           if (mode === 'ask') {
-            const response = await curator.ask(query, 5, signal);
-            const items = response.assets;
-            return items.length === 0 ? { status: 'empty' } : { status: 'ok', items, total: response.total };
+            const response = await withSlipsKnown(curator.ask(query, 5, signal));
+            const items = offered(response.assets);
+            const total = Math.max(items.length, response.total - (response.assets.length - items.length));
+            return items.length === 0 ? { status: 'empty' } : { status: 'ok', items, total };
           }
           if (mode === 'smart') {
             // withSharedSpaces:true mirrors Gallery's main search page so palette
@@ -2939,11 +2975,13 @@ export class GlobalSearchManager {
             // the session is elevated — that pulled locked-folder assets into palette results
             // for the whole PIN window (#869). Pin it so palette results never vary with the
             // PIN state; the locked folder has its own dedicated view.
-            const response = await searchSmart(
-              { smartSearchDto: { query, size: 5, withSharedSpaces: true, visibility: AssetVisibility.Timeline } },
-              { signal },
+            const response = await withSlipsKnown(
+              searchSmart(
+                { smartSearchDto: { query, size: 5, withSharedSpaces: true, visibility: AssetVisibility.Timeline } },
+                { signal },
+              ),
             );
-            const items = response.assets.items;
+            const items = offered(response.assets.items);
             return items.length === 0 ? { status: 'empty' } : { status: 'ok', items, total: items.length };
           }
           // withSharedSpaces:true for the same reason as smart mode above — without it the
@@ -2960,8 +2998,8 @@ export class GlobalSearchManager {
             withSharedSpaces: true,
             ...fieldSearchTerms(mode, query),
           };
-          const response = await searchAssets({ metadataSearchDto }, { signal });
-          const items = response.assets.items;
+          const response = await withSlipsKnown(searchAssets({ metadataSearchDto }, { signal }));
+          const items = offered(response.assets.items);
           return items.length === 0 ? { status: 'empty' } : { status: 'ok', items, total: items.length };
         } catch (error: unknown) {
           if (error instanceof Error && error.name === 'AbortError') {
