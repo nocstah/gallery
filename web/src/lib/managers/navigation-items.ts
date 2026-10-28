@@ -50,6 +50,7 @@ import {
   mdiViewAgenda,
   mdiViewDashboardOutline,
 } from '@mdi/js';
+import { vaultEdition } from '$lib/gallery/edition';
 import { Route } from '$lib/route';
 import { isAlmostExactWordMatch } from './cmdk-match';
 import { qrManager, todoManager, villaManager } from './special-albums.svelte';
@@ -73,6 +74,8 @@ export interface NavigationItem {
   featureFlag?: keyof ServerFeaturesDto;
   /** Local Omarchy layer: false keeps a page out of the empty palette's quick links (it is still found by name) */
   quickLink?: false;
+  /** Local Omarchy layer: false leaves the page out of a vault's Gallery (gallery/edition), as its sidebar does */
+  inVaults?: false;
 }
 
 /**
@@ -125,6 +128,7 @@ const ADMIN_PAGES: readonly NavigationItem[] = [
     icon: mdiAccountMultipleOutline,
     route: '/admin/users',
     adminOnly: true,
+    inVaults: false,
   },
   {
     id: 'nav:admin:libraries',
@@ -134,6 +138,7 @@ const ADMIN_PAGES: readonly NavigationItem[] = [
     icon: mdiBookshelf,
     route: '/admin/library-management',
     adminOnly: true,
+    inVaults: false,
   },
   {
     id: 'nav:admin:queues',
@@ -209,6 +214,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiMap,
     route: '/map',
     adminOnly: false,
+    inVaults: false,
     featureFlag: 'map',
   },
   // Local Omarchy layer: Places, after the Map as in the sidebar's Browse (only Explore's View all had led there)
@@ -231,6 +237,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiShareVariantOutline,
     route: '/sharing',
     adminOnly: false,
+    inVaults: false,
   },
   // Local Omarchy layer: the list of Spaces is found by name, but it is no quick link: the sidebar's Shared holds the
   // Spaces (2026-10-14), and the quick links had listed Spaces beside Shared
@@ -242,6 +249,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiBookOpenOutline,
     route: '/spaces',
     adminOnly: false,
+    inVaults: false,
     quickLink: false,
   },
   {
@@ -274,6 +282,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiClipboardTextClockOutline,
     route: '/todo',
     adminOnly: todoManager.ownerOnly,
+    inVaults: false,
   },
   {
     id: 'nav:userPages:villa',
@@ -283,6 +292,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiHomeOutline,
     route: '/villa',
     adminOnly: villaManager.ownerOnly,
+    inVaults: false,
   },
   {
     id: 'nav:userPages:qr',
@@ -292,6 +302,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiQrcode,
     route: '/qr',
     adminOnly: qrManager.ownerOnly,
+    inVaults: false,
   },
   {
     id: 'nav:userPages:archive',
@@ -334,6 +345,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiViewDashboardOutline,
     route: '/command',
     adminOnly: true,
+    inVaults: false,
   },
   {
     id: 'nav:userPages:inbox',
@@ -343,6 +355,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiInboxOutline,
     route: '/inbox',
     adminOnly: true,
+    inVaults: false,
   },
   {
     id: 'nav:userPages:inbox_jobs',
@@ -352,6 +365,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiPlayCircleOutline,
     route: '/inbox?tab=jobs',
     adminOnly: true,
+    inVaults: false,
   },
   {
     id: 'nav:userPages:inbox_history',
@@ -361,6 +375,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiUndoVariant,
     route: '/inbox?tab=history',
     adminOnly: true,
+    inVaults: false,
   },
   {
     id: 'nav:userPages:inbox_health',
@@ -370,6 +385,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiHeartPulse,
     route: '/inbox?tab=health',
     adminOnly: true,
+    inVaults: false,
   },
   {
     id: 'nav:userPages:chat',
@@ -379,6 +395,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiChatOutline,
     route: '/chat',
     adminOnly: true,
+    inVaults: false,
   },
   {
     id: 'nav:userPages:explore',
@@ -398,6 +415,7 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiLockOutline,
     route: Route.locked(),
     adminOnly: false,
+    inVaults: false,
   },
   {
     id: 'nav:userPages:duplicates',
@@ -452,10 +470,13 @@ const USER_PAGES: readonly NavigationItem[] = [
     icon: mdiLinkVariant,
     route: Route.sharedLinks(),
     adminOnly: false,
+    inVaults: false,
   },
 ];
 
-export const NAVIGATION_ITEMS: readonly NavigationItem[] = [...SYSTEM_SETTINGS, ...ADMIN_PAGES, ...USER_PAGES];
+export const NAVIGATION_ITEMS: readonly NavigationItem[] = [...SYSTEM_SETTINGS, ...ADMIN_PAGES, ...USER_PAGES].filter(
+  (item) => item.inVaults !== false || !vaultEdition(),
+);
 
 const MIN_MATCH_LENGTH = 3;
 

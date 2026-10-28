@@ -124,6 +124,29 @@ describe('UserSidebar', () => {
     expect(specialMocks.resolveSpecialAlbums).toHaveBeenCalledTimes(1);
   });
 
+  it('offers the owner the neutral local vault chooser on this desktop', async () => {
+    const agent = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (X11; Linux x86_64)');
+    try {
+      mockPage.url = new URL('http://localhost:2283/photos');
+      render(UserSidebar);
+      expect(await screen.findByRole('link', { name: 'photo_vaults' })).toHaveAttribute('href', 'kioku-vault://open');
+    } finally {
+      agent.mockRestore();
+    }
+  });
+
+  it('does not offer the desktop vault launcher to a family account', () => {
+    const agent = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (X11; Linux x86_64)');
+    try {
+      mockPage.url = new URL('http://localhost:2283/photos');
+      mocks.authManager.user.isAdmin = false;
+      render(UserSidebar);
+      expect(screen.queryByRole('link', { name: 'photo_vaults' })).not.toBeInTheDocument();
+    } finally {
+      agent.mockRestore();
+    }
+  });
+
   // Local Omarchy layer (plan A): one Shared row, beside Albums, in place of Spaces, Sharing and Shared links. It
   // expands into the Spaces and the links, which highlight themselves, so it is lit only on its own page and on the
   // list of Spaces, never alongside one of its rows.
@@ -166,6 +189,34 @@ describe('UserSidebar', () => {
   describe('owner tools', () => {
     const tools = ['/command', '/inbox', '/chat', '/utilities', '/import'];
     const link = (href: string) => document.querySelector(`a[href="${CSS.escape(href)}"]`);
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it("leaves sharing and the Locked Folder out of a vault's Gallery, and keeps Archive", () => {
+      vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+
+      render(UserSidebar);
+
+      for (const href of ['/sharing', '/locked']) {
+        expect(link(href), href).not.toBeInTheDocument();
+      }
+      expect(link('/archive'), '/archive').toBeInTheDocument();
+    });
+
+    it("leaves Curator's pages out of a vault's Gallery, and keeps Utilities and Import", () => {
+      vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+
+      render(UserSidebar);
+
+      for (const href of ['/command', '/inbox', '/chat']) {
+        expect(link(href), href).not.toBeInTheDocument();
+      }
+      for (const href of ['/utilities', '/import']) {
+        expect(link(href), href).toBeInTheDocument();
+      }
+    });
 
     it('shows the command center, AI inbox, chat, Utilities and Import to the owner', () => {
       render(UserSidebar);

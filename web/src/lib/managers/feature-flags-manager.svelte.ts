@@ -1,4 +1,5 @@
 import { getServerFeatures, type ServerFeaturesDto } from '@immich/sdk';
+import { vaultFeatures } from '$lib/gallery/edition';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 
 class FeatureFlagsManager {
@@ -32,7 +33,7 @@ class FeatureFlagsManager {
   }
 
   async #loadFeatureFlags() {
-    this.#value = await getServerFeatures();
+    this.#value = vaultFeatures(await getServerFeatures()); // Local Omarchy layer: gallery/edition
   }
 }
 

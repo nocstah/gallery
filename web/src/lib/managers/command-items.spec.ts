@@ -94,6 +94,23 @@ beforeEach(() => {
 });
 
 describe('COMMAND_ITEMS', () => {
+  // Local Omarchy layer: a vault's Gallery (gallery/edition) has no Spaces and shares nothing
+  it("leaves the Spaces and sharing commands out of a vault's Gallery", async () => {
+    const left = COMMAND_ITEMS.filter((item) => item.inVaults === false).map((item) => item.id);
+    expect(left).toHaveLength(10);
+    expect(left).toContain('cmd:create_space');
+    expect(left).toContain('cmd:album_share');
+    vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+    vi.resetModules();
+    try {
+      const { COMMAND_ITEMS: vault } = await import('./command-items');
+      expect(vault).toHaveLength(COMMAND_ITEMS.length - left.length);
+      expect(vault.map((item) => item.id)).not.toContain('cmd:create_space');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('has no duplicate ids', () => {
     const ids = new Set(COMMAND_ITEMS.map((c) => c.id));
     expect(ids.size).toBe(COMMAND_ITEMS.length);

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import AppDownloadModal from '$lib/modals/AppDownloadModal.svelte';
   import ObtainiumConfigModal from '$lib/modals/ObtainiumConfigModal.svelte';
   import { Route } from '$lib/route';
@@ -17,9 +18,13 @@
   const links = [
     { href: Route.duplicatesUtility(), icon: mdiContentDuplicate, label: $t('review_duplicates') },
     { href: Route.largeFileUtility(), icon: mdiImageSizeSelectLarge, label: $t('review_large_files') },
-    { href: Route.geolocationUtility(), icon: mdiCrosshairsGps, label: $t('manage_geolocation') },
-    // Local Omarchy layer: the bank slips and QR codes, filed into QR and the small ones sent to the Trash
-    { href: Route.slipsUtility(), icon: mdiQrcode, label: $t('slips') },
+    // Local Omarchy layer: locations are set on a map, which a vault's Gallery has none of (gallery/edition)
+    ...(vaultEdition()
+      ? []
+      : [{ href: Route.geolocationUtility(), icon: mdiCrosshairsGps, label: $t('manage_geolocation') }]),
+    // Local Omarchy layer: the bank slips and QR codes, filed into QR and the small ones sent to the Trash: Curator's,
+    // so not in a vault's Gallery (gallery/edition)
+    ...(vaultEdition() ? [] : [{ href: Route.slipsUtility(), icon: mdiQrcode, label: $t('slips') }]),
     { href: Route.workflows(), icon: mdiStateMachine, label: $t('workflows') },
   ];
 </script>
@@ -40,23 +45,26 @@
   </ul>
 </section>
 
-<section class="ws-utilities">
-  <h2 class="ws-utilities-heading">{$t('download')}</h2>
-  <ul>
-    <li>
-      <button type="button" class="ws-utility" onclick={() => modalManager.show(ObtainiumConfigModal, {})}>
-        <Icon icon={mdiLinkEdit} size="20" class="ws-utility-icon" />
-        {$t('obtainium_configurator')}
-      </button>
-    </li>
-    <li>
-      <button type="button" class="ws-utility" onclick={() => modalManager.show(AppDownloadModal, {})}>
-        <Icon icon={mdiCellphoneArrowDownVariant} size="20" class="ws-utility-icon" />
-        {$t('app_download_links')}
-      </button>
-    </li>
-  </ul>
-</section>
+<!-- Local Omarchy layer: the phone apps, which cannot reach a vault's Gallery (gallery/edition) -->
+{#if !vaultEdition()}
+  <section class="ws-utilities">
+    <h2 class="ws-utilities-heading">{$t('download')}</h2>
+    <ul>
+      <li>
+        <button type="button" class="ws-utility" onclick={() => modalManager.show(ObtainiumConfigModal, {})}>
+          <Icon icon={mdiLinkEdit} size="20" class="ws-utility-icon" />
+          {$t('obtainium_configurator')}
+        </button>
+      </li>
+      <li>
+        <button type="button" class="ws-utility" onclick={() => modalManager.show(AppDownloadModal, {})}>
+          <Icon icon={mdiCellphoneArrowDownVariant} size="20" class="ws-utility-icon" />
+          {$t('app_download_links')}
+        </button>
+      </li>
+    </ul>
+  </section>
+{/if}
 
 <style>
   .ws-utilities {

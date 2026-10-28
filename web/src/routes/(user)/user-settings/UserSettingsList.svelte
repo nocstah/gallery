@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import { page } from '$app/stores';
   import GroupSettings from '$lib/components/user-settings-page/group-settings.svelte';
   import ChangePinCodeSettings from './PinCodeSettings.svelte';
@@ -118,14 +119,17 @@
   <FeatureSettings />
 </SettingAccordion>
 
-<SettingAccordion
-  icon={mdiBellOutline}
-  key={OpenQueryParam.NOTIFICATIONS}
-  title={$t('notifications')}
-  subtitle={$t('user_settings_notifications_description')}
->
-  <NotificationsSettings />
-</SettingAccordion>
+<!-- Local Omarchy layer: a vault's Gallery has no email, other accounts, Locked Folder or sharing (gallery/edition) -->
+{#if !vaultEdition()}
+  <SettingAccordion
+    icon={mdiBellOutline}
+    key={OpenQueryParam.NOTIFICATIONS}
+    title={$t('notifications')}
+    subtitle={$t('user_settings_notifications_description')}
+  >
+    <NotificationsSettings />
+  </SettingAccordion>
+{/if}
 
 {#if featureFlagsManager.value.oauth}
   <SettingAccordion
@@ -148,34 +152,40 @@
   <ChangePasswordSettings />
 </SettingAccordion>
 
-<SettingAccordion
-  icon={mdiAccountMultipleOutline}
-  key="user-groups"
-  title={$t('user_groups')}
-  subtitle={$t('user_settings_groups_description')}
->
-  <GroupSettings user={authManager.user} />
-</SettingAccordion>
+{#if !vaultEdition()}
+  <SettingAccordion
+    icon={mdiAccountMultipleOutline}
+    key="user-groups"
+    title={$t('user_groups')}
+    subtitle={$t('user_settings_groups_description')}
+  >
+    <GroupSettings user={authManager.user} />
+  </SettingAccordion>
+{/if}
 
-<SettingAccordion
-  icon={mdiLockSmart}
-  key="user-pin-code-settings"
-  title={$t('user_pin_code_settings')}
-  subtitle={$t('user_settings_pin_code_description')}
-  autoScrollTo={true}
->
-  <ChangePinCodeSettings />
-</SettingAccordion>
+{#if !vaultEdition()}
+  <SettingAccordion
+    icon={mdiLockSmart}
+    key="user-pin-code-settings"
+    title={$t('user_pin_code_settings')}
+    subtitle={$t('user_settings_pin_code_description')}
+    autoScrollTo={true}
+  >
+    <ChangePinCodeSettings />
+  </SettingAccordion>
+{/if}
 
 <!-- Local Omarchy layer: no Purchase section. This fork's build has nothing to buy or activate (PurchaseContent lost
      its product key and buy options, and the /link activation lands on a page that ignores the key), so the section
      only carried upstream's pitch (full-time engineers, a sustainable income) beside the project's Discord and a GitHub
      star: not a family archive's settings. UserPurchaseSettings stays in the tree for upstream merges. -->
-<SettingAccordion
-  icon={mdiAccountGroupOutline}
-  key={OpenQueryParam.SHARING}
-  title={$t('sharing')}
-  subtitle={$t('user_settings_sharing_description')}
->
-  <SharingSettings />
-</SettingAccordion>
+{#if !vaultEdition()}
+  <SettingAccordion
+    icon={mdiAccountGroupOutline}
+    key={OpenQueryParam.SHARING}
+    title={$t('sharing')}
+    subtitle={$t('user_settings_sharing_description')}
+  >
+    <SharingSettings />
+  </SettingAccordion>
+{/if}

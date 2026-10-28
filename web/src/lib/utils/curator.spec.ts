@@ -40,6 +40,31 @@ describe('curatorIsMine', () => {
   });
 });
 
+// Local Omarchy layer: a vault's private Gallery is the vault edition (gallery/edition), which has no Curator at all.
+describe("in a vault's Gallery", () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+    authManager.reset();
+  });
+
+  it("is nobody's, not even the admin's", () => {
+    signIn(true);
+    expect(curatorIsMine()).toBe(false);
+  });
+
+  it('fails every call as when Curator is not answering, before any request', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch');
+    signIn(true);
+    await expect(curator.inbox()).rejects.toMatchObject({ status: 0 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('waitForJob', () => {
   const done: JobRow = {
     id: 7,

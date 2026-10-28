@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -193,6 +193,41 @@ describe('NAVIGATION_ITEMS schema', () => {
     expect(items).toHaveLength(30);
     for (const item of items) {
       expect(item.adminOnly, item.id).toBe(ownerOnly.has(item.id));
+    }
+  });
+
+  // Local Omarchy layer: a vault's Gallery is the vault edition (gallery/edition), which leaves out of Ctrl+K what its
+  // sidebar leaves out
+  it("leaves out of a vault's Gallery what it has none of", async () => {
+    const left = NAVIGATION_ITEMS.filter((item) => item.inVaults === false).map((item) => item.route);
+    expect(new Set(left)).toEqual(
+      new Set([
+        '/admin/users',
+        '/admin/library-management',
+        '/map',
+        '/sharing',
+        '/spaces',
+        '/todo',
+        '/villa',
+        '/qr',
+        '/command',
+        '/inbox',
+        '/inbox?tab=jobs',
+        '/inbox?tab=history',
+        '/inbox?tab=health',
+        '/chat',
+        Route.locked(),
+        Route.sharedLinks(),
+      ]),
+    );
+    vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+    vi.resetModules();
+    try {
+      const { NAVIGATION_ITEMS: vault } = await import('./navigation-items');
+      expect(vault).toHaveLength(NAVIGATION_ITEMS.length - left.length);
+      expect(vault.filter((item) => item.inVaults === false)).toEqual([]);
+    } finally {
+      vi.unstubAllEnvs();
     }
   });
 

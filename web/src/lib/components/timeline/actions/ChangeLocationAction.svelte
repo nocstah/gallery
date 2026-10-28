@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -51,6 +52,7 @@
   };
 </script>
 
-{#if menuItem}
+<!-- Local Omarchy layer: a vault's Gallery has no map to pick a place on (gallery/edition) -->
+{#if menuItem && !vaultEdition()}
   <MenuOption text={$t('change_location')} icon={mdiMapMarkerMultipleOutline} onClick={onAction} />
 {/if}

@@ -46,6 +46,7 @@ import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
 import { ADMIN_VISIBLE_QUEUES } from '$lib/constants';
+import { vaultEdition } from '$lib/gallery/edition';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { isAlmostExactWordMatch } from '$lib/managers/cmdk-match';
 import type { CommandContext } from '$lib/managers/command-context-manager.svelte';
@@ -98,6 +99,8 @@ export interface CommandItem {
   isAvailable?: (ctx: CommandContext) => boolean;
   /** Requires inline two-step Enter confirmation. */
   destructive?: boolean;
+  /** Local Omarchy layer: false leaves the command out of a vault's Gallery (gallery/edition): Spaces, sharing */
+  inVaults?: false;
 }
 
 async function runQueue(name: QueueName) {
@@ -140,7 +143,7 @@ async function clearAllFailedJobs() {
   toastManager.primary($t('cmdk_cmd_failed_cleared'));
 }
 
-export const COMMAND_ITEMS: readonly CommandItem[] = [
+const ALL_COMMAND_ITEMS: readonly CommandItem[] = [
   {
     id: 'cmd:theme',
     labelKey: 'theme',
@@ -164,6 +167,7 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   },
   {
     id: 'cmd:create_space',
+    inVaults: false,
     labelKey: 'create_space',
     descriptionKey: 'cmdk_cmd_create_space_description',
     icon: mdiAccountMultiplePlus,
@@ -276,6 +280,7 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   },
   {
     id: 'cmd:album_share',
+    inVaults: false,
     labelKey: 'cmdk_cmd_album_share_label',
     descriptionKey: 'cmdk_cmd_album_share_description',
     icon: mdiShareVariantOutline,
@@ -391,6 +396,7 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   },
   {
     id: 'cmd:selection_add_to_space',
+    inVaults: false,
     labelKey: 'cmdk_cmd_selection_add_to_space_label',
     descriptionKey: 'cmdk_cmd_selection_add_to_space_description',
     icon: mdiImageMultipleOutline,
@@ -399,6 +405,7 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   },
   {
     id: 'cmd:selection_add_to_current_space',
+    inVaults: false,
     labelKey: 'cmdk_cmd_selection_add_to_current_space_label',
     descriptionKey: 'cmdk_cmd_selection_add_to_current_space_description',
     icon: mdiImagePlusOutline,
@@ -435,6 +442,7 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   // with a registered SpaceContext.
   {
     id: 'cmd:space_add_photos',
+    inVaults: false,
     labelKey: 'cmdk_cmd_space_add_photos_label',
     descriptionKey: 'cmdk_cmd_space_add_photos_description',
     icon: mdiImagePlusOutline,
@@ -443,6 +451,7 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   },
   {
     id: 'cmd:space_manage_members',
+    inVaults: false,
     labelKey: 'cmdk_cmd_space_manage_members_label',
     descriptionKey: 'cmdk_cmd_space_manage_members_description',
     icon: mdiAccountGroupOutline,
@@ -461,6 +470,7 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   },
   {
     id: 'cmd:space_add_member',
+    inVaults: false,
     labelKey: 'cmdk_cmd_space_add_member_label',
     descriptionKey: 'cmdk_cmd_space_add_member_description',
     icon: mdiAccountPlus,
@@ -477,6 +487,7 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   },
   {
     id: 'cmd:space_bulk_add',
+    inVaults: false,
     labelKey: 'cmdk_cmd_space_bulk_add_label',
     descriptionKey: 'cmdk_cmd_space_bulk_add_description',
     icon: mdiImageMultipleOutline,
@@ -497,6 +508,7 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   },
   {
     id: 'cmd:space_leave',
+    inVaults: false,
     labelKey: 'cmdk_cmd_space_leave_label',
     descriptionKey: 'cmdk_cmd_space_leave_description',
     icon: mdiExitRun,
@@ -521,6 +533,7 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
   },
   {
     id: 'cmd:space_delete',
+    inVaults: false,
     labelKey: 'cmdk_cmd_space_delete_label',
     descriptionKey: 'cmdk_cmd_space_delete_description',
     icon: mdiDeleteOutline,
@@ -552,6 +565,11 @@ export const COMMAND_ITEMS: readonly CommandItem[] = [
     handler: () => photoBooks.askForYear(),
   },
 ];
+
+// Local Omarchy layer: a vault's Gallery leaves out the commands marked `inVaults: false` (gallery/edition)
+export const COMMAND_ITEMS: readonly CommandItem[] = ALL_COMMAND_ITEMS.filter(
+  (item) => item.inVaults !== false || !vaultEdition(),
+);
 
 export function isAlmostExactCommandMatch(query: string, label: string): boolean {
   return isAlmostExactWordMatch(query, label, MIN_MATCH_LENGTH);

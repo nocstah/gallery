@@ -1,3 +1,4 @@
+import { AssetVisibility } from '@immich/sdk';
 import { fireEvent, render, screen, cleanup } from '@testing-library/svelte';
 import { addMessages, locale } from 'svelte-i18n';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -19,6 +20,32 @@ vi.mock('$lib/utils/copy-subject', () => ({ copySubject: vi.fn() }));
 vi.mock('$lib/utils/reveal', () => ({ revealInPhotos: vi.fn() }));
 
 afterEach(cleanup);
+
+it.each([true, false])('does not offer external processing for locked assets (image: %s)', async (isImage) => {
+  addMessages('en', { menu: 'Menu', copy_subject: 'Copy subject', download_for_app: 'Download for {app}' });
+  await locale.set('en');
+  const asset = timelineAssetFactory.build({
+    id: 'private-asset',
+    ownerId: 'me',
+    visibility: AssetVisibility.Locked,
+    isImage,
+    isVideo: !isImage,
+  });
+  render(TileContextMenu, { assets: [asset] });
+  await fireEvent.contextMenu(screen.getByRole('button', { name: asset.id }));
+  await screen.findByRole('menu');
+  expect(screen.queryByRole('menuitem', { name: 'Copy subject' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('menuitem', { name: /Download for/ })).not.toBeInTheDocument();
+});
+
+it('keeps subject copying available for an ordinary photo', async () => {
+  addMessages('en', { menu: 'Menu', copy_subject: 'Copy subject' });
+  await locale.set('en');
+  const asset = timelineAssetFactory.build({ id: 'ordinary-photo', ownerId: 'me', isImage: true, isVideo: false });
+  render(TileContextMenu, { assets: [asset] });
+  await fireEvent.contextMenu(screen.getByRole('button', { name: asset.id }));
+  expect(await screen.findByRole('menuitem', { name: 'Copy subject' })).toBeInTheDocument();
+});
 
 it('downloads the right-clicked video after MenuOption closes and clears the selection', async () => {
   addMessages('en', { menu: 'Menu', download_for_app: 'Download for {app}' });

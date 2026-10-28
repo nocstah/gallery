@@ -99,6 +99,12 @@ function renderPage() {
 }
 
 describe('Locked page timeline grouping', () => {
+  it('mounts the thumbnail context menu and explains the PIN protection boundary', async () => {
+    const { container } = renderPage();
+    await waitFor(() => expect(container.querySelector('.ws-tile-menu')).toBeInTheDocument());
+    expect(screen.getByRole('note')).toHaveTextContent('locked_folder_privacy_note');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockAssetMultiSelectManager.selectionActive = false;

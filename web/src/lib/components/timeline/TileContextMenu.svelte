@@ -120,7 +120,12 @@
     const user = authManager.authenticated ? authManager.user : undefined;
     // subject lift is Curator's, so it is offered to Curator's owner only (curatorIsMine)
     liftAsset =
-      assetInteraction.assets.length === 1 && asset.isImage && user && asset.ownerId === user.id && curatorIsMine()
+      assetInteraction.assets.length === 1 &&
+      asset.isImage &&
+      asset.visibility !== AssetVisibility.Locked &&
+      user &&
+      asset.ownerId === user.id &&
+      curatorIsMine()
         ? asset
         : undefined;
     revealAsset =

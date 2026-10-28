@@ -42,3 +42,17 @@ describe('FeatureFlagsManager.valueOrUndefined', () => {
     expect(featureFlagsManager.valueOrUndefined).toEqual(featureFlagsManager.value);
   });
 });
+
+// Local Omarchy layer: a vault's Gallery (gallery/edition) reads no map and no email, whatever its server offers
+describe("FeatureFlagsManager in a vault's Gallery", () => {
+  it('turns the map and email off', async () => {
+    vi.mocked(getServerFeatures).mockResolvedValue({ map: true, email: true, search: true } as never);
+    vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+    try {
+      await featureFlagsManager.init();
+      expect(featureFlagsManager.value).toEqual({ map: false, email: false, search: true });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});

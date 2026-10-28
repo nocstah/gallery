@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import { page } from '$app/state';
   import GeolocationPointPickerModal from '$lib/modals/GeolocationPointPickerModal.svelte';
   import { applyContextualFilter, buildContextualMapUrl } from '$lib/utils/filter-target';
@@ -20,6 +21,9 @@
   };
 
   let { isOwner, canFilter = false, asset = $bindable() }: Props = $props();
+
+  // Local Omarchy layer: a vault's Gallery has no map, to show a place on or pick one from (gallery/edition)
+  const mapless = vaultEdition();
 
   // R9/E7 — a value that trims to nothing produces a patch that trims to nothing: the click would
   // close the asset viewer and apply NO filter. Such a value is rendered as plain text.
@@ -125,7 +129,7 @@
     </div>
 
     <div class="flex items-center gap-1">
-      {#if canFilter && mapUrl}
+      {#if canFilter && mapUrl && !mapless}
         <IconButton
           href={mapUrl}
           icon={mdiMapOutline}
@@ -136,7 +140,7 @@
           variant="ghost"
         />
       {/if}
-      {#if isOwner}
+      {#if isOwner && !mapless}
         <IconButton
           icon={mdiPencil}
           aria-label={$t('edit_location')}
@@ -149,7 +153,7 @@
       {/if}
     </div>
   </div>
-{:else if !asset.exifInfo?.city && isOwner}
+{:else if !asset.exifInfo?.city && isOwner && !mapless}
   <!--
     The ONLY entry point to the geo picker for an asset with no location at all. Untested before this
     slice; pinned by detail-panel-location.spec.ts now. Do not delete it "fixing" the branch above.

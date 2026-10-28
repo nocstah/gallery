@@ -10,6 +10,8 @@
   import SidebarNavGroup from '$lib/components/sidebar/sidebar-nav-group.svelte';
   import SidebarNavItem from '$lib/components/sidebar/sidebar-nav-item.svelte';
   import Sidebar from '$lib/components/sidebar/sidebar-shell.svelte';
+  import { vaultEdition } from '$lib/gallery/edition';
+  import VaultsNav from '$lib/gallery/vaults/VaultsNav.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { offeredSpecialAlbums, resolveSpecialAlbums, specialAlbums } from '$lib/managers/special-albums.svelte';
@@ -178,21 +180,23 @@
        beside My Albums. It opens the Shared page (shared albums, Spaces, partners) and holds the Spaces (Library
        excepted: it is the Albums tree's engine), each opening into its own folder tree, then the public links. It
        replaces the separate Spaces, Sharing and Shared links rows; the share arrow, as in Ctrl+K. -->
-  <SidebarNavItem
-    title={$t('shared')}
-    href={Route.sharing()}
-    isActive={() => page.url.pathname === Route.sharing() || page.url.pathname === Route.spaces()}
-    icon={mdiShareVariantOutline}
-    activeIcon={mdiShareVariant}
-    bind:expanded={$recentSpacesDropdown}
-  >
-    {#snippet items()}
-      <span in:fly={{ y: -20 }} class="hidden md:block">
-        <RecentSpaces />
-        <SharedLinksRow />
-      </span>
-    {/snippet}
-  </SidebarNavItem>
+  {#if !vaultEdition()}
+    <SidebarNavItem
+      title={$t('shared')}
+      href={Route.sharing()}
+      isActive={() => page.url.pathname === Route.sharing() || page.url.pathname === Route.spaces()}
+      icon={mdiShareVariantOutline}
+      activeIcon={mdiShareVariant}
+      bind:expanded={$recentSpacesDropdown}
+    >
+      {#snippet items()}
+        <span in:fly={{ y: -20 }} class="hidden md:block">
+          <RecentSpaces />
+          <SharedLinksRow />
+        </span>
+      {/snippet}
+    </SidebarNavItem>
+  {/if}
 
   {#if authManager.preferences.tags.enabled && authManager.preferences.tags.sidebarWeb}
     <SidebarNavItem title={$t('tags')} href={Route.tags()} icon={{ icon: mdiTagMultipleOutline, flipped: true }} />
@@ -216,19 +220,22 @@
       collapse="manage"
       holds={['/command', '/inbox', '/chat', Route.utilities(), Route.import()]}
     >
-      <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
-      <SidebarNavItem
-        title={$t('command_title')}
-        href="/command"
-        icon={mdiViewDashboardOutline}
-        activeIcon={mdiViewDashboard}
-      />
+      <!-- Local Omarchy layer: Curator's pages, which a vault's Gallery leaves out (gallery/edition) -->
+      {#if !vaultEdition()}
+        <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
+        <SidebarNavItem
+          title={$t('command_title')}
+          href="/command"
+          icon={mdiViewDashboardOutline}
+          activeIcon={mdiViewDashboard}
+        />
 
-      <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
-      <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
+        <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
+        <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
 
-      <!-- Local Omarchy layer: a conversation with Curator's local model about the library (routes/(user)/chat) -->
-      <SidebarNavItem title={$t('chat_title')} href="/chat" icon={mdiChatOutline} activeIcon={mdiChat} />
+        <!-- Local Omarchy layer: a conversation with Curator's local model about the library (routes/(user)/chat) -->
+        <SidebarNavItem title={$t('chat_title')} href="/chat" icon={mdiChatOutline} activeIcon={mdiChat} />
+      {/if}
 
       <SidebarNavItem
         title={$t('utilities')}
@@ -253,7 +260,10 @@
       activeIcon={mdiArchiveArrowDown}
     />
 
-    <SidebarNavItem title={$t('locked_folder')} href={Route.locked()} icon={mdiLockOutline} activeIcon={mdiLock} />
+    {#if !vaultEdition()}
+      <SidebarNavItem title={$t('locked_folder')} href={Route.locked()} icon={mdiLockOutline} activeIcon={mdiLock} />
+    {/if}
+    <VaultsNav />
 
     {#if featureFlagsManager.value.trash}
       <SidebarNavItem title={$t('trash')} href={Route.trash()} icon={mdiTrashCanOutline} activeIcon={mdiTrashCan} />

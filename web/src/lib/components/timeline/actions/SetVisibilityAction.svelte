@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import type { OnSetVisibility } from '$lib/utils/actions';
@@ -45,13 +46,14 @@
   };
 </script>
 
-{#if menuItem}
+<!-- Local Omarchy layer: a vault's Gallery has no Locked Folder; the vault is the lock (gallery/edition) -->
+{#if menuItem && !vaultEdition()}
   <MenuOption
     onClick={setLockedVisibility}
     text={unlock ? $t('move_off_locked_folder') : $t('move_to_locked_folder')}
     icon={unlock ? mdiLockOpenVariantOutline : mdiLockOutline}
   />
-{:else}
+{:else if !vaultEdition()}
   <Button
     leadingIcon={unlock ? mdiLockOpenVariantOutline : mdiLockOutline}
     disabled={loading}

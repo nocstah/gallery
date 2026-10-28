@@ -6,6 +6,7 @@
   import GlobalSearch from '$lib/components/global-search/global-search.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import OpenInAppBanner from '$lib/components/shared-components/open-in-app-banner.svelte';
+  import { markEdition } from '$lib/gallery/edition';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { closePaletteOnNavigate } from '$lib/managers/close-palette-on-navigate';
   import { eventManager } from '$lib/managers/event-manager.svelte';
@@ -198,6 +199,7 @@
   });
 
   onMount(() => {
+    markEdition(); // Local Omarchy layer: <html data-kioku-edition>, the full or vault edition (gallery/edition)
     const element = document.querySelector('#stencil');
     element?.remove();
     // if the browser theme changes, changes the Immich theme too

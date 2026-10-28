@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
   import { initInput } from '$lib/actions/focus';
   import AlbumListItem from '$lib/components/asset-viewer/AlbumListItem.svelte';
@@ -86,7 +87,10 @@
   const includesNonShareable = $derived(
     !restricted && assetIds !== undefined && shareableCount !== null && shareableCount < assetIds.length,
   );
-  const showSpaces = $derived(!restricted && !includesNonShareable && assetCount <= MAX_SPACE_ASSETS_PER_REQUEST);
+  // Local Omarchy layer: a vault's Gallery has no Spaces (gallery/edition)
+  const showSpaces = $derived(
+    !vaultEdition() && !restricted && !includesNonShareable && assetCount <= MAX_SPACE_ASSETS_PER_REQUEST,
+  );
   const currentUserId = $derived(authManager.authenticated ? (authManager.user?.id ?? null) : null);
 
   const albumCollections = $derived(
@@ -535,7 +539,7 @@
             <Icon icon={mdiInformationOutline} size="1rem" />
             <span>{$t('add_to_collection_non_owned_space_albums_only')}</span>
           </div>
-        {:else if !showSpaces}
+        {:else if !showSpaces && !vaultEdition()}
           <div
             class="flex items-center gap-2 px-6 py-2 text-sm text-gray-500 dark:text-gray-400"
             data-testid="spaces-hidden-notice"

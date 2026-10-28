@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import OnboardingBackup from './OnboardingBackup.svelte';
@@ -86,13 +87,18 @@
       title: $t('admin.backup_onboarding_title'),
       icon: mdiCloudCheckOutline,
     },
-    {
-      name: 'mobile_app',
-      component: OnboardingMobileApp,
-      role: OnboardingRole.USER,
-      title: $t('mobile_app'),
-      icon: mdiCellphoneArrowDownVariant,
-    },
+    // Local Omarchy layer: a vault's Gallery is on this computer only, out of a phone's reach (gallery/edition)
+    ...(vaultEdition()
+      ? []
+      : [
+          {
+            name: 'mobile_app',
+            component: OnboardingMobileApp,
+            role: OnboardingRole.USER,
+            title: $t('mobile_app'),
+            icon: mdiCellphoneArrowDownVariant,
+          },
+        ]),
   ]);
 
   const index = $derived.by(() => {

@@ -54,6 +54,7 @@ import {
 import type { MessageFormatter } from 'svelte-i18n';
 import { goto } from '$app/navigation';
 import { ProjectionType } from '$lib/constants';
+import { vaultEdition } from '$lib/gallery/edition';
 import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
 import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -122,7 +123,8 @@ export const getAssetBulkActions = (
   };
 
   const AddToAlbum: ActionItem = {
-    title: $t('add_to_album_or_space'),
+    // Local Omarchy layer: a vault's Gallery has no Spaces (gallery/edition)
+    title: vaultEdition() ? $t('add_to_album') : $t('add_to_album_or_space'),
     icon: mdiPlus,
     shortcuts: [{ key: 'l' }],
     onAction: () => modalManager.show(AssetAddToCollectionModal, { assetIds }),
@@ -152,6 +154,7 @@ export const getAssetBulkActions = (
   const CreateSharedLink: ActionItem = {
     title: $t('share'),
     icon: mdiShareVariantOutline,
+    $if: () => !vaultEdition(), // Local Omarchy layer: a vault's Gallery shares nothing (gallery/edition)
     onAction: () => shareSelection($t, { shareSpaceId, fromSpaceId }),
   };
 
@@ -316,7 +319,7 @@ export const getAssetActions = (
   const Share: ActionItem = {
     title: $t('share'),
     icon: mdiShareVariantOutline,
-    $if: () => canShare && !asset.isTrashed && asset.visibility !== AssetVisibility.Locked,
+    $if: () => canShare && !asset.isTrashed && asset.visibility !== AssetVisibility.Locked && !vaultEdition(),
     onAction: () =>
       modalManager.show(SelectionShareModal, {
         assetIds: [asset.id],
@@ -403,7 +406,7 @@ export const getAssetActions = (
   };
 
   const AddToAlbum: ActionItem = {
-    title: $t('add_to_album_or_space'),
+    title: vaultEdition() ? $t('add_to_album') : $t('add_to_album_or_space'),
     icon: mdiPlus,
     shortcuts: [{ key: 'l' }],
     $if: () => canAddToAlbum && asset.visibility !== AssetVisibility.Locked && !asset.isTrashed,

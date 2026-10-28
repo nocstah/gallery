@@ -14,6 +14,8 @@
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
   import { AssetAction } from '$lib/constants';
+  import LockedFolderNotice from '$lib/gallery/locked/LockedFolderNotice.svelte';
+  import LockedPhotoContextMenu from '$lib/gallery/locked/LockedPhotoContextMenu.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
@@ -111,11 +113,16 @@
     grouping={timelineGrouping}
     onGroupingChange={handleTimelineGroupingChange}
   >
+    <LockedFolderNotice />
     {#snippet empty()}
       <EmptyState title={$t('nothing_here_yet')} body={$t('no_locked_photos_message')} />
     {/snippet}
   </Timeline>
 </UserPageLayout>
+
+{#if timelineManager}
+  <LockedPhotoContextMenu {timelineManager} onRemove={handleMoveOffLockedFolder} />
+{/if}
 
 <!-- Multi-selection mode app bar -->
 {#if assetMultiSelectManager.selectionActive}

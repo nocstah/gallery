@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import BreadcrumbActionPage from '$lib/components/BreadcrumbActionPage.svelte';
   import NavigationBar from '$lib/components/shared-components/navigation-bar/NavigationBar.svelte';
   import BottomInfo from '$lib/components/shared-components/side-bar/BottomInfo.svelte';
@@ -40,13 +41,18 @@
     class="flex h-full flex-col justify-between gap-2 border-none shadow-none"
   >
     <div class="flex flex-col gap-1 pe-4 pt-8">
-      <NavbarItem title={$t('users')} href={Route.users()} icon={mdiAccountMultipleOutline} />
-      <NavbarItem title={$t('external_libraries')} href={Route.libraries()} icon={mdiBookshelf} />
+      <!-- Local Omarchy layer: a vault's Gallery has one account and keeps its photos inside the encryption -->
+      {#if !vaultEdition()}
+        <NavbarItem title={$t('users')} href={Route.users()} icon={mdiAccountMultipleOutline} />
+        <NavbarItem title={$t('external_libraries')} href={Route.libraries()} icon={mdiBookshelf} />
+      {/if}
       <NavbarItem title={$t('admin.queues')} href={Route.queues()} icon={mdiTrayFull} />
       <NavbarItem title={$t('admin.face_cleanup')} href={Route.faceCleanup()} icon={mdiFaceRecognition} />
       <NavbarItem title={$t('settings')} href={Route.systemSettings()} icon={mdiCog} />
       <NavbarItem title={$t('admin.maintenance_settings')} href={Route.systemMaintenance()} icon={mdiWrench} />
-      <NavbarItem title="Storage Migration" href={Route.storageMigration()} icon={mdiCloudSyncOutline} />
+      {#if !vaultEdition()}
+        <NavbarItem title="Storage Migration" href={Route.storageMigration()} icon={mdiCloudSyncOutline} />
+      {/if}
       <NavbarItem title={$t('server_stats')} href={Route.systemStatistics()} icon={mdiServer} />
     </div>
 

@@ -1,4 +1,5 @@
 import { getServerConfig, type ServerConfigDto } from '@immich/sdk';
+import { vaultServerConfig } from '$lib/gallery/edition';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 
 class ServerConfigManager {
@@ -23,7 +24,7 @@ class ServerConfigManager {
   }
 
   async loadServerConfig() {
-    this.#value = await getServerConfig();
+    this.#value = vaultServerConfig(await getServerConfig()); // Local Omarchy layer: gallery/edition
   }
 }
 

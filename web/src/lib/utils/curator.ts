@@ -2,6 +2,7 @@ import type { AssetResponseDto } from '@immich/sdk';
 import type { AdjustSettings } from '$lib/components/curator/adjust-math';
 import type { FilmPlan } from '$lib/components/memories/film/film-plan';
 import type { MemoryPresentation } from '$lib/components/memories/memory-sharing';
+import { vaultEdition } from '$lib/gallery/edition';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-stacks';
 
@@ -15,9 +16,10 @@ import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-sta
  * answers every other Gallery user 403 "Curator acts for its owner only"), and its owner is the owner of its API key,
  * this server's one admin, so the admin flag says it without asking Curator. Every Curator tool outside the owner's
  * own pages asks this first: a family member's account is offered none of them, and nothing asks Curator anything for
- * it. Read in a template, a $derived or an effect, it follows a sign-out and the next sign-in in the same tab.
+ * it. Read in a template, a $derived or an effect, it follows a sign-out and the next sign-in in the same tab. A vault's
+ * Gallery (gallery/edition's vault edition) has no Curator, so there it is nobody's.
  */
-export const curatorIsMine = (): boolean => authManager.authenticated && authManager.user.isAdmin;
+export const curatorIsMine = (): boolean => !vaultEdition() && authManager.authenticated && authManager.user.isAdmin;
 
 export type SuggestionStatus = 'pending' | 'rejected' | 'applied' | 'failed' | 'undone' | 'superseded';
 
@@ -495,9 +497,17 @@ export class CuratorError extends Error {
 }
 
 // HTTPS access uses the same origin for API calls, streams and downloads. The local Curator listener is HTTP;
-// guessing https://host:2290 breaks those features when Gallery is reached through Tailscale Serve.
-const origin = () =>
-  location.protocol === 'https:' ? `${location.origin}/curator` : `${location.protocol}//${location.hostname}:2290`;
+// guessing https://host:2290 breaks those features when Gallery is reached through Tailscale Serve. A vault's Gallery
+// has no Curator address at all, so nothing it builds can reach one: each call fails, before any request, as calls
+// fail while Curator is not answering.
+const origin = () => {
+  if (vaultEdition()) {
+    throw new CuratorError('Curator is not part of a vault', 0);
+  }
+  return location.protocol === 'https:'
+    ? `${location.origin}/curator`
+    : `${location.protocol}//${location.hostname}:2290`;
+};
 const base = () => `${origin()}/api`;
 
 /** A song Curator serves (a MemoryTrack's `src`, a path on its origin), for an <audio> element: no crossorigin, so the

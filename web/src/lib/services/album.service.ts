@@ -37,6 +37,7 @@ import {
 } from '@mdi/js';
 import { type MessageFormatter } from 'svelte-i18n';
 import { goto } from '$app/navigation';
+import { vaultEdition } from '$lib/gallery/edition';
 import { albumFolders } from '$lib/managers/album-folders.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
@@ -84,6 +85,7 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     title: $t('album_add_people'),
     icon: mdiPlus,
     color: 'primary',
+    $if: () => !vaultEdition(), // ... and none in a vault's Gallery (gallery/edition)
     onAction: () =>
       modalManager.show(AddUsersModal, {
         excludedUserIds: album.albumUsers.map(({ user: { id } }) => id),
@@ -182,7 +184,7 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
   const Share: ActionItem = {
     title: $t('share'),
     icon: mdiShareVariantOutline,
-    $if: () => isOwned,
+    $if: () => isOwned && !vaultEdition(), // Local Omarchy layer: a vault's Gallery shares nothing (gallery/edition)
     // Local Omarchy layer (plan A): the Share sheet (people, links, Spaces); the album's settings stay in Options
     onAction: () => modalManager.show(AlbumShareModal, { album }),
   };

@@ -1,7 +1,7 @@
 // album.service.spec.ts
 import { AlbumUserRole, BulkIdErrorReason, type AlbumResponseDto } from '@immich/sdk';
 import type { BulkIdResponseDto } from '@immich/sdk';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SpacePickerModal from '$lib/modals/SpacePickerModal.svelte';
 import {
   addAssetsToAlbumWithOutcome,
@@ -289,5 +289,25 @@ describe('getAlbumActions MakeBook', () => {
     const { MakeBook } = getAlbumActions($t, album);
     MakeBook.onAction({ action: MakeBook } as never);
     expect(photoBooksMock.askForAlbum).toHaveBeenCalledWith(album);
+  });
+});
+
+// Local Omarchy layer: a vault's Gallery (gallery/edition) shares nothing: no Share sheet, no people to add
+describe("album sharing in a vault's Gallery", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const owned = {
+    id: 'album-1',
+    albumUsers: [{ user: { id: 'me' }, role: AlbumUserRole.Owner }],
+  } as unknown as AlbumResponseDto;
+
+  it('offers neither the Share sheet nor adding people', () => {
+    expect(getAlbumActions(((k: string) => k) as never, owned).AddUsers.$if?.() ?? true).toBe(true);
+    vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+    const { Share, AddUsers } = getAlbumActions(((k: string) => k) as never, owned);
+    expect(Share.$if?.()).toBe(false);
+    expect(AddUsers.$if?.()).toBe(false);
   });
 });

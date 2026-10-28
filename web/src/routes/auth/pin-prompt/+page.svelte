@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation';
   import AuthPageLayout from '$lib/components/layouts/AuthPageLayout.svelte';
   import PinCodeCreateForm from '$lib/components/user-settings-page/PinCodeCreateForm.svelte';
+  import LockedFolderNotice from '$lib/gallery/locked/LockedFolderNotice.svelte';
   import { Route } from '$lib/route';
   import { handleError } from '$lib/utils/handle-error';
   import { unlockAuthSession } from '@immich/sdk';
@@ -64,6 +65,8 @@
         </p>
         <PinCodeCreateForm showLabel={false} onCreated={() => (hasPinCode = true)} />
       {/if}
+
+      <LockedFolderNotice />
 
       <div class={hasPinCode ? '' : 'flex w-full items-start'}>
         <Button type="button" color="secondary" onclick={() => goto(Route.photos())}>{$t('cancel')}</Button>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import SettingAccordion from '$lib/components/shared-components/settings/SettingAccordion.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
@@ -173,19 +174,22 @@
           </div>
         </SettingAccordion>
 
-        <SettingAccordion key="shared-links" title={$t('shared_links')} subtitle={$t('shared_links_description')}>
-          <div class="mt-4 flex flex-col gap-4 sm:ms-4">
-            <Field label={$t('enable')}>
-              <Switch bind:checked={sharedLinksEnabled} />
-            </Field>
-
-            {#if sharedLinksEnabled}
-              <Field label={$t('sidebar')} description={$t('sidebar_display_description')}>
-                <Switch bind:checked={sharedLinkSidebar} />
+        <!-- Local Omarchy layer: a vault's Gallery shares and casts nothing (gallery/edition) -->
+        {#if !vaultEdition()}
+          <SettingAccordion key="shared-links" title={$t('shared_links')} subtitle={$t('shared_links_description')}>
+            <div class="mt-4 flex flex-col gap-4 sm:ms-4">
+              <Field label={$t('enable')}>
+                <Switch bind:checked={sharedLinksEnabled} />
               </Field>
-            {/if}
-          </div>
-        </SettingAccordion>
+
+              {#if sharedLinksEnabled}
+                <Field label={$t('sidebar')} description={$t('sidebar_display_description')}>
+                  <Switch bind:checked={sharedLinkSidebar} />
+                </Field>
+              {/if}
+            </div>
+          </SettingAccordion>
+        {/if}
 
         <SettingAccordion key="tags" title={$t('tags')} subtitle={$t('tag_feature_description')}>
           <div class="mt-4 flex flex-col gap-4 sm:ms-4">
@@ -201,13 +205,15 @@
           </div>
         </SettingAccordion>
 
-        <SettingAccordion key="cast" title={$t('cast')} subtitle={$t('cast_description')}>
-          <div class="mt-4 flex flex-col gap-4 sm:ms-4">
-            <Field label={$t('gcast_enabled')} description={$t('gcast_enabled_description')}>
-              <Switch bind:checked={gCastEnabled} />
-            </Field>
-          </div>
-        </SettingAccordion>
+        {#if !vaultEdition()}
+          <SettingAccordion key="cast" title={$t('cast')} subtitle={$t('cast_description')}>
+            <div class="mt-4 flex flex-col gap-4 sm:ms-4">
+              <Field label={$t('gcast_enabled')} description={$t('gcast_enabled_description')}>
+                <Switch bind:checked={gCastEnabled} />
+              </Field>
+            </div>
+          </SettingAccordion>
+        {/if}
 
         <SettingAccordion key="recentlyAdded" title={$t('recently_added')} subtitle={$t('recently_added_description')}>
           <div class="mt-4 flex flex-col gap-4 sm:ms-4">

@@ -133,6 +133,20 @@ describe('AssetService', () => {
       expect(assetActions.Share.$if?.()).toStrictEqual(true);
     });
 
+    it("should offer no share action in a vault's Gallery, which shares nothing", () => {
+      const ownerId = 'owner';
+      authManager.setUser(userAdminFactory.build({ id: ownerId }));
+      setSharedLink(undefined);
+      vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+      try {
+        expect(getAssetActions(() => '', assetFactory.build({ ownerId })).Share.$if?.()).toStrictEqual(false);
+        expect(getAssetBulkActions(((k: string) => k) as never).CreateSharedLink.$if?.()).toStrictEqual(false);
+        expect(getAssetBulkActions(((k: string) => k) as never).AddToAlbum.title).toBe('add_to_album');
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+
     it('should offer the share action if a shared link stripped the asset owner', () => {
       // A `showMetadata: false` shared link returns SanitizedAssetResponseDto, which omits `ownerId`
       // altogether, so ownership is unknowable client-side. The owner still has to get the button.

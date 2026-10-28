@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import { AssetAction } from '$lib/constants';
   import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
@@ -52,8 +53,11 @@
   };
 </script>
 
-<MenuOption
-  onClick={() => toggleLockedVisibility()}
-  text={isLocked ? $t('move_off_locked_folder') : $t('move_to_locked_folder')}
-  icon={isLocked ? mdiLockOpenVariantOutline : mdiLockOutline}
-/>
+<!-- Local Omarchy layer: a vault's Gallery has no Locked Folder; the vault is the lock (gallery/edition) -->
+{#if !vaultEdition()}
+  <MenuOption
+    onClick={() => toggleLockedVisibility()}
+    text={isLocked ? $t('move_off_locked_folder') : $t('move_to_locked_folder')}
+    icon={isLocked ? mdiLockOpenVariantOutline : mdiLockOutline}
+  />
+{/if}

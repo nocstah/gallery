@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { vaultEdition } from '$lib/gallery/edition';
   import { goto, invalidate, onNavigate } from '$app/navigation';
   import { navigating, page } from '$app/state';
   import { scrollMemoryClearer } from '$lib/actions/scroll-memory';
@@ -992,7 +993,7 @@
         />
       {/if}
 
-      {#if isOwned}
+      {#if isOwned && !vaultEdition()}
         <MenuOption
           icon={mdiLinkVariantPlus}
           text={$t('link_album_to_space')}

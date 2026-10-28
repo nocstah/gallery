@@ -42,6 +42,7 @@ import {
 } from '@mdi/js';
 import { t, type Translations } from 'svelte-i18n';
 import { get } from 'svelte/store';
+import { vaultEdition } from '$lib/gallery/edition';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { undoManager } from '$lib/managers/undo-manager.svelte';
@@ -199,10 +200,12 @@ export class SpecialAlbumManager {
   /**
    * Local Omarchy layer: whether whoever is signed in has this album ("Hide Villa and QR, keep To do"): To do is
    * everyone's; Villa and QR are the owner's own workflows, the server's admin's. A family account is offered neither,
-   * its keys don't move photos there, and an album of its own that happens to bear the name is just an album.
+   * its keys don't move photos there, and an album of its own that happens to bear the name is just an album. A vault's
+   * Gallery (gallery/edition's vault edition) offers none of the three, to anyone ("no need for QR or Villa or those
+   * special albums in the vaults").
    */
   get offered() {
-    return !this.ownerOnly || (authManager.authenticated && authManager.user.isAdmin);
+    return !vaultEdition() && (!this.ownerOnly || (authManager.authenticated && authManager.user.isAdmin));
   }
 
   get route() {

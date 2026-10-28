@@ -2,7 +2,7 @@ import { type AssetResponseDto } from '@immich/sdk';
 import { modalManager } from '@immich/ui';
 import '@testing-library/jest-dom';
 import { fireEvent, screen, waitFor } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildContextualFilterUrl } from '$lib/utils/filter-target';
 import { renderWithTooltips } from '$tests/helpers';
 import { assetFactory } from '@test-data/factories/asset-factory';
@@ -348,5 +348,32 @@ describe('DetailPanelLocation map feature flag', () => {
     renderWithTooltips(DetailPanelLocation, { asset: buildAsset(BERLIN), isOwner: true, canFilter: true });
 
     expect(await screen.findByLabelText('view_in_map')).toBeInTheDocument();
+  });
+});
+
+// Local Omarchy layer: a vault's Gallery (gallery/edition) has no map, to show a place on or pick one from
+describe("DetailPanelLocation in a vault's Gallery", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('shows the place but offers neither the map nor a new location', async () => {
+    vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+    mockPage.reset('https://gallery.test/photos/asset-1');
+
+    renderWithTooltips(DetailPanelLocation, { asset: buildAsset(BERLIN), isOwner: true, canFilter: true });
+
+    expect(await screen.findByText('Berlin')).toBeInTheDocument();
+    expect(screen.queryByLabelText('view_in_map')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('edit_location')).not.toBeInTheDocument();
+  });
+
+  it('offers no location to a photo without one', () => {
+    vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+    mockPage.reset('https://gallery.test/photos/asset-1');
+
+    renderWithTooltips(DetailPanelLocation, { asset: buildAsset({}), isOwner: true, canFilter: true });
+
+    expect(screen.queryByTestId('detail-panel-location')).not.toBeInTheDocument();
   });
 });

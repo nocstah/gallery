@@ -45,6 +45,20 @@ describe('special albums offered to the account signed in', () => {
     expect(villaManager.isAlbum('villa-of-theirs')).toBe(false);
   });
 
+  it("offers none of them in a vault's Gallery, To do included, and asks Gallery nothing about them", async () => {
+    vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
+    sdkMock.getAllAlbums.mockClear();
+    try {
+      expect(offeredSpecialAlbums()).toEqual([]);
+      await todoManager.lookUp();
+      await expect(todoManager.move([{ id: 'photo', visibility: AssetVisibility.Timeline }])).resolves.toBeUndefined();
+      expect(sdkMock.getAllAlbums).not.toHaveBeenCalled();
+      expect(sdkMock.addAssetsToAlbum).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('moves nothing into Villa for a family account', async () => {
     auth.authManager.user.isAdmin = false;
 

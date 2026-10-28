@@ -1,5 +1,6 @@
 import { createSession, type SessionCreateResponseDto } from '@immich/sdk';
 import { DateTime, Duration } from 'luxon';
+import { vaultEdition } from '$lib/gallery/edition';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { GCastDestination } from '$lib/utils/cast/gcast-destination.svelte';
 
@@ -70,6 +71,11 @@ class CastManager {
       return;
     }
     this.initialized = true;
+
+    // Local Omarchy layer: a vault's Gallery casts nothing: its photos stay on this computer (gallery/edition)
+    if (vaultEdition()) {
+      return;
+    }
 
     // try to initialize each cast destination
     for (const castDestination of this.castDestinations) {
