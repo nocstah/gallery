@@ -11,6 +11,8 @@
   import SidebarNavItem from '$lib/components/sidebar/sidebar-nav-item.svelte';
   import Sidebar from '$lib/components/sidebar/sidebar-shell.svelte';
   import { vaultEdition } from '$lib/gallery/edition';
+  import LibrariesNav from '$lib/gallery/libraries/LibrariesNav.svelte';
+  import { libraryHas } from '$lib/gallery/libraries/library-context.svelte';
   import VaultsNav from '$lib/gallery/vaults/VaultsNav.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
@@ -220,8 +222,9 @@
       collapse="manage"
       holds={['/command', '/inbox', '/chat', Route.utilities(), Route.import()]}
     >
-      <!-- Local Omarchy layer: Curator's pages, which a vault's Gallery leaves out (gallery/edition) -->
-      {#if !vaultEdition()}
+      <!-- Local Omarchy layer: Curator's pages, which a vault's Gallery leaves out (gallery/edition), as does a library
+           without a Curator of its own (gallery/libraries) -->
+      {#if !vaultEdition() && libraryHas('curator')}
         <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
         <SidebarNavItem
           title={$t('command_title')}
@@ -269,6 +272,9 @@
       <SidebarNavItem title={$t('trash')} href={Route.trash()} icon={mdiTrashCanOutline} activeIcon={mdiTrashCan} />
     {/if}
   </SidebarNavGroup>
+
+  <!-- Local Omarchy layer: the Libraries switcher, after the Vaults launcher's group (gallery/libraries) -->
+  <LibrariesNav />
 
   {#if collapsed}
     <RailStorage />

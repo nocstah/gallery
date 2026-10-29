@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
 import NavigationBar from '$lib/components/shared-components/navigation-bar/NavigationBar.svelte';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
+import { libraryContextFile, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 
 const mocks = vi.hoisted(() => ({
   sidebarModeStore: {
@@ -340,5 +342,27 @@ describe('NavigationBar search trigger', () => {
     const logoImg = screen.getByTestId('navbar-logo').querySelector('img')!;
     expect(logoImg).toHaveClass('h-10');
     expect(logoImg.className).not.toMatch(/:h-/);
+  });
+});
+
+// Local Omarchy layer: the admin shell's bar names the open library beside the mark, as the one bar does
+// (gallery/libraries)
+describe('NavigationBar library chip', () => {
+  afterEach(() => {
+    resetLibraryContext();
+  });
+
+  it('names a library other than Main right after the mark', async () => {
+    await loadLibraryContext(serving(libraryContextFile(secondLibrary, [secondLibrary])));
+    renderNavigationBar();
+
+    const chip = screen.getByTestId('library-chip');
+    expect(chip).toHaveTextContent('Second');
+    expect(chip.previousElementSibling).toContainElement(screen.getByTestId('navbar-logo'));
+  });
+
+  it('draws no chip without a library context', () => {
+    renderNavigationBar();
+    expect(screen.queryByTestId('library-chip')).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,9 @@
 import { isHttpError, type ApiHttpError } from '@immich/sdk';
-import type { HandleClientError } from '@sveltejs/kit';
+import type { ClientInit, HandleClientError } from '@sveltejs/kit';
+import { loadLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
+
+// Local Omarchy layer: which library this Kioku is, read once before any load runs (gallery/libraries)
+export const init: ClientInit = () => loadLibraryContext();
 
 const DEFAULT_MESSAGE = 'Hmm, not sure about that. Check the logs or open a ticket?';
 

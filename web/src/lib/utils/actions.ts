@@ -2,6 +2,7 @@ import { AssetVisibility, deleteAssets as deleteBulk, restoreAssets, type StackR
 import { toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
+import { libraryNamed } from '$lib/gallery/libraries/library-words';
 import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import { pageKey, undoManager } from '$lib/managers/undo-manager.svelte';
@@ -34,9 +35,12 @@ export const deleteAssets = async (
     onAssetDelete(ids);
     announceCovers(covers, ids);
 
-    const description = force
-      ? $t('assets_permanently_deleted_count', { values: { count: ids.length } })
-      : $t('assets_trashed_count', { values: { count: ids.length } });
+    // Local Omarchy layer: outside Main the toast names the library (gallery/libraries)
+    const description = libraryNamed(
+      force
+        ? $t('assets_permanently_deleted_count', { values: { count: ids.length } })
+        : $t('assets_trashed_count', { values: { count: ids.length } }),
+    );
     // Local Omarchy layer: the undo stays in the bar's undo history once the toast is gone (managers/undo-manager)
     const entry = force
       ? undefined

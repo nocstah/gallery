@@ -21,7 +21,7 @@
     <Icon icon={item.icon} size="1.125em" class={pending ? 'text-danger' : 'text-gray-500 dark:text-gray-400'} />
   </div>
   <div class="min-w-0 flex-1">
-    <div class="truncate text-sm font-medium">{$t(item.labelKey as Translations)}</div>
+    <div class="truncate text-sm font-medium">{$t(item.labelKey as Translations, { values: item.labelValues })}</div>
     {#if pending}
       <div class="truncate text-xs font-medium text-danger">{$t('cmdk_cmd_confirm_hint')}</div>
     {:else}

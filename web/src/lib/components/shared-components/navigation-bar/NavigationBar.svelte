@@ -8,6 +8,7 @@
   import GlobalSearchInputTrigger from '$lib/components/global-search/global-search-input-trigger.svelte';
   import NotificationPanel from '$lib/components/shared-components/navigation-bar/NotificationPanel.svelte';
   import SkipLink from '$lib/elements/SkipLink.svelte';
+  import LibraryChip from '$lib/gallery/libraries/LibraryChip.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
   import { Route } from '$lib/route';
@@ -158,6 +159,8 @@
           <Logo variant={logoVariant} size="small" />
         </span>
       </a>
+      <!-- Local Omarchy layer: the open library, as the one bar shows it (gallery/libraries) -->
+      <LibraryChip />
     </div>
     <div class="flex justify-between gap-4 pe-6 lg:gap-8">
       <!--

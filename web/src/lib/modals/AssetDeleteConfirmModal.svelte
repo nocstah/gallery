@@ -1,5 +1,6 @@
 <script lang="ts">
   import FormatMessage from '$lib/elements/FormatMessage.svelte';
+  import { libraryNamed } from '$lib/gallery/libraries/library-words';
   import { showDeleteModal } from '$lib/stores/preferences.store';
   import { Checkbox, ConfirmModal, Label } from '@immich/ui';
   import { mdiDeleteForeverOutline } from '@mdi/js';
@@ -23,8 +24,9 @@
   };
 </script>
 
+<!-- Local Omarchy layer: outside Main its title names the library (gallery/libraries) -->
 <ConfirmModal
-  title={$t('permanently_delete_assets_count', { values: { count: size } })}
+  title={libraryNamed($t('permanently_delete_assets_count', { values: { count: size } }))}
   confirmText={$t('delete')}
   icon={mdiDeleteForeverOutline}
   {onClose}

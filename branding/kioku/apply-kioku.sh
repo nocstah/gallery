@@ -86,11 +86,12 @@ node "$ENGINE" i18n "$ROOT/i18n"
 
 echo "--- Titles ---"
 # Every tab reads "<page> - Kioku"; a page without a title of its own (the root layout's default, which /maintenance
-# and a few admin pages show) reads "Kioku", once.
+# and a few admin pages show) reads "Kioku", once. Outside Main the library's name follows the page's
+# (web/src/lib/gallery/libraries): "<page> - <library> - Kioku", and "Kioku - <library>".
 rule web/src/routes/+layout.svelte 1 <<'RULE'
-<title>{page.data.meta?.title || 'Web'} - @NOODLE@</title>
+<title>{libraryTitle(page.data.meta?.title || 'Web')} - @NOODLE@</title>
 =>
-<title>{page.data.meta?.title === '@NAME@' ? '@NAME@' : `${page.data.meta?.title || 'Web'} - @NAME@`}</title>
+<title>{page.data.meta?.title === '@NAME@' ? libraryTitle('@NAME@') : `${libraryTitle(page.data.meta?.title || 'Web')} - @NAME@`}</title>
 RULE
 rule web/src/routes/+layout.ts 1 <<'RULE'
 title: '@UPSTREAM@',

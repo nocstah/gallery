@@ -3,6 +3,7 @@ import { modalManager, toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
+import { libraryNamed } from '$lib/gallery/libraries/library-words';
 import type { CommandContext, SelectionCommandContext } from '$lib/managers/command-context-manager.svelte';
 import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
 import { pageKey, undoManager } from '$lib/managers/undo-manager.svelte';
@@ -181,9 +182,12 @@ export async function handleDeleteSelected(ctx?: CommandContext) {
     await deleteBulk({ assetBulkDeleteDto: { ids, force } });
     selection.onDelete(ids);
     announceCovers(covers, ids);
-    const description = force
-      ? $t('assets_permanently_deleted_count', { values: { count: ids.length } })
-      : $t('assets_trashed_count', { values: { count: ids.length } });
+    // Local Omarchy layer: outside Main the toast names the library (gallery/libraries)
+    const description = libraryNamed(
+      force
+        ? $t('assets_permanently_deleted_count', { values: { count: ids.length } })
+        : $t('assets_trashed_count', { values: { count: ids.length } }),
+    );
     // Local Omarchy layer: the undo stays in the bar's undo history once the toast is gone (managers/undo-manager)
     const entry = force
       ? undefined

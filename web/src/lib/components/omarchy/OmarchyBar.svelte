@@ -11,6 +11,7 @@
   import BarUndo from '$lib/components/omarchy/BarUndo.svelte';
   import BarViewMenu from '$lib/components/omarchy/BarViewMenu.svelte';
   import Logo from '$lib/components/shared-components/Logo.svelte';
+  import LibraryChip from '$lib/gallery/libraries/LibraryChip.svelte';
   import AccountInfoPanel from '$lib/components/shared-components/navigation-bar/AccountInfoPanel.svelte';
   import NotificationPanel from '$lib/components/shared-components/navigation-bar/NotificationPanel.svelte';
   import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
@@ -129,6 +130,8 @@
            the top slightly smaller") -->
       <Logo variant={barSlot.content || !isExpandedLayout ? 'icon' : 'inline'} size="tiny" ink />
     </a>
+    <!-- the open library, in the room the column leaves after the mark (gallery/libraries) -->
+    <LibraryChip />
   </div>
 
   <!-- A page's content is drawn here, outside the page, so a page that is being closed can still be asked for its

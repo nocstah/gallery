@@ -51,6 +51,7 @@ import {
   mdiViewDashboardOutline,
 } from '@mdi/js';
 import { vaultEdition } from '$lib/gallery/edition';
+import { leaveOutOfThisLibrary } from '$lib/gallery/libraries/library-gates';
 import { Route } from '$lib/route';
 import { isAlmostExactWordMatch } from './cmdk-match';
 import { qrManager, todoManager, villaManager } from './special-albums.svelte';
@@ -474,8 +475,10 @@ const USER_PAGES: readonly NavigationItem[] = [
   },
 ];
 
-export const NAVIGATION_ITEMS: readonly NavigationItem[] = [...SYSTEM_SETTINGS, ...ADMIN_PAGES, ...USER_PAGES].filter(
-  (item) => item.inVaults !== false || !vaultEdition(),
+// Local Omarchy layer: a vault's Gallery leaves out the pages marked `inVaults: false` (gallery/edition), and a library
+// the pages it does not offer, once it is known (gallery/libraries)
+export const NAVIGATION_ITEMS: readonly NavigationItem[] = leaveOutOfThisLibrary(
+  [...SYSTEM_SETTINGS, ...ADMIN_PAGES, ...USER_PAGES].filter((item) => item.inVaults !== false || !vaultEdition()),
 );
 
 const MIN_MATCH_LENGTH = 3;

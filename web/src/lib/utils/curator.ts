@@ -3,6 +3,7 @@ import type { AdjustSettings } from '$lib/components/curator/adjust-math';
 import type { FilmPlan } from '$lib/components/memories/film/film-plan';
 import type { MemoryPresentation } from '$lib/components/memories/memory-sharing';
 import { vaultEdition } from '$lib/gallery/edition';
+import { libraryHas } from '$lib/gallery/libraries/library-context.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-stacks';
 
@@ -17,9 +18,11 @@ import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-sta
  * this server's one admin, so the admin flag says it without asking Curator. Every Curator tool outside the owner's
  * own pages asks this first: a family member's account is offered none of them, and nothing asks Curator anything for
  * it. Read in a template, a $derived or an effect, it follows a sign-out and the next sign-in in the same tab. A vault's
- * Gallery (gallery/edition's vault edition) has no Curator, so there it is nobody's.
+ * Gallery (gallery/edition's vault edition) has no Curator, so there it is nobody's, nor in a library without a Curator
+ * of its own (gallery/libraries), where this host's Curator is Main's.
  */
-export const curatorIsMine = (): boolean => !vaultEdition() && authManager.authenticated && authManager.user.isAdmin;
+export const curatorIsMine = (): boolean =>
+  !vaultEdition() && libraryHas('curator') && authManager.authenticated && authManager.user.isAdmin;
 
 export type SuggestionStatus = 'pending' | 'rejected' | 'applied' | 'failed' | 'undone' | 'superseded';
 
@@ -499,10 +502,14 @@ export class CuratorError extends Error {
 // HTTPS access uses the same origin for API calls, streams and downloads. The local Curator listener is HTTP;
 // guessing https://host:2290 breaks those features when Gallery is reached through Tailscale Serve. A vault's Gallery
 // has no Curator address at all, so nothing it builds can reach one: each call fails, before any request, as calls
-// fail while Curator is not answering.
+// fail while Curator is not answering. Neither has a library without a Curator of its own (gallery/libraries): port
+// 2290 on this host is Main's Curator, so there the address is never made.
 const origin = () => {
   if (vaultEdition()) {
     throw new CuratorError('Curator is not part of a vault', 0);
+  }
+  if (!libraryHas('curator')) {
+    throw new CuratorError('Curator is not part of this library', 0);
   }
   return location.protocol === 'https:'
     ? `${location.origin}/curator`

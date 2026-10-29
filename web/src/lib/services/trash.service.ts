@@ -2,6 +2,7 @@ import { emptyTrash, restoreTrash } from '@immich/sdk';
 import { modalManager, toastManager, type ActionItem } from '@immich/ui';
 import { mdiDeleteForeverOutline, mdiHistory } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
+import { libraryNamed } from '$lib/gallery/libraries/library-words';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
 
@@ -26,7 +27,8 @@ export const getTrashActions = ($t: MessageFormatter, assetCount: number) => {
 const handleEmptyTrash = async () => {
   const $t = await getFormatter();
 
-  const confirmed = await modalManager.showDialog({ prompt: $t('empty_trash_confirmation') });
+  // Local Omarchy layer: outside Main the question names the library (gallery/libraries)
+  const confirmed = await modalManager.showDialog({ prompt: libraryNamed($t('empty_trash_confirmation')) });
   if (!confirmed) {
     return;
   }

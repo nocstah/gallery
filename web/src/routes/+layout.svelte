@@ -7,6 +7,7 @@
   import OnEvents from '$lib/components/OnEvents.svelte';
   import OpenInAppBanner from '$lib/components/shared-components/open-in-app-banner.svelte';
   import { markEdition } from '$lib/gallery/edition';
+  import { libraryTitle } from '$lib/gallery/libraries/library-words';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { closePaletteOnNavigate } from '$lib/managers/close-palette-on-navigate';
   import { eventManager } from '$lib/managers/event-manager.svelte';
@@ -277,7 +278,7 @@
 <VersionAnnouncement />
 
 <svelte:head>
-  <title>{page.data.meta?.title || 'Web'} - Immich</title>
+  <title>{libraryTitle(page.data.meta?.title || 'Web')} - Immich</title>
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
   <meta name="theme-color" content="white" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="black" media="(prefers-color-scheme: dark)" />

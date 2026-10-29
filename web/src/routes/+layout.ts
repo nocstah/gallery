@@ -1,6 +1,7 @@
 import { commandPaletteManager } from '@immich/ui';
 import { goto } from '$app/navigation';
 import { notInVaults } from '$lib/gallery/edition';
+import { notInThisLibrary } from '$lib/gallery/libraries/library-gates';
 import { languageManager } from '$lib/managers/language-manager.svelte';
 import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
 import { maintenanceCreateUrl, maintenanceReturnUrl, maintenanceShouldRedirect } from '$lib/utils/maintenance';
@@ -12,6 +13,7 @@ export const csr = true;
 
 export const load = (async ({ fetch, url }) => {
   notInVaults(url); // Local Omarchy layer: a vault's Gallery sends each page it leaves out to Photos (gallery/edition)
+  await notInThisLibrary(url, fetch); // Local Omarchy layer: as a library does those it lacks (gallery/libraries)
   let error;
   try {
     await init(fetch);

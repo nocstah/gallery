@@ -6,9 +6,11 @@ import {
   updateAssets,
 } from '@immich/sdk';
 import { modalManager, toastManager } from '@immich/ui';
+import { addMessages, locale } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.svelte';
@@ -16,6 +18,7 @@ import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte'
 import { showDeleteModal } from '$lib/stores/preferences.store';
 import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
 import * as handleErrorModule from '$lib/utils/handle-error';
+import { libraryContextFile, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 import type { CommandContext, SelectionCommandContext } from './command-context-manager.svelte';
 import {
   canAddSelectedToAlbum,
@@ -509,6 +512,22 @@ describe('delete selected', () => {
       { timeout: 5000 },
     );
     expect(selection.clearSelection).toHaveBeenCalledOnce();
+  });
+
+  // Local Omarchy layer: outside Main the toast after a move to the trash names the library (gallery/libraries)
+  it('names the library in its toast outside Main', async () => {
+    addMessages(get(locale) ?? 'dev', { libraries_named: '{library}: {text}' });
+    await loadLibraryContext(serving(libraryContextFile(secondLibrary, [secondLibrary])));
+    try {
+      await handleDeleteSelected(makeCtx(makeSelection()));
+
+      expect(toastManager.primary).toHaveBeenCalledWith(
+        expect.objectContaining({ description: 'Second: assets_trashed_count' }),
+        { timeout: 5000 },
+      );
+    } finally {
+      resetLibraryContext();
+    }
   });
 
   it('undo button restores deleted assets and then calls onUndoDelete with the original asset refs', async () => {

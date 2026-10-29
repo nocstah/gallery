@@ -43,6 +43,7 @@ import {
 import { t, type Translations } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { vaultEdition } from '$lib/gallery/edition';
+import { libraryHas } from '$lib/gallery/libraries/library-context.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { undoManager } from '$lib/managers/undo-manager.svelte';
@@ -202,10 +203,14 @@ export class SpecialAlbumManager {
    * everyone's; Villa and QR are the owner's own workflows, the server's admin's. A family account is offered neither,
    * its keys don't move photos there, and an album of its own that happens to bear the name is just an album. A vault's
    * Gallery (gallery/edition's vault edition) offers none of the three, to anyone ("no need for QR or Villa or those
-   * special albums in the vaults").
+   * special albums in the vaults"), and neither does a library whose context leaves them out (gallery/libraries).
    */
   get offered() {
-    return !vaultEdition() && (!this.ownerOnly || (authManager.authenticated && authManager.user.isAdmin));
+    return (
+      !vaultEdition() &&
+      libraryHas('specialAlbums') &&
+      (!this.ownerOnly || (authManager.authenticated && authManager.user.isAdmin))
+    );
   }
 
   get route() {

@@ -578,7 +578,7 @@ export class GlobalSearchManager {
     const translate = get(t);
     const table = new SvelteMap<string, string>();
     for (const item of COMMAND_ITEMS) {
-      const label = translate(item.labelKey as Translations);
+      const label = translate(item.labelKey as Translations, { values: item.labelValues });
       const description = translate(item.descriptionKey as Translations);
       table.set(item.id, `${label} ${description}`);
     }
@@ -2499,7 +2499,7 @@ export class GlobalSearchManager {
           continue;
         }
       }
-      const label = translate(item.labelKey as Translations);
+      const label = translate(item.labelKey as Translations, { values: item.labelValues });
       if (!isAlmostExactCommandMatch(q, label)) {
         continue;
       }

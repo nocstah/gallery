@@ -47,6 +47,7 @@ import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
 import { ADMIN_VISIBLE_QUEUES } from '$lib/constants';
 import { vaultEdition } from '$lib/gallery/edition';
+import { addLibraryCommands } from '$lib/gallery/libraries/switcher';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { isAlmostExactWordMatch } from '$lib/managers/cmdk-match';
 import type { CommandContext } from '$lib/managers/command-context-manager.svelte';
@@ -101,6 +102,8 @@ export interface CommandItem {
   destructive?: boolean;
   /** Local Omarchy layer: false leaves the command out of a vault's Gallery (gallery/edition): Spaces, sharing */
   inVaults?: false;
+  /** Local Omarchy layer: what the label's placeholders say (Switch to {name}: gallery/libraries) */
+  labelValues?: Record<string, string>;
 }
 
 async function runQueue(name: QueueName) {
@@ -566,9 +569,10 @@ const ALL_COMMAND_ITEMS: readonly CommandItem[] = [
   },
 ];
 
-// Local Omarchy layer: a vault's Gallery leaves out the commands marked `inVaults: false` (gallery/edition)
-export const COMMAND_ITEMS: readonly CommandItem[] = ALL_COMMAND_ITEMS.filter(
-  (item) => item.inVaults !== false || !vaultEdition(),
+// Local Omarchy layer: a vault's Gallery leaves out the commands marked `inVaults: false` (gallery/edition), and Switch to
+// <library> joins them for each other library once the library is known (gallery/libraries)
+export const COMMAND_ITEMS: readonly CommandItem[] = addLibraryCommands(
+  ALL_COMMAND_ITEMS.filter((item) => item.inVaults !== false || !vaultEdition()),
 );
 
 export function isAlmostExactCommandMatch(query: string, label: string): boolean {

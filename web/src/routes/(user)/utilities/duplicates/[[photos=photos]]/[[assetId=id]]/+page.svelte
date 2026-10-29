@@ -5,6 +5,7 @@
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import LinkToDocs from './LinkToDocs.svelte';
   import DuplicatesCompareControl from './DuplicatesCompareControl.svelte';
+  import { libraryNamed } from '$lib/gallery/libraries/library-words';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { languageManager } from '$lib/managers/language-manager.svelte';
@@ -74,7 +75,8 @@
   let hasDuplicates = $derived(duplicates.length > 0);
   const withConfirmation = async (callback: () => Promise<void>, prompt?: string, confirmText?: string) => {
     if (prompt && confirmText) {
-      const isConfirmed = await modalManager.showDialog({ prompt, confirmText });
+      // Local Omarchy layer: outside Main the question, and the toast after it, name the library (gallery/libraries)
+      const isConfirmed = await modalManager.showDialog({ prompt: libraryNamed(prompt), confirmText });
       if (!isConfirmed) {
         return;
       }
@@ -95,7 +97,7 @@
     const message = featureFlagsManager.value.trash
       ? $t('assets_moved_to_trash_count', { values: { count: trashedCount } })
       : $t('permanently_deleted_assets_count', { values: { count: trashedCount } });
-    toastManager.primary(message);
+    toastManager.primary(libraryNamed(message));
   };
 
   const handleResolve = async (duplicateId: string, duplicateAssetIds: string[], trashIds: string[]) => {

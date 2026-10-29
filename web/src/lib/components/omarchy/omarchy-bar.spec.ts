@@ -4,7 +4,9 @@ import type { Component } from 'svelte';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import TestWrapper from '$lib/components/TestWrapper.svelte';
 import OmarchyBar from '$lib/components/omarchy/OmarchyBar.svelte';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { setDefaultTabbleOptions } from '$lib/utils/focus-util';
+import { libraryContextFile, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 
 // Local Omarchy layer: on a phone the one bar's bell moves into the account menu (a row with what is unread, a dot on
 // the avatar while something is); a wider bar keeps the bell.
@@ -178,5 +180,27 @@ describe('OmarchyBar skip link', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'skip_to_content' }));
 
     expect(screen.getByRole('button', { name: 'New album' })).toHaveFocus();
+  });
+});
+
+// Local Omarchy layer: the open library's name beside the mark, once Kioku lists another library (gallery/libraries)
+describe('OmarchyBar library chip', () => {
+  afterEach(() => {
+    resetLibraryContext();
+  });
+
+  it('names the open library right after the mark, in the first column', async () => {
+    await loadLibraryContext(serving(libraryContextFile(secondLibrary)));
+    renderBar();
+
+    const chip = screen.getByTestId('library-chip');
+    expect(chip).toHaveTextContent('Second');
+    expect(chip.parentElement).toHaveClass('ws-bar-start');
+    expect(chip.previousElementSibling).toHaveClass('ws-bar-mark');
+  });
+
+  it('draws no chip without a library context', () => {
+    renderBar();
+    expect(screen.queryByTestId('library-chip')).not.toBeInTheDocument();
   });
 });

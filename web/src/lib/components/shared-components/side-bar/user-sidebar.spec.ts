@@ -1,7 +1,9 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import UserSidebar from '$lib/components/shared-components/side-bar/UserSidebar.svelte';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { sidebarRowsHidden } from '$lib/stores/sidebar-rows';
+import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 
 const mockPage = vi.hoisted(() => ({ url: new URL('https://gallery.test/photos') }));
 vi.mock('$app/state', () => ({ page: mockPage }));
@@ -100,7 +102,15 @@ vi.mock('$lib/managers/special-albums.svelte', async (importOriginal) => ({
 const rowMenuMocks = vi.hoisted(() => ({ showSidebarRowMenu: vi.fn() }));
 vi.mock('$lib/utils/sidebar-row-menu', () => ({ showSidebarRowMenu: rowMenuMocks.showSidebarRowMenu }));
 
+// Local Omarchy layer: a second library, which has no Curator, special albums or Vaults launcher of its own
+// (gallery/libraries)
+const inSecondLibrary = () => loadLibraryContext(serving(libraryContextFile(secondLibrary)));
+
 describe('UserSidebar', () => {
+  afterEach(() => {
+    resetLibraryContext();
+  });
+
   beforeEach(() => {
     mocks.authManager.user.isAdmin = true;
     mocks.authManager.preferences.memories.enabled = true;
@@ -218,6 +228,19 @@ describe('UserSidebar', () => {
       }
     });
 
+    it("leaves Curator's pages and the special albums out of a library without them, and keeps Utilities", async () => {
+      await inSecondLibrary();
+
+      render(UserSidebar);
+
+      for (const href of ['/command', '/inbox', '/chat', '/todo', '/villa', '/qr']) {
+        expect(link(href), href).not.toBeInTheDocument();
+      }
+      for (const href of ['/utilities', '/import', '/archive']) {
+        expect(link(href), href).toBeInTheDocument();
+      }
+    });
+
     it('shows the command center, AI inbox, chat, Utilities and Import to the owner', () => {
       render(UserSidebar);
 
@@ -251,6 +274,7 @@ describe('UserSidebar', () => {
       'library',
       'sidebar_manage',
       'sidebar_hidden_deleted',
+      'sidebar_libraries',
     ]);
     const outline = () =>
       [...document.body.querySelectorAll('a, div')]
@@ -283,6 +307,24 @@ describe('UserSidebar', () => {
       }
       expect(groupOf(rows, '/archive')).toBe('# sidebar_hidden_deleted');
       expect(groupOf(rows, '/locked')).toBe('# sidebar_hidden_deleted');
+    });
+
+    it('heads the libraries last, after the bins and the Vaults launcher, on this desktop', async () => {
+      const agent = vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (X11; Linux x86_64)');
+      try {
+        mockPage.url = new URL('/photos', secondLibrary.url);
+        await inSecondLibrary();
+        render(UserSidebar);
+        await screen.findByRole('link', { name: 'Main' });
+
+        const rows = outline();
+        expect(rows.findLast((row) => row?.startsWith('# '))).toBe('# sidebar_libraries');
+        expect(groupOf(rows, '/archive')).toBe('# sidebar_hidden_deleted');
+        expect(groupOf(rows, mainLibrary.url)).toBe('# sidebar_libraries');
+        expect(groupOf(rows, '/photos')).toBe('# sidebar_browse');
+      } finally {
+        agent.mockRestore();
+      }
     });
 
     it("gives a family account no Manage group, as it has none of the owner's tools", () => {

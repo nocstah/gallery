@@ -19,6 +19,7 @@ import {
   mdiUploadMultiple,
 } from '@mdi/js';
 import { type MessageFormatter } from 'svelte-i18n';
+import { libraryNamed } from '$lib/gallery/libraries/library-words';
 import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
@@ -121,7 +122,7 @@ const handleKeepThisDeleteOthers = async (stack: StackResponseDto, asset: AssetR
   const $t = await getFormatter();
 
   const isConfirmed = await modalManager.showDialog({
-    title: $t('keep_this_delete_others'),
+    title: libraryNamed($t('keep_this_delete_others')), // Local Omarchy layer: outside Main, named (gallery/libraries)
     prompt: $t('confirm_keep_this_delete_others'),
     confirmText: $t('delete_others'),
   });

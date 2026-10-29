@@ -23,7 +23,9 @@ A second run changes nothing.
 
 - **The tabs.** Every page is `<page> - Kioku` (Room is `Room - Kioku`); a page without a title of its own, which
   the root layout's default covers (`/maintenance`, a few admin pages), is `Kioku` once, where it was
-  `Immich - Noodle Gallery`. The error pages, a shared link's page and its ended page say Kioku too.
+  `Immich - Noodle Gallery`. The error pages, a shared link's page and its ended page say Kioku too. A library other
+  than Main names itself after the page (`Photos - <library> - Kioku`, and `Kioku - <library>`), from its
+  `kioku-library.json` (`web/src/lib/gallery/libraries`).
 - **The inspector's window** is titled `Kioku inspector` while it loads and `Kioku inspector - Kioku` once the page
   has drawn: a window rule matches the start, `Kioku inspector`.
 - **The installed app** (`manifest.json`): Kioku, short name Kioku, "The family's photos and videos", a white splash.
