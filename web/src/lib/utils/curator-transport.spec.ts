@@ -140,6 +140,15 @@ describe("Curator's port, from the library's file", () => {
     expect(files()).toEqual(filesAt(`${address}/curator`));
   });
 
+  it("makes no address in a library besides Main whose file turns Curator on but names no port: 2290 is Main's", async () => {
+    await loadLibraryContext(serving(secondWithCurator()));
+    const fetchMock = at(secondLibrary.url);
+
+    await expect(curator.health()).rejects.toMatchObject({ status: 0 });
+    expect(() => musicUrl('/api/music/a')).toThrow(CuratorError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('makes no address at all where the file turns Curator off, though it names a port', async () => {
     await loadLibraryContext(serving({ ...libraryContextFile(secondLibrary), curatorPort: 2291 }));
     const fetchMock = at(secondLibrary.url);

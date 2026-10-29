@@ -3,7 +3,7 @@ import type { AdjustSettings } from '$lib/components/curator/adjust-math';
 import type { FilmPlan } from '$lib/components/memories/film/film-plan';
 import type { MemoryPresentation } from '$lib/components/memories/memory-sharing';
 import { vaultEdition } from '$lib/gallery/edition';
-import { libraryCuratorPort, libraryHas } from '$lib/gallery/libraries/library-context.svelte';
+import { isMainLibrary, libraryCuratorPort, libraryHas } from '$lib/gallery/libraries/library-context.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-stacks';
 
@@ -513,13 +513,17 @@ export const curatorPort = (): number => libraryCuratorPort() ?? CURATOR_PORT;
 // has no Curator address at all, so nothing it builds can reach one: each call fails, before any request, as calls
 // fail while Curator is not answering. Neither has a library without a Curator of its own (gallery/libraries): port
 // 2290 on this host is Main's Curator, so there the address is never made, whatever port its file names. A library
-// with a Curator of its own reaches it over HTTP on the port its file names (curatorPort), over HTTPS at /curator.
+// with a Curator of its own reaches it over HTTP on the port its file names (curatorPort), over HTTPS at /curator;
+// one whose file turns Curator on but names no port has no address either, as 2290 would be Main's.
 const origin = () => {
   if (vaultEdition()) {
     throw new CuratorError('Curator is not part of a vault', 0);
   }
   if (!libraryHas('curator')) {
     throw new CuratorError('Curator is not part of this library', 0);
+  }
+  if (!isMainLibrary() && libraryCuratorPort() === undefined) {
+    throw new CuratorError("This library's Curator has no address", 0);
   }
   return location.protocol === 'https:'
     ? `${location.origin}/curator`
