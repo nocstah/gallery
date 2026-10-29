@@ -33,6 +33,7 @@ import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import type { FilterState } from '$lib/components/filter-panel/filter-panel';
 import { createFilterState } from '$lib/components/filter-panel/filter-panel';
+import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
 import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
@@ -159,6 +160,9 @@ type SearchBelowTopMatch = { id: 'top-search-below'; query: string; rawQuery: st
 const VALID_MODES: ReadonlySet<SearchMode> = new Set(['smart', 'metadata', 'description', 'ocr', 'ask']);
 // Local Omarchy layer: the palette's modes in its order, Ask last (Curator's owner's only: see `modes`)
 const PALETTE_MODES: readonly SearchMode[] = [...textSearchModes, 'ask'];
+// Local Omarchy layer: Ask puts the question to Curator's local models, for Curator's owner only (utils/curator's
+// curatorIsMine) and where this library's Curator has them (gallery/libraries: chat)
+const asks = () => curatorIsMine() && curatorOffers('chat');
 // Slice size for the albums section. Kept as a named constant so the buildProviders
 // `topN: 5` and the runAlbums slice cannot drift apart silently.
 const ALBUMS_TOP_N = 5;
@@ -341,18 +345,20 @@ export class GlobalSearchManager {
   #mode = $state<SearchMode>(loadSearchQueryType());
   /**
    * Local Omarchy layer: Ask puts the question to Curator, which works for its owner only (utils/curator's
-   * curatorIsMine). For any other account an Ask left in this browser reads as a smart search, so its palette never
-   * asks Curator, warms its model or opens the answer page.
+   * curatorIsMine), and only where this library's Curator has its local models (`asks`). For any other account, and in
+   * any other library, an Ask left in this browser reads as a smart search, so its palette never asks Curator, warms
+   * its model or opens the answer page.
    */
   get mode(): SearchMode {
-    return this.#mode === 'ask' && !curatorIsMine() ? 'smart' : this.#mode;
+    return this.#mode === 'ask' && !asks() ? 'smart' : this.#mode;
   }
   set mode(mode: SearchMode) {
     this.#mode = mode;
   }
-  /** Local Omarchy layer: the modes the palette offers and Ctrl+/ steps through; Ask only for Curator's owner. */
+  /** Local Omarchy layer: the modes the palette offers and Ctrl+/ steps through; Ask only where it is Curator's owner's
+   * (`asks`). */
   get modes(): readonly SearchMode[] {
-    return curatorIsMine() ? PALETTE_MODES : textSearchModes;
+    return asks() ? PALETTE_MODES : textSearchModes;
   }
   parsedQuery = $derived<ParsedQuery>(parseScope(this.query));
   scope = $derived<Scope>(this.parsedQuery.scope);

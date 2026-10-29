@@ -17,6 +17,8 @@
   import StackPick from '$lib/components/curator/StackPick.svelte';
   import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import RemoveObjects from '$lib/components/curator/RemoveObjects.svelte';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
+  import type { CuratorFeature } from '$lib/gallery/libraries/library-file';
   import { curatorIsMine } from '$lib/utils/curator';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import { AssetAction, ProjectionType } from '$lib/constants';
@@ -131,15 +133,23 @@
   let previewStackedAsset: AssetResponseDto | undefined = $state();
   let stack: StackResponseDto | undefined = $state();
   const asset = $derived(previewStackedAsset ?? cursor.current);
-  // Local Omarchy layer: Curator's tools and cards open only for Curator's owner (utils/curator's curatorIsMine). The
-  // bar offers them to no one else; this keeps one that the owner's session left open shut for the next account
+  // Local Omarchy layer: Curator's tools and cards open only for Curator's owner (utils/curator's curatorIsMine), each
+  // where this library's Curator offers what it is for (gallery/libraries). The bar offers them to no one else; this
+  // keeps one that the owner's session left open shut for the next account
   const curatorTools = $derived(curatorIsMine());
+  const curatorTool = (feature: CuratorFeature) => curatorTools && curatorOffers(feature);
   // Local Omarchy layer: Curator's object-removal brush replaces the photo viewer and its controls while it is open
-  const brushing = $derived(curatorTools && removeObjects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
+  const brushing = $derived(
+    curatorTool('restore') && removeObjects.assetId === asset.id && asset.type === AssetTypeEnum.Image,
+  );
   // Local Omarchy layer: Curator's effects panel (Live Photo effects, cinematic), which holds the viewer like the brush
-  const livening = $derived(curatorTools && liveEffects.assetId === asset.id && asset.type === AssetTypeEnum.Image);
+  const livening = $derived(
+    curatorTool('live') && liveEffects.assetId === asset.id && asset.type === AssetTypeEnum.Image,
+  );
   // Local Omarchy layer: Curator's Adjust panel (light, colour, filters, straighten), which holds the viewer the same way
-  const adjusting = $derived(curatorTools && adjustPhoto.assetId === asset.id && asset.type === AssetTypeEnum.Image);
+  const adjusting = $derived(
+    curatorTool('live') && adjustPhoto.assetId === asset.id && asset.type === AssetTypeEnum.Image,
+  );
   const inCuratorTool = $derived(brushing || livening || adjusting);
   const ownStack = $derived(authManager.authenticated && asset.ownerId === authManager.user.id);
   const nextAsset = $derived(cursor.nextAsset);
@@ -778,7 +788,7 @@
     {/if}
 
     <!-- Local Omarchy layer: Curator's "Pick the best" for the stack in view -->
-    {#if curatorTools && stack && stackPick.stackId === stack.id && !inCuratorTool && $slideshowState === SlideshowState.None}
+    {#if curatorTool('picks') && stack && stackPick.stackId === stack.id && !inCuratorTool && $slideshowState === SlideshowState.None}
       {@const pickedStack = stack}
       <StackPick
         stackId={pickedStack.id}
@@ -791,7 +801,7 @@
           }
         }}
       />
-    {:else if curatorTools && lookUp.on && asset.type === AssetTypeEnum.Image && !inCuratorTool && $slideshowState === SlideshowState.None}
+    {:else if curatorTool('chat') && lookUp.on && asset.type === AssetTypeEnum.Image && !inCuratorTool && $slideshowState === SlideshowState.None}
       <LookUpCard assetId={asset.id} onClose={() => (lookUp.on = false)} />
     {/if}
 
@@ -835,7 +845,7 @@
     <div id="stack-slideshow" class="absolute bottom-0 col-span-4 col-start-1 w-fit max-w-full" data-viewer-chrome>
       <div class="no-wrap horizontal-scrollbar relative flex flex-row overflow-x-auto overflow-y-hidden">
         <!-- Local Omarchy layer: ask Curator for the stack's best photo -->
-        {#if ownStack && lookUp.available}
+        {#if ownStack && lookUp.answers('picks')}
           <div class="flex items-center px-1 pb-2">
             <button
               type="button"

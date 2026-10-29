@@ -13,6 +13,7 @@ import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
 import SavedFrameToast from '$lib/components/curator/SavedFrameToast.svelte';
+import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
 import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { specialAlbumOf, type SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
@@ -52,14 +53,16 @@ class SaveFrameState {
   #available = $state(false);
   #checked = false;
 
-  /** Curator saves frames, and works for whoever is signed in (curatorIsMine): the button and Shift+S go by this */
+  /** Curator saves frames, and works for whoever is signed in (curatorIsMine) where this library's Curator has its
+   * live tools (gallery/libraries): the button and Shift+S go by this */
   get available() {
-    return this.#available && curatorIsMine();
+    return this.#available && curatorIsMine() && curatorOffers('live');
   }
 
-  /** Ask Curator once whether it saves frames (an older one does not, and the button stays away); only its owner asks. */
+  /** Ask Curator once whether it saves frames (an older one does not, and the button stays away); only its owner asks,
+   * and only where this library's Curator has its live tools. */
   check() {
-    if (this.#checked || !curatorIsMine()) {
+    if (this.#checked || !curatorIsMine() || !curatorOffers('live')) {
       return;
     }
     this.#checked = true;

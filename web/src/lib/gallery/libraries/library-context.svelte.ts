@@ -3,6 +3,7 @@ import {
   LIBRARY_CONTEXT_URL,
   MalformedLibraryContext,
   parseLibraryContext,
+  type CuratorFeature,
   type Library,
   type LibraryContext,
   type LibraryFeature,
@@ -12,10 +13,10 @@ import {
 // Local Omarchy layer: which Kioku library this page belongs to, and what it offers. Each library is a Gallery of its
 // own (its own database, storage, address and sign-in) serving the same full-edition build, and the deploy writes a
 // small static file into each library's web root that says which library it is, what it offers (and the port of a
-// Curator of its own), and every library for the switcher. It is read once, before anything else runs (hooks.client's
-// init, then the root layout's load waits for it), so nothing asks a service before Kioku knows which library it is
-// in. A missing file, or one that fails to load or to parse, means one library with every feature, exactly as before
-// there was a second one. A vault's Gallery (the vault edition) never reads one.
+// Curator of its own, and what that Curator offers), and every library for the switcher. It is read once, before
+// anything else runs (hooks.client's init, then the root layout's load waits for it), so nothing asks a service before
+// Kioku knows which library it is in. A missing file, or one that fails to load or to parse, means one library with
+// every feature, exactly as before there was a second one. A vault's Gallery (the vault edition) never reads one.
 
 let context = $state.raw<LibraryContext | undefined>();
 let loading: Promise<void> | undefined;
@@ -106,6 +107,14 @@ export const libraryHas = (feature: LibraryFeature): boolean => context?.feature
  * Main's 2290). It counts only where the library has a Curator (libraryHas), which utils/curator asks first.
  */
 export const libraryCuratorPort = (): number | undefined => context?.curatorPort;
+
+/**
+ * Whether this library's Curator offers a feature (library-file's CuratorFeature): none without a Curator of its own,
+ * every one where its context lists none (Main, and without a context), else the ones it lists. Every page, row,
+ * command and tool that asks Curator for one asks this first, as utils/curator does before any request.
+ */
+export const curatorOffers = (feature: CuratorFeature): boolean =>
+  libraryHas('curator') && (context?.curatorFeatures?.includes(feature) ?? true);
 
 /** Every library the context lists, this one included. */
 export const libraries = (): readonly Library[] => context?.libraries ?? [];

@@ -22,6 +22,7 @@
   import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
   import { memoryLaneTitle } from '$lib/utils';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import { curator, curatorIsMine, type MemoryTrack, type Story } from '$lib/utils/curator';
   import { formatMemoryTime, memoryFilmWords, type MemoryFilmWords } from '$lib/utils/memory-title';
   import {
@@ -202,14 +203,17 @@
   const goNext = () => step(1);
   const goPrevious = () => step(-1);
 
-  // ---- what Curator knows: a memory's facts, story and songs, an album's story (its owner only) ----
+  // ---- what Curator knows: a memory's facts, story and songs, an album's story (its owner only, where this library's
+  // Curator has its memories: gallery/libraries) ----
+
+  const toldByCurator = $derived(curatorIsMine() && curatorOffers('memories'));
 
   const stories = new SvelteMap<string, Story | null>();
   const songs = new SvelteMap<string, MemoryTrack[]>();
   const asked = new SvelteSet<string>();
 
   const askCurator = (target: RoomReel) => {
-    if (!curatorIsMine() || asked.has(target.key) || target.kind === 'year') {
+    if (!toldByCurator || asked.has(target.key) || target.kind === 'year') {
       return;
     }
     asked.add(target.key);
@@ -238,7 +242,7 @@
   const settledOf = (target: RoomReel) =>
     openings.has(target.key) &&
     (target.kind !== 'memory' ||
-      !curatorIsMine() ||
+      !toldByCurator ||
       (memoryFacts.settled(target.memory.id) && songs.has(target.key) && stories.has(target.key)));
 
   // ---- the opening: the picture under the title card, by the gate before the TV (room-opening.ts) ----
@@ -273,7 +277,7 @@
             .then(({ assets: found }) => new Set(found.items.map(({ id }) => id)))
             // without it, the favourites and Live Photos still pass the gate
             .catch(() => new Set<string>());
-    if (target.kind === 'memory' && curatorIsMine()) {
+    if (target.kind === 'memory' && toldByCurator) {
       let patience: ReturnType<typeof setTimeout> | undefined;
       await Promise.race([
         memoryFacts.settle([target.memory.id]),
@@ -700,7 +704,8 @@
             <h1 class="room-title">{$t('room_year_empty_title', { values: { year: String(request.year) } })}</h1>
           {:else}
             <h1 class="room-title">{$t('room_empty_title')}</h1>
-            <p class="room-body">{curatorIsMine() ? $t('room_empty_body') : $t('room_empty_body_family')}</p>
+            <!-- the albums Curator keeps for the TV are its memories' (gallery/libraries), accepted in the AI inbox -->
+            <p class="room-body">{toldByCurator ? $t('room_empty_body') : $t('room_empty_body_family')}</p>
           {/if}
           <div class="room-choices" use:focusFirst>
             {#if status === 'error'}
@@ -714,7 +719,7 @@
                 <Icon icon={mdiPlay} size="1.5rem" aria-hidden />
                 <span>{$t('room_play_year_short', { values: { year: lastYear } })}</span>
               </a>
-              {#if curatorIsMine()}
+              {#if toldByCurator && curatorOffers('inbox')}
                 <a class="room-choice" href="/inbox">{$t('room_empty_inbox')}</a>
               {/if}
             {/if}

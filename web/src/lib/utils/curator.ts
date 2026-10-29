@@ -3,7 +3,13 @@ import type { AdjustSettings } from '$lib/components/curator/adjust-math';
 import type { FilmPlan } from '$lib/components/memories/film/film-plan';
 import type { MemoryPresentation } from '$lib/components/memories/memory-sharing';
 import { vaultEdition } from '$lib/gallery/edition';
-import { isMainLibrary, libraryCuratorPort, libraryHas } from '$lib/gallery/libraries/library-context.svelte';
+import {
+  curatorOffers,
+  isMainLibrary,
+  libraryCuratorPort,
+  libraryHas,
+} from '$lib/gallery/libraries/library-context.svelte';
+import type { CuratorFeature } from '$lib/gallery/libraries/library-file';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-stacks';
 
@@ -19,7 +25,8 @@ import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-sta
  * own pages asks this first: a family member's account is offered none of them, and nothing asks Curator anything for
  * it. Read in a template, a $derived or an effect, it follows a sign-out and the next sign-in in the same tab. A vault's
  * Gallery (gallery/edition's vault edition) has no Curator, so there it is nobody's, nor in a library without a Curator
- * of its own (gallery/libraries), where this host's Curator is Main's.
+ * of its own (gallery/libraries), where this host's Curator is Main's. A tool then asks gallery/libraries' curatorOffers
+ * whether this library's Curator offers what it is for (a library's Curator may run only some of Main's jobs).
  */
 export const curatorIsMine = (): boolean =>
   !vaultEdition() && libraryHas('curator') && authManager.authenticated && authManager.user.isAdmin;
@@ -529,15 +536,60 @@ const origin = () => {
     ? `${location.origin}/curator`
     : `${location.protocol}//${location.hostname}:${curatorPort()}`;
 };
-const base = () => `${origin()}/api`;
+
+// Local Omarchy layer: what each of Curator's endpoints is for, by the first part of its path under /api
+// (gallery/libraries' CuratorFeature). A library whose Curator runs only some of Main's jobs lists what it offers
+// (curatorFeatures), and there an endpoint of anything else gets no address, so no call, song, file or stream of it is
+// ever asked for, whatever asks: it fails before any request, as a call does while Curator is not answering. What is
+// left out here every Curator answers: whether it answers (health), its jobs and their kinds, a suggestion and the
+// decisions on it, a new version's files and a reel (restored, reels), a person's stacks and Duplicates' QR slips.
+const FEATURE_OF: Readonly<Record<string, CuratorFeature>> = {
+  inbox: 'inbox',
+  history: 'inbox',
+  'library-health': 'inbox',
+  labels: 'inbox',
+  overview: 'inbox',
+  schedule: 'inbox',
+  chat: 'chat',
+  chats: 'chat',
+  ask: 'chat',
+  lookup: 'chat',
+  memories: 'memories',
+  music: 'memories',
+  stories: 'memories',
+  films: 'memories',
+  books: 'books',
+  inpaint: 'restore',
+  'live-effect': 'live',
+  adjust: 'live',
+  frame: 'live',
+  subject: 'live',
+  share: 'share',
+  stacks: 'picks',
+  'smart-albums': 'smart',
+  slips: 'slips',
+};
+
+/** Curator's origin for one of its endpoints (`path`, under /api), where this library's Curator offers what it is for. */
+const originFor = (path: string) => {
+  const root = origin();
+  const [, first] = path.split(/[/?]/, 2);
+  const feature = Object.hasOwn(FEATURE_OF, first) ? FEATURE_OF[first] : undefined;
+  if (feature && !curatorOffers(feature)) {
+    throw new CuratorError(`This library's Curator does not offer ${feature}`, 0);
+  }
+  return root;
+};
+/** The address of one of Curator's endpoints: `path` under its /api. */
+const api = (path: string) => `${originFor(path)}/api${path}`;
 
 /** A song Curator serves (a MemoryTrack's `src`, a path on its origin), for an <audio> element: no crossorigin, so the
  * session cookie goes with it as with an image. */
-export const musicUrl = (src: string) => (/^https?:\/\//.test(src) ? src : `${origin()}${src}`);
+export const musicUrl = (src: string) => (/^https?:\/\//.test(src) ? src : `${originFor('/music')}${src}`);
 
 /** subject lift: the photo's main subject on transparency, as a PNG (a few seconds) */
 export const curatorSubject = async (assetId: string): Promise<Blob> => {
-  const response = await fetch(`${base()}/subject`, {
+  const response = await fetch(api('/subject'), {
     method: 'POST',
     credentials: 'include',
     headers: { 'content-type': 'application/json' },
@@ -556,22 +608,22 @@ export const curatorSubject = async (assetId: string): Promise<Blob> => {
 };
 
 /** The file Curator made for a chat app, sent as an attachment under its own name, so the browser saves it. */
-export const shareVideoUrl = (assetId: string, app: ShareApp) => `${base()}/share/${assetId}/${app}.mp4`;
+export const shareVideoUrl = (assetId: string, app: ShareApp) => api(`/share/${assetId}/${app}.mp4`);
 /** One of a photo book's PDFs: shown by the browser, or with `download` saved under its own name. */
 export const bookFileUrl = (jobId: number, part: BookPart, download = false) =>
-  `${base()}/books/${jobId}/${part}.pdf${download ? '?download=true' : ''}`;
+  api(`/books/${jobId}/${part}.pdf${download ? '?download=true' : ''}`);
 /** A memory's film saved as video, sent as an attachment under the memory's title, so the browser saves it. */
-export const filmFileUrl = (jobId: number) => `${base()}/films/${jobId}/film.mp4`;
+export const filmFileUrl = (jobId: number) => api(`/films/${jobId}/film.mp4`);
 /** A pending highlight reel, streamed by Curator (byte ranges, so the player can seek). */
-export const reelUrl = (suggestionId: number) => `${base()}/reels/${suggestionId}.mp4`;
+export const reelUrl = (suggestionId: number) => api(`/reels/${suggestionId}.mp4`);
 /** a restore suggestion's original ('before') or restored version ('after'): a photo `width` pixels across, or a clip */
 export const restoredUrl = (suggestionId: number, which: 'before' | 'after', media: 'jpg' | 'mp4', width?: number) =>
-  `${base()}/restored/${suggestionId}/${which}.${media}${width ? `?width=${width}` : ''}`;
+  api(`/restored/${suggestionId}/${which}.${media}${width ? `?width=${width}` : ''}`);
 
 const call = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
   let response: Response;
   try {
-    response = await fetch(base() + path, {
+    response = await fetch(api(path), {
       ...init,
       credentials: 'include',
       headers: init.body ? { 'content-type': 'application/json' } : undefined,
@@ -804,7 +856,7 @@ export const chatStream = async (
 ): Promise<'ended' | 'aborted'> => {
   let response: Response;
   try {
-    response = await fetch(`${base()}/chat`, {
+    response = await fetch(api('/chat'), {
       method: 'POST',
       credentials: 'include',
       headers: { 'content-type': 'application/json', accept: 'text/event-stream' },

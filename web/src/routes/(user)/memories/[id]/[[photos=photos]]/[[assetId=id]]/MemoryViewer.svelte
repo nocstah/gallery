@@ -30,6 +30,7 @@
   import { getAssetBulkActions } from '$lib/services/asset.service';
   import { locale } from '$lib/stores/preferences.store';
   import { handlePromiseError, memoryLaneTitle } from '$lib/utils';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import { curator, curatorIsMine, type MemoryTrack, type Story } from '$lib/utils/curator';
   import { memoryFilmWords } from '$lib/utils/memory-title';
   import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
@@ -97,7 +98,10 @@
     });
   });
 
-  // ---- what Curator knows of it: the facts, the story, the songs (its owner only: curatorIsMine) ----
+  // ---- what Curator knows of it: the facts, the story, the songs (its owner only: curatorIsMine; and only where this
+  // library's Curator has its memories: gallery/libraries) ----
+
+  const toldByCurator = $derived(curatorIsMine() && curatorOffers('memories'));
 
   // every memory's facts: they tell which memories share a card (utils/memory-cards), and one batch asks for them all
   $effect(() => {
@@ -139,7 +143,7 @@
 
   $effect(() => {
     const id = memoryId;
-    if (!id || !curatorIsMine()) {
+    if (!id || !toldByCurator) {
       return;
     }
     let live = true;
@@ -176,7 +180,7 @@
   const tracks = $derived(songs && songs.memoryId === memoryId ? songs.tracks : []);
   const settled = $derived(
     !memoryId ||
-      !curatorIsMine() ||
+      !toldByCurator ||
       (memoryFacts.settledAll(members.map(({ id }) => id)) &&
         memoryFacts.settled(memoryId) &&
         songs?.memoryId === memoryId &&

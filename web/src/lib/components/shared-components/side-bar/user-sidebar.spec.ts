@@ -3,7 +3,14 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import UserSidebar from '$lib/components/shared-components/side-bar/UserSidebar.svelte';
 import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { sidebarRowsHidden } from '$lib/stores/sidebar-rows';
-import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
+import {
+  libraryContextFile,
+  mainLibrary,
+  SECOND_CURATOR_FEATURES,
+  secondLibrary,
+  secondOffering,
+  serving,
+} from '@test-data/factories/library-context-factory';
 
 const mockPage = vi.hoisted(() => ({ url: new URL('https://gallery.test/photos') }));
 vi.mock('$app/state', () => ({ page: mockPage }));
@@ -239,6 +246,30 @@ describe('UserSidebar', () => {
       for (const href of ['/utilities', '/import', '/archive']) {
         expect(link(href), href).toBeInTheDocument();
       }
+    });
+
+    // Local Omarchy layer: a library's Curator that runs only some of Main's jobs lists what it offers
+    // (gallery/libraries): the rows of the pages it does not offer go
+    it('keeps the command center and AI inbox, and leaves out chat, where its Curator offers the inbox and picks', async () => {
+      await loadLibraryContext(serving(secondOffering(SECOND_CURATOR_FEATURES)));
+
+      render(UserSidebar);
+
+      for (const href of ['/command', '/inbox', '/utilities', '/import']) {
+        expect(link(href), href).toBeInTheDocument();
+      }
+      expect(link('/chat'), '/chat').not.toBeInTheDocument();
+    });
+
+    it('leaves out the command center and AI inbox where its Curator offers only the chat', async () => {
+      await loadLibraryContext(serving(secondOffering(['chat'])));
+
+      render(UserSidebar);
+
+      for (const href of ['/command', '/inbox']) {
+        expect(link(href), href).not.toBeInTheDocument();
+      }
+      expect(link('/chat'), '/chat').toBeInTheDocument();
     });
 
     it('shows the command center, AI inbox, chat, Utilities and Import to the owner', () => {

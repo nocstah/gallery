@@ -1,4 +1,4 @@
-import type { LibraryFeature } from '$lib/gallery/libraries/library-file';
+import { CURATOR_FEATURES, type CuratorFeature, type LibraryFeature } from '$lib/gallery/libraries/library-file';
 
 // Local Omarchy layer: the libraries a kioku-library.json lists, for the specs of lib/gallery/libraries. Every library's
 // address is http on one of this computer's *.localhost names, which unicorn/prefer-https takes for a public host.
@@ -27,11 +27,24 @@ export const libraryContextFile = (
   };
 };
 
-/** The second library's file once it has a Curator of its own, which listens on `curatorPort` when that is given. */
-export const secondWithCurator = (curatorPort?: unknown) => ({
+/** The second library's file once it has a Curator of its own, which listens on `curatorPort` when that is given and
+ * offers `curatorFeatures` when they are given (without, everything Main's does). */
+export const secondWithCurator = (curatorPort?: unknown, curatorFeatures?: unknown) => ({
   ...libraryContextFile(secondLibrary, undefined, { curator: true }),
   ...(curatorPort !== undefined && { curatorPort }),
+  ...(curatorFeatures !== undefined && { curatorFeatures }),
 });
+
+/** What the second library's Curator offers, as its file lists it: it runs only clean-up jobs, which propose in the AI
+ * inbox, and picks a stack's best photo (gallery/libraries). */
+export const SECOND_CURATOR_FEATURES: readonly CuratorFeature[] = ['inbox', 'picks'];
+
+/** The second library's file with a Curator of its own on port 2291 that offers these, and only these. */
+export const secondOffering = (curatorFeatures: readonly unknown[]) => secondWithCurator(2291, curatorFeatures);
+
+/** The second library's file with a Curator of its own on port 2291 that offers everything Main's does but `left`. */
+export const secondWithout = (left: CuratorFeature) =>
+  secondOffering(CURATOR_FEATURES.filter((feature) => feature !== left));
 
 /** A fetch that answers every request with this file. */
 export const serving = (data: unknown) =>

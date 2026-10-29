@@ -1,12 +1,13 @@
 import type { MessageFormatter } from 'svelte-i18n';
 import { describe, expect, it } from 'vitest';
+import { CURATOR_FEATURES } from '$lib/gallery/libraries/library-file';
 import { shortcutSections, type SheetAccount } from './shortcut-sheet';
 
 // Local Omarchy layer: the shortcuts sheet, grouped by where keys work, a row only for an account it works for
 const $t = ((key: string) => key) as MessageFormatter;
-const family: SheetAccount = { signedIn: true, owner: false, curator: false, ratings: false, tags: false };
-const owner: SheetAccount = { signedIn: true, owner: true, curator: true, ratings: true, tags: true };
-const visitor: SheetAccount = { signedIn: false, owner: false, curator: false, ratings: false, tags: false };
+const family: SheetAccount = { signedIn: true, owner: false, curator: [], ratings: false, tags: false };
+const owner: SheetAccount = { signedIn: true, owner: true, curator: CURATOR_FEATURES, ratings: true, tags: true };
+const visitor: SheetAccount = { signedIn: false, owner: false, curator: [], ratings: false, tags: false };
 
 const section = (account: SheetAccount, id: string) => shortcutSections($t, account).find((at) => at.id === id);
 const actions = (account: SheetAccount, id: string) => section(account, id)?.rows.map(({ action }) => action) ?? [];
@@ -18,6 +19,23 @@ describe('shortcutSections', () => {
     expect(keysFor(owner, 'selection', 'stack_selected_photos')).toEqual([['Shift', 'S']]);
     expect(keysFor(owner, 'viewer', 'save_frame_as_photo')).toEqual([['Shift', 'S']]);
     expect(actions(owner, 'grid')).not.toContain('save_frame_as_photo');
+  });
+
+  // Local Omarchy layer: a library whose Curator offers only some of what Main's does (gallery/libraries) lists the keys
+  // of those alone: here the AI inbox's and Pick the best's, as the second library's file says
+  it("lists only the keys of what this library's Curator offers", () => {
+    const cleanup: SheetAccount = { ...owner, curator: ['inbox', 'picks'] };
+    expect(section(cleanup, 'inbox')?.rows.map(({ keys }) => keys[0][0])).toEqual(['J', 'K', 'A', 'R', 'D', 'U']);
+    expect(section(cleanup, 'inbox-review')).toBeDefined();
+    expect(actions(cleanup, 'viewer')).not.toContain('save_frame_as_photo');
+    expect(actions(cleanup, 'film')).not.toContain('shortcut_sound');
+    expect(actions(cleanup, 'film')).not.toContain('memory_film_next_song');
+
+    const noInbox: SheetAccount = { ...owner, curator: ['live', 'memories'] };
+    expect(section(noInbox, 'inbox')).toBeUndefined();
+    expect(section(noInbox, 'inbox-review')).toBeUndefined();
+    expect(keysFor(noInbox, 'viewer', 'save_frame_as_photo')).toEqual([['Shift', 'S']]);
+    expect(actions(noInbox, 'film')).toEqual(expect.arrayContaining(['shortcut_sound', 'memory_film_next_song']));
   });
 
   it('tells D apart: a day in the grid, ⇧D downloading a selection, saying so', () => {

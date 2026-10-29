@@ -2,7 +2,9 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import SmartAlbumBadge from '$lib/components/curator/SmartAlbumBadge.svelte';
 import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { curator, type SmartAlbum, type Suggestion } from '$lib/utils/curator';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
 
 // Local Omarchy layer: the smart albums Curator proposes (jobs/smartalbums.py). An album of people seen together
 // shows their faces on its inbox card; a media type's album has no Photos page search behind it to edit.
@@ -63,6 +65,10 @@ describe('a smart album card', () => {
 });
 
 describe('the smart album badge', () => {
+  afterEach(() => {
+    resetLibraryContext();
+  });
+
   it('offers to edit the search behind a saved search', async () => {
     vi.mocked(curator.smartForAlbum).mockResolvedValue(
       smart({
@@ -72,6 +78,19 @@ describe('the smart album badge', () => {
     );
     render(SmartAlbumBadge, { albumId: 'album-1' });
     expect(await screen.findByText('Edit search')).toBeInTheDocument();
+  });
+
+  // Local Omarchy layer: a library whose Curator keeps no smart albums (gallery/libraries), as the second library's,
+  // which only cleans up, is never asked whether an album is one
+  it("is not there, and asks nothing, where this library's Curator keeps no smart albums", async () => {
+    vi.mocked(curator.smartForAlbum).mockResolvedValue(smart({ media: 'selfies' }));
+    await loadLibraryContext(serving(secondOffering(SECOND_CURATOR_FEATURES)));
+
+    const { container } = render(SmartAlbumBadge, { albumId: 'album-1' });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(curator.smartForAlbum).not.toHaveBeenCalled();
+    expect(container.textContent?.trim()).toBe('');
   });
 
   it('only offers to stop a media type, which has no search to edit', async () => {

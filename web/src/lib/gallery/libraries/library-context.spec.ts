@@ -4,11 +4,14 @@ import type { MockInstance } from 'vitest';
 import {
   libraryContextFile,
   mainLibrary,
+  SECOND_CURATOR_FEATURES,
   secondLibrary,
+  secondOffering,
   secondWithCurator,
   serving,
 } from '@test-data/factories/library-context-factory';
 import {
+  curatorOffers,
   currentLibrary,
   isMainLibrary,
   libraries,
@@ -20,7 +23,13 @@ import {
   resetLibraryContext,
   whenLibraryKnown,
 } from './library-context.svelte';
-import { LIBRARY_CONTEXT_URL, libraryAddress, MalformedLibraryContext, parseLibraryContext } from './library-file';
+import {
+  CURATOR_FEATURES,
+  LIBRARY_CONTEXT_URL,
+  libraryAddress,
+  MalformedLibraryContext,
+  parseLibraryContext,
+} from './library-file';
 
 // Local Omarchy layer: which library a Kioku page is in comes from one static file in that library's web root. Without
 // a file, or with one that does not load or does not hold what it should, Kioku is the one library it always was.
@@ -39,6 +48,9 @@ const expectOneLibrary = () => {
   expect(libraryHas('specialAlbums')).toBe(true);
   expect(libraryHas('vaults')).toBe(true);
   expect(libraryCuratorPort()).toBeUndefined();
+  for (const feature of CURATOR_FEATURES) {
+    expect(curatorOffers(feature), feature).toBe(true);
+  }
   expect(libraries()).toEqual([]);
   expect(listsSeveralLibraries()).toBe(false);
 };
@@ -151,6 +163,16 @@ describe('the library context', () => {
     ["its Curator's port not a whole number", secondWithCurator(2291.5)],
     ["its Curator's port as null", secondWithCurator(null)],
     ['a port that is none, even without a Curator', { ...second(), curatorPort: 'none' }],
+    ["its Curator's features as a name, not a list", secondWithCurator(2291, 'inbox')],
+    ["its Curator's features as an object", secondWithCurator(2291, { inbox: true })],
+    ["its Curator's features as null", secondWithCurator(2291, null)],
+    ["its Curator's features as a number", secondWithCurator(2291, 2)],
+    ["a feature of its Curator's that is no name", secondOffering(['inbox', 3])],
+    ["a feature of its Curator's as null", secondOffering([null])],
+    ["a feature of its Curator's as a list", secondOffering([['inbox']])],
+    ["a feature of its Curator's named twice", secondOffering(['inbox', 'picks', 'inbox'])],
+    ['a name Kioku does not know, named twice', secondOffering(['inbox', 'teleport', 'teleport'])],
+    ['features that are none, even without a Curator', { ...second(), curatorFeatures: 'all' }],
   ];
 
   it.each(malformed)('ignores a file with %s, as one library with every feature, with a warning', async (_, data) => {
@@ -175,6 +197,8 @@ describe('the library context', () => {
       'features.specialAlbums',
     );
     expect(() => parseLibraryContext(secondWithCurator(80), vi.fn())).toThrow('curatorPort');
+    expect(() => parseLibraryContext(secondOffering(['inbox', 'inbox']), vi.fn())).toThrow('curatorFeatures[1]');
+    expect(() => parseLibraryContext(secondWithCurator(2291, 'inbox'), vi.fn())).toThrow('curatorFeatures');
   });
 
   it("reads the port of a library's own Curator", async () => {
@@ -198,6 +222,72 @@ describe('the library context', () => {
     await loadLibraryContext(serving(libraryContextFile(mainLibrary)));
     expect(libraryCuratorPort()).toBeUndefined();
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  // Local Omarchy layer: a library's Curator that runs only some of Main's jobs lists what it offers; without the list
+  // it offers everything, as Main's does
+  it("reads what a library's own Curator offers, and offers nothing else", async () => {
+    await loadLibraryContext(serving(secondOffering(SECOND_CURATOR_FEATURES)));
+
+    expect(libraryHas('curator')).toBe(true);
+    expect(libraryCuratorPort()).toBe(2291);
+    for (const feature of CURATOR_FEATURES) {
+      expect(curatorOffers(feature), feature).toBe(SECOND_CURATOR_FEATURES.includes(feature));
+    }
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["Main's file, which lists none", () => libraryContextFile(mainLibrary)],
+    ['a file that turns its Curator on and lists none', () => secondWithCurator(2291)],
+    ['a file that lists every one', () => secondOffering(CURATOR_FEATURES)],
+  ])("offers every one of Curator's features with %s", async (_, file) => {
+    await loadLibraryContext(serving(file()));
+
+    for (const feature of CURATOR_FEATURES) {
+      expect(curatorOffers(feature), feature).toBe(true);
+    }
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('offers none where the list is empty, though its Curator answers', async () => {
+    await loadLibraryContext(serving(secondOffering([])));
+
+    expect(libraryHas('curator')).toBe(true);
+    for (const feature of CURATOR_FEATURES) {
+      expect(curatorOffers(feature), feature).toBe(false);
+    }
+  });
+
+  it('offers none without a Curator, whatever the file lists', async () => {
+    await loadLibraryContext(serving({ ...second(), curatorPort: 2291, curatorFeatures: CURATOR_FEATURES }));
+
+    expect(libraryHas('curator')).toBe(false);
+    for (const feature of CURATOR_FEATURES) {
+      expect(curatorOffers(feature), feature).toBe(false);
+    }
+  });
+
+  it('leaves out a name Kioku does not know, with a warning, and keeps the rest of the file', async () => {
+    await loadLibraryContext(serving(secondOffering(['inbox', 'teleport', 'picks', 'Inbox'])));
+
+    expect(currentLibrary()?.id).toBe('second');
+    expect(curatorOffers('inbox')).toBe(true);
+    expect(curatorOffers('picks')).toBe(true);
+    expect(curatorOffers('chat')).toBe(false);
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(String(warn.mock.calls[0][0])).toContain('curatorFeatures[1]');
+    expect(String(warn.mock.calls[1][0])).toContain('curatorFeatures[3]');
+    expect(warn.mock.calls.some(([message]) => String(message).includes('malformed'))).toBe(false);
+  });
+
+  it('keeps the list it reads, and none where the file has none', () => {
+    expect(parseLibraryContext(secondOffering(['picks', 'inbox']), vi.fn()).curatorFeatures).toEqual([
+      'picks',
+      'inbox',
+    ]);
+    expect(parseLibraryContext(secondWithCurator(2291), vi.fn()).curatorFeatures).toBeUndefined();
+    expect(parseLibraryContext(libraryContextFile(mainLibrary), vi.fn()).curatorFeatures).toBeUndefined();
   });
 
   it('leaves out a listed library that fails its checks, or repeats an id, and keeps the rest', () => {

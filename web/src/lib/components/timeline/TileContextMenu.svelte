@@ -25,6 +25,7 @@
   import { goto } from '$app/navigation';
   import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import { copySubject } from '$lib/utils/copy-subject';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import { curatorIsMine } from '$lib/utils/curator';
   import { canShareVideo } from '$lib/utils/share-video';
   import { shareVideos } from '$lib/managers/share-video-manager.svelte';
@@ -118,14 +119,16 @@
     }
     stackMenu = next;
     const user = authManager.authenticated ? authManager.user : undefined;
-    // subject lift is Curator's, so it is offered to Curator's owner only (curatorIsMine)
+    // subject lift is Curator's, so it is offered to Curator's owner only (curatorIsMine), where this library's Curator
+    // has its live tools (gallery/libraries)
     liftAsset =
       assetInteraction.assets.length === 1 &&
       asset.isImage &&
       asset.visibility !== AssetVisibility.Locked &&
       user &&
       asset.ownerId === user.id &&
-      curatorIsMine()
+      curatorIsMine() &&
+      curatorOffers('live')
         ? asset
         : undefined;
     revealAsset =
@@ -323,9 +326,9 @@
       {/if}
       {#if stackMenu}
         {@const menu = stackMenu}
-        <!-- Local Omarchy layer: Curator picks the stack's best photo, for Curator's owner only (curatorIsMine); the
-           viewer opens on the stack with the card -->
-        {#if curatorIsMine()}
+        <!-- Local Omarchy layer: Curator picks the stack's best photo, for Curator's owner only (curatorIsMine), where
+           this library's Curator picks (gallery/libraries); the viewer opens on the stack with the card -->
+        {#if curatorIsMine() && curatorOffers('picks')}
           <MenuOption
             icon={mdiStarFourPointsOutline}
             text={$t('stack_pick')}

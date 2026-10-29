@@ -2,7 +2,9 @@ import { AssetVisibility } from '@immich/sdk';
 import { fireEvent, render, screen, cleanup } from '@testing-library/svelte';
 import { addMessages, locale } from 'svelte-i18n';
 import { afterEach, expect, it, vi } from 'vitest';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { timelineAssetFactory } from '@test-data/factories/asset-factory';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
 import TileContextMenu from './TileContextMenu.test-wrapper.svelte';
 
 const { start } = vi.hoisted(() => ({ start: vi.fn() }));
@@ -19,7 +21,10 @@ vi.mock('$lib/components/curator/stack-pick.svelte', () => ({ stackPick: {} }));
 vi.mock('$lib/utils/copy-subject', () => ({ copySubject: vi.fn() }));
 vi.mock('$lib/utils/reveal', () => ({ revealInPhotos: vi.fn() }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  resetLibraryContext();
+});
 
 it.each([true, false])('does not offer external processing for locked assets (image: %s)', async (isImage) => {
   addMessages('en', { menu: 'Menu', copy_subject: 'Copy subject', download_for_app: 'Download for {app}' });
@@ -56,4 +61,25 @@ it('downloads the right-clicked video after MenuOption closes and clears the sel
   await fireEvent.click(await screen.findByRole('menuitem', { name: 'Download for WhatsApp' }));
   expect(start).toHaveBeenCalledExactlyOnceWith(asset.id, 'whatsapp', expect.any(String));
   expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+});
+
+// Local Omarchy layer: where this library's Curator has no live tools and makes no videos for chat apps
+// (gallery/libraries), as the second library's, which only cleans up, neither is offered
+it("offers neither subject copying nor a video for a chat app where this library's Curator offers neither", async () => {
+  addMessages('en', { menu: 'Menu', copy_subject: 'Copy subject', download_for_app: 'Download for {app}' });
+  await locale.set('en');
+  await loadLibraryContext(serving(secondOffering(SECOND_CURATOR_FEATURES)));
+  const photo = timelineAssetFactory.build({ id: 'a-photo', ownerId: 'me', isImage: true, isVideo: false });
+  const clip = timelineAssetFactory.build({ id: 'a-video', ownerId: 'me', isImage: false, isVideo: true });
+
+  render(TileContextMenu, { assets: [photo] });
+  await fireEvent.contextMenu(screen.getByRole('button', { name: photo.id }));
+  await screen.findByRole('menu');
+  expect(screen.queryByRole('menuitem', { name: 'Copy subject' })).not.toBeInTheDocument();
+  cleanup();
+
+  render(TileContextMenu, { assets: [clip] });
+  await fireEvent.contextMenu(screen.getByRole('button', { name: clip.id }));
+  await screen.findByRole('menu');
+  expect(screen.queryByRole('menuitem', { name: /Download for/ })).not.toBeInTheDocument();
 });

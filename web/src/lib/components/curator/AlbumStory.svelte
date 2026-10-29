@@ -1,8 +1,10 @@
 <script lang="ts">
   // Local Omarchy layer: under an album's description, the story of the event or trip the album holds (the one Curator
   // made it from, else the one most of its photos belong to). Left out when there is none yet, when Curator does not
-  // answer, and when the description already is that story (a trip's album accepted from the inbox gets it there).
+  // answer, and when the description already is that story (a trip's album accepted from the inbox gets it there); not
+  // asked for at all where this library's Curator tells no stories (its memories: gallery/libraries).
   import StoryText from '$lib/components/curator/StoryText.svelte';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import { curator, type Story } from '$lib/utils/curator';
 
   interface Props {
@@ -17,6 +19,9 @@
   $effect(() => {
     const asked = albumId;
     story = null;
+    if (!curatorOffers('memories')) {
+      return;
+    }
     curator
       .story({ album: asked })
       .then((answer) => {

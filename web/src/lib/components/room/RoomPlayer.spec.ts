@@ -10,9 +10,11 @@ import {
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { curator } from '$lib/utils/curator';
 import type { MemoryCard } from '$lib/utils/memory-cards';
 import { assetFactory } from '@test-data/factories/asset-factory';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
 import { BRIGHT, DIM } from '@test-data/thumbhash';
 import RoomPlayer from './RoomPlayer.svelte';
 import { memoryReel, type RoomRequest } from './room-reels';
@@ -260,6 +262,28 @@ describe('RoomPlayer', () => {
     await playing('October 2025');
     expect(curator.story).not.toHaveBeenCalled();
     expect(curator.memoryMusic).not.toHaveBeenCalled();
+  });
+
+  // Local Omarchy layer: stories and songs are Curator's memories' (gallery/libraries), as are the albums it keeps for
+  // the TV; a library whose Curator has none, as the second library's, which only cleans up, is asked for none, and an
+  // empty Room speaks of today's memories alone, with no way to the inbox's TV albums
+  it("asks Curator for no story or songs where this library's Curator has no memories", async () => {
+    await loadLibraryContext(serving(secondOffering(SECOND_CURATOR_FEATURES)));
+    try {
+      vi.mocked(loadToday).mockResolvedValue([memoryReel(memory('m1', 2025))]);
+      const { unmount } = render(RoomPlayer, { request: today });
+      await playing('October 2025');
+      expect(curator.story).not.toHaveBeenCalled();
+      expect(curator.memoryMusic).not.toHaveBeenCalled();
+      unmount();
+
+      vi.mocked(loadToday).mockResolvedValue([]);
+      render(RoomPlayer, { request: today });
+      expect(await screen.findByText('room_empty_body_family')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'room_empty_inbox' })).not.toBeInTheDocument();
+    } finally {
+      resetLibraryContext();
+    }
   });
 
   // Local Omarchy layer: Room plays the whole card (2026-10-24), as the Memories page's film of it plays

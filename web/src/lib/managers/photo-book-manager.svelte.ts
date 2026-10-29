@@ -7,6 +7,7 @@
 // followed while the user goes elsewhere in Gallery.
 import { AssetVisibility, getTimeBuckets, type AlbumResponseDto } from '@immich/sdk';
 import { modalManager } from '@immich/ui';
+import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
 import PhotoBookModal from '$lib/modals/PhotoBookModal.svelte';
 import {
   BOOK_PHOTOS,
@@ -121,15 +122,16 @@ class PhotoBookManager {
   #available = $state(false);
   #checked = false;
 
-  /** Curator answers, makes books and works for whoever is signed in (curatorIsMine): until then the menus and the
-   * palette leave them out */
+  /** Curator answers, makes books and works for whoever is signed in (curatorIsMine), where this library's Curator
+   * makes them (gallery/libraries): until then the menus and the palette leave them out */
   get available() {
-    return this.#available && curatorIsMine();
+    return this.#available && curatorIsMine() && curatorOffers('books');
   }
 
-  /** Asked once a page load, by the panel once Curator's owner is signed in. */
+  /** Asked once a page load, by the panel once Curator's owner is signed in; never where this library's Curator makes
+   * no books. */
   check() {
-    if (this.#checked || !curatorIsMine()) {
+    if (this.#checked || !curatorIsMine() || !curatorOffers('books')) {
       return;
     }
     this.#checked = true;

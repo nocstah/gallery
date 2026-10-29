@@ -21,6 +21,7 @@
   import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import { curatorIsMine } from '$lib/utils/curator';
   import { formatDuration } from '$lib/utils/duration';
   import { getGlobalPersonHref } from '$lib/utils/global-person-route';
@@ -214,7 +215,7 @@
   $effect(() => {
     const details = shown?.details;
     story = undefined;
-    if (!details || details.albums.length === 0 || !curatorIsMine()) {
+    if (!details || details.albums.length === 0 || !curatorIsMine() || !curatorOffers('memories')) {
       return;
     }
     const asked = details.asset.id;

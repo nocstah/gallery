@@ -3,9 +3,11 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import Inspector from '$lib/components/inspector/Inspector.svelte';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { InspectorFeed } from '$lib/managers/inspector-link.svelte';
 import { albumFactory } from '@test-data/factories/album-factory';
 import { assetFactory, timelineAssetFactory } from '@test-data/factories/asset-factory';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
 import { personFactory } from '@test-data/factories/person-factory';
 
 // Local Omarchy layer: the inspector window with a main window beside it (its feed on the same channel, as a second
@@ -158,6 +160,22 @@ describe('Inspector', () => {
     expect(screen.getByText('Two boats on a beach.')).toBeInTheDocument();
     expect(mocks.story).not.toHaveBeenCalled();
     expect(screen.queryByText('A slow day by the sea.')).not.toBeInTheDocument();
+  });
+
+  // Local Omarchy layer: stories are Curator's memories' (gallery/libraries); a library whose Curator has none, as the
+  // second library's, which only cleans up, is never asked for one
+  it("asks Curator for no story where this library's Curator has no memories", async () => {
+    await loadLibraryContext(serving(secondOffering(SECOND_CURATOR_FEATURES)));
+    try {
+      render(Inspector, {});
+      await pointAtThePhoto();
+
+      expect(screen.getByText('Two boats on a beach.')).toBeInTheDocument();
+      expect(mocks.story).not.toHaveBeenCalled();
+      expect(screen.queryByText('A slow day by the sea.')).not.toBeInTheDocument();
+    } finally {
+      resetLibraryContext();
+    }
   });
 
   it('lays out the day around the photo, and shows one of them here, never in the main window', async () => {

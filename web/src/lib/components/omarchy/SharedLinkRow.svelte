@@ -12,6 +12,7 @@
   import { Route } from '$lib/route';
   import { asUrl } from '$lib/services/shared-link.service';
   import { copyToClipboard, getAssetMediaUrl } from '$lib/utils';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import { curatorIsMine, forgetLinkFilm } from '$lib/utils/curator';
   import { handleError } from '$lib/utils/handle-error';
   import { linkEnd, linkKind, linkName } from '$lib/utils/shared-link-words';
@@ -67,8 +68,9 @@
     }
     // the film Curator kept for a memory's link goes with it (an album's link never has one). When Curator cannot
     // forget it now, the link is off all the same and Curator's nightly sweep forgets it; a quiet word says so, also
-    // when Curator could not say whether there was a film, for a link made the way a memory's is
-    if (curatorIsMine() && gone.type === SharedLinkType.Individual) {
+    // when Curator could not say whether there was a film, for a link made the way a memory's is. A library whose Curator
+    // has no memories keeps no films (gallery/libraries)
+    if (curatorIsMine() && curatorOffers('memories') && gone.type === SharedLinkType.Individual) {
       const film = await forgetLinkFilm(gone.id);
       if (film === 'later' || (film === 'unsure' && filmShaped)) {
         toastManager.info(tonight);

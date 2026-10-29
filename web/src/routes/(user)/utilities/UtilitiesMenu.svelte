@@ -1,6 +1,6 @@
 <script lang="ts">
   import { vaultEdition } from '$lib/gallery/edition';
-  import { libraryHas } from '$lib/gallery/libraries/library-context.svelte';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import AppDownloadModal from '$lib/modals/AppDownloadModal.svelte';
   import ObtainiumConfigModal from '$lib/modals/ObtainiumConfigModal.svelte';
   import { Route } from '$lib/route';
@@ -24,8 +24,9 @@
       ? []
       : [{ href: Route.geolocationUtility(), icon: mdiCrosshairsGps, label: $t('manage_geolocation') }]),
     // Local Omarchy layer: the bank slips and QR codes, filed into QR and the small ones sent to the Trash: Curator's,
-    // so not in a vault's Gallery (gallery/edition) or a library without a Curator (gallery/libraries)
-    ...(vaultEdition() || !libraryHas('curator')
+    // so not in a vault's Gallery (gallery/edition), or in a library without a Curator or whose Curator does not read
+    // slips (gallery/libraries)
+    ...(vaultEdition() || !curatorOffers('slips')
       ? []
       : [{ href: Route.slipsUtility(), icon: mdiQrcode, label: $t('slips') }]),
     { href: Route.workflows(), icon: mdiStateMachine, label: $t('workflows') },

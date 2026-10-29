@@ -2,7 +2,9 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
 import StoryText from '$lib/components/curator/StoryText.svelte';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { curator, type Story } from '$lib/utils/curator';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
 
 vi.mock('$lib/utils/curator', () => ({ curator: { story: vi.fn() } }));
 
@@ -37,6 +39,10 @@ describe('StoryText', () => {
 });
 
 describe('AlbumStory', () => {
+  afterEach(() => {
+    resetLibraryContext();
+  });
+
   it('shows the story of the event the album holds', async () => {
     vi.mocked(curator.story).mockResolvedValue({ story });
     render(AlbumStory, { albumId: 'a1', description: '' });
@@ -56,6 +62,19 @@ describe('AlbumStory', () => {
     render(AlbumStory, { albumId: 'a1', description: `${story.text} (AI)` });
     await waitFor(() => expect(curator.story).toHaveBeenCalled());
     expect(screen.queryByText(story.text)).not.toBeInTheDocument();
+  });
+
+  // Local Omarchy layer: stories are Curator's memories' (gallery/libraries); a library whose Curator has none, as the
+  // second library's, which only cleans up, is never asked for one
+  it("stays out, and asks nothing, where this library's Curator tells no stories", async () => {
+    vi.mocked(curator.story).mockResolvedValue({ story });
+    await loadLibraryContext(serving(secondOffering(SECOND_CURATOR_FEATURES)));
+
+    const { container } = render(AlbumStory, { albumId: 'a1', description: '' });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(curator.story).not.toHaveBeenCalled();
+    expect(container.textContent?.trim()).toBe('');
   });
 
   it('stays out when Curator does not answer', async () => {

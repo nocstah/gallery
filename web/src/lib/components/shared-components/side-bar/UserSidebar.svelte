@@ -12,7 +12,7 @@
   import Sidebar from '$lib/components/sidebar/sidebar-shell.svelte';
   import { vaultEdition } from '$lib/gallery/edition';
   import LibrariesNav from '$lib/gallery/libraries/LibrariesNav.svelte';
-  import { libraryHas } from '$lib/gallery/libraries/library-context.svelte';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import VaultsNav from '$lib/gallery/vaults/VaultsNav.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
@@ -223,8 +223,8 @@
       holds={['/command', '/inbox', '/chat', Route.utilities(), Route.import()]}
     >
       <!-- Local Omarchy layer: Curator's pages, which a vault's Gallery leaves out (gallery/edition), as does a library
-           without a Curator of its own (gallery/libraries) -->
-      {#if !vaultEdition() && libraryHas('curator')}
+           without a Curator of its own, and one whose Curator does not offer what a page is for (gallery/libraries) -->
+      {#if !vaultEdition() && curatorOffers('inbox')}
         <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
         <SidebarNavItem
           title={$t('command_title')}
@@ -235,7 +235,9 @@
 
         <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
         <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
+      {/if}
 
+      {#if !vaultEdition() && curatorOffers('chat')}
         <!-- Local Omarchy layer: a conversation with Curator's local model about the library (routes/(user)/chat) -->
         <SidebarNavItem title={$t('chat_title')} href="/chat" icon={mdiChatOutline} activeIcon={mdiChat} />
       {/if}

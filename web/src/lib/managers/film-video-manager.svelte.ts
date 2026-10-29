@@ -5,6 +5,7 @@
 // components/omarchy/FilmVideoPanel.svelte shows how far it has got in the bottom-left corner, as the videos for chat
 // apps and the photo books do, and it lives as long as the page.
 import { modalManager } from '@immich/ui';
+import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
 import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
 import {
   curator,
@@ -62,14 +63,16 @@ class FilmVideoManager {
   #available = $state(false);
   #checked = false;
 
-  /** Curator answers, saves films and works for whoever is signed in (curatorIsMine): until then the ⋮ leaves it out */
+  /** Curator answers, saves films and works for whoever is signed in (curatorIsMine), where this library's Curator has
+   * its memories (gallery/libraries): until then the ⋮ leaves it out */
   get available() {
-    return this.#available && curatorIsMine();
+    return this.#available && curatorIsMine() && curatorOffers('memories');
   }
 
-  /** Asked once a page load, by the panel once Curator's owner is signed in. */
+  /** Asked once a page load, by the panel once Curator's owner is signed in; never where this library's Curator has no
+   * memories. */
   check() {
-    if (this.#checked || !curatorIsMine()) {
+    if (this.#checked || !curatorIsMine() || !curatorOffers('memories')) {
       return;
     }
     this.#checked = true;

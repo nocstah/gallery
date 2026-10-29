@@ -10,10 +10,12 @@ import { getAnimateMock } from '$lib/__mocks__/animate.mock';
 import '$lib/__mocks__/sdk.mock';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import SharedLinkRow from '$lib/components/omarchy/SharedLinkRow.svelte';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { curatorIsMine, forgetLinkFilm } from '$lib/utils/curator';
 import { renderWithTooltips } from '$tests/helpers';
 import { albumFactory } from '@test-data/factories/album-factory';
 import { assetFactory } from '@test-data/factories/asset-factory';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
 import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 
 // Local Omarchy layer: a shared link as a calm row: what it shows, who can open it, when it ends; Copy, Edit, Turn off
@@ -190,6 +192,22 @@ describe('SharedLinkRow', () => {
       await turnOff(link({ description: 'Beach day' }));
       await vi.waitFor(() => expect(forgetLinkFilm).toHaveBeenCalledTimes(2));
       expect(toastManager.info).toHaveBeenCalledOnce();
+    });
+
+    // Local Omarchy layer: films for links are Curator's memories' (gallery/libraries); a library whose Curator has
+    // none, as the second library's, which only cleans up, keeps none to forget
+    it("asks Curator nothing of a link's film where this library's Curator has no memories", async () => {
+      await loadLibraryContext(serving(secondOffering(SECOND_CURATOR_FEATURES)));
+      try {
+        await turnOff(film());
+
+        await vi.waitFor(() => expect(sdkMock.removeSharedLink).toHaveBeenCalledOnce());
+        await vi.waitFor(() => expect(toastManager.primary).toHaveBeenCalledWith('Link turned off'));
+        expect(forgetLinkFilm).not.toHaveBeenCalled();
+        expect(toastManager.info).not.toHaveBeenCalled();
+      } finally {
+        resetLibraryContext();
+      }
     });
 
     it("asks Curator nothing of an album's link, for another account, or when Gallery kept the link", async () => {

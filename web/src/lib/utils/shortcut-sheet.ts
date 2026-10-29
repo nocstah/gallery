@@ -4,6 +4,7 @@
 // L, N, ⇧I and the AI inbox's keys were missing. Every key here is bound in the source (the file named beside it), and
 // a row shows only for an account it works for.
 import type { MessageFormatter } from 'svelte-i18n';
+import type { CuratorFeature } from '$lib/gallery/libraries/library-file';
 
 /**
  * One way to press a shortcut: its keys in order. 'Shift' draws as ⇧ (and is read out as Shift), 'click' and
@@ -27,8 +28,10 @@ export type SheetAccount = {
   signedIn: boolean;
   /** the server's admin, the owner: Villa, QR and the AI inbox are theirs */
   owner: boolean;
-  /** Curator works for this account (utils/curator's curatorIsMine): saving a frame, a film's music */
-  curator: boolean;
+  /** what Curator does for this account here: whether it works for it (utils/curator's curatorIsMine), each where this
+   * library's Curator offers it (gallery/libraries' curatorOffers): the AI inbox's keys (inbox), saving a frame
+   * (live), a film's music (memories) */
+  curator: readonly CuratorFeature[];
   /** star ratings are on in this account's preferences */
   ratings: boolean;
   /** tags are on in this account's preferences */
@@ -151,7 +154,7 @@ export const shortcutSections = ($t: MessageFormatter, account: SheetAccount): S
             $t('shortcut_viewer_as_selection'),
           ),
         ),
-        ...only(curator, row([['Shift', 'S']], $t('save_frame_as_photo'))),
+        ...only(curator.includes('live'), row([['Shift', 'S']], $t('save_frame_as_photo'))),
         row([['Esc']], $t('close')),
       ],
     },
@@ -181,7 +184,7 @@ export const shortcutSections = ($t: MessageFormatter, account: SheetAccount): S
     },
   ];
 
-  if (owner) {
+  if (owner && curator.includes('inbox')) {
     sections.push(
       {
         // curator/InboxGroupView (a row of the AI inbox has focus)
@@ -219,7 +222,11 @@ export const shortcutSections = ($t: MessageFormatter, account: SheetAccount): S
     rows: [
       row([['Space']], $t('shortcut_play_pause')),
       row([['←'], ['→']], $t('shortcut_photo_previous_next')),
-      ...only(curator, row([['M']], $t('shortcut_sound')), row([['N']], $t('memory_film_next_song'))),
+      ...only(
+        curator.includes('memories'),
+        row([['M']], $t('shortcut_sound')),
+        row([['N']], $t('memory_film_next_song')),
+      ),
       row([['↑'], ['↓']], $t('shortcut_room_film')),
       row([['F']], $t('shortcut_room_full_screen')),
       row([['Esc']], $t('close')),

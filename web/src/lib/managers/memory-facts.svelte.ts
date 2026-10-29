@@ -1,11 +1,16 @@
 import { SvelteMap } from 'svelte/reactivity';
+import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import { curator, curatorIsMine, type MemoryFacts } from '$lib/utils/curator';
 
 // Local Omarchy layer: what Curator knows of each memory (its places, people, span, count, cover and faces), for the
 // titles of the Memories cards and of a memory's film (utils/memory-title) and for the film's cover and drift. Asked
 // for in batches as pages show memories, each memory once per page load, and for Curator's owner only (curatorIsMine):
-// a family member's account asks nothing, and its titles come from the memories themselves.
+// a family member's account asks nothing, and its titles come from the memories themselves, as they do in a library
+// whose Curator has no memories (gallery/libraries).
+
+/** whether Curator tells this account what it knows of memories here */
+const told = () => curatorIsMine() && curatorOffers('memories');
 
 /** memories a request asks for at most: a page of 250 memories goes in a few short URLs */
 const BATCH = 40;
@@ -25,18 +30,18 @@ class MemoryFactsManager {
 
   /** A memory's facts once Curator has told them; undefined before, without them, and for anyone but its owner. */
   get(memoryId: string): MemoryFacts | undefined {
-    return curatorIsMine() ? (this.#facts.get(memoryId) ?? undefined) : undefined;
+    return told() ? (this.#facts.get(memoryId) ?? undefined) : undefined;
   }
 
   /** Whether Curator has answered for the memory, either way (a film waits for that before it plans its opening). */
   settled(memoryId: string): boolean {
-    return !curatorIsMine() || this.#facts.has(memoryId);
+    return !told() || this.#facts.has(memoryId);
   }
 
   /** Whether Curator has answered for all of these memories: the Memories page lays out its cards once it has, since
    * the facts tell which memories read the same (utils/memory-cards). */
   settledAll(memoryIds: Iterable<string>): boolean {
-    if (!curatorIsMine()) {
+    if (!told()) {
       return true;
     }
     for (const id of memoryIds) {
@@ -59,7 +64,7 @@ class MemoryFactsManager {
 
   /** Ask Curator for these memories' facts: once each, in one batch per tick. */
   request(memoryIds: Iterable<string>) {
-    if (!curatorIsMine()) {
+    if (!told()) {
       return;
     }
     if (!this.#listening) {

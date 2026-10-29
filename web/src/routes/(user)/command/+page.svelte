@@ -12,6 +12,7 @@
   // fine in the library reads as two short lists, its photos and the work, not one run-on line.
   import { goto } from '$app/navigation';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
   import { memoryFacts } from '$lib/managers/memory-facts.svelte';
   import { memoryManager } from '$lib/managers/memory-manager.svelte';
@@ -415,9 +416,12 @@
         <h2>{$t('command_actions')}</h2>
         <!-- Review the inbox leads the page, beside the inbox's count -->
         <div class="command-actions">
-          <button type="button" class="ws-btn-quiet" onclick={() => goto('/chat')}>
-            <Icon icon={mdiChatOutline} size="16" />{$t('command_ask')}
-          </button>
+          <!-- the chat, where this library's Curator has its local models (gallery/libraries) -->
+          {#if curatorOffers('chat')}
+            <button type="button" class="ws-btn-quiet" onclick={() => goto('/chat')}>
+              <Icon icon={mdiChatOutline} size="16" />{$t('command_ask')}
+            </button>
+          {/if}
           <button type="button" class="ws-btn-quiet" onclick={() => globalSearchManager.open()}>
             <Icon icon={mdiMagnify} size="16" />{$t('search')}
           </button>

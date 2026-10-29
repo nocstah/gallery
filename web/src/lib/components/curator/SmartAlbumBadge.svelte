@@ -1,9 +1,11 @@
 <script lang="ts">
   // Local Omarchy layer: on a smart album's page (Curator, curator/smart.py), what it is and the two things to do with
   // it: change the search behind it on the Photos page, or stop it updating and keep it as an ordinary album. Left
-  // out for ordinary albums and when Curator does not answer. A media type's album (Selfies, Panoramas) has no
-  // Photos page search behind it, so it only offers to stop.
+  // out for ordinary albums and when Curator does not answer, and not asked for where this library's Curator keeps no
+  // smart albums (gallery/libraries). A media type's album (Selfies, Panoramas) has no Photos page search behind it, so
+  // it only offers to stop.
   import { goto } from '$app/navigation';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import { curator, type SmartAlbum } from '$lib/utils/curator';
   import { Icon, modalManager, toastManager } from '@immich/ui';
   import { mdiAutoFix } from '@mdi/js';
@@ -20,6 +22,9 @@
   $effect(() => {
     const asked = albumId;
     smart = null;
+    if (!curatorOffers('smart')) {
+      return;
+    }
     curator
       .smartForAlbum(asked)
       .then((answer) => {

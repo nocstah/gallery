@@ -157,11 +157,12 @@
       asset.type === AssetTypeEnum.Image,
     onAction: () => adjustPhoto.open(asset.id),
   });
-  // Local Omarchy layer: subject lift, the photo's main subject to the clipboard (Curator)
+  // Local Omarchy layer: subject lift, the photo's main subject to the clipboard (Curator's, one of its live tools)
   const CopySubject: ActionItem = $derived({
     title: $t('copy_subject'),
     icon: mdiContentCut,
-    $if: () => lookUp.available && isOwner && !sharedLink && !asset.isTrashed && asset.type === AssetTypeEnum.Image,
+    $if: () =>
+      lookUp.answers('live') && isOwner && !sharedLink && !asset.isTrashed && asset.type === AssetTypeEnum.Image,
     onAction: () => void copySubject(asset.id, asset.originalFileName),
   });
   // Local Omarchy layer: Curator's Look Up, what in the photo has a name

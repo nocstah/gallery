@@ -1,5 +1,7 @@
 <script lang="ts">
   import Logo from '$lib/components/shared-components/Logo.svelte';
+  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
+  import { CURATOR_FEATURES } from '$lib/gallery/libraries/library-file';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { inspectorFits } from '$lib/managers/inspector-link.svelte';
   import { curatorIsMine } from '$lib/utils/curator';
@@ -24,7 +26,7 @@
       shortcutSections($t, {
         signedIn,
         owner: signedIn && authManager.user.isAdmin,
-        curator: curatorIsMine(),
+        curator: curatorIsMine() ? CURATOR_FEATURES.filter((feature) => curatorOffers(feature)) : [],
         ratings: signedIn && authManager.preferences.ratings.enabled,
         tags: signedIn && authManager.preferences.tags.enabled,
         inspector: inspectorFits(),
