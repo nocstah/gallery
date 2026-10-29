@@ -18,6 +18,8 @@
   import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
   import SelectAllAssets from '$lib/components/timeline/actions/SelectAllAction.svelte';
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import MoveToActions from '$lib/gallery/moves/MoveToActions.svelte';
+  import { getMovePersonActions } from '$lib/gallery/moves/move-person-actions';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
@@ -633,6 +635,7 @@
     HidePerson,
     ShowPerson,
     SeparateFromGroupedPerson,
+    ...getMovePersonActions($t, person),
   ]);
 
   $effect(() => {
@@ -797,6 +800,7 @@
       <ChangeDate menuItem />
       <ChangeDescription menuItem />
       <ChangeLocation menuItem />
+      <MoveToActions menuItem {person} />
       <ArchiveAction
         menuItem
         unarchive={assetMultiSelectManager.isAllArchived}

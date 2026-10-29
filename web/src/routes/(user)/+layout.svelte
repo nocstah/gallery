@@ -8,6 +8,7 @@
   import { onPageKey } from '$lib/utils/page-keys';
   import UploadCover from './DragAndDropUploadOverlay.svelte';
   import InspectorFeed from '$lib/components/inspector/InspectorFeed.svelte';
+  import MoveProgress from '$lib/gallery/moves/MoveProgress.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { resolveSpecialAlbums } from '$lib/managers/special-albums.svelte';
   import { onMount, type Snippet } from 'svelte';
@@ -61,6 +62,8 @@
 <UploadCover />
 <!-- Local Omarchy layer: tells an open inspector window what is pointed at, selected or open; Shift+I opens it -->
 <InspectorFeed />
+<!-- Local Omarchy layer: a move between Kioku's libraries, on every page while it runs (gallery/moves) -->
+<MoveProgress />
 
 <style>
   :root {

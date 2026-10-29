@@ -37,6 +37,7 @@
   import RotateAction from '$lib/components/timeline/actions/RotateAction.svelte';
   import SelectAllAssets from '$lib/components/timeline/actions/SelectAllAction.svelte';
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import MoveToActions from '$lib/gallery/moves/MoveToActions.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
   import SelectionGroup from '$lib/components/timeline/SelectionGroup.svelte';
@@ -1378,6 +1379,7 @@
             <hr />
             <ActionMenuItem action={Edits.RemoveFromAlbum} hint />
             {#if assetMultiSelectManager.isAllUserOwned}
+              <MoveToActions menuItem />
               <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
               <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
               <DeleteAssets menuItem onAssetDelete={handleRemoveAssets} onUndoDelete={handleUndoRemoveAssets} />
@@ -1440,6 +1442,7 @@
           <ChangeDate menuItem />
           <ChangeDescription menuItem />
           <ChangeLocation menuItem />
+          <MoveToActions menuItem />
           <ArchiveAction menuItem unarchive={assetMultiSelectManager.isAllArchived} onArchive={handleBulkArchive} />
           {#each offeredSpecialAlbums() as other (other.key)}
             {#if other !== special}

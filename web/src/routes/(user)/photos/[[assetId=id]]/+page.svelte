@@ -30,6 +30,7 @@
   import RotateAction from '$lib/components/timeline/actions/RotateAction.svelte';
   import SelectAllAssets from '$lib/components/timeline/actions/SelectAllAction.svelte';
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import MoveToActions from '$lib/gallery/moves/MoveToActions.svelte';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
@@ -1057,6 +1058,7 @@
         <ChangeLocation menuItem />
         <ChangeDescription menuItem />
         <hr />
+        <MoveToActions menuItem />
         <ArchiveAction menuItem onArchive={handleArchive} />
         <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
         <DeleteAssets menuItem onAssetDelete={handleAssetDelete} onUndoDelete={handleUndoDelete} />
@@ -1118,6 +1120,7 @@
           <ChangeDate menuItem />
           <ChangeDescription menuItem />
           <ChangeLocation menuItem />
+          <MoveToActions menuItem />
           <ArchiveAction menuItem onArchive={handleArchive} />
           <ActionMenuItem action={Actions.Tag} />
           <DeleteAssets menuItem onAssetDelete={handleAssetDelete} onUndoDelete={handleUndoDelete} />
