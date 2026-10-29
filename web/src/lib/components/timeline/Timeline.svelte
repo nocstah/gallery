@@ -30,6 +30,7 @@
   } from '$lib/managers/timeline-manager/types';
   import { assetsSnapshot } from '$lib/managers/timeline-manager/utils.svelte';
   import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
+  import { onScrubberKey } from '$lib/gallery/timeline/scrubber-keys';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
   import { sidebarStore } from '$lib/stores/sidebar.svelte';
@@ -853,18 +854,7 @@
     {viewportTopMonth}
     {onScrub}
     bind:scrubberWidth
-    onScrubKeyDown={(evt) => {
-      evt.preventDefault();
-      let amount = keyboardManager.shift ? 500 : 50;
-      if (evt.key === 'ArrowUp') {
-        amount = -amount;
-        if (keyboardManager.shift) {
-          scrollableElement?.scrollBy({ top: amount, behavior: 'smooth' });
-        }
-      } else if (evt.key === 'ArrowDown') {
-        scrollableElement?.scrollBy({ top: amount, behavior: 'smooth' });
-      }
-    }}
+    onScrubKeyDown={(evt) => onScrubberKey(evt, scrollableElement, keyboardManager.shift)}
   />
 {/if}
 
