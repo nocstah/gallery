@@ -27,6 +27,12 @@ export const libraryContextFile = (
   };
 };
 
+/** The second library's file once it has a Curator of its own, which listens on `curatorPort` when that is given. */
+export const secondWithCurator = (curatorPort?: unknown) => ({
+  ...libraryContextFile(secondLibrary, undefined, { curator: true }),
+  ...(curatorPort !== undefined && { curatorPort }),
+});
+
 /** A fetch that answers every request with this file. */
 export const serving = (data: unknown) =>
   vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(Response.json(data)));

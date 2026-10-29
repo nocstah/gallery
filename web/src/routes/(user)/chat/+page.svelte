@@ -14,6 +14,7 @@
     chatStream,
     curator,
     CuratorError,
+    curatorPort,
     type ChatAssistantTurn,
     type ChatEvent,
     type ChatSummary,
@@ -365,7 +366,7 @@
       {#if offline}
         <div class="ws-empty">
           <h2 class="ws-empty-title">{$t('ai_inbox_offline_title')}</h2>
-          <p class="ws-empty-body">{$t('chat_offline_body')}</p>
+          <p class="ws-empty-body">{$t('chat_offline_body', { values: { port: curatorPort() } })}</p>
         </div>
       {:else if turns.length === 0 && !loadingChat}
         <div class="chat-empty">

@@ -7,7 +7,7 @@
   import { page } from '$app/state';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
-  import { curator, CuratorError, type AskResult } from '$lib/utils/curator';
+  import { curator, CuratorError, curatorPort, type AskResult } from '$lib/utils/curator';
   import { AssetMediaSize } from '@immich/sdk';
   import { onMount } from 'svelte';
   import { locale, t } from 'svelte-i18n';
@@ -137,7 +137,7 @@
       <div class="ws-empty">
         <h2 class="ws-empty-title">{failure.status === 0 ? $t('ai_inbox_offline_title') : failure.message}</h2>
         {#if failure.status === 0}
-          <p class="ws-empty-body">{$t('ai_inbox_offline_body')}</p>
+          <p class="ws-empty-body">{$t('ai_inbox_offline_body', { values: { port: curatorPort() } })}</p>
         {/if}
       </div>
     {:else if result}

@@ -3,14 +3,14 @@ import type { AdjustSettings } from '$lib/components/curator/adjust-math';
 import type { FilmPlan } from '$lib/components/memories/film/film-plan';
 import type { MemoryPresentation } from '$lib/components/memories/memory-sharing';
 import { vaultEdition } from '$lib/gallery/edition';
-import { libraryHas } from '$lib/gallery/libraries/library-context.svelte';
+import { libraryCuratorPort, libraryHas } from '$lib/gallery/libraries/library-context.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-stacks';
 
 // Local Omarchy layer: client for Curator (~/code/curator), the local AI service behind the AI inbox. Curator runs
-// beside Gallery on port 2290 locally, or behind /curator on its private HTTPS address. It authenticates the browser's
-// Gallery session cookie, so every call goes out with credentials. Nothing here writes to Gallery directly:
-// accepting a suggestion asks Curator to apply it.
+// beside Gallery on port 2290 locally (a library with a Curator of its own names that one's port: curatorPort), or
+// behind /curator on its private HTTPS address. It authenticates the browser's Gallery session cookie, so every call
+// goes out with credentials. Nothing here writes to Gallery directly: accepting a suggestion asks Curator to apply it.
 
 /**
  * Local Omarchy layer: whether Curator works for whoever is signed in. Curator acts for its owner only (curator/api.py
@@ -499,11 +499,21 @@ export class CuratorError extends Error {
   }
 }
 
+/** Curator's port on this host: Main's Curator's, and any library's whose kioku-library.json names no other. */
+const CURATOR_PORT = 2290;
+
+/**
+ * The port Curator listens on, which the words for Curator not answering name: Main's 2290, or the one a library with
+ * a Curator of its own names in its kioku-library.json (gallery/libraries).
+ */
+export const curatorPort = (): number => libraryCuratorPort() ?? CURATOR_PORT;
+
 // HTTPS access uses the same origin for API calls, streams and downloads. The local Curator listener is HTTP;
 // guessing https://host:2290 breaks those features when Gallery is reached through Tailscale Serve. A vault's Gallery
 // has no Curator address at all, so nothing it builds can reach one: each call fails, before any request, as calls
 // fail while Curator is not answering. Neither has a library without a Curator of its own (gallery/libraries): port
-// 2290 on this host is Main's Curator, so there the address is never made.
+// 2290 on this host is Main's Curator, so there the address is never made, whatever port its file names. A library
+// with a Curator of its own reaches it over HTTP on the port its file names (curatorPort), over HTTPS at /curator.
 const origin = () => {
   if (vaultEdition()) {
     throw new CuratorError('Curator is not part of a vault', 0);
@@ -513,7 +523,7 @@ const origin = () => {
   }
   return location.protocol === 'https:'
     ? `${location.origin}/curator`
-    : `${location.protocol}//${location.hostname}:2290`;
+    : `${location.protocol}//${location.hostname}:${curatorPort()}`;
 };
 const base = () => `${origin()}/api`;
 

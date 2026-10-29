@@ -10,14 +10,16 @@ import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { userAdminFactory } from '@test-data/factories/user-factory';
 import SlipsPage from './+page.svelte';
 
-const { curatorMock, moveMock, sdkMock, showDialog } = vi.hoisted(() => ({
+const { curatorMock, curatorPort, moveMock, sdkMock, showDialog } = vi.hoisted(() => ({
   curatorMock: { slips: vi.fn(), startJob: vi.fn(), setSlipsAuto: vi.fn() },
+  // the port Curator listens on (utils/curator): here a library's own, not Main's 2290
+  curatorPort: vi.fn(() => 2291),
   moveMock: vi.fn(),
   sdkMock: { deleteAssets: vi.fn(), restoreAssets: vi.fn() },
   showDialog: vi.fn(),
 }));
 
-vi.mock('$lib/utils/curator', () => ({ curator: curatorMock, waitForJob: vi.fn() }));
+vi.mock('$lib/utils/curator', () => ({ curator: curatorMock, curatorPort, waitForJob: vi.fn() }));
 vi.mock('$lib/managers/special-albums.svelte', () => ({ qrManager: { move: moveMock, route: '/qr' } }));
 vi.mock('@immich/sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/sdk')>()),
@@ -256,5 +258,21 @@ describe('Bank slips page', () => {
 
     await fireEvent.change(field, { target: { value: '100' } });
     expect(applyButton()).toHaveTextContent('Move 1 slip to Trash');
+  });
+
+  it('names the port Curator is expected on while it is not answering', async () => {
+    curatorMock.slips.mockRejectedValue(new Error('Curator is not answering'));
+    const props = { data: { meta: { title: 'Bank slips' } } };
+    render(TestWrapper as Component<{ component: typeof SlipsPage; componentProps: typeof props }>, {
+      component: SlipsPage,
+      componentProps: props,
+    });
+
+    expect(
+      await screen.findByText(
+        'The AI inbox needs the Curator service on port 2291. Start it from ~/immich with docker compose up -d curator-api curator-worker.',
+      ),
+    ).toBeInTheDocument();
+    expect(curatorPort).toHaveBeenCalled();
   });
 });

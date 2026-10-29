@@ -1,11 +1,18 @@
 /* eslint-disable unicorn/prefer-https -- a library's address is http on this computer's own names, and the checks below
    refuse the other kinds by example */
 import type { MockInstance } from 'vitest';
-import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
+import {
+  libraryContextFile,
+  mainLibrary,
+  secondLibrary,
+  secondWithCurator,
+  serving,
+} from '@test-data/factories/library-context-factory';
 import {
   currentLibrary,
   isMainLibrary,
   libraries,
+  libraryCuratorPort,
   libraryHas,
   listsSeveralLibraries,
   loadLibraryContext,
@@ -31,6 +38,7 @@ const expectOneLibrary = () => {
   expect(libraryHas('curator')).toBe(true);
   expect(libraryHas('specialAlbums')).toBe(true);
   expect(libraryHas('vaults')).toBe(true);
+  expect(libraryCuratorPort()).toBeUndefined();
   expect(libraries()).toEqual([]);
   expect(listsSeveralLibraries()).toBe(false);
 };
@@ -137,6 +145,12 @@ describe('the library context', () => {
     ],
     ['no libraries', { ...second(), libraries: undefined }],
     ['libraries as an object', { ...second(), libraries: { main: mainLibrary.url } }],
+    ["its Curator's port as a string", secondWithCurator('2291')],
+    ["its Curator's port below 1024", secondWithCurator(1023)],
+    ["its Curator's port above 65535", secondWithCurator(65_536)],
+    ["its Curator's port not a whole number", secondWithCurator(2291.5)],
+    ["its Curator's port as null", secondWithCurator(null)],
+    ['a port that is none, even without a Curator', { ...second(), curatorPort: 'none' }],
   ];
 
   it.each(malformed)('ignores a file with %s, as one library with every feature, with a warning', async (_, data) => {
@@ -160,6 +174,30 @@ describe('the library context', () => {
     expect(() => parseLibraryContext({ ...second(), features: { curator: true } }, vi.fn())).toThrow(
       'features.specialAlbums',
     );
+    expect(() => parseLibraryContext(secondWithCurator(80), vi.fn())).toThrow('curatorPort');
+  });
+
+  it("reads the port of a library's own Curator", async () => {
+    await loadLibraryContext(serving(secondWithCurator(2291)));
+
+    expect(libraryHas('curator')).toBe(true);
+    expect(libraryCuratorPort()).toBe(2291);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it.each([1024, 2291, 65_535])('takes %i for a Curator port', (port) => {
+    expect(parseLibraryContext(secondWithCurator(port), vi.fn()).curatorPort).toBe(port);
+  });
+
+  it('names no Curator port where its file names none, as in Main', async () => {
+    await loadLibraryContext(serving(secondWithCurator()));
+    expect(libraryHas('curator')).toBe(true);
+    expect(libraryCuratorPort()).toBeUndefined();
+
+    resetLibraryContext();
+    await loadLibraryContext(serving(libraryContextFile(mainLibrary)));
+    expect(libraryCuratorPort()).toBeUndefined();
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('leaves out a listed library that fails its checks, or repeats an id, and keeps the rest', () => {

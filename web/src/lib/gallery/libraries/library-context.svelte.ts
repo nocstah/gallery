@@ -11,11 +11,11 @@ import {
 
 // Local Omarchy layer: which Kioku library this page belongs to, and what it offers. Each library is a Gallery of its
 // own (its own database, storage, address and sign-in) serving the same full-edition build, and the deploy writes a
-// small static file into each library's web root that says which library it is, what it offers, and every library for
-// the switcher. It is read once, before anything else runs (hooks.client's init, then the root layout's load waits for
-// it), so nothing asks a service before Kioku knows which library it is in. A missing file, or one that fails to load or
-// to parse, means one library with every feature, exactly as before there was a second one. A vault's Gallery (the
-// vault edition) never reads one.
+// small static file into each library's web root that says which library it is, what it offers (and the port of a
+// Curator of its own), and every library for the switcher. It is read once, before anything else runs (hooks.client's
+// init, then the root layout's load waits for it), so nothing asks a service before Kioku knows which library it is
+// in. A missing file, or one that fails to load or to parse, means one library with every feature, exactly as before
+// there was a second one. A vault's Gallery (the vault edition) never reads one.
 
 let context = $state.raw<LibraryContext | undefined>();
 let loading: Promise<void> | undefined;
@@ -100,6 +100,12 @@ export const isMainLibrary = (): boolean => context?.main ?? true;
 
 /** Whether this library offers a feature: without a context, every one. */
 export const libraryHas = (feature: LibraryFeature): boolean => context?.features[feature] ?? true;
+
+/**
+ * The port this library's own Curator listens on, when its context names one (without, utils/curator's curatorPort is
+ * Main's 2290). It counts only where the library has a Curator (libraryHas), which utils/curator asks first.
+ */
+export const libraryCuratorPort = (): number | undefined => context?.curatorPort;
 
 /** Every library the context lists, this one included. */
 export const libraries = (): readonly Library[] => context?.libraries ?? [];

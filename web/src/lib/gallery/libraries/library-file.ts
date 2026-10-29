@@ -2,7 +2,9 @@
 //   { "version": 1, "id": "second", "name": "Second", "colour": "#3d7fa6", "main": false,
 //     "features": { "curator": false, "specialAlbums": false, "vaults": false },
 //     "libraries": [{ "id": "main", "name": "Main", "url": "<Main's address>", "colour": "#bf5b74" }, ...] }
-// Every library's address must be on this computer, so the switcher can never send the browser anywhere else.
+// Every library's address must be on this computer, so the switcher can never send the browser anywhere else. A
+// library with a Curator of its own ("curator": true) may name the port that Curator listens on, "curatorPort": 2291
+// (a whole number from 1024 to 65535); without one it is 2290, Main's Curator's (utils/curator).
 
 /** Where the deploy writes each library's context: its own web root, read same-origin. */
 export const LIBRARY_CONTEXT_URL = '/kioku-library.json';
@@ -20,6 +22,8 @@ export type LibraryContext = LibraryIdentity & {
   version: 1;
   main: boolean;
   features: Readonly<Record<LibraryFeature, boolean>>;
+  /** the port this library's own Curator listens on, when the file names one; it counts only with features.curator */
+  curatorPort?: number;
   /** every library, this one included, in the deploy's order; an entry that fails its checks is left out */
   libraries: readonly Library[];
 };
@@ -32,6 +36,9 @@ const NAME_LENGTH = 40;
 // control characters, and the bidirectional controls that could make a name read as another
 const UNSAFE_NAME = /[\p{Cc}\u{61C}\u{200E}\u{200F}\u{202A}-\u{202E}\u{2066}-\u{2069}]/u;
 const MAX_LIBRARIES = 16;
+// a Curator's own port, above the ones only the system may take
+const LEAST_PORT = 1024;
+const MOST_PORT = 65_535;
 // this computer only: loopback, or a *.localhost name, which browsers resolve to this computer and nowhere else
 const LOCAL_HOST = /^(?:localhost|127\.0\.0\.1|\[::1\]|(?:[\da-z](?:[\da-z-]*[\da-z])?\.)+localhost)$/;
 
@@ -49,6 +56,10 @@ const asName = (value: unknown) => {
   const name = typeof value === 'string' ? value.trim() : '';
   return name && name.length <= NAME_LENGTH && !UNSAFE_NAME.test(name) ? name : undefined;
 };
+const asPort = (value: unknown) =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value >= LEAST_PORT && value <= MOST_PORT
+    ? value
+    : undefined;
 
 /**
  * A library's address, when it is one Kioku may send the browser to: http or https, on this computer (a loopback
@@ -107,6 +118,9 @@ export const parseLibraryContext = (data: unknown, warn: (message: string) => vo
     const value = offered[feature];
     features[feature] = typeof value === 'boolean' ? value : malformed(`features.${feature}`);
   }
+  // optional, but a port it names has to be one, whether or not this library has a Curator
+  const curatorPort =
+    data.curatorPort === undefined ? undefined : (asPort(data.curatorPort) ?? malformed('curatorPort'));
   if (!Array.isArray(data.libraries)) {
     malformed('libraries');
   }
@@ -123,5 +137,5 @@ export const parseLibraryContext = (data: unknown, warn: (message: string) => vo
     }
     libraries.push(library);
   }
-  return { version: 1, id, name, colour, main: data.main, features, libraries };
+  return { version: 1, id, name, colour, main: data.main, features, curatorPort, libraries };
 };

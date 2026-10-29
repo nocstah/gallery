@@ -3,10 +3,11 @@ import { Route } from '$lib/route';
 import { libraryHas, loadLibraryContext, whenLibraryKnown } from './library-context.svelte';
 import type { LibraryFeature } from './library-file';
 
-// Local Omarchy layer: the pages a library without a feature leaves out. Curator listens on this host's port 2290,
-// which from any local address is Main's Curator, so a library without a Curator of its own has none of Curator's
-// pages (the client refuses to make the address: utils/curator); the special albums (To do, Villa, QR) are Main's
-// workflows. Pages are named by their first path segments, as the vault edition's are (gallery/edition).
+// Local Omarchy layer: the pages a library without a feature leaves out. Main's Curator listens on this host's port
+// 2290, which any local address reaches, so a library without a Curator of its own has none of Curator's pages (the
+// client refuses to make the address: utils/curator); one with its own names that one's port (curatorPort). The
+// special albums (To do, Villa, QR) are Main's workflows. Pages are named by their first path segments, as the vault
+// edition's are (gallery/edition).
 const PAGES: Record<Exclude<LibraryFeature, 'vaults'>, readonly string[]> = {
   // the command center, the AI inbox, chat, Ask and the bank slips
   curator: ['command', 'inbox', 'chat', 'ask', 'utilities/slips'],

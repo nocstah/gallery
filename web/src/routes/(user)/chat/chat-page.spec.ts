@@ -2,7 +2,9 @@ import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { goto } from '$app/navigation';
-import { chatStream, curator, type ChatEvent } from '$lib/utils/curator';
+import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
+import { chatStream, curator, CuratorError, type ChatEvent } from '$lib/utils/curator';
+import { secondWithCurator, serving } from '@test-data/factories/library-context-factory';
 import { reactivePageMock } from '@test-data/mocks/reactive-page.mock.svelte';
 import ChatPage from './+page.svelte';
 
@@ -170,5 +172,35 @@ describe('the chat page', () => {
     expect(screen.getByText('Looked up events and trips')).toBeInTheDocument();
     expect(screen.getByText('3 events')).toBeInTheDocument();
     expect(screen.getByText('Norway trips')).toBeInTheDocument();
+  });
+});
+
+// Local Omarchy layer: the words for Curator not answering name the port it is expected on (utils/curator's
+// curatorPort): Main's, or the one a library with a Curator of its own names (gallery/libraries).
+describe('the chat page while Curator is not answering', () => {
+  const offline = (port: number) =>
+    `The chat needs the Curator service on port ${port}. Start it from ~/immich with docker compose up -d curator-api curator-worker.`;
+
+  beforeEach(() => {
+    resetLibraryContext();
+    reactivePageMock.reset('https://gallery.test/chat?id=c9');
+    vi.mocked(curator.chat).mockRejectedValueOnce(new CuratorError('Curator is not answering', 0));
+  });
+
+  afterEach(() => {
+    resetLibraryContext();
+  });
+
+  it("names Main's port, as before libraries", async () => {
+    renderPage();
+
+    expect(await screen.findByText(offline(2290))).toBeInTheDocument();
+  });
+
+  it('names the port of a library with a Curator of its own', async () => {
+    await loadLibraryContext(serving(secondWithCurator(2291)));
+    renderPage();
+
+    expect(await screen.findByText(offline(2291))).toBeInTheDocument();
   });
 });

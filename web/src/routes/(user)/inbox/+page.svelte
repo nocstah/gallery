@@ -11,7 +11,7 @@
   import InboxGroupView from '$lib/components/curator/InboxGroupView.svelte';
   import InboxOverview from '$lib/components/curator/InboxOverview.svelte';
   import JobsPanel from '$lib/components/curator/JobsPanel.svelte';
-  import { curator, CuratorError, type Health } from '$lib/utils/curator';
+  import { curator, CuratorError, curatorPort, type Health } from '$lib/utils/curator';
   import { onMount } from 'svelte';
   import { t, type Translations } from 'svelte-i18n';
   import type { PageData } from './$types';
@@ -81,7 +81,7 @@
           {failure.status === 0 ? $t('ai_inbox_offline_title') : $t('ai_inbox_denied_title')}
         </h2>
         <p class="ws-empty-body">
-          {failure.status === 0 ? $t('ai_inbox_offline_body') : failure.message}
+          {failure.status === 0 ? $t('ai_inbox_offline_body', { values: { port: curatorPort() } }) : failure.message}
         </p>
         <div class="ws-empty-actions">
           <button type="button" class="ws-empty-action" onclick={refresh}>{$t('retry')}</button>

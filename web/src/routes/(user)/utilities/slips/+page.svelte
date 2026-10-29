@@ -16,7 +16,7 @@
   import { undoManager } from '$lib/managers/undo-manager.svelte';
   import { slipsRule, type SlipsRule } from '$lib/stores/preferences.store';
   import { getAssetMediaUrl } from '$lib/utils';
-  import { curator, waitForJob, type Slip, type SlipList } from '$lib/utils/curator';
+  import { curator, curatorPort, waitForJob, type Slip, type SlipList } from '$lib/utils/curator';
   import { handleError } from '$lib/utils/handle-error';
   import { toastUndoable } from '$lib/utils/undoable';
   import { AssetMediaSize, deleteAssets as trashAssets, restoreAssets } from '@immich/sdk';
@@ -357,7 +357,7 @@
     {#if offline}
       <div class="ws-empty">
         <h2 class="ws-empty-title">{$t('ai_inbox_offline_title')}</h2>
-        <p class="ws-empty-body">{$t('ai_inbox_offline_body')}</p>
+        <p class="ws-empty-body">{$t('ai_inbox_offline_body', { values: { port: curatorPort() } })}</p>
       </div>
     {:else if !list}
       <div class="ws-slips-loading"><LoadingSpinner /></div>
