@@ -623,6 +623,15 @@ export const reelUrl = (suggestionId: number) => api(`/reels/${suggestionId}.mp4
 /** a restore suggestion's original ('before') or restored version ('after'): a photo `width` pixels across, or a clip */
 export const restoredUrl = (suggestionId: number, which: 'before' | 'after', media: 'jpg' | 'mp4', width?: number) =>
   api(`/restored/${suggestionId}/${which}.${media}${width ? `?width=${width}` : ''}`);
+/**
+ * Local Omarchy layer: a person on a "People in this video" card at their moment, read from the video by Curator: a
+ * square of the frame round their face (`face`, the card's picture) or the whole frame with the face boxed (`frame`,
+ * the inspector's), `width` pixels across.
+ */
+export const videoPersonUrl = (suggestionId: number, personId: string, view: 'face' | 'frame', width?: number) =>
+  api(
+    `/video-people/${suggestionId}/${encodeURIComponent(personId)}.jpg?view=${view}${width ? `&width=${width}` : ''}`,
+  );
 
 const call = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
   let response: Response;

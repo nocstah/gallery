@@ -1,6 +1,7 @@
 import { AssetMediaSize } from '@immich/sdk';
 import { getAssetMediaUrl } from '$lib/utils';
-import { reelUrl, type Suggestion } from '$lib/utils/curator';
+import { reelUrl, videoPersonUrl, type Suggestion } from '$lib/utils/curator';
+import { videoOf, videoPeopleOf, videoPersonCaption } from '$lib/utils/inbox-video-people';
 
 export type InspectionItem = {
   src?: string;
@@ -8,6 +9,8 @@ export type InspectionItem = {
   videoSrc?: string;
   turn?: number;
   label?: 'ai_inbox_now' | 'ai_inbox_proposed';
+  /** words of the item's own, not translated: a person's name and moment on a "People in this video" card */
+  caption?: string;
   restore?: Suggestion;
 };
 
@@ -37,6 +40,17 @@ export const inspectionItems = (suggestion: Suggestion): InspectionItem[] => {
     return [
       photo(photos[0], 'ai_inbox_now'),
       photo(photos[0], 'ai_inbox_proposed', Number(payload.rotation ?? payload.angle ?? 0)),
+    ];
+  }
+  if (suggestion.kind === 'video.people') {
+    // each person at their moment, the whole frame with their face boxed, then the clip itself
+    const video = videoOf(suggestion);
+    return [
+      ...videoPeopleOf(suggestion).map((person) => ({
+        src: videoPersonUrl(suggestion.id, person.person_id, 'frame'),
+        caption: videoPersonCaption(person),
+      })),
+      ...(video ? [photo(video)] : []),
     ];
   }
   if (suggestion.kind === 'person.portrait') {

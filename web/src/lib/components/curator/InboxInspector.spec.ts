@@ -94,6 +94,38 @@ describe('inbox inspection', () => {
     expect(trigger).toHaveFocus();
   });
 
+  it('shows each person found in a video at their moment, then the clip, and opens the whole frame', async () => {
+    render(SuggestionVisual, {
+      suggestion: suggestion({
+        id: 31,
+        kind: 'video.people',
+        target_id: 'clip-1',
+        title: 'People in this video: Anna, Ben',
+        asset_ids: ['clip-1'],
+        payload: {
+          asset_id: 'clip-1',
+          size: [1080, 1920],
+          people: [
+            { person_id: 'p-anna', name: 'Anna', seconds: 3.75, box: [540, 960, 108, 192] },
+            { person_id: 'p-ben', name: 'Ben', seconds: 12.5, box: [100, 200, 90, 120] },
+          ],
+        },
+      }),
+    });
+    const anna = screen.getByRole('button', { name: 'Anna · 0:03: Open large preview' });
+    const tile = anna.querySelector('img');
+    expect(tile?.getAttribute('src')).toMatch(/\/api\/video-people\/31\/p-anna\.jpg\?view=face&width=224$/);
+    expect(screen.getByRole('button', { name: 'Ben · 0:12: Open large preview' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open large preview' })).toHaveAttribute('href', '/photos/clip-1');
+    await fireEvent.click(anna);
+    const dialog = screen.getByRole('dialog', { name: 'People in this video: Anna, Ben' });
+    const frame = within(dialog).getByRole('img', { name: 'Anna · 0:03' });
+    expect(frame.getAttribute('src')).toMatch(/\/api\/video-people\/31\/p-anna\.jpg\?view=frame$/);
+    expect(within(dialog).getByText('1 / 3')).toBeInTheDocument();
+    await fireEvent.click(within(dialog).getByRole('button', { name: 'Next' }));
+    expect(within(dialog).getByRole('img', { name: 'Ben · 0:12' })).toBeInTheDocument();
+  });
+
   it('isolates preview keys from the review queue and Escape closes only the preview', async () => {
     waitingIn.mockResolvedValue([suggestion(), suggestion({ id: 20, title: 'Second print' })]);
     const closeReview = vi.fn();

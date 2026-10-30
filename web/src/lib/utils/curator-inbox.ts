@@ -170,6 +170,7 @@ export type InboxVerb =
   | 'make'
   | 'merge'
   | 'name'
+  | 'people'
   | 'place'
   | 'publish'
   | 'qr'
@@ -194,6 +195,7 @@ const VERBS: Record<InboxVerb, { button: Translations; all: Translations }> = {
   make: { button: 'ai_inbox_verb_make', all: 'ai_inbox_verb_make_all' },
   merge: { button: 'ai_inbox_verb_merge', all: 'ai_inbox_verb_merge_all' },
   name: { button: 'ai_inbox_verb_name', all: 'ai_inbox_verb_name_all' },
+  people: { button: 'ai_inbox_verb_people', all: 'ai_inbox_verb_people_all' },
   place: { button: 'ai_inbox_verb_place', all: 'ai_inbox_verb_place_all' },
   publish: { button: 'ai_inbox_verb_publish', all: 'ai_inbox_verb_publish_all' },
   qr: { button: 'ai_inbox_verb_qr', all: 'ai_inbox_verb_qr_all' },
@@ -225,6 +227,7 @@ const WHAT = {
   merge_people: ['merge', 'ai_inbox_do_merge_people', 'ai_inbox_did_merge_people'],
   merge_pets: ['merge', 'ai_inbox_do_merge_pets', 'ai_inbox_did_merge_pets'],
   name_people: ['name', 'ai_inbox_do_name_people', 'ai_inbox_did_name_people'],
+  people_videos: ['people', 'ai_inbox_do_people_videos', 'ai_inbox_did_people_videos'],
   place_photos: ['place', 'ai_inbox_do_place_photos', 'ai_inbox_did_place_photos'],
   publish_clips: ['publish', 'ai_inbox_do_publish_clips', 'ai_inbox_did_publish_clips'],
   publish_reels: ['publish', 'ai_inbox_do_publish_reels', 'ai_inbox_did_publish_reels'],
@@ -275,6 +278,7 @@ const BY_KIND: Record<string, What> = {
   'stack.cover': 'cover_stacks',
   'stack.create': 'stack_copies',
   'tag.retire': 'untag_tags',
+  'video.people': 'people_videos',
 };
 
 export type KindAction = {

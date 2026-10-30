@@ -210,6 +210,14 @@ describe('kindAction', () => {
     expect(kindAction('smart.create:people', 'smart.create').todo).toBe('ai_inbox_do_album_smart');
     expect(kindAction('tag.retire', 'tag.retire').button).toBe('ai_inbox_verb_untag');
     expect(kindAction('asset.archive:gallery:Screenshots', 'asset.archive').todo).toBe('ai_inbox_do_archive_photos');
+    // the people found in a video are tagged, as Gallery's own face editor tags them
+    expect(kindAction('video.people', 'video.people')).toMatchObject({
+      verb: 'people',
+      button: 'ai_inbox_verb_people',
+      all: 'ai_inbox_verb_people_all',
+      todo: 'ai_inbox_do_people_videos',
+      done: 'ai_inbox_did_people_videos',
+    });
   });
 
   it('counts what the series holds where one kind of change holds different things', () => {
@@ -259,7 +267,7 @@ describe("the inbox's words for each kind", () => {
   it('counts with a plural where a phrase names what it counts', () => {
     const en = read('en');
     const phrases = kindActionKeys().filter((name) => /^ai_inbox_(do|did)_/.test(name));
-    expect(phrases).toHaveLength(60);
+    expect(phrases).toHaveLength(62);
     for (const key of phrases) {
       expect(en[key], key).toMatch(/\{count, plural,/);
     }

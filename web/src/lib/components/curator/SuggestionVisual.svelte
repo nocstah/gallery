@@ -5,15 +5,17 @@
   // every face group being joined, a restored photo or clip shares one frame with its original, an album of people
   // seen together (a smart album Curator proposes) shows their faces before photos of them together. Each photo
   // opens in a zoomable inspector that keeps the review in place; modified clicks still open Gallery in a new tab. Resting the pointer on a photo
-  // shows it large, whole, in the middle of the screen, until the pointer moves off it. A picture with nothing to show
-  // is a quiet placeholder (InboxTile). Each photo, face and control is described by its card (`describedBy`: the
+  // shows it large, whole, in the middle of the screen, until the pointer moves off it. People found in a video show each
+  // person at their moment, a square of the frame round their face under their name and where in the clip it is, then
+  // the clip itself. A picture with nothing to show is a quiet placeholder (InboxTile). Each photo, face and control is described by its card (`describedBy`: the
   // card's heading and line), so a screen reader hears whose preview it opens, and the inspector is titled as the
   // card is headed.
   import InboxTile from '$lib/components/curator/InboxTile.svelte';
   import InboxInspector from '$lib/components/curator/InboxInspector.svelte';
   import { inspectionItems } from '$lib/utils/inbox-inspection';
   import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
-  import { reelUrl, type Suggestion } from '$lib/utils/curator';
+  import { reelUrl, videoPersonUrl, type Suggestion } from '$lib/utils/curator';
+  import { videoOf, videoPeopleOf, videoPersonCaption } from '$lib/utils/inbox-video-people';
   import { getAssetMediaUrl } from '$lib/utils';
   import { AssetMediaSize } from '@immich/sdk';
   import { onDestroy } from 'svelte';
@@ -67,6 +69,9 @@
       ? [String(payload.into_id), ...((payload.ids as string[] | undefined) ?? [])]
       : [suggestion.target_id],
   );
+  /** the people found in a video, each at their moment, and the video */
+  const videoPeople = $derived(videoPeopleOf(suggestion));
+  const video = $derived(suggestion.kind === 'video.people' ? videoOf(suggestion) : undefined);
   /** the people an album of people together is about, in the order its name gives them */
   const together = $derived(
     suggestion.kind === 'smart.create' ? ((payload.person_ids as string[] | undefined) ?? []) : [],
@@ -178,6 +183,26 @@
       />
       <span class="ws-inbox-meta">{$t('ai_inbox_proposed')}</span>
     </button>
+  {:else if suggestion.kind === 'video.people'}
+    <!-- each person at their moment in the clip (the frame round their face, read from the video by Curator), then the
+         clip; the inspector shows each whole frame with the face boxed -->
+    {#each videoPeople as person (person.person_id)}
+      {@const caption = videoPersonCaption(person)}
+      <button
+        type="button"
+        class="visual-tile"
+        style:width="112px"
+        aria-label={`${caption}: ${$t('ai_inbox_inspect')}`}
+        aria-describedby={describedBy}
+        onclick={() => inspectFace(videoPersonUrl(suggestion.id, person.person_id, 'frame'))}
+      >
+        <InboxTile src={videoPersonUrl(suggestion.id, person.person_id, 'face', 224)} size={112} />
+        <span class="ws-inbox-meta visual-caption">{caption}</span>
+      </button>
+    {/each}
+    {#if video}
+      {@render photo(video, 72)}
+    {/if}
   {:else if ['person.name', 'person.merge', 'person.hide'].includes(suggestion.kind)}
     {#each [...new Set(faces)] as personId (personId)}
       <button
@@ -297,6 +322,12 @@
     border-radius: var(--ws-radius);
     box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 45%);
     background: var(--ws-surface, #000);
+  }
+  /* a long name stays on its line under its tile */
+  .visual-caption {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* faces are people, not photos: drawn round like everywhere else Gallery shows a person */
   .visual-face {

@@ -179,7 +179,8 @@
       >
       <button type="button" class="ws-btn-quiet" onclick={() => zoom?.reset()}>{$t('ai_inbox_fit')}</button>
     </div>
-    {#if item.label}<span class="inspector-label">{$t(item.label)}</span>{/if}
+    {#if item.label}<span class="inspector-label">{$t(item.label)}</span>
+    {:else if item.caption}<span class="inspector-label">{item.caption}</span>{/if}
     {#if items.length > 1}
       <div class="inspector-tools">
         <button
@@ -268,7 +269,7 @@
           <img
             class="inspector-image"
             src={imageSrc}
-            alt={item.label ? $t(item.label) : title}
+            alt={item.label ? $t(item.label) : (item.caption ?? title)}
             draggable="false"
             style:rotate={item.turn ? `${item.turn}deg` : undefined}
             onload={(event) => {

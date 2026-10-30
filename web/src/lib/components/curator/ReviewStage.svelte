@@ -2,12 +2,14 @@
   // Local Omarchy layer: one suggestion, large, for review mode. Each kind shows what the decision is about at the
   // size it needs: two covers side by side, a photo before and after its turn, a face beside the photos it was named
   // from, copies next to each other, an album's spread of photos, the reel itself, a restored version over its
-  // original. Each piece of evidence opens in the zoomable inspector, titled as review mode heads the suggestion.
+  // original, the people found in a video each at their moment with their face boxed. Each piece of evidence opens in
+  // the zoomable inspector, titled as review mode heads the suggestion.
   import InboxInspector from '$lib/components/curator/InboxInspector.svelte';
   import { inspectionItems } from '$lib/utils/inbox-inspection';
   import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
   import { getAssetMediaUrl } from '$lib/utils';
-  import { reelUrl, type Suggestion } from '$lib/utils/curator';
+  import { reelUrl, videoPersonUrl, type Suggestion } from '$lib/utils/curator';
+  import { videoPeopleOf, videoPersonCaption } from '$lib/utils/inbox-video-people';
   import { AssetMediaSize } from '@immich/sdk';
   import { t } from 'svelte-i18n';
 
@@ -51,6 +53,8 @@
       : [suggestion.target_id],
   );
   const rotation = $derived(Number(payload.rotation ?? payload.angle ?? 0));
+  /** the people found in a video: the first three at their moments, the rest in the inspector */
+  const videoPeople = $derived(videoPeopleOf(suggestion).slice(0, 3));
 </script>
 
 {#snippet big(id: string, label?: string, turn = 0)}
@@ -117,6 +121,21 @@
           aria-label={`${$t(item.label!)}: ${$t('ai_inbox_inspect')}`}
           onclick={() => inspectFace(item.src!)}
           ><img src={item.src} alt="" /><span class="ws-inbox-meta">{$t(item.label!)}</span></button
+        >
+      {/each}
+    </div>
+  {:else if suggestion.kind === 'video.people' && videoPeople.length > 0}
+    <div class="stage-pair">
+      {#each videoPeople as person (person.person_id)}
+        {@const caption = videoPersonCaption(person)}
+        <button
+          type="button"
+          class="stage-big"
+          aria-label={`${caption}: ${$t('ai_inbox_inspect')}`}
+          onclick={() => inspectFace(videoPersonUrl(suggestion.id, person.person_id, 'frame'))}
+          ><img src={videoPersonUrl(suggestion.id, person.person_id, 'frame')} alt="" /><span class="ws-inbox-meta"
+            >{caption}</span
+          ></button
         >
       {/each}
     </div>
