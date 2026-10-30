@@ -80,6 +80,32 @@ describe('the smart album badge', () => {
     expect(await screen.findByText('Edit search')).toBeInTheDocument();
   });
 
+  // Local Omarchy layer: an album of at least some of its people (Curator's people_at_least) says how many
+  it.each([
+    [1, '· any of them'],
+    [2, '· at least 2 of them'],
+  ])('says an album of at least %i of its people holds them', async (least, words) => {
+    vi.mocked(curator.smartForAlbum).mockResolvedValue(
+      smart({
+        search: { personIds: ['person:person-a', 'person:person-b', 'person:person-c'] },
+        people_at_least: least,
+        filters: { url: '/photos?people=person:person-a,person:person-b,person:person-c' },
+      }),
+    );
+    render(SmartAlbumBadge, { albumId: 'album-1' });
+    expect(await screen.findByText(words)).toBeInTheDocument();
+    expect(screen.getByText('Edit search')).toBeInTheDocument();
+  });
+
+  it('says nothing of how many for an album of all of its people together', async () => {
+    vi.mocked(curator.smartForAlbum).mockResolvedValue(
+      smart({ search: { personIds: ['person:person-a', 'person:person-b'] } }),
+    );
+    const { container } = render(SmartAlbumBadge, { albumId: 'album-1' });
+    expect(await screen.findByText('Edit search')).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/of them/);
+  });
+
   // Local Omarchy layer: a library whose Curator keeps no smart albums (gallery/libraries), as the second library's,
   // which only cleans up, is never asked whether an album is one
   it("is not there, and asks nothing, where this library's Curator keeps no smart albums", async () => {

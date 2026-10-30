@@ -3,7 +3,7 @@
   // it: change the search behind it on the Photos page, or stop it updating and keep it as an ordinary album. Left
   // out for ordinary albums and when Curator does not answer, and not asked for where this library's Curator keeps no
   // smart albums (gallery/libraries). A media type's album (Selfies, Panoramas) has no Photos page search behind it, so
-  // it only offers to stop.
+  // it only offers to stop. An album of fewer than all of its people together says how many ("at least 2 of them").
   import { goto } from '$app/navigation';
   import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import { curator, type SmartAlbum } from '$lib/utils/curator';
@@ -18,6 +18,8 @@
   let { albumId }: Props = $props();
 
   let smart = $state<SmartAlbum | null>(null);
+  // an album of fewer than all of its people together: how many of them each photo holds (Curator keeps it only then)
+  const atLeast = $derived(smart?.rule.people_at_least);
 
   $effect(() => {
     const asked = albumId;
@@ -75,6 +77,9 @@
       {#if smart.rule.query}
         <span class="query">“{smart.rule.query}”</span>
       {/if}
+      {#if atLeast}
+        <span class="people">· {$t('smart_album_badge_people', { values: { count: atLeast } })}</span>
+      {/if}
     </span>
     {#if !smart.rule.media}
       <button type="button" onclick={editSearch}>{$t('smart_album_edit')}</button>
@@ -100,7 +105,8 @@
     border-radius: var(--ws-radius);
     font-weight: 600;
   }
-  .query {
+  .query,
+  .people {
     font-weight: 500;
     opacity: 0.8;
   }

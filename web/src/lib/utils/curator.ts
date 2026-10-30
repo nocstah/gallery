@@ -485,6 +485,9 @@ export type SmartRule = {
   /** one of Apple's media types Curator tells from the camera data (selfies, panoramas, …); no Photos page search
    * holds it, so such a rule is not edited there */
   media?: string | null;
+  /** with two or more people in the search, how many of them each photo holds: from 1 (any of them) to one fewer than
+   * all. Left out, all of them together, as Gallery's search finds them */
+  people_at_least?: number | null;
 };
 export type SmartAlbum = {
   id: number;

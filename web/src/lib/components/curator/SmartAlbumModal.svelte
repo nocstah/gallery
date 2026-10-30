@@ -1,7 +1,9 @@
 <script lang="ts">
   // Local Omarchy layer: saving the Photos page's search as a smart album (Curator, curator/smart.py), or changing the
   // search behind one. Shows how many photos match as the settings change, the newest few, and for typed words the
-  // weakest matches still in, so the cut can be set by eye.
+  // weakest matches still in, so the cut can be set by eye. With two or more people, how many of them each photo
+  // holds: any of them, at least 2 of them up to one fewer than all, or all of them together, the default and what
+  // the Photos page shows (Gallery's search finds the photos holding all of them).
   import { getAssetMediaUrl } from '$lib/utils';
   import {
     curator,
@@ -16,8 +18,8 @@
   import { t } from 'svelte-i18n';
 
   type Props = {
-    /** the search as it stands, without strictness */
-    rule: Omit<SmartRule, 'strictness'>;
+    /** the search as it stands, without strictness or how many of its people */
+    rule: Omit<SmartRule, 'strictness' | 'people_at_least'>;
     suggestedName: string;
     /** the smart album being changed; a new one is made without */
     editing?: SmartAlbum;
@@ -28,28 +30,50 @@
 
   let name = $state(editing?.name ?? suggestedName);
   let strictness = $state<SmartStrictness>(editing?.rule.strictness ?? 'normal');
+  // how many of the people each photo holds, as chosen; unset, all of them together
+  let atLeast = $state(editing?.rule.people_at_least ?? undefined);
   let preview = $state<SmartPreview>();
   let previewError = $state<string>();
+  // a preview for the settings as they are now is on its way: the one shown is for the settings before
+  let pending = $state(false);
   let saving = $state(false);
   const typed = $derived(!!rule.query?.trim());
   const levels: SmartStrictness[] = ['loose', 'normal', 'strict'];
+  // the people the search names (Photos' person tokens), each once
+  const people = $derived(new Set(rule.search.personIds as string[] | undefined).size);
+  // the choices: 1 (any of them) up to all of them together, offered with two or more people
+  const leasts = $derived(people > 1 ? Array.from({ length: people }, (_, index) => index + 1) : []);
+  const least = $derived(atLeast && atLeast < people ? atLeast : people);
+  const wanted = $derived<SmartRule>({ ...rule, strictness, ...(least < people && { people_at_least: least }) });
 
   $effect(() => {
     const controller = new AbortController();
-    const wanted: SmartRule = { ...rule, strictness };
+    const asked = wanted;
     previewError = undefined;
+    pending = true;
     curator
-      .smartPreview(wanted, controller.signal)
-      .then((result) => (preview = result))
+      .smartPreview(asked, controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) {
+          preview = result;
+        }
+      })
       .catch((error: Error) => {
         if (!controller.signal.aborted) {
           previewError = error.message;
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          pending = false;
         }
       });
     return () => controller.abort();
   });
 
   const thumb = (id: string) => getAssetMediaUrl({ id, size: AssetMediaSize.Thumbnail });
+  const leastLabel = (count: number) =>
+    count === people ? $t('smart_album_people_all') : $t('smart_album_people_at_least', { values: { count } });
 
   const onSubmit = async () => {
     if (!name.trim() || saving) {
@@ -57,7 +81,6 @@
     }
     saving = true;
     try {
-      const wanted: SmartRule = { ...rule, strictness };
       const saved = editing
         ? await curator.smartUpdate(editing.id, wanted)
         : await curator.smartCreate(name.trim(), wanted);
@@ -87,6 +110,18 @@
       </Field>
     {/if}
 
+    {#if leasts.length > 0}
+      <Field label={$t('smart_album_people')}>
+        <div class="ws-seg" role="group" aria-label={$t('smart_album_people')}>
+          {#each leasts as count (count)}
+            <button type="button" aria-pressed={least === count} onclick={() => (atLeast = count)}>
+              {leastLabel(count)}
+            </button>
+          {/each}
+        </div>
+      </Field>
+    {/if}
+
     {#if typed}
       <Field label={$t('smart_album_strictness')}>
         <div class="ws-seg" role="group" aria-label={$t('smart_album_strictness')}>
@@ -99,7 +134,7 @@
       </Field>
     {/if}
 
-    <p class="count" aria-live="polite">
+    <p class="count" class:pending aria-live="polite" aria-busy={pending}>
       {#if previewError}
         <span class="error">{previewError}</span>
       {:else if preview}
@@ -139,11 +174,17 @@
   }
   .ws-seg {
     width: fit-content;
+    /* four people or more, or a phone: the choices take a second row rather than leave the dialog */
+    flex-wrap: wrap;
   }
   .count {
     font-size: 0.875rem;
     font-weight: 600;
     min-height: 1.25rem;
+  }
+  .pending,
+  .pending ~ .strip {
+    opacity: 0.5;
   }
   .error {
     color: var(--ws-danger);
