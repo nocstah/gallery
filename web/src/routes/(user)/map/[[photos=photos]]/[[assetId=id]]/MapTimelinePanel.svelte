@@ -16,6 +16,7 @@
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
   import Portal from '$lib/elements/Portal.svelte';
+  import TimelinePhotoMenu from '$lib/gallery/photo-menu/TimelinePhotoMenu.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
@@ -182,6 +183,19 @@
     />
   </div>
 </aside>
+
+<!-- Local Omarchy layer: right-click menu on the photos beside the map, acting on the selection like the bar below
+     (gallery/photo-menu) -->
+<TimelinePhotoMenu
+  page="map"
+  {timelineManager}
+  reveal
+  onFavorite={(ids, isFavorite) => timelineManager.update(ids, (asset) => (asset.isFavorite = isFavorite))}
+  onArchive={(ids, visibility) => timelineManager.update(ids, (asset) => (asset.visibility = visibility))}
+  onVisibilitySet={handleSetVisibility}
+  onAssetDelete={(assetIds) => timelineManager.removeAssets(assetIds)}
+  onUndoDelete={(assets) => timelineManager.upsertAssets(assets)}
+/>
 
 {#if assetMultiSelectManager.selectionActive}
   {@const Actions = getAssetBulkActions($t)}

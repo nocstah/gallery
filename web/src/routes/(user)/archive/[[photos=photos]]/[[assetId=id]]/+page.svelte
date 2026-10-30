@@ -12,6 +12,7 @@
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
+  import TimelinePhotoMenu from '$lib/gallery/photo-menu/TimelinePhotoMenu.svelte';
   import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
   import { lang } from '$lib/stores/preferences.store';
   import { AssetAction } from '$lib/constants';
@@ -132,6 +133,17 @@
     {/snippet}
   </Timeline>
 </UserPageLayout>
+
+<!-- Local Omarchy layer: right-click menu on the archived photos, acting on the selection like the bar below
+     (gallery/photo-menu) -->
+<TimelinePhotoMenu
+  page="archive"
+  {timelineManager}
+  onFavorite={(ids, isFavorite) => timelineManager.update(ids, (asset) => (asset.isFavorite = isFavorite))}
+  onArchive={(ids, visibility) => timelineManager.update(ids, (asset) => (asset.visibility = visibility))}
+  onVisibilitySet={handleSetVisibility}
+  onAssetDelete={(assetIds) => timelineManager.removeAssets(assetIds)}
+/>
 
 {#if assetMultiSelectManager.selectionActive}
   <AssetSelectControlBar>

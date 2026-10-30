@@ -21,6 +21,7 @@
   import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import { QueryParameter } from '$lib/constants';
+  import GalleryPhotoMenu from '$lib/gallery/photo-menu/GalleryPhotoMenu.svelte';
   import { parseSearchTerms } from '$lib/gallery/search/parse-search-terms';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -702,6 +703,19 @@
     {/if}
   </section>
 </UserPageLayout>
+
+<!-- Local Omarchy layer: right-click menu on the results, acting on the selection like the bar below
+     (gallery/photo-menu) -->
+<GalleryPhotoMenu
+  page="search"
+  assets={searchResultAssets}
+  reveal
+  {onFavorite}
+  {onArchive}
+  onVisibilitySet={handleSetVisibility}
+  {onAssetDelete}
+  onUndoDelete={onSearchQueryUpdate}
+/>
 
 {#if assetMultiSelectManager.selectionActive}
   <AssetSelectControlBar>

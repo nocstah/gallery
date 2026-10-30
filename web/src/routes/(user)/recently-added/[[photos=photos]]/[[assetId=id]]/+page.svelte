@@ -30,6 +30,7 @@
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import { AssetAction } from '$lib/constants';
+  import TimelinePhotoMenu from '$lib/gallery/photo-menu/TimelinePhotoMenu.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
@@ -546,6 +547,20 @@
     </div>
   </div>
 </UserPageLayout>
+
+<!-- Local Omarchy layer: right-click menu on the photos and on search results, acting on the selection like the bar below
+     (gallery/photo-menu) -->
+<TimelinePhotoMenu
+  page="recentlyAdded"
+  {timelineManager}
+  results={showSearchResults ? searchResults : undefined}
+  reveal
+  onFavorite={handleFavorite}
+  onArchive={handleArchive}
+  onVisibilitySet={handleSetVisibility}
+  onAssetDelete={handleAssetDelete}
+  onUndoDelete={handleUndoDelete}
+/>
 
 {#if assetMultiSelectManager.selectionActive}
   <AssetSelectControlBar>

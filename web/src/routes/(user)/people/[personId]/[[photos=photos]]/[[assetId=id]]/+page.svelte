@@ -20,6 +20,7 @@
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
   import MoveToActions from '$lib/gallery/moves/MoveToActions.svelte';
   import { getMovePersonActions } from '$lib/gallery/moves/move-person-actions';
+  import TimelinePhotoMenu from '$lib/gallery/photo-menu/TimelinePhotoMenu.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
@@ -774,6 +775,24 @@
     </div>
   </div>
 </UserPageLayout>
+
+<!-- Local Omarchy layer: right-click menu on the person's photos, acting on the selection like the bar below
+     (gallery/photo-menu) -->
+{#if viewMode === PersonPageViewMode.VIEW_ASSETS}
+  <TimelinePhotoMenu
+    page="person"
+    {timelineManager}
+    reveal
+    downloadName={person.name || 'immich'}
+    {person}
+    onFixMatch={handleReassignAssets}
+    onFavorite={(ids, isFavorite) => timelineManager.update(ids, (asset) => (asset.isFavorite = isFavorite))}
+    onArchive={(ids, visibility) => timelineManager.update(ids, (asset) => (asset.visibility = visibility))}
+    onVisibilitySet={handleSetVisibility}
+    onAssetDelete={(assetIds) => handleDeleteAssets(assetIds)}
+    onUndoDelete={(assets) => handleUndoDeleteAssets(assets)}
+  />
+{/if}
 
 <!-- Local Omarchy layer: selecting swaps the bar for its own, after the shell as on Photos -->
 {#if assetMultiSelectManager.selectionActive}

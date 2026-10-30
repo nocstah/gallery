@@ -20,11 +20,13 @@
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import SkipLink from '$lib/elements/SkipLink.svelte';
+  import GalleryPhotoMenu from '$lib/gallery/photo-menu/GalleryPhotoMenu.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import type { Viewport } from '$lib/managers/timeline-manager/types';
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
   import { foldersStore } from '$lib/stores/folders.svelte';
+  import { updateSearchResults } from '$lib/utils/search-result-selection';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import type { TreeNode } from '$lib/utils/tree-utils';
   import { ActionButton, CommandPaletteDefaultProvider, IconButton } from '@immich/ui';
@@ -163,6 +165,20 @@
     {/if}
   </section>
 </UserPageLayout>
+
+<!-- Local Omarchy layer: right-click menu on the folder's photos, acting on the selection like the bar below
+     (gallery/photo-menu) -->
+<GalleryPhotoMenu
+  page="folders"
+  assets={data.pathAssets ?? []}
+  reveal
+  onFavorite={(ids, isFavorite) =>
+    updateSearchResults(data.pathAssets ?? [], ids, (asset) => (asset.isFavorite = isFavorite))}
+  onArchive={triggerAssetUpdate}
+  onVisibilitySet={handleSetVisibility}
+  onAssetDelete={triggerAssetUpdate}
+  onUndoDelete={triggerAssetUpdate}
+/>
 
 {#if assetMultiSelectManager.selectionActive}
   <div class="fixed inset-s-0 top-0 w-full">

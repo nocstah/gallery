@@ -26,6 +26,7 @@
   import ActiveFiltersBar from '$lib/components/filter-panel/active-filters-bar.svelte';
   import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import SelectionToolbar from '$lib/components/timeline/SelectionToolbar.svelte';
+  import SpacePhotoMenu from '$lib/gallery/photo-menu/SpacePhotoMenu.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import ScopedSearchButton from '$lib/components/search/scoped-search-button.svelte';
   import TimelineGroupingControl from '$lib/components/timeline/TimelineGroupingControl.svelte';
@@ -875,6 +876,26 @@
      rule as the single-asset viewer's `canEditAsset`). Archive/SetVisibility split out into
      `canSetVisibility`, which DID stay `isAllUserOwned`-only: rbac-3 restricts visibility changes
      to owned assets regardless of space role. -->
+<!-- Local Omarchy layer: right-click menu on the album's photos and on search results, offering what the selection bar
+     below offers (gallery/photo-menu) -->
+{#if mode === 'browse'}
+  <SpacePhotoMenu
+    spaceId={space.id}
+    {album}
+    {timelineManager}
+    results={showSearchResults ? searchResults : undefined}
+    downloadName={`${album.albumName}.zip`}
+    reveal
+    onRemove={handleRemoveAssets}
+    onSetCover={handleSetAlbumCover}
+    onFavorite={handleFavorite}
+    onArchive={handleArchive}
+    onVisibilitySet={handleSetVisibility}
+    onAssetDelete={handleAssetDelete}
+    onUndoDelete={handleUndoAssetDelete}
+  />
+{/if}
+
 {#if mode === 'browse' && assetMultiSelectManager.selectionActive}
   <SelectionToolbar
     timelineManager={showSearchResults ? undefined : timelineManager}

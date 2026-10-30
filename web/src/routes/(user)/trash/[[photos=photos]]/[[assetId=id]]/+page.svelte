@@ -8,6 +8,7 @@
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
+  import TimelinePhotoMenu from '$lib/gallery/photo-menu/TimelinePhotoMenu.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
@@ -109,6 +110,15 @@
       {/snippet}
     </Timeline>
   </UserPageLayout>
+
+  <!-- Local Omarchy layer: right-click menu on the photos in the trash, acting on the selection like the bar below
+       (gallery/photo-menu) -->
+  <TimelinePhotoMenu
+    page="trash"
+    {timelineManager}
+    onRestore={(assetIds) => timelineManager.removeAssets(assetIds)}
+    onAssetDelete={(assetIds) => timelineManager.removeAssets(assetIds)}
+  />
 {/if}
 
 {#if assetMultiSelectManager.selectionActive}

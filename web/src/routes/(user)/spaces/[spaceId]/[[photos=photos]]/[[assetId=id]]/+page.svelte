@@ -22,6 +22,7 @@
   import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
   import SpaceAssetLimitWarning from '$lib/components/spaces/space-asset-limit-warning.svelte';
   import SelectionToolbar from '$lib/components/timeline/SelectionToolbar.svelte';
+  import SpacePhotoMenu from '$lib/gallery/photo-menu/SpacePhotoMenu.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineAsset, TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
@@ -960,6 +961,24 @@
     {/if}
   </div>
 </div>
+
+<!-- Local Omarchy layer: right-click menu on the Space's photos and on search results, offering what the selection bar
+     below offers (gallery/photo-menu) -->
+{#if viewMode === 'view'}
+  <SpacePhotoMenu
+    spaceId={space.id}
+    {timelineManager}
+    results={showSearchResults ? searchResults : undefined}
+    reveal
+    onRemove={handleRemoveAssets}
+    onSetCover={handleSetAsCover}
+    onFavorite={handleFavorite}
+    onArchive={handleArchive}
+    onVisibilitySet={handleSetVisibility}
+    onAssetDelete={handleAssetDelete}
+    onUndoDelete={handleUndoAssetDelete}
+  />
+{/if}
 
 {#if assetMultiSelectManager.selectionActive && viewMode === 'view'}
   <div class="fixed inset-s-0 top-0 z-2 w-full">

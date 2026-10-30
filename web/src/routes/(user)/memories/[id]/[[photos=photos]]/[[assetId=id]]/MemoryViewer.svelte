@@ -31,6 +31,7 @@
   import { locale } from '$lib/stores/preferences.store';
   import { handlePromiseError, memoryLaneTitle } from '$lib/utils';
   import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
+  import GalleryPhotoMenu from '$lib/gallery/photo-menu/GalleryPhotoMenu.svelte';
   import { curator, curatorIsMine, type MemoryTrack, type Story } from '$lib/utils/curator';
   import { memoryFilmWords } from '$lib/utils/memory-title';
   import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
@@ -576,6 +577,15 @@
             enableGrouping
           />
         </div>
+        <!-- Local Omarchy layer: right-click menu on the memory's photos, acting on the selection like the bar above
+             (gallery/photo-menu) -->
+        <GalleryPhotoMenu
+          page="memory"
+          assets={current.memory.assets}
+          reveal
+          onArchive={handleHideAssets}
+          onAssetDelete={handleHideAssets}
+        />
       </div>
     {/if}
   {/if}

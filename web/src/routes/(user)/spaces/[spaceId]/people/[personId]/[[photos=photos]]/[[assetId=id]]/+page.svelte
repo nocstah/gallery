@@ -6,6 +6,7 @@
   import PeopleMergeSelector from '$lib/components/people/people-merge-selector.svelte';
   import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import SelectionToolbar from '$lib/components/timeline/SelectionToolbar.svelte';
+  import SpacePhotoMenu from '$lib/gallery/photo-menu/SpacePhotoMenu.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
@@ -796,6 +797,23 @@
     {/key}
   </div>
 </main>
+
+<!-- Local Omarchy layer: right-click menu on the person's photos, offering what the selection bar below offers
+     (gallery/photo-menu) -->
+{#if action !== 'merge'}
+  <SpacePhotoMenu
+    spaceId={space.id}
+    {timelineManager}
+    downloadName={`${person.name || space.name || 'immich'}.zip`}
+    reveal
+    onRemove={handleRemoveAssets}
+    onFavorite={(ids, isFavorite) => timelineManager.update(ids, (asset) => (asset.isFavorite = isFavorite))}
+    onArchive={(ids, visibility) => timelineManager.update(ids, (asset) => (asset.visibility = visibility))}
+    onVisibilitySet={handleSetVisibility}
+    onAssetDelete={handleAssetDelete}
+    onUndoDelete={handleUndoAssetDelete}
+  />
+{/if}
 
 <header>
   {#if assetMultiSelectManager.selectionActive}

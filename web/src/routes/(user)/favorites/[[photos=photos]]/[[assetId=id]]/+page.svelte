@@ -16,6 +16,7 @@
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
+  import TimelinePhotoMenu from '$lib/gallery/photo-menu/TimelinePhotoMenu.svelte';
   import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
   import { lang } from '$lib/stores/preferences.store';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
@@ -137,6 +138,19 @@
     {/snippet}
   </Timeline>
 </UserPageLayout>
+
+<!-- Local Omarchy layer: right-click menu on the favourites, acting on the selection like the bar below
+     (gallery/photo-menu) -->
+<TimelinePhotoMenu
+  page="favorites"
+  {timelineManager}
+  reveal
+  onFavorite={(assetIds) => timelineManager.removeAssets(assetIds)}
+  onArchive={(ids, visibility) => timelineManager.update(ids, (asset) => (asset.visibility = visibility))}
+  onVisibilitySet={handleSetVisibility}
+  onAssetDelete={(assetIds) => timelineManager.removeAssets(assetIds)}
+  onUndoDelete={(assets) => timelineManager.upsertAssets(assets)}
+/>
 
 <!-- Multiselection mode app bar -->
 {#if assetMultiSelectManager.selectionActive}

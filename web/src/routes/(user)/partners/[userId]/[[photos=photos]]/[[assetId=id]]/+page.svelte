@@ -5,6 +5,7 @@
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import Timeline from '$lib/components/timeline/Timeline.svelte';
   import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
+  import TimelinePhotoMenu from '$lib/gallery/photo-menu/TimelinePhotoMenu.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
   import type { TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
@@ -89,6 +90,10 @@
     onGroupingChange={handleTimelineGroupingChange}
   />
 </main>
+
+<!-- Local Omarchy layer: right-click menu on the partner's photos, which are theirs to change: Download only
+     (gallery/photo-menu) -->
+<TimelinePhotoMenu page="partner" {timelineManager} />
 
 {#if assetMultiSelectManager.selectionActive}
   <AssetSelectControlBar>

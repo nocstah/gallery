@@ -21,6 +21,7 @@
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
   import { AssetAction } from '$lib/constants';
   import SkipLink from '$lib/elements/SkipLink.svelte';
+  import TimelinePhotoMenu from '$lib/gallery/photo-menu/TimelinePhotoMenu.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
   import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
@@ -209,6 +210,19 @@
     {/if}
   </section>
 </UserPageLayout>
+
+<!-- Local Omarchy layer: right-click menu on the tag's photos, acting on the selection like the bar below
+     (gallery/photo-menu) -->
+<TimelinePhotoMenu
+  page="tags"
+  {timelineManager}
+  reveal
+  onFavorite={(ids, isFavorite) => timelineManager.update(ids, (asset) => (asset.isFavorite = isFavorite))}
+  onArchive={(ids, visibility) => timelineManager.update(ids, (asset) => (asset.visibility = visibility))}
+  onVisibilitySet={handleSetVisibility}
+  onAssetDelete={(assetIds) => timelineManager.removeAssets(assetIds)}
+  onUndoDelete={(assets) => timelineManager.upsertAssets(assets)}
+/>
 
 <section>
   {#if assetMultiSelectManager.selectionActive}
