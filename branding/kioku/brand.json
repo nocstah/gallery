@@ -249,7 +249,7 @@
     "restore": [
       {
         "_why": "the owner's Curator lives under ~/immich; apply-branding read the directory as the brand in nine locales",
-        "keys": ["ai_inbox_offline_body", "chat_offline_body"],
+        "keys": ["ai_inbox_offline_body", "chat_offline_body", "memory_series_offline_body"],
         "from": "~/Noodle Gallery",
         "to": "~/immich"
       }
