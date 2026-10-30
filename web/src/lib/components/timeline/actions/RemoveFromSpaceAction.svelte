@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { eventManager } from '$lib/managers/event-manager.svelte';
   import { handleError } from '$lib/utils/handle-error';
@@ -10,9 +11,11 @@
   interface Props {
     spaceId: string;
     onRemove?: (assetIds: string[]) => void;
+    /** Local Omarchy layer: a row of the photos' right-click menu (gallery/photo-menu) */
+    menuItem?: boolean;
   }
 
-  let { spaceId, onRemove }: Props = $props();
+  let { spaceId, onRemove, menuItem = false }: Props = $props();
 
   const removeFromSpace = async () => {
     const assets = [...assetMultiSelectManager.assets];
@@ -75,11 +78,15 @@
   };
 </script>
 
-<IconButton
-  shape="round"
-  color="secondary"
-  variant="ghost"
-  aria-label={$t('remove_from_space')}
-  icon={mdiImageRemoveOutline}
-  onclick={removeFromSpace}
-/>
+{#if menuItem}
+  <MenuOption text={$t('remove_from_space')} icon={mdiImageRemoveOutline} onClick={removeFromSpace} />
+{:else}
+  <IconButton
+    shape="round"
+    color="secondary"
+    variant="ghost"
+    aria-label={$t('remove_from_space')}
+    icon={mdiImageRemoveOutline}
+    onclick={removeFromSpace}
+  />
+{/if}

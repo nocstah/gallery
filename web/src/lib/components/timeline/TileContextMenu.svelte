@@ -120,10 +120,11 @@
     stackMenu = next;
     const user = authManager.authenticated ? authManager.user : undefined;
     // subject lift is Curator's, so it is offered to Curator's owner only (curatorIsMine), where this library's Curator
-    // has its live tools (gallery/libraries)
+    // has its live tools (gallery/libraries); a photo in the trash is not copied from, as no video there is sent
     liftAsset =
       assetInteraction.assets.length === 1 &&
       asset.isImage &&
+      !asset.isTrashed &&
       asset.visibility !== AssetVisibility.Locked &&
       user &&
       asset.ownerId === user.id &&

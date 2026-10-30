@@ -17,6 +17,7 @@
   import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import SelectionGroup from '$lib/components/timeline/SelectionGroup.svelte';
+  import { offerFromSelectionBar } from '$lib/gallery/photo-menu/selection-bar.svelte';
   import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import type {
@@ -233,6 +234,9 @@
   // they are a space Owner/Editor, the link is created against the space instead of being narrowed
   // to the owned subset. `caps` encodes the role check; `space` is non-null whenever it is set.
   const shareSpaceId = $derived(caps.shareScopedToSpace ? space?.id : undefined);
+
+  // Local Omarchy layer: the photos' right-click menu offers what this bar offers (gallery/photo-menu)
+  offerFromSelectionBar(() => ({ caps, editableSelectedAssetIds, shareSpaceId }));
 
   // Local Omarchy layer: Show selected (AssetSelectControlBar) offers what this bar offers, gated the same way: Share
   // (against the space where the bar's own does), and New album with Add to album or space where adding is allowed (New
