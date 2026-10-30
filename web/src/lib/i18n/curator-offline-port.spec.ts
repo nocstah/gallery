@@ -12,7 +12,7 @@ import { convertBCP47 } from '$lib/utils/i18n';
 
 const I18N_DIR = path.resolve(process.cwd(), '../i18n/gallery/merged');
 const SRC_DIR = path.resolve(process.cwd(), 'src');
-const KEYS = ['ai_inbox_offline_body', 'chat_offline_body'];
+const KEYS = ['ai_inbox_offline_body', 'chat_offline_body', 'memory_series_offline_body'];
 
 const read = (code: string) =>
   JSON.parse(fs.readFileSync(path.join(I18N_DIR, `${code}.json`), 'utf8')) as Record<string, string>;
@@ -40,7 +40,9 @@ describe('every place that says Curator is not answering', () => {
         continue;
       }
       const source = fs.readFileSync(path.join(SRC_DIR, name), 'utf8');
-      for (const [, key, rest] of source.matchAll(/\(\s*'(ai_inbox_offline_body|chat_offline_body)'([^)]*)/g)) {
+      for (const [, key, rest] of source.matchAll(
+        /\(\s*'(ai_inbox_offline_body|chat_offline_body|memory_series_offline_body)'([^)]*)/g,
+      )) {
         places.push(`${name}: ${key}`);
         if (!/values:\s*\{\s*port:/.test(rest)) {
           withoutPort.push(`${name}: ${key}`);
@@ -48,8 +50,8 @@ describe('every place that says Curator is not answering', () => {
       }
     }
 
-    // control: the AI inbox, Ask, the chat and the bank slips say them
-    expect(places.length).toBeGreaterThanOrEqual(4);
+    // control: the AI inbox, Ask, the chat, the bank slips and From the beginning say them
+    expect(places.length).toBeGreaterThanOrEqual(5);
     expect(withoutPort).toEqual([]);
   });
 });

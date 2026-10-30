@@ -13,10 +13,12 @@ const PAGES: Partial<Record<LibraryFeature, readonly string[]>> = {
   specialAlbums: ['todo', 'villa', 'qr'],
 };
 
-// Curator's pages, by what each is for: the command center and the AI inbox; the chat and Ask; the bank slips
+// Curator's pages, by what each is for: the command center and the AI inbox; the chat and Ask; a memory a day (From
+// the beginning); the bank slips
 const CURATOR_PAGES: Partial<Record<CuratorFeature, readonly string[]>> = {
   inbox: ['command', 'inbox'],
   chat: ['chat', 'ask'],
+  memories: ['from-the-beginning'],
   slips: ['utilities/slips'],
 };
 

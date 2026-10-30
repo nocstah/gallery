@@ -561,6 +561,7 @@ const FEATURE_OF: Readonly<Record<string, CuratorFeature>> = {
   music: 'memories',
   stories: 'memories',
   films: 'memories',
+  series: 'memories',
   books: 'books',
   inpaint: 'restore',
   'live-effect': 'live',
@@ -645,6 +646,10 @@ const call = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
 };
 
 const post = <T>(path: string, body: unknown) => call<T>(path, { method: 'POST', body: JSON.stringify(body) });
+
+/** The same calls for a fork module with Curator calls of its own (gallery/series): one address, credentials and
+ * errors for all of them. */
+export { call as curatorCall, post as curatorPost };
 
 export const curator = {
   personStacks: (personId: string, signal?: AbortSignal) =>

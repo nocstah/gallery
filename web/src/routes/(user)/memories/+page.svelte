@@ -6,6 +6,7 @@
   import { memoryManager } from '$lib/managers/memory-manager.svelte';
   import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
   import MemoryCard from '$lib/components/memories/MemoryCard.svelte';
+  import SeriesButton from '$lib/gallery/series/SeriesButton.svelte';
   import MemoriesSettingsModal from '$lib/modals/MemoriesSettingsModal.svelte';
   import { Route } from '$lib/route';
   import { locale } from '$lib/stores/preferences.store';
@@ -74,6 +75,8 @@
 >
   {#snippet buttons()}
     <div class="flex place-items-center gap-2">
+      <!-- Local Omarchy layer: a memory a day, from the beginning: the owner's Coming up (gallery/series) -->
+      <SeriesButton />
       <!-- Local Omarchy layer: today's memories across the room, full screen (components/room) -->
       <Button
         href={Route.room()}

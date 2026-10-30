@@ -43,6 +43,8 @@ features:
       - web/src/routes/(user)/albums/[albumId=id]/**
       - web/src/routes/(user)/spaces/*/*photos*/**
       - web/src/routes/(user)/spaces/[spaceId]/albums/[albumId=id]/**
+      # a memory a day: Coming up, a thin mount of lib/gallery/series
+      - web/src/routes/(user)/from-the-beginning/**
       - web/memory-player/**
       - web/vite.memory.config.ts
     # These complete screens preserve the owner's accepted interaction model; see DESIGN.md.

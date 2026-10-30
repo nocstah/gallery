@@ -134,6 +134,7 @@ describe("the pages of Main's services", () => {
     '/chat/conversation-1',
     '/ask',
     '/utilities/slips',
+    '/from-the-beginning',
   ];
   const specialPages = ['/todo', '/villa', '/qr'];
   const shared = [
@@ -259,7 +260,7 @@ describe("Curator's pages, in a library whose Curator offers only some of what M
     inbox: ['/command', '/inbox', '/inbox?tab=jobs', '/inbox?tab=history', '/inbox?tab=health', '/inbox?tab=calibrate'],
     chat: ['/chat', '/chat/conversation-1', '/ask', '/ask?q=when'],
     slips: ['/utilities/slips'],
-    memories: [],
+    memories: ['/from-the-beginning'],
     books: [],
     restore: [],
     live: [],

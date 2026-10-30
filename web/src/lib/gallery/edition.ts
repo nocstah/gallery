@@ -31,6 +31,7 @@ const LEFT_OUT = [
   'chat',
   'ask',
   'utilities/slips',
+  'from-the-beginning',
   // sharing, and the pages a shared link opens
   'sharing',
   'spaces',

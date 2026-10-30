@@ -28,6 +28,7 @@ describe('Kioku edition', () => {
       '/chat',
       '/ask',
       '/utilities/slips',
+      '/from-the-beginning',
       '/sharing',
       '/spaces',
       '/spaces/space-1/members',
