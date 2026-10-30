@@ -339,6 +339,41 @@ describe('MovePage', () => {
     await waitFor(() => expect(requests.some(({ path }) => path.endsWith('/faces'))).toBe(true));
   });
 
+  it('keeps asking while the faces are read but not on anyone yet', async () => {
+    routes = serves(
+      status({
+        state: 'done',
+        endedAt: new Date().toISOString(),
+        person: { id: 'p', name: 'Person A' },
+        faces: { photos: 6, waiting: 0, unmatched: 0, unassigned: 2, people: [], proposals: [] },
+      }),
+    );
+    render(MovePage);
+    expect(await screen.findByTestId('move-faces')).toBeInTheDocument();
+    await waitFor(() => expect(requests.some(({ path }) => path.endsWith('/faces'))).toBe(true));
+  });
+
+  it('asks no more once every face is placed', async () => {
+    routes = serves(
+      status({
+        state: 'done',
+        endedAt: new Date().toISOString(),
+        person: { id: 'p', name: 'Person A' },
+        faces: {
+          photos: 6,
+          waiting: 0,
+          unmatched: 0,
+          unassigned: 0,
+          people: [{ id: 'named', named: true, faces: 6 }],
+          proposals: [],
+        },
+      }),
+    );
+    render(MovePage);
+    expect(await screen.findByTestId('move-faces')).toBeInTheDocument();
+    expect(requests.some(({ path }) => path.endsWith('/faces'))).toBe(false);
+  });
+
   it('lists the moves that involve this library without ?move=', async () => {
     at(`${mainLibrary.url}/moves`);
     routes = serves(status({ state: 'done', endedAt: '2026-10-29T21:00:00Z', progress: { moved: 8 } }));

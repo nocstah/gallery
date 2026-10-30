@@ -74,10 +74,18 @@ describe('MoveFaces', () => {
     expect(sdk.getPerson.mock.calls.map(([{ id }]) => id)).toEqual(expect.arrayContaining([NAMED, UNNAMED]));
     await waitFor(() => expect(rows()[0].querySelector('img')).not.toBeNull());
     expect(rows()[0].querySelector('img')?.getAttribute('src')).toContain(`/people/${NAMED}/thumbnail`);
-    // the counts, as words
-    expect(screen.getByText('moves_faces_read')).toBeInTheDocument();
+    // the counts, as words: while photos are still read, a face found but on no one yet is part of the progress
+    expect(screen.getByText('moves_faces_progress')).toBeInTheDocument();
+    expect(screen.getByText('moves_faces_people')).toBeInTheDocument();
     expect(screen.getByText('moves_faces_unmatched')).toBeInTheDocument();
+    expect(screen.queryByText('moves_faces_unassigned')).not.toBeInTheDocument();
+  });
+
+  it('once every photo is read, says the faces not on anyone yet once, and no progress', () => {
+    render(MoveFaces, { report: report({ waiting: 0, unmatched: 0, unassigned: 2 }), names });
+    expect(screen.queryByText('moves_faces_progress')).not.toBeInTheDocument();
     expect(screen.getByText('moves_faces_unassigned')).toBeInTheDocument();
+    expect(screen.queryByText('moves_faces_unmatched')).not.toBeInTheDocument();
   });
 
   it('offers a merge as a link to Kioku’s own merge view on the named person, never as a call', async () => {
@@ -112,7 +120,7 @@ describe('MoveFaces', () => {
     expect(within(rows()[0]).getByText('moves_faces_unnamed')).toBeInTheDocument();
     // a merge into someone this page cannot name is not offered
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
-    expect(screen.queryByText('moves_faces_read')).not.toBeInTheDocument();
+    expect(screen.queryByText('moves_faces_progress')).not.toBeInTheDocument();
     expect(screen.queryByText('moves_faces_unmatched')).not.toBeInTheDocument();
     expect(screen.queryByText('moves_faces_unassigned')).not.toBeInTheDocument();
     expect(writes()).toEqual([]);

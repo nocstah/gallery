@@ -43,15 +43,18 @@
   const nameOf = (id: string) => people[id]?.name || $t('moves_faces_unnamed');
   const proposalFor = (id: string) =>
     report.proposals.find((proposal) => ('merge' in proposal ? proposal.merge === id : proposal.name === id));
-  const read = $derived(Math.max(0, report.photos - report.waiting));
+  // done: on a person, or read without the face; while this library still reads photos, a face it has found but not
+  // yet put on anyone is part of the work under way, said once as the progress, never as a count of its own
+  const done = $derived(Math.max(0, report.photos - report.waiting - report.unassigned));
 </script>
 
 <section class="ws-move-faces" data-testid="move-faces">
   <h2>{$t('moves_faces_title', { values: names })}</h2>
   {#if report.waiting > 0}
-    <p>{$t('moves_faces_read', { values: { ...names, read, total: report.photos } })}</p>
+    <p>{$t('moves_faces_progress', { values: { ...names, done, total: report.photos } })}</p>
   {/if}
   {#if report.people.length > 0}
+    <p>{$t('moves_faces_people', { values: names })}</p>
     <ul>
       {#each report.people as row (row.id)}
         {@const person = people[row.id]}
@@ -78,8 +81,10 @@
   {#if report.unmatched > 0}
     <p class="ws-move-faces-muted">{$t('moves_faces_unmatched', { values: { ...names, count: report.unmatched } })}</p>
   {/if}
-  {#if report.unassigned > 0}
-    <p class="ws-move-faces-muted">{$t('moves_faces_unassigned', { values: { count: report.unassigned } })}</p>
+  {#if report.waiting === 0 && report.unassigned > 0}
+    <p class="ws-move-faces-muted">
+      {$t('moves_faces_unassigned', { values: { ...names, count: report.unassigned } })}
+    </p>
   {/if}
 </section>
 

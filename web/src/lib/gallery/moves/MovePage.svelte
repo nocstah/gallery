@@ -84,12 +84,13 @@
     return $t('moves_page_title', { values: names });
   });
 
-  // a person's move that ended done or cancelled in the last 7 days, whose report is not complete yet
+  // a person's move that ended done or cancelled in the last 7 days, whose report is not complete yet: photos still
+  // to read, or faces read but not on anyone yet (the destination places most within minutes, the rest at night)
   const wantsFaces = (move: MoveStatus) =>
     !!move.person &&
     (move.state === 'done' || move.state === 'cancelled') &&
     Date.now() - Date.parse(move.endedAt ?? '') < FACES_DAYS_MS &&
-    (!move.faces || move.faces.waiting > 0);
+    (!move.faces || move.faces.waiting > 0 || move.faces.unassigned > 0);
 
   const nextDelay = (): number | undefined => {
     if (!status) {
