@@ -70,5 +70,17 @@ export default defineConfig({
     }),
     tailwindcss(),
   ],
-  build: { outDir: resolve(import.meta.dirname, 'build-memory-player'), emptyOutDir: true, target: 'es2022' },
+  build: {
+    outDir: resolve(import.meta.dirname, 'build-memory-player'),
+    emptyOutDir: true,
+    target: 'es2022',
+    // Local Omarchy layer: two pages, one build: a shared memory (index.html, at /memory/<key>/) and the family page of
+    // "From the beginning" (days.html, at /days/<key>/), sharing the film and the words' chunks
+    rolldownOptions: {
+      input: {
+        index: resolve(import.meta.dirname, 'memory-player/index.html'),
+        days: resolve(import.meta.dirname, 'memory-player/days.html'),
+      },
+    },
+  },
 });

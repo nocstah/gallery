@@ -1,4 +1,4 @@
-import type { Coming, ComingMemory, SeriesRow, SkippedMemory } from '$lib/gallery/series/series-api';
+import type { Coming, ComingMemory, SentMemory, SeriesRow, SkippedMemory } from '$lib/gallery/series/series-api';
 import { isoDay } from '$lib/gallery/series/series-days';
 
 // Local Omarchy layer: a series as Curator's routes give it (gallery/series), for its specs. Synthetic names, places and
@@ -75,5 +75,23 @@ export const comingDays = (overrides: Partial<Coming> = {}): Coming => ({
     }),
   ],
   skipped: [],
+  live: false,
+  link_id: null,
+  sent_count: 0,
+  story_ends: null,
+  waiting_notice: false,
+  ...overrides,
+});
+
+/** a memory that went out to the family page */
+export const sentMemory = (overrides: Partial<SentMemory> = {}): SentMemory => ({
+  key: 'trip:8',
+  n: 2,
+  day: dayFromToday(-1),
+  title: 'Riverton in the snow',
+  line: 'Riverton · January 2004',
+  cover: 'photo-8',
+  count: 14,
+  state: 'sent',
   ...overrides,
 });

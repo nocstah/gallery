@@ -1,11 +1,13 @@
 <script lang="ts">
   // Local Omarchy layer: "From the beginning", the Coming up view of "A memory a day, from the beginning" (gallery/series;
-  // the design: ~/code/curator/docs/memory-series-design.md, section 3). The owner plans the series here first, then
+  // the design: Curator's docs/memory-series-design.md, sections 3 and 4). The owner plans the series here first, then
   // looks over the coming days as the family will see them, one row a day: plays a film, swaps a photo, has Curator pick
-  // again or skips the day, puts a skipped one back, and says who never goes in a memory. One quiet line says what the
-  // page waits for: that nothing goes out yet, or that Curator is preparing the days, which the page then asks for again
-  // every few seconds (series-state). Curator not answering, or not the owner's, is the page's own state, as the AI
-  // inbox says it.
+  // again or skips the day, puts a skipped one back, and says who never goes in a memory. The family page has a section
+  // of its own: day 1 and its link, made, copied, renewed or turned off (SeriesFamily), and what went out is listed on
+  // it, each with Take off the page (SeriesSent). One quiet line says what the page waits for: that nothing goes out
+  // yet, since when the page is live and how much went out, or that Curator is preparing the days, which the page then
+  // asks for again every few seconds (series-state); under it, notes on when the story reaches today and on a memory
+  // that waits. Curator not answering, or not the owner's, is the page's own state, as the AI inbox says it.
   import PanelStatus from '$lib/components/curator/PanelStatus.svelte';
   import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
   import { locale } from '$lib/stores/preferences.store';
@@ -14,11 +16,13 @@
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import SeriesDay from './SeriesDay.svelte';
+  import SeriesFamily from './SeriesFamily.svelte';
   import SeriesFilm from './SeriesFilm.svelte';
   import SeriesLeaveOut from './SeriesLeaveOut.svelte';
+  import SeriesSent from './SeriesSent.svelte';
   import SeriesSwapSheet from './SeriesSwapSheet.svelte';
-  import type { ComingMemory } from './series-api';
-  import { isTomorrow, seriesDate } from './series-days';
+  import type { Coming, ComingMemory, SentMemory } from './series-api';
+  import { daysFromToday, nearDayKey, seriesDate, seriesPlainDate } from './series-days';
   import { SeriesPageState } from './series-state.svelte';
 
   type Props = { title: string };
@@ -33,7 +37,49 @@
     return () => view.close();
   });
 
-  const dayWords = (day: string) => (isTomorrow(day) ? $t('memory_series_tomorrow') : seriesDate(day, $locale));
+  // "Today", "Tomorrow" (and for what went out "Yesterday"), else the weekday and the date
+  const dayWords = (day: string) => {
+    const near = nearDayKey(day);
+    return near ? $t(near) : seriesDate(day, $locale);
+  };
+
+  /** the quiet line before the family page is live: that nothing goes out yet, and when day 1 would be */
+  const provisionalWords = (coming: Coming) =>
+    $t('memory_series_provisional', { values: { date: seriesDate(coming.first_day, $locale) } });
+
+  /** the quiet line while the family page is live: since when and how much went out, or when it starts (day 1 ahead,
+   * or today before its memory went out) */
+  const liveWords = (coming: Coming) => {
+    const dayOne = coming.series.starts_on ?? coming.first_day;
+    const date = seriesDate(dayOne, $locale);
+    const ahead = daysFromToday(dayOne);
+    return ahead > 0 || (ahead === 0 && coming.sent_count === 0)
+      ? $t('memory_series_starts_on', { values: { date } })
+      : $t('memory_series_live_since', { values: { date, count: coming.sent_count } });
+  };
+
+  // the family page's two switches that cannot be undone from here ask first
+  const turnOff = async () => {
+    const confirmed = await modalManager.showDialog({
+      title: $t('memory_series_turn_off_title'),
+      prompt: $t('memory_series_turn_off_prompt'),
+      confirmText: $t('memory_series_turn_off'),
+    });
+    if (confirmed) {
+      await view.turnOff();
+    }
+  };
+
+  const takeOff = async (memory: SentMemory) => {
+    const confirmed = await modalManager.showDialog({
+      title: $t('memory_series_take_off_title'),
+      prompt: $t('memory_series_take_off_prompt'),
+      confirmText: $t('memory_series_take_off_confirm'),
+    });
+    if (confirmed) {
+      await view.takeOff(memory.key);
+    }
+  };
 
   const swap = async (memory: ComingMemory) => {
     const series = view.series;
@@ -104,19 +150,44 @@
       <PanelStatus waiting={$t('memory_series_loading')} onRetry={() => view.load()} />
     {:else}
       {@const coming = view.coming}
-      {#if coming.provisional || coming.preparing}
-        <p class="series-status" role="status" data-testid="series-status">
-          {#if coming.provisional}
-            <span>{$t('memory_series_provisional', { values: { date: seriesDate(coming.first_day, $locale) } })}</span>
+      {#if coming.live || coming.provisional || coming.preparing || coming.story_ends || coming.waiting_notice}
+        <div class="series-status" role="status" data-testid="series-status">
+          {#if coming.live || coming.provisional || coming.preparing}
+            <p class="series-status-line">
+              {#if coming.live}
+                <span data-testid="series-live">{liveWords(coming)}</span>
+              {:else if coming.provisional}
+                <span>{provisionalWords(coming)}</span>
+              {/if}
+              {#if coming.preparing}
+                <span>{$t('memory_series_preparing')}</span>
+              {/if}
+            </p>
           {/if}
-          {#if coming.preparing}
-            <span>{$t('memory_series_preparing')}</span>
+          {#if coming.story_ends}
+            <p data-testid="series-story-ends">
+              {$t('memory_series_story_ends', { values: { date: seriesPlainDate(coming.story_ends, $locale) } })}
+            </p>
           {/if}
-        </p>
+          {#if coming.waiting_notice}
+            <p data-testid="series-waiting">{$t('memory_series_waiting_notice')}</p>
+          {/if}
+        </div>
       {/if}
       {#if view.message}
         <p class="series-message" role="status" data-testid="series-message">{view.message}</p>
       {/if}
+
+      <SeriesFamily
+        {coming}
+        link={view.familyLink}
+        linking={view.linking}
+        turnedOff={view.turnedOff}
+        onDayOne={(day) => view.setDayOne(day)}
+        onMake={(password, dayOne) => view.makeLink(password, dayOne)}
+        onNewLink={() => view.newLink()}
+        onTurnOff={turnOff}
+      />
 
       {#if coming.memories.length > 0}
         <section class="ws-sharing-section" aria-labelledby="{id}-coming" data-testid="series-coming">
@@ -171,6 +242,17 @@
         </section>
       {/if}
 
+      {#if coming.sent_count > 0 && view.sent && view.sent.length > 0}
+        <SeriesSent
+          memories={view.sent}
+          {dayWords}
+          language={$locale}
+          isBusy={(key) => view.busy.has(key)}
+          onTakeOff={takeOff}
+          onPutBack={(memory) => view.putBack(memory.key)}
+        />
+      {/if}
+
       <SeriesLeaveOut
         ids={view.series.people_without}
         saving={view.savingPeople}
@@ -187,15 +269,19 @@
 {/if}
 
 <style>
-  /* one quiet line: what the page waits for, in muted words at the ui size */
+  /* one quiet line: what the page waits for, in muted words at the ui size, and the notes under it */
   .series-status {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 0.5rem;
+    display: grid;
+    gap: 0.25rem;
     max-width: 62ch;
     margin-bottom: 1.5rem;
     font-size: var(--ws-text-ui);
     color: var(--immich-ui-muted);
+  }
+  .series-status-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
   }
   .series-message {
     max-width: 62ch;

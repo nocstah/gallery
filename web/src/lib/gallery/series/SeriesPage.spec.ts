@@ -217,7 +217,7 @@ describe('SeriesPage, the coming days', () => {
     expect(status).toHaveTextContent('memory_series_preparing');
   });
 
-  it('says nothing more once the family page is live and nothing is being prepared', async () => {
+  it('has no quiet line while there is nothing to wait for or to say', async () => {
     coming = comingDays({ provisional: false, preparing: false });
     show();
     await rows();

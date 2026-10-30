@@ -54,6 +54,7 @@ type FilmProps = {
   story?: string | null;
   storyCues?: FilmStoryCue[];
   allPhotos?: boolean;
+  dates?: 'day' | 'month';
   onNextFilm?: () => void;
   onPreviousFilm?: () => void;
 };
@@ -72,6 +73,7 @@ const filmProps = (props: FilmProps = {}) => ({
   tracks: props.tracks ?? [],
   dress: props.dress,
   caption: props.caption,
+  dates: props.dates,
   onClose,
   onAllPhotos: props.allPhotos === false ? undefined : onAllPhotos,
   onNextFilm: props.onNextFilm,
@@ -149,6 +151,20 @@ describe('MemoryFilm', () => {
     expect(await screen.findByRole('heading', { name: 'Siem Reap' }, { timeout: 4000 })).toBeInTheDocument();
     // (the title card's ruler, out of sight, holds the same words)
     expect(screen.getByText('October 2025 · 3 photos', { ignore: 'script, style, .film-ruler *' })).toBeInTheDocument();
+  });
+
+  it('dates the photo on screen by its day, or by its month and year only', async () => {
+    const byDay = renderFilm();
+    await started();
+    expect(document.querySelector('.film-where-data')).toHaveTextContent('October 16, 2025');
+    byDay.unmount();
+
+    // Local Omarchy layer: the family page of From the beginning says no photo's day, only its month and year
+    renderFilm({ dates: 'month' });
+    await started();
+    const where = document.querySelector('.film-where-data');
+    expect(where).toHaveTextContent('October 2025');
+    expect(where).not.toHaveTextContent('16');
   });
 
   it('starts the first song with the film, from Curator', async () => {

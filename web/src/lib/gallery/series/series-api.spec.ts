@@ -71,6 +71,26 @@ describe('seriesApi', () => {
     expect(asked.every(({ path }) => !path.split('?', 1)[0].includes('trip'))).toBe(true);
   });
 
+  it('asks for the family page’s routes: day 1, the link’s photos, its bind and its forgetting, and what went out', async () => {
+    const key = 'trip:12#2';
+    await seriesApi.dayOne(7, '2026-11-02');
+    await seriesApi.linkPhotos(7);
+    await seriesApi.bindLink(7, 'link-1', 'key-1');
+    await seriesApi.forgetLink(7, 'link-1');
+    await seriesApi.sent(7);
+    await seriesApi.takeOff(7, key);
+    await seriesApi.putBack(7, key);
+    expect(asked).toEqual([
+      { method: 'POST', path: '/api/series/7/day1', body: { day: '2026-11-02' }, credentials: 'include' },
+      { method: 'GET', path: '/api/series/7/link-photos', credentials: 'include' },
+      { method: 'POST', path: '/api/series/7/link', body: { linkId: 'link-1', key: 'key-1' }, credentials: 'include' },
+      { method: 'DELETE', path: '/api/series/7/link/link-1', credentials: 'include' },
+      { method: 'GET', path: '/api/series/7/sent', credentials: 'include' },
+      { method: 'POST', path: '/api/series/7/takeoff', body: { key }, credentials: 'include' },
+      { method: 'POST', path: '/api/series/7/putback', body: { key }, credentials: 'include' },
+    ]);
+  });
+
   it('fails with Curator’s own words, or as not answering', async () => {
     answer = () => Response.json({ detail: 'A series exists already' }, { status: 409 });
     await expect(seriesApi.create()).rejects.toMatchObject({ message: 'A series exists already', status: 409 });

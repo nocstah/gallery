@@ -92,6 +92,10 @@
     tracks: MemoryTrack[];
     /** where the photo on screen was taken ("Siem Reap, Cambodia"), when it is known */
     place?: string;
+    /** how the top bar dates the photo on screen: its day ("October 16, 2025"), or only its month and year ("October
+     * 2025") where the day is not to be said (the family page of "From the beginning": month and year only, never the
+     * day) */
+    dates?: 'day' | 'month';
     /** a photo's time on screen, in seconds (the Memories duration preference) */
     photoSeconds?: number;
     nextMemory?: { title: string; assetId: string };
@@ -137,6 +141,7 @@
     storyCues,
     tracks,
     place,
+    dates = 'day',
     photoSeconds = 5,
     nextMemory,
     current = $bindable(),
@@ -274,9 +279,10 @@
   const shownAsset = $derived<AssetResponseDto | undefined>(shot ? assetsById.get(shot.assetId) : undefined);
   const shownDate = $derived(
     shownAsset
-      ? DateTime.fromISO(shownAsset.localDateTime, { zone: 'UTC' }).toLocaleString(DateTime.DATE_FULL, {
-          locale: language,
-        })
+      ? DateTime.fromISO(shownAsset.localDateTime, { zone: 'UTC' }).toLocaleString(
+          dates === 'month' ? { month: 'long', year: 'numeric' } : DateTime.DATE_FULL,
+          { locale: language },
+        )
       : '',
   );
 
