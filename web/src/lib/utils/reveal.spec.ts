@@ -1,6 +1,6 @@
 import { AssetVisibility, type AssetResponseDto } from '@immich/sdk';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { revealInPhotos, takeReveal } from '$lib/utils/reveal';
+import { markRevealed, revealInPhotos, takeReveal, takeRevealClick } from '$lib/utils/reveal';
 
 const mocks = vi.hoisted(() => ({ goto: vi.fn() }));
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
@@ -55,5 +55,50 @@ describe('Show in Photos', () => {
     const later = vi.spyOn(performance, 'now').mockReturnValue(now + 20_000);
     expect(takeReveal('photo')).toBeUndefined();
     later.mockRestore();
+  });
+});
+
+describe("Show in Photos' soft selection", () => {
+  const selection = (...ids: string[]) => ({ assets: ids.map((id) => ({ id })), clear: vi.fn() });
+
+  beforeEach(() => {
+    takeRevealClick(selection(), false); // nothing left over from another test
+  });
+
+  it('lets the first plain click open a photo, dropping the revealed photo from the selection', () => {
+    markRevealed('photo');
+    const selected = selection('photo');
+
+    expect(takeRevealClick(selected, false)).toBe(true);
+    expect(selected.clear).toHaveBeenCalledOnce();
+    // once: the click after it selects as usual
+    expect(takeRevealClick(selection('photo'), false)).toBe(false);
+  });
+
+  it('keeps selecting on a click with Shift', () => {
+    markRevealed('photo');
+    const selected = selection('photo');
+
+    expect(takeRevealClick(selected, true)).toBe(false);
+    expect(selected.clear).not.toHaveBeenCalled();
+    expect(takeRevealClick(selection('photo'), false)).toBe(false);
+  });
+
+  it('keeps selecting once the selection holds anything else, or nothing', () => {
+    markRevealed('photo');
+    const more = selection('photo', 'other');
+    expect(takeRevealClick(more, false)).toBe(false);
+    expect(more.clear).not.toHaveBeenCalled();
+
+    markRevealed('photo');
+    expect(takeRevealClick(selection('other'), false)).toBe(false);
+    markRevealed('photo');
+    expect(takeRevealClick(selection(), false)).toBe(false);
+  });
+
+  it('does nothing without a reveal', () => {
+    const selected = selection('photo');
+    expect(takeRevealClick(selected, false)).toBe(false);
+    expect(selected.clear).not.toHaveBeenCalled();
   });
 });

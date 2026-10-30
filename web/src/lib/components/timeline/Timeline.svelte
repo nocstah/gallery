@@ -37,7 +37,7 @@
   import { attachThumbnailZoom, thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
   import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
   import { timelineHeading, type TimelineHeadingSource } from '$lib/managers/timeline-heading.svelte';
-  import { takeReveal, type Reveal } from '$lib/utils/reveal';
+  import { markRevealed, takeReveal, takeRevealClick, type Reveal } from '$lib/utils/reveal';
   import { marqueeSelect } from '$lib/actions/marquee-select';
   import { lang } from '$lib/stores/preferences.store';
   import { isAssetViewerRoute, navigate } from '$lib/utils/navigation';
@@ -460,6 +460,7 @@
     assetInteraction.clear();
     assetInteraction.selectAsset(asset);
     assetInteraction.setAssetSelectionStart(asset);
+    markRevealed(asset.id);
     // the stack laid out beside its cover can push the photo along: bring the photo itself into view
     scrollToAsset(asset);
     await tick();
@@ -808,6 +809,11 @@
     groupTitle: string,
     asset: TimelineAsset,
   ) => {
+    // Local Omarchy layer: Show in Photos' selection gives way to a plain click (utils/reveal)
+    if (!isSelectionMode && takeRevealClick(assetInteraction, keyboardManager.shift)) {
+      void navigate({ targetRoute: 'current', assetId: asset.id });
+      return;
+    }
     if (isSelectionMode || assetInteraction.selectionActive) {
       assetSelectHandler(timelineManager, asset, assets, groupTitle);
       return;
