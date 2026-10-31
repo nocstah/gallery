@@ -268,6 +268,7 @@
       }
       // Cancel native activation of whichever button has focus: Enter always means Same person.
       event.preventDefault();
+      // eslint-disable-next-line tscompat/tscompat -- before Chrome 137, repeat is wrong only while two keys are held
       if (!loading && !event.repeat) {
         void act('confirm');
       }
@@ -286,6 +287,7 @@
       }
       case 'o': {
         event.preventDefault();
+        // eslint-disable-next-line tscompat/tscompat -- as above
         if (current && !event.repeat) {
           window.open(getSuggestionAssetHref(current.assetId, page.params.spaceId), '_blank', 'noopener');
         }

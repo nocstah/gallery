@@ -432,6 +432,7 @@
     const move = (to: number) => rows[Math.max(0, Math.min(rows.length - 1, to))]?.focus();
     // a held A, R, D or U acts once: the next card moves up into this place, and a repeat would decide it too (J, K
     // and the arrows keep repeating, moving on)
+    // eslint-disable-next-line tscompat/tscompat -- before Chrome 137, repeat is wrong only while two keys are held
     const open = item && item.status === 'pending' && !deciding.has(item.id) && !busy && !event.repeat;
     if (key === 'j' || key === 'ArrowDown') {
       move(index + 1);
@@ -446,6 +447,7 @@
     } else if (open && key === 'd' && deletable(item)) {
       void trash(item);
       void tick().then(() => move(index));
+      // eslint-disable-next-line tscompat/tscompat -- as above
     } else if (!(item && key === 'u' && !busy && !event.repeat && takeBack(item))) {
       return;
     }

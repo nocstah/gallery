@@ -67,7 +67,6 @@ export const photoTransition = (navigation: NavigationLike) => {
 
   return new Promise<void>((resolve) => {
     name(start, NAME);
-    // eslint-disable-next-line tscompat/tscompat -- Guarded above; older browsers use the plain navigation.
     const transition = document.startViewTransition(async () => {
       resolve();
       await navigation.complete;
