@@ -163,12 +163,11 @@ describe(todayReels.name, () => {
       type: MemoryType.OnThisDay,
       assets: lit('day', 8).map((photo) => ({ ...photo, localDateTime: '2001-10-18T10:00:00.000Z' })),
     } as MemoryResponseDto;
-    const trip = {
-      id: 'trip',
-      type: MemoryType.Rule,
+    const trip: MemoryResponseDto = {
+      ...memory('trip', MemoryType.Rule, 0),
       data: { ruleId: 'trip_anniversary' },
       assets: lit('trip', 4),
-    } as MemoryResponseDto;
+    };
 
     expect(todayReels(cardsOf([day, trip]), [], 10).map(({ key }) => key)).toEqual(['memory:trip', 'memory:day']);
   });
