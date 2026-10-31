@@ -4,7 +4,7 @@ import type { FilmMedia } from '$lib/components/memories/film/film-media';
 import { dayFromToday } from '@test-data/factories/series-factory';
 import SeriesFamilyPage from '../../../../memory-player/src/series/SeriesFamilyPage.svelte';
 import type { FamilyListDay, SeriesDay, SeriesIndex } from '../../../../memory-player/src/series/series-family';
-import { seen } from './memory-film.test-wrapper.svelte';
+import { seen } from './memory-film.test-seen';
 import { seriesDate, seriesLongDate } from './series-days';
 
 // Local Omarchy layer: the family page of From the beginning (memory-player/src/series), against a stand-in gateway:

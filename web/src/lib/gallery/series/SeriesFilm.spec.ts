@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { privateFilmMedia } from '$lib/components/memories/film/private-film-media';
 import { comingMemory } from '@test-data/factories/series-factory';
 import SeriesFilm from './SeriesFilm.svelte';
-import { seen } from './memory-film.test-wrapper.svelte';
+import { seen } from './memory-film.test-seen';
 
 // Local Omarchy layer: Play in Coming up (gallery/series): the film Kioku plays, full screen over the shell, given the
 // memory as the family will see it: its photos from Gallery, Curator's cover, faces and songs, the title and the line,

@@ -1,10 +1,7 @@
-<script module lang="ts">
-  /** what the stand-in film was last given */
-  export const seen: { props?: Record<string, unknown> } = {};
-</script>
-
 <script lang="ts">
-  // A stand-in for MemoryFilm in the series' specs: it keeps what it was given, and its one button closes it.
+  // A stand-in for MemoryFilm in the series' specs: it keeps what it was given in `seen`, and its one button closes it.
+  import { seen } from './memory-film.test-seen';
+
   let { ...props }: Record<string, unknown> = $props();
 
   $effect.pre(() => {

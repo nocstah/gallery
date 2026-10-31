@@ -11,7 +11,7 @@ import {
 } from '@test-data/factories/series-factory';
 import SeriesPage from './SeriesPage.svelte';
 import SeriesSwapSheet from './SeriesSwapSheet.svelte';
-import { seen } from './memory-film.test-wrapper.svelte';
+import { seen } from './memory-film.test-seen';
 import type { Coming, SeriesCard } from './series-api';
 import { seriesDate } from './series-days';
 import { POLL_MS } from './series-state.svelte';
