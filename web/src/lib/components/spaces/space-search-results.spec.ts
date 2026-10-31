@@ -58,6 +58,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 3,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -77,6 +78,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 3,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -91,6 +93,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 3,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -109,6 +112,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 3,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
         onScroll,
       },
@@ -129,6 +133,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 3,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -143,6 +148,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 3,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'desc',
       },
     });
@@ -158,6 +164,7 @@ describe('SpaceSearchResults', () => {
         hasMore: true,
         totalLoaded: 100,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -173,6 +180,7 @@ describe('SpaceSearchResults', () => {
         totalLoaded: 3,
         total: 42,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -188,6 +196,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 3,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -203,6 +212,7 @@ describe('SpaceSearchResults', () => {
         hasMore: true,
         totalLoaded: 100,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -217,6 +227,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 3,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -232,6 +243,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 0,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -246,6 +258,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 0,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -261,6 +274,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 3,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
       },
     });
@@ -275,6 +289,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 3,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
         includeArchived: false,
       },
@@ -293,6 +308,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 0,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'relevance',
         includeArchived: false,
       },
@@ -309,6 +325,7 @@ describe('SpaceSearchResults', () => {
         hasMore: true,
         totalLoaded: 100,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'desc',
       },
     });
@@ -323,6 +340,7 @@ describe('SpaceSearchResults', () => {
         hasMore: true,
         totalLoaded: 50,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'asc',
       },
     });
@@ -337,6 +355,7 @@ describe('SpaceSearchResults', () => {
         hasMore: false,
         totalLoaded: 35,
         onLoadMore: vi.fn(),
+        isShared: false,
         sortMode: 'desc',
       },
     });

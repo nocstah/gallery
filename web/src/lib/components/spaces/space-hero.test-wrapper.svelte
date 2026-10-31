@@ -1,24 +1,10 @@
 <script lang="ts">
-  import type { SharedSpaceResponseDto } from '@immich/sdk';
   import { TooltipProvider } from '@immich/ui';
+  import type { ComponentProps } from 'svelte';
   import SpaceHero from './space-hero.svelte';
 
-  interface Props {
-    space: SharedSpaceResponseDto;
-    currentRole?: string;
-    gradientClass?: string;
-    canEdit?: boolean;
-    onChangeCover?: () => void;
-    onEditSpace?: () => void;
-    onReposition?: () => void;
-    repositioning?: boolean;
-    onSavePosition?: (cropY: number) => void;
-    onCancelReposition?: () => void;
-    compact?: boolean;
-    collapsed?: boolean;
-  }
-
-  let props: Props = $props();
+  // SpaceHero's own props, forwarded verbatim, so the wrapper cannot fall behind them (it had lost assetCount)
+  let props: ComponentProps<typeof SpaceHero> = $props();
 </script>
 
 <TooltipProvider>

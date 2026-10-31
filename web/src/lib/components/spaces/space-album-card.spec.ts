@@ -1,3 +1,4 @@
+import type { SharedSpaceLinkedAlbumDto } from '@immich/sdk';
 import { fireEvent, screen } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { getActiveDragPayload, readDragPayload, setActiveDragPayload } from '$lib/utils/space-album-folder-dnd';
@@ -23,16 +24,17 @@ describe('SpaceAlbumCard', () => {
     setActiveDragPayload(null);
   });
 
-  const album = {
+  const album: SharedSpaceLinkedAlbumDto = {
     id: 'a-1',
     albumName: 'Trip',
     assetCount: 12,
     albumThumbnailAssetId: null,
+    folderId: null,
+    ownerId: 'owner-1',
     showInTimeline: true,
     hiddenFromMyTimeline: false,
     addedById: null,
     linkedAt: '2026-01-01T00:00:00Z',
-    albumUsers: [],
     description: '',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
