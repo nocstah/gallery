@@ -1,16 +1,16 @@
 import { AlbumUserRole, AssetOrder } from '@immich/sdk';
 import { modalManager } from '@immich/ui';
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import { fireEvent, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAnimateMock } from '$lib/__mocks__/animate.mock';
 import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
 import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { barSlot } from '$lib/managers/bar-slot.svelte';
 import { qrManager } from '$lib/managers/special-albums.svelte';
+import { renderWithTooltips } from '$tests/helpers';
 import { albumFactory } from '@test-data/factories/album-factory';
 import { timelineAssetFactory } from '@test-data/factories/asset-factory';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
@@ -159,15 +159,12 @@ function renderPage(album = albumFactory.build({ assetCount: 2 })) {
 
   sdkMock.getSearchSuggestions.mockImplementation((() => Promise.resolve([] as string[])) as never);
 
-  return render(TestWrapper, {
-    component: AlbumPage,
-    componentProps: {
-      data: {
-        album,
-        asset: undefined,
-        error: undefined,
-        meta: { title: album.albumName },
-      },
+  return renderWithTooltips(AlbumPage, {
+    data: {
+      album,
+      asset: undefined,
+      error: undefined,
+      meta: { title: album.albumName },
     },
   });
 }

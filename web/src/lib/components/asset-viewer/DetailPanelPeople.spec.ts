@@ -85,10 +85,10 @@ const renderPanel = (props: {
   });
 };
 
-// renderWithTooltips casts away the TestWrapper indirection, so rerender must be fed the
-// wrapper's own prop shape — passing the component's props directly silently does nothing.
+// renderWithTooltips renders TestWrapper, so rerender takes the wrapper's own props — passing the
+// component's props directly would silently do nothing, and its type says so now.
 const rerenderPanel = async (
-  result: { rerender: (props: never) => Promise<void> },
+  result: ReturnType<typeof renderPanel>,
   props: { isOwner: boolean; spaceId?: string; assetId: string },
 ) => {
   await result.rerender({
@@ -96,10 +96,11 @@ const rerenderPanel = async (
     componentProps: {
       asset: asset({ id: props.assetId }),
       isOwner: props.isOwner,
+      canEditSpacePeople: undefined,
       previousRoute: '/photos',
       spaceId: props.spaceId,
     },
-  } as never);
+  });
 };
 
 // A person as the server sends it inside a shared space: the id stays the GLOBAL person id
