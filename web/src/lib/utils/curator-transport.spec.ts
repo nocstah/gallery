@@ -296,7 +296,7 @@ describe("Curator's features, from the library's file", () => {
     Object.fromEntries(Object.entries(ALL).map(([name, [feature]]) => [name, feature === null || offers(feature)]));
 
   it('names what every call of the client is for', () => {
-    expect(Object.keys(CALLS).toSorted()).toEqual(Object.keys(curator).toSorted());
+    expect(Object.keys(CALLS).sort()).toEqual(Object.keys(curator).sort());
   });
 
   it.each(CURATOR_FEATURES)("asks nothing of %s where the library's Curator does not offer it", async (left) => {
