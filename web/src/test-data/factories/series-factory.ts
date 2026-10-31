@@ -71,6 +71,7 @@ export const smartAlbum = (overrides: Partial<SmartAlbum> = {}): SmartAlbum => (
 export const comingMemory = (overrides: Partial<ComingMemory> = {}): ComingMemory => ({
   key: 'event:340',
   day: dayFromToday(1),
+  month: '2018-03',
   kind: 'event',
   title: 'Riverton harbour',
   line: 'Riverton · March 2018',

@@ -31,8 +31,9 @@ vi.mock('@immich/ui', async (importOriginal) => ({
   toastManager: { success: mocks.success, danger: mocks.danger },
 }));
 
-// Curator's own words for a title it refuses
+// Curator's own words for a title it refuses, which the page says in the owner's language
 const NAMES_SOMEONE = "The family page never shows anyone's name: take the name out of the title";
+const PLACE_FROM_HOME = 'The family page never shows a place from home: take it out of the title';
 const GIVES_A_DAY = 'The family page never gives a day of the month: take the date out of the title';
 
 type Asked = { method: string; path: string; body?: Record<string, unknown> };
@@ -120,7 +121,7 @@ describe('the family page’s title', () => {
     expect(patches()).toEqual([{ method: 'PATCH', path: '/api/series/7', body: { name: '' } }]);
   });
 
-  it('says why Curator refused it, in its words, under the field, until the owner types again', async () => {
+  it('says why Curator refused it, in the owner’s language, under the field, until the owner types again', async () => {
     refusal = NAMES_SOMEONE;
     show();
     const { form, field } = await titleForm();
@@ -128,7 +129,7 @@ describe('the family page’s title', () => {
     await fireEvent.click(within(form).getByRole('button', { name: 'save' }));
 
     const said = await within(form).findByRole('alert');
-    expect(said).toHaveTextContent(NAMES_SOMEONE);
+    expect(said).toHaveTextContent('memory_series_title_names_someone');
     expect(field).toHaveAttribute('aria-invalid', 'true');
     expect(field).toHaveAttribute('aria-errormessage', said.id);
     expect(field).toHaveValue('Rowan at the lake');
@@ -143,7 +144,19 @@ describe('the family page’s title', () => {
     refusal = GIVES_A_DAY;
     await fireEvent.input(field, { target: { value: 'At the lake on the 14th' } });
     await fireEvent.click(within(form).getByRole('button', { name: 'save' }));
-    expect(await within(form).findByRole('alert')).toHaveTextContent(GIVES_A_DAY);
+    expect(await within(form).findByRole('alert')).toHaveTextContent('memory_series_title_gives_a_day');
+
+    // a place from home (a trip's place is allowed, so Curator alone knows which)
+    refusal = PLACE_FROM_HOME;
+    await fireEvent.input(field, { target: { value: 'Summers in Riverton' } });
+    await fireEvent.click(within(form).getByRole('button', { name: 'save' }));
+    expect(await within(form).findByRole('alert')).toHaveTextContent('memory_series_title_home_place');
+
+    // a refusal the page does not know stays in Curator's words
+    refusal = 'Curator could not check the title just now';
+    await fireEvent.input(field, { target: { value: 'Summers at the lake' } });
+    await fireEvent.click(within(form).getByRole('button', { name: 'save' }));
+    expect(await within(form).findByRole('alert')).toHaveTextContent('Curator could not check the title just now');
   });
 
   it('takes a title saved elsewhere into the field, and keeps what is being typed while the days come again', async () => {

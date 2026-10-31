@@ -61,6 +61,17 @@ const readable = (locale?: string) => {
   }
 };
 
+/** A month and its year ("March 2004"), from Curator's 'YYYY-MM', in the reader's language; one it cannot read, as it
+ * is. */
+export const seriesMonth = (month: string, locale?: string): string => {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) {
+    return month;
+  }
+  const options: Intl.DateTimeFormatOptions = { month: 'long', year: 'numeric' };
+  return new Intl.DateTimeFormat(readable(locale), options).format(new Date(Number(match[1]), Number(match[2]) - 1, 1));
+};
+
 /** The weekday and the date in full ("Sunday, November 1"), with the year when it is not this year's: a day said in a
  * sentence of its own. */
 export const seriesLongDate = (day: string, locale?: string, now = new Date()): string => {

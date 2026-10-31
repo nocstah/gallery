@@ -1,7 +1,7 @@
 import { SharedLinkType, type SharedLinkCreateDto, type SharedLinkResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
-import { comingDays, dayFromToday, sentMemory, seriesCard } from '@test-data/factories/series-factory';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import { comingDays, comingMemory, dayFromToday, sentMemory, seriesCard } from '@test-data/factories/series-factory';
 import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 import SeriesPage from './SeriesPage.svelte';
 import type { Coming, SentMemory } from './series-api';
@@ -197,6 +197,10 @@ describe('the family page before it is made', () => {
     const dayOne = within(section).getByLabelText('memory_series_day_one');
     expect(dayOne).toHaveValue(dayFromToday(1));
     expect(dayOne).toHaveAttribute('min', dayFromToday(0));
+    // under it, where the story starts: not that day, but the first memory's earliest photos
+    const story = within(section).getByTestId('series-family-story');
+    expect(story).toHaveTextContent('memory_series_story_from');
+    expect(dayOne).toHaveAttribute('aria-describedby', story.id);
     expect(passwordSwitch(section)).toHaveAttribute('aria-checked', 'true');
     expect(within(section).getByLabelText('password')).toBeInTheDocument();
     expect(within(section).getByRole('button', { name: 'memory_series_link_make' })).toBeEnabled();
@@ -306,6 +310,20 @@ describe('the family page before it is made', () => {
     await fireEvent.click(within(section).getByRole('button', { name: 'memory_series_link_make' }));
     await waitFor(() => expect(section).toHaveAttribute('data-state', 'live'));
     expect(curatorWrites().filter(({ path }) => path.endsWith('/day1'))).toHaveLength(1);
+  });
+
+  it('says the story starts with the old albums when the undated prelude goes first, and nothing with no days yet', async () => {
+    coming = comingDays({ memories: [comingMemory({ key: 'undated:1', kind: 'prelude', month: null })] });
+    show();
+    const section = await family();
+    expect(within(section).getByTestId('series-family-story')).toHaveTextContent('memory_series_story_from_old_albums');
+    cleanup();
+
+    coming = comingDays({ memories: [] });
+    show();
+    const prepared = await family();
+    expect(within(prepared).queryByTestId('series-family-story')).not.toBeInTheDocument();
+    expect(within(prepared).getByLabelText('memory_series_day_one')).not.toHaveAttribute('aria-describedby');
   });
 });
 

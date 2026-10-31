@@ -1,4 +1,4 @@
-import { t } from 'svelte-i18n';
+import { t, type Translations } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { curatorCall, CuratorError, curatorPost, type MemoryTrack, type SmartAlbum } from '$lib/utils/curator';
 
@@ -73,6 +73,9 @@ export type ComingMemory = {
   key: string;
   /** its day, 'YYYY-MM-DD' */
   day: string;
+  /** the month of its first photo, 'YYYY-MM': where the story starts when it is the first to go out; null for the
+   * prelude's undated photos (older Curators leave it out) */
+  month?: string | null;
   kind: 'prelude' | 'trip' | 'event' | 'month';
   /** the title and the line as the family page will show them (the line may be '') */
   title: string;
@@ -190,6 +193,20 @@ export const seriesApi = {
 /** A failure as a page's own state keeps it: Curator's, with its status, or one of its own (-1). */
 export const asCuratorError = (error: unknown) =>
   error instanceof CuratorError ? error : new CuratorError(error instanceof Error ? error.message : String(error), -1);
+
+/** Curator's refusals of a family page's title (curator/series_api.py), in its own English words, and the keys that say
+ * them in the owner's language: a person's name, a place from home, a day of the month. */
+const TITLE_REFUSALS = new Map<string, Translations>([
+  ["The family page never shows anyone's name: take the name out of the title", 'memory_series_title_names_someone'],
+  ['The family page never shows a place from home: take it out of the title', 'memory_series_title_home_place'],
+  ['The family page never gives a day of the month: take the date out of the title', 'memory_series_title_gives_a_day'],
+]);
+
+/** Why Curator would not have a title, in the owner's language where Kioku knows the refusal, else in Curator's words. */
+export const titleRefusal = (error: unknown): string => {
+  const key = error instanceof CuratorError && error.status === 400 ? TITLE_REFUSALS.get(error.message) : undefined;
+  return key ? get(t)(key) : seriesFailure(error);
+};
 
 /** What went wrong, as Curator's pages say it: its own words, or that it is not answering. */
 export const seriesFailure = (error: unknown): string => {

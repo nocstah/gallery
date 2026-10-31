@@ -5,6 +5,7 @@ import {
   nearDayKey,
   seriesDate,
   seriesLongDate,
+  seriesMonth,
   seriesPlainDate,
 } from './series-days';
 
@@ -75,5 +76,13 @@ describe('seriesPlainDate and seriesLongDate', () => {
     expect(seriesPlainDate('soon', 'en-US')).toBe('soon');
     expect(seriesLongDate('soon', 'en-US', friday)).toBe('soon');
     expect(seriesLongDate('2026-11-01', 'not a language', friday)).toMatch(/1/);
+  });
+});
+
+describe('seriesMonth', () => {
+  it('says a month and its year in the reader’s language, and leaves one it cannot read as it is', () => {
+    expect(seriesMonth('2004-03', 'en-US')).toBe('March 2004');
+    expect(seriesMonth('2004-03', 'de')).toBe('März 2004');
+    expect(seriesMonth('2004-3', 'en-US')).toBe('2004-3');
   });
 });

@@ -1,7 +1,9 @@
 <script lang="ts">
   // Local Omarchy layer: the family page in Coming up (gallery/series; the design's section 4), one section under the
-  // page's quiet line. Before it is made: what the family gets, day 1 (today or later, saved as it is chosen), a switch
-  // that asks for a password (on, as decided: D2) and Make the family link. Live: the page's address, the public one the
+  // page's quiet line. Before it is made: what the family gets, the day the first memory goes out (today or later,
+  // saved as it is chosen; not the story's start, which the line under it gives: the month of the first memory's
+  // earliest photos, or the old albums for the undated prelude), a switch that asks for a password (on, as decided: D2)
+  // and Make the family link. Live: the page's address, the public one the
   // Share sheets give out (asUrl: the external domain, /share/<key>), Copy link, New link and Turn off, which the page
   // asks about first. Off, once it was turned off (or Gallery no longer has the link Curator holds): it says so, with
   // the password switch again and Make a new family link. The link itself is series-state's to make and delete. What
@@ -13,8 +15,9 @@
   import { mdiCheck, mdiContentCopy } from '@mdi/js';
   import { onDestroy, tick, type Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { locale } from '$lib/stores/preferences.store';
   import type { Coming } from './series-api';
-  import { isoDay } from './series-days';
+  import { isoDay, seriesMonth } from './series-days';
   import type { SeriesLinking } from './series-state.svelte';
 
   type Props = {
@@ -51,6 +54,19 @@
   });
   const busy = $derived(!!linking);
   const dayOne = $derived(coming.series.starts_on ?? coming.first_day);
+  // where the story starts: the first memory to go out, its earliest photos' month, or the old albums of the prelude
+  const storyStart = $derived.by(() => {
+    const first = coming.memories[0];
+    if (!first) {
+      return undefined;
+    }
+    if (first.kind === 'prelude') {
+      return $t('memory_series_story_from_old_albums');
+    }
+    return first.month
+      ? $t('memory_series_story_from', { values: { month: seriesMonth(first.month, $locale) } })
+      : undefined;
+  });
   const address = $derived(link ? asUrl(link) : undefined);
   const today = isoDay(new Date());
 
@@ -126,16 +142,22 @@
     </p>
     <div class="series-family-form">
       {#if phase === 'before'}
-        <div class="series-family-day">
-          <Field label={$t('memory_series_day_one')} disabled={busy}>
-            <Input
-              type="date"
-              min={today}
-              value={dayOne}
-              data-testid="series-family-day-one"
-              onchange={(event) => onDayOne(event.currentTarget.value)}
-            />
-          </Field>
+        <div class="series-family-start">
+          <div class="series-family-day">
+            <Field label={$t('memory_series_day_one')} disabled={busy}>
+              <Input
+                type="date"
+                min={today}
+                value={dayOne}
+                data-testid="series-family-day-one"
+                aria-describedby={storyStart ? `${id}-story` : undefined}
+                onchange={(event) => onDayOne(event.currentTarget.value)}
+              />
+            </Field>
+          </div>
+          {#if storyStart}
+            <p class="series-family-story" id="{id}-story" data-testid="series-family-story">{storyStart}</p>
+          {/if}
         </div>
       {/if}
       <div class="series-family-switch">
@@ -188,8 +210,17 @@
     max-width: 24rem;
     margin-top: 1rem;
   }
+  /* the day the first memory goes out, and under it, muted, where the story starts: never read as one */
+  .series-family-start {
+    display: grid;
+    gap: 0.4rem;
+  }
   .series-family-day {
-    max-width: 12rem;
+    max-width: 16rem;
+  }
+  .series-family-story {
+    font-size: var(--ws-text-meta);
+    color: var(--immich-ui-muted);
   }
   .series-family-switch {
     display: flex;

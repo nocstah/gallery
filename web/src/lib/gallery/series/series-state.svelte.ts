@@ -18,6 +18,7 @@ import {
   asCuratorError,
   seriesApi,
   seriesFailure,
+  titleRefusal,
   type Coming,
   type ComingMemory,
   type SentMemory,
@@ -40,8 +41,8 @@ import { linksOf } from './series-cards';
 // for the link there is. Gallery is asked for the link itself for its address and its password, and Curator for what
 // went out, each when Curator's answer changes. After every change the coming days are asked for again.
 //
-// The family page's title is saved as the owner types it, Curator tidying it or refusing it in its own words (a name,
-// a day of the month). Deleting the series turns off every family link it still has, in Gallery first, as Turn off
+// The family page's title is saved as the owner types it, Curator tidying it or refusing it (a name, a place from
+// home, a day of the month), which the page says in the owner's language. Deleting the series turns off every family link it still has, in Gallery first, as Turn off
 // does, since Curator lets a series go only once Gallery has none of them.
 
 /** what the family page has under way: day 1, its first link, a new link, turning it off */
@@ -222,7 +223,8 @@ export class SeriesPageState {
   };
 
   /** The family page's title as the owner typed it, '' for Curator's own; a live page shows it at once. True once
-   * Curator has it; its refusal (a person's name, a day of the month) is kept for where the title is typed. */
+   * Curator has it; its refusal (a person's name, a place from home, a day of the month) is kept for where the title
+   * is typed. */
   saveTitle = async (name: string): Promise<boolean> => {
     const series = this.series;
     if (!series || this.savingTitle) {
@@ -242,7 +244,7 @@ export class SeriesPageState {
       return true;
     } catch (error) {
       if (!this.#closed) {
-        this.titleRefused = seriesFailure(error);
+        this.titleRefused = titleRefusal(error);
       }
       return false;
     } finally {
