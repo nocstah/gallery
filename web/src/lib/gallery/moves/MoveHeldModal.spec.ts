@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import type { Mock } from 'vitest';
 import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
 import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 import MoveHeldModal from './MoveHeldModal.svelte';
@@ -36,7 +37,7 @@ const held = [
   { asset: ids.d, reason: 'a-newer-reason' },
 ];
 
-let onClose: ReturnType<typeof vi.fn>;
+let onClose: Mock<() => void>;
 
 beforeEach(async () => {
   vi.clearAllMocks();

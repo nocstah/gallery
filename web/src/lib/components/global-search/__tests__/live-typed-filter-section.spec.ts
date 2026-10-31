@@ -1,13 +1,14 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { Command } from 'bits-ui';
-import type { Snippet } from 'svelte';
+import type { ComponentProps, Snippet } from 'svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import LiveTypedFilterSection from '../live-typed-filter-section.svelte';
 
 type ComponentAnchor = Parameters<typeof Command.Root>[0];
 type RenderSnippet = ($$anchor: ComponentAnchor) => void;
+type SectionProps = ComponentProps<typeof LiveTypedFilterSection>;
 const snippet = (renderSnippet: RenderSnippet) => renderSnippet as unknown as Snippet;
 
 beforeAll(async () => {
@@ -16,7 +17,7 @@ beforeAll(async () => {
   await waitLocale('en-US');
 });
 
-function LiveTypedFilterSectionHost($$anchor: ComponentAnchor, $$props: Record<string, unknown>) {
+function LiveTypedFilterSectionHost($$anchor: ComponentAnchor, $$props: SectionProps) {
   Command.Root($$anchor, {
     children: snippet(($$anchor: ComponentAnchor) => {
       Command.List($$anchor, {
@@ -38,7 +39,7 @@ function LiveTypedFilterSectionHost($$anchor: ComponentAnchor, $$props: Record<s
 describe('LiveTypedFilterSection', () => {
   it('renders live choices as filter application rows', async () => {
     const user = userEvent.setup();
-    const onSelect = vi.fn();
+    const onSelect = vi.fn<SectionProps['onSelect']>();
 
     render(LiveTypedFilterSectionHost, {
       props: {

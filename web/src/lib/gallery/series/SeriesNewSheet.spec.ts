@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import type { Mock } from 'vitest';
 import { albumSource, seriesCard, smartAlbum } from '@test-data/factories/series-factory';
 import SeriesNewSheet from './SeriesNewSheet.svelte';
 import type { SeriesCard } from './series-api';
@@ -17,7 +18,7 @@ vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth })
 type Asked = { method: string; path: string; body?: unknown };
 let asked: Asked[];
 let made: () => Response;
-let onClose: ReturnType<typeof vi.fn>;
+let onClose: Mock<(seriesId?: number) => void>;
 
 const ALBUMS = [
   smartAlbum(),

@@ -20,7 +20,8 @@ describe('LazyChunks', () => {
     vi.restoreAllMocks();
   });
 
-  const chunk = createRawSnippet((items: () => number[]) => ({ render: () => `<p>${items().join(',')}</p>` }));
+  // LazyChunks is generic in its items, which render() cannot infer, so the snippet takes them as unknown[]
+  const chunk = createRawSnippet((items: () => unknown[]) => ({ render: () => `<p>${items().join(',')}</p>` }));
   const renderChunks = () =>
     render(LazyChunks, {
       items: Array.from({ length: 10 }, (_, i) => i),

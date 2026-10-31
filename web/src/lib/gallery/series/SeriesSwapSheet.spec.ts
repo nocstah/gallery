@@ -1,7 +1,9 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import type { Mock } from 'vitest';
 import { comingMemory } from '@test-data/factories/series-factory';
 import SeriesSwapSheet from './SeriesSwapSheet.svelte';
+import type { ComingMemory } from './series-api';
 
 // Local Omarchy layer: Swap a photo (gallery/series): first the photo to take out, from the memory's own; then the one
 // to put in, from Curator's candidates the memory does not hold yet; Swap sends both with the memory's key in the body,
@@ -16,7 +18,7 @@ type Asked = { method: string; path: string; body?: unknown };
 let asked: Asked[];
 let candidates: { id: string; video: boolean; favourite: boolean; picked: boolean }[];
 let swapAnswer: () => Response;
-let onClose: ReturnType<typeof vi.fn>;
+let onClose: Mock<(memory?: ComingMemory) => void>;
 
 const memory = comingMemory();
 const swapped = comingMemory({

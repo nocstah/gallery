@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import type { ComponentProps } from 'svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import FaceActionsHelpModal from './FaceActionsHelpModal.svelte';
@@ -18,22 +19,25 @@ beforeAll(async () => {
   await waitLocale('en');
 });
 
-const GUIDED = {
+type ModalProps = ComponentProps<typeof FaceActionsHelpModal>;
+type Preset = Omit<ModalProps, 'onClose'>;
+
+const GUIDED: Preset = {
   mode: 'guided',
   actions: ['owner', 'stay', 'lock', 'other', 'unknown', 'detach'],
   introKey: 'admin.face_cleanup_review_help_intro',
   footerKey: 'admin.face_cleanup_review_help_footer',
-} as const;
+};
 
-const MANUAL = {
+const MANUAL: Preset = {
   mode: 'manual',
   actions: ['keep', 'other', 'lock', 'unknown', 'detach', 'unmark'],
   introKey: 'admin.face_cleanup_manual_review_help_intro',
   footerKey: 'admin.face_cleanup_manual_review_help_footer',
   defaultActionId: 'keep',
-} as const;
+};
 
-const renderModal = (preset: object, over: object = {}) =>
+const renderModal = (preset: Preset, over: Partial<ModalProps> = {}) =>
   render(FaceActionsHelpModal, { props: { ...preset, onClose: vi.fn(), ...over } });
 
 describe('FaceActionsHelpModal — guided', () => {
@@ -291,7 +295,7 @@ describe('FaceActionsHelpModal — structure and edges', () => {
 
   // H8
   it('closes on the close button', async () => {
-    const onClose = vi.fn();
+    const onClose = vi.fn<ModalProps['onClose']>();
     renderModal(GUIDED, { onClose });
 
     await fireEvent.click(screen.getByTestId('help-close'));

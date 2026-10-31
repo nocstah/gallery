@@ -4,7 +4,7 @@ import '@testing-library/jest-dom';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { beforeNavigate } from '$app/navigation';
 import PersonSuggestionReviewModal from '$lib/gallery/people/PersonSuggestionReviewModal.svelte';
 import { faceSuggestionContextExpanded } from '$lib/gallery/people/face-suggestion-context.store';
@@ -71,23 +71,28 @@ function item(id: string) {
 }
 const page1: PersonFaceSuggestionPageResponseDto = { total: 2, items: [item('f1'), item('f2')] };
 
-function setup(
-  overrides: Partial<{
-    loadPage: ReturnType<typeof vi.fn>;
-    confirm: ReturnType<typeof vi.fn>;
-    dismiss: ReturnType<typeof vi.fn>;
-    ignore: ReturnType<typeof vi.fn>;
-    onClose: ReturnType<typeof vi.fn>;
-  }> = {},
-) {
+// The modal's callback props, spelled out here: tsc reads a .svelte import without its props. svelte-check holds them
+// to the component's own at render().
+type LoadPage = (req: { page: number; size: number }) => Promise<PersonFaceSuggestionPageResponseDto>;
+// confirm, dismiss and ignore share one signature
+type Act = (assetFaceId: string) => Promise<{ acted: boolean }>;
+type Callbacks = {
+  loadPage: LoadPage;
+  confirm: Act;
+  dismiss: Act;
+  ignore: Act;
+  onClose: (result: { confirmed: number }) => void;
+};
+
+function setup(overrides: Partial<{ [K in keyof Callbacks]: Mock<Callbacks[K]> }> = {}) {
   const props = {
     person,
     referenceThumbnailUrl: '/api/people/p1/thumbnail',
-    loadPage: overrides.loadPage ?? vi.fn().mockResolvedValue(page1),
-    confirm: overrides.confirm ?? vi.fn().mockResolvedValue(acted()),
-    dismiss: overrides.dismiss ?? vi.fn().mockResolvedValue(acted()),
-    ignore: overrides.ignore ?? vi.fn().mockResolvedValue(acted()),
-    onClose: overrides.onClose ?? vi.fn(),
+    loadPage: overrides.loadPage ?? vi.fn<LoadPage>().mockResolvedValue(page1),
+    confirm: overrides.confirm ?? vi.fn<Act>().mockResolvedValue(acted()),
+    dismiss: overrides.dismiss ?? vi.fn<Act>().mockResolvedValue(acted()),
+    ignore: overrides.ignore ?? vi.fn<Act>().mockResolvedValue(acted()),
+    onClose: overrides.onClose ?? vi.fn<Callbacks['onClose']>(),
   };
   render(PersonSuggestionReviewModal, { props });
   return props;
