@@ -1,4 +1,4 @@
-import { getFaceRepairOwnerPeople, type FaceRepairOwnerPeopleResponseDto } from '@immich/sdk';
+import { getFaceRepairOwnerPeople, UserAvatarColor, type FaceRepairOwnerPeopleResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,6 +6,7 @@ import { authManager } from '$lib/managers/auth-manager.svelte';
 import { Route } from '$lib/route';
 import { manualReviewOwnerId } from '$lib/stores/face-cleanup-manual-review.store';
 import { userAdminFactory } from '@test-data/factories/user-factory';
+import type { PageData } from './$types';
 import Page from './+page.svelte';
 
 // Manual people browser at /admin/face-cleanup/people (Slice 6, §6.3 of
@@ -114,14 +115,15 @@ class ControllableIntersectionObserver implements IntersectionObserver {
 
 type OwnerPerson = FaceRepairOwnerPeopleResponseDto['people'][number];
 
-const makeUser = (id: string, name: string) => ({
-  id,
-  name,
-  email: `${id}@example.com`,
-  profileImagePath: '',
-  avatarColor: 'primary',
-  profileChangedAt: new Date().toISOString(),
-});
+const makeUser = (id: string, name: string) =>
+  userAdminFactory.build({
+    id,
+    name,
+    email: `${id}@example.com`,
+    profileImagePath: '',
+    avatarColor: UserAvatarColor.Primary,
+    profileChangedAt: new Date().toISOString(),
+  });
 
 const makePerson = (over: Partial<OwnerPerson> = {}): OwnerPerson => ({
   id: 'person-1',
@@ -140,7 +142,8 @@ const makeResponse = (
   hasMore: over.hasMore ?? false,
 });
 
-const makePageData = (users: ReturnType<typeof makeUser>[]) => ({
+const makePageData = (users: ReturnType<typeof makeUser>[]): PageData => ({
+  error: undefined,
   users,
   meta: { title: 'Manual review' },
 });

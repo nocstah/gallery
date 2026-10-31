@@ -28,6 +28,7 @@ import { personFactory } from '@test-data/factories/person-factory';
 import { preferencesFactory } from '@test-data/factories/preferences-factory';
 import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
 import { userAdminFactory } from '@test-data/factories/user-factory';
+import type { PageData } from './$types';
 import PeoplePage from './+page.svelte';
 
 const { gotoMock, pageStore, navigatingStore, featureFlagsMock } = vi.hoisted(() => {
@@ -163,21 +164,20 @@ function renderPage(
   // unfiltered overview statistics are the right source.
   peopleListTotals: { total: number; hidden: number } | null = null,
 ) {
-  return render(PeoplePage, {
-    props: {
-      data: {
-        people: {
-          people,
-          total: people.length,
-          hidden: people.filter((person) => person.isHidden).length,
-          hasNextPage,
-        },
-        peopleStatistics,
-        peopleListTotals,
-        meta: { title: 'People' },
-      },
+  const data: PageData = {
+    error: undefined,
+    asset: undefined,
+    people: {
+      people,
+      total: people.length,
+      hidden: people.filter((person) => person.isHidden).length,
+      hasNextPage,
     },
-  });
+    peopleStatistics,
+    peopleListTotals,
+    meta: { title: 'People' },
+  };
+  return render(PeoplePage, { props: { data } });
 }
 
 /**

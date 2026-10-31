@@ -166,7 +166,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
   });
 
   it('lists verdicts from both engines with their source, target and actor', async () => {
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(2));
 
@@ -199,7 +199,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
   // looks like it lost their work. The subtitle is the only thing on the page that explains that, so it must
   // render whether or not there are rows — the empty states are exactly when it is needed most.
   it('states the page scope in a subtitle, alongside rows', async () => {
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(2));
 
@@ -213,7 +213,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
       ReturnType<typeof getFaceRepairResolutions>
     >);
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     await waitFor(() => expect(screen.getByText('No decisions recorded yet')).toBeInTheDocument());
     expect(screen.getByTestId('resolutions-subtitle')).toHaveTextContent(
@@ -227,7 +227,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
       resolutions: [SPACE_PERSON_ROW, ORPHANED_ROW],
     } as unknown as Awaited<ReturnType<typeof getFaceRepairResolutions>>);
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(2));
 
@@ -271,7 +271,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
       resolutions: [liveUnnamedRow, ORPHANED_ROW],
     } as unknown as Awaited<ReturnType<typeof getFaceRepairResolutions>>);
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(2));
 
@@ -291,7 +291,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
   });
 
   it('filters by source', async () => {
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(2));
 
@@ -306,7 +306,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
   });
 
   it('undoing a row posts removeFaceRepairResolutions with verdictIds and refreshes', async () => {
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(2));
 
@@ -340,7 +340,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
         resolutions: [page2Row],
       } as unknown as Awaited<ReturnType<typeof getFaceRepairResolutions>>);
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(2));
     // Total matches the server total (3), not just what's loaded so far (2).
@@ -382,7 +382,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
       ReturnType<typeof getFaceRepairResolutions>
     >);
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     await waitFor(() => {
       expect(screen.getByText('No decisions recorded yet')).toBeInTheDocument();
@@ -395,7 +395,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
       ReturnType<typeof getFaceRepairResolutions>
     >);
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     // Real en.json is loaded in this file — 'No decisions recorded yet' is the actual value of
     // admin.face_cleanup_resolutions_empty, matching the sibling empty-state test above.
@@ -423,7 +423,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
       resolutions: [CLEANUP_ROW],
     } as unknown as Awaited<ReturnType<typeof getFaceRepairResolutions>>);
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(1));
 
     const suggestionFilter = screen
@@ -450,7 +450,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
       resolutions: [SUGGESTION_ROW],
     } as unknown as Awaited<ReturnType<typeof getFaceRepairResolutions>>);
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(1));
 
     const cleanupFilter = screen.getAllByTestId('source-filter-option').find((el) => el.dataset.value === 'cleanup')!;
@@ -477,7 +477,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
       resolutions: [SUGGESTION_ROW],
     } as unknown as Awaited<ReturnType<typeof getFaceRepairResolutions>>);
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(1));
 
     const cleanupFilter = screen.getAllByTestId('source-filter-option').find((el) => el.dataset.value === 'cleanup')!;
@@ -494,7 +494,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
   it('shows a load-error state (not the empty state) when the initial fetch fails, and Retry re-fetches', async () => {
     vi.mocked(getFaceRepairResolutions).mockRejectedValueOnce(new Error('network down'));
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     await waitFor(() => {
       expect(screen.getByTestId('load-error-banner')).toBeInTheDocument();
@@ -514,7 +514,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
   });
 
   it('renders a breadcrumb trail back to the face cleanup landing page', async () => {
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
 
     const trail = within(screen.getByTestId('breadcrumbs'));
 
@@ -548,7 +548,7 @@ describe('+page.svelte (face-cleanup resolutions)', () => {
       }),
     );
 
-    render(Page, { props: { data: { meta: { title: 'Resolutions' } } } });
+    render(Page);
     await waitFor(() => expect(screen.getAllByTestId('resolution-row')).toHaveLength(2));
 
     // Scoped to the filter-chip strip: `source-label` spans in the rows below also say "Admin cleanup" /

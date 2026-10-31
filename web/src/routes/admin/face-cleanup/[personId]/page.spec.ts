@@ -14,6 +14,7 @@ import { goto } from '$app/navigation';
 import FaceActionsHelpModal from '$lib/components/face-cleanup/FaceActionsHelpModal.svelte';
 import FacePhotoModal from '$lib/components/face-cleanup/FacePhotoModal.svelte';
 import { Route } from '$lib/route';
+import type { PageData } from './$types';
 import Page from './+page.svelte';
 import type { SuspectedOwner } from './destination';
 
@@ -210,7 +211,8 @@ const makeCompletedScan = (persons = [makeScanPerson()]) => ({
   createdAt: new Date().toISOString(),
 });
 
-const makePageData = (personId = PERSON_ID) => ({
+const makePageData = (personId = PERSON_ID): PageData => ({
+  error: undefined,
   personId,
   meta: { title: 'Review person' },
 });

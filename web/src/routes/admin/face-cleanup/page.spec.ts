@@ -1,7 +1,10 @@
+import { UserAvatarColor, type UserAdminResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { render, screen, within } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import { Route } from '$lib/route';
+import { userAdminFactory } from '@test-data/factories/user-factory';
+import type { PageData } from './$types';
 import Page from './+page.svelte';
 
 // The chooser at /admin/face-cleanup: two equal-weight cards (guided scan vs. manual review), covering
@@ -93,16 +96,18 @@ const makeScan = (over: Partial<Record<string, unknown>> = {}) => ({
   ...over,
 });
 
-const makeUser = (id: string) => ({
-  id,
-  name: `User ${id}`,
-  email: `${id}@example.com`,
-  profileImagePath: '',
-  avatarColor: 'primary',
-  profileChangedAt: new Date().toISOString(),
-});
+const makeUser = (id: string) =>
+  userAdminFactory.build({
+    id,
+    name: `User ${id}`,
+    email: `${id}@example.com`,
+    profileImagePath: '',
+    avatarColor: UserAvatarColor.Primary,
+    profileChangedAt: new Date().toISOString(),
+  });
 
-const makePageData = (over: { scan?: unknown; users?: unknown[] } = {}) => ({
+const makePageData = (over: { scan?: unknown; users?: UserAdminResponseDto[] } = {}): PageData => ({
+  error: undefined,
   users: over.users ?? [],
   scan: over.scan ?? null,
   meta: { title: 'Face cleanup' },

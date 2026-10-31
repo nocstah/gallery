@@ -11,6 +11,7 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Route } from '$lib/route';
+import type { PageData } from './$types';
 import Page from './+page.svelte';
 
 // The post-scan console, retriaged into two lanes (design
@@ -180,7 +181,7 @@ const mockFlaggedFaces = (faces: { assetFaceId: string; suspectedOwnerId: string
     flaggedFaces: faces,
   } as unknown as FaceRepairPersonFacesDto);
 
-const makePageData = () => ({ users: [], meta: { title: 'Guided cleanup' } });
+const makePageData = (): PageData => ({ error: undefined, users: [], meta: { title: 'Guided cleanup' } });
 
 // Same cast rationale as [personId]/page.spec.ts: modalManager.show's return type depends on which component
 // is passed, so a single concrete signature has to be asserted at this call site.
