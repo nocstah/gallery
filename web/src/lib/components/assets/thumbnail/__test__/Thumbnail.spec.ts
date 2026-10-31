@@ -4,7 +4,7 @@ import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observe
 import Thumbnail from '$lib/components/assets/thumbnail/Thumbnail.svelte';
 import { livePhotoMark } from '$lib/components/assets/thumbnail/live-mark';
 import { getTabbable } from '$lib/utils/focus-util';
-import { assetFactory, timelineAssetFactory } from '@test-data/factories/asset-factory';
+import { timelineAssetFactory } from '@test-data/factories/asset-factory';
 
 vi.mock('$lib/utils/navigation', () => ({
   currentUrlReplaceAssetId: vi.fn(),
@@ -30,13 +30,16 @@ vi.hoisted(() => {
   });
 });
 
+// Thumbnail takes a TimelineAsset; the factory makes a Live Photo by default, and these tests want a still image
+const stillImage = () => timelineAssetFactory.build({ livePhotoVideoId: null });
+
 describe('Thumbnail component', () => {
   beforeAll(() => {
     vi.stubGlobal('IntersectionObserver', getIntersectionObserverMock());
   });
 
   it('should only contain a single tabbable element (the container)', () => {
-    const asset = assetFactory.build({ originalPath: 'image.jpg', originalMimeType: 'image/jpeg' });
+    const asset = stillImage();
     const { baseElement } = render(Thumbnail, {
       asset,
       selected: true,
@@ -52,7 +55,7 @@ describe('Thumbnail component', () => {
   });
 
   it('shows thumbhash while image is loading', () => {
-    const asset = assetFactory.build({ originalPath: 'image.jpg', originalMimeType: 'image/jpeg' });
+    const asset = stillImage();
     const sut = render(Thumbnail, {
       asset,
       selected: true,
@@ -63,7 +66,7 @@ describe('Thumbnail component', () => {
   });
 
   it('carries the month mark it is given, in the corner while no check is there', () => {
-    const asset = assetFactory.build({ originalPath: 'image.jpg', originalMimeType: 'image/jpeg' });
+    const asset = stillImage();
     const { baseElement } = render(Thumbnail, { asset, monthMark: 'SEP' });
 
     const mark = baseElement.querySelector('.ws-month-mark');
@@ -72,7 +75,7 @@ describe('Thumbnail component', () => {
   });
 
   it('moves the month mark aside for the selection check', () => {
-    const asset = assetFactory.build({ originalPath: 'image.jpg', originalMimeType: 'image/jpeg' });
+    const asset = stillImage();
     const { baseElement } = render(Thumbnail, { asset, monthMark: 'SEP', selected: true });
 
     expect(baseElement.querySelector('[role="checkbox"]')).not.toBeNull();
@@ -80,7 +83,7 @@ describe('Thumbnail component', () => {
   });
 
   it('shows no month mark on other photos', () => {
-    const asset = assetFactory.build({ originalPath: 'image.jpg', originalMimeType: 'image/jpeg' });
+    const asset = stillImage();
     const { baseElement } = render(Thumbnail, { asset });
 
     expect(baseElement.querySelector('.ws-month-mark')).toBeNull();

@@ -40,7 +40,7 @@ describe('AssetViewerNavBar component', () => {
     onAction: () => {},
     onPlaySlideshow: () => {},
     onClose: () => {},
-    playOriginalVideo: false,
+    isPlayingOriginalVideo: false,
     setPlayOriginalVideo: () => Promise.resolve(),
   };
 
