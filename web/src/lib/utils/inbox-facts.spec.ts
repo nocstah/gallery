@@ -66,6 +66,10 @@ describe('photoSubject', () => {
       'a',
     );
     expect(photoSubject(card({ kind: 'qr.file', asset_ids: ['slip'], payload: {} }))).toBe('slip');
+    // the people found in a clip: the card is headed by the clip's when and where
+    expect(photoSubject(card({ kind: 'video.people', asset_ids: ['clip'], payload: { asset_id: 'clip' } }))).toBe(
+      'clip',
+    );
   });
 
   it("is a new version's original, a burst's cover for its animation, never a collage's", () => {

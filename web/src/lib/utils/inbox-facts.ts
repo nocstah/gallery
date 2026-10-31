@@ -36,8 +36,9 @@ export type InboxFacts = {
 
 /**
  * The one photo or clip a card is about, where it is about one: a change to a photo (Curator's asset.* kinds, filing a
- * slip in QR) or a new version of one (restore.publish: a restored copy, an animation of its burst, a Live Photo
- * effect), never a collage of an event's photos. A card about people, albums, tags or many photos has none.
+ * slip in QR, the people found in a clip) or a new version of one (restore.publish: a restored copy, an animation of
+ * its burst, a Live Photo effect), never a collage of an event's photos. A card about people, albums, tags or many
+ * photos has none.
  */
 export const photoSubject = ({
   kind,
@@ -48,7 +49,7 @@ export const photoSubject = ({
   if (kind === 'restore.publish') {
     return payload?.variant === 'collage' ? undefined : named;
   }
-  if (kind.startsWith('asset.') || kind === 'qr.file') {
+  if (kind.startsWith('asset.') || kind === 'qr.file' || kind === 'video.people') {
     const ids = [...new Set(asset_ids)];
     return named ?? (ids.length === 1 ? ids[0] : undefined);
   }
