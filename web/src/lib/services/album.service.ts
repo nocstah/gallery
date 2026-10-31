@@ -38,6 +38,7 @@ import {
 import { type MessageFormatter } from 'svelte-i18n';
 import { goto } from '$app/navigation';
 import { vaultEdition } from '$lib/gallery/edition';
+import { albumSeriesAction } from '$lib/gallery/series/series-album.svelte';
 import { albumFolders } from '$lib/managers/album-folders.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { eventManager } from '$lib/managers/event-manager.svelte';
@@ -167,6 +168,10 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     onAction: () => void photoBooks.askForAlbum(album),
   };
 
+  // Local Omarchy layer: A memory a day from this album (gallery/series): a smart album's own series, opened or made,
+  // for Curator's owner only
+  const MemoryADay = albumSeriesAction($t, album);
+
   const Options: ActionItem = {
     title: $t('options'),
     icon: mdiCogOutline,
@@ -196,6 +201,7 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
     Edit,
     Leave,
     MakeBook,
+    MemoryADay,
     Merge,
     MoveToFolder,
     Options,

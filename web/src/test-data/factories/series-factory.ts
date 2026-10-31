@@ -1,5 +1,14 @@
-import type { Coming, ComingMemory, SentMemory, SeriesRow, SkippedMemory } from '$lib/gallery/series/series-api';
+import type {
+  Coming,
+  ComingMemory,
+  SentMemory,
+  SeriesCard,
+  SeriesRow,
+  SeriesSource,
+  SkippedMemory,
+} from '$lib/gallery/series/series-api';
 import { isoDay } from '$lib/gallery/series/series-days';
+import type { SmartAlbum } from '$lib/utils/curator';
 
 // Local Omarchy layer: a series as Curator's routes give it (gallery/series), for its specs. Synthetic names, places and
 // ids only: this branch is public.
@@ -15,6 +24,47 @@ export const seriesRow = (overrides: Partial<SeriesRow> = {}): SeriesRow => ({
   starts_on: null,
   people_without: [],
   created_at: '2026-10-30T09:00:00Z',
+  ...overrides,
+});
+
+/** a series as every series route gives it: the row, what it is made from and where it stands (of the whole library,
+ * planning, no family link yet, unless told otherwise) */
+export const seriesCard = (overrides: Partial<SeriesCard> = {}): SeriesCard => ({
+  ...seriesRow(),
+  link_id: null,
+  span_from: null,
+  span_to: null,
+  smart_album_id: null,
+  album_id: null,
+  source: { kind: 'library' },
+  status: 'planning',
+  remaining: null,
+  sent_count: 0,
+  prepared_count: 0,
+  links: [],
+  ...overrides,
+});
+
+/** what an album's series is made from */
+export const albumSource = (overrides: Partial<Extract<SeriesSource, { kind: 'album' }>> = {}): SeriesSource => ({
+  kind: 'album',
+  album_id: 'album-riverton',
+  smart_album_id: 4,
+  name: 'Riverton walks',
+  updating: true,
+  gone: false,
+  ...overrides,
+});
+
+/** a smart album as Curator lists it */
+export const smartAlbum = (overrides: Partial<SmartAlbum> = {}): SmartAlbum => ({
+  id: 4,
+  album_id: 'album-riverton',
+  name: 'Riverton walks',
+  rule: { search: {}, strictness: 'normal', filters: {} },
+  count: 1204,
+  excluded: 0,
+  synced_at: null,
   ...overrides,
 });
 
@@ -51,7 +101,7 @@ export const skippedMemory = (overrides: Partial<SkippedMemory> = {}): SkippedMe
 });
 
 export const comingDays = (overrides: Partial<Coming> = {}): Coming => ({
-  series: seriesRow(),
+  series: seriesCard(),
   first_day: dayFromToday(1),
   provisional: true,
   preparing: false,

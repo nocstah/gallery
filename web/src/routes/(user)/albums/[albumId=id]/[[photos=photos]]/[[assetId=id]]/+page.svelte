@@ -1010,6 +1010,8 @@
       <ActionMenuItem action={Actions.Merge} />
       <ActionMenuItem action={Actions.ToggleTimeline} />
       <ActionMenuItem action={Actions.MakeBook} />
+      <!-- Local Omarchy layer: A memory a day from this album, on a smart album, for Curator's owner (gallery/series) -->
+      <ActionMenuItem action={Actions.MemoryADay} />
       <ActionMenuItem action={Actions.Delete} />
       <ActionMenuItem action={Actions.Leave} />
     </ButtonContextMenu>

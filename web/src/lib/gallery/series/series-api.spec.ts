@@ -34,23 +34,36 @@ afterEach(() => {
 });
 
 describe('seriesApi', () => {
-  it('asks for the series, plans one with Curator’s name or the one given, and changes it', async () => {
+  it('asks for every series and for one, plans one of the library or of a smart album, and changes it', async () => {
     await seriesApi.list();
+    await seriesApi.one(7);
     await seriesApi.create();
-    await seriesApi.create('From the beginning');
+    await seriesApi.create({ smart_album_id: 4, span_from: '2003-03-01', span_to: '2010-12-31' });
     await seriesApi.update(7, { people_without: ['person-anna', 'person-ben'] });
+    await seriesApi.update(7, { name: 'Summers at the lake' });
     await seriesApi.coming(7);
+    await seriesApi.remove(7);
+    await seriesApi.smartAlbums();
     expect(asked).toEqual([
       { method: 'GET', path: '/api/series', credentials: 'include' },
+      { method: 'GET', path: '/api/series/7', credentials: 'include' },
       { method: 'POST', path: '/api/series', body: {}, credentials: 'include' },
-      { method: 'POST', path: '/api/series', body: { name: 'From the beginning' }, credentials: 'include' },
+      {
+        method: 'POST',
+        path: '/api/series',
+        body: { smart_album_id: 4, span_from: '2003-03-01', span_to: '2010-12-31' },
+        credentials: 'include',
+      },
       {
         method: 'PATCH',
         path: '/api/series/7',
         body: { people_without: ['person-anna', 'person-ben'] },
         credentials: 'include',
       },
+      { method: 'PATCH', path: '/api/series/7', body: { name: 'Summers at the lake' }, credentials: 'include' },
       { method: 'GET', path: '/api/series/7/coming', credentials: 'include' },
+      { method: 'DELETE', path: '/api/series/7', credentials: 'include' },
+      { method: 'GET', path: '/api/smart-albums', credentials: 'include' },
     ]);
   });
 
@@ -92,8 +105,11 @@ describe('seriesApi', () => {
   });
 
   it('fails with Curator’s own words, or as not answering', async () => {
-    answer = () => Response.json({ detail: 'A series exists already' }, { status: 409 });
-    await expect(seriesApi.create()).rejects.toMatchObject({ message: 'A series exists already', status: 409 });
+    answer = () => Response.json({ detail: 'The span ends before it starts' }, { status: 400 });
+    await expect(seriesApi.create({ span_from: '2010-01-01', span_to: '2003-01-01' })).rejects.toMatchObject({
+      message: 'The span ends before it starts',
+      status: 400,
+    });
 
     vi.mocked(fetch).mockRejectedValueOnce(new TypeError('Failed to fetch'));
     const offline = await seriesApi.list().catch((error: unknown) => error);
@@ -104,6 +120,12 @@ describe('seriesApi', () => {
   it('asks nothing in a library whose Curator does not offer what it adds to memories', async () => {
     await loadLibraryContext(serving(secondWithout('memories')));
     await expect(seriesApi.list()).rejects.toMatchObject({ status: 0 });
+    expect(asked).toEqual([]);
+  });
+
+  it('asks for no smart albums in a library whose Curator keeps none', async () => {
+    await loadLibraryContext(serving(secondWithout('smart')));
+    await expect(seriesApi.smartAlbums()).rejects.toMatchObject({ status: 0 });
     expect(asked).toEqual([]);
   });
 });

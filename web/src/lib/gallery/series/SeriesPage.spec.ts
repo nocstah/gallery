@@ -1,19 +1,26 @@
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import PeoplePickerModal from '$lib/modals/PeoplePickerModal.svelte';
-import { comingDays, comingMemory, dayFromToday, seriesRow, skippedMemory } from '@test-data/factories/series-factory';
+import {
+  albumSource,
+  comingDays,
+  comingMemory,
+  dayFromToday,
+  seriesCard,
+  skippedMemory,
+} from '@test-data/factories/series-factory';
 import SeriesPage from './SeriesPage.svelte';
 import SeriesSwapSheet from './SeriesSwapSheet.svelte';
 import { seen } from './memory-film.test-wrapper.svelte';
-import type { Coming, SeriesRow } from './series-api';
+import type { Coming, SeriesCard } from './series-api';
 import { seriesDate } from './series-days';
 import { POLL_MS } from './series-state.svelte';
 
-// Local Omarchy layer: "From the beginning" against a stand-in Curator (gallery/series): planning a series, the coming
-// days as the family will see them, the four buttons of a day and Put back, each sending the memory's key in the body,
-// the swap sheet's answer in its row, who is left out, and the days asked for again while Curator prepares them, and
-// never once the page has closed. Every word is an i18n key (the specs render the 'dev' locale, which shows keys).
-// Synthetic names, places and ids only.
+// Local Omarchy layer: one series of "From the beginning" against a stand-in Curator (gallery/series): its head (what
+// it is made from, its span, the way back), a series that is gone, the coming days as the family will see them, the
+// four buttons of a day and Put back, each sending the memory's key in the body, the swap sheet's answer in its row,
+// who is left out, and the days asked for again while Curator prepares them, and never once the page has closed.
+// Every word is an i18n key (the specs render the 'dev' locale, which shows keys). Synthetic names, places and ids only.
 
 const mocks = vi.hoisted(() => ({
   auth: {
@@ -49,27 +56,17 @@ vi.mock('@immich/sdk', async (importOriginal) => ({
 
 type Asked = { method: string; path: string; body?: Record<string, unknown> };
 let asked: Asked[];
-let series: SeriesRow[];
-let coming: Coming;
+let coming: Coming | undefined;
 let failWith: Response | 'offline' | undefined;
 
 const PEOPLE: Record<string, string> = { 'person-anna': 'Anna', 'person-ben': 'Ben' };
 
 const answer = ({ method, path, body }: Asked): Response => {
-  if (path === '/api/series' && method === 'GET') {
-    return Response.json({ series });
-  }
-  if (path === '/api/series' && method === 'POST') {
-    series = [seriesRow()];
-    coming = comingDays({ preparing: true, memories: [] });
-    return Response.json({ series: series[0], job: 11 }, { status: 201 });
-  }
   if (path === '/api/series/7/coming') {
-    return Response.json(coming);
+    return coming ? Response.json(coming) : Response.json({ detail: 'No such series' }, { status: 404 });
   }
-  if (path === '/api/series/7' && method === 'PATCH') {
-    const saved = { ...series[0], ...body };
-    series = [saved];
+  if (path === '/api/series/7' && method === 'PATCH' && coming) {
+    const saved: SeriesCard = { ...coming.series, ...body };
     coming = { ...coming, series: saved };
     return Response.json({ series: saved, job: 12 });
   }
@@ -85,7 +82,6 @@ const answer = ({ method, path, body }: Asked): Response => {
 beforeEach(() => {
   asked = [];
   failWith = undefined;
-  series = [seriesRow()];
   coming = comingDays();
   vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
     const url = new URL(String(input));
@@ -117,44 +113,84 @@ afterEach(() => {
 const comingAsked = () => asked.filter(({ path }) => path === '/api/series/7/coming').length;
 const posts = () => asked.filter(({ method }) => method !== 'GET');
 const rows = async () => await screen.findAllByTestId('series-day');
-const show = (title = 'memory_series_title') => render(SeriesPage, { props: { title } });
+const show = (seriesId: number | null = 7) => render(SeriesPage, { props: { title: 'memory_series_title', seriesId } });
 
-describe('SeriesPage before there is a series', () => {
-  it('says what a series is and plans one, then shows Curator preparing the days', async () => {
-    series = [];
+describe('SeriesPage, its head', () => {
+  it('says what the series is made from, with the way back to every series', async () => {
     show();
-    expect(await screen.findByTestId('series-empty')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'memory_series_empty_title' })).toBeInTheDocument();
-    expect(screen.getByText('memory_series_empty_body')).toBeInTheDocument();
-    expect(comingAsked()).toBe(0);
-
-    await fireEvent.click(screen.getByRole('button', { name: 'memory_series_plan' }));
-    expect(await screen.findByTestId('series-status')).toHaveTextContent('memory_series_preparing');
-    expect(posts()).toEqual([{ method: 'POST', path: '/api/series', body: {} }]);
-    expect(comingAsked()).toBe(1);
-    expect(screen.queryByTestId('series-empty')).not.toBeInTheDocument();
+    const head = await screen.findByTestId('series-head');
+    expect(within(head).getByRole('heading', { level: 2 })).toHaveTextContent('memory_series_whole_library');
+    expect(within(head).getByRole('link', { name: 'memory_series_all' })).toHaveAttribute(
+      'href',
+      '/from-the-beginning',
+    );
+    expect(within(head).queryByTestId('series-head-span')).not.toBeInTheDocument();
+    expect(within(head).queryByTestId('series-head-note')).not.toBeInTheDocument();
+    // only the coming days were asked for: they come with the series
+    expect(asked.map(({ path }) => path)).toEqual(['/api/series/7/coming']);
   });
 
-  it('shows the series another tab planned meanwhile', async () => {
-    series = [];
+  it('names an album’s series by its album, with its span and the album’s note', async () => {
+    coming = comingDays({
+      series: seriesCard({
+        source: albumSource({ updating: false }),
+        span_from: '2003-03-01',
+        span_to: '2010-12-31',
+      }),
+    });
     show();
-    await screen.findByTestId('series-empty');
-    series = [seriesRow()];
-    vi.mocked(fetch).mockImplementationOnce(() =>
-      Promise.resolve(Response.json({ detail: 'A series exists already' }, { status: 409 })),
+    const head = await screen.findByTestId('series-head');
+    expect(within(head).getByRole('heading', { level: 2 })).toHaveTextContent('Riverton walks');
+    expect(within(head).getByTestId('series-head-span')).toHaveTextContent('memory_series_span_both');
+    expect(within(head).getByTestId('series-head-note')).toHaveTextContent('memory_series_album_stopped');
+  });
+});
+
+describe('SeriesPage of a series Curator does not have', () => {
+  it('says it is gone, with the way back, and asks nothing more', async () => {
+    vi.useFakeTimers();
+    coming = undefined;
+    show();
+    await vi.advanceTimersByTimeAsync(0);
+    const gone = screen.getByTestId('series-gone');
+    expect(within(gone).getByRole('heading', { name: 'memory_series_gone' })).toBeInTheDocument();
+    expect(within(gone).getByRole('link', { name: 'memory_series_all' })).toHaveAttribute(
+      'href',
+      '/from-the-beginning',
     );
-    await fireEvent.click(screen.getByRole('button', { name: 'memory_series_plan' }));
-    expect(await rows()).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(POLL_MS * 3);
+    expect(comingAsked()).toBe(1);
+  });
+
+  it('asks nothing for an address that names no series', async () => {
+    show(null);
+    expect(await screen.findByTestId('series-gone')).toBeInTheDocument();
+    expect(asked).toEqual([]);
+  });
+
+  it('says it is gone once it is deleted elsewhere while the page is open', async () => {
+    vi.useFakeTimers();
+    coming = comingDays({ preparing: true });
+    show();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(screen.getAllByTestId('series-day')).toHaveLength(2);
+    coming = undefined;
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(screen.getByTestId('series-gone')).toBeInTheDocument();
+    expect(screen.queryByTestId('series-day')).not.toBeInTheDocument();
+    await vi.advanceTimersByTimeAsync(POLL_MS * 3);
+    expect(comingAsked()).toBe(2);
   });
 });
 
 describe('SeriesPage when Curator cannot be asked', () => {
-  it('says Curator is not answering, on its port, with Retry', async () => {
+  it('says Curator is not answering, on its port, with Retry and the way back', async () => {
     failWith = 'offline';
     show();
     const failed = await screen.findByTestId('series-failed');
     expect(within(failed).getByRole('heading', { name: 'ai_inbox_offline_title' })).toBeInTheDocument();
     expect(within(failed).getByText('memory_series_offline_body')).toBeInTheDocument();
+    expect(within(failed).getByRole('link', { name: 'memory_series_all' })).toBeInTheDocument();
 
     failWith = undefined;
     await fireEvent.click(within(failed).getByRole('button', { name: 'retry' }));
@@ -260,6 +296,8 @@ describe('SeriesPage, the coming days', () => {
   });
 
   it('opens the swap sheet for the day and shows the memory it answers with in its row', async () => {
+    const days = comingDays();
+    coming = days;
     show();
     const [first] = await rows();
     mocks.show.mockResolvedValueOnce(comingMemory({ title: 'Riverton harbour at dusk', picked_by: 'owner' }));
@@ -267,7 +305,7 @@ describe('SeriesPage, the coming days', () => {
     await waitFor(() =>
       expect(within(first).getByRole('heading', { name: 'Riverton harbour at dusk' })).toBeInTheDocument(),
     );
-    expect(mocks.show).toHaveBeenCalledWith(SeriesSwapSheet, { seriesId: 7, memory: coming.memories[0] });
+    expect(mocks.show).toHaveBeenCalledWith(SeriesSwapSheet, { seriesId: 7, memory: days.memories[0] });
     expect(within(first).getByTestId('series-day-owner')).toBeInTheDocument();
     // the sheet asked Curator itself; the page asked nothing more
     expect(posts()).toEqual([]);
@@ -330,8 +368,7 @@ describe('SeriesPage, the skipped days', () => {
 
 describe('SeriesPage, who is left out', () => {
   it('names them from Gallery, and saves each one taken off and each one added', async () => {
-    series = [seriesRow({ people_without: ['person-anna'] })];
-    coming = comingDays({ series: series[0] });
+    coming = comingDays({ series: seriesCard({ people_without: ['person-anna'] }) });
     show();
     const leaveOut = await screen.findByTestId('series-leave-out');
     expect(within(leaveOut).getByText('memory_series_leave_out_body')).toBeInTheDocument();
@@ -415,11 +452,13 @@ describe('SeriesPage words', () => {
     await rows();
     const words = [
       ...screen.getAllByRole('button').map((button) => button.textContent!.trim()),
+      ...screen.getAllByRole('link').map((link) => link.textContent!.trim()),
       ...screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.firstChild!.textContent!.trim()),
     ];
     expect(words.length).toBeGreaterThan(10);
+    // the page's own keys, and Gallery's Save for the family page's title
     for (const word of words) {
-      expect(word).toMatch(/^memory_series_[a-z_]+$/);
+      expect(word).toMatch(/^(memory_series_[a-z_]+|save)$/);
     }
   });
 });

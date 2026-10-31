@@ -15,19 +15,23 @@ import { makeSharedLink } from '$lib/services/shared-link.service';
 import { CuratorError } from '$lib/utils/curator';
 import { serverDetail } from '$lib/utils/handle-error';
 import {
+  asCuratorError,
   seriesApi,
   seriesFailure,
   type Coming,
   type ComingMemory,
   type SentMemory,
+  type SeriesCard,
   type SeriesRow,
 } from './series-api';
+import { linksOf } from './series-cards';
 
-// Local Omarchy layer: the state of "From the beginning" while its page is open (gallery/series). It asks Curator for
-// the series and its coming days, and after anything Curator answers with a job (planning, Skip, Put back, Pick again,
-// a change to who is left out) it asks for the days again, then every few seconds while Curator says it is preparing
-// them. Nothing is asked once the page has closed. A failure keeps what the page shows and says what went wrong in one
-// line; only the first look failing is the page's own state.
+// Local Omarchy layer: the state of one series' page in "From the beginning" while it is open (gallery/series), the
+// series by Curator's id. It asks Curator for its coming days, which come with the series itself, and after anything
+// Curator answers with a job (Skip, Put back, Pick again, a change to who is left out) it asks for the days again, then
+// every few seconds while Curator says it is preparing them. Nothing is asked once the page has closed. A failure keeps
+// what the page shows and says what went wrong in one line; only the first look failing is the page's own state, and
+// a series Curator does not have (any more) is the page's own too: it is gone.
 //
 // The family page (the design's section 4) is a Gallery shared link that the web makes and deletes with the owner's
 // session, and Curator binds and forgets: day 1 first, then the link with the photos Curator says it must hold, then
@@ -35,6 +39,10 @@ import {
 // the next one the same way and turn off the one it replaces, in Gallery first, then in Curator; Turn off does that
 // for the link there is. Gallery is asked for the link itself for its address and its password, and Curator for what
 // went out, each when Curator's answer changes. After every change the coming days are asked for again.
+//
+// The family page's title is saved as the owner types it, Curator tidying it or refusing it in its own words (a name,
+// a day of the month). Deleting the series turns off every family link it still has, in Gallery first, as Turn off
+// does, since Curator lets a series go only once Gallery has none of them.
 
 /** what the family page has under way: day 1, its first link, a new link, turning it off */
 export type SeriesLinking = 'day1' | 'make' | 'new' | 'off';
@@ -49,25 +57,33 @@ const galleryFailure = (error: unknown, key: Translations) => {
 /** Gallery has no link by that id (any more) */
 const isGone = (error: unknown) => isHttpError(error) && error.status === 404;
 
+/** Curator has no series by that id (any more) */
+const isMissing = (error: unknown) => error instanceof CuratorError && error.status === 404;
+
 /** how often the coming days are asked for while Curator prepares them */
 export const POLL_MS = 3000;
 
 /** a memory's film preview: its photos and clips as Gallery gives them to the owner, in film order */
 export type SeriesFilmShow = { memory: ComingMemory; assets: AssetResponseDto[] };
 
-const asCuratorError = (error: unknown) =>
-  error instanceof CuratorError ? error : new CuratorError(error instanceof Error ? error.message : String(error), -1);
+/** What deleting a series came to: gone, or what stopped it, in Curator's or Gallery's words. */
+export type SeriesDeleted = { deleted: true } | { deleted: false; failure: string };
 
 export class SeriesPageState {
-  /** undefined until Curator has answered; null when there is no series yet */
-  series = $state<SeriesRow | null>();
+  /** undefined until Curator has answered; null where Curator has no such series (any more): it is gone */
+  series = $state<SeriesCard | null>();
   coming = $state<Coming>();
   /** the first look failed: the page's own state, with Retry */
   failure = $state<CuratorError>();
   /** what the last action could not do, in one line */
   message = $state<string>();
-  planning = $state(false);
   savingPeople = $state(false);
+  /** the family page's title is being saved */
+  savingTitle = $state(false);
+  /** why Curator would not have the title, in its own words: said where the title is typed */
+  titleRefused = $state<string>();
+  /** the series is being deleted */
+  deleting = $state(false);
   film = $state<SeriesFilmShow>();
   /** the memories with an action under way (by key) */
   readonly busy = new SvelteSet<string>();
@@ -80,6 +96,7 @@ export class SeriesPageState {
   /** the family page was turned off while this page was open: it says so until a new link is made */
   turnedOff = $state(false);
 
+  readonly #id: number | null;
   #timer: ReturnType<typeof setTimeout> | undefined;
   #asked = 0;
   #closed = false;
@@ -88,35 +105,33 @@ export class SeriesPageState {
   #sentFor = -1;
   #sentTurn = 0;
 
+  /** `id`: the series' Curator id, as the page's address names it; null where it names none, a series that is gone */
+  constructor(id: number | null) {
+    this.#id = id;
+  }
+
   load = async () => {
     this.failure = undefined;
     this.message = undefined;
-    try {
-      const { series } = await seriesApi.list();
-      if (this.#closed) {
-        return;
-      }
-      this.series = series[0] ?? null;
-    } catch (error) {
-      if (!this.#closed) {
-        this.failure = asCuratorError(error);
-      }
+    if (this.#id === null) {
+      this.series = null;
       return;
     }
     await this.refresh();
   };
 
-  /** the coming days, again; `quiet` for the asks while Curator prepares, which say nothing when they fail */
+  /** the coming days, again, with the series; `quiet` for the asks while Curator prepares, which say nothing when
+   * they fail */
   refresh = async (quiet = false) => {
-    const series = this.series;
-    if (!series || this.#closed) {
+    const id = this.#id;
+    if (id === null || this.series === null || this.#closed) {
       return;
     }
     clearTimeout(this.#timer);
     this.#timer = undefined;
     const asked = ++this.#asked;
     try {
-      const coming = await seriesApi.coming(series.id);
+      const coming = await seriesApi.coming(id);
       if (asked !== this.#asked || this.#closed) {
         return;
       }
@@ -125,6 +140,11 @@ export class SeriesPageState {
       await this.#follow(coming);
     } catch (error) {
       if (asked !== this.#asked || this.#closed) {
+        return;
+      }
+      if (isMissing(error)) {
+        // deleted meanwhile (in another tab): nothing of it is left to show or to ask about
+        this.#gone();
         return;
       }
       if (!this.coming) {
@@ -137,31 +157,6 @@ export class SeriesPageState {
     }
     if (this.coming?.preparing) {
       this.#timer = setTimeout(() => void this.refresh(true), POLL_MS);
-    }
-  };
-
-  plan = async () => {
-    if (this.planning || this.series) {
-      return;
-    }
-    this.planning = true;
-    this.message = undefined;
-    try {
-      const { series } = await seriesApi.create();
-      if (this.#closed) {
-        return;
-      }
-      this.series = series;
-      await this.refresh();
-    } catch (error) {
-      if (error instanceof CuratorError && error.status === 409) {
-        // one was planned meanwhile (in another tab): show it
-        await this.load();
-      } else if (!this.#closed) {
-        this.message = seriesFailure(error);
-      }
-    } finally {
-      this.planning = false;
     }
   };
 
@@ -213,10 +208,7 @@ export class SeriesPageState {
       if (this.#closed) {
         return;
       }
-      this.series = saved;
-      if (this.coming) {
-        this.coming = { ...this.coming, series: saved };
-      }
+      this.#saved(saved);
       if (job !== null && job !== undefined) {
         await this.refresh();
       }
@@ -227,6 +219,75 @@ export class SeriesPageState {
     } finally {
       this.savingPeople = false;
     }
+  };
+
+  /** The family page's title as the owner typed it, '' for Curator's own; a live page shows it at once. True once
+   * Curator has it; its refusal (a person's name, a day of the month) is kept for where the title is typed. */
+  saveTitle = async (name: string): Promise<boolean> => {
+    const series = this.series;
+    if (!series || this.savingTitle) {
+      return false;
+    }
+    this.savingTitle = true;
+    this.titleRefused = undefined;
+    try {
+      const { series: saved, job } = await seriesApi.update(series.id, { name: name.trim() });
+      if (this.#closed) {
+        return false;
+      }
+      this.#saved(saved);
+      if (job !== null && job !== undefined) {
+        await this.refresh();
+      }
+      return true;
+    } catch (error) {
+      if (!this.#closed) {
+        this.titleRefused = seriesFailure(error);
+      }
+      return false;
+    } finally {
+      this.savingTitle = false;
+    }
+  };
+
+  /** The series gone. Every family link it still has is deleted in Gallery first, as Turn off deletes one (Curator
+   * holds them on the series' card, asked again here, as another tab may have made one meanwhile), then Curator lets
+   * the series go, with its coming days and its pages' files. Nothing more is asked once it is gone. */
+  remove = async (): Promise<SeriesDeleted | undefined> => {
+    const id = this.#id;
+    if (id === null || !this.series || this.deleting) {
+      return undefined;
+    }
+    this.deleting = true;
+    this.message = undefined;
+    try {
+      const { series } = await seriesApi.one(id);
+      for (const link of linksOf(series)) {
+        try {
+          await this.#remove(link, this.familyLink?.id === link ? this.familyLink : undefined);
+        } catch (error) {
+          return this.#notDeleted(galleryFailure(error, 'memory_share_turn_off_failed'));
+        }
+      }
+      await seriesApi.remove(id);
+      this.close();
+      return { deleted: true };
+    } catch (error) {
+      if (isMissing(error)) {
+        // gone already
+        this.close();
+        return { deleted: true };
+      }
+      return this.#notDeleted(seriesFailure(error));
+    } finally {
+      this.deleting = false;
+    }
+  };
+
+  /** a delete that stopped part of the way: the page asks again, as its links may be off now */
+  #notDeleted = (failure: string): SeriesDeleted => {
+    void this.refresh(true);
+    return { deleted: false, failure };
   };
 
   /** the film of a memory as the family will see it: its photos from Gallery, then the film full screen */
@@ -488,14 +549,27 @@ export class SeriesPageState {
     }
   };
 
-  #saved = (series: SeriesRow) => {
-    if (this.#closed) {
+  /** a series as Curator saved it: its card, or a row alone, which keeps the rest of the card */
+  #saved = (row: SeriesRow | SeriesCard) => {
+    if (this.#closed || !this.series) {
       return;
     }
+    const series: SeriesCard = { ...this.series, ...row };
     this.series = series;
     if (this.coming) {
       this.coming = { ...this.coming, series };
     }
+  };
+
+  /** Curator has no such series (any more): the page says it is gone, and asks nothing more of it */
+  #gone = () => {
+    clearTimeout(this.#timer);
+    this.#timer = undefined;
+    this.series = null;
+    this.coming = undefined;
+    this.sent = undefined;
+    this.familyLink = undefined;
+    this.film = undefined;
   };
 
   /** what an action could not do, in the page's line: Curator's words, or the ones given */
