@@ -186,7 +186,7 @@ export class SeriesPageState {
   restore = (key: string) => this.#act(key, (id) => seriesApi.restore(id, key));
   repick = (key: string) => this.#act(key, (id) => seriesApi.repick(id, key));
 
-  /** a memory as a swap left it, in its row */
+  /** a memory as a swap or a new song left it, in its row */
   swapped = (memory: ComingMemory) => {
     if (this.coming) {
       this.coming = {

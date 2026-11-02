@@ -2,7 +2,7 @@
   // Local Omarchy layer: one series of "A memory a day, from the beginning", its own page (gallery/series; the design:
   // Curator's docs/memory-series-design.md, sections 3 and 4), by Curator's id. Its head says what the series is made
   // from (the whole library, or its album by name) and its span, with the way back to All series. The owner looks over
-  // the coming days as the family will see them, one row a day: plays a film, swaps a photo, has Curator pick again or
+  // the coming days as the family will see them, one row a day: plays a film, swaps a photo, changes the song, has Curator pick again or
   // skips the day, puts a skipped one back, and says who never goes in a memory. The family page has a section of its
   // own: day 1 and its link, made, copied, renewed or turned off (SeriesFamily), the title the family sees
   // (SeriesTitle), and what went out is listed on it, each with Take off the page (SeriesSent). One quiet line says
@@ -25,6 +25,7 @@
   import SeriesFilm from './SeriesFilm.svelte';
   import SeriesLeaveOut from './SeriesLeaveOut.svelte';
   import SeriesSent from './SeriesSent.svelte';
+  import SeriesSongSheet from './SeriesSongSheet.svelte';
   import SeriesSwapSheet from './SeriesSwapSheet.svelte';
   import SeriesTitle from './SeriesTitle.svelte';
   import type { Coming, ComingMemory, SentMemory } from './series-api';
@@ -107,6 +108,17 @@
   };
 
   // Pick again drops what the owner chose, so it asks first where there is something to drop
+  const changeSong = async (memory: ComingMemory) => {
+    const series = view.series;
+    if (!series) {
+      return;
+    }
+    const changed = await modalManager.show(SeriesSongSheet, { seriesId: series.id, memory });
+    if (changed) {
+      view.swapped(changed);
+    }
+  };
+
   const repick = async (memory: ComingMemory) => {
     if (
       memory.picked_by === 'owner' &&
@@ -264,6 +276,7 @@
                 busy={view.busy.has(memory.key)}
                 onPlay={() => view.play(memory)}
                 onSwap={() => swap(memory)}
+                onSong={() => changeSong(memory)}
                 onRepick={() => repick(memory)}
                 onSkip={() => view.skip(memory.key)}
               />

@@ -92,6 +92,9 @@ export type ComingMemory = {
   note: string | null;
 };
 
+/** a song Change song offers: `used` when another memory of the series already plays it */
+export type SeriesSong = MemoryTrack & { used: boolean };
+
 export type SkippedMemory = {
   key: string;
   kind: string;
@@ -170,6 +173,11 @@ export const seriesApi = {
     curatorCall<{ photos: SeriesCandidate[] }>(`/series/${id}/candidates?${new URLSearchParams({ key })}`),
   swap: (id: number, key: string, out: string, into: string) =>
     curatorPost<{ memory: ComingMemory }>(`/series/${id}/swap`, { key, out, in: into }),
+  /** Curator's suggestions for the memory, or with `query` a search of the owner's whole music library */
+  songs: (id: number, key: string, query = '') =>
+    curatorCall<{ songs: SeriesSong[] }>(`/series/${id}/songs?${new URLSearchParams({ key, q: query })}`),
+  song: (id: number, key: string, trackId: string) =>
+    curatorPost<{ memory: ComingMemory }>(`/series/${id}/song`, { key, track_id: trackId }),
   /** sets day 1, 'YYYY-MM-DD': Curator refuses a past day, or once memories went out */
   dayOne: (id: number, day: string) => curatorPost<{ series: SeriesRow }>(`/series/${id}/day1`, { day }),
   /** the photos a new family link must hold */

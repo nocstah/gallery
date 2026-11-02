@@ -18,11 +18,12 @@
     busy?: boolean;
     onPlay: () => void;
     onSwap: () => void;
+    onSong: () => void;
     onRepick: () => void;
     onSkip: () => void;
   };
 
-  let { memory, day, language, busy = false, onPlay, onSwap, onRepick, onSkip }: Props = $props();
+  let { memory, day, language, busy = false, onPlay, onSwap, onSong, onRepick, onSkip }: Props = $props();
 
   const id = $props.id();
   // "title · artist", each song the film plays, in the reader's own "and"
@@ -67,6 +68,9 @@
       </button>
       <button type="button" class="ws-btn-quiet" disabled={busy} aria-describedby="{id}-title" onclick={onSwap}>
         {$t('memory_series_swap')}
+      </button>
+      <button type="button" class="ws-btn-quiet" disabled={busy} aria-describedby="{id}-title" onclick={onSong}>
+        {$t('memory_series_song')}
       </button>
       <button type="button" class="ws-btn-quiet" disabled={busy} aria-describedby="{id}-title" onclick={onRepick}>
         {$t('memory_series_repick')}

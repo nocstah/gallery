@@ -10,6 +10,7 @@ import {
   skippedMemory,
 } from '@test-data/factories/series-factory';
 import SeriesPage from './SeriesPage.svelte';
+import SeriesSongSheet from './SeriesSongSheet.svelte';
 import SeriesSwapSheet from './SeriesSwapSheet.svelte';
 import { seen } from './memory-film.test-seen';
 import type { Coming, SeriesCard } from './series-api';
@@ -310,6 +311,19 @@ describe('SeriesPage, the coming days', () => {
     // the sheet asked Curator itself; the page asked nothing more
     expect(posts()).toEqual([]);
     expect(comingAsked()).toBe(1);
+  });
+
+  it('opens the song sheet for the day and shows the song it answers with in its row', async () => {
+    const days = comingDays();
+    coming = days;
+    show();
+    const [first] = await rows();
+    const track = { id: 's1', title: 'Harbour lights', artist: 'Rowan', duration: 200, bpm: 90, src: '/api/music/s1' };
+    mocks.show.mockResolvedValueOnce(comingMemory({ tracks: [track] }));
+    await fireEvent.click(within(first).getByRole('button', { name: 'memory_series_song' }));
+    await waitFor(() => expect(within(first).getByTestId('series-day-song')).toHaveTextContent('Harbour lights'));
+    expect(mocks.show).toHaveBeenCalledWith(SeriesSongSheet, { seriesId: 7, memory: days.memories[0] });
+    expect(posts()).toEqual([]);
   });
 
   it('plays the film from Gallery’s photos of the memory, and closes it', async () => {
