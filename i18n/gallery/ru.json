@@ -1454,6 +1454,8 @@
   "memory_event_no_more": "Других уникальных фото или видео этого события не найдено",
   "memory_favorites_throwback_subtitle": "{count, plural, one {# избранное} few {# избранных} many {# избранных} other {# избранных}}",
   "memory_favorites_throwback_title": "Избранные моменты за {monthYear}",
+  "memory_film_lyrics_hide": "Скрыть текст",
+  "memory_film_lyrics_show": "Показать текст",
   "memory_film_next_photo": "Следующее фото",
   "memory_film_next_song": "Следующая песня",
   "memory_film_previous_photo": "Предыдущее фото",

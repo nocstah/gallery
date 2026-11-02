@@ -38,9 +38,15 @@ export const FILM_TIMING = {
 
 /** A photo fills the frame (cropped) when the crop keeps at least this share of it; else it is shown whole. */
 export const FILL_KEEPS = 0.6;
+/** A wide photo in a wide frame fills it with less: a phone on its side, its browser's bars taking height, is far wider
+ * than any camera's shape, and a 4:3 photo left whole there sits small between empty sides. */
+const WIDE_FILL_KEEPS = 0.45;
 
 /** The drift: a photo that fills the frame moves between these scales, a whole one breathes a little. */
 const DRIFT = { wide: 1.04, near: 1.12, whole: 1.035 } as const;
+
+/** However short the photos and long the song, a film stops coming round at this many shots. */
+const MOST_SHOTS = 2000;
 
 /** Where the camera is: the scale over the photo filling the frame, and the photo's point (0 to 1) at its centre. */
 export type FilmCamera = { scale: number; x: number; y: number };
@@ -141,6 +147,8 @@ export type FilmPlanInput = {
   bpm?: number | null;
   /** where the songs begin (the film's start; later when a skip starts the next song) */
   musicFrom?: number;
+  /** the photos come round again until the first song is over */
+  loop?: boolean;
   /** a photo's time on screen */
   photoSeconds?: number;
   reducedMotion?: boolean;
@@ -161,7 +169,9 @@ export const coverWindow = (ratio: number, aspect: number) =>
 export const keptShare = (ratio: number, aspect: number) => (ratio >= aspect ? aspect / ratio : ratio / aspect);
 
 const fitOf = (ratio: number | null, aspect: number): FilmShot['fit'] =>
-  ratio && ratio > 0 && keptShare(ratio, aspect) >= FILL_KEEPS ? 'fill' : 'whole';
+  ratio && ratio > 0 && keptShare(ratio, aspect) >= (ratio > 1 && aspect > 1 ? WIDE_FILL_KEEPS : FILL_KEEPS)
+    ? 'fill'
+    : 'whole';
 
 /** A song's beat in seconds, when its tempo is one a cut can follow. */
 const beatOf = (bpm: number | null | undefined) => (bpm && bpm >= 50 && bpm <= 220 ? 60 / bpm : undefined);
@@ -372,6 +382,28 @@ export const buildFilmPlan = (input: FilmPlanInput): FilmPlan => {
     entries.push({ asset, index, opening, seconds: opening ? titleSeconds + seconds : seconds });
   }
 
+  // once round the words are told; the rounds after it only carry the song to its end
+  const firstRound = entries.length;
+  if (input.loop) {
+    const song = input.tracks?.find((track) => track.src && trackSeconds(track) >= FILM_TIMING.musicCross * 2);
+    const until = song ? (input.musicFrom ?? 0) + trackSeconds(song) : 0;
+    const again = entries.filter((entry) => entry.index >= 0);
+    let total = entries.reduce((sum, entry) => sum + entry.seconds, 0);
+    for (let turn = 0; again.length > 0 && total < until - 0.01 && turn < MOST_SHOTS; turn++) {
+      const entry = again[turn % again.length];
+      const seconds = entry.opening ? entry.seconds - titleSeconds : entry.seconds;
+      const left = until - total;
+      if (left < seconds / 2) {
+        // too little for another photo: the last one stays until the song is over
+        entries.at(-1)!.seconds += left;
+        total = until;
+      } else {
+        entries.push({ ...entry, opening: false, seconds: Math.min(seconds, left) });
+        total += Math.min(seconds, left);
+      }
+    }
+  }
+
   const shots: FilmShot[] = [];
   let start = 0;
   for (const [ordinal, entry] of entries.entries()) {
@@ -421,7 +453,8 @@ export const buildFilmPlan = (input: FilmPlanInput): FilmPlan => {
   }
   // the story's slots: each shot's time after the title card, a sentence coming a moment after its photo (or the
   // title's words) began
-  const slots = shots
+  const told = shots.slice(0, firstRound);
+  const slots = told
     .map((shot) => ({
       start: round(Math.max(shot.start, titleEnd) + FILM_TIMING.storyDelay),
       end: round(shot.start + shot.duration),
@@ -430,7 +463,7 @@ export const buildFilmPlan = (input: FilmPlanInput): FilmPlan => {
   if (input.storyCues === undefined) {
     texts.push(...storyTexts(input.sentences ?? [], slots));
   } else {
-    for (const shot of shots) {
+    for (const shot of told) {
       const text = input.storyCues
         .filter((cue) => cue.assetIds.includes(shot.assetId))
         .map((cue) => cue.text.trim())

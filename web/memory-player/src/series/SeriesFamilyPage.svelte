@@ -9,9 +9,10 @@
   // from it, a clip plays whole with its sound. Before day 1 the page says when the first memory comes. A password, an
   // ended page and a list that would not load say so in the shared memory's own words. Nothing is cached: every Play
   // and All photos asks for the day afresh, so a memory taken off is gone at once.
+  import { unlockFilmSound } from '../../../src/lib/components/memories/film/film-music.svelte';
   import MemoryFilm from '../../../src/lib/components/memories/film/MemoryFilm.svelte';
   import { daysFromToday, seriesDate, seriesLongDate } from '../../../src/lib/gallery/series/series-days';
-  import { Icon } from '@immich/ui';
+  import { Icon, LoadingSpinner } from '@immich/ui';
   import { mdiImageMultipleOutline, mdiPlay, mdiRefresh } from '@mdi/js';
   import { onMount, tick } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -166,11 +167,14 @@
     }
   };
 
-  const play = (n: number) =>
-    openDay(n, (day) => {
+  const play = (n: number) => {
+    // here, in the press: the day and its first photo may take seconds, and iOS lets sound start only from a press
+    unlockFilmSound();
+    return openDay(n, (day) => {
       filmAsset = day.assets[0].id;
       stack = ['film'];
     });
+  };
 
   const allPhotos = (n: number) => openDay(n, () => (stack = ['grid']));
 
@@ -188,12 +192,14 @@
       show('clip');
       return;
     }
+    unlockFilmSound();
     filmAsset = id;
     show('film');
   };
 
   const playFromGrid = () => {
     if (open) {
+      unlockFilmSound();
       filmAsset = open.assets[0].id;
       show('film');
     }
@@ -269,7 +275,11 @@
       aria-describedby={titleId}
       onclick={() => play(day.n)}
     >
-      <Icon icon={mdiPlay} size="20" aria-hidden />
+      {#if opening === day.n}
+        <LoadingSpinner size="small" />
+      {:else}
+        <Icon icon={mdiPlay} size="20" aria-hidden />
+      {/if}
       {$t('memory_series_play')}
     </button>
     <button

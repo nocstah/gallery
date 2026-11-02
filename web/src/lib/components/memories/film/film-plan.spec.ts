@@ -427,3 +427,73 @@ describe('splitSentences', () => {
     expect(splitSentences(' '.repeat(3))).toEqual([]);
   });
 });
+
+describe('the film comes round until the song is over', () => {
+  const song = (duration: number) => ({ id: 's', title: 'S', artist: 'A', duration, bpm: null, src: '/s' });
+  const looped = (duration: number, photos = 3) =>
+    buildFilmPlan({
+      memoryId: 'm',
+      assets: Array.from({ length: photos }, (_, index) => ({ id: `p${index}`, kind: 'photo' as const, ratio: 1.5 })),
+      aspect: 1.5,
+      title: { text: 'T', line: '' },
+      sentences: ['One.', 'Two.', 'Three.'],
+      tracks: [song(duration)],
+      loop: true,
+    });
+
+  it('lasts as long as the song, and the music has the whole of it', () => {
+    const plan = looped(100);
+    expect(plan.duration).toBe(100);
+    expect(plan.music).toHaveLength(1);
+    expect(plan.music[0].end).toBe(100);
+  });
+
+  it('shows the photos again in their order, and counts them once', () => {
+    const { shots } = looped(100);
+    expect(shots.slice(0, 7).map((shot) => shot.index)).toEqual([0, 1, 2, 0, 1, 2, 0]);
+    expect(shots.filter((shot) => shot.opening)).toHaveLength(1);
+    expect(new Set(shots.map((shot) => shot.index)).size).toBe(3);
+  });
+
+  it('tells the story and the title only once', () => {
+    const plan = looped(100);
+    const onceRound = plan.shots[2].start + plan.shots[2].duration;
+    expect(plan.texts.every((text) => text.start < onceRound)).toBe(true);
+    expect(plan.texts.filter((text) => text.kind === 'title')).toHaveLength(1);
+  });
+
+  it('never cuts a film shorter than its photos for a short song', () => {
+    expect(looped(10, 5).duration).toBeGreaterThan(10);
+  });
+
+  it('does not come round without a song, or when not asked', () => {
+    const plain = buildFilmPlan({
+      memoryId: 'm',
+      assets: [{ id: 'p', kind: 'photo', ratio: 1.5 }],
+      aspect: 1.5,
+      title: { text: 'T', line: '' },
+      tracks: [song(100)],
+    });
+    expect(plain.shots).toHaveLength(1);
+    expect(plain.duration).toBeLessThan(100);
+  });
+});
+
+describe('a phone on its side', () => {
+  const planFor = (ratio: number, aspect: number) =>
+    buildFilmPlan({
+      memoryId: 'm',
+      assets: [{ id: 'p', kind: 'photo', ratio }],
+      aspect,
+      title: { text: 'T', line: '' },
+    }).shots[0].fit;
+
+  it('fills the frame with a wide photo, even with the browser bars taking height', () => {
+    expect(planFor(4 / 3, 2.16)).toBe('fill');
+    expect(planFor(4 / 3, 2.5)).toBe('fill');
+  });
+
+  it('keeps an upright photo whole, for a crop would lose most of it', () => {
+    expect(planFor(3 / 4, 2.16)).toBe('whole');
+  });
+});

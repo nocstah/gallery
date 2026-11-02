@@ -13,13 +13,15 @@
   // after or before, the picture and the music fading to black first, where a lone film offers what to do next.
   import type { MemoryTrack } from '$lib/utils/curator';
   import { AssetTypeEnum, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
-  import { Icon, isModalOpen } from '@immich/ui';
+  import { Icon, isModalOpen, LoadingSpinner } from '@immich/ui';
   import {
     mdiChevronLeft,
     mdiChevronRight,
     mdiClose,
     mdiImageMultipleOutline,
     mdiMusicNote,
+    mdiSubtitles,
+    mdiSubtitlesOutline,
     mdiPause,
     mdiPlay,
     mdiReplay,
@@ -34,6 +36,7 @@
   import { thumbhashBackdrop } from './film-backdrop';
   import { BREATH_FADE_MS, HAND_ON_MS, handOnTiming } from './film-breath';
   import { filmKeyAction, type FilmAction, type FilmDress } from './film-keys';
+  import { keepLyricsWanted, lyricAt, lyricsWanted, settledLyrics, type LyricLine } from './film-lyrics';
   import { FilmMusic } from './film-music.svelte';
   import type { FilmMedia } from './film-media';
   import {
@@ -165,6 +168,10 @@
   const WAIT_MS = 1200;
   /** the film waits this long at most for a photo to decode, then shows it as it is */
   const READY_MS = 6000;
+  // photos brought ahead of the two in the page: on a slow link each can take seconds
+  const WARM_AHEAD = 3;
+  // a wait this short needs no word
+  const LOADING_SHOWN_MS = 500;
 
   let film: HTMLElement | undefined = $state();
   // what the shade and the lift are measured from: the words' rulers, the top bar's scrim and words
@@ -198,6 +205,8 @@
   let storyIndex = $state(-1);
   let controlsShown = $state(false);
   let waited = $state(false);
+  // the film is waiting for a photo that has not come
+  let photoLate = $state(false);
   let storyText = $derived(plan && storyIndex >= 0 ? storyOf(plan)[storyIndex]?.text : undefined);
 
   /** a photo as it lies under the words (film-shade.ts): the black under the words at the foot and under the top bar,
@@ -259,6 +268,28 @@
   let music = $state<FilmMusic | undefined>();
   const song = $derived(music?.available ? music.track : undefined);
   const soundBlocked = $derived(!!music?.available && music.blocked);
+  // the song's words: its own (a family page's day), or asked for once a song is on
+  let lyricsAsked = $state<Record<string, LyricLine[]>>({});
+  let lyricsOn = $state(lyricsWanted());
+  const lyricLines = $derived(settledLyrics(song ? (song.lyrics ?? lyricsAsked[song.id] ?? []) : []));
+  const sung = $derived(
+    lyricsOn && !ended && !titleShown && music?.playing && !music.muted ? lyricAt(lyricLines, music.time) : '',
+  );
+  $effect(() => {
+    const id = song?.id;
+    if (id && !song?.lyrics && media.lyrics) {
+      untrack(() => {
+        if (!(id in lyricsAsked)) {
+          lyricsAsked[id] = [];
+          void media.lyrics?.(id).then((lines) => (lyricsAsked[id] = lines));
+        }
+      });
+    }
+  });
+  const toggleLyrics = () => {
+    lyricsOn = !lyricsOn;
+    keepLyricsWanted(lyricsOn);
+  };
 
   const assetsById = $derived(new Map(memory.assets.map((asset) => [asset.id, asset])));
   const filmAssets = $derived<FilmAsset[]>(
@@ -271,7 +302,9 @@
     })),
   );
   const sentences = $derived(splitSentences(story, language));
-  const total = $derived(plan?.shots.filter((shot) => shot.index >= 0).length ?? memory.assets.length);
+  const total = $derived(
+    plan ? new Set(plan.shots.filter((shot) => shot.index >= 0).map((shot) => shot.index)).size : memory.assets.length,
+  );
 
   const shot = $derived(plan?.shots[shotIndex]);
   /** where the film is, for "3/20": a cover opening on its own is the film's start */
@@ -304,6 +337,7 @@
       tracks: music?.available ? [...music.tracks.slice(music.index), ...music.tracks.slice(0, music.index)] : [],
       bpm: beatBpm,
       musicFrom,
+      loop: true,
       photoSeconds: frozen?.photoSeconds ?? photoSeconds,
       reducedMotion,
     });
@@ -558,7 +592,9 @@
     const upcoming = plan.shots.at(next);
     if (upcoming) {
       void prepare(1 - front, upcoming, next);
-      warm(next + 1);
+      for (let ahead = 1; ahead <= WARM_AHEAD; ahead++) {
+        warm(next + ahead);
+      }
     }
   };
 
@@ -629,10 +665,17 @@
       clockStop();
       clearTimeout(wakeTimer);
     }
+    const slow = setTimeout(() => {
+      if (token === turn) {
+        photoLate = true;
+      }
+    }, LOADING_SHOWN_MS);
     await ready;
+    clearTimeout(slow);
     if (token !== turn || destroyed) {
       return;
     }
+    photoLate = false;
     show(slot, next, fadeSeconds);
     if (playing && !clockRunning) {
       clockRun();
@@ -1092,6 +1135,7 @@
         return;
       }
       music = new FilmMusic(list, media.music);
+      music.prepare();
       if (began && plan) {
         musicFrom = clockTime();
         plan = makePlan(plan.aspect);
@@ -1275,6 +1319,11 @@
   data-pointer={pointerSeen || undefined}
   data-leaving={leaving || undefined}
 >
+  {#if photoLate || (music?.available && music.loading)}
+    <div class="film-loading" role="status" aria-label={$t('loading')} data-testid="film-loading">
+      <LoadingSpinner size="small" />
+    </div>
+  {/if}
   <div
     class="film-stage"
     onpointerdown={onPointerDown}
@@ -1388,6 +1437,11 @@
     {/if}
   </header>
 
+  {#if sung}
+    {#key sung}
+      <p class="film-lyric" aria-hidden="true" data-testid="film-lyric">{sung}</p>
+    {/key}
+  {/if}
   <div class="film-foot" style:--film-transport="{transportWidth}px">
     <div class="film-words">
       <!-- the words' rulers, out of sight: the title card and the story's longest sentence (and across the room the
@@ -1553,6 +1607,18 @@
           >
             <Icon icon={music?.muted ? mdiVolumeOff : mdiVolumeHigh} size="1.375rem" aria-hidden />
           </button>
+          {#if lyricLines.length > 0}
+            <button
+              type="button"
+              class="film-button"
+              aria-label={lyricsOn ? $t('memory_film_lyrics_hide') : $t('memory_film_lyrics_show')}
+              aria-pressed={lyricsOn}
+              title={lyricsOn ? $t('memory_film_lyrics_hide') : $t('memory_film_lyrics_show')}
+              onclick={toggleLyrics}
+            >
+              <Icon icon={lyricsOn ? mdiSubtitles : mdiSubtitlesOutline} size="1.375rem" aria-hidden />
+            </button>
+          {/if}
         {/if}
         {#if onAllPhotos}
           <span class="film-rule" aria-hidden="true"></span>
@@ -2074,6 +2140,49 @@
   }
 
   /* ---- the transport: the song, the photo before, play and pause, the next, where the film is ---- */
+  /* the song's words as they are sung: over the photo, above the foot's words and controls */
+  .film-lyric {
+    position: absolute;
+    z-index: 2;
+    inset-inline: 0;
+    bottom: 24%;
+    margin: 0 auto;
+    padding-inline: var(--film-gutter);
+    max-width: 40rem;
+    color: #fff;
+    font-size: clamp(1.15rem, 2.6vw, 1.75rem);
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: center;
+    text-wrap: balance;
+    text-shadow:
+      0 1px 3px rgb(0 0 0 / 0.75),
+      0 0 18px rgb(0 0 0 / 0.45);
+    pointer-events: none;
+    animation: film-lyric-in 280ms ease-out;
+  }
+  @keyframes film-lyric-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .film-lyric {
+      animation: none;
+    }
+  }
+  /* a slow link: a small mark at the top, over the photo and clear of the words and the controls */
+  .film-loading {
+    position: absolute;
+    z-index: 3;
+    inset-block-start: max(1rem, env(safe-area-inset-top));
+    inset-inline: 0;
+    display: flex;
+    justify-content: center;
+    color: #fff;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.6));
+    pointer-events: none;
+  }
   .film-transport {
     display: grid;
     justify-items: end;

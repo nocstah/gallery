@@ -104,6 +104,8 @@ export type MemoryTrack = {
   duration: number;
   bpm: number | null;
   src: string;
+  /** timed lyrics, when the song brings them with it (a family page's day) */
+  lyrics?: { at: number; text: string }[];
 };
 
 /** A conversation in the library chat (Curator's curator/chat.py), as the chat page lists it. */
@@ -590,6 +592,16 @@ const api = (path: string) => `${originFor(path)}/api${path}`;
 /** A song Curator serves (a MemoryTrack's `src`, a path on its origin), for an <audio> element: no crossorigin, so the
  * session cookie goes with it as with an image. */
 export const musicUrl = (src: string) => (/^https?:\/\//.test(src) ? src : `${originFor('/music')}${src}`);
+
+/** A song's timed lyrics; none when Curator has none or cannot be reached, for the film goes on without them. */
+export const curatorLyrics = async (trackId: string): Promise<{ at: number; text: string }[]> => {
+  try {
+    const response = await fetch(api(`/music/${encodeURIComponent(trackId)}/lyrics`), { credentials: 'include' });
+    return response.ok ? (((await response.json()) as { lines?: { at: number; text: string }[] }).lines ?? []) : [];
+  } catch {
+    return [];
+  }
+};
 
 /** subject lift: the photo's main subject on transparency, as a PNG (a few seconds) */
 export const curatorSubject = async (assetId: string): Promise<Blob> => {

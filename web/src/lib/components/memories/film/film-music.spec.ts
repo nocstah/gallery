@@ -1,5 +1,5 @@
 import type { MemoryTrack } from '$lib/utils/curator';
-import { FilmMusic } from './film-music.svelte';
+import { FilmMusic, unlockFilmSound } from './film-music.svelte';
 
 const track = (id: string): MemoryTrack => ({
   id,
@@ -152,6 +152,55 @@ describe('FilmMusic', () => {
     started[1].dispatchEvent(new Event('error'));
     expect(music.failed).toBe(true);
     expect(music.available).toBe(false);
+  });
+
+  it('plays on an element unlocked in the press, and again for the next film', async () => {
+    unlockFilmSound();
+    await flush();
+    const [unlockedInPress] = started;
+    const first = new FilmMusic([track('a')], url);
+    first.prepare();
+
+    await first.play(0);
+    const elements = started.slice(-1);
+    expect(started).toContain(unlockedInPress);
+    expect(elements[0].src).toBe('https://curator.test/api/music/a');
+    first.destroy();
+    expect(elements[0].hasAttribute('src')).toBe(false);
+
+    const second = new FilmMusic([track('b')], url);
+    await second.play(0);
+    expect(started.at(-1)?.src).toBe('https://curator.test/api/music/b');
+    expect(new Set(started.slice(0, 2)).has(started.at(-1)!)).toBe(true);
+    second.destroy();
+  });
+
+  it('does not let a song that has gone hear its old film', async () => {
+    const first = new FilmMusic([track('a'), track('b')], url);
+    await first.play(0);
+    const audio = started.at(-1)!;
+    first.destroy();
+
+    const second = new FilmMusic([track('c')], url);
+    await second.play(0);
+    expect(started.at(-1)).toBe(audio);
+    audio.dispatchEvent(new Event('ended'));
+    expect(first.index).toBe(0);
+    second.destroy();
+  });
+
+  it('says it is loading until the song has started', async () => {
+    let start = () => undefined as void;
+    vi.mocked(HTMLMediaElement.prototype.play).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (start = resolve)),
+    );
+    const music = new FilmMusic([track('a')], url);
+    const playing = music.play(0);
+    expect(music.loading).toBe(true);
+    start();
+    await playing;
+    expect(music.loading).toBe(false);
+    music.destroy();
   });
 
   it('has nothing to play without songs', async () => {

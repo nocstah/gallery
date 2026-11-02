@@ -6,9 +6,46 @@ import type { MemoryTrack } from '$lib/utils/curator';
 // element's volume, which iOS keeps at full: there the music starts and stops without them). A song fades in, the next
 // one follows when it ends or when skipped to, and at the film's end the music fades out. Opening a memory from its
 // card is a press, so the sound may start with the film; a link opened cold may not, and the film offers to start it
-// (`blocked`).
+// (`blocked`). iOS asks for the press on each element, and the press is long gone by the time a slow link has brought
+// the day and its first photo: a page that knows a film is coming unlocks elements in the press itself
+// (unlockFilmSound), and elements that have played go back to be used again, for the next song and the next film.
 
 const FULL = 1;
+// 50 ms of silence, for an element to play in the press
+const SILENCE =
+  'data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+const SPARES = 2;
+
+// the elements the browser has let play, free for the next song
+const spares: HTMLAudioElement[] = [];
+const unlocked = new WeakSet<HTMLAudioElement>();
+
+const keepSpare = (audio: HTMLAudioElement) => {
+  if (unlocked.has(audio) && spares.length < SPARES && !spares.includes(audio)) {
+    spares.push(audio);
+  }
+};
+
+/** Call in the press that opens a film: its songs may then start when they are ready, wherever the press has gone. */
+export const unlockFilmSound = () => {
+  while (spares.length < SPARES) {
+    const audio = new Audio(SILENCE);
+    unlocked.add(audio);
+    spares.push(audio);
+    void audio.play().then(
+      () => {
+        if (audio.getAttribute('src') === SILENCE) {
+          audio.pause();
+        }
+      },
+      () => {
+        // not allowed after all: the film still offers Turn on sound
+        unlocked.delete(audio);
+        spares.splice(spares.indexOf(audio), 1);
+      },
+    );
+  }
+};
 
 type Fade = { cancel: () => void };
 
@@ -58,10 +95,16 @@ export class FilmMusic {
   muted = $state(false);
   /** no song would load: the film goes on silent */
   failed = $state(false);
+  /** asked to play, and the song has not come yet */
+  loading = $state(false);
+  /** how far into the song, for its words */
+  time = $state(0);
 
   #tracks: MemoryTrack[];
   #url: (src: string) => string;
   #audio: HTMLAudioElement | undefined;
+  // what each element in use listens with, taken off when it goes back
+  #listening = new WeakMap<HTMLAudioElement, AbortController>();
   // at most the song playing and the one fading out under it
   #fades: { audio: HTMLAudioElement; fade: Fade }[] = [];
   // the songs that would not load
@@ -102,29 +145,50 @@ export class FilmMusic {
   }
 
   #element(index: number) {
-    const audio = new Audio();
+    const audio = spares.pop() ?? new Audio();
+    const listening = new AbortController();
+    this.#listening.set(audio, listening);
+    const { signal } = listening;
     audio.preload = 'auto';
     audio.volume = 0;
     audio.muted = this.muted;
     audio.src = this.#url(this.#tracks[index].src);
-    audio.addEventListener('ended', () => {
-      if (audio === this.#audio && this.playing) {
-        this.#switchTo(this.#nextPlayable(), 0);
-      }
-    });
-    audio.addEventListener('error', () => {
-      if (audio === this.#audio) {
-        if (!this.#broken.includes(this.index)) {
-          this.#broken.push(this.index);
+    audio.addEventListener(
+      'timeupdate',
+      () => {
+        if (audio === this.#audio) {
+          this.time = audio.currentTime;
         }
-        if (this.#broken.length >= this.#tracks.length) {
-          this.failed = true;
-          this.playing = false;
-        } else if (this.playing) {
+      },
+      { signal },
+    );
+    audio.addEventListener(
+      'ended',
+      () => {
+        if (audio === this.#audio && this.playing) {
           this.#switchTo(this.#nextPlayable(), 0);
         }
-      }
-    });
+      },
+      { signal },
+    );
+    audio.addEventListener(
+      'error',
+      () => {
+        if (audio === this.#audio) {
+          this.loading = false;
+          if (!this.#broken.includes(this.index)) {
+            this.#broken.push(this.index);
+          }
+          if (this.#broken.length >= this.#tracks.length) {
+            this.failed = true;
+            this.playing = false;
+          } else if (this.playing) {
+            this.#switchTo(this.#nextPlayable(), 0);
+          }
+        }
+      },
+      { signal },
+    );
     return audio;
   }
 
@@ -138,15 +202,20 @@ export class FilmMusic {
     return this.index;
   }
 
+  /** Empty, and free for the next song if the browser has let it play. */
+  #release(audio: HTMLAudioElement) {
+    this.#listening.get(audio)?.abort();
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    keepSpare(audio);
+  }
+
   #retire(audio: HTMLAudioElement | undefined, ms: number) {
     if (!audio) {
       return;
     }
-    this.#fade(audio, 0, ms, () => {
-      audio.pause();
-      audio.removeAttribute('src');
-      audio.load();
-    });
+    this.#fade(audio, 0, ms, () => this.#release(audio));
   }
 
   #switchTo(index: number, fadeOutMs: number) {
@@ -159,6 +228,14 @@ export class FilmMusic {
     }
   }
 
+  /** Start bringing the song before it is asked for. */
+  prepare() {
+    if (this.available && !this.#destroyed && !this.#audio) {
+      this.#audio = this.#element(this.index);
+      this.#audio.load();
+    }
+  }
+
   /** The song playing now (or the first) from where it is, fading in. */
   async play(fadeMs = 1500) {
     if (!this.available || this.#destroyed) {
@@ -167,12 +244,14 @@ export class FilmMusic {
     this.#audio ??= this.#element(this.index);
     const audio = this.#audio;
     this.playing = true;
+    this.loading = true;
     try {
       await audio.play();
     } catch (error) {
       if (audio !== this.#audio) {
         return;
       }
+      this.loading = false;
       if ((error as Error)?.name === 'NotAllowedError') {
         this.blocked = true;
         this.playing = false;
@@ -183,6 +262,8 @@ export class FilmMusic {
     if (audio !== this.#audio || this.#destroyed) {
       return;
     }
+    unlocked.add(audio);
+    this.loading = false;
     if (!this.playing) {
       // paused while it was starting
       audio.pause();
@@ -243,14 +324,13 @@ export class FilmMusic {
   destroy() {
     this.#destroyed = true;
     this.playing = false;
+    this.loading = false;
     for (const { fade } of this.#fades) {
       fade.cancel();
     }
     this.#fades = [];
     if (this.#audio) {
-      this.#audio.pause();
-      this.#audio.removeAttribute('src');
-      this.#audio.load();
+      this.#release(this.#audio);
       this.#audio = undefined;
     }
   }
