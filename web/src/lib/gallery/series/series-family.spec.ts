@@ -2,10 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   durationMs,
+  enterFullscreen,
   familyDayKey,
   familyPage,
   filmAssets,
   keyOf,
+  offersHomeScreen,
+  putHomeScreenHintAway,
   type SeriesDay,
 } from '../../../../memory-player/src/series/series-family';
 
@@ -161,5 +164,37 @@ describe('the family page’s head', () => {
     const config = fs.readFileSync(path.resolve(process.cwd(), 'vite.memory.config.ts'), 'utf8');
     expect(config).toContain("index: resolve(import.meta.dirname, 'memory-player/index.html')");
     expect(config).toContain("days: resolve(import.meta.dirname, 'memory-player/days.html')");
+  });
+});
+
+describe('all of the screen', () => {
+  const phone = (userAgent: string, standalone?: boolean) => ({ userAgent, standalone }) as unknown as Navigator;
+  const iPhone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) Safari/604.1';
+
+  afterEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('offers the Home Screen only to an iPhone still in its browser', () => {
+    expect(offersHomeScreen(phone(iPhone, false))).toBe(true);
+    expect(offersHomeScreen(phone(iPhone, true))).toBe(false);
+    expect(offersHomeScreen(phone('Mozilla/5.0 (Linux; Android 16) Chrome/140.0.0.0'))).toBe(false);
+  });
+
+  it('stops offering once put away', () => {
+    putHomeScreenHintAway();
+    expect(offersHomeScreen(phone(iPhone, false))).toBe(false);
+  });
+
+  it('asks for all of the screen where the browser has it, and goes on where it has not', () => {
+    const root = document.documentElement;
+    const asked = vi.fn(() => Promise.resolve());
+    Object.defineProperty(root, 'requestFullscreen', { configurable: true, value: asked });
+    enterFullscreen();
+    expect(asked).toHaveBeenCalledOnce();
+    Object.defineProperty(root, 'requestFullscreen', { configurable: true, value: undefined });
+    expect(() => enterFullscreen()).not.toThrow();
+    delete (root as { requestFullscreen?: unknown }).requestFullscreen;
   });
 });

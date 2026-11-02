@@ -155,3 +155,40 @@ export const familyDayKey = (day: string, now = new Date()): Translations | unde
   }
   return from === -1 ? 'memory_series_yesterday' : undefined;
 };
+
+/** All of the screen for the film, where the browser allows it: this must run in the press. An iPhone only allows it
+ * for a video, so there the page offers its Home Screen instead. */
+export const enterFullscreen = () => {
+  const root = document.documentElement;
+  if (!document.fullscreenElement && typeof root.requestFullscreen === 'function') {
+    void root.requestFullscreen({ navigationUI: 'hide' }).catch(() => undefined);
+  }
+};
+
+export const leaveFullscreen = () => {
+  if (document.fullscreenElement) {
+    void document.exitFullscreen().catch(() => undefined);
+  }
+};
+
+const HOME_SCREEN_HINT = 'family-home-screen-hint';
+
+/** An iPhone in its browser, not yet opened from the Home Screen, that has not put the hint away. */
+export const offersHomeScreen = (nav: Navigator = navigator) => {
+  if (!/iPhone|iPod/.test(nav.userAgent) || (nav as Navigator & { standalone?: boolean }).standalone !== false) {
+    return false;
+  }
+  try {
+    return localStorage.getItem(HOME_SCREEN_HINT) !== 'off';
+  } catch {
+    return true;
+  }
+};
+
+export const putHomeScreenHintAway = () => {
+  try {
+    localStorage.setItem(HOME_SCREEN_HINT, 'off');
+  } catch {
+    // not kept here: it comes back next time
+  }
+};

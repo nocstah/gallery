@@ -18,7 +18,17 @@
   import { t } from 'svelte-i18n';
   import SeriesFamilyClip from './SeriesFamilyClip.svelte';
   import SeriesFamilyGrid from './SeriesFamilyGrid.svelte';
-  import { familyDayKey, familyPage, filmAssets, type FamilyListDay, type SeriesDay } from './series-family';
+  import {
+    enterFullscreen,
+    familyDayKey,
+    familyPage,
+    filmAssets,
+    leaveFullscreen,
+    offersHomeScreen,
+    putHomeScreenHintAway,
+    type FamilyListDay,
+    type SeriesDay,
+  } from './series-family';
 
   type Props = {
     /** the key in the page's address, encoded for a path */
@@ -55,6 +65,7 @@
   let filmAsset = $state('');
   let clipAsset = $state<string>();
   let reducedMotion = $state(false);
+  let homeScreen = $state(offersHomeScreen());
 
   const view = $derived(stack.at(-1));
   const newest = $derived(days.at(0));
@@ -167,13 +178,22 @@
     }
   };
 
-  const play = (n: number) => {
-    // here, in the press: the day and its first photo may take seconds, and iOS lets sound start only from a press
+  // here, in the press: the day and its first photo may take seconds, and a browser allows sound and all of the screen
+  // only from a press
+  const pressedFilm = () => {
     unlockFilmSound();
-    return openDay(n, (day) => {
+    enterFullscreen();
+  };
+
+  const play = async (n: number) => {
+    pressedFilm();
+    await openDay(n, (day) => {
       filmAsset = day.assets[0].id;
       stack = ['film'];
     });
+    if (view !== 'film') {
+      leaveFullscreen();
+    }
   };
 
   const allPhotos = (n: number) => openDay(n, () => (stack = ['grid']));
@@ -192,14 +212,14 @@
       show('clip');
       return;
     }
-    unlockFilmSound();
+    pressedFilm();
     filmAsset = id;
     show('film');
   };
 
   const playFromGrid = () => {
     if (open) {
-      unlockFilmSound();
+      pressedFilm();
       filmAsset = open.assets[0].id;
       show('film');
     }
@@ -247,6 +267,13 @@
     change();
     query.addEventListener('change', change);
     return () => query.removeEventListener('change', change);
+  });
+
+  // all of the screen is the film's: back under it, the page has its browser again
+  $effect(() => {
+    if (view !== 'film') {
+      leaveFullscreen();
+    }
   });
 
   // the list holds still under the film, the grid and a clip
@@ -327,6 +354,22 @@
     {:else if firstComes}
       <p class="family-first" data-testid="series-family-first">
         {$t('memory_series_first_on', { values: { date: seriesLongDate(firstComes, reader) } })}
+      </p>
+    {/if}
+
+    {#if homeScreen}
+      <p class="family-home-screen" data-testid="series-family-home-screen">
+        <span>{$t('memory_series_home_screen')}</span>
+        <button
+          type="button"
+          class="family-home-screen-away"
+          onclick={() => {
+            homeScreen = false;
+            putHomeScreenHintAway();
+          }}
+        >
+          {$t('close')}
+        </button>
       </p>
     {/if}
 
@@ -563,6 +606,25 @@
   }
   .family-more {
     margin-top: 1.5rem;
+  }
+  .family-home-screen {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--ws-radius);
+    box-shadow: inset 0 0 0 1px var(--public-memory-boundary);
+    color: var(--public-memory-ink);
+    line-height: 1.5;
+  }
+  .family-home-screen-away {
+    flex: none;
+    min-height: 44px;
+    padding-inline: 0.5rem;
+    font-weight: 600;
+    text-decoration: underline;
   }
   .family-first,
   .family-failed {
