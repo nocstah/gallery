@@ -4,6 +4,7 @@ import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
 import { libraryNamed } from '$lib/gallery/libraries/library-words';
+import { animateRemoval } from '$lib/gallery/motion';
 import type { CommandContext, SelectionCommandContext } from '$lib/managers/command-context-manager.svelte';
 import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
 import { pageKey, undoManager } from '$lib/managers/undo-manager.svelte';
@@ -145,6 +146,7 @@ export async function handleArchiveSelected(ctx?: CommandContext) {
   const prior = assets.map((asset) => ({ id: asset.id, visibility: asset.visibility }));
   try {
     await updateAssets({ assetBulkUpdateDto: { ids, visibility } });
+    animateRemoval(ids, 'archive');
     selection.onArchive(ids, visibility);
     // Local Omarchy layer: with an undo, kept in the bar's undo history too (managers/undo-manager)
     showUndoArchiveToast($t('archived_count', { values: { count: ids.length } }), prior, assets, true);
@@ -180,6 +182,7 @@ export async function handleDeleteSelected(ctx?: CommandContext) {
     const here = pageKey();
     const covers = await handOverCovers(assets);
     await deleteBulk({ assetBulkDeleteDto: { ids, force } });
+    animateRemoval(ids, force ? 'delete' : 'trash');
     selection.onDelete(ids);
     announceCovers(covers, ids);
     // Local Omarchy layer: outside Main the toast names the library (gallery/libraries)

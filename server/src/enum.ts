@@ -204,6 +204,9 @@ export enum Permission {
   DuplicateRead = 'duplicate.read',
   DuplicateDelete = 'duplicate.delete',
 
+  CleanupRead = 'cleanup.read',
+  CleanupUpdate = 'cleanup.update',
+
   FaceCreate = 'face.create',
   FaceRead = 'face.read',
   FaceUpdate = 'face.update',
@@ -905,6 +908,8 @@ export enum QueueName {
   Editor = 'editor',
   StorageBackendMigration = 'storageBackendMigration',
   Classification = 'classification',
+  QualityAnalysis = 'qualityAnalysis',
+  SpatialScene = 'spatialScene',
 }
 
 export const QueueNameSchema = z.enum(QueueName).describe('Queue name').meta({ id: 'QueueName' });
@@ -1013,6 +1018,10 @@ export enum JobName {
   PetRecognitionQueueAll = 'PetRecognitionQueueAll',
   PetRecognition = 'PetRecognition',
 
+  // Spatial Scene
+  SpatialSceneQueueAll = 'SpatialSceneQueueAll',
+  SpatialScene = 'SpatialScene',
+
   // Workflow
   WorkflowAssetTrigger = 'WorkflowAssetTrigger',
 
@@ -1060,6 +1069,10 @@ export enum JobName {
   // Classification
   AssetClassifyQueueAll = 'AssetClassifyQueueAll',
   AssetClassify = 'AssetClassify',
+
+  // Library Cleanup
+  AssetAnalyzeQualityQueueAll = 'AssetAnalyzeQualityQueueAll',
+  AssetAnalyzeQuality = 'AssetAnalyzeQuality',
 }
 
 export const JobNameSchema = z.enum(JobName).describe('Job name').meta({ id: 'JobName' });
@@ -1116,6 +1129,7 @@ export enum DatabaseLock {
   VersionCheck = 800,
   HlsSessionCleanup = 850,
   PetRecognitionModelSwitch = 860,
+  CleanupQualityRerun = 870,
 }
 
 export enum MaintenanceAction {
@@ -1183,6 +1197,7 @@ export enum SyncRequestType {
   SharedSpaceAssetsV1 = 'SharedSpaceAssetsV1',
   SharedSpaceAssetExifsV1 = 'SharedSpaceAssetExifsV1',
   SharedSpaceToAssetsV1 = 'SharedSpaceToAssetsV1',
+  SharedSpaceStacksV1 = 'SharedSpaceStacksV1',
 
   LibrariesV1 = 'LibrariesV1',
   LibraryAssetsV1 = 'LibraryAssetsV1',
@@ -1314,6 +1329,12 @@ export enum SyncEntityType {
   SharedSpaceToAssetV1 = 'SharedSpaceToAssetV1',
   SharedSpaceToAssetDeleteV1 = 'SharedSpaceToAssetDeleteV1',
   SharedSpaceToAssetBackfillV1 = 'SharedSpaceToAssetBackfillV1',
+
+  SharedSpaceStackV1 = 'SharedSpaceStackV1',
+  SharedSpaceStackBackfillV1 = 'SharedSpaceStackBackfillV1',
+  SharedSpaceStackAlbumBackfillV1 = 'SharedSpaceStackAlbumBackfillV1',
+  SharedSpaceStackLibraryBackfillV1 = 'SharedSpaceStackLibraryBackfillV1',
+  SharedSpaceStackDeleteV1 = 'SharedSpaceStackDeleteV1',
 
   LibraryV1 = 'LibraryV1',
   LibraryDeleteV1 = 'LibraryDeleteV1',
@@ -1458,6 +1479,7 @@ export enum ApiTag {
   Assets = 'Assets',
   AssetFiles = 'Asset files',
   Classification = 'Classification',
+  Cleanup = 'Cleanup',
   ConfigUser = 'Config (user)',
   ConfigAdmin = 'Config (admin)',
   ConfigPublic = 'Config (public)',

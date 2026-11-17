@@ -5,7 +5,7 @@
   import FaceCrop from '$lib/components/faces-page/face-crop.svelte';
   import ShortcutKeycap from '$lib/gallery/components/shortcut-keycap.svelte';
   import { faceSuggestionContextExpanded } from '$lib/gallery/people/face-suggestion-context.store';
-  import SuggestionAssetDetails from '$lib/gallery/people/suggestion-asset-details.svelte';
+  import SuggestionAssetDetails from '$lib/gallery/asset-context/asset-context-details.svelte';
   import SuggestionAssetSummary from '$lib/gallery/people/suggestion-asset-summary.svelte';
   import { getSuggestionAssetHref } from '$lib/gallery/people/suggestion-asset-href';
   import { getAssetMediaUrl } from '$lib/utils';

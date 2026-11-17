@@ -3,6 +3,7 @@ import { toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { libraryNamed } from '$lib/gallery/libraries/library-words';
+import { animateRemoval } from '$lib/gallery/motion';
 import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
 import { pageKey, undoManager } from '$lib/managers/undo-manager.svelte';
@@ -32,6 +33,7 @@ export const deleteAssets = async (
     const here = pageKey();
     const covers = await handOverCovers(assets);
     await deleteBulk({ assetBulkDeleteDto: { ids, force } });
+    animateRemoval(ids, force ? 'delete' : 'trash');
     onAssetDelete(ids);
     announceCovers(covers, ids);
 

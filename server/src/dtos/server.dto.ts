@@ -2,6 +2,7 @@ import { createZodDto } from 'nestjs-zod';
 import z from 'zod';
 import type { SemVer } from 'semver';
 import { ExtraModel, HistoryBuilder } from 'src/decorators.js';
+import { SpatialSceneServerFeatures } from 'src/gallery/dtos/spatial-scene.dto.js';
 import { isoDatetimeToDate } from 'src/validation.js';
 
 const ServerPingResponseSchema = z
@@ -152,6 +153,9 @@ const ServerFeaturesSchema = z
     ocr: z.boolean().describe('Whether OCR is enabled'),
     realtimeTranscoding: z.boolean().describe('Whether real-time transcoding is enabled'),
     peopleStatistics: z.boolean().describe('Whether the people face statistics UI is enabled'),
+    // Gallery-fork: the admin UI hides config that only applies on the S3 storage backend (database
+    // backups to S3), and the client has no other signal for which backend the server is running on.
+    s3Storage: z.boolean().describe('Whether the server is running on the S3 storage backend'),
     // Deliberately plain strings, not the SyncRequestType enum: a client must be able to
     // parse a newer server's list without choking on values its own enum doesn't know yet.
     syncRequestTypes: z
@@ -166,6 +170,14 @@ const ServerFeaturesSchema = z
       .describe(
         'Whether takenAfter/takenBefore filters compare the local (wall-clock) taken time with an exclusive end. Absent on older servers, which compare the UTC instant with an inclusive end.',
       ),
+    searchOptions: z.boolean().optional().describe('Whether POST /search/options exists. Absent on older servers.'),
+    searchFavoritesAcrossSpaces: z
+      .boolean()
+      .optional()
+      .describe(
+        'Whether a favourites browse (isFavorite=true) may combine withSharedSpaces/withPartners with an unset visibility: own favourites incl. archived, plus partners and member spaces in timeline visibility. Absent on older servers.',
+      ),
+    ...SpatialSceneServerFeatures,
   })
   .meta({ id: 'ServerFeaturesDto' });
 

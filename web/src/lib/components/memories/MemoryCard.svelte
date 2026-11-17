@@ -85,6 +85,7 @@
 <a
   class="ws-memory-card group relative me-2 inline-block aspect-3/4 h-54 rounded-xl last:me-0 max-md:h-37.5 md:me-4 md:aspect-4/3 xl:aspect-video {className}"
   href={item.href}
+  data-motion-memory
   onmouseenter={() => isBirthday && confettiCount++}
   bind:this={card}
   bind:clientWidth={width}

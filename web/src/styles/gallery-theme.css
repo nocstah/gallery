@@ -10,7 +10,8 @@
 
 /* Local Omarchy layer: DM Sans is unused and the wght-only Bricolage registered a second face under the family name
    that the browser picked over the layer's full one (omarchy-world.css imports the standard axis set), so nothing
-   off the bar ever condensed; both imports are gone */
+   off the bar ever condensed; both imports are gone. Gallery's motion language (lib/gallery/motion/motion.css) is
+   not imported either: Kioku's motion follows the desktop (DESIGN.md, Motion), and omarchy-world.css owns it */
 
 :root,
 .light {

@@ -54,6 +54,10 @@ export type ActivityStatisticsResponseDto = {
     /** Number of likes */
     likes: number;
 };
+export type AdminConfigDatabaseBackupS3Dto = {
+    /** Upload scheduled database backups to S3 */
+    enabled?: boolean;
+};
 export type AdminConfigDatabaseBackupDto = {
     /** Cron expression */
     cronExpression: string;
@@ -61,6 +65,7 @@ export type AdminConfigDatabaseBackupDto = {
     enabled: boolean;
     /** Keep last amount */
     keepLastAmount: number;
+    s3: AdminConfigDatabaseBackupS3Dto;
 };
 export type AdminConfigBackupsDto = {
     database: AdminConfigDatabaseBackupDto;
@@ -195,9 +200,11 @@ export type AdminConfigJobDto = {
     ocr: AdminConfigJobSettingsDto;
     peopleBackfill: AdminConfigJobSettingsDto;
     petDetection: AdminConfigJobSettingsDto;
+    qualityAnalysis: AdminConfigJobSettingsDto;
     search: AdminConfigJobSettingsDto;
     sidecar: AdminConfigJobSettingsDto;
     smartSearch: AdminConfigJobSettingsDto;
+    spatialScene: AdminConfigJobSettingsDto;
     thumbnailGeneration: AdminConfigJobSettingsDto;
     videoConversion: AdminConfigJobSettingsDto;
     workflow: AdminConfigJobSettingsDto;
@@ -290,6 +297,23 @@ export type AdminConfigPetRecognitionDto = {
     /** Name of the model to use */
     modelName: string;
 };
+export type AdminConfigSpatialSceneDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+    /** Largest share of the photo the subject may cover */
+    maxForegroundRatio: number;
+    /** Minimum depth sharpness along the subject outline for a photo to count as suitable */
+    minBoundarySharpness: number;
+    /** Alternatively, the minimum share of the photo made of sharp depth edges */
+    minEdgeDensity: number;
+    /** Alternatively, the smallest person or pet face, as a share of the photo height. 0 ignores faces. */
+    minFaceHeight: number;
+    /** Smallest share of the photo the subject may cover */
+    minForegroundRatio: number;
+    /** Name of the depth model to use */
+    modelName: string;
+    offer: SpatialSceneOffer;
+};
 export type AdminConfigMachineLearningDto = {
     availabilityChecks: AdminConfigMachineLearningAvailabilityChecksDto;
     clip: AdminConfigClipDto;
@@ -300,6 +324,7 @@ export type AdminConfigMachineLearningDto = {
     ocr: AdminConfigOcrDto;
     petDetection: AdminConfigPetDetectionDto;
     petRecognition: AdminConfigPetRecognitionDto;
+    spatialScene: AdminConfigSpatialSceneDto;
     /** ML service URLs */
     urls: string[];
 };
@@ -443,6 +468,10 @@ export type AdminConfigServerDto = {
     mergePeopleAcrossOwners?: boolean;
     /** Public users */
     publicUsers: boolean;
+    /** Let editors of a shared space add members (as viewers). A space owner can override this per space. */
+    spaceEditorsCanAddMembers?: boolean;
+    /** Let editors of a shared space switch members between viewer and editor. A space owner can override this per space. */
+    spaceEditorsCanChangeRoles?: boolean;
 };
 export type AdminConfigStorageTemplateDto = {
     /** Enabled */
@@ -1794,6 +1823,8 @@ export type AssetResponseDto = {
     resized?: boolean;
     /** Resolved space ID (when server auto-detects space context) */
     resolvedSpaceId?: string;
+    /** Whether the viewer offers Spatial Scene for this photo: it has a depth map and the admin offers it on every photo, or the photo counts as suitable. Present only on single-asset reads. */
+    spatialScene?: boolean;
     stack?: (AssetStackResponseDto) | null;
     tags?: TagResponseDto[];
     /** Thumbhash for thumbnail generation (base64) also used as the c query param for thumbnail cache busting. */
@@ -2020,6 +2051,92 @@ export type AuthStatusResponseDto = {
 export type ValidateAccessTokenResponseDto = {
     /** Authentication status */
     authStatus: boolean;
+};
+export type CleanupCalendarDayDto = {
+    assetCount: number;
+    monthDay: number;
+    reviewedAt: string | null;
+};
+export type CleanupCalendarResponseDto = {
+    days: CleanupCalendarDayDto[];
+    daysReviewed: number;
+    streak: number;
+};
+export type CleanupCommitDto = {
+    /** Calendar date as month*100+day, e.g. 923 */
+    completeMonthDay?: number;
+    favoriteIds?: string[];
+    keepIds?: string[];
+    queue: CleanupQueue;
+    trashIds?: string[];
+};
+export type CleanupSkippedDto = {
+    id: string;
+    reason: CleanupSkipReason;
+};
+export type CleanupCommitResponseDto = {
+    favorited: number;
+    kept: number;
+    skipped: CleanupSkippedDto[];
+    trashed: string[];
+};
+export type CleanupDecisionDeleteDto = {
+    assetIds: string[];
+    queue: CleanupQueue;
+};
+export type CleanupInSpacesDto = {
+    assetIds: string[];
+};
+export type CleanupInSpacesResponseDto = {
+    assetIds: string[];
+    externalAssetIds: string[];
+};
+export type CleanupAssetDto = {
+    city: string | null;
+    duration: number | null;
+    fileSize: number;
+    height: number | null;
+    id: string;
+    inAlbum: boolean;
+    isFavorite: boolean;
+    kept: boolean;
+    localDateTime: string;
+    originalFileName: string;
+    reason?: CleanupBlurReason;
+    sharpness?: number | null;
+    thumbhash: string | null;
+    "type": AssetTypeEnum;
+    width: number | null;
+};
+export type CleanupBurstGroupDto = {
+    assets: CleanupAssetDto[];
+    groupId: string;
+    source: CleanupBurstSource;
+    suggestedKeepId: string;
+};
+export type CleanupQueuePageDto = {
+    groups: CleanupBurstGroupDto[];
+    items: CleanupAssetDto[];
+    nextCursor: string | null;
+};
+export type CleanupCountResponseDto = {
+    analysedPercent?: number;
+    bytes: number;
+    count: number;
+};
+export type CleanupRewindYearDto = {
+    count: number;
+    year: number;
+};
+export type CleanupRewindYearsResponseDto = {
+    years: CleanupRewindYearDto[];
+};
+export type CleanupRewindAssetsResponseDto = {
+    assets: CleanupAssetDto[];
+};
+export type CleanupTrashResponseDto = {
+    bytes: number;
+    count: number;
 };
 export type UserConfigFFmpegRealtimeDto = {
     /** Enable real-time HLS transcoding (alpha) */
@@ -2268,9 +2385,11 @@ export type QueuesResponseLegacyDto = {
     peopleBackfill: QueueResponseLegacyDto;
     petDetection: QueueResponseLegacyDto;
     petRecognition: QueueResponseLegacyDto;
+    qualityAnalysis: QueueResponseLegacyDto;
     search: QueueResponseLegacyDto;
     sidecar: QueueResponseLegacyDto;
     smartSearch: QueueResponseLegacyDto;
+    spatialScene: QueueResponseLegacyDto;
     storageBackendMigration: QueueResponseLegacyDto;
     storageTemplateMigration: QueueResponseLegacyDto;
     thumbnailGeneration: QueueResponseLegacyDto;
@@ -3136,6 +3255,187 @@ export type SearchResponseDto = {
     albums: SearchAlbumResponseDto;
     assets: SearchAssetResponseDto;
 };
+export type SearchOptionsRequestDto = {
+    /** Scope to these albums (browse mode: at most one) */
+    albumIds?: string[];
+    /** Filter by city */
+    city?: string | null;
+    /** Filter by country */
+    country?: string | null;
+    /** Filter by description text */
+    description?: string;
+    /** What to compute: availability (the default, LIMIT 1 probes for the chip row) and/or option lists with counts. Ask for availability first, then fetch the lists in parallel */
+    dimensions?: SearchOptionsDimension[];
+    /** Filter by the caller's favorites */
+    isFavorite?: boolean;
+    /** Filter assets in at least one album */
+    isInAlbum?: boolean;
+    /** Filter assets not in any album */
+    isNotInAlbum?: boolean;
+    /** Search language code for `query` */
+    language?: string;
+    /** Filter by lens model */
+    lensModel?: string | null;
+    /** Filter by camera make */
+    make?: string | null;
+    /** Filter by camera model */
+    model?: string | null;
+    /** Filter by OCR text content */
+    ocr?: string;
+    /** Filter by original file name */
+    originalFileName?: string;
+    /** Filter by asset owner (contributor). Narrows within the current scope; never widens it. */
+    ownerId?: string;
+    /** Filter by people: all of them (AND), both modes */
+    personIds?: string[];
+    /** Query mode: count over the smart-search results for this text */
+    query?: string;
+    /** Query mode: count over the smart-search results similar to this asset */
+    queryAssetId?: string;
+    /** Minimum star rating (>=), both modes; null for unrated */
+    rating?: number | null;
+    /** Scope to a shared space */
+    spaceId?: string;
+    /** Filter by shared space people: all of them (AND) */
+    spacePersonIds?: string[];
+    /** Filter by state/province */
+    state?: string | null;
+    /** Filter by tags: any of them in browse mode, all of them in query mode; null for untagged assets */
+    tagIds?: string[] | null;
+    /** Filter by taken date: on or after this local date and time (inclusive) */
+    takenAfter?: string;
+    /** Filter by taken date: before this local date and time (exclusive) */
+    takenBefore?: string;
+    /** Filter by asset type */
+    "type"?: AssetTypeEnum;
+    /** Filter by visibility. Unset: timeline + archive in browse mode, everything but locked in query mode */
+    visibility?: AssetVisibility;
+    /** Browse mode: include the partners shown in the timeline, as on /timeline/buckets */
+    withPartners?: boolean;
+    /** Include the shared spaces shown in the timeline */
+    withSharedSpaces?: boolean;
+    /** Browse mode: count only the primary asset of each stack, as on /timeline/buckets */
+    withStacked?: boolean;
+};
+export type SearchOptionsAvailabilityDto = {
+    /** Whether any asset matches every active filter */
+    hasAssets: boolean;
+    /** Whether any matching asset belongs to an album, ignoring the album filters */
+    hasAssetsInAlbum: boolean;
+    /** Whether any matching asset belongs to no album, ignoring the album filters */
+    hasAssetsNotInAlbum: boolean;
+    /** Whether the camera list would have a make, ignoring the camera filter */
+    hasCameras: boolean;
+    /** Whether any of the caller's favourites match, ignoring isFavorite */
+    hasFavorites: boolean;
+    /** Whether any image matches, ignoring the type filter */
+    hasImages: boolean;
+    /** Whether the people list would have a named person */
+    hasPeople: boolean;
+    /** Whether the place list would have a country, ignoring the place filter */
+    hasPlaces: boolean;
+    /** Whether any rated asset matches, ignoring the rating filter */
+    hasRatings: boolean;
+    /** Whether the tag list would have a tag */
+    hasTags: boolean;
+    /** Whether any video matches, ignoring the type filter */
+    hasVideos: boolean;
+};
+export type SearchOptionsModelDto = {
+    /** Matching assets taken with this model */
+    count: number;
+    /** Camera model */
+    model: string;
+};
+export type SearchOptionsMakeDto = {
+    /** Matching assets taken with this make */
+    count: number;
+    /** Camera make */
+    make: string;
+    /** Models of this make, most assets first */
+    models: SearchOptionsModelDto[];
+};
+export type SearchOptionsCityDto = {
+    /** City name */
+    city: string;
+    /** Matching assets in this city */
+    count: number;
+};
+export type SearchOptionsCountryDto = {
+    /** Cities of this country, most assets first */
+    cities: SearchOptionsCityDto[];
+    /** Matching assets in this country */
+    count: number;
+    /** Country name */
+    country: string;
+};
+export type SearchOptionsMediaTypeDto = {
+    /** Matching assets of this type */
+    count: number;
+    "type": AssetTypeEnum;
+};
+export type SearchOptionsPersonDto = {
+    /** Matching assets that show this person, with every active filter applied */
+    count: number;
+    /** The value to send in personIds (or spacePersonIds in a space scope): a person:/space-person: token when the scope shares people, else a bare id */
+    filterId: string;
+    /** Person ID, the same value as filterId */
+    id: string;
+    /** Whether this is a pet rather than a person (the People / Pets toggle); absent from older servers */
+    isPet?: boolean;
+    /** Whether this person is one of the active people filters */
+    isSelected: boolean;
+    /** Person name */
+    name: string;
+    /** Accessible profile used for thumbnails */
+    primaryProfile?: ScopedPrimaryProfile;
+};
+export type SearchOptionsRatingDto = {
+    /** Matching assets with exactly this rating */
+    count: number;
+    /** Star rating */
+    rating: number;
+};
+export type SearchOptionsTagDto = {
+    /** Matching assets with this tag (or a child tag), with the other filters applied (see tags) */
+    count: number;
+    /** Tag ID */
+    id: string;
+    /** Whether this tag is one of the active tag filters */
+    isSelected: boolean;
+    /** Tag value/name */
+    value: string;
+};
+export type TimeBucketsResponseDto = {
+    /** Number of assets in this time bucket */
+    count: number;
+    /** Time bucket identifier in YYYY-MM-DD format representing the start of the time period */
+    timeBucket: string;
+};
+export type SearchOptionsResponseDto = {
+    /** The chip row: whether each list has any option (as the list itself, ignoring its own filter) and the #910 flags */
+    availability?: SearchOptionsAvailabilityDto;
+    /** Camera makes and their models, ignoring the camera filter; most assets first */
+    cameraMakes?: SearchOptionsMakeDto[];
+    /** Countries and their cities, ignoring the place filter; most assets first */
+    countries?: SearchOptionsCountryDto[];
+    /** With people: whether unnamed people appear in the matching assets */
+    hasUnnamedPeople?: boolean;
+    /** Media types present, ignoring the type filter */
+    mediaTypes?: SearchOptionsMediaTypeDto[];
+    /** Named people in the matching assets, active people filters included; most assets first */
+    people?: SearchOptionsPersonDto[];
+    /** Ratings present, ignoring the rating filter */
+    ratings?: SearchOptionsRatingDto[];
+    /** True when served from the unfiltered cache after the library changed, while a refresh runs (at most 10 minutes old); a client may show it as is */
+    stale?: boolean;
+    /** Tags with the photos each would match. Browse (tags ANY): computed without the tag filter. Query (tags ALL): with it, so they co-occur with the selection. Untagged is ignored; most assets first */
+    tags?: SearchOptionsTagDto[];
+    /** Monthly buckets (local taken time), ignoring the taken-date filter; newest first */
+    timeBuckets?: TimeBucketsResponseDto[];
+    /** Matching assets with every active filter applied */
+    total?: number;
+};
 export type PlacesResponseDto = {
     /** Administrative level 1 name (state/province) */
     admin1name?: string;
@@ -3358,12 +3658,6 @@ export type FilterSuggestionsTagDto = {
     id: string;
     /** Tag value/name */
     value: string;
-};
-export type TimeBucketsResponseDto = {
-    /** Number of assets in this time bucket */
-    count: number;
-    /** Time bucket identifier in YYYY-MM-DD format representing the start of the time period */
-    timeBucket: string;
 };
 export type SmartSearchFacetsResponseDto = {
     /** Available camera makes */
@@ -3607,14 +3901,22 @@ export type ServerFeaturesDto = {
     realtimeTranscoding: boolean;
     /** Whether reverse geocoding is enabled */
     reverseGeocoding: boolean;
+    /** Whether the server is running on the S3 storage backend */
+    s3Storage: boolean;
     /** Whether search is enabled */
     search: boolean;
+    /** Whether a favourites browse (isFavorite=true) may combine withSharedSpaces/withPartners with an unset visibility: own favourites incl. archived, plus partners and member spaces in timeline visibility. Absent on older servers. */
+    searchFavoritesAcrossSpaces?: boolean;
+    /** Whether POST /search/options exists. Absent on older servers. */
+    searchOptions?: boolean;
     /** Whether sidecar files are supported */
     sidecar: boolean;
     /** Whether smart search is enabled */
     smartSearch: boolean;
     /** Whether smart search has an active relevance cutoff (clip.maxDistance) */
     smartSearchHasCutoff: boolean;
+    /** Whether Spatial Scene is enabled, so single-asset reads may set spatialScene. Absent on older servers. */
+    spatialScene?: boolean;
     /** Sync stream request types this server accepts. Absent on servers that predate capability signalling; clients fall back to version-based gating. */
     syncRequestTypes?: string[];
     /** Whether trash feature is enabled */
@@ -3835,6 +4137,20 @@ export type SharedSpaceLinkedLibraryDto = {
     libraryId: string;
     libraryName: string;
 };
+export type SharedSpaceMemberManagementDto = {
+    /** Whether the current user can add members */
+    canAddMembers: boolean;
+    /** Whether the current user can change member roles */
+    canChangeRoles: boolean;
+    /** Space setting for editors adding members (null follows the server) */
+    editorsCanAddMembers: boolean | null;
+    /** Space setting for editors changing roles (null follows the server) */
+    editorsCanChangeRoles: boolean | null;
+    /** Server default for editors adding members */
+    serverEditorsCanAddMembers: boolean;
+    /** Server default for editors changing roles */
+    serverEditorsCanChangeRoles: boolean;
+};
 export type SharedSpaceMemberResponseDto = {
     /** Avatar color */
     avatarColor?: string;
@@ -3894,6 +4210,8 @@ export type SharedSpaceResponseDto = {
     linkedLibraries?: SharedSpaceLinkedLibraryDto[];
     /** Number of members */
     memberCount?: number;
+    /** Member management permissions for the current user */
+    memberManagement?: SharedSpaceMemberManagementDto;
     /** Space members (summary) */
     members?: SharedSpaceMemberResponseDto[];
     /** Space name */
@@ -3926,6 +4244,10 @@ export type SharedSpaceUpdateDto = {
     color?: UserAvatarColor;
     /** Space description */
     description?: string;
+    /** Let editors add members (null follows the server setting) */
+    editorsCanAddMembers?: boolean | null;
+    /** Let editors change viewer and editor roles (null follows the server setting) */
+    editorsCanChangeRoles?: boolean | null;
     /** Enable face recognition for this space */
     faceRecognitionEnabled?: boolean;
     /** Space name */
@@ -6644,6 +6966,24 @@ export function updateAssetAdjust({ id, assetImageAdjustDto }: {
     })));
 }
 /**
+ * View the depth map of a photo
+ */
+export function viewAssetDepth({ id, key, slug }: {
+    id: string;
+    key?: string;
+    slug?: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchBlob<{
+        status: 200;
+        data: Blob;
+    }>(`/assets/${encodeURIComponent(id)}/depth${QS.query(QS.explode({
+        key,
+        slug
+    }))}`, {
+        ...opts
+    }));
+}
+/**
  * Remove edits from an existing asset
  */
 export function removeAssetEdits({ id }: {
@@ -7081,6 +7421,157 @@ export function scanClassification(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchText("/classification/scan", {
         ...opts,
         method: "POST"
+    }));
+}
+/**
+ * Get the cleanup calendar
+ */
+export function getCleanupCalendar({ tz }: {
+    tz: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: CleanupCalendarResponseDto;
+    }>(`/cleanup/calendar${QS.query(QS.explode({
+        tz
+    }))}`, {
+        ...opts
+    }));
+}
+/**
+ * Commit cleanup decisions
+ */
+export function commitCleanup({ cleanupCommitDto }: {
+    cleanupCommitDto: CleanupCommitDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: CleanupCommitResponseDto;
+    }>("/cleanup/commit", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: cleanupCommitDto
+    })));
+}
+/**
+ * Delete cleanup decisions
+ */
+export function deleteCleanupDecisions({ cleanupDecisionDeleteDto }: {
+    cleanupDecisionDeleteDto: CleanupDecisionDeleteDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText("/cleanup/decisions", oazapfts.json({
+        ...opts,
+        method: "DELETE",
+        body: cleanupDecisionDeleteDto
+    })));
+}
+/**
+ * Get which cleanup assets are in a shared space
+ */
+export function getCleanupAssetsInSpaces({ cleanupInSpacesDto }: {
+    cleanupInSpacesDto: CleanupInSpacesDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: CleanupInSpacesResponseDto;
+    }>("/cleanup/in-spaces", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: cleanupInSpacesDto
+    })));
+}
+/**
+ * Get a cleanup queue page
+ */
+export function getCleanupQueue({ cursor, hideFaces, limit, minSize, queue, reason, strictness, $type }: {
+    cursor?: string;
+    hideFaces?: boolean;
+    limit?: number;
+    minSize?: number;
+    queue: CleanupListQueue;
+    reason?: CleanupBlurReason;
+    strictness?: CleanupStrictness;
+    $type?: CleanupAssetTypeFilter;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: CleanupQueuePageDto;
+    }>(`/cleanup/queues/${encodeURIComponent(queue)}${QS.query(QS.explode({
+        cursor,
+        hideFaces,
+        limit,
+        minSize,
+        reason,
+        strictness,
+        "type": $type
+    }))}`, {
+        ...opts
+    }));
+}
+/**
+ * Get a cleanup queue count
+ */
+export function getCleanupQueueCount({ cursor, hideFaces, limit, minSize, queue, reason, strictness, $type }: {
+    cursor?: string;
+    hideFaces?: boolean;
+    limit?: number;
+    minSize?: number;
+    queue: CleanupCountQueue;
+    reason?: CleanupBlurReason;
+    strictness?: CleanupStrictness;
+    $type?: CleanupAssetTypeFilter;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: CleanupCountResponseDto;
+    }>(`/cleanup/queues/${encodeURIComponent(queue)}/count${QS.query(QS.explode({
+        cursor,
+        hideFaces,
+        limit,
+        minSize,
+        reason,
+        strictness,
+        "type": $type
+    }))}`, {
+        ...opts
+    }));
+}
+/**
+ * Get rewind years for a date
+ */
+export function getCleanupRewindYears({ monthDay }: {
+    monthDay: number;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: CleanupRewindYearsResponseDto;
+    }>(`/cleanup/rewind/${encodeURIComponent(monthDay)}`, {
+        ...opts
+    }));
+}
+/**
+ * Get rewind assets for a date and year
+ */
+export function getCleanupRewindAssets({ monthDay, year }: {
+    monthDay: number;
+    year: number;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: CleanupRewindAssetsResponseDto;
+    }>(`/cleanup/rewind/${encodeURIComponent(monthDay)}/${encodeURIComponent(year)}`, {
+        ...opts
+    }));
+}
+/**
+ * Get cleanup trash totals
+ */
+export function getCleanupTrash(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: CleanupTrashResponseDto;
+    }>("/cleanup/trash", {
+        ...opts
     }));
 }
 /**
@@ -8634,6 +9125,21 @@ export function searchAssets({ key, slug, metadataSearchDto }: {
         ...opts,
         method: "POST",
         body: metadataSearchDto
+    })));
+}
+/**
+ * Search filter options with counts
+ */
+export function getSearchOptions({ searchOptionsRequestDto }: {
+    searchOptionsRequestDto: SearchOptionsRequestDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: SearchOptionsResponseDto;
+    }>("/search/options", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: searchOptionsRequestDto
     })));
 }
 /**
@@ -11396,6 +11902,10 @@ export enum LogLevel {
     Error = "error",
     Fatal = "fatal"
 }
+export enum SpatialSceneOffer {
+    Suitable = "suitable",
+    All = "all"
+}
 export enum ReleaseChannel {
     Stable = "stable",
     ReleaseCandidate = "releaseCandidate"
@@ -11550,6 +12060,8 @@ export enum Permission {
     UserConfigRead = "userConfig.read",
     DuplicateRead = "duplicate.read",
     DuplicateDelete = "duplicate.delete",
+    CleanupRead = "cleanup.read",
+    CleanupUpdate = "cleanup.update",
     FaceCreate = "face.create",
     FaceRead = "face.read",
     FaceUpdate = "face.update",
@@ -11734,6 +12246,51 @@ export enum AssetMediaSize {
     Preview = "preview",
     Thumbnail = "thumbnail"
 }
+export enum CleanupQueue {
+    Rewind = "rewind",
+    SpaceHogs = "space_hogs",
+    Bursts = "bursts",
+    Screenshots = "screenshots",
+    Blurry = "blurry"
+}
+export enum CleanupSkipReason {
+    NotFound = "not_found",
+    OutOfScope = "out_of_scope",
+    AlreadyTrashed = "already_trashed"
+}
+export enum CleanupListQueue {
+    SpaceHogs = "space_hogs",
+    Bursts = "bursts",
+    Screenshots = "screenshots",
+    Blurry = "blurry"
+}
+export enum CleanupBlurReason {
+    All = "all",
+    Blurry = "blurry",
+    Dark = "dark",
+    Bright = "bright"
+}
+export enum CleanupStrictness {
+    Lenient = "lenient",
+    Balanced = "balanced",
+    Strict = "strict"
+}
+export enum CleanupAssetTypeFilter {
+    All = "all",
+    Image = "image",
+    Video = "video"
+}
+export enum CleanupBurstSource {
+    BurstId = "burstId",
+    TimeWindow = "timeWindow"
+}
+export enum CleanupCountQueue {
+    SpaceHogs = "space_hogs",
+    Bursts = "bursts",
+    Screenshots = "screenshots",
+    Blurry = "blurry",
+    Duplicates = "duplicates"
+}
 export enum SourceType {
     MachineLearning = "machine-learning",
     Exif = "exif",
@@ -11787,7 +12344,9 @@ export enum QueueName {
     IntegrityCheck = "integrityCheck",
     Editor = "editor",
     StorageBackendMigration = "storageBackendMigration",
-    Classification = "classification"
+    Classification = "classification",
+    QualityAnalysis = "qualityAnalysis",
+    SpatialScene = "spatialScene"
 }
 export enum QueueCommand {
     Start = "start",
@@ -11897,6 +12456,8 @@ export enum JobName {
     PetDetection = "PetDetection",
     PetRecognitionQueueAll = "PetRecognitionQueueAll",
     PetRecognition = "PetRecognition",
+    SpatialSceneQueueAll = "SpatialSceneQueueAll",
+    SpatialScene = "SpatialScene",
     WorkflowAssetTrigger = "WorkflowAssetTrigger",
     IntegrityUntrackedFilesQueueAll = "IntegrityUntrackedFilesQueueAll",
     IntegrityUntrackedFiles = "IntegrityUntrackedFiles",
@@ -11924,7 +12485,9 @@ export enum JobName {
     SharedSpaceAlbumGrantReconcileSweep = "SharedSpaceAlbumGrantReconcileSweep",
     SharedSpaceIdentityReconciliationSweep = "SharedSpaceIdentityReconciliationSweep",
     AssetClassifyQueueAll = "AssetClassifyQueueAll",
-    AssetClassify = "AssetClassify"
+    AssetClassify = "AssetClassify",
+    AssetAnalyzeQualityQueueAll = "AssetAnalyzeQualityQueueAll",
+    AssetAnalyzeQuality = "AssetAnalyzeQuality"
 }
 export enum QueueJobStatus {
     Active = "active",
@@ -11939,6 +12502,17 @@ export enum SearchOrderField {
     LocalDateTime = "localDateTime",
     FileSizeInBytes = "fileSizeInBytes",
     Rating = "rating"
+}
+export enum SearchOptionsDimension {
+    Availability = "availability",
+    Total = "total",
+    Time = "time",
+    People = "people",
+    Tags = "tags",
+    Places = "places",
+    Cameras = "cameras",
+    Ratings = "ratings",
+    MediaTypes = "mediaTypes"
 }
 export enum SearchSuggestionType {
     Country = "country",
@@ -12047,6 +12621,11 @@ export enum SyncEntityType {
     SharedSpaceToAssetV1 = "SharedSpaceToAssetV1",
     SharedSpaceToAssetDeleteV1 = "SharedSpaceToAssetDeleteV1",
     SharedSpaceToAssetBackfillV1 = "SharedSpaceToAssetBackfillV1",
+    SharedSpaceStackV1 = "SharedSpaceStackV1",
+    SharedSpaceStackBackfillV1 = "SharedSpaceStackBackfillV1",
+    SharedSpaceStackAlbumBackfillV1 = "SharedSpaceStackAlbumBackfillV1",
+    SharedSpaceStackLibraryBackfillV1 = "SharedSpaceStackLibraryBackfillV1",
+    SharedSpaceStackDeleteV1 = "SharedSpaceStackDeleteV1",
     LibraryV1 = "LibraryV1",
     LibraryDeleteV1 = "LibraryDeleteV1",
     LibraryAssetCreateV1 = "LibraryAssetCreateV1",
@@ -12120,6 +12699,7 @@ export enum SyncRequestType {
     SharedSpaceAssetsV1 = "SharedSpaceAssetsV1",
     SharedSpaceAssetExifsV1 = "SharedSpaceAssetExifsV1",
     SharedSpaceToAssetsV1 = "SharedSpaceToAssetsV1",
+    SharedSpaceStacksV1 = "SharedSpaceStacksV1",
     LibrariesV1 = "LibrariesV1",
     LibraryAssetsV1 = "LibraryAssetsV1",
     LibraryAssetExifsV1 = "LibraryAssetExifsV1",

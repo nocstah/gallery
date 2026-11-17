@@ -29,6 +29,9 @@
 --   * Asset duplicate checksums
 --   * Library sync state (library_audit, library_user, library.createId)
 --   * Storage migration history
+--   * Library Cleanup progress: keep decisions (cleanup_decision), reviewed
+--     dates (cleanup_day_review) and quality-analysis scores (asset_quality,
+--     asset_job_status_gallery.qualityAnalyzedAt)
 --
 -- Assets you uploaded through Gallery are preserved as long as they are stored
 -- in Immich-native rows (asset, asset_exif, asset_face, etc.). If an asset
@@ -140,6 +143,67 @@ BEGIN
      WHERE "personGroupId" IN (SELECT "personGroupId" FROM "person" WHERE "type" = 'pet');
     DELETE FROM "person_group"
      WHERE "id" IN (SELECT "personGroupId" FROM "person" WHERE "type" = 'pet');
+  END IF;
+END $$;
+
+-- Person groups split on the way in (1790900000000-SplitSharedPersonGroups).
+-- Immich 3.3 lets several users own a person row in one person group (cluster
+-- groups and person sharing); Gallery split those one per owner and recorded
+-- how. This puts every row, its faces and the person_user shares back, so
+-- cluster groups and person sharing work again in Immich. It needs Gallery's
+-- one-row-per-group index gone first (section 4 drops it again, a no-op).
+-- The statements match server/src/gallery/utils/person-group-split.ts.
+DROP INDEX IF EXISTS "person_personGroupId_key";
+DO $$
+BEGIN
+  IF to_regclass('public.person_group_split') IS NOT NULL THEN
+    WITH "pending" AS MATERIALIZED (
+      SELECT "split"."splitGroupId", "split"."originalGroupId", "split"."ownerId"
+      FROM "person_group_split" AS "split"
+      WHERE EXISTS (
+        SELECT FROM "person" WHERE "person"."personGroupId" = "split"."splitGroupId" AND "person"."ownerId" = "split"."ownerId"
+      )
+      AND NOT EXISTS (
+        SELECT FROM "person" WHERE "person"."personGroupId" = "split"."originalGroupId" AND "person"."ownerId" = "split"."ownerId"
+      )
+    ),
+    "people" AS (
+      UPDATE "person" SET "personGroupId" = "pending"."originalGroupId"
+      FROM "pending"
+      WHERE "person"."personGroupId" = "pending"."splitGroupId" AND "person"."ownerId" = "pending"."ownerId"
+    ),
+    "faces" AS (
+      UPDATE "asset_face" SET "personGroupId" = "pending"."originalGroupId"
+      FROM "pending"
+      WHERE "asset_face"."personGroupId" = "pending"."splitGroupId"
+    )
+    INSERT INTO "person_audit" ("personGroupId", "ownerId")
+    SELECT "splitGroupId", "ownerId" FROM "pending";
+    DELETE FROM "person_group"
+    USING "person_group_split"
+    WHERE "person_group"."id" = "person_group_split"."splitGroupId"
+      AND NOT EXISTS (SELECT FROM "person" WHERE "person"."personGroupId" = "person_group"."id")
+      AND NOT EXISTS (SELECT FROM "asset_face" WHERE "asset_face"."personGroupId" = "person_group"."id");
+    INSERT INTO "person" ("ownerId", "personGroupId", "createdAt", "name", "thumbnailPath", "isHidden", "birthDate", "faceAssetId", "isFavorite", "color")
+    SELECT "parked"."ownerId", "parked"."personGroupId", "parked"."createdAt", "parked"."name", "parked"."thumbnailPath", "parked"."isHidden", "parked"."birthDate",
+      (SELECT "asset_face"."id" FROM "asset_face" WHERE "asset_face"."id" = "parked"."faceAssetId"), "parked"."isFavorite", "parked"."color"
+    FROM "person_group_split_person" AS "parked"
+    ON CONFLICT DO NOTHING;
+    ALTER TABLE "person_user" DISABLE TRIGGER "person_user_after_insert";
+    INSERT INTO "person_user" ("personGroupId", "sharedById", "sharedWithId", "role", "createdAt", "updatedAt", "updateId")
+    SELECT "share"."personGroupId", "share"."sharedById", "share"."sharedWithId", "share"."role", "share"."createdAt", "share"."updatedAt", "share"."updateId"
+    FROM "person_group_split_share" AS "share"
+    WHERE EXISTS (
+      SELECT FROM "person" WHERE "person"."personGroupId" = "share"."personGroupId" AND "person"."ownerId" = "share"."sharedById"
+    )
+    AND EXISTS (
+      SELECT FROM "person" WHERE "person"."personGroupId" = "share"."personGroupId" AND "person"."ownerId" = "share"."sharedWithId"
+    )
+    ON CONFLICT DO NOTHING;
+    ALTER TABLE "person_user" ENABLE TRIGGER "person_user_after_insert";
+    DELETE FROM "person_group_split_share";
+    DELETE FROM "person_group_split_person";
+    DELETE FROM "person_group_split";
   END IF;
 END $$;
 
@@ -301,7 +365,8 @@ UPDATE "api_key" k
                 'sharedSpaceAlbum.create', 'sharedSpaceAlbum.update', 'sharedSpaceAlbum.delete',
                 'sharedSpaceAlbumFolder.create', 'sharedSpaceAlbumFolder.update', 'sharedSpaceAlbumFolder.delete',
                 'sharedSpaceLibrary.create', 'sharedSpaceLibrary.delete',
-                'userGroup.create', 'userGroup.read', 'userGroup.update', 'userGroup.delete'
+                'userGroup.create', 'userGroup.read', 'userGroup.update', 'userGroup.delete',
+                'cleanup.read', 'cleanup.update'
               ]::character varying[])
            )::character varying[] AS "permissions"
       FROM "api_key"
@@ -403,6 +468,9 @@ DROP TABLE IF EXISTS "shared_space" CASCADE;
 -- Face identities
 DROP TABLE IF EXISTS "person_identity" CASCADE;
 DROP TABLE IF EXISTS "person_pet" CASCADE;
+DROP TABLE IF EXISTS "person_group_split" CASCADE;
+DROP TABLE IF EXISTS "person_group_split_share" CASCADE;
+DROP TABLE IF EXISTS "person_group_split_person" CASCADE;
 DROP TABLE IF EXISTS "face_repair_scan_flagged_face" CASCADE;
 DROP TABLE IF EXISTS "face_repair_decline" CASCADE;
 DROP TABLE IF EXISTS "face_repair_lock" CASCADE;
@@ -438,6 +506,14 @@ DROP TABLE IF EXISTS "asset_job_status_gallery" CASCADE;
 -- Video trims, cleaned up in step 1 above.
 DROP TABLE IF EXISTS "asset_video_trim" CASCADE;
 DROP TABLE IF EXISTS "asset_image_adjust" CASCADE;
+
+-- Library Cleanup (specs/2026-09-23-library-cleanup-design.md)
+DROP TABLE IF EXISTS "cleanup_decision" CASCADE;
+DROP TABLE IF EXISTS "cleanup_day_review" CASCADE;
+DROP TABLE IF EXISTS "asset_quality" CASCADE;
+-- Spatial Scene depth maps. Immich has no equivalent; the <assetId>_depth.png
+-- files stay in the thumbnails folder, where Immich never reads them.
+DROP TABLE IF EXISTS "asset_spatial_scene" CASCADE;
 
 -- -----------------------------------------------------------------------------
 -- 3. Drop Gallery-only functions.
@@ -488,6 +564,10 @@ ALTER TABLE "asset_job_status"  DROP COLUMN IF EXISTS "petsDetectedAt";
 ALTER TABLE "asset_job_status"  DROP COLUMN IF EXISTS "classifiedAt";
 -- Databases from before 1798200000000-DropLibraryCreateId.
 DROP INDEX IF EXISTS "library_createId_idx";
+-- Library Cleanup indexes on Immich tables.
+DROP INDEX IF EXISTS "asset_localMonthDay_idx";
+DROP INDEX IF EXISTS "asset_cleanup_localDateTime_idx";
+DROP INDEX IF EXISTS "asset_exif_fileSizeInByte_idx";
 ALTER TABLE "library"           DROP COLUMN IF EXISTS "createId";
 -- 1791000000000-RepointFaceReviewToPersonGroup added this unique index to make option M's
 -- one-person-per-group invariant a database fact. It lives on the upstream `person` table, so
@@ -578,6 +658,9 @@ DELETE FROM "migration_overrides"
    'index_shared_space_album_folder_nested_name_key',
    'index_shared_space_album_folder_root_name_key',
    'function_shared_space_album_folder_delete_audit',
+   'index_asset_localMonthDay_idx',
+   'index_asset_cleanup_localDateTime_idx',
+   'index_asset_quality_ownerId_screenshot_idx',
    'trigger_asset_library_delete_audit',
    'trigger_classification_category_updatedAt',
    'trigger_face_identity_face_updatedAt',
@@ -812,12 +895,14 @@ DELETE FROM "kysely_migrations"
    '1789000000000-AddFacePersonVerdictStatusCreatedAtIdIndex',
   '1787100000000-DropPersonFksBeforeClusterGroups',
   '1790000000000-FixFaceRepairScanInFlightIndex',
+  '1790900000000-SplitSharedPersonGroups',
   '1791000000000-RepointFaceReviewToPersonGroup',
   '1792123120451-AddSharedLinkSpaceId',
   '1793000000000-AddSharedSpaceAlbumHidden',
   '1793100000000-AddSharedSpaceAlbumFolderTable',
   '1793200000000-SharedSpaceAlbumFolderAuditTable',
   '1793300000000-ClearPreOptionMFaceRepairScans',
+  '1793400000000-AddCleanupTables',
   -- #763 per-user favorites. Renumbered off 1784000000000/1784100000000 during the v3.2.0 rebase:
   -- 1784000000000 was already taken by FixFaceRepairScanInFlightIndexOverride above.
   '1794000000000-AddAssetFavoriteTables',
@@ -833,6 +918,10 @@ DELETE FROM "kysely_migrations"
   '1798800000000-RestoreAssetIsFavoriteProjection',
   '1798900000000-MoveVideoTrimToSidecar',
   '1799000000000-AddAssetImageAdjustTable',
+  '1799100000000-AddSharedSpaceEditorMemberPermissions',
+  '1799500000000-AddCleanupTables',
+  '1799600000000-AddAssetQualityScreenshotVersion',
+  '1799700000000-AddAssetSpatialSceneTable',
   -- Pre-rename name, recorded by builds from before the ledger split: this migration was
   -- renumbered off 1793000000000 when fork PR #1060 took that timestamp, but rolling RC instances
   -- had already recorded the pre-rename name. Drop that row too, or upstream's migrator aborts
@@ -945,8 +1034,11 @@ BEGIN
        'asset_job_status_gallery',
        'asset_video_trim',
        'asset_image_adjust',
+       'asset_spatial_scene',
        'person_identity',
        'person_pet',
+       'person_group_split', 'person_group_split_share', 'person_group_split_person',
+       'cleanup_decision', 'cleanup_day_review', 'asset_quality',
        'gallery_migrations', 'gallery_migrations_lock'
      );
   IF fork_tables_left > 0 THEN

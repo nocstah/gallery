@@ -276,6 +276,14 @@ export class QueueService extends BaseService {
         return this.jobRepository.queue({ name: JobName.AssetClassifyQueueAll, data: { force } });
       }
 
+      case QueueName.QualityAnalysis: {
+        return this.jobRepository.queue({ name: JobName.AssetAnalyzeQualityQueueAll, data: { force } });
+      }
+
+      case QueueName.SpatialScene: {
+        return this.jobRepository.queue({ name: JobName.SpatialSceneQueueAll, data: { force } });
+      }
+
       case QueueName.PeopleBackfill: {
         return this.jobRepository.queue({ name: JobName.FaceIdentityBackfill, data: {} });
       }

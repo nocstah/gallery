@@ -34,6 +34,7 @@
   bind:this={groupElement}
   class="relative"
   role="group"
+  data-motion-lift-group
   onmouseenter={() => (showActions = true)}
   onmouseleave={hideActionsUnlessFocused}
   use:focusOutside={{ onFocusOut: () => (showActions = false) }}

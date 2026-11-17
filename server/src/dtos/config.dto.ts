@@ -33,6 +33,7 @@ import {
   VideoContainerSchema,
 } from 'src/enum.js';
 import {
+  GalleryBackupS3Schema,
   GalleryClassificationSchema,
   GalleryClipExtension,
   GalleryFaceSuggestionSchema,
@@ -40,7 +41,9 @@ import {
   GalleryPetDetectionSchema,
   GalleryPetRecognitionSchema,
   GalleryServerExtension,
+  GallerySpatialSceneSchema,
   GalleryStorageUsageSchema,
+  galleryBackupDatabaseDefaults,
   galleryJobDefaults,
   galleryMachineLearningDefaults,
   galleryServerDefaults,
@@ -170,6 +173,7 @@ const AdminConfigSchemaWithVisibility = z
             enabled: configBool.describe('Enabled'),
             cronExpression: cronExpressionSchema,
             keepLastAmount: z.int().min(1).describe('Keep last amount'),
+            s3: GalleryBackupS3Schema,
           })
           .meta({ id: 'AdminConfigDatabaseBackupDto' }),
       })
@@ -213,6 +217,8 @@ const AdminConfigSchemaWithVisibility = z
         peopleBackfill: AdminConfigJobSettingsSchema,
         petDetection: AdminConfigJobSettingsSchema,
         classification: AdminConfigJobSettingsSchema,
+        qualityAnalysis: AdminConfigJobSettingsSchema,
+        spatialScene: AdminConfigJobSettingsSchema,
       })
       .meta({ id: 'AdminConfigJobDto' }),
     logging: z
@@ -235,6 +241,7 @@ const AdminConfigSchemaWithVisibility = z
         clip: AdminConfigMachineLearningModelSchema.extend(GalleryClipExtension).meta({ id: 'AdminConfigClipDto' }),
         petDetection: GalleryPetDetectionSchema,
         petRecognition: GalleryPetRecognitionSchema,
+        spatialScene: GallerySpatialSceneSchema,
         duplicateDetection: AdminConfigMachineLearningTaskSchema.extend({
           maxDistance: z
             .number()
@@ -574,6 +581,7 @@ export const defaults = Object.freeze<SystemConfig>({
       enabled: true,
       cronExpression: CronExpression.EVERY_DAY_AT_2AM,
       keepLastAmount: 14,
+      ...galleryBackupDatabaseDefaults,
     },
   },
   ffmpeg: {
@@ -657,6 +665,7 @@ export const defaults = Object.freeze<SystemConfig>({
     },
     petDetection: galleryMachineLearningDefaults.petDetection,
     petRecognition: galleryMachineLearningDefaults.petRecognition,
+    spatialScene: galleryMachineLearningDefaults.spatialScene,
     duplicateDetection: {
       enabled: true,
       maxDistance: 0.01,

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { CleanupRoute } from '$lib/gallery/cleanup/cleanup-route';
   import { vaultEdition } from '$lib/gallery/edition';
   import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import AppDownloadModal from '$lib/modals/AppDownloadModal.svelte';
@@ -6,6 +7,7 @@
   import { Route } from '$lib/route';
   import { Icon, modalManager } from '@immich/ui';
   import {
+    mdiBroom,
     mdiCellphoneArrowDownVariant,
     mdiContentDuplicate,
     mdiCrosshairsGps,
@@ -17,6 +19,7 @@
   import { t } from 'svelte-i18n';
 
   const links = [
+    { href: CleanupRoute.utility(), icon: mdiBroom, label: $t('cleanup') },
     { href: Route.duplicatesUtility(), icon: mdiContentDuplicate, label: $t('review_duplicates') },
     { href: Route.largeFileUtility(), icon: mdiImageSizeSelectLarge, label: $t('review_large_files') },
     // Local Omarchy layer: locations are set on a map, which a vault's Gallery has none of (gallery/edition)

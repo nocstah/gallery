@@ -11,6 +11,13 @@ import 'package:immich_mobile/domain/models/memory.model.dart';
 import 'package:immich_mobile/domain/models/person.model.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
+import 'package:immich_mobile/gallery/cleanup/pages/cleanup_day_photos.page.dart';
+import 'package:immich_mobile/gallery/cleanup/pages/cleanup_month.page.dart';
+import 'package:immich_mobile/gallery/cleanup/pages/cleanup_overview.page.dart';
+import 'package:immich_mobile/gallery/cleanup/pages/cleanup_queue.page.dart';
+import 'package:immich_mobile/gallery/cleanup/pages/cleanup_year.page.dart';
+import 'package:immich_mobile/gallery/cleanup/pages/rewind.page.dart';
+import 'package:immich_mobile/gallery/motion/transitions.dart';
 import 'package:immich_mobile/models/folder/recursive_folder.model.dart';
 import 'package:immich_mobile/models/shared_link/shared_link.model.dart';
 import 'package:immich_mobile/models/upload/share_intent_attachment.model.dart';
@@ -68,11 +75,6 @@ import 'package:immich_mobile/presentation/pages/memory_list.page.dart';
 import 'package:immich_mobile/presentation/pages/partner_detail.page.dart';
 import 'package:immich_mobile/presentation/pages/people_collection.page.dart';
 import 'package:immich_mobile/presentation/pages/person.page.dart';
-import 'package:immich_mobile/presentation/pages/photos_filter/camera_picker.page.dart';
-import 'package:immich_mobile/presentation/pages/photos_filter/person_picker.page.dart';
-import 'package:immich_mobile/presentation/pages/photos_filter/places_picker.page.dart';
-import 'package:immich_mobile/presentation/pages/photos_filter/tags_picker.page.dart';
-import 'package:immich_mobile/presentation/pages/photos_filter/when_picker.page.dart';
 import 'package:immich_mobile/presentation/pages/place.page.dart';
 import 'package:immich_mobile/presentation/pages/place_detail.page.dart';
 import 'package:immich_mobile/presentation/pages/profile/profile_picture_crop.page.dart';
@@ -146,9 +148,11 @@ class AppRouter extends RootStackRouter {
     ),
     // >>> fork-only gallery-bottom-nav — rollback: remove this block and
     // point the 5 callsites of GalleryTabShellRoute() back at TabShellRoute().
-    AutoRoute(
+    CustomRoute(
       page: GalleryTabShellRoute.page,
       guards: [_authGuard, _duplicateGuard],
+      transitionsBuilder: GalleryTransitions.shell,
+      duration: GalleryTransitions.shellDuration,
       children: [
         AutoRoute(page: MainTimelineRoute.page, guards: [_authGuard, _duplicateGuard]),
         AutoRoute(page: AlbumsRoute.page, guards: [_authGuard, _duplicateGuard]),
@@ -243,11 +247,6 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: UploadDetailRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: SyncStatusRoute.page, guards: [_duplicateGuard]),
     AutoRoute(page: PeopleCollectionRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: PersonPickerRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: WhenPickerRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: PlacesPickerRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: TagsPickerRoute.page, guards: [_authGuard, _duplicateGuard]),
-    AutoRoute(page: CameraPickerRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: PersonRoute.page, guards: [_authGuard]),
     AutoRoute(page: BackupOptionsRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: AlbumOptionsRoute.page, guards: [_authGuard, _duplicateGuard]),
@@ -258,6 +257,12 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: AssetTroubleshootRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: DownloadInfoRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: CleanupPreviewRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: LibraryCleanupYearRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: LibraryCleanupMonthRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: LibraryCleanupOverviewRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: LibraryCleanupQueueRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: LibraryCleanupRewindRoute.page, guards: [_authGuard, _duplicateGuard]),
+    AutoRoute(page: LibraryCleanupDayPhotosRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: SlideshowRoute.page, guards: [_authGuard, _duplicateGuard]),
     AutoRoute(page: MemoryListRoute.page, guards: [_authGuard, _duplicateGuard]),
     // required to handle all deeplinks in deep_link.service.dart

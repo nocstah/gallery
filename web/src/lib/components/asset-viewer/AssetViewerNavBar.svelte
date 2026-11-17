@@ -24,6 +24,7 @@
   import { getAlbumAssetActions } from '$lib/services/album.service';
   import { getGlobalActions } from '$lib/services/app.service';
   import { getAssetActions } from '$lib/services/asset.service';
+  import { getSpatialSceneActions } from '$lib/gallery/spatial/spatial-scene.svelte';
   import { getPersonAssetActions } from '$lib/services/person.service';
   import { getStackActions } from '$lib/services/stack.service';
   import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
@@ -119,6 +120,7 @@
     getAssetActions($t, { ...asset, stackPrimaryAssetId: stack?.primaryAssetId }, { space, album }),
   );
   const StackActions = $derived(getStackActions($t, stack, asset));
+  const SpatialActions = $derived(getSpatialSceneActions($t, asset));
   const sharedLink = getSharedLink();
 
   // Local Omarchy layer: Curator's object-removal brush, for the owner's own photos when Curator offers it
@@ -344,6 +346,8 @@
         <!-- a shared link has no ⋮ (its viewer is no one's to organise): its own two keep their icons -->
         <ActionButton action={Actions.PlayMotionPhoto} />
         <ActionButton action={Actions.StopMotionPhoto} />
+        <ActionButton action={SpatialActions.ShowSpatialScene} />
+        <ActionButton action={SpatialActions.HideSpatialScene} />
         <ActionButton action={Actions.SharedLinkDownload} />
       {:else}
         <ButtonContextMenu
@@ -356,6 +360,8 @@
           <!-- first what the desktop's bar holds beyond the bottom bar (its download is the ⋮'s own), then the ⋮ -->
           <ActionMenuItem action={Actions.PlayMotionPhoto} />
           <ActionMenuItem action={Actions.StopMotionPhoto} />
+          <ActionMenuItem action={SpatialActions.ShowSpatialScene} />
+          <ActionMenuItem action={SpatialActions.HideSpatialScene} />
           {#if adjustInBar}
             <ActionMenuItem action={Actions.Edit} />
           {/if}
@@ -403,6 +409,8 @@
       <div class="ws-viewer-group">
         <ActionButton action={Actions.PlayMotionPhoto} />
         <ActionButton action={Actions.StopMotionPhoto} />
+        <ActionButton action={SpatialActions.ShowSpatialScene} />
+        <ActionButton action={SpatialActions.HideSpatialScene} />
         <ActionButton action={Actions.Info} />
         <ActionButton action={Actions.Favorite} />
         <ActionButton action={Actions.Unfavorite} />

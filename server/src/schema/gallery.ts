@@ -6,7 +6,11 @@ import { AssetFavoriteAuditTable } from 'src/schema/tables/asset-favorite-audit.
 import { AssetFavoriteTable } from 'src/schema/tables/asset-favorite.table.js';
 import { AssetImageAdjustTable } from 'src/schema/tables/asset-image-adjust.table.js';
 import { AssetJobStatusGalleryTable } from 'src/schema/tables/asset-job-status-gallery.table.js';
+import { AssetQualityTable } from 'src/schema/tables/asset-quality.table.js';
+import { AssetSpatialSceneTable } from 'src/schema/tables/asset-spatial-scene.table.js';
 import { AssetVideoTrimTable } from 'src/schema/tables/asset-video-trim.table.js';
+import { CleanupDayReviewTable } from 'src/schema/tables/cleanup-day-review.table.js';
+import { CleanupDecisionTable } from 'src/schema/tables/cleanup-decision.table.js';
 import { FaceIdentityFaceTable } from 'src/schema/tables/face-identity-face.table.js';
 import { FaceIdentityTable } from 'src/schema/tables/face-identity.table.js';
 import { FacePersonVerdictTable } from 'src/schema/tables/face-person-verdict.table.js';
@@ -16,6 +20,9 @@ import { FaceRepairScanTable } from 'src/schema/tables/face-repair-scan.table.js
 import { LibraryAssetAuditTable } from 'src/schema/tables/library-asset-audit.table.js';
 import { LibraryAuditTable } from 'src/schema/tables/library-audit.table.js';
 import { LibraryUserTable } from 'src/schema/tables/library-user.table.js';
+import { PersonGroupSplitPersonTable } from 'src/schema/tables/person-group-split-person.table.js';
+import { PersonGroupSplitShareTable } from 'src/schema/tables/person-group-split-share.table.js';
+import { PersonGroupSplitTable } from 'src/schema/tables/person-group-split.table.js';
 import { PersonIdentityTable } from 'src/schema/tables/person-identity.table.js';
 import { PersonPetTable } from 'src/schema/tables/person-pet.table.js';
 import { PetSearchTable } from 'src/schema/tables/pet-search.table.js';
@@ -49,6 +56,9 @@ import { UserGroupTable } from 'src/schema/tables/user-group.table.js';
 
 // Gallery fork tables, spread into ImmichDatabase.tables and merged into DB by src/schema/index.ts.
 export const galleryTables = [
+  CleanupDayReviewTable,
+  CleanupDecisionTable,
+  AssetQualityTable,
   AlbumSpaceAssetTable,
   AlbumSpaceAssetAuditTable,
   AssetDuplicateChecksumTable,
@@ -56,6 +66,7 @@ export const galleryTables = [
   AssetFavoriteTable,
   AssetFavoriteAuditTable,
   AssetImageAdjustTable,
+  AssetSpatialSceneTable,
   AssetJobStatusGalleryTable,
   AssetVideoTrimTable,
   FaceIdentityTable,
@@ -67,6 +78,9 @@ export const galleryTables = [
   LibraryUserTable,
   LibraryAssetAuditTable,
   FacePersonVerdictTable,
+  PersonGroupSplitTable,
+  PersonGroupSplitShareTable,
+  PersonGroupSplitPersonTable,
   PersonIdentityTable,
   PersonPetTable,
   PetSearchTable,
@@ -100,6 +114,9 @@ export const galleryTables = [
 ];
 
 export interface GalleryDB {
+  cleanup_day_review: CleanupDayReviewTable;
+  cleanup_decision: CleanupDecisionTable;
+  asset_quality: AssetQualityTable;
   album_space_asset: AlbumSpaceAssetTable;
   album_space_asset_audit: AlbumSpaceAssetAuditTable;
   asset_duplicate_checksum: AssetDuplicateChecksumTable;
@@ -107,6 +124,7 @@ export interface GalleryDB {
   asset_favorite: AssetFavoriteTable;
   asset_favorite_audit: AssetFavoriteAuditTable;
   asset_image_adjust: AssetImageAdjustTable;
+  asset_spatial_scene: AssetSpatialSceneTable;
   asset_job_status_gallery: AssetJobStatusGalleryTable;
   asset_video_trim: AssetVideoTrimTable;
   face_identity: FaceIdentityTable;
@@ -118,6 +136,9 @@ export interface GalleryDB {
   library_user: LibraryUserTable;
   library_asset_audit: LibraryAssetAuditTable;
   face_person_verdict: FacePersonVerdictTable;
+  person_group_split: PersonGroupSplitTable;
+  person_group_split_share: PersonGroupSplitShareTable;
+  person_group_split_person: PersonGroupSplitPersonTable;
   person_identity: PersonIdentityTable;
   person_pet: PersonPetTable;
   pet_search: PetSearchTable;

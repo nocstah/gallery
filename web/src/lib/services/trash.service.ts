@@ -3,6 +3,7 @@ import { modalManager, toastManager, type ActionItem } from '@immich/ui';
 import { mdiDeleteForeverOutline, mdiHistory } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
 import { libraryNamed } from '$lib/gallery/libraries/library-words';
+import { animateRemoval } from '$lib/gallery/motion';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
 
@@ -24,7 +25,9 @@ export const getTrashActions = ($t: MessageFormatter, assetCount: number) => {
   return { RestoreAll, Empty };
 };
 
-const handleEmptyTrash = async () => {
+// gallery-fork: exported for the Library Cleanup hub's "empty trash" footer
+// (web/src/lib/gallery/cleanup/pages/CleanupHubPage.svelte).
+export const handleEmptyTrash = async () => {
   const $t = await getFormatter();
 
   // Local Omarchy layer: outside Main the question names the library (gallery/libraries)
@@ -35,6 +38,7 @@ const handleEmptyTrash = async () => {
 
   try {
     const { count } = await emptyTrash();
+    animateRemoval('visible', 'delete');
     toastManager.primary($t('assets_permanently_deleted_count', { values: { count } }));
   } catch (error) {
     handleError(error, $t('errors.unable_to_empty_trash'));
@@ -51,6 +55,7 @@ const handleRestoreTrash = async () => {
 
   try {
     const { count } = await restoreTrash();
+    animateRemoval('visible', 'restore');
     toastManager.primary($t('assets_restored_count', { values: { count } }));
   } catch (error) {
     handleError(error, $t('errors.unable_to_restore_trash'));

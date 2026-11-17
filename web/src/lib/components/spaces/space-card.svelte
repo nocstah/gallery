@@ -47,6 +47,7 @@
   href={Route.viewSpace({ id: space.id })}
   class="group relative rounded-2xl border border-transparent p-5 hover:border-gray-200 hover:bg-gray-100 dark:hover:border-gray-800 dark:hover:bg-gray-900"
   data-testid="space-card"
+  data-motion-lift-group
   onmouseenter={() => (showMenu = true)}
   onmouseleave={() => {
     showMenu = false;

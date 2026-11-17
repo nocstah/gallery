@@ -63,6 +63,7 @@ dependencies:
   punycode: ^1.0.0
   scroll_date_picker: ^3.8.0
   scrollable_positioned_list: ^0.3.8
+  sensors_plus: ^7.1.1
   share_handler: ^0.0.25
   share_plus: ^10.1.4
   sliver_tools: ^0.2.12
@@ -92,6 +93,7 @@ dependencies:
       ref: '549c24b0a4d3881a9a44b70f4873450d43c1c4af' # https://github.com/dart-lang/http/pull/1877
       path: pkgs/ok_http/
   freezed_annotation: ^3.1.0
+  flutter_timezone: ^5.1.1
 
 dev_dependencies:
   auto_route_generator: ^10.5.0
@@ -127,6 +129,8 @@ flutter:
   assets:
     - assets/
     - assets/feature_message/
+  shaders:
+    - shaders/spatial_scene.frag
   fonts:
     - family: GoogleSans
       fonts:

@@ -350,6 +350,8 @@ export const ADMIN_VISIBLE_QUEUES = [
   QueueName.PetDetection,
   QueueName.PetRecognition,
   QueueName.Classification,
+  QueueName.QualityAnalysis,
+  QueueName.SpatialScene,
   QueueName.VideoConversion,
   QueueName.StorageTemplateMigration,
   QueueName.Migration,

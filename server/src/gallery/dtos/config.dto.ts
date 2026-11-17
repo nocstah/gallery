@@ -17,6 +17,19 @@ export const galleryConfigBool = z
   }, z.boolean())
   .meta({ type: 'boolean' });
 
+// Gallery-fork: scheduled database backups to S3. Deliberately a single on/off flag. Bucket, credentials,
+// region and endpoint are not here because the feature is only offered when the server's storage backend is
+// already S3 (IMMICH_STORAGE_BACKEND=s3), so the only S3 configuration that could apply is the one the media
+// backend is already using; and the key prefix is fixed at `backups/` (see BACKUP_PREFIX in
+// src/gallery/utils/backup-store.ts), which is what guarantees the dumps stay out of the media key space.
+// The result is that nothing about the destination is stored in the database, so there is no S3 secret for
+// GET /admin/config to hand back in the clear, and nothing an admin can misconfigure.
+export const GalleryBackupS3Schema = z
+  .object({
+    enabled: galleryConfigBool.describe('Upload scheduled database backups to S3'),
+  })
+  .meta({ id: 'AdminConfigDatabaseBackupS3Dto' });
+
 const GalleryClassificationFaceExclusionSchema = z
   .enum(['off', 'any_assigned_face', 'named_people', 'named_visible_people'])
   .default('off')
@@ -122,6 +135,52 @@ export const GalleryPetRecognitionSchema = z
   })
   .meta({ id: 'AdminConfigPetRecognitionDto' });
 
+// Admin-only for the same reason as GalleryPetDetectionSchema. Clients learn whether a photo is offered from
+// `spatialScene` on the asset itself, decided against these thresholds when it is opened
+// (specs/2026-10-29-spatial-scene-design.md, "Deciding which photos to offer it on").
+export const GallerySpatialSceneSchema = z
+  .object({
+    enabled: z.boolean().describe('Whether the task is enabled'),
+    modelName: z.string().min(1).describe('Name of the depth model to use'),
+    offer: z
+      .enum(['suitable', 'all'])
+      .describe('Offer Spatial Scene on suitable photos only, or on every photo with a depth map')
+      .meta({ id: 'SpatialSceneOffer' }),
+    minBoundarySharpness: z
+      .number()
+      .meta({ format: 'double' })
+      .min(0)
+      .max(1)
+      .describe('Minimum depth sharpness along the subject outline for a photo to count as suitable'),
+    minEdgeDensity: z
+      .number()
+      .meta({ format: 'double' })
+      .min(0)
+      .max(1)
+      .describe('Alternatively, the minimum share of the photo made of sharp depth edges'),
+    minForegroundRatio: z
+      .number()
+      .meta({ format: 'double' })
+      .min(0)
+      .max(1)
+      .describe('Smallest share of the photo the subject may cover'),
+    maxForegroundRatio: z
+      .number()
+      .meta({ format: 'double' })
+      .min(0)
+      .max(1)
+      .describe('Largest share of the photo the subject may cover'),
+    minFaceHeight: z
+      .number()
+      .meta({ format: 'double' })
+      .min(0)
+      .max(1)
+      .describe('Alternatively, the smallest person or pet face, as a share of the photo height. 0 ignores faces.'),
+  })
+  .meta({ id: 'AdminConfigSpatialSceneDto' });
+
+export type SpatialSceneConfig = z.infer<typeof GallerySpatialSceneSchema>;
+
 export const GalleryFaceSuggestionSchema = z
   .object({
     enabled: z.boolean().describe('Whether face suggestions are enabled'),
@@ -147,12 +206,20 @@ export const GalleryServerExtension = {
   mergePeopleAcrossOwners: galleryConfigBool.describe(
     "Allow a people merge to combine two of another user's people, or two people in a shared space the actor cannot edit, into one (a destructive collapse). Re-points that only move a single person to another identity are always allowed. When off, such combining merges are blocked; when on, each still requires an explicit confirmation.",
   ),
+  spaceEditorsCanAddMembers: galleryConfigBool.describe(
+    'Let editors of a shared space add members (as viewers). A space owner can override this per space.',
+  ),
+  spaceEditorsCanChangeRoles: galleryConfigBool.describe(
+    'Let editors of a shared space switch members between viewer and editor. A space owner can override this per space.',
+  ),
 };
 
 export const galleryJobDefaults = {
   [QueueName.PeopleBackfill]: { concurrency: 1 },
   [QueueName.PetDetection]: { concurrency: 1 },
   [QueueName.Classification]: { concurrency: 1 },
+  [QueueName.QualityAnalysis]: { concurrency: 2 },
+  [QueueName.SpatialScene]: { concurrency: 1 },
 };
 
 export const galleryMachineLearningDefaults = {
@@ -160,9 +227,28 @@ export const galleryMachineLearningDefaults = {
   faceSuggestions: { enabled: true, maxDistance: 0.7 },
   petDetection: { enabled: false, modelName: 'rfdetr-nano', minScore: 0.3 },
   petRecognition: { enabled: false, modelName: 'pet-recognition-base', maxDistance: 0.55, minFaces: 1 },
+  spatialScene: {
+    enabled: false,
+    modelName: 'depth-anything-v2-small',
+    offer: 'suitable' as const,
+    minBoundarySharpness: 0.03,
+    minEdgeDensity: 0.02,
+    minForegroundRatio: 0.01,
+    maxForegroundRatio: 0.75,
+    minFaceHeight: 0.03,
+  },
 };
 
-export const galleryServerDefaults = { mergePeopleAcrossOwners: false };
+export const galleryBackupDatabaseDefaults = {
+  // off out of the box, so a fresh install behaves exactly like upstream Immich
+  s3: { enabled: false },
+};
+
+export const galleryServerDefaults = {
+  mergePeopleAcrossOwners: false,
+  spaceEditorsCanAddMembers: false,
+  spaceEditorsCanChangeRoles: false,
+};
 
 export const galleryTopLevelDefaults = {
   // CLIP text->image distances sit far higher than the image->image thresholds used elsewhere

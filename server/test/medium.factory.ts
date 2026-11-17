@@ -22,6 +22,7 @@ import {
   SyncEntityType,
   SyncRequestType,
 } from 'src/enum.js';
+import { CleanupRepository } from 'src/gallery/repositories/cleanup.repository.js';
 import { FaceSearchRepository } from 'src/gallery/repositories/face-search.repository.js';
 import { FilterSuggestionRepository } from 'src/gallery/repositories/filter-suggestion.repository.js';
 import { GallerySyncRepository } from 'src/gallery/repositories/gallery-sync.repository.js';
@@ -31,6 +32,7 @@ import { PetFaceRepository } from 'src/gallery/repositories/pet-face.repository.
 import { QueueMaintenanceRepository } from 'src/gallery/repositories/queue-maintenance.repository.js';
 import { SmartFacetRepository } from 'src/gallery/repositories/smart-facet.repository.js';
 import { SpaceAlbumRepository } from 'src/gallery/repositories/space-album.repository.js';
+import { SpatialSceneRepository } from 'src/gallery/repositories/spatial-scene.repository.js';
 import { VideoTrimRepository } from 'src/gallery/repositories/video-trim.repository.js';
 import { PersonSidecarFields, writePersonSidecars } from 'src/gallery/utils/person-sidecar.js';
 import { AccessRepository } from 'src/repositories/access.repository.js';
@@ -692,6 +694,7 @@ const newRealRepository = <T extends BaseServiceDeps[number]>(key: T, db: Kysely
     case GallerySyncRepository:
     case VideoTrimRepository:
     case ImageAdjustRepository:
+    case SpatialSceneRepository:
     case SyncCheckpointRepository:
     case SystemMetadataRepository:
     case UserRepository:
@@ -728,6 +731,7 @@ const newRealRepository = <T extends BaseServiceDeps[number]>(key: T, db: Kysely
     }
 
     case ClassificationRepository:
+    case CleanupRepository:
     case TagRepository: {
       return new key(db, LoggingRepository.create()) as InstanceType<T>;
     }
@@ -762,6 +766,7 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
     case AssetRepository:
     case AssetJobRepository:
     case ClassificationRepository:
+    case CleanupRepository:
     case ConfigRepository:
     case CryptoRepository:
     case FaceIdentityRepository:
@@ -784,6 +789,7 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
     case GallerySyncRepository:
     case VideoTrimRepository:
     case ImageAdjustRepository:
+    case SpatialSceneRepository:
     case SyncCheckpointRepository:
     case SystemMetadataRepository:
     case UserRepository:

@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import z from 'zod';
 import { AdminConfigDto, defaults, mapPublicConfig, mapUserConfig } from 'src/dtos/config.dto.js';
 import {
+  GalleryBackupS3Schema,
   GalleryClassificationSchema,
   GalleryFaceSuggestionSchema,
   GalleryMemoriesSchema,
   GalleryPetDetectionSchema,
+  GalleryServerExtension,
   galleryConfigBool,
+  galleryServerDefaults,
 } from 'src/gallery/dtos/config.dto.js';
 
 describe('gallery config fragments', () => {
@@ -14,6 +17,23 @@ describe('gallery config fragments', () => {
     expect(galleryConfigBool.parse('true')).toBe(true);
     expect(galleryConfigBool.parse('false')).toBe(false);
     expect(galleryConfigBool.parse(true)).toBe(true);
+  });
+
+  it('defaults both space-editor member switches to false', () => {
+    expect(galleryServerDefaults).toMatchObject({
+      spaceEditorsCanAddMembers: false,
+      spaceEditorsCanChangeRoles: false,
+    });
+  });
+
+  it('coerces string booleans for the space-editor member switches', () => {
+    expect(
+      z.object({ ...GalleryServerExtension }).parse({
+        spaceEditorsCanAddMembers: 'true',
+        spaceEditorsCanChangeRoles: 'false',
+        mergePeopleAcrossOwners: 'false',
+      }),
+    ).toMatchObject({ spaceEditorsCanAddMembers: true, spaceEditorsCanChangeRoles: false });
   });
 
   it('rejects duplicate classification category names', () => {
@@ -66,6 +86,18 @@ describe('gallery config fragments', () => {
   it('does not inherit a user-visible enabled leaf on pet detection', () => {
     expect(z.globalRegistry.get(GalleryPetDetectionSchema.shape.enabled)?.visibility).toBeUndefined();
   });
+
+  it('coerces the backup S3 enabled flag from an IMMICH_CONFIG_FILE string boolean', () => {
+    const parsed = GalleryBackupS3Schema.parse({ enabled: 'true' });
+    expect(parsed.enabled).toBe(true);
+  });
+
+  // Nothing about the destination is configurable: the bucket, credentials, region and endpoint come from
+  // the media backend the gate requires, and the key prefix is fixed at `backups/`. That is what keeps
+  // secrets out of the database and out of GET /admin/config, which redacts nothing.
+  it('carries nothing but the on/off flag', () => {
+    expect(Object.keys(GalleryBackupS3Schema.shape)).toEqual(['enabled']);
+  });
 });
 
 describe('fork config survives schema composition', () => {
@@ -93,8 +125,14 @@ describe('fork config survives schema composition', () => {
     expect(parsed.machineLearning.petDetection).toEqual({ enabled: false, modelName: 'rfdetr-nano', minScore: 0.3 });
   });
 
+  it('keeps the fork database-backup S3 block', () => {
+    expect(parsed.backup.database.s3).toEqual({ enabled: false });
+  });
+
   it('keeps the fork server flag and job concurrencies', () => {
     expect(parsed.server.mergePeopleAcrossOwners).toBe(false);
+    expect(parsed.server.spaceEditorsCanAddMembers).toBe(false);
+    expect(parsed.server.spaceEditorsCanChangeRoles).toBe(false);
     expect(parsed.job.peopleBackfill).toEqual({ concurrency: 1 });
     expect(parsed.job.petDetection).toEqual({ concurrency: 1 });
     expect(parsed.job.classification).toEqual({ concurrency: 1 });
@@ -125,6 +163,8 @@ describe('fork config is admin-only', () => {
     'suggestions',
     'mergePeopleAcrossOwners',
     'maxDistance',
+    // the backup bucket and prefix are admin-only infrastructure detail, like the rest of `backup`
+    's3',
   ];
 
   it.each([
