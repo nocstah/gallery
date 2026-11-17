@@ -5,6 +5,7 @@
   import { getMyImmichLink } from '$lib/commands';
   import GlobalSearch from '$lib/components/global-search/global-search.svelte';
   import { setupMotion } from '$lib/gallery/motion';
+  import { installTileLift } from '$lib/utils/tile-lift';
   import OnEvents from '$lib/components/OnEvents.svelte';
   import OpenInAppBanner from '$lib/components/shared-components/open-in-app-banner.svelte';
   import { markEdition } from '$lib/gallery/edition';
@@ -208,6 +209,8 @@
   });
 
   setupMotion();
+  // Local Omarchy layer: a hovered photo lifts by its size, so a small one grows to where it can be made out (utils/tile-lift)
+  onMount(installTileLift);
 
   eventManager.emit('AppInit');
 

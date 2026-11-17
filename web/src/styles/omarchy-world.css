@@ -383,11 +383,16 @@ div:has(> [data-testid='admin-page-header']) {
 [data-thumbnail-focus-container]:focus-visible::after {
   box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
 }
-/* Gallery's hover lift (lib/gallery/motion/motion.css) grows the tile's one layer past its frame. While a photo is
-   lifted, or settling back, the frame lets it out: its clip-path and its overflow step aside (the frame is a layout
-   container, so its overflow would clip that absolute layer, where Gallery's own frame does not), a hover video keeps
-   its corners by a clip of its own, and the frame's border grows with the photo from the same origin. The photo's
-   place in the grid is raised over its neighbours, the frame being a stacking context of its own */
+/* Gallery's hover lift (lib/gallery/motion/motion.css) raises the photo you point at over its neighbours. Kioku lifts
+   it by its size (utils/tile-lift.ts): a small photo grows until it can be made out (the owner, 2026-11-17: "it should
+   then hover a lot bigger so you can see what the photo is"), a large one by about Gallery's tenth, always where it
+   stays on screen. It grows by its box, not by a scale: the photo's layer (ws-tile-media) takes the lifted box
+   (--ws-lift-x/-y/-w/-h), so the caption, the badges and the heart on it keep their own size, and the caption has room
+   for the whole date and place. The frame and its controls keep their place: the check sits where the tile is, and the
+   pointer goes through the lifted photo to the photos beneath, which lift in turn, a loupe over the grid.
+   While a photo is lifted or settling back, the frame lets it out: its clip-path and overflow step aside (the frame is a
+   layout container, so its overflow would clip that absolute layer), a hover video keeps its corners by a clip of its
+   own, and the photo's place in the grid is raised over its neighbours (the frame being a stacking context of its own) */
 [data-thumbnail-focus-container] video {
   clip-path: inset(0 round var(--tile-radius, var(--ws-radius)));
 }
@@ -395,17 +400,93 @@ div:has(> [data-testid='admin-page-header']) {
   overflow: visible;
   clip-path: none;
 }
+/* Gallery's scale and raised shadow on the tile's whole layer give way to the photo's own box and shadow */
+[data-thumbnail-focus-container]:not([data-selected]):hover > div {
+  scale: none;
+  box-shadow: none;
+}
+[data-thumbnail-focus-container] .ws-tile-media,
 [data-thumbnail-focus-container]::after {
-  transform-origin: var(--gallery-lift-origin, center);
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 100%;
+}
+[data-thumbnail-focus-container] .ws-tile-media {
+  transition:
+    translate 400ms var(--ease-settle),
+    width 400ms var(--ease-settle),
+    height 400ms var(--ease-settle),
+    box-shadow 400ms var(--ease-settle);
+}
+[data-thumbnail-focus-container]::after {
   transition:
     box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1),
-    scale var(--motion-slow) var(--ease-settle);
+    translate 400ms var(--ease-settle),
+    width 400ms var(--ease-settle),
+    height 400ms var(--ease-settle);
+}
+[data-thumbnail-focus-container]:not([data-selected]):hover .ws-tile-media {
+  transition-duration: 600ms, 600ms, 600ms, var(--motion-base);
 }
 [data-thumbnail-focus-container]:not([data-selected]):hover::after {
-  scale: 1.1;
-  transition:
-    box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1),
-    scale 600ms var(--ease-settle);
+  transition-duration: 140ms, 600ms, 600ms, 600ms;
+}
+/* the photo's image is sized in px by its tile; while lifted it fills the lifted box */
+[data-thumbnail-focus-container]:not([data-selected]):is(:hover, [data-motion-settling])
+  .ws-tile-media
+  > :is(img, canvas) {
+  width: 100% !important;
+  height: 100% !important;
+}
+[data-thumbnail-focus-container]:not([data-selected]):is(:hover, [data-motion-settling]) .ws-tile-media {
+  border-radius: var(--tile-radius, var(--ws-radius));
+  overflow: clip;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* the photo and the frame's border take the lifted box together */
+  [data-thumbnail-focus-container]:not([data-selected]):hover .ws-tile-media,
+  [data-thumbnail-focus-container]:not([data-selected]):hover::after {
+    translate: var(--ws-lift-x, 0px) var(--ws-lift-y, 0px);
+    width: var(--ws-lift-w, 100%);
+    height: var(--ws-lift-h, 100%);
+  }
+  /* Gallery's raised card, on the photo */
+  [data-thumbnail-focus-container]:not([data-selected]):hover .ws-tile-media {
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.18),
+      0 3px 6px rgb(0 0 0 / 0.5),
+      0 12px 24px -2px rgb(0 0 0 / 0.55),
+      0 32px 64px -6px rgb(0 0 0 / 0.85);
+  }
+  /* The hover link (a middle click opens the photo in a new tab) lives on the photo's layer but keeps the tile's place:
+     moved back by as much as the photo moves, in step with it. It is made as the pointer comes on, as the photo starts
+     to move, so it starts from where the photo starts */
+  [data-thumbnail-focus-container]:not([data-selected]):hover .ws-tile-media > a {
+    inset: 0 auto auto 0;
+    width: var(--ws-rest-w, 100%);
+    height: var(--ws-rest-h, 100%);
+    translate: calc(-1 * var(--ws-lift-x, 0px)) calc(-1 * var(--ws-lift-y, 0px));
+    transition: translate 600ms var(--ease-settle);
+  }
+  @starting-style {
+    [data-thumbnail-focus-container]:not([data-selected]):hover .ws-tile-media > a {
+      translate: 0px 0px;
+    }
+  }
+}
+/* A lifted photo covers its neighbours without taking the pointer from them: the pointer goes through it to the photo
+   beneath, while the tile's own controls (the check, the hover link, a stack's badge) still answer. A click on the
+   photo itself lands on its frame, which keeps its place */
+[data-thumbnail-focus-container]:not([data-selected]):is(:hover, [data-motion-settling]) > div {
+  pointer-events: none;
+}
+[data-thumbnail-focus-container]:not([data-selected]):hover > div :is(button, a, input, [role='checkbox']) {
+  pointer-events: auto;
+}
+/* Gallery moves a day's date up as a first-row photo grows toward it; Kioku's days have no date row, so its first
+   child is the day's photos themselves, and they stay where they are */
+section[data-group][data-motion-title-lift] > div[data-image-grid]:first-child {
+  translate: none;
 }
 [data-image-grid]
   > [data-asset-id]:has([data-thumbnail-focus-container]:not([data-selected]):is(:hover, [data-motion-settling])) {
@@ -414,16 +495,12 @@ div:has(> [data-testid='admin-page-header']) {
 [data-image-grid] > [data-asset-id]:has([data-thumbnail-focus-container]:not([data-selected]):hover) {
   z-index: 2;
 }
-@media (prefers-reduced-motion: reduce) {
-  [data-thumbnail-focus-container]:not([data-selected]):hover::after {
-    scale: none;
-  }
-}
 [data-thumbnail-focus-container]:focus-visible {
   outline: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-thumbnail-focus-container]::after {
+  [data-thumbnail-focus-container]::after,
+  [data-thumbnail-focus-container] .ws-tile-media {
     transition: none;
   }
 }
