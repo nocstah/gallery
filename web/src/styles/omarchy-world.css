@@ -483,6 +483,20 @@ div:has(> [data-testid='admin-page-header']) {
 [data-thumbnail-focus-container]:not([data-selected]):hover > div :is(button, a, input, [role='checkbox']) {
   pointer-events: auto;
 }
+/* Closing the viewer, Gallery flies the photo back into its tile and hides the tile's image until it lands
+   (viewer-zoom.ts). The pointer is often still on that tile, which lifted under the flight: an empty raised card with
+   its caption, the photo landing small inside it. The tile stays at rest until the photo is home, then lifts */
+[data-thumbnail-focus-container]:has(.ws-tile-media > img[style*='visibility: hidden']) .ws-tile-media,
+[data-thumbnail-focus-container]:has(.ws-tile-media > img[style*='visibility: hidden'])::after {
+  translate: none;
+  width: 100%;
+  height: 100%;
+  box-shadow: none;
+  transition: none;
+}
+[data-thumbnail-focus-container]:has(.ws-tile-media > img[style*='visibility: hidden']) .ws-place {
+  opacity: 0;
+}
 /* Gallery moves a day's date up as a first-row photo grows toward it; Kioku's days have no date row, so its first
    child is the day's photos themselves, and they stay where they are */
 section[data-group][data-motion-title-lift] > div[data-image-grid]:first-child {

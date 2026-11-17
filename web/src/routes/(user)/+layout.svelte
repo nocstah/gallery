@@ -9,7 +9,8 @@
   import MoveProgress from '$lib/gallery/moves/MoveProgress.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { resolveSpecialAlbums } from '$lib/managers/special-albums.svelte';
-  import { onMount, type Snippet } from 'svelte';
+  import { flyingTile, viewerStandsOver } from '$lib/utils/viewer-handover';
+  import { onMount, untrack, type Snippet } from 'svelte';
   interface Props {
     children?: Snippet;
   }
@@ -40,6 +41,33 @@
     const asset = page.url.searchParams.get('at');
     assetViewerManager.gridScrollTarget = { at: asset };
   });
+
+  // Local Omarchy layer: the page goes once the viewer stands over it, not as the route opens the photo: a photo flying
+  // out of its tile (Gallery's viewer zoom) crossed an empty page until the viewer had mounted (utils/viewer-handover)
+  let pageHidden = $state(false);
+  $effect(() => {
+    if (!assetViewerManager.isViewing) {
+      pageHidden = false;
+      return;
+    }
+    const tile = untrack(() => flyingTile(assetViewerManager.asset?.id));
+    if (!tile) {
+      pageHidden = true;
+      return;
+    }
+    tile.style.visibility = 'hidden';
+    let cancelled = false;
+    void viewerStandsOver().then(() => {
+      if (!cancelled) {
+        pageHidden = true;
+        tile.style.visibility = '';
+      }
+    });
+    return () => {
+      cancelled = true;
+      tile.style.visibility = '';
+    };
+  });
 </script>
 
 <!-- Local Omarchy layer: Page Up / Page Down page the main view wherever the focus is (lib/utils/page-keys.ts) -->
@@ -51,7 +79,7 @@
   ]}
 />
 
-<div class:display-none={assetViewerManager.isViewing}>
+<div class:display-none={pageHidden}>
   {@render children?.()}
 </div>
 <UploadCover />
