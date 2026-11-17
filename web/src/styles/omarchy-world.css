@@ -383,6 +383,42 @@ div:has(> [data-testid='admin-page-header']) {
 [data-thumbnail-focus-container]:focus-visible::after {
   box-shadow: inset 0 0 0 var(--ws-border) var(--ws-accent);
 }
+/* Gallery's hover lift (lib/gallery/motion/motion.css) grows the tile's one layer past its frame. While a photo is
+   lifted, or settling back, the frame lets it out: its clip-path and its overflow step aside (the frame is a layout
+   container, so its overflow would clip that absolute layer, where Gallery's own frame does not), a hover video keeps
+   its corners by a clip of its own, and the frame's border grows with the photo from the same origin. The photo's
+   place in the grid is raised over its neighbours, the frame being a stacking context of its own */
+[data-thumbnail-focus-container] video {
+  clip-path: inset(0 round var(--tile-radius, var(--ws-radius)));
+}
+[data-thumbnail-focus-container]:not([data-selected]):is(:hover, [data-motion-settling]) {
+  overflow: visible;
+  clip-path: none;
+}
+[data-thumbnail-focus-container]::after {
+  transform-origin: var(--gallery-lift-origin, center);
+  transition:
+    box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    scale var(--motion-slow) var(--ease-settle);
+}
+[data-thumbnail-focus-container]:not([data-selected]):hover::after {
+  scale: 1.1;
+  transition:
+    box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1),
+    scale 600ms var(--ease-settle);
+}
+[data-image-grid]
+  > [data-asset-id]:has([data-thumbnail-focus-container]:not([data-selected]):is(:hover, [data-motion-settling])) {
+  z-index: 1;
+}
+[data-image-grid] > [data-asset-id]:has([data-thumbnail-focus-container]:not([data-selected]):hover) {
+  z-index: 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-thumbnail-focus-container]:not([data-selected]):hover::after {
+    scale: none;
+  }
+}
 [data-thumbnail-focus-container]:focus-visible {
   outline: none;
 }
@@ -1187,22 +1223,6 @@ section.ws-filter-sheet-panel {
   .ws-person-name::placeholder {
     opacity: 1;
   }
-}
-
-/* ---- grid <-> viewer morph (lib/utils/photo-transition.ts) ---- */
-::view-transition-group(ws-photo) {
-  animation-duration: 340ms;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-::view-transition-old(ws-photo),
-::view-transition-new(ws-photo) {
-  height: 100%;
-  object-fit: cover;
-  animation-duration: 340ms;
-}
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 240ms;
 }
 
 /* ---- viewer: a stage tinted by the theme's dark ground; controls float on smoked glass over the photo ---- */

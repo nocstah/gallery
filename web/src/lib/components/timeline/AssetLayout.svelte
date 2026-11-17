@@ -31,7 +31,9 @@
 
   // Local Omarchy layer: a photo that leaves (trash, archive, To do) closes like a window, the desktop's windowsOut
   // (it shrinks a little as it fades), and the rest re-tile into place on windowsMove, as windows do when one closes.
-  // Both stop while the timeline scrolls or lays out again; reduced motion keeps only a short fade.
+  // Both stop while the timeline scrolls or lays out again; reduced motion keeps only a short fade. Where Gallery's
+  // removal motion flies the photo off (lib/gallery/motion/removal.ts: its copy, over the page, into Trash or Archive),
+  // the tile itself goes at once, so no fading ghost stays behind under the flight; the rest still re-tile.
   const motion = desktopMotion();
   const still = $derived(manager.suspendTransitions && !$isUploading);
   const reduced = $derived(mediaQueryManager.reducedMotion);
@@ -44,8 +46,9 @@
   const moveDuration = $derived(still || reduced ? 0 : motion.move.duration);
   const closeWindow = (_node: Element, { duration }: { duration: number }) => {
     const from = reduced ? 1 : motion.close.scale;
+    const flown = document.querySelector('[data-gallery-removal]') !== null;
     return {
-      duration,
+      duration: flown ? 0 : duration,
       easing: motion.close.easing,
       css: (t: number) => `opacity: ${t}; scale: ${from + (1 - from) * t}`,
     };

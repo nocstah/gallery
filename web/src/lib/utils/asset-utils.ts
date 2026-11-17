@@ -15,6 +15,7 @@ import { toastManager } from '@immich/ui';
 import { DateTime } from 'luxon';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
+import { animateRemoval } from '$lib/gallery/motion';
 import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
 import { authManager } from '$lib/managers/auth-manager.svelte';
 import { downloadManager } from '$lib/managers/download-manager.svelte';
@@ -403,6 +404,9 @@ export const archiveAssets = async (assets: TimelineAsset[], visibility: AssetVi
         assetBulkUpdateDto: { ids, visibility },
       });
       const archived = visibility === AssetVisibility.Archive;
+      if (archived) {
+        animateRemoval(ids, 'archive');
+      }
       showUndoArchiveToast(
         archived
           ? $t('archived_count', { values: { count: ids.length } })

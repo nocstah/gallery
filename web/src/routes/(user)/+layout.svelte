@@ -1,10 +1,8 @@
 <script lang="ts">
-  import { onNavigate } from '$app/navigation';
   import { page } from '$app/state';
   import { shortcuts } from '$lib/actions/shortcut';
   import { undoManager } from '$lib/managers/undo-manager.svelte';
   import { isModalOpen } from '@immich/ui';
-  import { photoTransition } from '$lib/utils/photo-transition';
   import { onPageKey } from '$lib/utils/page-keys';
   import UploadCover from './DragAndDropUploadOverlay.svelte';
   import InspectorFeed from '$lib/components/inspector/InspectorFeed.svelte';
@@ -17,9 +15,6 @@
   }
 
   let { children }: Props = $props();
-
-  // Local Omarchy layer: grid <-> viewer morph (lib/utils/photo-transition.ts)
-  onNavigate((navigation) => photoTransition(navigation));
 
   // Local Omarchy layer: which albums are To do, Villa and QR (managers/special-albums), looked up once per page load, so
   // a special album knows itself even on a page without the sidebar (Room, a photo opened on its own); the sidebar asks

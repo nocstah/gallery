@@ -45,7 +45,7 @@
     aria-label={person.accessibleName ?? person.displayName}
     onfocus={() => (showActions = true)}
   >
-    <div class="size-full rounded-xl brightness-95 filter">
+    <div class="size-full rounded-xl brightness-95 filter" data-motion-lift="flat">
       {#if deferThumbnail && thumbnailQueue}
         <DeferredPersonThumbnail
           queue={thumbnailQueue}

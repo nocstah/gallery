@@ -17,6 +17,7 @@
   import StackPick from '$lib/components/curator/StackPick.svelte';
   import { stackPick } from '$lib/components/curator/stack-pick.svelte';
   import RemoveObjects from '$lib/components/curator/RemoveObjects.svelte';
+  import { useViewerZoom } from '$lib/gallery/motion/viewer-zoom';
   import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
   import type { CuratorFeature } from '$lib/gallery/libraries/library-file';
   import { curatorIsMine } from '$lib/utils/curator';
@@ -135,6 +136,7 @@
   let previewStackedAsset: AssetResponseDto | undefined = $state();
   let stack: StackResponseDto | undefined = $state();
   const asset = $derived(previewStackedAsset ?? cursor.current);
+  useViewerZoom(() => asset.id);
   // Local Omarchy layer: Curator's tools and cards open only for Curator's owner (utils/curator's curatorIsMine), each
   // where this library's Curator offers what it is for (gallery/libraries). The bar offers them to no one else; this
   // keeps one that the owner's session left open shut for the next account

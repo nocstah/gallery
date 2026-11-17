@@ -54,7 +54,7 @@
     showDropdown = false;
   }}
 >
-  <div class="relative">
+  <div class="relative" data-motion-lift>
     <SpaceCollage assets={collageAssets} {preload} />
 
     {#if isPinned}
