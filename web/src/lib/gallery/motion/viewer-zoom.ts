@@ -19,6 +19,8 @@ const VIEWER = '#immich-asset-viewer';
 const THUMBNAIL = '[data-thumbnail-focus-container]';
 /** AdaptiveImage's box around the displayed photo (upstream markup). */
 const PHOTO_BOX = '[data-viewer-content] .size-full.overflow-hidden > .pointer-events-none.absolute.overflow-hidden';
+/** Local Omarchy layer: on a thumbnail while its photo flies back into it. */
+export const LANDING_ATTR = 'data-motion-landing';
 /** A click older than this did not open the viewer that is mounting now. */
 const CLICK_MAX_AGE_MS = 3000;
 
@@ -333,10 +335,15 @@ const zoomOut = async ({ assetId, rect }: Shot, flyer: HTMLDivElement) => {
     return;
   }
   thumbnail.style.visibility = 'hidden';
+  // Local Omarchy layer: the tile is marked while its photo flies home, so it stays at rest under the flight rather than
+  // lifting under the pointer (omarchy-world.css)
+  const tile = thumbnail.closest<HTMLElement>(THUMBNAIL);
+  tile?.setAttribute(LANDING_ATTR, '');
   await flyer
     .animate([{ transform: 'none' }, { transform: transformBetween(to, rect) }], flight())
     .finished.catch(() => {});
   thumbnail.style.visibility = '';
+  tile?.removeAttribute(LANDING_ATTR);
   flyer.remove();
 };
 

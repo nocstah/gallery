@@ -24,6 +24,7 @@
   import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
   import { sidebarStore } from '$lib/stores/sidebar.svelte';
   import { skipToContent } from '$lib/utils/skip-to-content';
+  import { markNavbar } from '$lib/theme/chrome.svelte';
   import { Icon } from '@immich/ui';
   import { mdiBellBadgeOutline, mdiBellOutline, mdiMenu, mdiTrayArrowUp } from '@mdi/js';
   import { onMount } from 'svelte';
@@ -105,7 +106,12 @@
   };
 </script>
 
-<nav id="dashboard-navbar" class="ws-bar h-(--navbar-height) w-dvw max-md:h-(--navbar-height-md)" data-column={column}>
+<nav
+  id="dashboard-navbar"
+  class="ws-bar h-(--navbar-height) w-dvw max-md:h-(--navbar-height-md)"
+  data-column={column}
+  use:markNavbar
+>
   <!-- lands on the page's content: a page of photos on its grid, the first photo the next Tab (utils/skip-to-content) -->
   <SkipLink text={$t('skip_to_content')} onSkip={skipToContent} />
   <div class="ws-bar-start">

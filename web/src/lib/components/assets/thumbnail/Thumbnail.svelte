@@ -384,8 +384,8 @@
         />
       {/if}
 
-      <!-- icon overlay -->
-      <div class="absolute inset-0 z-2">
+      <!-- icon overlay. Local Omarchy layer: ws-tile-overlay keeps its own size on a photo that lifts a lot (omarchy-world.css) -->
+      <div class="ws-tile-overlay absolute inset-0 z-2">
         <!-- Gradient overlay on hover -->
         {#if !usingMobileDevice && !disabled && !asset.isVideo}
           <div

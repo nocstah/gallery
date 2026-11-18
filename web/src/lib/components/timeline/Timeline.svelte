@@ -39,6 +39,7 @@
   import { timelineHeading, type TimelineHeadingSource } from '$lib/managers/timeline-heading.svelte';
   import { markRevealed, takeReveal, takeRevealClick, type Reveal } from '$lib/utils/reveal';
   import { marqueeSelect } from '$lib/actions/marquee-select';
+  import { markTimelineColumn } from '$lib/theme/chrome.svelte';
   import { lang } from '$lib/stores/preferences.store';
   import { isAssetViewerRoute, navigate } from '$lib/utils/navigation';
   import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
@@ -869,6 +870,8 @@
      page's own gutter at its right edge instead of the width the day view's scrubber left behind -->
 <!-- Local Omarchy layer: use:marqueeSelect draws a drag-selection box over the grid (lib/actions/marquee-select.ts);
      photos carried to To do, Villa or QR in the sidebar leave it as after their keys (TimelineKeyboardActions) -->
+<!-- Local Omarchy layer: use:markTimelineColumn marks the column and row the grid stands in, for the glass chrome
+     (lib/theme/chrome.svelte.ts) -->
 <section
   use:marqueeSelect={{
     assetInteraction,
@@ -883,6 +886,7 @@
     },
   }}
   id="asset-grid"
+  use:markTimelineColumn
   class={['h-full scrollbar-hidden overflow-y-auto outline-none', { 'm-0': isEmpty }, { 'ms-0': !isEmpty }]}
   style:margin-inline-end={(usingMobileDevice || timelineManager.months.length === 0 ? 0 : scrubberWidth) + 'px'}
   tabindex="-1"

@@ -5,6 +5,7 @@
 </script>
 
 <script lang="ts">
+  import { markRoot } from '$lib/actions/mark-root';
   // Local Omarchy layer: Room (DESIGN.md, Room), the archive across the room: full screen without the shell, for the
   // AORUS when the owner sits back and later a TV's browser. It plays the film of a memory (MemoryFilm, dressed for
   // three metres) one after another: the Memories page's Today cards, each whole, then the albums Curator keeps for the
@@ -615,7 +616,14 @@
 
 <svelte:document onkeydown={onKeyDown} onfullscreenchange={onFullScreenChange} />
 
-<section class="room" bind:this={section} aria-label={$t('room')} data-testid="room" data-status={status}>
+<section
+  class="room"
+  bind:this={section}
+  use:markRoot={'ws-room'}
+  aria-label={$t('room')}
+  data-testid="room"
+  data-status={status}
+>
   {#if filmReel && filmSource && filmWords}
     {#key filmKey}
       <MemoryFilm
@@ -901,8 +909,9 @@
     background: rgb(255 255 255 / 0.14);
   }
 
-  /* what Curator makes on request (photo books, saved films) waits in a corner of the shell's pages: not on the TV */
-  :global(body:has(section.room) .ws-curator-corner) {
+  /* what Curator makes on request (photo books, saved films) waits in a corner of the shell's pages: not on the TV (the
+     root's data-ws-room, actions/mark-root: a body:has() made Chrome style the whole page on any change in it) */
+  :global(:root[data-ws-room] .ws-curator-corner) {
     display: none;
   }
 </style>

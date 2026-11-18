@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { markRoot } from '$lib/actions/mark-root';
   import { browser } from '$app/environment';
   import { focusTrap } from '$lib/actions/focus-trap';
   import { shortcuts } from '$lib/actions/shortcut';
@@ -654,6 +655,7 @@
   id="immich-asset-viewer"
   class="fixed inset-s-0 top-0 grid size-full grid-cols-4 grid-rows-[64px_1fr] overflow-hidden bg-black"
   data-phone={phone || undefined}
+  use:markRoot={phone ? 'ws-viewer-phone' : undefined}
   data-sheet={sheet || undefined}
   use:focusTrap={trapOptions}
   bind:this={assetViewerHtmlElement}
@@ -947,8 +949,9 @@
     max-height: calc(100% - 5.75rem - var(--ws-viewer-foot));
   }
   /* what Curator makes on request waits in the bottom-left corner of the window (routes/+layout): over the bottom
-     bar it would hide share and favourite, so while the viewer is open on a phone it waits above them */
-  :global(body:has(#immich-asset-viewer[data-phone]) .ws-curator-corner) {
+     bar it would hide share and favourite, so while the viewer is open on a phone it waits above them (the root's
+     data-ws-viewer-phone, actions/mark-root: a body:has() made Chrome style the whole page on any change in it) */
+  :global(:root[data-ws-viewer-phone] .ws-curator-corner) {
     bottom: calc(0.75rem + 3.5rem + env(safe-area-inset-bottom, 0px));
   }
 

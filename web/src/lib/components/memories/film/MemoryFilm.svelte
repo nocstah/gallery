@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { markRoot } from '$lib/actions/mark-root';
   // Local Omarchy layer: a memory as a full-screen film (DESIGN.md, Memories, The film; the owner's "Full-screen film",
   // 2026-10-16). It plays a plan (film-plan.ts): a title card, then each photo filling the screen and drifting, or
   // shown whole over its own blurred colours where a crop would take too much, videos muted for a few seconds, the
@@ -1305,6 +1306,7 @@
   class="film"
   bind:this={film}
   hidden={!active}
+  use:markRoot={active ? 'ws-film' : undefined}
   aria-label={title}
   data-testid="memory-film"
   data-shot={shotIndex}
@@ -2408,8 +2410,9 @@
     }
   }
   /* what Curator makes on request waits in the bottom-left corner of the window (routes/+layout), where the film's
-     words are: while the film is up it waits at the top-left instead, under the close and the title */
-  :global(body:has(section.film:not([hidden])) .ws-curator-corner) {
+     words are: while the film is up it waits at the top-left instead, under the close and the title (the root's
+     data-ws-film, actions/mark-root: a body:has() made Chrome style the whole page on any change in it) */
+  :global(:root[data-ws-film] .ws-curator-corner) {
     top: calc(max(clamp(1rem, 0.6rem + 1.6vw, 2.5rem), env(safe-area-inset-top, 0px)) + 3.75rem);
     bottom: auto;
   }

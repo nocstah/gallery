@@ -3,6 +3,10 @@
 @import './styles/gallery-theme.css';
 @import './styles/omarchy-world.css';
 @source "../node_modules/@immich/ui";
+/* Local Omarchy layer: not PinInput's group-has utilities (`.group:has(:disabled) *`): with one of them in the page,
+   Chrome styled the whole page again whenever anything changed in it. omarchy-world.css gives the PIN boxes the same
+   looks from the input's own aria-disabled */
+@source not inline("group-has-disabled:text-dark group-has-disabled:bg-gray-300 dark:group-has-disabled:bg-gray-900 dark:group-has-disabled:text-gray-200 dark:group-not-has-disabled:border-gray-700");
 /* @import '../../../ui/packages/ui/dist/theme/default.css'; */
 
 @custom-variant dark (&:where(.dark, .dark *):not(.light));

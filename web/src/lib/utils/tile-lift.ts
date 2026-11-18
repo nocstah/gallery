@@ -6,10 +6,17 @@
 // lifts alike. Never past LIFT_MAX, never larger than the scroll area, and placed where all of it stays inside that
 // area, clear of its edges.
 //
-// It grows by its box, not by a scale, so what sits on it (the caption, the badges, the heart) keeps its own size: the
-// frame carries the lifted box as offsets and a size (`--ws-lift-x/-y/-w/-h`) and its own size at rest
-// (`--ws-rest-w/-h`), set as the pointer comes onto it, before the hover's transition starts; omarchy-world.css reads
-// them.
+// It grows by a transform the compositor runs (a translate and a scale on the photo's layer, ws-tile-media), never by
+// its size: grown by its box, every frame of the lift laid the tile out and painted the photo and its shadow again, and
+// the zoom stuttered (the owner, 2026-11-18: "it doesn't zoom smoothly"). The frame carries the lift as an offset and a
+// scale (`--ws-lift-x/-y`, `--ws-lift-s`), set as the pointer comes onto it, before the hover's transition starts;
+// omarchy-world.css reads them, and keeps what sits on a photo that grows a lot (`data-ws-lift`: the caption, the badges,
+// the heart) at its own size.
+//
+// This is Kioku's whole hover lift: Gallery's own listeners (thumbnail-lift.ts) measured every photo the pointer entered
+// a second time, for a transform origin and a date lift Kioku does not use, so they are not installed
+// (lib/gallery/motion/index.ts), and the settling mark Gallery's stacking rules key off is set here.
+import { SETTLE_MS, SETTLING_ATTR } from '$lib/gallery/motion/thumbnail-lift';
 
 /** About how large a lifted photo stands, in CSS px on a side (the square root of its area): one you can make out. */
 export const LIFT_TARGET_PX = 300;
@@ -23,6 +30,11 @@ export const LIFT_MIN = 1.1;
 export const LIFT_MAX = 5;
 /** Room kept between a lifted photo and the scroll area's edge, in CSS px. */
 export const LIFT_MARGIN_PX = 8;
+/** From this scale on, what sits on the photo keeps its own size rather than growing with it. */
+export const LIFT_BIG_FROM = 1.3;
+
+/** The frame's mark for a lift that keeps what sits on the photo at its own size. */
+export const LIFT_ATTR = 'data-ws-lift';
 
 const THUMBNAIL = '[data-thumbnail-focus-container]';
 
@@ -54,14 +66,13 @@ export const liftOffset = (start: number, size: number, lo: number, hi: number, 
   return target - start;
 };
 
-/** The lifted box of a photo inside an area, as offsets from where it is and a size. */
+/** The lift of a photo inside an area: how far its top left corner moves, and how many times it grows. */
 export const liftBox = (photo: Box, area: Box) => {
   const scale = liftScale(photo.width, photo.height, area.width, area.height);
   return {
     x: liftOffset(photo.left, photo.width, area.left, area.right, scale),
     y: liftOffset(photo.top, photo.height, area.top, area.bottom, scale),
-    width: photo.width * scale,
-    height: photo.height * scale,
+    scale,
   };
 };
 
@@ -85,9 +96,13 @@ const clipBox = (element: Element): Box => {
 
 const px = (value: number) => `${value.toFixed(1)}px`;
 
+/** The pointer moved between two photos, or onto or off one, rather than within one. */
+const crossing = (event: MouseEvent, thumbnail: Element) =>
+  !(event.relatedTarget instanceof Node && thumbnail.contains(event.relatedTarget));
+
 const onMouseOver = (event: MouseEvent) => {
   const thumbnail = event.target instanceof Element ? event.target.closest<HTMLElement>(THUMBNAIL) : null;
-  if (!thumbnail || (event.relatedTarget instanceof Node && thumbnail.contains(event.relatedTarget))) {
+  if (!thumbnail || !crossing(event, thumbnail)) {
     return;
   }
   // the frame keeps its place and size while its photo grows, so its box is the photo's at rest
@@ -96,14 +111,35 @@ const onMouseOver = (event: MouseEvent) => {
   const { style } = thumbnail;
   style.setProperty('--ws-lift-x', px(lift.x));
   style.setProperty('--ws-lift-y', px(lift.y));
-  style.setProperty('--ws-lift-w', px(lift.width));
-  style.setProperty('--ws-lift-h', px(lift.height));
-  style.setProperty('--ws-rest-w', px(rect.width));
-  style.setProperty('--ws-rest-h', px(rect.height));
+  style.setProperty('--ws-lift-s', lift.scale.toFixed(4));
+  thumbnail.toggleAttribute(LIFT_ATTR, lift.scale >= LIFT_BIG_FROM);
 };
 
-/** Installs the document listener. Returns the uninstaller. */
+const timers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
+
+/** Gallery's stacking rules keep a photo raised while it shrinks back, for as long as SETTLING_ATTR is on it. */
+const onMouseOut = (event: MouseEvent) => {
+  const thumbnail = event.target instanceof Element ? event.target.closest(THUMBNAIL) : null;
+  if (!thumbnail || !crossing(event, thumbnail)) {
+    return;
+  }
+  clearTimeout(timers.get(thumbnail));
+  thumbnail.setAttribute(SETTLING_ATTR, '');
+  timers.set(
+    thumbnail,
+    setTimeout(() => {
+      thumbnail.removeAttribute(SETTLING_ATTR);
+      timers.delete(thumbnail);
+    }, SETTLE_MS),
+  );
+};
+
+/** Installs the document listeners. Returns the uninstaller. */
 export const installTileLift = (target: Document = document): (() => void) => {
   target.addEventListener('mouseover', onMouseOver, { passive: true });
-  return () => target.removeEventListener('mouseover', onMouseOver);
+  target.addEventListener('mouseout', onMouseOut, { passive: true });
+  return () => {
+    target.removeEventListener('mouseover', onMouseOver);
+    target.removeEventListener('mouseout', onMouseOut);
+  };
 };

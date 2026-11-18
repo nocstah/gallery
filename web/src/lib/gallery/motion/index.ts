@@ -2,7 +2,6 @@ import { onMount } from 'svelte';
 import { beforeNavigate, onNavigate } from '$app/navigation';
 import { crossfadeNavigation } from '$lib/gallery/motion/page-transition';
 import { installPressFeedback } from '$lib/gallery/motion/press';
-import { installThumbnailLift } from '$lib/gallery/motion/thumbnail-lift';
 import { installTilt } from '$lib/gallery/motion/tilt';
 import { installViewerZoom, viewerZoomBeforeNavigate } from '$lib/gallery/motion/viewer-zoom';
 
@@ -20,12 +19,13 @@ export const setupMotion = (): void => {
   onMount(() => {
     const uninstallPress = installPressFeedback();
     const uninstallTilt = installTilt();
-    const uninstallThumbnailLift = installThumbnailLift();
+    // Local Omarchy layer: Kioku lifts a timeline photo itself, settling included (utils/tile-lift, installed by the
+    // root layout); Gallery's lift listeners measured every photo the pointer entered a second time, for a transform
+    // origin and a date lift that Kioku does not use
     const uninstallViewerZoom = installViewerZoom();
     return () => {
       uninstallPress();
       uninstallTilt();
-      uninstallThumbnailLift();
       uninstallViewerZoom();
     };
   });

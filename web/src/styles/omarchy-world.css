@@ -386,92 +386,162 @@ div:has(> [data-testid='admin-page-header']) {
 /* Gallery's hover lift (lib/gallery/motion/motion.css) raises the photo you point at over its neighbours. Kioku lifts
    it by its size (utils/tile-lift.ts): a small photo grows until it can be made out (the owner, 2026-11-17: "it should
    then hover a lot bigger so you can see what the photo is"), a large one by about Gallery's tenth, always where it
-   stays on screen. It grows by its box, not by a scale: the photo's layer (ws-tile-media) takes the lifted box
-   (--ws-lift-x/-y/-w/-h), so the caption, the badges and the heart on it keep their own size, and the caption has room
-   for the whole date and place. The frame and its controls keep their place: the check sits where the tile is, and the
-   pointer goes through the lifted photo to the photos beneath, which lift in turn, a loupe over the grid.
+   stays on screen. The photo's layer (ws-tile-media) moves and grows by a transform alone (--ws-lift-x/-y, --ws-lift-s),
+   which the compositor runs: grown by its box, every frame of the zoom laid the tile out and painted the photo and its
+   shadow again, and it stuttered (the owner, 2026-11-18: "it doesn't zoom smoothly"). The frame's border (::after) and
+   the raised card's shadow (::before, drawn once and faded in) take the same transform, their widths divided by the
+   scale so they land at their own. The frame and its controls keep their place: the check sits where the tile is, and
+   the pointer goes through the lifted photo to the photos beneath, which lift in turn, a loupe over the grid.
    While a photo is lifted or settling back, the frame lets it out: its clip-path and overflow step aside (the frame is a
-   layout container, so its overflow would clip that absolute layer), a hover video keeps its corners by a clip of its
-   own, and the photo's place in the grid is raised over its neighbours (the frame being a stacking context of its own) */
-[data-thumbnail-focus-container] video {
-  clip-path: inset(0 round var(--tile-radius, var(--ws-radius)));
-}
+   layout container, so its overflow would clip that absolute layer), the photo's layer rounds its own corners, and the
+   photo's place in the grid is raised over its neighbours (the frame being a stacking context of its own) */
 [data-thumbnail-focus-container]:not([data-selected]):is(:hover, [data-motion-settling]) {
   overflow: visible;
   clip-path: none;
 }
-/* Gallery's scale and raised shadow on the tile's whole layer give way to the photo's own box and shadow */
+/* Gallery's scale and raised shadow on the tile's whole layer give way to the photo's own */
 [data-thumbnail-focus-container]:not([data-selected]):hover > div {
   scale: none;
   box-shadow: none;
 }
 [data-thumbnail-focus-container] .ws-tile-media,
 [data-thumbnail-focus-container]::after {
-  inset: 0 auto auto 0;
-  width: 100%;
-  height: 100%;
+  transform-origin: 0 0;
 }
 [data-thumbnail-focus-container] .ws-tile-media {
   transition:
     translate 400ms var(--ease-settle),
-    width 400ms var(--ease-settle),
-    height 400ms var(--ease-settle),
-    box-shadow 400ms var(--ease-settle);
+    scale 400ms var(--ease-settle);
 }
 [data-thumbnail-focus-container]::after {
   transition:
     box-shadow 140ms cubic-bezier(0.22, 1, 0.36, 1),
     translate 400ms var(--ease-settle),
-    width 400ms var(--ease-settle),
-    height 400ms var(--ease-settle);
+    scale 400ms var(--ease-settle);
 }
 [data-thumbnail-focus-container]:not([data-selected]):hover .ws-tile-media {
-  transition-duration: 600ms, 600ms, 600ms, var(--motion-base);
+  transition-duration: 600ms;
 }
 [data-thumbnail-focus-container]:not([data-selected]):hover::after {
-  transition-duration: 140ms, 600ms, 600ms, 600ms;
-}
-/* the photo's image is sized in px by its tile; while lifted it fills the lifted box */
-[data-thumbnail-focus-container]:not([data-selected]):is(:hover, [data-motion-settling])
-  .ws-tile-media
-  > :is(img, canvas) {
-  width: 100% !important;
-  height: 100% !important;
+  transition-duration: 140ms, 600ms, 600ms;
 }
 [data-thumbnail-focus-container]:not([data-selected]):is(:hover, [data-motion-settling]) .ws-tile-media {
-  border-radius: var(--tile-radius, var(--ws-radius));
+  border-radius: calc(var(--tile-radius, var(--ws-radius)) / var(--ws-lift-s, 1));
   overflow: clip;
 }
 @media (prefers-reduced-motion: no-preference) {
-  /* the photo and the frame's border take the lifted box together */
   [data-thumbnail-focus-container]:not([data-selected]):hover .ws-tile-media,
   [data-thumbnail-focus-container]:not([data-selected]):hover::after {
     translate: var(--ws-lift-x, 0px) var(--ws-lift-y, 0px);
-    width: var(--ws-lift-w, 100%);
-    height: var(--ws-lift-h, 100%);
+    scale: var(--ws-lift-s, 1);
   }
-  /* Gallery's raised card, on the photo */
-  [data-thumbnail-focus-container]:not([data-selected]):hover .ws-tile-media {
+  [data-thumbnail-focus-container]:not([data-selected]):hover::after {
+    border-radius: calc(var(--tile-radius, var(--ws-radius)) / var(--ws-lift-s, 1));
+    box-shadow: inset 0 0 0 calc(var(--ws-border) / var(--ws-lift-s, 1)) var(--ws-accent);
+  }
+  [data-thumbnail-focus-container][data-stack-member]:not([data-selected]):hover::after {
     box-shadow:
-      0 0 0 1px rgb(255 255 255 / 0.18),
-      0 3px 6px rgb(0 0 0 / 0.5),
-      0 12px 24px -2px rgb(0 0 0 / 0.55),
-      0 32px 64px -6px rgb(0 0 0 / 0.85);
+      inset 0 0 0 calc(4px / var(--ws-lift-s, 1)) var(--ws-accent),
+      inset 0 0 0 calc(5px / var(--ws-lift-s, 1)) rgb(0 0 0 / 0.35);
+  }
+  /* Gallery's raised card, under the photo: drawn at the lifted size once, then only moved, grown and faded */
+  [data-thumbnail-focus-container]::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    height: 100%;
+    transform-origin: 0 0;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity 400ms var(--ease-settle),
+      translate 400ms var(--ease-settle),
+      scale 400ms var(--ease-settle);
+  }
+  [data-thumbnail-focus-container]:not([data-selected]):is(:hover, [data-motion-settling])::before {
+    border-radius: calc(var(--tile-radius, var(--ws-radius)) / var(--ws-lift-s, 1));
+    box-shadow:
+      0 0 0 calc(1px / var(--ws-lift-s, 1)) rgb(255 255 255 / 0.18),
+      0 calc(3px / var(--ws-lift-s, 1)) calc(6px / var(--ws-lift-s, 1)) rgb(0 0 0 / 0.5),
+      0 calc(12px / var(--ws-lift-s, 1)) calc(24px / var(--ws-lift-s, 1)) calc(-2px / var(--ws-lift-s, 1))
+        rgb(0 0 0 / 0.55),
+      0 calc(32px / var(--ws-lift-s, 1)) calc(64px / var(--ws-lift-s, 1)) calc(-6px / var(--ws-lift-s, 1))
+        rgb(0 0 0 / 0.85);
+  }
+  [data-thumbnail-focus-container]:not([data-selected]):hover::before {
+    translate: var(--ws-lift-x, 0px) var(--ws-lift-y, 0px);
+    scale: var(--ws-lift-s, 1);
+    opacity: 1;
+    transition-duration: var(--motion-base), 600ms, 600ms;
   }
   /* The hover link (a middle click opens the photo in a new tab) lives on the photo's layer but keeps the tile's place:
-     moved back by as much as the photo moves, in step with it. It is made as the pointer comes on, as the photo starts
-     to move, so it starts from where the photo starts */
+     moved and scaled back by as much as the photo moves and grows */
   [data-thumbnail-focus-container]:not([data-selected]):hover .ws-tile-media > a {
-    inset: 0 auto auto 0;
-    width: var(--ws-rest-w, 100%);
-    height: var(--ws-rest-h, 100%);
-    translate: calc(-1 * var(--ws-lift-x, 0px)) calc(-1 * var(--ws-lift-y, 0px));
-    transition: translate 600ms var(--ease-settle);
+    translate: calc(-1 * var(--ws-lift-x, 0px) / var(--ws-lift-s, 1))
+      calc(-1 * var(--ws-lift-y, 0px) / var(--ws-lift-s, 1));
+    scale: calc(1 / var(--ws-lift-s, 1));
+    transform-origin: 0 0;
   }
-  @starting-style {
-    [data-thumbnail-focus-container]:not([data-selected]):hover .ws-tile-media > a {
-      translate: 0px 0px;
-    }
+  /* On a photo that grows a lot (utils/tile-lift.ts, data-ws-lift), what sits on it keeps its own size: the
+     overlay (the caption, the heart, the gradient) is laid out at the lifted size and scaled back by as much as the
+     photo grows, and the badges are scaled back about the corner they sit in, so each reaches the grown photo's edge
+     at its own size. On the way they would be smaller than that, so they are out of sight while the photo grows or
+     shrinks back, and come in once it stands; the month mark, a mark of the grid, sits the lift out */
+  [data-ws-lift]:not([data-selected]):is(:hover, [data-motion-settling]) .ws-tile-overlay {
+    width: calc(100% * var(--ws-lift-s, 1));
+    height: calc(100% * var(--ws-lift-s, 1));
+    scale: calc(1 / var(--ws-lift-s, 1));
+    transform-origin: 0 0;
+  }
+  [data-ws-lift]:not([data-selected]):is(:hover, [data-motion-settling]) .ws-tile-media > .ws-stack-badge,
+  [data-ws-lift]:not([data-selected]):is(:hover, [data-motion-settling])
+    .ws-tile-media
+    > :not(.ws-tile-overlay)
+    > .ws-tile-corner {
+    scale: calc(1 / var(--ws-lift-s, 1));
+    transform-origin: 100% 0;
+  }
+  [data-ws-lift]:not([data-selected]):is(:hover, [data-motion-settling])
+    .ws-tile-media
+    > .ws-stack-badge.ws-tile-badge-low {
+    transform-origin: 100% -1.5rem;
+  }
+  [data-ws-lift]:not([data-selected]):is(:hover, [data-motion-settling]) .ws-tile-media > .ws-stack-place {
+    scale: calc(1 / var(--ws-lift-s, 1));
+    transform-origin: 0 100%;
+  }
+  [data-ws-lift]:not([data-selected]):hover
+    :is(
+      .ws-tile-overlay,
+      .ws-tile-media > .ws-stack-badge,
+      .ws-tile-media > .ws-stack-place,
+      .ws-tile-media > :not(.ws-tile-overlay) > .ws-tile-corner
+    ) {
+    animation: ws-lift-stands 600ms linear;
+  }
+  [data-ws-lift]:not([data-selected])[data-motion-settling]:not(:hover)
+    :is(
+      .ws-tile-overlay,
+      .ws-tile-media > .ws-stack-badge,
+      .ws-tile-media > .ws-stack-place,
+      .ws-tile-media > :not(.ws-tile-overlay) > .ws-tile-corner
+    ),
+  [data-ws-lift]:not([data-selected]):is(:hover, [data-motion-settling]) .ws-month-mark {
+    opacity: 0;
+    transition: opacity 80ms;
+  }
+  [data-thumbnail-focus-container] :is(.ws-tile-overlay, .ws-stack-place, .ws-tile-corner) {
+    transition: opacity 160ms;
+  }
+}
+@keyframes ws-lift-stands {
+  0%,
+  55% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }
 /* A lifted photo covers its neighbours without taking the pointer from them: the pointer goes through it to the photo
@@ -485,19 +555,30 @@ div:has(> [data-testid='admin-page-header']) {
 }
 /* Closing the viewer, Gallery flies the photo back into its tile and hides the tile's image until it lands
    (viewer-zoom.ts). The pointer is often still on that tile, which lifted under the flight: an empty raised card with
-   its caption, the photo landing small inside it. The tile stays at rest until the photo is home, then lifts */
-[data-thumbnail-focus-container]:has(.ws-tile-media > img[style*='visibility: hidden']) .ws-tile-media,
-[data-thumbnail-focus-container]:has(.ws-tile-media > img[style*='visibility: hidden'])::after {
+   its caption, the photo landing small inside it. The tile stays at rest until the photo is home (data-motion-landing,
+   set by viewer-zoom.ts: a :has() on the image's style made every inline style change in the page a reason for Chrome to
+   style it all again), then lifts. `:is()` weighs as its heaviest part, the id no element has, so these outrank the
+   hover's rules */
+[data-thumbnail-focus-container]:is([data-motion-landing], #ws-landing) .ws-tile-media,
+[data-thumbnail-focus-container]:is([data-motion-landing], #ws-landing)::after {
   translate: none;
-  width: 100%;
-  height: 100%;
-  box-shadow: none;
+  scale: none;
   transition: none;
 }
-[data-thumbnail-focus-container]:has(.ws-tile-media > img[style*='visibility: hidden']) .ws-place {
+[data-thumbnail-focus-container]:is([data-motion-landing], #ws-landing)::before,
+[data-thumbnail-focus-container]:is([data-motion-landing], #ws-landing) .ws-place {
   opacity: 0;
+  transition: none;
 }
-/* Gallery moves a day's date up as a first-row photo grows toward it; Kioku's days have no date row, so its first
+[data-thumbnail-focus-container]:is([data-motion-landing], #ws-landing) .ws-tile-overlay {
+  width: 100%;
+  height: 100%;
+}
+[data-thumbnail-focus-container]:is([data-motion-landing], #ws-landing)
+  :is(.ws-tile-overlay, .ws-stack-badge, .ws-stack-place, .ws-tile-corner) {
+  scale: none;
+  animation: none;
+}
    child is the day's photos themselves, and they stay where they are */
 section[data-group][data-motion-title-lift] > div[data-image-grid]:first-child {
   translate: none;
@@ -1965,7 +2046,9 @@ ul[role='menu'] > hr:last-child {
    pointed at or its stack is open; the inserted frames carry a quiet ink ring ---- */
 .ws-stack-badge {
   cursor: pointer;
-  transition: background-color 120ms;
+  transition:
+    background-color 120ms,
+    opacity 160ms;
 }
 .ws-stack-badge:hover,
 .ws-stack-badge[aria-expanded='true'] {
@@ -2817,12 +2900,29 @@ label.ws-sheet-title {
   }
 }
 
+/* ---- @immich/ui's PinInput, its boxes' looks without its group-has utilities (app.css leaves them out: a
+   `.group:has(:disabled) *` made Chrome style the whole page again on any change in it, 2026-11-18). PinInput puts
+   aria-disabled on the boxes' group, so the boxes ask that instead; in the utilities layer, as the utilities were, and
+   never on the active box, whose border is the primary ---- */
+@layer utilities {
+  :where(.group[aria-disabled='true']) .font-mono.border-2 {
+    @apply bg-gray-300 text-dark dark:bg-gray-900 dark:text-gray-200;
+  }
+  :where(.group:not([aria-disabled='true'])) .font-mono.border-2:not([data-active]) {
+    @apply dark:border-gray-700;
+  }
+}
+
 /* ---- glass chrome (Settings > Theme > Chrome, lib/theme/chrome.svelte.ts) ----
    The top bar, a page's title bar and the timeline's header rows turn to smoked glass over the content, which now
    runs to the top of the window and scrolls under them, as the desktop's glass themes do. The space they cover is
    reserved at the top of the content (it scrolls away), so nothing starts hidden. glass-hide slides them up while you
    scroll down and back on the way up; that moves paint only, the reserved space stays where it is. Only with the
-   navbar on screen: pages that swap it for their own bar (selection) keep the solid layout.
+   navbar on screen (data-navbar on the root, markNavbar): pages that swap it for their own bar (selection) keep the
+   solid layout. The timeline marks the column and the row it stands in, and the page that holds it
+   (data-ws-timeline-column / -row / -page, markTimelineColumn): :has() rules asking every div whether a timeline stood
+   below it made Chrome style the whole page again on any change in it, 40ms each time the pointer came onto a photo
+   (2026-11-18).
    Every word on it holds AA over whatever photo comes under it (2026-10-23, the critique's "the returned bar's words
    fail AA over photos": at 64% of the ground 735 of the 963 words measured over photos were under AA, the strip's
    years down to 1.7:1 in the dark face and 2.5:1 in the light one). Its muted words go halfway to the ink
@@ -2836,7 +2936,7 @@ label.ws-sheet-title {
   /* how much of the top of the content the glass covers: the bar, and a page's title bar where it has one */
   --ws-over: var(--navbar-height);
 }
-:root[data-chrome^='glass'] body:has(#dashboard-navbar) {
+:root[data-chrome^='glass'][data-navbar] body {
   header:has(> #dashboard-navbar) {
     position: relative;
     z-index: 40;
@@ -2844,21 +2944,21 @@ label.ws-sheet-title {
   /* the muted words on the glass, a step toward the ink; what has a ground of its own in the bar (its sheets and menus,
      the search field and its list) keeps the muted ink of that ground */
   #dashboard-navbar,
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed) {
+  [data-ws-timeline-column] > :not(#asset-grid, .absolute, .fixed) {
     --immich-ui-muted: var(--ws-glass-muted);
   }
-  :is(#dashboard-navbar, div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed))
+  :is(#dashboard-navbar, [data-ws-timeline-column] > :not(#asset-grid, .absolute, .fixed))
     :is([data-bar-sheet], .ws-view-sheet, .ws-undo-sheet, .ws-bar-search-field, [role='menu'], [role='dialog']) {
     --immich-ui-muted: var(--ws-ground-muted);
   }
   /* the material sits on a layer behind each bar, not on the bar: a backdrop-filter on the bar itself would make it
      the box its fixed menus are placed in, and they would open in the wrong place */
   #dashboard-navbar,
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed) {
+  [data-ws-timeline-column] > :not(#asset-grid, .absolute, .fixed) {
     background: transparent;
   }
   #dashboard-navbar::before,
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed)::before {
+  [data-ws-timeline-column] > :not(#asset-grid, .absolute, .fixed)::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -2882,30 +2982,30 @@ label.ws-sheet-title {
     padding-top: var(--navbar-height);
   }
   /* pages without a timeline: their content starts below the glass */
-  main > div.absolute.overflow-y-auto:not(:has(#asset-grid)) {
+  main > div.absolute.overflow-y-auto:not([data-ws-timeline-page]) {
     padding-top: calc(var(--ws-over) + 0.5rem);
   }
   /* the timeline: its header rows (month and years, grouping and filters) float over the grid in one cell, the grid
      fills the column, and its top section starts below the bar, the title bar and the header rows (measured into
      --ws-tl-head, lib/theme/chrome.svelte.ts). What floats on its own is no row: the scrubber (.absolute) and a phone's
      Years / Months / All (.fixed), which glass had pulled into the column's grid and laid glass behind */
-  div:has(> #asset-grid) {
+  [data-ws-timeline-column] {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto minmax(0, 1fr);
     align-content: start;
   }
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed) {
+  [data-ws-timeline-column] > :not(#asset-grid, .absolute, .fixed) {
     position: relative;
     z-index: 20;
     grid-column: 1;
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed):first-child {
+  [data-ws-timeline-column] > :not(#asset-grid, .absolute, .fixed):first-child {
     grid-row: 1;
     margin-top: calc(var(--ws-over) - 0.5rem);
   }
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed):nth-child(2) {
+  [data-ws-timeline-column] > :not(#asset-grid, .absolute, .fixed):nth-child(2) {
     grid-row: 2;
   }
   #asset-grid {
@@ -2916,14 +3016,14 @@ label.ws-sheet-title {
     padding-top: calc(var(--ws-over) - 0.5rem + var(--ws-tl-head, 0px));
   }
   /* the filter rail beside the timeline starts below the glass too */
-  div:has(> div > #asset-grid) > :not(:has(#asset-grid)) {
+  [data-ws-timeline-row] > :not([data-ws-timeline-column]) {
     padding-top: calc(var(--ws-over) - 0.5rem);
   }
 }
 /* glass-hide: everything above the content slides up together: the one bar and any timeline header rows */
-:root[data-chrome='glass-hide'][data-bar-hidden] body:has(#dashboard-navbar) {
+:root[data-chrome='glass-hide'][data-bar-hidden][data-navbar] body {
   #dashboard-navbar,
-  div:has(> #asset-grid) > :not(#asset-grid, .absolute, .fixed) {
+  [data-ws-timeline-column] > :not(#asset-grid, .absolute, .fixed) {
     transform: translateY(calc(-1 * (var(--ws-over) + var(--ws-tl-head, 0px))));
   }
   #dashboard-navbar {
@@ -2931,7 +3031,7 @@ label.ws-sheet-title {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  :root[data-chrome^='glass'] body:has(#dashboard-navbar) :is(#dashboard-navbar, div:has(> #asset-grid) > *) {
+  :root[data-chrome^='glass'][data-navbar] body :is(#dashboard-navbar, [data-ws-timeline-column] > *) {
     transition: none;
   }
 }

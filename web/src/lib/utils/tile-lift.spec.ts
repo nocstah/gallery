@@ -1,4 +1,6 @@
+import { SETTLING_ATTR } from '$lib/gallery/motion/thumbnail-lift';
 import {
+  installTileLift,
   LIFT_FULL_BELOW_PX,
   LIFT_GALLERY_FROM_PX,
   LIFT_MARGIN_PX,
@@ -68,18 +70,68 @@ describe('liftOffset', () => {
 });
 
 describe('liftBox', () => {
-  it('answers offsets and a size, the photo kept on screen', () => {
+  it('answers how far the photo moves and how many times it grows, the photo kept on screen', () => {
     const box = liftBox(at(0, 0, 80, 80), area);
-    expect(box.width).toBeCloseTo(LIFT_TARGET_PX);
-    expect(box.height).toBeCloseTo(LIFT_TARGET_PX);
+    expect(80 * box.scale).toBeCloseTo(LIFT_TARGET_PX);
     expect(box.x).toBe(LIFT_MARGIN_PX);
     expect(box.y).toBe(LIFT_MARGIN_PX);
   });
 
   it('grows a large photo by Gallery’s tenth about its centre', () => {
     const box = liftBox(at(300, 300, 400, 300), area);
-    expect(box.width).toBeCloseTo(440);
+    expect(box.scale).toBe(LIFT_MIN);
     expect(box.x).toBeCloseTo(-20);
     expect(box.y).toBeCloseTo(-15);
+  });
+});
+
+describe('installTileLift', () => {
+  let uninstall: () => void;
+  const tile = (width: number, height: number) => {
+    const frame = document.createElement('div');
+    frame.dataset.thumbnailFocusContainer = '';
+    const photo = document.createElement('img');
+    frame.append(photo);
+    document.body.append(frame);
+    frame.getBoundingClientRect = () => DOMRect.fromRect({ x: 100, y: 100, width, height });
+    return { frame, photo };
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    uninstall = installTileLift();
+  });
+
+  afterEach(() => {
+    uninstall();
+    document.body.replaceChildren();
+    vi.useRealTimers();
+  });
+
+  it('sets the lift on the frame as the pointer comes onto it, marking one that grows a lot', () => {
+    const { frame, photo } = tile(80, 80);
+    photo.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    const scale = Number(frame.style.getPropertyValue('--ws-lift-s'));
+    expect(80 * scale).toBeCloseTo(LIFT_TARGET_PX, 0);
+    expect(frame.style.getPropertyValue('--ws-lift-x')).toMatch(/px$/);
+    expect(frame.dataset.wsLift).toBe('');
+  });
+
+  it('leaves the mark off a photo that lifts as Gallery’s do', () => {
+    const { frame, photo } = tile(300, 240);
+    frame.dataset.wsLift = '';
+    photo.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    expect(Number(frame.style.getPropertyValue('--ws-lift-s'))).toBeCloseTo(LIFT_MIN);
+    expect(frame.dataset.wsLift).toBeUndefined();
+  });
+
+  it('marks a photo settling back once the pointer leaves it, not while it moves within it', () => {
+    const { frame, photo } = tile(80, 80);
+    photo.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: frame }));
+    expect(frame.hasAttribute(SETTLING_ATTR)).toBe(false);
+    photo.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+    expect(frame.hasAttribute(SETTLING_ATTR)).toBe(true);
+    vi.runAllTimers();
+    expect(frame.hasAttribute(SETTLING_ATTR)).toBe(false);
   });
 });

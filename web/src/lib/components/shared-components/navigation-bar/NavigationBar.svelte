@@ -25,6 +25,7 @@
   import ThemeButton from '../ThemeButton.svelte';
   import UserAvatar from '../UserAvatar.svelte';
   import AccountInfoPanel from './AccountInfoPanel.svelte';
+  import { markNavbar } from '$lib/theme/chrome.svelte';
 
   type Props = {
     onUploadClick?: () => void;
@@ -110,7 +111,8 @@
 
 <svelte:window bind:innerWidth />
 
-<nav id="dashboard-navbar" class="h-(--navbar-height) w-dvw text-sm max-md:h-(--navbar-height-md)">
+<!-- Local Omarchy layer: markNavbar tells the glass chrome a bar is up (lib/theme/chrome.svelte.ts) -->
+<nav id="dashboard-navbar" class="h-(--navbar-height) w-dvw text-sm max-md:h-(--navbar-height-md)" use:markNavbar>
   <SkipLink text={$t('skip_to_content')} />
   <div
     data-testid="navbar-grid"
