@@ -43,7 +43,11 @@
   });
 
   // Local Omarchy layer: the page goes once the viewer stands over it, not as the route opens the photo: a photo flying
-  // out of its tile (Gallery's viewer zoom) crossed an empty page until the viewer had mounted (utils/viewer-handover)
+  // out of its tile (Gallery's viewer zoom) crossed an empty page until the viewer had mounted (utils/viewer-handover).
+  // It is hidden, not taken out of the layout (was display: none): brought back, the whole page was laid out again, and
+  // every box watching its size answered one by one, each laying the page out once more (the tag filter's rows), so
+  // closing a photo froze the page for most of a second (the owner, 2026-11-18: "really slow and unresponsive to click
+  // the back arrow")
   let pageHidden = $state(false);
   $effect(() => {
     if (!assetViewerManager.isViewing) {
@@ -79,7 +83,7 @@
   ]}
 />
 
-<div class:display-none={pageHidden}>
+<div class:page-under-viewer={pageHidden}>
   {@render children?.()}
 </div>
 <UploadCover />
@@ -92,7 +96,7 @@
   :root {
     overscroll-behavior: none;
   }
-  .display-none {
-    display: none;
+  .page-under-viewer {
+    visibility: hidden;
   }
 </style>
