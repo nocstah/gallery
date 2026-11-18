@@ -579,6 +579,73 @@ div:has(> [data-testid='admin-page-header']) {
   scale: none;
   animation: none;
 }
+/* The peek (utils/tile-peek): Space shows the photo under the pointer as large as the window allows, over the page
+   dimmed. The photo leaves its tile meanwhile, which stands empty under the dim (data-ws-peeking), and flies back into
+   it. A pointer on the photo can open it (Enter does too), one beside it puts it back */
+[data-thumbnail-focus-container][data-ws-peeking] .ws-tile-media,
+[data-thumbnail-focus-container][data-ws-peeking]::before,
+[data-thumbnail-focus-container][data-ws-peeking]::after {
+  visibility: hidden;
+}
+.ws-peek {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  cursor: zoom-out;
+}
+.ws-peek-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.72);
+}
+.ws-peek-card {
+  position: fixed;
+  overflow: hidden;
+  transform-origin: 0 0;
+  will-change: transform;
+  background: rgb(0 0 0);
+  border-radius: var(--tile-radius, var(--ws-radius));
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.12),
+    0 12px 24px -2px rgb(0 0 0 / 0.45),
+    0 32px 80px -8px rgb(0 0 0 / 0.75);
+  cursor: zoom-in;
+}
+.ws-peek-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: cover;
+}
+/* the preview, and a video's first frames, come in over the thumbnail once they can be shown */
+.ws-peek-layer + .ws-peek-layer {
+  opacity: 0;
+  transition: opacity 240ms var(--ease-standard);
+}
+.ws-peek-layer + .ws-peek-layer[data-shown] {
+  opacity: 1;
+}
+.ws-peek-caption {
+  position: fixed;
+  inset-inline: 1rem;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: rgb(255 255 255 / 0.82);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-peek-layer + .ws-peek-layer {
+    transition: none;
+  }
+}
+/* Gallery moves a day's date up as a first-row photo grows toward it; Kioku's days have no date row, so its first
    child is the day's photos themselves, and they stay where they are */
 section[data-group][data-motion-title-lift] > div[data-image-grid]:first-child {
   translate: none;

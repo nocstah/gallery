@@ -84,6 +84,7 @@ export const shortcutSections = ($t: MessageFormatter, account: SheetAccount): S
         ...only(signedIn, row([['O']], $t('shortcut_overview'))),
         row([['G']], $t('shortcut_go_to_date')),
         row([['Enter']], $t('shortcut_open_photo')),
+        row([['Space']], $t('shortcut_peek')),
         row([['X']], $t('select')),
         row([['Ctrl', 'A']], $t('select_all')),
         row([['Shift', 'click']], $t('shortcut_select_range')),

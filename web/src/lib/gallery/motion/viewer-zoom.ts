@@ -171,11 +171,28 @@ const opensViewer = (event: Event) =>
     ? event.key === 'Enter'
     : event instanceof MouseEvent && event.button === 0 && !event.shiftKey && !event.ctrlKey && !event.metaKey);
 
+/** Local Omarchy layer: an image showing a photo elsewhere on screen, which the photo's flight starts from. */
+let standIn: { assetId: string; image: HTMLImageElement } | undefined;
+
+/**
+ * Local Omarchy layer: while it holds, a click on the photo's thumbnail flies the photo out of `image` instead: the
+ * peek (utils/tile-peek) shows the photo large over the page, and opens it from there. Returns the release.
+ */
+export const flyFrom = (assetId: string, image: HTMLImageElement): (() => void) => {
+  const held = { assetId, image };
+  standIn = held;
+  return () => {
+    if (standIn === held) {
+      standIn = undefined;
+    }
+  };
+};
+
 const recordThumbnail = (event: Event) => {
   const thumbnail = event.target instanceof Element ? event.target.closest<HTMLElement>(THUMBNAIL) : null;
-  const image = thumbnail?.querySelector('img');
-  const rect = onScreen(image);
   const assetId = thumbnail?.dataset.asset;
+  const image = (standIn && standIn.assetId === assetId ? standIn.image : undefined) ?? thumbnail?.querySelector('img');
+  const rect = onScreen(image);
   dropClicked();
   if (!assetId || !rect || !image?.currentSrc || !opensViewer(event) || !canAnimate()) {
     return;

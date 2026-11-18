@@ -268,6 +268,7 @@
   });
 </script>
 
+<!-- Local Omarchy layer: data-peek-video is a video's playback address, so the peek on Space plays it (utils/tile-peek) -->
 <div
   class={[
     'group flex overflow-hidden focus-visible:outline-none',
@@ -300,6 +301,7 @@
   data-stack-dimmed={stackDimmed ? true : undefined}
   data-selected={selected ? true : undefined}
   data-month-start={monthMark ? true : undefined}
+  data-peek-video={asset.isVideo ? getAssetPlaybackUrl({ id: asset.id, cacheKey: asset.thumbhash }) : undefined}
   data-readonly={readonly ? true : undefined}
   data-disabled={disabled ? true : undefined}
   tabindex={0}
