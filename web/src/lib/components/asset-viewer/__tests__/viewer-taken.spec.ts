@@ -1,4 +1,4 @@
-import { viewerTaken } from '$lib/components/asset-viewer/viewer-taken';
+import { viewerTaken } from '#lib/components/asset-viewer/viewer-taken.ts';
 
 // Local Omarchy layer: when the photo was taken, as the phone's viewer bar says it beside the back arrow: the moment
 // the Info panel shows (the camera's clock in its own zone where the photo has one, else the server's local time),

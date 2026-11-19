@@ -2,7 +2,7 @@ import type { LoginResponseDto } from '@immich/sdk';
 import { updateAsset } from '@immich/sdk';
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { thumbnailUtils } from 'src/ui/specs/timeline/utils.js';
+import { thumbnailUtils } from 'src/gallery-timeline.js';
 import { asBearerAuth, testAssetDir, utils } from 'src/utils.js';
 
 test.describe('Recently Added', () => {
@@ -335,6 +335,7 @@ test.describe('Recently Added text search', () => {
   async function gotoRecentlyAdded(
     context: import('@playwright/test').BrowserContext,
     page: import('@playwright/test').Page,
+    // eslint-disable-next-line unicorn/no-unnecessary-parameters
     path = '/recently-added',
   ) {
     await utils.setAuthCookies(context, admin.accessToken);

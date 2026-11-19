@@ -1,21 +1,23 @@
 <script lang="ts">
-  import { lazyComponent } from '$lib/utils/lazy-component.svelte';
-  import type { Action } from '$lib/components/asset-viewer/actions/action';
-  import type { AssetCursor } from '$lib/components/asset-viewer/AssetViewer.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import { AssetAction } from '$lib/constants';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { assetCacheManager } from '$lib/managers/AssetCacheManager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import { websocketEvents } from '$lib/stores/websocket';
-  import { handlePromiseError } from '$lib/utils';
-  import { navigateToAsset } from '$lib/utils/asset-utils';
-  import { handleErrorAsync } from '$lib/utils/handle-error';
-  import { navigate } from '$lib/utils/navigation';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
-  import { type AlbumResponseDto, type AssetResponseDto, type PersonResponseDto, getAssetInfo } from '@immich/sdk';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import type { AssetCursor } from '#lib/components/asset-viewer/AssetViewer.svelte';
+  import type { Action } from '#lib/components/asset-viewer/actions/action.ts';
+  import { AssetAction } from '#lib/constants.ts';
+  import { albumStackSuccessor } from '#lib/gallery/stack/album-stack-strip.ts';
+  import { setViewerSpace, type ViewerSpace } from '#lib/gallery/viewer-space.ts';
+  import { assetCacheManager } from '#lib/managers/AssetCacheManager.svelte.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import { websocketEvents } from '#lib/stores/websocket.ts';
+  import { handlePromiseError } from '#lib/utils.ts';
+  import { navigateToAsset } from '#lib/utils/asset-utils.ts';
+  import { handleErrorAsync } from '#lib/utils/handle-error.ts';
+  import { lazyComponent } from '#lib/utils/lazy-component.svelte.ts';
+  import { navigate } from '#lib/utils/navigation.ts';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
+  import { getAssetInfo, type AlbumResponseDto, type AssetResponseDto, type PersonResponseDto } from '@immich/sdk';
   import { onDestroy, onMount } from 'svelte';
   import { t } from 'svelte-i18n';
 
@@ -28,8 +30,7 @@
     person?: PersonResponseDto;
     removeAction?: AssetAction.UNARCHIVE | AssetAction.ARCHIVE | AssetAction.SET_VISIBILITY_TIMELINE | null;
     spaceId?: string;
-    /** Shared-space surface + the caller's write capability on it — see `Timeline` (#889). */
-    space?: { id: string; canWrite: boolean };
+    space?: ViewerSpace['space'];
   }
 
   let {
@@ -44,6 +45,7 @@
     spaceId,
     space,
   }: Props = $props();
+  setViewerSpace(() => ({ spaceId, space }));
 
   const getAsset = (id: string) => {
     return handleErrorAsync(
@@ -115,7 +117,8 @@
   const onAlbumRemoveAssets = async ({ assetIds, albumIds }: { assetIds: string[]; albumIds: string[] }) => {
     if (!!album && albumIds.includes(album.id) && assetIds.includes(assetCursor.current.id)) {
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      (await navigateToAsset(assetCursor?.nextAsset)) ||
+      (await navigateToAsset(await albumStackSuccessor(album.id, assetCursor.current))) ||
+        (await navigateToAsset(assetCursor?.nextAsset)) ||
         (await navigateToAsset(assetCursor?.previousAsset)) ||
         (await handleClose(assetCursor.current.id));
     }
@@ -197,21 +200,19 @@
 
   // Mounting the viewer through `{#await}` leaves it permanently unreactive on reopen.
   // See lazyComponent().
-  const LazyAssetViewer = lazyComponent(() => import('$lib/components/asset-viewer/AssetViewer.svelte'));
+  const LazyAssetViewer = lazyComponent(() => import('#lib/components/asset-viewer/AssetViewer.svelte'));
 </script>
 
 <OnEvents {onAlbumRemoveAssets} />
 
 {#if LazyAssetViewer.current}
-  {@const AssetViewer = LazyAssetViewer.current}
+  {const AssetViewer = $derived(LazyAssetViewer.current)}
   <AssetViewer
     {withStacked}
     cursor={assetCursor}
     {isShared}
     {album}
     {person}
-    {spaceId}
-    {space}
     onAssetChange={(asset) => {
       timelineManager?.upsertAssets([toTimelineAsset(asset)]);
     }}

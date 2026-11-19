@@ -1,4 +1,4 @@
-import { dayLabel, monthMarkLabel, tileDateLabel } from '$lib/utils/timeline-dates';
+import { dayLabel, monthMarkLabel, tileDateLabel } from '#lib/utils/timeline-dates.ts';
 
 describe('monthMarkLabel', () => {
   it('sets the short month in capitals', () => {

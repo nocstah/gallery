@@ -1,6 +1,6 @@
-import type { ServerConfigDto, ServerFeaturesDto } from '@immich/sdk';
+import { Route } from '#lib/route.ts';
+import type { ServerFeaturesDto } from '@immich/sdk';
 import { redirect } from '@sveltejs/kit';
-import { Route } from '$lib/route';
 
 // Local Omarchy layer: which Kioku a build is. local-build.sh builds two from this one source: the full edition for the
 // owner's Gallery, and the vault edition (VITE_KIOKU_EDITION=vault) that each encrypted vault's private Gallery serves.
@@ -14,10 +14,10 @@ import { Route } from '$lib/route';
 export const vaultEdition = (): boolean => import.meta.env.VITE_KIOKU_EDITION === 'vault';
 
 /**
- * Marks the page with the edition it was built as: <html data-kioku-edition="vault"> or "full". The test is written out
- * here, not through vaultEdition(), so a build folds it to one word, which local-build.sh looks for in each build: proof
- * the vault flag reached the vault edition, and only it.
- */
+Marks the page with the edition it was built as: <html data-kioku-edition="vault"> or "full". The test is written out
+here, not through vaultEdition(), so a build folds it to one word, which local-build.sh looks for in each build: proof
+the vault flag reached the vault edition, and only it.
+*/
 export const markEdition = (): void => {
   document.documentElement.dataset.kiokuEdition = import.meta.env.VITE_KIOKU_EDITION === 'vault' ? 'vault' : 'full';
 };
@@ -71,6 +71,13 @@ export const vaultFeatures = (features: ServerFeaturesDto): ServerFeaturesDto =>
 // so where vault photos were taken stays on this computer.
 const NO_MAP = 'data:application/json,' + encodeURIComponent('{"version":8,"sources":{},"layers":[]}');
 
-/** The server's settings as a vault's Gallery uses them: every map style is the empty one. */
-export const vaultServerConfig = (config: ServerConfigDto): ServerConfigDto =>
-  vaultEdition() ? { ...config, mapDarkStyleUrl: NO_MAP, mapLightStyleUrl: NO_MAP } : config;
+type MapConfig = { map: { enabled: boolean; darkStyle: string; lightStyle: string } };
+
+/**
+The server's map settings (the public and the user config, queries/config-*.query) as a vault's Gallery uses them: no
+map, as its features say (vaultFeatures), and every map style the empty one.
+*/
+export const vaultMapConfig = <T extends MapConfig>(config: T): T =>
+  vaultEdition()
+    ? { ...config, map: { ...config.map, enabled: false, darkStyle: NO_MAP, lightStyle: NO_MAP } }
+    : config;

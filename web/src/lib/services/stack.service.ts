@@ -1,3 +1,20 @@
+import { libraryNamed } from '#lib/gallery/libraries/library-words.ts';
+import { keepThisDeleteOthersPrompt } from '#lib/gallery/stack/keep-this-delete-others.ts';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { openFileUploadDialog } from '#lib/utils/file-uploader.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { navigate } from '#lib/utils/navigation.ts';
+import {
+  coverDone,
+  keptThisDone,
+  stackedDone,
+  stacksBefore,
+  unstackedDone,
+  unstackedOneDone,
+} from '#lib/utils/undoable.ts';
 import {
   createStack,
   deleteAssets,
@@ -19,22 +36,6 @@ import {
   mdiUploadMultiple,
 } from '@mdi/js';
 import { type MessageFormatter } from 'svelte-i18n';
-import { libraryNamed } from '$lib/gallery/libraries/library-words';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { openFileUploadDialog } from '$lib/utils/file-uploader';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
-import { navigate } from '$lib/utils/navigation';
-import {
-  coverDone,
-  keptThisDone,
-  stackedDone,
-  stacksBefore,
-  unstackedDone,
-  unstackedOneDone,
-} from '$lib/utils/undoable';
 
 export const getStackBulkActions = ($t: MessageFormatter) => {
   const Stack: ActionItem = {
@@ -54,7 +55,12 @@ export const getStackBulkActions = ($t: MessageFormatter) => {
   return { Stack, Unstack };
 };
 
-export const getStackActions = ($t: MessageFormatter, stack: StackResponseDto | undefined, asset: AssetResponseDto) => {
+export const getStackActions = (
+  $t: MessageFormatter,
+  stack: StackResponseDto | undefined,
+  asset: AssetResponseDto,
+  inAlbum = false,
+) => {
   const authUser = authManager.authenticated ? authManager.user : undefined;
   const isAssetOwner = !!(authUser && authUser.id === asset.ownerId);
   const validStack = !!stack && isAssetOwner;
@@ -70,7 +76,7 @@ export const getStackActions = ($t: MessageFormatter, stack: StackResponseDto | 
     title: $t('keep_this_delete_others'),
     icon: mdiPinOutline,
     $if: () => validStack,
-    onAction: () => handleKeepThisDeleteOthers(stack!, asset),
+    onAction: () => handleKeepThisDeleteOthers(stack!, asset, inAlbum),
   };
 
   const RemoveAsset: ActionItem = {
@@ -118,12 +124,12 @@ const handleAddUploadToStack = async (stack: StackResponseDto | undefined, asset
   }
 };
 
-const handleKeepThisDeleteOthers = async (stack: StackResponseDto, asset: AssetResponseDto) => {
+const handleKeepThisDeleteOthers = async (stack: StackResponseDto, asset: AssetResponseDto, inAlbum: boolean) => {
   const $t = await getFormatter();
 
   const isConfirmed = await modalManager.showDialog({
     title: libraryNamed($t('keep_this_delete_others')), // Local Omarchy layer: outside Main, named (gallery/libraries)
-    prompt: $t('confirm_keep_this_delete_others'),
+    prompt: keepThisDeleteOthersPrompt($t, stack, inAlbum),
     confirmText: $t('delete_others'),
   });
 

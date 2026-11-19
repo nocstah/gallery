@@ -1,5 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { Dirent, constants, createReadStream } from 'node:fs';
-import { mkdir, opendir, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, opendir, readdir, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -7,17 +8,17 @@ import { ServeOptions, ServeStrategy, StorageBackend } from 'src/interfaces/stor
 import { StorageRepository } from 'src/repositories/storage.repository.js';
 
 /**
- * A stored path that names a disk file: absolute, in upstream's layout. A relative key belongs to the configured
- * storage backend (S3, or the media location when S3 is off). StorageService.backendFor decides on it; sites
- * that run upstream's own disk code for disk files test it too.
- */
+A stored path that names a disk file: absolute, in upstream's layout. A relative key belongs to the configured
+storage backend (S3, or the media location when S3 is off). StorageService.backendFor decides on it; sites
+that run upstream's own disk code for disk files test it too.
+*/
 export const isDiskPath = (key: string) => isAbsolute(key);
 
 /**
- * exists / readAll / delete go through StorageRepository: they replace direct StorageRepository
- * calls in upstream code paths, which keeps those paths (and the specs that mock the repository)
- * unchanged for disk files.
- */
+exists / readAll / copy / stat / delete go through StorageRepository: they replace direct StorageRepository
+calls in upstream code paths, which keeps those paths (and the specs that mock the repository)
+unchanged for disk files.
+*/
 export class DiskStorageBackend implements StorageBackend {
   constructor(
     private mediaLocation: string,
@@ -42,14 +43,28 @@ export class DiskStorageBackend implements StorageBackend {
     const fullPath = this.resolvePath(key);
     await mkdir(dirname(fullPath), { recursive: true });
 
-    if (Buffer.isBuffer(source)) {
-      await writeFile(fullPath, source);
-    } else {
-      // Through the repository, not a bare `createWriteStream`: it opens the stream with `flush: true`,
-      // which fsyncs before close. The database backup needs that — the dump is renamed to its real name
-      // and then uploaded as soon as this resolves, so an unflushed tail would promote a truncated file
-      // after a host crash. It is also what the class comment above promises: upstream's own write path.
-      await pipeline(source, this.storageRepository.createWriteStream(fullPath));
+    // written beside the target and renamed into place, so an interrupted write leaves no partial file at the target
+    // (which the storage migration would then refuse, on every run, as a target of the wrong size). A fixed-length
+    // name: one derived from the target's could exceed the 255-byte file name limit the target itself fits in.
+    const tempPath = join(dirname(fullPath), `.${randomUUID()}.tmp`);
+    try {
+      if (Buffer.isBuffer(source)) {
+        await writeFile(tempPath, source);
+      } else {
+        // Through the repository, not a bare `createWriteStream`: it opens the stream with `flush: true`,
+        // which fsyncs before close. The database backup needs that — the dump is renamed to its real name
+        // and then uploaded as soon as this resolves, so an unflushed tail would promote a truncated file
+        // after a host crash. It is also what the class comment above promises: upstream's own write path.
+        await pipeline(source, this.storageRepository.createWriteStream(tempPath));
+      }
+      await rename(tempPath, fullPath);
+    } catch (error) {
+      try {
+        await unlink(tempPath);
+      } catch {
+        // the write's own error is the one to report
+      }
+      throw error;
     }
   }
 
@@ -71,6 +86,27 @@ export class DiskStorageBackend implements StorageBackend {
       this.resolvePath(key),
       options?.readable ? constants.R_OK : constants.F_OK,
     );
+  }
+
+  async copy(fromKey: string, toKey: string): Promise<void> {
+    const source = this.resolvePath(fromKey);
+    const target = this.resolvePath(toKey);
+    this.storageRepository.mkdirSync(dirname(target));
+    await this.storageRepository.copyFile(source, target);
+    try {
+      // keep the times, as upstream's disk move does (rename, or utimes after its cross-device copy)
+      const { atime, mtime } = await this.storageRepository.stat(source);
+      await this.storageRepository.utimes(target, atime, mtime);
+    } catch (error) {
+      // a failed copy leaves nothing behind, as on S3: a stray copy would take the destination's name on the next run
+      await this.storageRepository.unlink(target).catch(() => {});
+      throw error;
+    }
+  }
+
+  async stat(key: string): Promise<{ size: number }> {
+    const { size } = await this.storageRepository.stat(this.resolvePath(key));
+    return { size };
   }
 
   delete(key: string): Promise<void> {
@@ -121,10 +157,10 @@ export class DiskStorageBackend implements StorageBackend {
   }
 
   /**
-   * Move a file within this backend. Deliberately NOT on `StorageBackend`: S3 has no move, only a
-   * copy-then-delete that is neither atomic nor cheap for a multi-gigabyte object, and the one
-   * caller (the database backup's `.tmp` promote) only ever moves a file on the staging disk.
-   */
+  Move a file within this backend. Deliberately NOT on `StorageBackend`: S3 has no move, only a
+  copy-then-delete that is neither atomic nor cheap for a multi-gigabyte object, and the one
+  caller (the database backup's `.tmp` promote) only ever moves a file on the staging disk.
+  */
   rename(fromKey: string, toKey: string): Promise<void> {
     return this.storageRepository.rename(this.resolvePath(fromKey), this.resolvePath(toKey));
   }

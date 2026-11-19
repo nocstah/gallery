@@ -1,11 +1,11 @@
-import { AssetTypeEnum, AssetVisibility } from '@immich/sdk';
-import { createFilterState } from '$lib/components/filter-panel/filter-panel';
+import { createFilterState } from '#lib/components/filter-panel/filter-panel.ts';
 import {
   buildAlbumMapMarkerOptions,
   buildMapMarkerOptions,
   buildMapTimeBucketOptions,
   buildMapTimelineOptions,
-} from '$lib/utils/map-filter-options';
+} from '#lib/utils/map-filter-options.ts';
+import { AssetTypeEnum, AssetVisibility } from '@immich/sdk';
 
 describe('buildMapMarkerOptions', () => {
   it('includes custom dates in map marker options', () => {
@@ -301,10 +301,10 @@ describe('buildMapTimelineOptions', () => {
 });
 
 /**
- * #802 — the Map view was missing the "Text" filter section entirely. These cover the option
- * builders forwarding the three text fields the section produces. The map timeline hits
- * TimeBucketDto (which already supports them); markers hit FilteredMapMarkerDto.
- */
+#802 — the Map view was missing the "Text" filter section entirely. These cover the option
+builders forwarding the three text fields the section produces. The map timeline hits
+TimeBucketDto (which already supports them); markers hit FilteredMapMarkerDto.
+*/
 describe('text filters (#802)', () => {
   const textFilters = {
     ...createFilterState(),

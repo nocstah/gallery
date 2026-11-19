@@ -1,9 +1,14 @@
-import { isHttpError, type ApiHttpError } from '@immich/sdk';
-import type { ClientInit, HandleClientError } from '@sveltejs/kit';
-import { loadLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
+import { galleryAppHeader } from '#lib/gallery/client-header.ts';
+import { loadLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { isHttpError, setHeaders, type ApiHttpError } from '@immich/sdk';
+import type { ClientCaughtError, ClientInit, HandleClientError } from '@sveltejs/kit/hooks';
 
-// Local Omarchy layer: which library this Kioku is, read once before any load runs (gallery/libraries)
-export const init: ClientInit = () => loadLibraryContext();
+// Gallery: runs before any route loads, so no load function can reach the server as a stock client.
+// Local Omarchy layer: and reads which library this Kioku is, once, before any load runs (gallery/libraries)
+export const init: ClientInit = () => {
+  setHeaders(galleryAppHeader);
+  return loadLibraryContext();
+};
 
 const DEFAULT_MESSAGE = 'Hmm, not sure about that. Check the logs or open a ticket?';
 
@@ -23,19 +28,24 @@ const parseHTTPError = (httpError: ApiHttpError) => {
   };
 };
 
-const parseError = (error: unknown, status: number, message: string) => {
-  if (isHttpError(error)) {
-    return parseHTTPError(error);
+const parseError = ({ kind, error }: ClientCaughtError) => {
+  if (kind === 'unknown') {
+    if (isHttpError(error)) {
+      return parseHTTPError(error);
+    }
+    console.error(error);
+    return;
   }
 
   return {
-    message: (error as Error)?.message || message || DEFAULT_MESSAGE,
-    code: status,
+    message: error.message || DEFAULT_MESSAGE,
+    code: error.status,
   };
 };
 
-export const handleError: HandleClientError = ({ error, status, message }) => {
-  const result = parseError(error, status, message);
-  console.error(`[hooks.client.ts]:handleError ${result.message}`, error);
+export const handleError: HandleClientError = (error) => {
+  const result = parseError(error);
+
+  console.error(`[hooks.client.ts]:handleError ${result?.message}`, error);
   return result;
 };

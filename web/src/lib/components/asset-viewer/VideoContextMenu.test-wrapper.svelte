@@ -1,6 +1,6 @@
 <script lang="ts">
-  import VideoContextMenu from './VideoContextMenu.svelte';
   import type { AssetResponseDto } from '@immich/sdk';
+  import VideoContextMenu from './VideoContextMenu.svelte';
 
   let { asset }: { asset: AssetResponseDto } = $props();
 </script>

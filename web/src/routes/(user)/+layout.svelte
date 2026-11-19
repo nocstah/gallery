@@ -1,16 +1,17 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import { shortcuts } from '$lib/actions/shortcut';
-  import { undoManager } from '$lib/managers/undo-manager.svelte';
+  import { shortcuts } from '#lib/actions/shortcut.ts';
+  import InspectorFeed from '#lib/components/inspector/InspectorFeed.svelte';
+  import MoveProgress from '#lib/gallery/moves/MoveProgress.svelte';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { resolveSpecialAlbums } from '#lib/managers/special-albums.svelte.ts';
+  import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+  import { onPageKey } from '#lib/utils/page-keys.ts';
+  import { flyingTile, viewerStandsOver } from '#lib/utils/viewer-handover.ts';
   import { isModalOpen } from '@immich/ui';
-  import { onPageKey } from '$lib/utils/page-keys';
-  import UploadCover from './DragAndDropUploadOverlay.svelte';
-  import InspectorFeed from '$lib/components/inspector/InspectorFeed.svelte';
-  import MoveProgress from '$lib/gallery/moves/MoveProgress.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { resolveSpecialAlbums } from '$lib/managers/special-albums.svelte';
-  import { flyingTile, viewerStandsOver } from '$lib/utils/viewer-handover';
   import { onMount, untrack, type Snippet } from 'svelte';
+  import { page } from '$app/state';
+  import UploadCover from './DragAndDropUploadOverlay.svelte';
+
   interface Props {
     children?: Snippet;
   }

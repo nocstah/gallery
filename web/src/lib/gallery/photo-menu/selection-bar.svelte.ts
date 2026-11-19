@@ -1,4 +1,4 @@
-import type { SelectionCapabilities } from '$lib/managers/selection-capabilities';
+import type { SelectionCapabilities } from '#lib/managers/selection-capabilities.ts';
 
 // Local Omarchy layer: what a Space's selection bar (SelectionToolbar) offers for the selection, as it works it out:
 // its capabilities (the viewer's role in the Space and in the album), the photos they may edit (#734, which the bar

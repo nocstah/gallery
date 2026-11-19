@@ -1,21 +1,16 @@
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
 import { AssetOrder, AssetOrderBy } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import TimelineBeginning from './TimelineBeginning.svelte';
 
 // Local Omarchy layer: Photos' timeline ends where the archive begins, under its oldest photo (DESIGN.md, Ink)
-type Day = { year: number; month: number; day: number };
 
-const managerOf = ({
-  loaded = true,
-  order = AssetOrder.Desc,
-  orderBy = AssetOrderBy.TakenAt,
-  days = [
+const managerOf = ({ loaded = true, order = AssetOrder.Desc, orderBy = AssetOrderBy.TakenAt } = {}) => {
+  const days = [
     { year: 1977, month: 3, day: 14 },
     { year: 1977, month: 3, day: 12 },
-  ] as Day[],
-} = {}) => {
+  ];
   const assets = days.map((localDateTime, index) => ({ id: `asset-${index}`, localDateTime }));
   const month = { isLoaded: loaded, lastTimelineDay: { getAssets: () => assets } };
   return {

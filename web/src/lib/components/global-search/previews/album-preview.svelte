@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { slipCovers } from '$lib/managers/slip-covers.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { iconCoverOf } from '$lib/utils/slips';
+  import { slipCovers } from '#lib/managers/slip-covers.svelte.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { iconCoverOf } from '#lib/utils/slips.ts';
   import { AssetMediaSize, type AlbumNameDto } from '@immich/sdk';
   import { Button, Icon } from '@immich/ui';
   import { mdiImageMultipleOutline } from '@mdi/js';
   import { DateTime } from 'luxon';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
 
   interface Props {
     item: AlbumNameDto;

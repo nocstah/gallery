@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ImportProgress } from '$lib/managers/import-manager.svelte';
-  import { Route } from '$lib/route';
+  import type { ImportProgress } from '#lib/managers/import-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
   import { Icon } from '@immich/ui';
   import { mdiPause, mdiPlay } from '@mdi/js';
   import { t } from 'svelte-i18n';

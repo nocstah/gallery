@@ -1,4 +1,4 @@
-import { INSPECTOR_TITLE, INSPECTOR_WINDOW } from '$lib/managers/inspector-link.svelte';
+import { INSPECTOR_TITLE, INSPECTOR_WINDOW } from '#lib/managers/inspector-link.svelte.ts';
 import { load } from './+page';
 
 const { authenticate, getFormatter } = vi.hoisted(() => ({
@@ -6,8 +6,8 @@ const { authenticate, getFormatter } = vi.hoisted(() => ({
   getFormatter: vi.fn(),
 }));
 
-vi.mock('$lib/utils/auth', () => ({ authenticate }));
-vi.mock(import('$lib/utils/i18n'), async (importOriginal) => ({
+vi.mock('#lib/utils/auth.ts', () => ({ authenticate }));
+vi.mock(import('#lib/utils/i18n.ts'), async (importOriginal) => ({
   ...(await importOriginal()),
   getFormatter,
 }));

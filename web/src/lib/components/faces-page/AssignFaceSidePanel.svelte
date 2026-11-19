@@ -1,14 +1,13 @@
 <script lang="ts">
-  import { type PickerCandidate } from '$lib/components/faces-page/PersonPickerGrid.svelte';
-  import PersonPickerPanel from '$lib/components/faces-page/PersonPickerPanel.svelte';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
-  import { maximumLengthSearchPeople, timeBeforeShowLoadingSpinner } from '$lib/constants';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { getPeopleThumbnailUrl, handlePromiseError } from '$lib/utils';
-  import { handleError } from '$lib/utils/handle-error';
-  import { comparePeopleMatches, sortInPeopleOrder } from '$lib/utils/people-order';
-  import { orderPickerCandidates, zoomImageToBase64 } from '$lib/utils/people-utils';
-  import { getPersonNameWithHiddenValue, searchNameLocal } from '$lib/utils/person';
+  import { type PickerCandidate } from '#lib/components/faces-page/PersonPickerGrid.svelte';
+  import PersonPickerPanel from '#lib/components/faces-page/PersonPickerPanel.svelte';
+  import { maximumLengthSearchPeople, timeBeforeShowLoadingSpinner } from '#lib/constants.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { getPeopleThumbnailUrl, handlePromiseError } from '#lib/utils.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { comparePeopleMatches, sortInPeopleOrder } from '#lib/utils/people-order.ts';
+  import { orderPickerCandidates, zoomImageToBase64 } from '#lib/utils/people-utils.ts';
+  import { getPersonNameWithHiddenValue, searchNameLocal } from '#lib/utils/person.ts';
   import {
     AssetTypeEnum,
     getAllPeople,
@@ -16,7 +15,7 @@
     type AssetFaceResponseDto,
     type PersonResponseDto,
   } from '@immich/sdk';
-  import { IconButton } from '@immich/ui';
+  import { IconButton, LoadingSpinner } from '@immich/ui';
   import { mdiPlus } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -37,19 +36,19 @@
   let isShowLoadingPeople = $state(false);
 
   /**
-   * Deliberately WITHOUT upstream's `closestAssetId`.
-   *
-   * That parameter orders the whole list by how much each person's face resembles the one you
-   * tapped. It is a name suggestion, and a good one for the first handful of rows -- but past those
-   * it is indistinguishable from random, and a library with several hundred named people is then
-   * several hundred rows nobody can scan or scroll to (#992). Dropping it takes `getAllForUser`'s
-   * other branch, which sorts named people alphabetically and puts the unnamed clusters after them
-   * by face count -- the same order `getPersonsBySpaceId` serves the space picker, and the same one
-   * every other people list in the fork already uses. This picker was the sole exception.
-   *
-   * The resemblance ordering itself stays on the server for the person page's "sort faces" toggle
-   * (`closestPersonId`), which opts into it explicitly.
-   */
+  Deliberately WITHOUT upstream's `closestAssetId`.
+  
+  That parameter orders the whole list by how much each person's face resembles the one you
+  tapped. It is a name suggestion, and a good one for the first handful of rows -- but past those
+  it is indistinguishable from random, and a library with several hundred named people is then
+  several hundred rows nobody can scan or scroll to (#992). Dropping it takes `getAllForUser`'s
+  other branch, which sorts named people alphabetically and puts the unnamed clusters after them
+  by face count -- the same order `getPersonsBySpaceId` serves the space picker, and the same one
+  every other people list in the fork already uses. This picker was the sole exception.
+  
+  The resemblance ordering itself stays on the server for the person page's "sort faces" toggle
+  (`closestPersonId`), which opts into it explicitly.
+  */
   async function loadPeople() {
     const timeout = setTimeout(() => (isShowLoadingPeople = true), timeBeforeShowLoadingSpinner);
     try {
@@ -76,19 +75,19 @@
   let searchWord = '';
 
   /**
-   * The search used to sit behind a magnifier icon, in a `PeopleSearch` that swapped out the whole
-   * header. `PersonPickerPanel` shows the field outright, as the space-flavoured picker always has,
-   * so the request is issued from here instead.
-   *
-   * It goes to the SERVER on purpose: `getAllPeople` above serves one page, so narrowing the loaded
-   * list would quietly stop finding anyone past it on a large library.
-   *
-   * The rest mirrors what `PeopleSearch` did with the response, because dropping any of it would be
-   * a silent regression on a path that used to have it: `searchNameLocal` applies the same
-   * prefix-and-slice narrowing; the abort stops a slow earlier keystroke landing on top of a later
-   * one; and an unsaturated result set is narrowed in place when the query merely grows, so typing a
-   * name costs one request rather than one per letter.
-   */
+  The search used to sit behind a magnifier icon, in a `PeopleSearch` that swapped out the whole
+  header. `PersonPickerPanel` shows the field outright, as the space-flavoured picker always has,
+  so the request is issued from here instead.
+  
+  It goes to the SERVER on purpose: `getAllPeople` above serves one page, so narrowing the loaded
+  list would quietly stop finding anyone past it on a large library.
+  
+  The rest mirrors what `PeopleSearch` did with the response, because dropping any of it would be
+  a silent regression on a path that used to have it: `searchNameLocal` applies the same
+  prefix-and-slice narrowing; the abort stops a slow earlier keystroke landing on top of a later
+  one; and an unsaturated result set is narrowed in place when the query merely grows, so typing a
+  name costs one request rather than one per letter.
+  */
   const runSearch = async (query: string) => {
     if (query === '') {
       searchAbortController?.abort();
@@ -177,6 +176,7 @@
   emptyLabel={$t('no_people_found')}
   onSelect={handleSelectCandidate}
   {onClose}
+  videoFace={assetType === AssetTypeEnum.Video ? { id: editedFace.id, canEdit: true } : undefined}
   bind:query={searchName}
   onQueryChange={(query) => handlePromiseError(runSearch(query))}
 >

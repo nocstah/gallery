@@ -2,7 +2,7 @@
   // Local Omarchy layer: one photo of a series' memory as a small square tile (gallery/series): Gallery's thumbnail with
   // the owner's session, a clip's play mark and a favourite's heart in the tiles' corner chips, and the memory's cover
   // framed in ink, the inversion the layer marks a chosen one with. Its words name it by its place in the film.
-  import { getAssetMediaUrl } from '$lib/utils';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiHeart, mdiPlay } from '@mdi/js';

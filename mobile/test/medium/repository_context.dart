@@ -33,6 +33,7 @@ import 'package:immich_mobile/domain/models/album/local_album.model.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/memory.model.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
+import 'package:immich_mobile/utils/datetime_helpers.dart';
 import 'package:immich_mobile/utils/option.dart';
 import 'package:uuid/uuid.dart';
 
@@ -131,13 +132,13 @@ class MediumRepositoryContext {
     String? stackId,
     String? thumbHash,
     String? libraryId,
-    // Defaults to createdAt.toLocal() (the pre-existing behaviour). Pass
-    // Value(null) explicitly to simulate an asset synced with no
-    // localDateTime — remote_asset.localDateTime is nullable (S13).
-    Value<DateTime?> localDateTime = const Value.absent(),
+    DateTime? localDateTime,
+    // gallery-fork: simulate an asset synced with no localDateTime — remote_asset.localDateTime is nullable (S13).
+    bool withoutLocalDateTime = false,
   }) async {
     id ??= TestUtils.uuid();
     createdAt ??= TestUtils.date();
+    final date = localDateTime ?? createdAt.toLocal();
     return db
         .into(db.remoteAssetEntity)
         .insertReturning(
@@ -158,7 +159,8 @@ class MediumRepositoryContext {
             isEdited: .new(isEdited ?? false),
             livePhotoVideoId: .new(livePhotoVideoId),
             stackId: .new(stackId),
-            localDateTime: localDateTime.present ? localDateTime : Value(createdAt.toLocal()),
+            localDateTime: withoutLocalDateTime ? const Value(null) : .new(date),
+            groupDate: .new(timelineGroupDate(date)),
             thumbHash: .new(TestUtils.uuid(thumbHash)),
             libraryId: .new(TestUtils.uuid(libraryId)),
           ),
@@ -298,6 +300,7 @@ class MediumRepositoryContext {
     DateTime? updatedAt,
   }) async {
     id ??= TestUtils.uuid();
+    createdAt ??= TestUtils.date();
     return db
         .into(db.localAssetEntity)
         .insertReturning(
@@ -311,7 +314,8 @@ class MediumRepositoryContext {
             updatedAt: .new(TestUtils.date(updatedAt)),
             checksum: _resolveUndefined(checksum, checksumOption, const Uuid().v4()),
             previousChecksum: .new(previousChecksum),
-            createdAt: .new(TestUtils.date(createdAt)),
+            createdAt: .new(createdAt),
+            groupDate: .new(timelineGroupDate(createdAt.toLocal())),
             type: .new(type ?? .image),
             isFavorite: .new(isFavorite ?? false),
             iCloudId: _resolveUndefined(iCloudId, iCloudIdOption, TestUtils.uuid()),

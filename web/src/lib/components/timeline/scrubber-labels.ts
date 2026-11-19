@@ -25,7 +25,7 @@ export const yearRank = (year: number, newest: number, oldest: number) => {
 };
 
 /** The years to name: taken in rank order (a newer year first within a rank), each kept only where it stands at
- * least `spacing` from every name kept before it. Where all fit, every year keeps its name. */
+least `spacing` from every name kept before it. Where all fit, every year keeps its name. */
 export const pickYearLabels = (marks: YearMark[], spacing = YEAR_LABEL_SPACING): Set<number> => {
   if (marks.length === 0) {
     return new Set();

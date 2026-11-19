@@ -1,24 +1,29 @@
 <script lang="ts">
-  import SettingAccordion from '$lib/components/shared-components/settings/SettingAccordion.svelte';
-  import SettingInputField from '$lib/components/shared-components/settings/SettingInputField.svelte';
-  import SettingSelect from './SettingSelect.svelte';
-  import SettingSwitch from '$lib/components/shared-components/settings/SettingSwitch.svelte';
-  import SettingButtonsRow from '$lib/components/shared-components/settings/SystemConfigButtonRow.svelte';
-  import { SettingInputFieldType } from '$lib/constants';
-  import FormatMessage from '$lib/elements/FormatMessage.svelte';
-  import SpatialSceneSettings from '$lib/gallery/admin/SpatialSceneSettings.svelte';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { systemConfigManager } from '$lib/managers/system-config-manager.svelte';
-  import { Button, IconButton, modalManager, Text } from '@immich/ui';
+  import SettingAccordion from '#lib/components/shared-components/settings/SettingAccordion.svelte';
+  import SettingInputField from '#lib/components/shared-components/settings/SettingInputField.svelte';
+  import SettingSwitch from '#lib/components/shared-components/settings/SettingSwitch.svelte';
+  import SettingButtonsRow from '#lib/components/shared-components/settings/SystemConfigButtonRow.svelte';
+  import { SettingInputFieldType } from '#lib/constants.ts';
+  import FormatMessage from '#lib/elements/FormatMessage.svelte';
+  import SpatialSceneSettings from '#lib/gallery/admin/SpatialSceneSettings.svelte';
+  import VideoFaceSettings from '#lib/gallery/components/admin/video-face-settings.svelte';
+  import VideoPetSettings from '#lib/gallery/components/admin/video-pet-settings.svelte';
+  import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
+  import { createPreloadedQuery } from '#lib/queries/client.ts';
+  import { getAdminConfigQuery } from '#lib/queries/config-admin.query.ts';
+  import { Button, IconButton, Text, modalManager } from '@immich/ui';
   import { mdiPlus, mdiTrashCanOutline } from '@mdi/js';
-  import { isEqual } from 'lodash-es';
+  import { cloneDeep, isEqual } from 'lodash-es';
   import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
+  import SettingSelect from './SettingSelect.svelte';
+
+  const query = createPreloadedQuery(getAdminConfigQuery);
+  const config = $derived(query.data);
 
   const disabled = $derived(featureFlagsManager.value.configFile);
-  const config = $derived(systemConfigManager.value);
-  let configToEdit = $state(systemConfigManager.cloneValue());
+  let configToEdit = $state(cloneDeep(config));
 
   $effect(() => {
     if (disabled) {
@@ -218,7 +223,7 @@
             min={0.001}
             max={0.1}
             description={$t('admin.machine_learning_max_detection_distance_description')}
-            disabled={disabled || !featureFlagsManager.value.duplicateDetection}
+            disabled={disabled || !config.machineLearning.duplicateDetection.enabled}
             isEdited={configToEdit.machineLearning.duplicateDetection.maxDistance !==
               config.machineLearning.duplicateDetection.maxDistance}
           />
@@ -331,6 +336,8 @@
             isEdited={configToEdit.machineLearning.facialRecognition.minFaces !==
               config.machineLearning.facialRecognition.minFaces}
           />
+
+          <VideoFaceSettings bind:configToEdit {config} {disabled} />
         </div>
       </SettingAccordion>
 
@@ -460,6 +467,8 @@
             isEdited={configToEdit.machineLearning.petDetection.minScore !==
               config.machineLearning.petDetection.minScore}
           />
+
+          <VideoPetSettings bind:configToEdit {config} {disabled} />
         </div>
       </SettingAccordion>
 

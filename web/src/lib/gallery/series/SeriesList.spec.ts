@@ -1,6 +1,6 @@
+import { albumSource, dayFromToday, seriesCard } from '#test/kioku/factories/series-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
-import { albumSource, dayFromToday, seriesCard } from '@test-data/factories/series-factory';
 import SeriesList from './SeriesList.svelte';
 import SeriesNewSheet from './SeriesNewSheet.svelte';
 import type { SeriesCard } from './series-api';
@@ -16,10 +16,10 @@ const mocks = vi.hoisted(() => ({
   show: vi.fn(),
   goto: vi.fn(),
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: stub } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: stub } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: stub };
 });
 vi.mock('@immich/ui', async (importOriginal) => ({

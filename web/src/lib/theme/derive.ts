@@ -262,7 +262,7 @@ const HEX = /^#[\da-f]{6}$/i;
 const ID = /^[a-z\d][a-z\d-]{0,63}$/;
 
 /** A theme read from a file or a URL, checked field by field: only colours, numbers and plain names pass, so a
- * theme can change how Gallery looks and nothing else. Throws with what is wrong. */
+theme can change how Gallery looks and nothing else. Throws with what is wrong. */
 export const parseTheme = (data: unknown): GalleryTheme => {
   if (!data || typeof data !== 'object') {
     throw new Error('not a theme file');
@@ -299,7 +299,7 @@ export const parseTheme = (data: unknown): GalleryTheme => {
       background: palette.background as string,
       foreground: palette.foreground as string,
       accent: palette.accent as string,
-      ...(!!palette.lighterBackground && { lighterBackground: String(palette.lighterBackground) }),
+      ...(palette.lighterBackground && { lighterBackground: String(palette.lighterBackground) }),
     },
   };
   if (typeof t.author === 'string') {

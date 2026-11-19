@@ -3,11 +3,11 @@
 // menu's (TileContextMenu): what a person does most, the downloads, then the edits and the ways out. The Photos page,
 // an album and the Locked Folder draw their menus themselves; a Space's follows its bar's capabilities (spaceOffer).
 // Like the Photos menu, none offers the bars' maintenance jobs or Link Live Photo.
+import type { SelectionCapabilities } from '#lib/managers/selection-capabilities.ts';
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
 import type { AssetResponseDto } from '@immich/sdk';
-import type { SelectionCapabilities } from '$lib/managers/selection-capabilities';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { toTimelineAsset } from '$lib/utils/timeline-util';
 
 export type PhotoMenuAction =
   /** the trash's own: back out of the trash */
@@ -59,9 +59,9 @@ const EDITS = ['tag', 'changeDate', 'changeLocation', 'changeDescription'] as co
 const OUT = ['archive', 'setVisibility', 'delete'] as const;
 
 /**
- * Each page's menu, read off its selection bar (its buttons, its ⋮, and Show selected's Share, New album and Add to
- * album where the bar keeps them).
- */
+Each page's menu, read off its selection bar (its buttons, its ⋮, and Show selected's Share, New album and Add to
+album where the bar keeps them).
+*/
 export const photoMenuOffers = {
   /** a person's photos: the bar's ⋮ holds Fix incorrect match and Move to <library>, with the person */
   person: { actions: [...KEEP, ...EDITS, 'fixMatch', 'move', ...OUT] },
@@ -94,10 +94,10 @@ export const offeredActions = (offer: PhotoMenuOffer, allOwned: boolean): Readon
   new Set([...offer.actions, ...(allOwned ? (offer.whenOwned ?? []) : [])]);
 
 /**
- * A Space's menu (its timeline and search results, a Space album, a Space person): what its selection bar
- * (SelectionToolbar) shows for these capabilities, which the bar works out from the viewer's role in the Space and the
- * photos they may edit (#734). Show selected's New album goes with Add to album there too.
- */
+A Space's menu (its timeline and search results, a Space album, a Space person): what its selection bar
+(SelectionToolbar) shows for these capabilities, which the bar works out from the viewer's role in the Space and the
+photos they may edit (#734). Show selected's New album goes with Add to album there too.
+*/
 export const spaceOffer = (caps: SelectionCapabilities): PhotoMenuOffer => {
   const actions: PhotoMenuAction[] = [];
   const offer = (allowed: boolean, ...some: PhotoMenuAction[]) => {

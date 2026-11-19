@@ -1,3 +1,5 @@
+import { buildFilterContext, type FilterState } from '#lib/components/filter-panel/filter-panel.ts';
+import { getPhotosPersonFilterId, getPhotosPersonFilterThumbnailUrl } from '#lib/utils/photos-filter-options.ts';
 import {
   AssetOrder,
   AssetTypeEnum,
@@ -6,8 +8,6 @@ import {
   type SmartSearchFacetsDto,
   type SmartSearchFacetsResponseDto,
 } from '@immich/sdk';
-import { buildFilterContext, type FilterState } from '$lib/components/filter-panel/filter-panel';
-import { getPhotosPersonFilterId, getPhotosPersonFilterThumbnailUrl } from '$lib/utils/photos-filter-options';
 
 export const SEARCH_FILTER_DEBOUNCE_MS = 250;
 
@@ -18,34 +18,34 @@ type SmartSearchParamsArgs = {
   withSharedSpaces?: boolean;
   language?: string;
   /**
-   * Album scope imposed by the ROUTE, not by the filter panel — how an album detail page
-   * (`/albums/<id>` and `/spaces/<sid>/albums/<id>`) narrows a page-aware search to what it is
-   * showing. Unioned with `filters.albumId` rather than replacing it, so the route scope cannot be
-   * dropped by a hand-edited `?album=` in the URL.
-   */
+  Album scope imposed by the ROUTE, not by the filter panel — how an album detail page
+  (`/albums/<id>` and `/spaces/<sid>/albums/<id>`) narrows a page-aware search to what it is
+  showing. Unioned with `filters.albumId` rather than replacing it, so the route scope cannot be
+  dropped by a hand-edited `?album=` in the URL.
+  */
   albumIds?: string[];
   /**
-   * Local Omarchy layer: false leaves archived photos out (the Photos page's "Include archived" box); undefined keeps the
-   * server's default, which includes them.
-   */
+  Local Omarchy layer: false leaves archived photos out (the Photos page's "Include archived" box); undefined keeps the
+  server's default, which includes them.
+  */
   includeArchived?: boolean;
 };
 
 /**
- * How query mode (smart search) treats each filter-panel dimension.
- *
- * - `sent` — forwarded to `SmartSearchDto`, possibly under a different name
- *   (`albumId` → `albumIds`, `mediaType` → `type`, `sortOrder` → `order`).
- * - `derived` — not sent directly; folded into another param by `buildFilterContext`
- *   (the date fields all collapse into `takenAfter` / `takenBefore`).
- * - `unsupported` — `SmartSearchDto` has no such field, so the chip cannot apply in query
- *   mode. Browse mode (`MetadataSearchDto`) does support these; see `filter-search-terms.ts`.
- *
- * `satisfies Record<keyof FilterState, …>` is the point of this map: adding a dimension to
- * `FilterState` without classifying it here fails `tsc`. Without that, a new filter silently
- * fails to reach smart search while its chip still renders as active — which is exactly how
- * `state`, `lensModel`, `ownerId`, `ocr` and `albumId` came to be dropped.
- */
+How query mode (smart search) treats each filter-panel dimension.
+
+- `sent` — forwarded to `SmartSearchDto`, possibly under a different name
+  (`albumId` → `albumIds`, `mediaType` → `type`, `sortOrder` → `order`).
+- `derived` — not sent directly; folded into another param by `buildFilterContext`
+  (the date fields all collapse into `takenAfter` / `takenBefore`).
+- `unsupported` — `SmartSearchDto` has no such field, so the chip cannot apply in query
+  mode. Browse mode (`MetadataSearchDto`) does support these; see `filter-search-terms.ts`.
+
+`satisfies Record<keyof FilterState, …>` is the point of this map: adding a dimension to
+`FilterState` without classifying it here fails `tsc`. Without that, a new filter silently
+fails to reach smart search while its chip still renders as active — which is exactly how
+`state`, `lensModel`, `ownerId`, `ocr` and `albumId` came to be dropped.
+*/
 export const QUERY_MODE_FILTER_HANDLING = {
   personIds: 'sent',
   city: 'sent',

@@ -1,8 +1,8 @@
-import { AssetVisibility, getTimeBuckets, TimeBucketSize } from '@immich/sdk';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { placeStatsOf, type PlaceStats } from '#lib/utils/place-stats.ts';
+import { AssetVisibility, TimeBucketSize, getTimeBuckets } from '@immich/sdk';
 import { SvelteMap } from 'svelte/reactivity';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { placeStatsOf, type PlaceStats } from '$lib/utils/place-stats';
 
 // Local Omarchy layer: how many photos a person is in and the years they span, for the people whose name repeats on
 // People (DESIGN.md, People; utils/person-names). Each person's timeline is asked for by year exactly as their page asks
@@ -61,13 +61,13 @@ class PersonSpanManager {
     }
   }
 
-  async #load({ id, filterId }: PersonSpanKey) {
+  async #load({ id, filterId = id }: PersonSpanKey) {
     const epoch = this.#epoch;
     try {
       const buckets = await getTimeBuckets({
         ...authManager.params,
         visibility: AssetVisibility.Timeline,
-        personIds: [filterId ?? id],
+        personIds: [filterId],
         withPartners: true,
         withSharedSpaces: true,
         bucketSize: TimeBucketSize.Year,

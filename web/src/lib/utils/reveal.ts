@@ -7,10 +7,10 @@
 // it doesn't open it"): while the revealed photo is the only one selected, a plain click on any photo opens it as on a
 // timeline with nothing selected, and the selection goes. Shift and the select circle keep selecting, and once the
 // selection holds anything else it is an ordinary one.
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { Route } from '#lib/route.ts';
 import { AssetVisibility, getAssetInfo } from '@immich/sdk';
 import { goto } from '$app/navigation';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { Route } from '$lib/route';
 
 /** where the timeline scrolls to (the photo, or the cover it is folded under), and what it then selects */
 export type Reveal = { at: string; select: string; stackId?: string };
@@ -54,10 +54,10 @@ export const markRevealed = (id: string) => {
 };
 
 /**
- * A click on a photo while a reveal's selection is soft: true when the click should open the photo instead of
- * selecting it, having dropped that selection. Only the first click after a reveal is looked at; one with Shift, or a
- * selection that no longer holds the revealed photo alone, keeps the ordinary selecting.
- */
+A click on a photo while a reveal's selection is soft: true when the click should open the photo instead of
+selecting it, having dropped that selection. Only the first click after a reveal is looked at; one with Shift, or a
+selection that no longer holds the revealed photo alone, keeps the ordinary selecting.
+*/
 export const takeRevealClick = (selection: { assets: { id: string }[]; clear: () => void }, shift: boolean) => {
   const revealed = soft;
   soft = undefined;

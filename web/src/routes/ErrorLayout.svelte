@@ -6,17 +6,17 @@
   // a collapsed Details for the server's admin only. Someone signed in keeps the shell (bar and sidebar) around what
   // is missing, so the rest of the archive is one click away; anyone else, and a page that failed or a Gallery that
   // is not answering, gets the page on its own.
-  import { afterNavigate } from '$app/navigation';
-  import { page } from '$app/state';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import SharedLinkErrorPage from '$lib/components/pages/SharedLinkErrorPage.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { Route } from '$lib/route';
-  import { copyToClipboard } from '$lib/utils';
-  import { errorCode, errorPageKind, isMissingKind, type ErrorPageKind } from '$lib/utils/error-page';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import SharedLinkErrorPage from '#lib/components/pages/SharedLinkErrorPage.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { copyToClipboard } from '#lib/utils.ts';
+  import { errorCode, errorPageKind, isMissingKind, type ErrorPageKind } from '#lib/utils/error-page.ts';
   import { Icon } from '@immich/ui';
   import { mdiChevronRight } from '@mdi/js';
   import { t } from 'svelte-i18n';
+  import { afterNavigate } from '$app/navigation';
+  import { page } from '$app/state';
 
   interface Props {
     error?: { message: string; code?: string | number; stack?: string } | undefined | null;

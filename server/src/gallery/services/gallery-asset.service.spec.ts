@@ -134,6 +134,49 @@ describe(GalleryAssetService.name, () => {
     });
   });
 
+  describe('getSpaces', () => {
+    it("groups the caller's spaces by asset, keeping the assets it can read", async () => {
+      const auth = AuthFactory.create();
+      const [readable, unreadable, inNoSpace] = [newUuid(), newUuid(), newUuid()];
+      const [family, trips] = [newUuid(), newUuid()];
+      mocks.sharedSpace.getMemberSpaceIdsByAssetIds.mockResolvedValue([
+        { assetId: readable, spaceId: family },
+        { assetId: readable, spaceId: trips },
+        { assetId: unreadable, spaceId: family },
+      ]);
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([readable]));
+
+      const result = await sut.getSpaces(auth, { assetIds: [readable, unreadable, inNoSpace] });
+
+      expect(mocks.sharedSpace.getMemberSpaceIdsByAssetIds).toHaveBeenCalledWith(auth.user.id, [
+        readable,
+        unreadable,
+        inNoSpace,
+      ]);
+      expect(mocks.access.asset.checkOwnerAccess).toHaveBeenCalledWith(
+        auth.user.id,
+        new Set([readable, unreadable]),
+        undefined,
+      );
+      expect(result).toEqual({ assets: [{ assetId: readable, spaceIds: [family, trips] }] });
+    });
+
+    it('checks no access when no asset is in a space', async () => {
+      const auth = AuthFactory.create();
+      mocks.sharedSpace.getMemberSpaceIdsByAssetIds.mockResolvedValue([]);
+
+      await expect(sut.getSpaces(auth, { assetIds: [newUuid()] })).resolves.toEqual({ assets: [] });
+      expect(mocks.access.asset.checkOwnerAccess).not.toHaveBeenCalled();
+    });
+
+    it("never lists a shared link owner's spaces", async () => {
+      const auth = AuthFactory.from().sharedLink().build();
+
+      await expect(sut.getSpaces(auth, { assetIds: [newUuid()] })).resolves.toEqual({ assets: [] });
+      expect(mocks.sharedSpace.getMemberSpaceIdsByAssetIds).not.toHaveBeenCalled();
+    });
+  });
+
   describe('video trim', () => {
     let assetId: string;
     beforeEach(() => {
@@ -142,7 +185,7 @@ describe(GalleryAssetService.name, () => {
     });
 
     describe('setTrim', () => {
-      it('stores the trim, marks the asset edited and queues the edit job', async () => {
+      it('stores the trim, marks the asset edited and queues the trim job', async () => {
         mocks.videoTrim.getForTrim.mockResolvedValue(video());
         mocks.media.probe.mockResolvedValue(videoStream);
 
@@ -155,7 +198,7 @@ describe(GalleryAssetService.name, () => {
         expect(mocks.videoTrim.upsert).toHaveBeenCalledWith(assetId, 5, 25);
         expect(mocks.asset.update).toHaveBeenCalledWith({ id: assetId, isEdited: true });
         expect(mocks.job.queue).toHaveBeenCalledWith({
-          name: JobName.AssetEditThumbnailGeneration,
+          name: JobName.AssetVideoTrimGenerate,
           data: { id: assetId },
         });
       });
@@ -193,7 +236,7 @@ describe(GalleryAssetService.name, () => {
         expect(mocks.videoTrim.delete).toHaveBeenCalledWith(assetId);
         expect(mocks.asset.update).toHaveBeenCalledWith({ id: assetId, isEdited: false });
         expect(mocks.job.queue).toHaveBeenCalledWith({
-          name: JobName.AssetEditThumbnailGeneration,
+          name: JobName.AssetVideoTrimGenerate,
           data: { id: assetId },
         });
       });
@@ -317,7 +360,7 @@ describe(GalleryAssetService.name, () => {
     });
 
     describe('removeTrim', () => {
-      it('deletes the trim, clears isEdited and queues the edit job', async () => {
+      it('deletes the trim, clears isEdited and queues the trim job', async () => {
         mocks.videoTrim.delete.mockResolvedValue(true);
 
         await sut.removeTrim(authStub.admin, assetId);
@@ -325,7 +368,7 @@ describe(GalleryAssetService.name, () => {
         expect(mocks.videoTrim.delete).toHaveBeenCalledWith(assetId);
         expect(mocks.asset.update).toHaveBeenCalledWith({ id: assetId, isEdited: false });
         expect(mocks.job.queue).toHaveBeenCalledWith({
-          name: JobName.AssetEditThumbnailGeneration,
+          name: JobName.AssetVideoTrimGenerate,
           data: { id: assetId },
         });
       });

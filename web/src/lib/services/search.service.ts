@@ -1,6 +1,6 @@
 import {
-  searchAssets,
   searchAssetStatistics,
+  searchAssets,
   searchSmart,
   type MetadataSearchDto,
   type SmartSearchDto,
@@ -12,9 +12,9 @@ const COLLECT_PAGE_SIZE = 1000;
 export type SearchTerms = MetadataSearchDto & Pick<SmartSearchDto, 'query' | 'queryAssetId'>;
 
 /**
- * Pages through the search API for the given filter and returns the ids of every matching asset.
- * IDs only — `withExif: false` keeps each page payload minimal.
- */
+Pages through the search API for the given filter and returns the ids of every matching asset.
+IDs only — `withExif: false` keeps each page payload minimal.
+*/
 export const collectSearchResultAssetIds = async (
   terms: SearchTerms,
   options: { smartSearchEnabled: boolean; language: string },
@@ -40,11 +40,11 @@ export const collectSearchResultAssetIds = async (
 };
 
 /**
- * Local Omarchy layer: how many photos a smart search finds when the server cuts its ranking off
- * (machineLearning.clip.maxDistance, the smartSearchHasCutoff feature): the results end there, so paging their ids
- * counts them, as Add all collects them. The facets endpoint's total cannot stand in: it counts archived photos too.
- * Undefined past `cap` photos, where the count would cost more than it says.
- */
+Local Omarchy layer: how many photos a smart search finds when the server cuts its ranking off
+(machineLearning.clip.maxDistance, the smartSearchHasCutoff feature): the results end there, so paging their ids
+counts them, as Add all collects them. The facets endpoint's total cannot stand in: it counts archived photos too.
+Undefined past `cap` photos, where the count would cost more than it says.
+*/
 export const countSmartSearchResults = async (
   terms: SearchTerms,
   options: { language: string; signal?: AbortSignal; cap?: number },
@@ -107,10 +107,10 @@ const STATISTICS_TERMS = new Set<string>([
 const PAGING_TERMS = new Set<string>(['page', 'size', 'withExif', 'withPeople', 'withStacked', 'order']);
 
 /**
- * Local Omarchy layer: how many photos a metadata search finds (the search page's count), or undefined when the
- * statistics endpoint cannot count these terms: a smart search, which ranks every photo rather than matching some,
- * or a term it does not know, such as a file name.
- */
+Local Omarchy layer: how many photos a metadata search finds (the search page's count), or undefined when the
+statistics endpoint cannot count these terms: a smart search, which ranks every photo rather than matching some,
+or a term it does not know, such as a file name.
+*/
 export const countSearchResults = async (
   terms: SearchTerms,
   options: { signal?: AbortSignal } = {},

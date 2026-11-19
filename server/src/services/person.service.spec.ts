@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Mock } from 'vitest';
 import { BulkIdErrorReason } from 'src/dtos/asset-ids.response.dto.js';
 import { PersonUserRole, mapFaces, mapPerson } from 'src/dtos/person.dto.js';
 import { QueueStatisticsDto } from 'src/dtos/queue.dto.js';
@@ -8,11 +9,14 @@ import {
   CacheControl,
   JobName,
   JobStatus,
+  PersonPathType,
   QueueName,
   SourceType,
   SystemMetadataKey,
   UserMetadataKey,
 } from 'src/enum.js';
+import { updatePersonWithType } from 'src/gallery/utils/person-type.js';
+import { storageBackends } from 'src/gallery/utils/storage-backends.js';
 import { FaceSearchResult } from 'src/repositories/search.repository.js';
 import { PersonService } from 'src/services/person.service.js';
 import { ImmichFileResponse } from 'src/utils/file.js';
@@ -36,12 +40,13 @@ import {
 import { factory, newDate, newUuid } from 'test/small.factory.js';
 import { ServiceMocks, makeStream, newTestService } from 'test/utils.js';
 
+vi.mock('src/gallery/utils/person-type.js', () => ({ updatePersonWithType: vi.fn() }));
+
 const recognitionCounts = (overrides: Partial<QueueStatisticsDto> = {}) =>
   factory.queueStatistics({
     active: 1,
     waiting: 0,
     delayed: 0,
-    paused: 0,
     completed: 0,
     failed: 0,
     ...overrides,
@@ -49,6 +54,10 @@ const recognitionCounts = (overrides: Partial<QueueStatisticsDto> = {}) =>
 
 const prefsMetadata = (minimumFaces: number) =>
   [{ key: UserMetadataKey.Preferences, value: { people: { minimumFaces } } }] as any;
+
+/** StorageCore.getPersonThumbnailPath with the media location stripped: where a person thumbnail lives as an S3 key */
+const expectedThumbnailKey = ({ ownerId, personGroupId }: { ownerId: string; personGroupId: string }) =>
+  `thumbs/${ownerId}/${personGroupId.slice(0, 2)}/${personGroupId.slice(2, 4)}/${personGroupId}.jpeg`;
 
 /** The cross-owner authorizer each merge entry point hands to the planner (src/utils/merge-policy.ts). */
 type MergeAuthorizerFn = (plan: {
@@ -63,6 +72,10 @@ describe(PersonService.name, () => {
 
   beforeEach(() => {
     ({ sut, mocks } = newTestService(PersonService));
+    vi.mocked(updatePersonWithType).mockImplementation(async (_databaseRepository, personRepository, person) => {
+      const { type: _type, ...personUpdate } = person;
+      return personRepository.update(personUpdate);
+    });
     mocks.faceIdentity.ensurePersonIdentity.mockResolvedValue({ id: 'identity-1' } as any);
     const faceIdentityMock = mocks.faceIdentity as any;
     faceIdentityMock.getAccessiblePeople ??= vi.fn();
@@ -87,8 +100,6 @@ describe(PersonService.name, () => {
     faceIdentityMock.deletePendingSharedSpaceFaceMatchBackfillTargets.mockResolvedValue(void 0);
     faceIdentityMock.deleteUnreferencedIdentities ??= vi.fn();
     faceIdentityMock.deleteUnreferencedIdentities.mockResolvedValue(void 0);
-    (mocks.person as any).getPeopleOverviewStatistics ??= vi.fn();
-    (mocks.person as any).getPeopleFaceStatistics ??= vi.fn();
     (mocks.faceIdentity as any).getAccessiblePersonByProfileId.mockResolvedValue(void 0);
     (mocks.faceIdentity as any).getAccessibleProfileIdentityId.mockResolvedValue(void 0);
     mocks.sharedSpace.getSpaceIdsWithFaceRecognitionEnabled.mockResolvedValue([]);
@@ -111,7 +122,7 @@ describe(PersonService.name, () => {
   };
 
   const expectNoRecognitionMutation = () => {
-    expect(mocks.faceSearch.searchFaces).not.toHaveBeenCalled();
+    expect(mocks.search.searchFaces).not.toHaveBeenCalled();
     expect(mocks.person.create).not.toHaveBeenCalled();
     expect(mocks.person.reassignFaces).not.toHaveBeenCalled();
     expect(mocks.faceIdentity.ensurePersonIdentity).not.toHaveBeenCalled();
@@ -243,6 +254,59 @@ describe(PersonService.name, () => {
         auth.user.id,
         expect.objectContaining({ type: 'pet' }),
       );
+    });
+
+    // Stock sync withholds pets, so GET /people does too when a stock client names no type.
+    it('defaults the type to person for a stock client', async () => {
+      const auth = { ...AuthFactory.create(), stockClient: true as const };
+      mocks.person.getAllForUser.mockResolvedValue({ items: [], hasNextPage: false });
+      mocks.person.getNumberOfPeople.mockResolvedValue({ total: 0, hidden: 0 });
+
+      await sut.getAll(auth, { withHidden: false, page: 1, size: 50 });
+
+      expect(mocks.person.getAllForUser).toHaveBeenCalledWith(
+        expect.anything(),
+        auth.user.id,
+        expect.objectContaining({ type: 'person' }),
+      );
+      expect(mocks.person.getNumberOfPeople).toHaveBeenCalledWith(auth.user.id, {
+        minimumFaceCount: 3,
+        type: 'person',
+      });
+    });
+
+    // OD-14: stock web's People page searches by name; Gallery clients search through their own routes.
+    it('filters by name for a stock client only', async () => {
+      const auth = AuthFactory.create();
+      mocks.person.getAllForUser.mockResolvedValue({ items: [], hasNextPage: false });
+      mocks.person.getNumberOfPeople.mockResolvedValue({ total: 0, hidden: 0 });
+
+      await sut.getAll({ ...auth, stockClient: true }, { withHidden: false, page: 1, size: 50, name: 'jose' });
+      await sut.getAll(auth, { withHidden: false, page: 1, size: 50, name: 'jose' });
+
+      expect(mocks.person.getAllForUser).toHaveBeenNthCalledWith(
+        1,
+        expect.anything(),
+        auth.user.id,
+        expect.objectContaining({ name: 'jose' }),
+      );
+      expect(mocks.person.getAllForUser).toHaveBeenNthCalledWith(2, expect.anything(), auth.user.id, {
+        withHidden: false,
+      });
+    });
+
+    it('forwards isFavorite and isHidden to the owner-scoped repository', async () => {
+      const auth = AuthFactory.create();
+      mocks.person.getAllForUser.mockResolvedValue({ items: [], hasNextPage: false });
+      mocks.person.getNumberOfPeople.mockResolvedValue({ total: 0, hidden: 0 });
+
+      await sut.getAll(auth, { withHidden: true, page: 1, size: 50, isFavorite: true, isHidden: false });
+
+      expect(mocks.person.getAllForUser).toHaveBeenCalledWith(expect.anything(), auth.user.id, {
+        withHidden: true,
+        isFavorite: true,
+        isHidden: false,
+      });
     });
 
     it('should preserve identity-aware people ordering returned by repository', async () => {
@@ -784,6 +848,37 @@ describe(PersonService.name, () => {
       });
     });
 
+    it.each([
+      { currentType: 'person', nextType: 'pet' },
+      { currentType: 'pet', nextType: 'person' },
+    ] as const)('should change a $currentType cluster to $nextType', async ({ currentType, nextType }) => {
+      const auth = AuthFactory.create();
+      const person = PersonFactory.create({ type: currentType });
+      const updatedPerson = PersonFactory.create({ ...person, type: nextType, species: null });
+
+      mocks.person.getByGroupIdOnly.mockResolvedValue(person);
+      vi.mocked(updatePersonWithType).mockResolvedValue(updatedPerson);
+      mocks.access.galleryPerson.checkOwnerAccess.mockResolvedValue(new Set([person.personGroupId]));
+
+      await expect(sut.update(auth, person.personGroupId, { type: nextType })).resolves.toEqual(
+        expect.objectContaining({ id: person.personGroupId, type: nextType }),
+      );
+
+      expect(updatePersonWithType).toHaveBeenCalledWith(
+        mocks.database,
+        mocks.person,
+        expect.objectContaining({
+          ownerId: person.ownerId,
+          personGroupId: person.personGroupId,
+          type: nextType,
+        }),
+      );
+      expect(mocks.access.galleryPerson.checkOwnerAccess).toHaveBeenCalledWith(
+        auth.user.id,
+        new Set([person.personGroupId]),
+      );
+    });
+
     it("should update a person's date of birth", async () => {
       const auth = AuthFactory.create();
       const person = PersonFactory.create({ birthDate: new Date('1976-06-30') });
@@ -1169,17 +1264,70 @@ describe(PersonService.name, () => {
       await expect(sut.handlePersonMigration(PersonFactory.create())).resolves.toBe(JobStatus.Failed);
     });
 
-    it('should leave a relative S3 thumbnail where it is', async () => {
-      const person = PersonFactory.create({ thumbnailPath: 'thumbs/user/ab/cd/person.jpeg' });
-      mocks.person.getByGroupId.mockResolvedValue(person);
+    describe('with an S3 thumbnail', () => {
+      let s3Backend: { exists: Mock; copy: Mock; stat: Mock; delete: Mock };
+      let previousS3Backend: unknown;
 
-      await expect(
-        sut.handlePersonMigration({ ownerId: person.ownerId, personGroupId: person.personGroupId }),
-      ).resolves.toBe(JobStatus.Success);
+      beforeEach(() => {
+        previousS3Backend = (storageBackends as any).s3Backend;
+        s3Backend = {
+          exists: vi.fn().mockResolvedValue(true),
+          copy: vi.fn().mockResolvedValue(void 0),
+          stat: vi.fn().mockResolvedValue({ size: 1024 }),
+          delete: vi.fn().mockResolvedValue(void 0),
+        };
+        (storageBackends as any).s3Backend = s3Backend;
+      });
 
-      expect(mocks.move.create).not.toHaveBeenCalled();
-      expect(mocks.move.getByEntity).not.toHaveBeenCalled();
-      expect(mocks.storage.rename).not.toHaveBeenCalled();
+      afterEach(() => {
+        (storageBackends as any).s3Backend = previousS3Backend;
+      });
+
+      it('should move a relative S3 thumbnail within S3 to its expected key', async () => {
+        const oldPath = 'thumbs/user/ab/cd/person.jpeg';
+        const person = PersonFactory.create({ thumbnailPath: oldPath });
+        const newPath = expectedThumbnailKey(person);
+        mocks.person.getByGroupId.mockResolvedValue(person);
+        mocks.move.create.mockImplementation((move) => Promise.resolve({ id: 'move-id', ...move }));
+
+        await expect(
+          sut.handlePersonMigration({ ownerId: person.ownerId, personGroupId: person.personGroupId }),
+        ).resolves.toBe(JobStatus.Success);
+
+        expect(mocks.move.create).toHaveBeenCalledWith({
+          entityId: person.personGroupId,
+          pathType: PersonPathType.Face,
+          oldPath,
+          newPath,
+        });
+        expect(s3Backend.copy).toHaveBeenCalledWith(oldPath, newPath);
+        expect(mocks.person.update).toHaveBeenCalledWith({
+          ownerId: person.ownerId,
+          personGroupId: person.personGroupId,
+          thumbnailPath: newPath,
+        });
+        expect(s3Backend.delete).toHaveBeenCalledWith(oldPath);
+        expect(mocks.move.delete).toHaveBeenCalledWith('move-id');
+        expect(mocks.storage.mkdirSync).not.toHaveBeenCalled();
+        expect(mocks.storage.rename).not.toHaveBeenCalled();
+      });
+
+      it('should make no S3 calls for a thumbnail already at its expected key', async () => {
+        const person = PersonFactory.create();
+        person.thumbnailPath = expectedThumbnailKey(person);
+        mocks.person.getByGroupId.mockResolvedValue(person);
+
+        await expect(
+          sut.handlePersonMigration({ ownerId: person.ownerId, personGroupId: person.personGroupId }),
+        ).resolves.toBe(JobStatus.Success);
+
+        expect(mocks.move.getByEntity).not.toHaveBeenCalled();
+        expect(mocks.move.create).not.toHaveBeenCalled();
+        expect(mocks.person.update).not.toHaveBeenCalled();
+        for (const call of Object.values(s3Backend)) {
+          expect(call).not.toHaveBeenCalled();
+        }
+      });
     });
 
     it('should move nothing for a person without a thumbnail', async () => {
@@ -1678,7 +1826,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -1695,7 +1842,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 1,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -1715,7 +1861,7 @@ describe(PersonService.name, () => {
         const lastRun = new Date('2026-05-17T02:00:00.000Z');
         mocks.systemMetadata.get.mockResolvedValue({ lastRun: lastRun.toISOString() });
         mocks.person.getLatestFaceDate.mockResolvedValue(new Date(lastRun.getTime() - 1000).toISOString());
-        mocks.job.getJobCounts.mockResolvedValue(recognitionCounts({ waiting: 25_000, delayed: 1000, paused: 3 }));
+        mocks.job.getJobCounts.mockResolvedValue(recognitionCounts({ waiting: 25_000, delayed: 1000 }));
 
         await expect(sut.handleQueueRecognizeFaces(data)).resolves.toBe(JobStatus.Skipped);
 
@@ -1730,7 +1876,6 @@ describe(PersonService.name, () => {
     it.each([
       ['waiting jobs', { waiting: 87_000 }],
       ['delayed jobs', { delayed: 42 }],
-      ['paused jobs', { paused: 9 }],
       ['another active job besides the coordinator', { active: 2 }],
     ] as const)('skips non-force recognition when FacialRecognition has %s', async (_label, counts) => {
       mocks.job.getJobCounts.mockResolvedValue(recognitionCounts(counts));
@@ -1771,7 +1916,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -1804,7 +1948,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -1877,7 +2020,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -1921,7 +2063,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -2126,7 +2267,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -2176,7 +2316,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -2238,7 +2377,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -2281,7 +2419,6 @@ describe(PersonService.name, () => {
         mocks.job.getJobCounts.mockResolvedValue({
           active: 1,
           waiting: 0,
-          paused: 0,
           completed: 0,
           failed: 0,
           delayed: 0,
@@ -2310,7 +2447,6 @@ describe(PersonService.name, () => {
         mocks.job.getJobCounts.mockResolvedValue({
           active: 1,
           waiting: 0,
-          paused: 0,
           completed: 0,
           failed: 0,
           delayed: 0,
@@ -2330,7 +2466,6 @@ describe(PersonService.name, () => {
         mocks.job.getJobCounts.mockResolvedValue({
           active: 1,
           waiting: 0,
-          paused: 0,
           completed: 0,
           failed: 0,
           delayed: 0,
@@ -2363,7 +2498,6 @@ describe(PersonService.name, () => {
         mocks.job.getJobCounts.mockResolvedValue({
           active: 1,
           waiting: 0,
-          paused: 0,
           completed: 0,
           failed: 0,
           delayed: 0,
@@ -2384,7 +2518,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -2424,7 +2557,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -2651,7 +2783,7 @@ describe(PersonService.name, () => {
       const face = AssetFaceFactory.create({ assetId: asset.id });
       mocks.crypto.randomUUID.mockReturnValue(face.id);
       mocks.machineLearning.detectFaces.mockResolvedValue(getAsDetectedFace(face));
-      mocks.faceSearch.searchFaces.mockResolvedValue([getForFaceSearch(face, 0.7)]);
+      mocks.search.searchFaces.mockResolvedValue([getForFaceSearch(face, 0.7)]);
       mocks.assetJob.getForDetectFacesJob.mockResolvedValue(getForDetectedFaces(asset));
       mocks.person.refreshFaces.mockResolvedValue();
 
@@ -3056,6 +3188,66 @@ describe(PersonService.name, () => {
       expect(mocks.person.reassignFaces).not.toHaveBeenCalled();
     });
 
+    it('should match metadata face stored at a different resolution', async () => {
+      const face = AssetFaceFactory.create({
+        sourceType: SourceType.Exif,
+        imageWidth: 2736,
+        imageHeight: 3648,
+        boundingBoxX1: 1225,
+        boundingBoxY1: 1453,
+        boundingBoxX2: 1436,
+        boundingBoxY2: 1732,
+      });
+      const asset = AssetFactory.from().face(face).file({ type: AssetFileType.Preview }).exif().build();
+      mocks.machineLearning.detectFaces.mockResolvedValue({
+        imageWidth: 1440,
+        imageHeight: 1920,
+        faces: [{ boundingBox: { x1: 645, y1: 765, x2: 756, y2: 912 }, embedding: '[1, 2, 3, 4]', score: 0.9 }],
+      });
+      mocks.assetJob.getForDetectFacesJob.mockResolvedValue(getForDetectedFaces(asset));
+
+      await sut.handleDetectFaces({ id: asset.id });
+
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith([], [], [{ faceId: face.id, embedding: '[1, 2, 3, 4]' }]);
+      expect(mocks.job.queueAll).not.toHaveBeenCalled();
+    });
+
+    it('should prefer metadata face over overlapping machine learning face', async () => {
+      const mlFace = AssetFaceFactory.create({
+        imageWidth: 1440,
+        imageHeight: 1920,
+        boundingBoxX1: 645,
+        boundingBoxY1: 765,
+        boundingBoxX2: 756,
+        boundingBoxY2: 912,
+      });
+      const exifFace = AssetFaceFactory.create({
+        sourceType: SourceType.Exif,
+        imageWidth: 2736,
+        imageHeight: 3648,
+        boundingBoxX1: 1225,
+        boundingBoxY1: 1453,
+        boundingBoxX2: 1436,
+        boundingBoxY2: 1732,
+      });
+      const asset = AssetFactory.from()
+        .face(mlFace)
+        .face(exifFace)
+        .file({ type: AssetFileType.Preview })
+        .exif()
+        .build();
+      mocks.machineLearning.detectFaces.mockResolvedValue(getAsDetectedFace(mlFace));
+      mocks.assetJob.getForDetectFacesJob.mockResolvedValue(getForDetectedFaces(asset));
+
+      await sut.handleDetectFaces({ id: asset.id });
+
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith(
+        [],
+        [mlFace.id],
+        [{ faceId: exifFace.id, embedding: '[1, 2, 3, 4]' }],
+      );
+    });
+
     it('should not add embedding to non-matching metadata face', async () => {
       const assetId = newUuid();
       const face = AssetFaceFactory.create({ assetId, sourceType: SourceType.Exif });
@@ -3275,7 +3467,7 @@ describe(PersonService.name, () => {
       ];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
       mocks.person.getByGroupId.mockResolvedValue(primaryFace.person!);
       mocks.person.create.mockResolvedValue(primaryFace.person!);
@@ -3305,7 +3497,7 @@ describe(PersonService.name, () => {
         { ...matchedFace, distance: 0.2 },
       ] as FaceSearchResult[];
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
       mocks.faceIdentity.ensurePersonIdentity.mockResolvedValue({ id: 'identity-1' } as any);
 
@@ -3331,7 +3523,7 @@ describe(PersonService.name, () => {
       ] as FaceSearchResult[];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
       mocks.person.getByGroupId.mockResolvedValue(matchedFace.person!);
       mocks.faceIdentity.ensurePersonIdentity.mockResolvedValue({ id: 'matched-identity' } as any);
@@ -3367,7 +3559,7 @@ describe(PersonService.name, () => {
       const targetIdentityId = 'target-identity';
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
       mocks.faceIdentity.ensurePersonIdentity.mockResolvedValue({ id: sourceIdentityId } as any);
       (mocks.faceIdentity as any).findClosestAccessibleIdentityForFace.mockResolvedValue({
@@ -3413,7 +3605,7 @@ describe(PersonService.name, () => {
       const targetIdentityId = 'target-identity';
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
       mocks.faceIdentity.ensurePersonIdentity.mockResolvedValue({ id: sourceIdentityId } as any);
       (mocks.faceIdentity as any).findClosestAccessibleIdentityForFace.mockResolvedValue({
@@ -3456,7 +3648,7 @@ describe(PersonService.name, () => {
       const targetIdentityId = 'target-identity';
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
       mocks.faceIdentity.ensurePersonIdentity.mockResolvedValue({ id: sourceIdentityId } as any);
       (mocks.faceIdentity as any).findClosestAccessibleIdentityForFace.mockResolvedValue({
@@ -3493,7 +3685,7 @@ describe(PersonService.name, () => {
       const sourceIdentityId = 'source-identity';
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
       mocks.faceIdentity.ensurePersonIdentity.mockResolvedValue({ id: sourceIdentityId } as any);
       (mocks.faceIdentity as any).findClosestAccessibleIdentityForFace.mockResolvedValue({
@@ -3518,7 +3710,7 @@ describe(PersonService.name, () => {
       const sourceIdentityId = 'source-identity';
       const targetIdentityId = 'target-identity';
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue([{ ...primaryFace, distance: 0.2 } as FaceSearchResult]);
+      mocks.search.searchFaces.mockResolvedValue([{ ...primaryFace, distance: 0.2 } as FaceSearchResult]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
       mocks.person.create.mockResolvedValue(person);
       mocks.person.createGroup.mockResolvedValue(PersonGroupFactory.create({ id: person.personGroupId }));
@@ -3576,7 +3768,7 @@ describe(PersonService.name, () => {
       ];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
       mocks.person.getByGroupId.mockResolvedValue(face.person!);
       mocks.person.create.mockResolvedValue(face.person!);
@@ -3610,7 +3802,7 @@ describe(PersonService.name, () => {
       ];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
       mocks.person.getByGroupId.mockResolvedValue(faceWithBirthDate.person!);
       mocks.person.create.mockResolvedValue(face.person!);
@@ -3638,7 +3830,7 @@ describe(PersonService.name, () => {
       const faces = [getForFaceSearch(noPerson1, 0), getForFaceSearch(noPerson2, 0.3)];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValueOnce(faces).mockResolvedValueOnce([]);
+      mocks.search.searchFaces.mockResolvedValueOnce(faces).mockResolvedValueOnce([]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
       mocks.person.createGroup.mockResolvedValue(PersonGroupFactory.create({ id: person.personGroupId }));
       mocks.person.create.mockResolvedValue(person);
@@ -3678,7 +3870,7 @@ describe(PersonService.name, () => {
       ] as FaceSearchResult[];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
       mocks.person.create.mockResolvedValue(person);
       mocks.person.createGroup.mockResolvedValue(PersonGroupFactory.create({ id: person.personGroupId }));
@@ -3716,7 +3908,7 @@ describe(PersonService.name, () => {
       const targetIdentityId = newUuid();
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 3 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue([{ ...face, distance: 0 }] as FaceSearchResult[]);
+      mocks.search.searchFaces.mockResolvedValue([{ ...face, distance: 0 }] as FaceSearchResult[]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(face, asset));
       mocks.person.create.mockResolvedValue(person);
       mocks.person.createGroup.mockResolvedValue(PersonGroupFactory.create({ id: person.personGroupId }));
@@ -3760,7 +3952,7 @@ describe(PersonService.name, () => {
       const face = AssetFaceFactory.create({ assetId: asset.id });
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 3 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue([{ ...face, distance: 0 }] as FaceSearchResult[]);
+      mocks.search.searchFaces.mockResolvedValue([{ ...face, distance: 0 }] as FaceSearchResult[]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(face, asset));
       (mocks.faceIdentity as any).findClosestAccessibleIdentityForFace.mockResolvedValue(void 0);
 
@@ -3783,14 +3975,14 @@ describe(PersonService.name, () => {
       const face = AssetFaceFactory.create({ assetId: asset.id });
       const faces = [getForFaceSearch(face, 0)];
 
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(face, asset));
       mocks.person.create.mockResolvedValue(PersonFactory.create());
 
       await sut.handleRecognizeFaces({ id: face.id });
 
       expect(mocks.job.queue).not.toHaveBeenCalled();
-      expect(mocks.faceSearch.searchFaces).toHaveBeenCalledTimes(1);
+      expect(mocks.search.searchFaces).toHaveBeenCalledTimes(1);
       expect(mocks.person.create).not.toHaveBeenCalled();
       expect(mocks.person.reassignFaces).not.toHaveBeenCalled();
     });
@@ -3800,12 +3992,12 @@ describe(PersonService.name, () => {
       const face = AssetFaceFactory.create({ assetId: asset.id });
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 3 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue([{ ...face, distance: 0 }] as FaceSearchResult[]);
+      mocks.search.searchFaces.mockResolvedValue([{ ...face, distance: 0 }] as FaceSearchResult[]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(face, asset));
 
       expect(await sut.handleRecognizeFaces({ id: face.id })).toBe(JobStatus.Skipped);
 
-      expect(mocks.faceSearch.searchFaces).toHaveBeenCalledTimes(1);
+      expect(mocks.search.searchFaces).toHaveBeenCalledTimes(1);
       expect(mocks.person.create).not.toHaveBeenCalled();
       expect(mocks.person.reassignFaces).not.toHaveBeenCalled();
       expect(mocks.job.queue).not.toHaveBeenCalled();
@@ -3816,7 +4008,7 @@ describe(PersonService.name, () => {
       const asset = AssetFactory.create();
       const noPerson = AssetFaceFactory.create({ assetId: asset.id });
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 3 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue([{ ...noPerson, distance: 0 } as FaceSearchResult]);
+      mocks.search.searchFaces.mockResolvedValue([{ ...noPerson, distance: 0 } as FaceSearchResult]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
 
       expect(await sut.handleRecognizeFaces({ id: noPerson.id, skipSharedSpaceMatch: true })).toBe(JobStatus.Skipped);
@@ -3834,7 +4026,7 @@ describe(PersonService.name, () => {
       const faces = [getForFaceSearch(noPerson1, 0), getForFaceSearch(noPerson2, 0.4)];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 3 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
       mocks.person.create.mockResolvedValue(PersonFactory.create());
 
@@ -3844,7 +4036,7 @@ describe(PersonService.name, () => {
         name: JobName.FacialRecognition,
         data: { id: noPerson1.id, deferred: true },
       });
-      expect(mocks.faceSearch.searchFaces).toHaveBeenCalledTimes(1);
+      expect(mocks.search.searchFaces).toHaveBeenCalledTimes(1);
       expect(mocks.person.create).not.toHaveBeenCalled();
       expect(mocks.person.reassignFaces).not.toHaveBeenCalled();
     });
@@ -3856,14 +4048,14 @@ describe(PersonService.name, () => {
       const faces = [getForFaceSearch(noPerson1, 0), getForFaceSearch(noPerson2, 0.4)];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 3 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValueOnce(faces).mockResolvedValueOnce([]);
+      mocks.search.searchFaces.mockResolvedValueOnce(faces).mockResolvedValueOnce([]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
       mocks.person.create.mockResolvedValue(PersonFactory.create());
 
       await sut.handleRecognizeFaces({ id: noPerson1.id, deferred: true });
 
       expect(mocks.job.queue).not.toHaveBeenCalled();
-      expect(mocks.faceSearch.searchFaces).toHaveBeenCalledTimes(2);
+      expect(mocks.search.searchFaces).toHaveBeenCalledTimes(2);
       expect(mocks.person.create).not.toHaveBeenCalled();
       expect(mocks.person.reassignFaces).not.toHaveBeenCalled();
     });
@@ -3875,7 +4067,7 @@ describe(PersonService.name, () => {
         const face = AssetFaceFactory.create({ assetId: asset.id });
 
         mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-        mocks.faceSearch.searchFaces
+        mocks.search.searchFaces
           .mockResolvedValueOnce([{ ...face, distance: 0 }] as FaceSearchResult[])
           .mockResolvedValueOnce([]);
         mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(face, asset));
@@ -3915,7 +4107,7 @@ describe(PersonService.name, () => {
       ] as FaceSearchResult[];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
       mocks.person.create.mockResolvedValue(person);
       mocks.person.createGroup.mockResolvedValue(PersonGroupFactory.create({ id: person.personGroupId }));
@@ -3946,7 +4138,7 @@ describe(PersonService.name, () => {
       ] as FaceSearchResult[];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson, asset));
       mocks.faceIdentity.ensurePersonIdentity.mockResolvedValue({ id: 'identity-1' } as any);
       mocks.sharedSpace.getSpaceIdsForAsset.mockResolvedValue([
@@ -3980,7 +4172,7 @@ describe(PersonService.name, () => {
       ] as FaceSearchResult[];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
       mocks.person.create.mockResolvedValue(person);
       mocks.person.createGroup.mockResolvedValue(PersonGroupFactory.create({ id: person.personGroupId }));
@@ -4006,7 +4198,7 @@ describe(PersonService.name, () => {
       ] as FaceSearchResult[];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValue(faces);
+      mocks.search.searchFaces.mockResolvedValue(faces);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
       mocks.person.create.mockResolvedValue(person);
       mocks.person.createGroup.mockResolvedValue(PersonGroupFactory.create({ id: person.personGroupId }));
@@ -4842,14 +5034,14 @@ describe(PersonService.name, () => {
       ] as FaceSearchResult[];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 1 } } });
-      mocks.faceSearch.searchFaces
+      mocks.search.searchFaces
         .mockResolvedValueOnce(faces)
         .mockResolvedValueOnce([{ ...noPerson2, personGroupId: person.personGroupId, distance: 0.2 }]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
 
       await sut.handleRecognizeFaces({ id: noPerson1.id });
 
-      expect(mocks.faceSearch.searchFaces).toHaveBeenCalledTimes(2);
+      expect(mocks.search.searchFaces).toHaveBeenCalledTimes(2);
       expect(mocks.person.reassignFaces).toHaveBeenCalledWith({
         faceIds: [noPerson1.id],
         newPersonGroupId: person.personGroupId,
@@ -4871,14 +5063,14 @@ describe(PersonService.name, () => {
       ] as FaceSearchResult[];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 3 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValueOnce(faces).mockResolvedValueOnce([]);
+      mocks.search.searchFaces.mockResolvedValueOnce(faces).mockResolvedValueOnce([]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
       mocks.person.create.mockResolvedValue(person);
       mocks.person.createGroup.mockResolvedValue(PersonGroupFactory.create({ id: person.personGroupId }));
 
       await sut.handleRecognizeFaces({ id: noPerson1.id });
 
-      expect(mocks.faceSearch.searchFaces).toHaveBeenNthCalledWith(
+      expect(mocks.search.searchFaces).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
           hasPerson: true,
@@ -4906,12 +5098,12 @@ describe(PersonService.name, () => {
       ] as FaceSearchResult[];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 3 } } });
-      mocks.faceSearch.searchFaces.mockResolvedValueOnce(faces).mockResolvedValueOnce([]);
+      mocks.search.searchFaces.mockResolvedValueOnce(faces).mockResolvedValueOnce([]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
 
       await sut.handleRecognizeFaces({ id: noPerson1.id, deferred: true });
 
-      expect(mocks.faceSearch.searchFaces).toHaveBeenNthCalledWith(
+      expect(mocks.search.searchFaces).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
           hasPerson: true,
@@ -4937,7 +5129,7 @@ describe(PersonService.name, () => {
       ] as FaceSearchResult[];
 
       mocks.systemMetadata.get.mockResolvedValue({ machineLearning: { facialRecognition: { minFaces: 3 } } });
-      mocks.faceSearch.searchFaces
+      mocks.search.searchFaces
         .mockResolvedValueOnce(faces)
         .mockResolvedValueOnce([{ ...noPerson2, personGroupId: person.personGroupId, distance: 0.2 }]);
       mocks.person.getFaceForFacialRecognitionJob.mockResolvedValue(getForFacialRecognitionJob(noPerson1, asset));
@@ -4962,7 +5154,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 0,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -4991,7 +5182,6 @@ describe(PersonService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 0,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,

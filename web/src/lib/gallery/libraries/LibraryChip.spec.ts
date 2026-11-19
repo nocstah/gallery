@@ -1,13 +1,13 @@
-import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/svelte';
-import { tick } from 'svelte';
 import {
   libraryContextFile,
   mainLibrary,
   secondLibrary,
   serving,
   type TestLibrary,
-} from '@test-data/factories/library-context-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
+import '@testing-library/jest-dom';
+import { render, screen } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import LibraryChip from './LibraryChip.svelte';
 import { loadLibraryContext, resetLibraryContext } from './library-context.svelte';
 

@@ -1,10 +1,10 @@
 <script lang="ts">
   // Local Omarchy layer: Move to a special album (To do, Villa: managers/special-albums) for the selection, or take the
   // selection out inside that album (Mark done); the album's key does the same from the keyboard (TimelineKeyboardActions)
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import type { SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
-  import type { OnArchive } from '$lib/utils/actions';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import type { SpecialAlbumManager } from '#lib/managers/special-albums.svelte.ts';
+  import type { OnArchive } from '#lib/utils/actions.ts';
   import { AssetVisibility } from '@immich/sdk';
   import { IconButton } from '@immich/ui';
   import { mdiTimerSand } from '@mdi/js';

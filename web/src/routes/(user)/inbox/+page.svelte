@@ -2,18 +2,18 @@
   // Local Omarchy layer: the AI inbox. Curator (~/code/curator) proposes changes to the library; nothing is written
   // until it is accepted here, and everything accepted can be undone from History. Calibrate collects the hand
   // labels each judge must agree with before it may act alone; Jobs starts scans and shows Curator's health.
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import CalibratePanel from '$lib/components/curator/CalibratePanel.svelte';
-  import HealthPanel from '$lib/components/curator/HealthPanel.svelte';
-  import HistoryPanel from '$lib/components/curator/HistoryPanel.svelte';
-  import InboxGroupView from '$lib/components/curator/InboxGroupView.svelte';
-  import InboxOverview from '$lib/components/curator/InboxOverview.svelte';
-  import JobsPanel from '$lib/components/curator/JobsPanel.svelte';
-  import { curator, CuratorError, curatorPort, type Health } from '$lib/utils/curator';
+  import CalibratePanel from '#lib/components/curator/CalibratePanel.svelte';
+  import HealthPanel from '#lib/components/curator/HealthPanel.svelte';
+  import HistoryPanel from '#lib/components/curator/HistoryPanel.svelte';
+  import InboxGroupView from '#lib/components/curator/InboxGroupView.svelte';
+  import InboxOverview from '#lib/components/curator/InboxOverview.svelte';
+  import JobsPanel from '#lib/components/curator/JobsPanel.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { CuratorError, curator, curatorPort, type Health } from '#lib/utils/curator.ts';
   import { onMount } from 'svelte';
   import { t, type Translations } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import type { PageData } from './$types';
 
   interface Props {
@@ -51,7 +51,7 @@
     }
   };
 
-  const open = (params: Record<string, string>) => goto(`?${new URLSearchParams(params)}`, { noScroll: false });
+  const open = (params: Record<string, string>) => goto(`?${new URLSearchParams(params)}`);
 
   onMount(() => {
     void refresh();

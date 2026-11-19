@@ -1,5 +1,6 @@
-import { vaultEdition } from '$lib/gallery/edition';
-import { libraryHas } from '$lib/gallery/libraries/library-context.svelte';
+import { vaultEdition } from '#lib/gallery/edition.ts';
+import { libraryHas } from '#lib/gallery/libraries/library-context.svelte.ts';
+import type { ReadonlyURL } from '$app/state';
 
 // A fixed local application link: no vault IDs, passwords, names or server API.
 export const VAULT_CHOOSER_URI = 'kioku-vault://open';
@@ -14,7 +15,7 @@ export const isDesktop = (userAgent: string) => /Linux/.test(userAgent) && !/And
 
 // Never inside a vault: its Gallery is the vault edition (gallery/edition). Nor in a library that does not offer the
 // vaults, which are Main's (gallery/libraries).
-export const canLaunchVaultChooser = (url: URL, userAgent: string, isOwner: boolean) =>
+export const canLaunchVaultChooser = (url: ReadonlyURL, userAgent: string, isOwner: boolean) =>
   !vaultEdition() &&
   libraryHas('vaults') &&
   isOwner &&

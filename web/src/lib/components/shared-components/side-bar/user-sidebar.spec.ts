@@ -1,16 +1,16 @@
-import '@testing-library/jest-dom';
-import { fireEvent, render, screen } from '@testing-library/svelte';
-import UserSidebar from '$lib/components/shared-components/side-bar/UserSidebar.svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { sidebarRowsHidden } from '$lib/stores/sidebar-rows';
+import UserSidebar from '#lib/components/shared-components/side-bar/UserSidebar.svelte';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { sidebarRowsHidden } from '#lib/stores/sidebar-rows.ts';
 import {
+  SECOND_CURATOR_FEATURES,
   libraryContextFile,
   mainLibrary,
-  SECOND_CURATOR_FEATURES,
   secondLibrary,
   secondOffering,
   serving,
-} from '@test-data/factories/library-context-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
+import '@testing-library/jest-dom';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 
 const mockPage = vi.hoisted(() => ({ url: new URL('https://gallery.test/photos') }));
 vi.mock('$app/state', () => ({ page: mockPage }));
@@ -35,58 +35,68 @@ const mocks = vi.hoisted(() => ({
       trash: false,
     },
   },
+  // the user config's map and trash switches (upstream reads them through the config query, not the feature flags)
+  config: {
+    map: { enabled: false },
+    trash: { enabled: false },
+  },
 }));
 
-vi.mock('$lib/components/sidebar/sidebar-shell.svelte', async () => {
-  const module = await import('@test-data/mocks/sidebar-shell.stub.svelte');
+vi.mock('#lib/components/sidebar/sidebar-shell.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/sidebar-shell.stub.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/side-bar/BottomInfo.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/side-bar/BottomInfo.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/side-bar/rail-storage.svelte', async () => {
-  const module = await import('@test-data/mocks/rail-storage.stub.svelte');
+vi.mock('#lib/components/shared-components/side-bar/rail-storage.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/rail-storage.stub.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/side-bar/RecentAlbums.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/side-bar/RecentAlbums.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/side-bar/recent-spaces.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/side-bar/recent-spaces.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/side-bar/shared-links-row.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/side-bar/shared-links-row.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/sidebar/albums-tree.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/sidebar/albums-tree.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: mocks.authManager,
 }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: mocks.featureFlagsManager,
 }));
 
-vi.mock('$lib/components/sidebar/sidebar-nav-item.svelte', async () => {
-  const module = await import('@test-data/mocks/sidebar-nav-item.stub.svelte');
+vi.mock('#lib/queries/client.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/queries/client.ts')>()),
+  createPreloadedQuery: () => ({ data: mocks.config }),
+}));
+
+vi.mock('#lib/components/sidebar/sidebar-nav-item.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/sidebar-nav-item.stub.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/sidebar/sidebar-nav-group.svelte', async () => {
-  const module = await import('@test-data/mocks/sidebar-nav-group.stub.svelte');
+vi.mock('#lib/components/sidebar/sidebar-nav-group.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/sidebar-nav-group.stub.svelte');
   return { default: module.default };
 });
 
@@ -98,16 +108,16 @@ const sidebarMocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: sidebarMocks.sidebarModeStore }));
+vi.mock('#lib/stores/sidebar-mode.svelte.ts', () => ({ sidebarModeStore: sidebarMocks.sidebarModeStore }));
 
 const specialMocks = vi.hoisted(() => ({ resolveSpecialAlbums: vi.fn() }));
-vi.mock('$lib/managers/special-albums.svelte', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/managers/special-albums.svelte')>()),
+vi.mock('#lib/managers/special-albums.svelte.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/managers/special-albums.svelte.ts')>()),
   resolveSpecialAlbums: specialMocks.resolveSpecialAlbums,
 }));
 
 const rowMenuMocks = vi.hoisted(() => ({ showSidebarRowMenu: vi.fn() }));
-vi.mock('$lib/utils/sidebar-row-menu', () => ({ showSidebarRowMenu: rowMenuMocks.showSidebarRowMenu }));
+vi.mock('#lib/utils/sidebar-row-menu.ts', () => ({ showSidebarRowMenu: rowMenuMocks.showSidebarRowMenu }));
 
 // Local Omarchy layer: a second library, which has no Curator, special albums or Vaults launcher of its own
 // (gallery/libraries)
@@ -124,7 +134,7 @@ describe('UserSidebar', () => {
     mocks.authManager.preferences.memories.sidebarWeb = true;
     mocks.authManager.preferences.people.enabled = false;
     mocks.authManager.preferences.people.sidebarWeb = false;
-    mocks.featureFlagsManager.value.map = false;
+    mocks.config.map.enabled = false;
     sidebarRowsHidden.set({});
     rowMenuMocks.showSidebarRowMenu.mockClear();
     mockPage.url = new URL('https://gallery.test/photos');
@@ -309,8 +319,9 @@ describe('UserSidebar', () => {
     ]);
     const outline = () =>
       [...document.body.querySelectorAll('a, div')]
-        .filter((element) =>
-          element.tagName === 'A' ? true : element.children.length === 0 && headings.has(element.textContent ?? ''),
+        .filter(
+          (element) =>
+            element.tagName === 'A' || (element.children.length === 0 && headings.has(element.textContent ?? '')),
         )
         .map((element) => (element.tagName === 'A' ? element.getAttribute('href') : `# ${element.textContent}`));
     const groupOf = (rows: (string | null)[], href: string) =>
@@ -379,7 +390,7 @@ describe('UserSidebar', () => {
     const people = () => screen.queryByRole('link', { name: /^people$/i });
 
     it('puts Places right after the Map', () => {
-      mocks.featureFlagsManager.value.map = true;
+      mocks.config.map.enabled = true;
 
       render(UserSidebar);
 

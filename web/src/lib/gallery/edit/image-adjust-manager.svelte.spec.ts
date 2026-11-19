@@ -1,12 +1,25 @@
+import { ImageAdjustManager, withImageAdjust } from '#lib/gallery/edit/image-adjust-manager.svelte.ts';
+import { imageAdjustFilter } from '#lib/gallery/edit/image-adjust.ts';
+import type { EditToolManager } from '#lib/managers/edit/edit-manager.svelte.ts';
+import { waitForWebsocketEvent } from '#lib/stores/websocket.ts';
+import { factory } from '#test/unit/factories.ts';
 import { editAsset, getAssetAdjust, removeAssetAdjust, removeAssetEdits, updateAssetAdjust } from '@immich/sdk';
-import { imageAdjustFilter } from '$lib/gallery/edit/image-adjust';
-import { ImageAdjustManager, withImageAdjust } from '$lib/gallery/edit/image-adjust-manager.svelte';
-import type { EditToolManager } from '$lib/managers/edit/edit-manager.svelte';
-import { waitForWebsocketEvent } from '$lib/stores/websocket';
-import { assetFactory } from '@test-data/factories/asset-factory';
 
-vi.mock('@immich/sdk');
-vi.mock('$lib/stores/websocket', () => ({ waitForWebsocketEvent: vi.fn() }));
+// Browser mode cannot automock `@immich/sdk` (its build uses `export *`): replace each function with a mock.
+vi.mock('@immich/sdk', async (importOriginal) => {
+  const module = await importOriginal<typeof import('@immich/sdk')>();
+  const mocks = Object.fromEntries(
+    Object.entries(module)
+      .filter(([, value]) => typeof value === 'function')
+      .map(([key]) => [key, vi.fn()]),
+  );
+  return { ...module, ...mocks };
+});
+// Browser mode rejects an import of a name the mock does not export, so keep the module's other exports.
+vi.mock('#lib/stores/websocket.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/stores/websocket.ts')>()),
+  waitForWebsocketEvent: vi.fn(),
+}));
 
 const waitForEditReady = vi.mocked(waitForWebsocketEvent);
 
@@ -120,7 +133,7 @@ describe(ImageAdjustManager.name, () => {
 
 describe('withImageAdjust', () => {
   let adjust: ImageAdjustManager;
-  const asset = assetFactory.build();
+  const asset = factory.asset();
 
   beforeEach(() => {
     vi.resetAllMocks();

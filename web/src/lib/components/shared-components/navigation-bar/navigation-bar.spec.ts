@@ -1,12 +1,14 @@
+import NavigationBar from '#lib/components/shared-components/navigation-bar/NavigationBar.svelte';
+import QueryTestWrapper from '#lib/gallery/components/query-test-wrapper.svelte';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { getNotificationsQuery } from '#lib/queries/notification.query.ts';
+import { libraryContextFile, secondLibrary, serving } from '#test/kioku/factories/library-context-factory.ts';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import NavigationBar from '$lib/components/shared-components/navigation-bar/NavigationBar.svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { libraryContextFile, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 
 const mocks = vi.hoisted(() => ({
   sidebarModeStore: {
@@ -22,67 +24,70 @@ const mocks = vi.hoisted(() => ({
   mediaQueryManager: { isFullSidebar: false },
 }));
 
-vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
-vi.mock('$lib/stores/sidebar.svelte', () => ({ sidebarStore: mocks.sidebarStore }));
-vi.mock('$lib/stores/media-query-manager.svelte', () => ({ mediaQueryManager: mocks.mediaQueryManager }));
+vi.mock('#lib/stores/sidebar-mode.svelte.ts', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
+vi.mock('#lib/stores/sidebar.svelte.ts', () => ({ sidebarStore: mocks.sidebarStore }));
+vi.mock('#lib/stores/media-query-manager.svelte.ts', () => ({ mediaQueryManager: mocks.mediaQueryManager }));
 
 // NavigationBar pulls in the search trigger, notification and account panels, the avatar
-// and theme button, and calls notificationManager.refresh() on mount - a network call.
-// Everything not under test is stubbed out so this spec exercises only the sidebar wiring.
-vi.mock('$lib/stores/notification-manager.svelte', () => ({
-  notificationManager: { notifications: [], refresh: vi.fn().mockResolvedValue(undefined) },
-}));
+// and theme button, and reads the unread notifications through a query - a network call, so
+// the query is seeded empty below (renderNavigationBar). Everything not under test is stubbed
+// out so this spec exercises only the sidebar wiring.
 
 // `ActionButton`'s `action` prop is required (not optional) and immediately destructures
 // it in `isEnabled`, so `Cast: undefined` crashes on mount. `$if: () => false` mirrors the
 // real cast action's own gating and keeps it hidden without touching NavigationBar's markup.
-vi.mock('$lib/services/app.service', () => ({
+vi.mock('#lib/services/app.service.ts', () => ({
   getGlobalActions: () => ({ Cast: { title: 'Cast', onAction: vi.fn(), $if: () => false } }),
 }));
 
-vi.mock('$lib/managers/global-search-manager.svelte', () => ({ globalSearchManager: { open: vi.fn() } }));
+vi.mock('#lib/managers/global-search-manager.svelte.ts', () => ({ globalSearchManager: { open: vi.fn() } }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: { authenticated: true, user: { name: 'Test', email: 'test@example.com' } },
 }));
 
 // Written out one by one on purpose: vi.mock is hoisted to the top of the module and
 // needs a literal path, so a loop over an array of paths silently fails to mock anything.
-vi.mock('$lib/components/global-search/global-search-input-trigger.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/global-search/global-search-input-trigger.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/navigation-bar/NotificationPanel.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/navigation-bar/NotificationPanel.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/navigation-bar/AccountInfoPanel.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/navigation-bar/AccountInfoPanel.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/UserAvatar.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/UserAvatar.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/ThemeButton.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/ThemeButton.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 
 // NavigationBar mounts real @immich/ui IconButtons (menu, search, upload, notifications),
-// which resolve a bits-ui Tooltip against a "Tooltip.Provider" context. TestWrapper supplies
+// which resolve a bits-ui Tooltip against a "Tooltip.Provider" context. QueryTestWrapper supplies
 // it (see other *.spec.ts files rendering real IconButton-based trees).
 type NavigationBarProps = { railAware?: boolean };
 
-const renderNavigationBar = (props: NavigationBarProps = {}) =>
-  render(TestWrapper as Component<{ component: typeof NavigationBar; componentProps: NavigationBarProps }>, {
-    component: NavigationBar,
-    componentProps: props,
-  });
+const renderNavigationBar = (props: NavigationBarProps = {}) => {
+  queryClient.setQueryData(getNotificationsQuery().queryKey, []);
+  return render(
+    QueryTestWrapper as Component<{ component: typeof NavigationBar; componentProps: NavigationBarProps }>,
+    {
+      component: NavigationBar,
+      componentProps: props,
+    },
+  );
+};
 
 // Local Omarchy layer: where it hides and shows the sidebar by hand the button is named by what it does to it
 const menuButton = () =>

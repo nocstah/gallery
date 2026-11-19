@@ -1,11 +1,11 @@
+import { libraryNamed } from '#lib/gallery/libraries/library-words.ts';
+import { animateRemoval } from '#lib/gallery/motion/index.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
 import { emptyTrash, restoreTrash } from '@immich/sdk';
 import { modalManager, toastManager, type ActionItem } from '@immich/ui';
 import { mdiDeleteForeverOutline, mdiHistory } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
-import { libraryNamed } from '$lib/gallery/libraries/library-words';
-import { animateRemoval } from '$lib/gallery/motion';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
 
 export const getTrashActions = ($t: MessageFormatter, assetCount: number) => {
   const RestoreAll: ActionItem = {

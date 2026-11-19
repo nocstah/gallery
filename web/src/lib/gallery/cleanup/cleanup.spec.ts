@@ -1,23 +1,23 @@
 import {
-  busiestYear,
-  rewindMinutes,
-  burstDecision,
-  burstMemberIds,
-  burstMarkOf,
-  burstTimeRange,
-  chunk,
   CLEANUP_QUEUE_SLUGS,
+  burstDecision,
+  burstMarkOf,
+  burstMemberIds,
+  burstTimeRange,
+  busiestYear,
+  chunk,
   dominantCity,
   monthDayLabel,
   nextUnreviewedDay,
   parseMonthDay,
   queueToSlug,
+  rewindMinutes,
   shadeLevel,
   shadeScale,
   shiftMonthDay,
   slugToQueue,
   todayMonthDay,
-} from '$lib/gallery/cleanup/cleanup';
+} from '#lib/gallery/cleanup/cleanup.ts';
 
 describe('cleanup utils', () => {
   it('computes today as month*100+day in local time', () => {

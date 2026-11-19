@@ -1,11 +1,11 @@
+import { kindAction } from '#lib/utils/curator-inbox.ts';
+import type { Suggestion } from '#lib/utils/curator.ts';
+import { InboxFactsLoader } from '#lib/utils/inbox-facts.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
 import { AssetTypeEnum, AssetVisibility } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import type { Suggestion } from '$lib/utils/curator';
-import { kindAction } from '$lib/utils/curator-inbox';
-import { InboxFactsLoader } from '$lib/utils/inbox-facts';
-import { assetFactory } from '@test-data/factories/asset-factory';
 import ReviewMode from './ReviewMode.svelte';
 
 // Local Omarchy layer: review mode decides from the keyboard, one suggestion at a time; a held key decides once (its
@@ -16,21 +16,21 @@ const { curatorMock, waitingInMock } = vi.hoisted(() => ({
   waitingInMock: vi.fn(),
 }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: curatorMock,
 }));
-vi.mock('$lib/utils/curator-inbox', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator-inbox')>()),
+vi.mock('#lib/utils/curator-inbox.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator-inbox.ts')>()),
   waitingIn: waitingInMock,
 }));
-vi.mock('$lib/components/curator/ReviewStage.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/curator/ReviewStage.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
   await waitLocale('en-US');
 });

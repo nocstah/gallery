@@ -2,15 +2,15 @@ import { rgbaToThumbHash } from 'thumbhash';
 import { deepen } from './film-backdrop';
 import {
   CARD_SCRIM,
-  darknessFor,
   FOOT_SCRIM,
   HEADROOM,
+  ROOM_SCRIM,
+  SHADE_MOST,
+  darknessFor,
   headScrimAt,
   imagePicture,
   relativeLuminance,
-  ROOM_SCRIM,
   scrimAt,
-  SHADE_MOST,
   shotLight,
   shotShade,
   thumbhashPicture,

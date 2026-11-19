@@ -1,53 +1,51 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
-  import { clickOutside } from '$lib/actions/click-outside';
-  import { listNavigation } from '$lib/actions/list-navigation';
-  import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
-  import PeopleMergeSelector from '$lib/components/people/people-merge-selector.svelte';
-  import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
-  import SelectionToolbar from '$lib/components/timeline/SelectionToolbar.svelte';
-  import SpacePhotoMenu from '$lib/gallery/photo-menu/SpacePhotoMenu.svelte';
-  import Timeline from '$lib/components/timeline/Timeline.svelte';
-  import TimelineRouteGroupingBar from '$lib/components/timeline/TimelineRouteGroupingBar.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import type { TimelineAsset, TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
-  import { timeBeforeShowLoadingSpinner } from '$lib/constants';
-  import PersonEditBirthDateModal from '$lib/modals/PersonEditBirthDateModal.svelte';
-  import PersonSuggestionBanner from '$lib/components/faces-page/person-suggestion-banner.svelte';
-  import PersonSuggestionReviewModal from '$lib/gallery/people/PersonSuggestionReviewModal.svelte';
-  import RepresentativeFacePickerModal from '$lib/modals/RepresentativeFacePickerModal.svelte';
-  import { Route } from '$lib/route';
+  import { clickOutside } from '#lib/actions/click-outside.ts';
+  import { listNavigation } from '#lib/actions/list-navigation.ts';
+  import ImageThumbnail from '#lib/components/assets/thumbnail/ImageThumbnail.svelte';
+  import PersonSuggestionBanner from '#lib/components/faces-page/person-suggestion-banner.svelte';
+  import PeopleMergeSelector from '#lib/components/people/people-merge-selector.svelte';
+  import ControlAppBar from '#lib/components/shared-components/ControlAppBar.svelte';
+  import SelectionToolbar from '#lib/components/timeline/SelectionToolbar.svelte';
+  import Timeline from '#lib/components/timeline/Timeline.svelte';
+  import TimelineRouteGroupingBar from '#lib/components/timeline/TimelineRouteGroupingBar.svelte';
+  import { timeBeforeShowLoadingSpinner } from '#lib/constants.ts';
+  import { timelineGroupingProps } from '#lib/gallery/filtered-timeline/timeline-grouping.svelte.ts';
+  import PersonSuggestionReviewModal from '#lib/gallery/people/PersonSuggestionReviewModal.svelte';
+  import { confirmAndMergeSpacePerson, findSpacePersonNamed } from '#lib/gallery/people/space-person-name-merge.ts';
+  import SpacePhotoMenu from '#lib/gallery/photo-menu/SpacePhotoMenu.svelte';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
+  import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import PersonEditBirthDateModal from '#lib/modals/PersonEditBirthDateModal.svelte';
+  import RepresentativeFacePickerModal from '#lib/modals/RepresentativeFacePickerModal.svelte';
+  import { Route } from '#lib/route.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
   import {
     createCrossOwnerMergeHandlers,
     runMergeWithCrossOwnerConfirmation,
     runScopedMergeWithCrossOwnerConfirmation,
-  } from '$lib/utils/cross-owner-merge';
-  import { getGlobalPersonThumbnailUrl, getSpacePersonThumbnailUrl } from '$lib/utils/global-person-route';
-  import { handleError } from '$lib/utils/handle-error';
-  import { locale } from '$lib/stores/preferences.store';
-  import { getSpacePersonFaceThumbnailUrl } from '$lib/utils/people-utils';
-  import { confirmAndMergeSpacePerson, findSpacePersonNamed } from '$lib/gallery/people/space-person-name-merge';
-  import { toScopedPersonRef as toPersonScopedRef } from '$lib/utils/scoped-person-ref';
-  import { getTimelineBucketZoomTarget, type ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
-  import { getTimelineTopVisibleAnchor } from '$lib/managers/timeline-manager/timeline-anchor';
+  } from '#lib/utils/cross-owner-merge.ts';
+  import { getGlobalPersonThumbnailUrl, getSpacePersonThumbnailUrl } from '#lib/utils/global-person-route.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { getSpacePersonFaceThumbnailUrl } from '#lib/utils/people-utils.ts';
+  import { toScopedPersonRef as toPersonScopedRef } from '#lib/utils/scoped-person-ref.ts';
   import {
+    RepresentativeFaceSource,
+    ScopedPersonProfileType,
+    SharedSpaceRole,
     confirmSpacePersonFaceSuggestion,
     detachScopedPerson,
     dismissSpacePersonFaceSuggestion,
-    getSpacePersonFaces,
-    getSpacePersonFaceSuggestions,
-    ignoreSpacePersonFaceSuggestion,
     getSpacePeople,
+    getSpacePersonFaceSuggestions,
+    getSpacePersonFaces,
+    ignoreSpacePersonFaceSuggestion,
     mergeSpacePeople,
-    RepresentativeFaceSource,
     searchPerson,
-    SharedSpaceRole,
-    Type2 as ScopedPersonProfileType,
-    updateSpacePersonRepresentativeFace,
     updateSpacePerson,
+    updateSpacePersonRepresentativeFace,
     type PersonFaceResponseDto,
     type PersonFaceSuggestionResponseDto,
     type PersonResponseDto,
@@ -67,6 +65,7 @@
   import { DateTime } from 'luxon';
   import { tick } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { goto, invalidateAll } from '$app/navigation';
   import type { PageData } from './$types';
 
   interface Props {
@@ -82,8 +81,7 @@
   const routeStateKey = $derived(`${data.space.id}:${data.person.id}:${data.person.updatedAt}:${data.action ?? ''}`);
 
   let timelineManager = $state<TimelineManager>() as TimelineManager;
-  let timelineGrouping = $state<TimelineGrouping>('day');
-  let temporalAnchor = $state<TimelineTemporalAnchor | undefined>();
+  const timelineGrouping = timelineGroupingProps(() => timelineManager);
   let personOverride = $state<SharedSpacePersonResponseDto>();
   let personOverrideKey = $state('');
   const person = $derived(personOverrideKey === routeStateKey && personOverride ? personOverride : data.person);
@@ -116,7 +114,7 @@
   });
   const options = $derived({
     ...baseTimelineOptions,
-    grouping: timelineGrouping,
+    grouping: timelineGrouping.grouping,
   });
 
   const currentMember = $derived(members.find((member) => member.userId === authManager.user.id));
@@ -280,6 +278,7 @@
   const isSharedSpacePerson = (person: ScopedMergeCandidate): person is SharedSpacePersonResponseDto =>
     'assetCount' in person;
 
+  // eslint-disable-next-line unicorn/no-unnecessary-parameters
   const toScopedPersonRef = (person: ScopedMergeCandidate, fallbackSpaceId = space.id): ScopedPersonProfileRefDto => {
     if (!isSharedSpacePerson(person)) {
       return toPersonScopedRef(person);
@@ -374,26 +373,6 @@
   const handleUndoAssetDelete = (assets: TimelineAsset[]) => {
     timelineManager.upsertAssets(assets);
   };
-
-  function handleTimelineGroupingChange(grouping: TimelineGrouping) {
-    const anchor = getTimelineTopVisibleAnchor(timelineManager);
-    timelineGrouping = grouping;
-    temporalAnchor = anchor;
-  }
-
-  function handleTimelineBucketActivate(bucket: ActivatableTimelineBucket) {
-    if (assetMultiSelectManager.selectionActive) {
-      return;
-    }
-
-    const result = getTimelineBucketZoomTarget(bucket);
-    if (!result) {
-      return;
-    }
-
-    timelineGrouping = result.grouping;
-    temporalAnchor = result.anchor;
-  }
 
   async function closeMergeFlow() {
     setAction(null);
@@ -616,10 +595,9 @@
   <!-- Sticky grouping switcher: lives outside the scrolling timeline so it stays visible (see Tags).
        mt-12 clears the taller ControlAppBar, which exceeds the --control-bar-height padding reserve. -->
   <TimelineRouteGroupingBar
-    grouping={timelineGrouping}
+    {...timelineGrouping.barProps}
     hidden={assetMultiSelectManager.selectionActive || action === 'merge'}
     class="mt-12 shrink-0"
-    onGroupingChange={handleTimelineGroupingChange}
   />
   <div class="relative min-h-0 flex-1">
     {#key person.id}
@@ -633,11 +611,7 @@
         onEscape={handleBack}
         spaceId={space.id}
         space={{ id: space.id, canWrite: isEditor }}
-        {temporalAnchor}
-        onTimelineBucketActivate={handleTimelineBucketActivate}
-        onTemporalAnchorResolved={() => (temporalAnchor = undefined)}
-        grouping={timelineGrouping}
-        onGroupingChange={handleTimelineGroupingChange}
+        {...timelineGrouping.timelineProps}
       >
         <div
           class="relative p-4 pt-12 sm:px-6"

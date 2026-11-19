@@ -1,17 +1,17 @@
-import type { AssetResponseDto } from '@immich/sdk';
-import type { AdjustSettings } from '$lib/components/curator/adjust-math';
-import type { FilmPlan } from '$lib/components/memories/film/film-plan';
-import type { MemoryPresentation } from '$lib/components/memories/memory-sharing';
-import { vaultEdition } from '$lib/gallery/edition';
+import type { AdjustSettings } from '#lib/components/curator/adjust-math.ts';
+import type { FilmPlan } from '#lib/components/memories/film/film-plan.ts';
+import type { MemoryPresentation } from '#lib/components/memories/memory-sharing.ts';
+import { vaultEdition } from '#lib/gallery/edition.ts';
 import {
   curatorOffers,
   isMainLibrary,
   libraryCuratorPort,
   libraryHas,
-} from '$lib/gallery/libraries/library-context.svelte';
-import type { CuratorFeature } from '$lib/gallery/libraries/library-file';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-stacks';
+} from '#lib/gallery/libraries/library-context.svelte.ts';
+import type { CuratorFeature } from '#lib/gallery/libraries/library-file.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import type { PersonStackGroup } from '#lib/managers/timeline-manager/person-stacks.ts';
+import type { AssetResponseDto } from '@immich/sdk';
 
 // Local Omarchy layer: client for Curator (~/code/curator), the local AI service behind the AI inbox. Curator runs
 // beside Gallery on port 2290 locally (a library with a Curator of its own names that one's port: curatorPort), or
@@ -19,15 +19,15 @@ import type { PersonStackGroup } from '$lib/managers/timeline-manager/person-sta
 // goes out with credentials. Nothing here writes to Gallery directly: accepting a suggestion asks Curator to apply it.
 
 /**
- * Local Omarchy layer: whether Curator works for whoever is signed in. Curator acts for its owner only (curator/api.py
- * answers every other Gallery user 403 "Curator acts for its owner only"), and its owner is the owner of its API key,
- * this server's one admin, so the admin flag says it without asking Curator. Every Curator tool outside the owner's
- * own pages asks this first: a family member's account is offered none of them, and nothing asks Curator anything for
- * it. Read in a template, a $derived or an effect, it follows a sign-out and the next sign-in in the same tab. A vault's
- * Gallery (gallery/edition's vault edition) has no Curator, so there it is nobody's, nor in a library without a Curator
- * of its own (gallery/libraries), where this host's Curator is Main's. A tool then asks gallery/libraries' curatorOffers
- * whether this library's Curator offers what it is for (a library's Curator may run only some of Main's jobs).
- */
+Local Omarchy layer: whether Curator works for whoever is signed in. Curator acts for its owner only (curator/api.py
+answers every other Gallery user 403 "Curator acts for its owner only"), and its owner is the owner of its API key,
+this server's one admin, so the admin flag says it without asking Curator. Every Curator tool outside the owner's
+own pages asks this first: a family member's account is offered none of them, and nothing asks Curator anything for
+it. Read in a template, a $derived or an effect, it follows a sign-out and the next sign-in in the same tab. A vault's
+Gallery (gallery/edition's vault edition) has no Curator, so there it is nobody's, nor in a library without a Curator
+of its own (gallery/libraries), where this host's Curator is Main's. A tool then asks gallery/libraries' curatorOffers
+whether this library's Curator offers what it is for (a library's Curator may run only some of Main's jobs).
+*/
 export const curatorIsMine = (): boolean =>
   !vaultEdition() && libraryHas('curator') && authManager.authenticated && authManager.user.isAdmin;
 
@@ -78,11 +78,11 @@ export type Story = {
 };
 
 /**
- * What Curator knows of a memory (GET /api/memories/facts), for its title and its film: the places worth naming (most
- * photos first, at most two) and the named people (at most three), the first and last day of its photos
- * ('YYYY-MM-DD'), how many photos it stands for (a trip's whole count, more than the memory shows), the best photo for
- * its cover, and where the faces are in each photo (normalised centres, 0 to 1), for the film's drift.
- */
+What Curator knows of a memory (GET /api/memories/facts), for its title and its film: the places worth naming (most
+photos first, at most two) and the named people (at most three), the first and last day of its photos
+('YYYY-MM-DD'), how many photos it stands for (a trip's whole count, more than the memory shows), the best photo for
+its cover, and where the faces are in each photo (normalised centres, 0 to 1), for the film's drift.
+*/
 export type MemoryFacts = {
   places: string[];
   people: string[];
@@ -94,9 +94,9 @@ export type MemoryFacts = {
 };
 
 /**
- * A song from the owner's own library that Curator picked for a memory (GET /api/memories/{id}/music), best first;
- * `duration` in seconds, `src` a path on Curator's origin that an <audio> plays with the session cookie.
- */
+A song from the owner's own library that Curator picked for a memory (GET /api/memories/{id}/music), best first;
+`duration` in seconds, `src` a path on Curator's origin that an <audio> plays with the session cookie.
+*/
 export type MemoryTrack = {
   id: string;
   title: string;
@@ -201,10 +201,10 @@ export type JobRow = {
 export type JobKind = { kind: string; title: string; heavy: boolean };
 
 /**
- * A bank transfer slip or payment QR code (Curator's jobs/slips.py) with its two readings of the amount, in baht: one
- * from Gallery's text recognition, one from the vision model. `agree`: both, and the same; `differ`: both, not the
- * same; `single`: only one; `none`: no amount (a code to receive money, say).
- */
+A bank transfer slip or payment QR code (Curator's jobs/slips.py) with its two readings of the amount, in baht: one
+from Gallery's text recognition, one from the vision model. `agree`: both, and the same; `differ`: both, not the
+same; `single`: only one; `none`: no amount (a code to receive money, say).
+*/
 export type Slip = {
   id: string;
   owner_id: string;
@@ -218,9 +218,9 @@ export type Slip = {
 };
 
 /**
- * Every slip, the QR album when there is one, a reading under way (its job id), and whether new slips and QR codes are
- * filed into QR as they arrive (Curator's qr.watch).
- */
+Every slip, the QR album when there is one, a reading under way (its job id), and whether new slips and QR codes are
+filed into QR as they arrive (Curator's qr.watch).
+*/
 export type SlipList = { album_id: string | null; slips: Slip[]; reading: number | null; auto: boolean };
 
 export type Health = {
@@ -312,7 +312,7 @@ export type BookJob = {
 };
 
 /** A memory's film saved as video (Curator's curator/film.py): the plan the film plays, the song playing, and the
- * title the file is named after. Curator takes five minutes of film at most. */
+title the file is named after. Curator takes five minutes of film at most. */
 export type FilmRequest = {
   memoryId: string;
   plan: FilmPlan;
@@ -326,7 +326,7 @@ export const FILM_MOST_SECONDS = 300;
 export type MemoryShare = { memoryId: string; music: boolean };
 
 /** What forgetting a link's film did: whether one was kept for the link (false the second time), and how many songs no
- * other film plays went with it. */
+other film plays went with it. */
 export type ForgottenShare = { forgotten: boolean; songs: number };
 
 /** What film.render made: the film as an MP4, 1080p at 30 fps, kept a week. */
@@ -375,10 +375,10 @@ export type AskResult = {
 export type DecideResult = { applied?: number[]; failed?: number[]; rejected?: number; job?: number };
 
 /**
- * Undo refuses where the photo changed again since (conflicts) and reports what Gallery refused (failed). Only applied
- * suggestions are taken back (the rest are skipped); with reopen, those taken back wait in the inbox again (reopened).
- * More than 20 at once go to Curator's worker after its backup rule, as accepting that many does: then only `job`.
- */
+Undo refuses where the photo changed again since (conflicts) and reports what Gallery refused (failed). Only applied
+suggestions are taken back (the rest are skipped); with reopen, those taken back wait in the inbox again (reopened).
+More than 20 at once go to Curator's worker after its backup rule, as accepting that many does: then only `job`.
+*/
 export type UndoResult = {
   undone: number[];
   conflicts: { id: number; reason: string }[];
@@ -478,17 +478,17 @@ export type CuratorOverview = {
 
 export type SmartStrictness = 'loose' | 'normal' | 'strict';
 /** a smart album's saved search: Gallery's metadata-search filters, the typed words, and the Photos page URL it came
- * from (to open it there again for editing) */
+from (to open it there again for editing) */
 export type SmartRule = {
   search: Record<string, unknown>;
   query?: string | null;
   strictness: SmartStrictness;
   filters: { url?: string };
   /** one of Apple's media types Curator tells from the camera data (selfies, panoramas, …); no Photos page search
-   * holds it, so such a rule is not edited there */
+  holds it, so such a rule is not edited there */
   media?: string | null;
   /** with two or more people in the search, how many of them each photo holds: from 1 (any of them) to one fewer than
-   * all. Left out, all of them together, as Gallery's search finds them */
+  all. Left out, all of them together, as Gallery's search finds them */
   people_at_least?: number | null;
 };
 export type SmartAlbum = {
@@ -515,9 +515,9 @@ export class CuratorError extends Error {
 const CURATOR_PORT = 2290;
 
 /**
- * The port Curator listens on, which the words for Curator not answering name: Main's 2290, or the one a library with
- * a Curator of its own names in its kioku-library.json (gallery/libraries).
- */
+The port Curator listens on, which the words for Curator not answering name: Main's 2290, or the one a library with
+a Curator of its own names in its kioku-library.json (gallery/libraries).
+*/
 export const curatorPort = (): number => libraryCuratorPort() ?? CURATOR_PORT;
 
 // HTTPS access uses the same origin for API calls, streams and downloads. The local Curator listener is HTTP;
@@ -590,7 +590,7 @@ const originFor = (path: string) => {
 const api = (path: string) => `${originFor(path)}/api${path}`;
 
 /** A song Curator serves (a MemoryTrack's `src`, a path on its origin), for an <audio> element: no crossorigin, so the
- * session cookie goes with it as with an image. */
+session cookie goes with it as with an image. */
 export const musicUrl = (src: string) => (/^https?:\/\//.test(src) ? src : `${originFor('/music')}${src}`);
 
 /** A song's timed lyrics; none when Curator has none or cannot be reached, for the film goes on without them. */
@@ -636,10 +636,10 @@ export const reelUrl = (suggestionId: number) => api(`/reels/${suggestionId}.mp4
 export const restoredUrl = (suggestionId: number, which: 'before' | 'after', media: 'jpg' | 'mp4', width?: number) =>
   api(`/restored/${suggestionId}/${which}.${media}${width ? `?width=${width}` : ''}`);
 /**
- * Local Omarchy layer: a person on a "People in this video" card at their moment, read from the video by Curator: a
- * square of the frame round their face (`face`, the card's picture) or the whole frame with the face boxed (`frame`,
- * the inspector's), `width` pixels across.
- */
+Local Omarchy layer: a person on a "People in this video" card at their moment, read from the video by Curator: a
+square of the frame round their face (`face`, the card's picture) or the whole frame with the face boxed (`frame`,
+the inspector's), `width` pixels across.
+*/
 export const videoPersonUrl = (suggestionId: number, personId: string, view: 'face' | 'frame', width?: number) =>
   api(
     `/video-people/${suggestionId}/${encodeURIComponent(personId)}.jpg?view=${view}${width ? `&width=${width}` : ''}`,
@@ -669,7 +669,7 @@ const call = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
 const post = <T>(path: string, body: unknown) => call<T>(path, { method: 'POST', body: JSON.stringify(body) });
 
 /** The same calls for a fork module with Curator calls of its own (gallery/series): one address, credentials and
- * errors for all of them. */
+errors for all of them. */
 export { call as curatorCall, post as curatorPost };
 
 export const curator = {
@@ -686,14 +686,14 @@ export const curator = {
   /** take back what was accepted; `reopen` puts each one back in the inbox (Undo all, a card's Undo), History's does not */
   undo: (ids: number[], reopen = false) => post<UndoResult>('/suggestions/undo', { ids, reopen }),
   /** a rejection or a failed apply back to waiting; the ids it leaves out stay as they were (a restored version whose
-   * file is gone, a week after it was rejected) */
+  file is gone, a week after it was rejected) */
   reopen: (ids: number[]) => post<{ reopened: number[] }>('/suggestions/reopen', { ids }),
   libraryHealth: () => call<LibraryHealth>('/library-health'),
   history: (limit = 100) => call<HistoryEntry[]>(`/history?limit=${limit}`),
   kinds: () => call<JobKind[]>('/kinds'),
   jobs: (limit = 30) => call<JobRow[]>(`/jobs?limit=${limit}`),
   /** the runs that failed in the last `days` (a Curator from before 2026-10-18 gives the newest runs of any kind:
-   * filtered here too) */
+  filtered here too) */
   failedJobs: (days = 7, limit = 50) =>
     call<JobRow[]>(`/jobs?status=failed&days=${days}&limit=${limit}`).then((rows) =>
       rows.filter((row) => row.status === 'failed'),
@@ -727,7 +727,7 @@ export const curator = {
     }),
   suggestion: (id: number) => call<Suggestion>(`/suggestions/${id}`),
   /** the object-removal brush: a mask painted over a photo (a PNG data URL, white where it is to be filled in); the
-   * job's result names the suggestion holding the new version */
+  job's result names the suggestion holding the new version */
   inpaint: (assetId: string, mask: string) =>
     post<{ job: number; mask: string }>('/inpaint', { asset_id: assetId, mask }),
   /** the library chat's earlier conversations, newest first */
@@ -735,15 +735,15 @@ export const curator = {
   chat: (id: string) => call<ChatDetail>(`/chats/${encodeURIComponent(id)}`),
   forgetChat: (id: string) => call<void>(`/chats/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   /** a Live Photo effect picked in the photo viewer (`seconds`: where in the clip, for a key photo); the job's result
-   * names the suggestion holding the new version */
+  names the suggestion holding the new version */
   liveEffect: (assetId: string, effect: 'loop' | 'bounce' | 'long-exposure' | 'key-photo' | 'cinematic', seconds = 0) =>
     post<{ job: number }>('/live-effect', { asset_id: assetId, effect, seconds }),
   /** the frame a video (or a Live Photo's clip) is on, `seconds` in as the player counts, saved as a new photo that
-   * joins `albumId` (the album the viewer is open in) when the owner may add to it; the job's result is a SavedFrame */
+  joins `albumId` (the album the viewer is open in) when the owner may add to it; the job's result is a SavedFrame */
   saveFrame: (assetId: string, seconds: number, albumId?: string) =>
     post<{ job: number }>('/frame', { asset_id: assetId, seconds, ...(albumId && { album_id: albumId }) }),
   /** Keep in the photo viewer's Adjust panel: the settings its preview showed, rendered at full size; the job's result
-   * names the suggestion holding the new version */
+  names the suggestion holding the new version */
   adjust: (assetId: string, settings: AdjustSettings) =>
     post<{ job: number }>('/adjust', { asset_id: assetId, settings }),
   overview: () => call<CuratorOverview>('/overview'),
@@ -752,7 +752,7 @@ export const curator = {
   /** queue tonight's jobs now */
   runTonightNow: () => post<{ jobs: number[] }>('/schedule/run-now', {}),
   /** a video (or a Live Photo's clip) made ready for WhatsApp or Telegram: the file when it is already made, else the
-   * job making it (its result is a ShareResult) */
+  job making it (its result is a ShareResult) */
   shareVideo: (assetId: string, app: ShareApp) =>
     post<{ ready?: ShareResult; job?: number }>('/share', { asset_id: assetId, preset: app }),
   /** pick a stack's best photo, carefully (a job of 10-60 seconds; its result is a StackPick) */
@@ -768,7 +768,7 @@ export const curator = {
   /** the films Curator keeps for shared links, by link id: which links play a memory, which memory, with songs or not */
   memoryShares: () => call<{ shares: Record<string, MemoryShare> }>('/memories/shares'),
   /** once Gallery has deleted the link: Curator forgets the film it kept for it (its snapshot, its key index, the songs
-   * no other film plays); Curator refuses (409) while Gallery still has the link, and a second call changes nothing */
+  no other film plays); Curator refuses (409) while Gallery still has the link, and a second call changes nothing */
   forgetMemoryShare: (memoryId: string, linkId: string) =>
     call<ForgottenShare>(`/memories/${encodeURIComponent(memoryId)}/share/${encodeURIComponent(linkId)}`, {
       method: 'DELETE',
@@ -798,17 +798,17 @@ export const curator = {
 };
 
 /**
- * What became of a link's film once Gallery deleted the link: Curator forgot it, kept none for the link, or could not
- * forget it now (`later`: not answering, or refusing), so its nightly sweep does; `unsure` when Curator could not even
- * say whether it kept one.
- */
+What became of a link's film once Gallery deleted the link: Curator forgot it, kept none for the link, or could not
+forget it now (`later`: not answering, or refusing), so its nightly sweep does; `unsure` when Curator could not even
+say whether it kept one.
+*/
 export type FilmForgotten = 'forgotten' | 'none' | 'later' | 'unsure';
 
 /**
- * Local Omarchy layer: after a link is turned off (deleted in Gallery), the film Curator kept for it goes too: the films
- * Curator keeps say whether the link played one, and of which memory, so a memory's link is known for what it is, not
- * guessed from its shape. Never throws: the link is off whatever Curator answers.
- */
+Local Omarchy layer: after a link is turned off (deleted in Gallery), the film Curator kept for it goes too: the films
+Curator keeps say whether the link played one, and of which memory, so a memory's link is known for what it is, not
+guessed from its shape. Never throws: the link is off whatever Curator answers.
+*/
 export const forgetLinkFilm = async (linkId: string): Promise<FilmForgotten> => {
   let film: MemoryShare | undefined;
   try {
@@ -829,9 +829,9 @@ export const forgetLinkFilm = async (linkId: string): Promise<FilmForgotten> => 
 };
 
 /**
- * Server-sent events, fed in pieces as they arrive: each complete block ("event: name", "data: JSON", a blank line)
- * becomes one ChatEvent. A block cut between two pieces waits for the rest; a malformed one is skipped.
- */
+Server-sent events, fed in pieces as they arrive: each complete block ("event: name", "data: JSON", a blank line)
+becomes one ChatEvent. A block cut between two pieces waits for the rest; a malformed one is skipped.
+*/
 export const createChatEventParser = (onEvent: (event: ChatEvent) => void) => {
   let buffer = '';
   const emit = (block: string) => {
@@ -873,10 +873,10 @@ export const createChatEventParser = (onEvent: (event: ChatEvent) => void) => {
 };
 
 /**
- * Ask the library chat one question (a new conversation when `chatId` is null) and hand each event to `onEvent` as
- * it streams. Resolves 'ended' when the stream closes and 'aborted' when `signal` stopped it; throws a CuratorError
- * when Curator does not answer or refuses (status 0: not reachable).
- */
+Ask the library chat one question (a new conversation when `chatId` is null) and hand each event to `onEvent` as
+it streams. Resolves 'ended' when the stream closes and 'aborted' when `signal` stopped it; throws a CuratorError
+when Curator does not answer or refuses (status 0: not reachable).
+*/
 export const chatStream = async (
   chatId: string | null,
   message: string,
@@ -925,10 +925,10 @@ export const chatStream = async (
 };
 
 /**
- * Poll a Curator job until it leaves the queue, asking every `every` milliseconds (a quick job wants it sooner). Local
- * Omarchy layer: while another account is signed in in the tab, the job its owner started is not asked about
- * (curatorIsMine); it is followed again once Curator's owner is back.
- */
+Poll a Curator job until it leaves the queue, asking every `every` milliseconds (a quick job wants it sooner). Local
+Omarchy layer: while another account is signed in in the tab, the job its owner started is not asked about
+(curatorIsMine); it is followed again once Curator's owner is back.
+*/
 export const waitForJob = async (id: number, onProgress?: (job: JobRow) => void, every = 1500) => {
   for (;;) {
     if (curatorIsMine()) {

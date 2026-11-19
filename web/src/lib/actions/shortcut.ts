@@ -1,4 +1,4 @@
-import { matchesShortcut, shouldIgnoreEvent as ignoredByUi, type ShortcutOptions } from '@immich/ui';
+import { shouldIgnoreEvent as ignoredByUi, matchesShortcut, type ShortcutOptions } from '@immich/ui';
 import type { ActionReturn } from 'svelte/action';
 import { on } from 'svelte/events';
 

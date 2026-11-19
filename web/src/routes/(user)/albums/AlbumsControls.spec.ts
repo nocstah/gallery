@@ -1,13 +1,19 @@
+import {
+  AlbumGroupBy,
+  AlbumSortBy,
+  AlbumViewMode,
+  SortOrder,
+  albumViewSettings,
+} from '#lib/stores/preferences.store.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
 import { fireEvent, screen, within } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { AlbumGroupBy, AlbumSortBy, AlbumViewMode, albumViewSettings, SortOrder } from '$lib/stores/preferences.store';
-import { renderWithTooltips } from '$tests/helpers';
 import AlbumsControls from './AlbumsControls.svelte';
 
 describe('AlbumsControls toolbar order', () => {
   beforeAll(async () => {
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
     await waitLocale('en-US');
   });
@@ -26,7 +32,7 @@ describe('AlbumsControls toolbar order', () => {
 // View menu, where each had a control of its own in the bar
 describe('AlbumsControls view sheet', () => {
   beforeAll(async () => {
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
     await waitLocale('en-US');
   });

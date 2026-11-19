@@ -96,10 +96,10 @@ const joins = (item: { since: string }, at: string) =>
   ms(item.since) - ms(at) <= MERGE_GAP_MS && dayKey(item.since) === dayKey(at);
 
 /**
- * A Space's activity as feed items: photos added or removed (one person's batches in a sitting as one item), albums
- * put in or taken out, people joining and leaving. Faces, people, covers, roles and renames are the Space's own
- * housekeeping and stay on its Activity page.
- */
+A Space's activity as feed items: photos added or removed (one person's batches in a sitting as one item), albums
+put in or taken out, people joining and leaving. Faces, people, covers, roles and renames are the Space's own
+housekeeping and stay on its Activity page.
+*/
 export const spaceItems = (
   space: { id: string; name: string },
   activities: SharedSpaceActivityResponseDto[],
@@ -157,9 +157,9 @@ export const spaceItems = (
 };
 
 /**
- * A shared album's comments and hearts as feed items: per day, its comments as one item (each with its text and
- * photo) and its hearts as another ("3 hearts on 2 photos").
- */
+A shared album's comments and hearts as feed items: per day, its comments as one item (each with its text and
+photo) and its hearts as another ("3 hearts on 2 photos").
+*/
 export const reactionItems = (album: AlbumResponseDto, activities: ActivityResponseDto[]): FeedItem[] => {
   const place: FeedPlace = { kind: 'album', id: album.id, name: album.albumName };
   const days = new Map<string, ActivityResponseDto[]>();
@@ -204,9 +204,9 @@ export const reactionItems = (album: AlbumResponseDto, activities: ActivityRespo
 };
 
 /**
- * The photos new in a shared album since this browser last looked, as one item per person and sitting (the same
- * merge as a Space's adds): who uploaded them comes from the album's members, me included.
- */
+The photos new in a shared album since this browser last looked, as one item per person and sitting (the same
+merge as a Space's adds): who uploaded them comes from the album's members, me included.
+*/
 export const freshItems = (album: AlbumResponseDto, assets: AssetResponseDto[], me: FeedPerson): FeedItem[] => {
   const place: FeedPlace = { kind: 'album', id: album.id, name: album.albumName };
   const members = new Map(album.albumUsers.map(({ user }) => [user.id, toFeedPerson(user)]));
@@ -289,7 +289,7 @@ export const groupByDay = (items: FeedItem[]): FeedDay[] => {
 };
 
 /** Items without the photos that are gone (put in the trash from the viewer): an add counts them out, and goes when
- * nothing it added is left. */
+nothing it added is left. */
 export const withoutPhotos = (items: FeedItem[], gone: ReadonlySet<string>): FeedItem[] =>
   gone.size === 0
     ? items
@@ -300,9 +300,9 @@ export const withoutPhotos = (items: FeedItem[], gone: ReadonlySet<string>): Fee
         }
         if (item.kind === 'added') {
           const count = item.count - (item.photoIds.length - photoIds.length);
-          return count > 0 ? [{ ...item, photoIds, count }] : [];
+          return count > 0 ? { ...item, photoIds, count } : [];
         }
-        return [{ ...item, photoIds }];
+        return { ...item, photoIds };
       });
 
 /** The full date and time, for a time's tooltip. */
@@ -323,9 +323,9 @@ const SITTING_MAX_MS = 12 * 60 * 60 * 1000;
 const FIRST_LOOK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Since when photos in shared albums count as new, by this browser's last look at Shared (a per-browser mark, like the
- * layer's other marks), and the mark moved to now. Storage that is blocked or damaged makes every look a first one.
- */
+Since when photos in shared albums count as new, by this browser's last look at Shared (a per-browser mark, like the
+layer's other marks), and the mark moved to now. Storage that is blocked or damaged makes every look a first one.
+*/
 export const takeSharedVisit = (now: number): number => {
   // seen: the last look; since: what counted as new then; start: when that sitting began
   let previous: { seen: number; since: number; start: number } | undefined;

@@ -1,16 +1,4 @@
 import {
-  searchSmartFacets,
-  type AssetResponseDto,
-  type AssetVisibility,
-  type SmartSearchFacetsResponseDto,
-} from '@immich/sdk';
-import { modalManager } from '@immich/ui';
-import { untrack } from 'svelte';
-import { SvelteMap } from 'svelte/reactivity';
-import { get } from 'svelte/store';
-import { goto } from '$app/navigation';
-import { page } from '$app/state';
-import {
   clearFilters,
   createFilterState,
   getActiveFilterCount,
@@ -18,46 +6,67 @@ import {
   type FilterPanelConfig,
   type FilterState,
   type FilterSuggestionsResponse,
-} from '$lib/components/filter-panel/filter-panel';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
+} from '#lib/components/filter-panel/filter-panel.ts';
+import { getTimelineTopVisibleAnchor } from '#lib/gallery/timeline/timeline-anchor.ts';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
 import {
   registerSelectionContext,
   type RegisterSelectionContextOptions,
-} from '$lib/managers/command-context-manager.svelte';
-import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-import { getTimelineTopVisibleAnchor } from '$lib/managers/timeline-manager/timeline-anchor';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
+} from '#lib/managers/command-context-manager.svelte.ts';
+import { globalSearchManager } from '#lib/managers/global-search-manager.svelte.ts';
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
 import type {
   TimelineAsset,
   TimelineGrouping,
   TimelineManagerOptions,
   TimelineTemporalAnchor,
-} from '$lib/managers/timeline-manager/types';
-import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
-import type { SearchTerms } from '$lib/services/search.service';
-import { lang } from '$lib/stores/preferences.store';
-import { withNameCapture } from '$lib/utils/filter-name-capture';
-import { resolveFilterNames } from '$lib/utils/filter-name-resolution';
-import { buildFilterStateUrl, isFilterStateUrlUnchanged, withoutAtParam } from '$lib/utils/filter-target';
-import { handlePhotosRemoveFilter } from '$lib/utils/photos-filter-options';
-import { removeSearchResults, selectAllSearchResults, updateSearchResults } from '$lib/utils/search-result-selection';
+} from '#lib/managers/timeline-manager/types.ts';
+import SearchAddAllToCollectionModal from '#lib/modals/SearchAddAllToCollectionModal.svelte';
+import type { SearchTerms } from '#lib/services/search.service.ts';
+import { lang } from '#lib/stores/preferences.store.ts';
+import { isEnabled } from '#lib/utils.ts';
+import { withNameCapture } from '#lib/utils/filter-name-capture.ts';
+import { resolveFilterNames } from '#lib/utils/filter-name-resolution.ts';
+import { buildFilterStateUrl, isFilterStateUrlUnchanged, withoutAtParam } from '#lib/utils/filter-target.ts';
+import { handlePhotosRemoveFilter } from '#lib/utils/photos-filter-options.ts';
+import {
+  removeSearchResults,
+  selectAllSearchResults,
+  updateSearchResults,
+} from '#lib/utils/search-result-selection.ts';
 import {
   buildSearchablePageUrl,
   getSearchablePageFilterState,
   getSearchablePageState,
-} from '$lib/utils/searchable-page-search';
+} from '#lib/utils/searchable-page-search.ts';
 import {
   buildSmartSearchFacetKey,
   buildSmartSearchFacetsParams,
   mapSmartSearchFacetsToFilterSuggestions,
-} from '$lib/utils/space-search';
-import { clearTimelineTemporalFilter } from '$lib/utils/timeline-temporal-filters';
+} from '#lib/utils/space-search.ts';
+import { clearTimelineTemporalFilter } from '#lib/utils/timeline-temporal-filters.ts';
 import {
   getTimelineBucketZoomTarget,
   getTimelineManagerTimeBuckets,
   type ActivatableTimelineBucket,
-} from '$lib/utils/timeline-zoom-navigation';
-import { consumeTypedSearchNamesInto } from '$lib/utils/typed-search/typed-search-name-cache';
+} from '#lib/utils/timeline-zoom-navigation.ts';
+import { consumeTypedSearchNamesInto } from '#lib/utils/typed-search/typed-search-name-cache.ts';
+import {
+  searchSmartFacets,
+  type AssetResponseDto,
+  type AssetVisibility,
+  type SmartSearchFacetsResponseDto,
+} from '@immich/sdk';
+import { modalManager, type ActionItem } from '@immich/ui';
+import { mapValues } from 'lodash-es';
+import { untrack } from 'svelte';
+import { SvelteMap } from 'svelte/reactivity';
+import { get } from 'svelte/store';
+import { goto } from '$app/navigation';
+import { page } from '$app/state';
+
+// SvelteKit 3's page.url is read-only; the URL helpers take a URL. This is a throwaway copy, not reactive state.
+const currentPageUrl = () => new URL(page.url.href);
 
 /** The route's smart-search scope; the keys match `SmartSearchResults`' props. */
 export type SmartSearchScope = { withSharedSpaces?: boolean; spaceId?: string; albumIds?: string[] };
@@ -77,14 +86,14 @@ export type FilteredTimelineConfig = {
   /** Browse-mode timeline query for the current filters; the controller adds `grouping`. */
   timelineOptions: (filters: FilterState) => TimelineManagerOptions;
   /**
-   * Browse-mode panel config. In query mode the controller answers suggestions, baseline and the
-   * city/camera-model providers from the smart-search facets instead.
-   */
+  Browse-mode panel config. In query mode the controller answers suggestions, baseline and the
+  city/camera-model providers from the smart-search facets instead.
+  */
   browseConfig: () => FilterPanelConfig;
   /**
-   * `searchable` (photos style) writes `q`/`sort` with the filters and re-hydrates on any URL
-   * change. `filter-state` (album style) writes only filter params and ignores `?at=` churn.
-   */
+  `searchable` (photos style) writes `q`/`sort` with the filters and re-hydrates on any URL
+  change. `filter-state` (album style) writes only filter params and ignores `?at=` churn.
+  */
   urlMode?: 'searchable' | 'filter-state';
   /** `filter-state` only: URL to FilterState (e.g. dropping a route-implied `albumId`). */
   hydrate?: (url: URL) => FilterState;
@@ -97,6 +106,8 @@ export type FilteredTimelineConfig = {
   ownerNameSeed?: () => Iterable<{ id: string; name: string }>;
   /** Resolve album/owner chip names by id. */
   resolveNames?: boolean;
+  /** Whether the library view control (#1038) applies; its view must reach the query through `timelineOptions`. */
+  showLibraryView?: () => boolean;
   /** Search terms replayed by "add all to collection"; omit to hide the action. */
   collectTerms?: (filters: FilterState, query: string) => SearchTerms;
   /** Panel temporal-picker buckets in browse mode; defaults to the timeline's own buckets. */
@@ -131,15 +142,15 @@ const emptyFilterSuggestions = (): FilterSuggestionsResponse => ({
   hasAssetsNotInAlbum: false,
 });
 
-const replaceUrl = (url: string) => void goto(url, { replaceState: true, keepFocus: true, noScroll: true });
+const replaceUrl = (url: string) => void goto(url, { replace: true, reset: false });
 
 /**
- * Fork-only state behind every filtered timeline route: filter state and its URL round trip, the
- * committed smart-search query and its facets, grouping/zoom, chip names and the bulk-action
- * handlers that must act on search results while the timeline is unmounted (#908).
- *
- * Construct it during component init (it registers effects). Render it with `FilteredTimeline`.
- */
+Fork-only state behind every filtered timeline route: filter state and its URL round trip, the
+committed smart-search query and its facets, grouping/zoom, chip names and the bulk-action
+handlers that must act on search results while the timeline is unmounted (#908).
+
+Construct it during component init (it registers effects). Render it with `FilteredTimeline`.
+*/
 export class FilteredTimelineController {
   readonly config: FilteredTimelineConfig;
 
@@ -245,6 +256,21 @@ export class FilteredTimelineController {
       : undefined;
   }
 
+  /** Filters, a search or a library view (#1038) narrow the timeline: empty then means no results, not an empty library. */
+  get isNarrowed() {
+    return this.hasActiveFilters || !!this.timelineQuery.libraryView;
+  }
+
+  /** A text search spans every photo, so the library view (#1038) is hidden while one runs. */
+  get showLibraryView() {
+    return !!this.config.showLibraryView?.() && this.isBrowse && !this.showSearchResults;
+  }
+
+  /** A library view (#1038) other than Both narrows the timeline: its chip shows and the filter button is marked. */
+  get libraryViewActive() {
+    return this.showLibraryView && !!this.timelineQuery.libraryView;
+  }
+
   get onAddAllToCollection() {
     return this.config.collectTerms ? this.#addAllToCollection : undefined;
   }
@@ -290,7 +316,7 @@ export class FilteredTimelineController {
 
   clearSearch = () => {
     this.isLoading = false;
-    const nextUrl = buildSearchablePageUrl(page.url, '', this.filters.sortOrder, this.filters);
+    const nextUrl = buildSearchablePageUrl(currentPageUrl(), '', this.filters.sortOrder, this.filters);
     if (nextUrl) {
       replaceUrl(nextUrl);
     }
@@ -335,6 +361,10 @@ export class FilteredTimelineController {
 
   // --- bulk actions: the timeline is unmounted while results show (#908) ------------------------
 
+  /** Stack/unstack act on the browse timeline only: hidden while search results show. */
+  browseOnly = <T extends Record<string, ActionItem>>(actions: T) =>
+    mapValues(actions, (action) => ({ ...action, $if: () => !this.showSearchResults && isEnabled(action) })) as T;
+
   onFavorite = (ids: string[], isFavorite: boolean) => {
     if (this.showSearchResults) {
       updateSearchResults(this.searchResults, ids, (asset) => (asset.isFavorite = isFavorite));
@@ -375,13 +405,13 @@ export class FilteredTimelineController {
   };
 
   /**
-   * #1041: adding photos to a space the caller hides from their own timeline changes what the
-   * server returns, but the mounted manager has cached its buckets. Remount rather than
-   * `removeAssets`: an asset that also reaches a still-visible space must stay, and deciding that
-   * client-side is the simulation the hide-from-timeline design abandoned.
-   */
+  #1041: adding photos to a space the caller hides from their own timeline changes what the
+  server returns, but the mounted manager has cached its buckets. Remount rather than
+  `removeAssets`: an asset that also reaches a still-visible space must stay, and deciding that
+  client-side is the simulation the hide-from-timeline design abandoned.
+  */
   onSpaceAddAssets = ({ hiddenFromMyTimeline }: { hiddenFromMyTimeline?: boolean }) => {
-    if (hiddenFromMyTimeline && !this.showSearchResults) {
+    if ((hiddenFromMyTimeline || this.timelineQuery.libraryView) && !this.showSearchResults) {
       this.timelineReloadToken++;
     }
   };
@@ -409,7 +439,7 @@ export class FilteredTimelineController {
 
   #isTimelineEmpty() {
     const custom = this.config.isTimelineEmpty;
-    return custom ? custom(this) : !!this.#timeline()?.isEmptyForOptions(this.options) && !this.hasActiveFilters;
+    return custom ? custom(this) : !!this.#timeline()?.isEmptyForOptions(this.options) && !this.isNarrowed;
   }
 
   #isBrowse() {
@@ -428,16 +458,16 @@ export class FilteredTimelineController {
     if (this.config.urlMode === 'filter-state') {
       return withoutAtParam(page.url.search);
     }
-    const { query, sortOrder } = getSearchablePageState(page.url);
+    const { query, sortOrder } = getSearchablePageState(currentPageUrl());
     return `${query}:${sortOrder}:${page.url.search}`;
   }
 
   #readFilters(): FilterState {
     if (this.config.urlMode === 'filter-state') {
-      return { ...createFilterState(), ...this.config.hydrate?.(page.url) };
+      return { ...createFilterState(), ...this.config.hydrate?.(currentPageUrl()) };
     }
-    const { sortOrder } = getSearchablePageState(page.url);
-    return { ...createFilterState(), ...getSearchablePageFilterState(page.url), sortOrder };
+    const { sortOrder } = getSearchablePageState(currentPageUrl());
+    return { ...createFilterState(), ...getSearchablePageFilterState(currentPageUrl()), sortOrder };
   }
 
   #hydrateFromUrl() {
@@ -445,7 +475,7 @@ export class FilteredTimelineController {
     const temporal = { dateAfter: undefined, dateBefore: undefined, selectedYear: undefined, selectedMonth: undefined };
     const filters = this.#readFilters();
     this.filters = this.config.urlMode === 'filter-state' ? filters : { ...temporal, ...filters };
-    this.query = getSearchablePageState(page.url).query;
+    this.query = getSearchablePageState(currentPageUrl()).query;
     this.#lastHandledUrl = this.#urlToken();
     consumeTypedSearchNamesInto(page.url.pathname + page.url.search, this.personNames, this.tagNames);
   }
@@ -458,7 +488,7 @@ export class FilteredTimelineController {
     if (token === this.#lastHandledUrl) {
       return;
     }
-    const nextQuery = getSearchablePageState(page.url).query;
+    const nextQuery = getSearchablePageState(currentPageUrl()).query;
     untrack(() => {
       const queryChanged = nextQuery !== this.query;
       if (queryChanged) {
@@ -482,9 +512,9 @@ export class FilteredTimelineController {
 
   #syncUrl(nextFilters: FilterState) {
     if (this.config.urlMode === 'filter-state') {
-      const nextUrl = buildFilterStateUrl(page.url, nextFilters);
+      const nextUrl = buildFilterStateUrl(currentPageUrl(), nextFilters);
       // Not a string compare: buildFilterStateUrl re-appends the filter params last.
-      if (!isFilterStateUrlUnchanged(page.url, nextUrl)) {
+      if (!isFilterStateUrlUnchanged(currentPageUrl(), nextUrl)) {
         replaceUrl(nextUrl);
       }
       return;
@@ -492,10 +522,12 @@ export class FilteredTimelineController {
     // `createFilterState()` defaults sortOrder to 'desc'; passing that through would stamp
     // `sort=desc` on every filter URL. With a query committed, 'desc' is a deliberate choice.
     const sortOrder =
-      !this.query.trim() && nextFilters.sortOrder === 'desc' && !getSearchablePageState(page.url).hasExplicitSort
+      !this.query.trim() &&
+      nextFilters.sortOrder === 'desc' &&
+      !getSearchablePageState(currentPageUrl()).hasExplicitSort
         ? 'relevance'
         : nextFilters.sortOrder;
-    const nextUrl = buildSearchablePageUrl(page.url, this.query, sortOrder, nextFilters);
+    const nextUrl = buildSearchablePageUrl(currentPageUrl(), this.query, sortOrder, nextFilters);
     if (nextUrl && nextUrl !== page.url.pathname + page.url.search) {
       replaceUrl(nextUrl);
     }

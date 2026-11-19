@@ -11,14 +11,14 @@
   // on when the story reaches today and on a memory that waits. Delete this series closes the page, asking first.
   // Curator not answering, or not the owner's, is the page's own state, as the AI inbox says it; a series Curator does
   // not have (any more) says it is gone, with the way back.
-  import { goto } from '$app/navigation';
-  import PanelStatus from '$lib/components/curator/PanelStatus.svelte';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import { locale } from '$lib/stores/preferences.store';
+  import PanelStatus from '#lib/components/curator/PanelStatus.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { locale } from '#lib/stores/preferences.store.ts';
   import { Icon, modalManager, toastManager } from '@immich/ui';
   import { mdiArrowLeft } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
   import SeriesDay from './SeriesDay.svelte';
   import SeriesFailed from './SeriesFailed.svelte';
   import SeriesFamily from './SeriesFamily.svelte';
@@ -63,7 +63,7 @@
     $t('memory_series_provisional', { values: { date: seriesDate(coming.first_day, $locale) } });
 
   /** the quiet line while the family page is live: since when and how much went out, or when it starts (day 1 ahead,
-   * or today before its memory went out) */
+  or today before its memory went out) */
   const liveWords = (coming: Coming) => {
     const dayOne = coming.series.starts_on ?? coming.first_day;
     const date = seriesDate(dayOne, $locale);
@@ -196,10 +196,10 @@
       </div>
       <PanelStatus waiting={$t('memory_series_loading')} onRetry={() => view.load()} />
     {:else}
-      {@const coming = view.coming}
-      {@const series = view.series}
-      {@const span = spanWords(series, $t, $locale)}
-      {@const note = albumNote(series, $t)}
+      {const coming = $derived(view.coming)}
+      {const series = $derived(view.series)}
+      {const span = $derived(spanWords(series, $t, $locale))}
+      {const note = $derived(albumNote(series, $t))}
       <header class="series-head" data-testid="series-head">
         {@render back('ws-inbox-link series-back')}
         <h2 class="series-head-title">{sourceName(series, $t)}</h2>

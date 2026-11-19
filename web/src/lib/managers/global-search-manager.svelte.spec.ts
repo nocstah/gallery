@@ -1,3 +1,14 @@
+import { createFilterState, type FilterState } from '#lib/components/filter-panel/filter-panel.ts';
+import * as recentModule from '#lib/stores/cmdk-recent.ts';
+import {
+  addEntry,
+  getEntries,
+  __resetForTests as resetRecentStore,
+  type RecentEntry,
+} from '#lib/stores/cmdk-recent.ts';
+import { curator, type AskResult } from '#lib/utils/curator.ts';
+import { getTypedSearchDisplayText, storeTypedSearchNames } from '#lib/utils/typed-search/typed-search-name-cache.ts';
+import type { TypedSearchResolveContext } from '#lib/utils/typed-search/typed-search-resolver.ts';
 import {
   AssetVisibility,
   getAlbumInfo,
@@ -17,21 +28,17 @@ import {
 } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
 import { computeCommandScore } from 'bits-ui';
+import { locale as i18nLocale } from 'svelte-i18n';
+import { get } from 'svelte/store';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { goto } from '$app/navigation';
-import { createFilterState, type FilterState } from '$lib/components/filter-panel/filter-panel';
-import * as recentModule from '$lib/stores/cmdk-recent';
-import { addEntry, getEntries, __resetForTests as resetRecentStore, type RecentEntry } from '$lib/stores/cmdk-recent';
-import { curator, type AskResult } from '$lib/utils/curator';
-import { getTypedSearchDisplayText, storeTypedSearchNames } from '$lib/utils/typed-search/typed-search-name-cache';
-import type { TypedSearchResolveContext } from '$lib/utils/typed-search/typed-search-resolver';
 import { installFakeAbortTimeout, restoreAbortTimeout } from './__tests__/fake-abort-timeout';
 import { commandContextManager } from './command-context-manager.svelte';
 import { COMMAND_ITEMS, type CommandItem } from './command-items';
 import {
   GlobalSearchManager,
-  monthJumpId,
   RECONCILE_ORDER_BY_SCOPE,
+  monthJumpId,
   type EntityItem,
   type Provider,
   type ProviderStatus,
@@ -50,7 +57,7 @@ const { mockUser } = vi.hoisted(() => ({
   // flips `mockUser.current` to something else.
   mockUser: { current: { id: 'test-user', isAdmin: true } as { id: string; isAdmin: boolean } | null },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.js', () => ({
   authManager: {
     get authenticated() {
       return mockUser.current !== null;
@@ -66,9 +73,12 @@ const { mockFlags } = vi.hoisted(() => ({
     valueOrUndefined: { search: true, map: true, trash: true } as Record<string, boolean> | undefined,
   },
 }));
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.js', () => ({
   featureFlagsManager: mockFlags,
 }));
+
+// An ES module namespace cannot be spied on in the browser; spy on the module's exports instead.
+vi.mock(import('#lib/stores/cmdk-recent.ts'), { spy: true });
 
 const { typedSearchMock } = vi.hoisted(() => ({
   typedSearchMock: {
@@ -76,7 +86,7 @@ const { typedSearchMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('$lib/utils/typed-search/typed-search-resolver', () => ({
+vi.mock('#lib/utils/typed-search/typed-search-resolver.js', () => ({
   resolveTypedSearchFilters: typedSearchMock.resolveTypedSearchFilters,
 }));
 
@@ -86,9 +96,9 @@ const { liveTypedSearchMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('$lib/utils/typed-search/typed-search-live-suggestions', async () => ({
-  ...(await vi.importActual<typeof import('$lib/utils/typed-search/typed-search-live-suggestions')>(
-    '$lib/utils/typed-search/typed-search-live-suggestions',
+vi.mock('#lib/utils/typed-search/typed-search-live-suggestions.js', async () => ({
+  ...(await vi.importActual<typeof import('#lib/utils/typed-search/typed-search-live-suggestions.ts')>(
+    '#lib/utils/typed-search/typed-search-live-suggestions.ts',
   )),
   resolveLiveTypedSearchSuggestions: liveTypedSearchMock.resolveLiveTypedSearchSuggestions,
 }));
@@ -100,7 +110,8 @@ const resetLiveTypedSearchMock = () => {
 
 resetLiveTypedSearchMock();
 
-vi.mock('$lib/utils/typed-search/typed-search-name-cache', () => ({
+vi.mock('#lib/utils/typed-search/typed-search-name-cache.js', async (orig) => ({
+  ...(await orig<typeof import('#lib/utils/typed-search/typed-search-name-cache.ts')>()),
   getTypedSearchDisplayText: vi.fn(() => undefined),
   storeTypedSearchNames: vi.fn(),
 }));
@@ -111,7 +122,7 @@ vi.mock('$lib/utils/typed-search/typed-search-name-cache', () => ({
 afterEach(() => {
   mockUser.current = { id: 'test-user', isAdmin: true };
   mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
-  mockI18nLocale.current = 'en';
+  resetLocale();
   mockPage.route.id = null;
   mockPage.params = {};
   mockPage.url = new URL('https://gallery.test/photos');
@@ -143,21 +154,23 @@ vi.mock('@immich/sdk', async () => ({
   getAllPeople: vi.fn().mockResolvedValue({ people: [], total: 0, hidden: 0, hasNextPage: false }),
 }));
 
-vi.mock('$app/navigation', () => ({
+// Browser mode rejects an import of a name a mock does not export, so keep the global fake's other exports.
+vi.mock('$app/navigation', async () => ({
+  ...(await import('#test/unit/mocks/app-navigation.ts')),
   goto: vi.fn(),
 }));
 
 // Local Omarchy layer: the palette's Ask mode puts questions to Curator, for Curator's owner only (the real
 // curatorIsMine, which reads the mocked authManager: the admin by default)
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: { ask: vi.fn(), warmAsk: vi.fn(() => Promise.resolve({ warming: true })) },
 }));
 
 // Local Omarchy layer: QR's bank slips as the palette reads them (managers/slip-covers), known at once here and none
 // unless a test names some, so no test reads QR's album
 const { slipsMock } = vi.hoisted(() => ({ slipsMock: { ids: new Set<string>(), loads: 0 } }));
-vi.mock('$lib/managers/slip-covers.svelte', () => ({
+vi.mock('#lib/managers/slip-covers.svelte.ts', () => ({
   slipCovers: {
     isSlip: (assetId: string | null | undefined) => !!assetId && slipsMock.ids.has(assetId),
     load: () => {
@@ -175,52 +188,28 @@ const { mockPage } = vi.hoisted(() => ({
     url: new URL('https://gallery.test/photos'),
   },
 }));
-vi.mock('$app/state', () => ({ page: mockPage }));
+vi.mock('$app/state', async () => ({ ...(await import('#test/unit/mocks/app-state.svelte.ts')), page: mockPage }));
 
 // Stub `@immich/ui` so `toastManager.warning` is spyable. The components that
 // use the real toast UI are not exercised in this manager-only suite; keep the
 // stub minimal (just the members the manager actually touches).
-vi.mock('@immich/ui', () => ({
+vi.mock('@immich/ui', async (orig) => ({
+  ...(await orig<typeof import('@immich/ui')>()),
   toastManager: { warning: vi.fn(), danger: vi.fn(), primary: vi.fn(), success: vi.fn() },
   themeManager: { toggle: vi.fn(), setPreference: vi.fn(), value: 'light' },
 }));
 
-// Mock ONLY svelte-i18n's `locale` store so tests can control it. The `t` store
-// keeps its real implementation so translation calls resolve via fallbackLocale='dev'.
-// `setLocale(v)` drives all live subscribers — required by the cache-invalidation test
-// which asserts that a locale change clears the navigation memo cache.
-const { mockI18nLocale } = vi.hoisted(() => {
-  const subscribers = new Set<(v: string | null) => void>();
-  const state = {
-    current: 'en' as string | null,
-    subscribers,
-    setLocale(v: string | null) {
-      state.current = v;
-      for (const sub of subscribers) {
-        sub(v);
-      }
-    },
-  };
-  return { mockI18nLocale: state };
+// Gallery: `vi.mock('svelte-i18n')` has no effect in browser mode (the unit setup has already loaded it), so the
+// tests drive svelte-i18n's real `locale` store. `resetLocale()` restores whatever the setup left it at.
+let initialLocale: string | null | undefined;
+beforeAll(() => {
+  initialLocale = get(i18nLocale);
 });
-vi.mock('svelte-i18n', async (orig) => {
-  const actual = await orig<typeof import('svelte-i18n')>();
-  return {
-    ...actual,
-    locale: {
-      subscribe: (run: (v: string | null) => void) => {
-        run(mockI18nLocale.current);
-        mockI18nLocale.subscribers.add(run);
-        return () => {
-          mockI18nLocale.subscribers.delete(run);
-        };
-      },
-    },
-  };
-});
+const resetLocale = () => void i18nLocale.set(initialLocale as string);
 
 const flushMicrotasks = () => new Promise((resolve) => queueMicrotask(() => resolve(undefined)));
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 function mockResolvedTypedSearch(queryText = 'beach', filters: FilterState = createFilterState()) {
   typedSearchMock.resolveTypedSearchFilters.mockResolvedValue({
     ok: true,
@@ -1227,7 +1216,7 @@ describe('activate("command")', () => {
   it('calls the handler exactly once and does not write RECENT', async () => {
     const handler = vi.fn().mockResolvedValue(undefined);
     const cmd: CommandItem = { id: 'cmd:test', labelKey: 'x', descriptionKey: 'x', icon: '', handler };
-    const addEntrySpy = vi.spyOn(recentModule, 'addEntry');
+    const addEntrySpy = vi.mocked(recentModule.addEntry);
     manager.activate('command', cmd);
     await flushMicrotasks();
     expect(handler).toHaveBeenCalledOnce();
@@ -1404,6 +1393,7 @@ describe('activate("command")', () => {
   });
 
   describe('destructive activate', () => {
+    // eslint-disable-next-line unicorn/no-unnecessary-parameters
     const makeDestructive = (id: string, handler = vi.fn().mockResolvedValue(undefined)): CommandItem => ({
       id: id as `cmd:${string}`,
       labelKey: 'x',
@@ -2671,9 +2661,8 @@ describe('activate("command")', () => {
     await m.applySearchSort('asc', 'beach');
 
     expect(goto).toHaveBeenCalledWith('/photos?q=beach&sort=asc', {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
     expect(m.consumeKeepOpenOnNextNavigate()).toBe(true);
     expect(m.consumeKeepOpenOnNextNavigate()).toBe(false);
@@ -2686,9 +2675,8 @@ describe('activate("command")', () => {
     await m.applySearchSort('asc', 'beach');
 
     expect(goto).toHaveBeenCalledWith('/photos?q=beach&sort=asc', {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
     expect(m.consumeKeepOpenOnNextNavigate()).toBe(false);
   });
@@ -2700,9 +2688,8 @@ describe('activate("command")', () => {
     await m.applySearchSort('desc', '');
 
     expect(goto).toHaveBeenCalledWith('/spaces/space-1?sort=desc', {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
     expect(m.consumeKeepOpenOnNextNavigate()).toBe(false);
   });
@@ -2715,9 +2702,8 @@ describe('activate("command")', () => {
     await m.applySearchSort('asc', '');
 
     expect(goto).toHaveBeenCalledWith('/spaces/space-1/photos?view=timeline&sort=asc&rating=3', {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
   });
 
@@ -3718,7 +3704,7 @@ describe('navigation memo cache', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     localStorage.clear();
-    mockI18nLocale.current = 'en';
+    resetLocale();
   });
 
   it('builds cache on first access for the current locale', () => {
@@ -3741,11 +3727,20 @@ describe('navigation memo cache', () => {
   });
 
   it('handles a null locale gracefully (svelte-i18n before init)', () => {
-    mockI18nLocale.current = null;
-    const m = new GlobalSearchManager();
-    const cache = (
-      m as unknown as { getNavigationSearchStrings: () => Map<string, string> }
-    ).getNavigationSearchStrings();
+    // Gallery: with the real svelte-i18n (browser mode cannot mock it), `$t` itself throws while the locale is
+    // null, so a fresh table cannot be built then. What the manager owns is the cache key: a null locale falls
+    // back to 'en' instead of crashing, so a table cached under 'en' is served.
+    type Internals = {
+      getNavigationSearchStrings: () => Map<string, string>;
+      navigationSearchCache: Map<string, Map<string, string>>;
+    };
+    const m = new GlobalSearchManager() as unknown as Internals;
+    const table = m.getNavigationSearchStrings();
+    void i18nLocale.set(null as unknown as string);
+    // The locale subscription cleared the cache; seed the 'en' entry the null locale must resolve to.
+    m.navigationSearchCache.set('en', table);
+    const cache = m.getNavigationSearchStrings();
+    expect(cache).toBe(table);
     expect(cache.size).toBe(NAVIGATION_ITEMS.length);
   });
 
@@ -3757,7 +3752,7 @@ describe('navigation memo cache', () => {
     // Drive the subscribers: this mirrors svelte-i18n emitting a new locale after
     // the user switches language. The manager's locale subscription should fire
     // and clear `navigationSearchCache`, forcing the next call to rebuild.
-    mockI18nLocale.setLocale('de');
+    void i18nLocale.set('de');
     const second = (
       m as unknown as { getNavigationSearchStrings: () => Map<string, string> }
     ).getNavigationSearchStrings();
@@ -3834,7 +3829,7 @@ describe('runNavigationProvider', () => {
     localStorage.clear();
     mockUser.current = { id: 'test-user', isAdmin: true };
     mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
-    mockI18nLocale.current = 'en';
+    resetLocale();
   });
 
   // Calls the private runNavigationProvider. The original signature was `(query)`;
@@ -3995,7 +3990,7 @@ describe('special albums for a family account', () => {
     localStorage.clear();
     resetRecentStore();
     mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
-    mockI18nLocale.current = 'en';
+    void i18nLocale.set('en');
   });
 
   const typed = (query: string) => {
@@ -4085,7 +4080,7 @@ describe('commands provider', () => {
     localStorage.clear();
     mockUser.current = { id: 'test-user', isAdmin: true };
     mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
-    mockI18nLocale.current = 'en';
+    resetLocale();
     manager = new GlobalSearchManager();
     manager.open();
   });
@@ -4472,7 +4467,7 @@ describe('setQuery synchronous navigation', () => {
     installFakeAbortTimeout();
     mockUser.current = { id: 'test-user', isAdmin: true };
     mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
-    mockI18nLocale.current = 'en';
+    resetLocale();
     vi.mocked(searchSmart).mockResolvedValue({ assets: { items: [], nextPage: null } } as never);
     vi.mocked(searchAssets).mockResolvedValue({ assets: { items: [], nextPage: null } } as never);
     vi.mocked(searchPerson).mockResolvedValue([] as never);
@@ -4534,7 +4529,7 @@ describe('SWR loading rules', () => {
     installFakeAbortTimeout();
     mockUser.current = { id: 'test-user', isAdmin: true };
     mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
-    mockI18nLocale.current = 'en';
+    resetLocale();
     vi.mocked(searchSmart).mockResolvedValue({ assets: { items: [], nextPage: null } } as never);
     vi.mocked(searchAssets).mockResolvedValue({ assets: { items: [], nextPage: null } } as never);
     vi.mocked(searchPerson).mockResolvedValue([] as never);
@@ -4861,7 +4856,7 @@ describe('batch lifecycle: close, empty-query, grace window (review fixes)', () 
     installFakeAbortTimeout();
     mockUser.current = { id: 'test-user', isAdmin: true };
     mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
-    mockI18nLocale.current = 'en';
+    resetLocale();
     vi.mocked(searchSmart).mockResolvedValue({ assets: { items: [], nextPage: null } } as never);
     vi.mocked(searchAssets).mockResolvedValue({ assets: { items: [], nextPage: null } } as never);
     vi.mocked(searchPerson).mockResolvedValue([] as never);
@@ -5023,7 +5018,7 @@ describe('setMode stale photos race (review fix U3)', () => {
     installFakeAbortTimeout();
     mockUser.current = { id: 'test-user', isAdmin: true };
     mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
-    mockI18nLocale.current = 'en';
+    resetLocale();
     vi.mocked(searchPerson).mockResolvedValue([] as never);
     vi.mocked(searchPlaces).mockResolvedValue([] as never);
     vi.mocked(getAllTags).mockResolvedValue([] as never);
@@ -5092,7 +5087,7 @@ describe('Batch 4 post-review: route consistency, SWR cursor, debounce-window cl
     installFakeAbortTimeout();
     mockUser.current = { id: 'test-user', isAdmin: true };
     mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
-    mockI18nLocale.current = 'en';
+    resetLocale();
     vi.mocked(searchSmart).mockResolvedValue({ assets: { items: [], nextPage: null } } as never);
     vi.mocked(searchAssets).mockResolvedValue({ assets: { items: [], nextPage: null } } as never);
     vi.mocked(searchPerson).mockResolvedValue([] as never);
@@ -5319,20 +5314,16 @@ describe('getActiveItem recent-entry preview lookup (cold open)', () => {
     // params without re-running the page component — URL-backed state (e.g.,
     // SettingAccordionState) stays on its stale initial value. The manager must
     // detect this case and do a full browser navigation so every component remounts.
-    const originalLocation = location;
+    // `location` and `location.assign` cannot be redefined in a real browser. Put the page on the
+    // settings URL with history, and catch the full navigation with the Navigation API instead.
+    const originalHref = location.href;
+    history.replaceState(history.state, '', '/admin/system-settings?isOpen=classification');
     const assignSpy = vi.fn();
-    const fakeLocation: Record<string, unknown> = {
-      pathname: '/admin/system-settings',
-      assign: assignSpy,
+    const onNavigate = (event: NavigateEvent) => {
+      assignSpy(new URL(event.destination.url).pathname + new URL(event.destination.url).search);
+      event.preventDefault();
     };
-    Object.defineProperty(fakeLocation, 'href', {
-      configurable: true,
-      get: () => 'http://localhost/admin/system-settings?isOpen=classification',
-    });
-    Object.defineProperty(globalThis, 'location', {
-      configurable: true,
-      value: fakeLocation,
-    });
+    navigation.addEventListener('navigate', onNavigate);
     try {
       const m = new GlobalSearchManager();
       m.open();
@@ -5350,23 +5341,15 @@ describe('getActiveItem recent-entry preview lookup (cold open)', () => {
       // Client-side goto must NOT have fired — that would leave the accordion stale.
       expect(goto).not.toHaveBeenCalled();
     } finally {
-      Object.defineProperty(globalThis, 'location', {
-        configurable: true,
-        value: originalLocation,
-      });
+      navigation.removeEventListener('navigate', onNavigate);
+      history.replaceState(history.state, '', originalHref);
     }
   });
 
   it('activate nav: different-pathname navigation uses client-side goto (unchanged)', () => {
-    const originalLocation = location;
-    const fakeLocation: Record<string, unknown> = {
-      pathname: '/photos',
-      href: 'http://localhost/photos',
-    };
-    Object.defineProperty(globalThis, 'location', {
-      configurable: true,
-      value: fakeLocation,
-    });
+    // `location` cannot be redefined in a real browser; put the page on /photos with history instead.
+    const originalHref = location.href;
+    history.replaceState(history.state, '', '/photos');
     try {
       const m = new GlobalSearchManager();
       m.open();
@@ -5381,10 +5364,7 @@ describe('getActiveItem recent-entry preview lookup (cold open)', () => {
       });
       expect(goto).toHaveBeenCalledWith('/admin/system-settings?isOpen=video-transcoding');
     } finally {
-      Object.defineProperty(globalThis, 'location', {
-        configurable: true,
-        value: originalLocation,
-      });
+      history.replaceState(history.state, '', originalHref);
     }
   });
 
@@ -6642,7 +6622,7 @@ describe('prefix scoping — runNavigationProvider', () => {
     installFakeAbortTimeout();
     mockUser.current = { id: 'test-user', isAdmin: true };
     mockFlags.valueOrUndefined = { search: true, map: true, trash: true };
-    mockI18nLocale.current = 'en';
+    resetLocale();
     vi.mocked(searchSmart).mockResolvedValue({ assets: { items: [], nextPage: null } } as never);
     vi.mocked(searchAssets).mockResolvedValue({ assets: { items: [], nextPage: null } } as never);
     vi.mocked(searchPerson).mockResolvedValue([] as never);
@@ -6962,7 +6942,7 @@ describe('prefix scoping — announcementText', () => {
     // English copy rather than raw keys. The rest of this suite uses fallbackLocale
     // 'dev' (raw keys) — the scope-cue assertions here check the translated prefix.
     const { init, register, waitLocale } = await import('svelte-i18n');
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US' });
     await waitLocale('en-US');
   });
@@ -7256,6 +7236,7 @@ describe('person activation navigation', () => {
       ...overrides,
     }) as PersonResponseDto;
 
+  // eslint-disable-next-line unicorn/no-unnecessary-parameters
   const spacePerson = (spaceId: string, overrides: Partial<PersonResponseDto> = {}) =>
     ({
       id: 'sp1',

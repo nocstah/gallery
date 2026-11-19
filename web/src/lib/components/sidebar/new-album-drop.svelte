@@ -3,8 +3,8 @@
   // (managers/sidebar-drop). Photos dropped on it become an album named by where and when they were taken
   // (services/sidebar-drop). It stays at the foot of the sidebar's view however far the tree is scrolled, a dashed
   // hairline like Import's drop zone, and lights like every row that takes photos.
-  import { dropTarget, sidebarDrop } from '$lib/managers/sidebar-drop.svelte';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
+  import { dropTarget, sidebarDrop } from '#lib/managers/sidebar-drop.svelte.ts';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
   import { Icon } from '@immich/ui';
   import { mdiImagePlusOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';

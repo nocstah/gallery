@@ -1,5 +1,5 @@
-import { buildFilmPlan, type FilmPlan } from '$lib/components/memories/film/film-plan';
-import { CuratorError, type FilmJob, type FilmResult } from '$lib/utils/curator';
+import { buildFilmPlan, type FilmPlan } from '#lib/components/memories/film/film-plan.ts';
+import { CuratorError, type FilmJob, type FilmResult } from '#lib/utils/curator.ts';
 
 // Local Omarchy layer: a memory's film saved as video against a stand-in Curator: Save as video posts the film's plan
 // and the song playing, the job is followed from the queue through its frames to the file, which the browser saves; a
@@ -17,10 +17,10 @@ vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),
   modalManager: { show: showModal },
 }));
-vi.mock('$lib/modals/SharedLinkCreateModal.svelte', () => ({ default: {} }));
+vi.mock('#lib/modals/SharedLinkCreateModal.svelte', () => ({ default: {} }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: curatorMock,
   curatorIsMine: () => mine.current,
 }));

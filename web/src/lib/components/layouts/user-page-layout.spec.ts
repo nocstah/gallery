@@ -1,9 +1,9 @@
+import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
 import UserPageLayoutDescriptionTrailingTestWrapper from './user-page-layout-description-trailing.test-wrapper.svelte';
 import UserPageLayoutFoldTestWrapper from './user-page-layout-fold.test-wrapper.svelte';
 
@@ -11,21 +11,21 @@ const layoutMocks = vi.hoisted(() => ({
   sidebarModeStore: { layout: 'expanded' as 'overlay' | 'rail' | 'expanded' },
 }));
 
-vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: layoutMocks.sidebarModeStore }));
+vi.mock('#lib/stores/sidebar-mode.svelte.ts', () => ({ sidebarModeStore: layoutMocks.sidebarModeStore }));
 
-vi.mock('$lib/components/shared-components/navigation-bar/NavigationBar.svelte', async () => {
-  const module = await import('@test-data/mocks/navigation-bar-rail-aware.stub.svelte');
+vi.mock('#lib/components/shared-components/navigation-bar/NavigationBar.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/navigation-bar-rail-aware.stub.svelte');
   return { default: module.default };
 });
 
 // Local Omarchy layer: UserPageLayout renders the one bar (OmarchyBar) where upstream rendered NavigationBar
-vi.mock('$lib/components/omarchy/OmarchyBar.svelte', async () => {
-  const module = await import('@test-data/mocks/omarchy-bar-rail-aware.stub.svelte');
+vi.mock('#lib/components/omarchy/OmarchyBar.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/omarchy-bar-rail-aware.stub.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/side-bar/UserSidebar.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/side-bar/UserSidebar.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
 

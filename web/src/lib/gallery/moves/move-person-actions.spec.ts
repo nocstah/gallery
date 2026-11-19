@@ -1,12 +1,12 @@
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
 import {
   cleanupLibrary,
   libraryContextFile,
   mainLibrary,
   secondLibrary,
   serving,
-} from '@test-data/factories/library-context-factory';
-import { personFactory } from '@test-data/factories/person-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
+import { personFactory } from '#test/kioku/factories/person-factory.ts';
 import MoveDialog from './MoveDialog.svelte';
 import { getMovePersonActions } from './move-person-actions';
 
@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
   show: vi.fn(),
 }));
 vi.mock('$app/state', () => ({ page: mocks.page }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
 vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),
   modalManager: { show: mocks.show },

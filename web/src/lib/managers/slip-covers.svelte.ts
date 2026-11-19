@@ -5,9 +5,9 @@
 // per page load and again when QR's count says they changed; elsewhere AlbumCover goes by what was read last. Ctrl+K
 // reads them when it opens, and leaves them out of every row, cover and preview it shows (utils/slips). Only the owner
 // has QR (managers/special-albums).
+import { qrManager } from '#lib/managers/special-albums.svelte.ts';
 import { searchAssets } from '@immich/sdk';
 import { SvelteSet } from 'svelte/reactivity';
-import { qrManager } from '$lib/managers/special-albums.svelte';
 
 /** QR's photos read per request, page after page. */
 const PAGE = 1000;
@@ -26,9 +26,9 @@ export class SlipCoverManager {
   }
 
   /**
-   * Whether QR's slips are known, so a cover can show without being one of them: once read (or tried: a failed first
-   * read shows the covers as they come, as the Albums page does), and at once for an account without QR.
-   */
+  Whether QR's slips are known, so a cover can show without being one of them: once read (or tried: a failed first
+  read shows the covers as they come, as the Albums page does), and at once for an account without QR.
+  */
   get known() {
     return !qrManager.offered || this.#settled;
   }

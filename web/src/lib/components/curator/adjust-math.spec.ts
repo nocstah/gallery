@@ -9,7 +9,7 @@ import {
   vignette,
   vignetteWeight,
   type AdjustSettings,
-} from '$lib/components/curator/adjust-math';
+} from '#lib/components/curator/adjust-math.ts';
 import parity from './adjust-parity.json';
 
 // Local Omarchy layer: the photo viewer's Adjust math against Curator's (~/code/curator/curator/adjust.py). Curator's

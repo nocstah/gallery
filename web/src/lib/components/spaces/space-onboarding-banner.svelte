@@ -6,7 +6,9 @@
   // it does in muted meta); a done step keeps its row, its check in ink and its label muted. The steps name the Space
   // in plain words ("Add photos to Family", "Invite people to Family"), where the fork said "Invite members to
   // collaborate" and "Personalize your space with a cover image".
+  import { dismissedOnboardingSpaceIds } from '#lib/stores/space-view.store.ts';
   import type { SharedSpaceResponseDto } from '@immich/sdk';
+  import { Icon } from '@immich/ui';
   import {
     mdiAccountPlusOutline,
     mdiCheck,
@@ -17,9 +19,7 @@
     mdiImageFilterHdrOutline,
     mdiImagePlusOutline,
   } from '@mdi/js';
-  import { Icon } from '@immich/ui';
   import { t } from 'svelte-i18n';
-  import { dismissedOnboardingSpaceIds } from '$lib/stores/space-view.store';
 
   interface Props {
     space: SharedSpaceResponseDto;

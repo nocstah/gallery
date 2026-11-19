@@ -1,8 +1,9 @@
+import SpaceSearchResults from '#lib/components/spaces/space-search-results.svelte';
+import { getViewerSpace, type ViewerSpace } from '#lib/gallery/viewer-space.ts';
+import { getIntersectionObserverMock } from '#test/kioku/mocks/intersection-observer.mock.ts';
 import type { AssetResponseDto } from '@immich/sdk';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
-import SpaceSearchResults from '$lib/components/spaces/space-search-results.svelte';
 
 const getAssetInfoMock = vi.fn();
 vi.mock('@immich/sdk', async (importOriginal) => {
@@ -13,7 +14,7 @@ vi.mock('@immich/sdk', async (importOriginal) => {
 // The real GalleryViewer measures a justified layout against its scroll container, which
 // happy-dom reports as 0x0 — it would render zero thumbnails here. The stub records the props
 // under test and renders one clickable element per asset.
-vi.mock('$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte', async () => {
+vi.mock('#lib/components/shared-components/gallery-viewer/GalleryViewer.svelte', async () => {
   const { default: MockComponent } = await import('./mock-gallery-viewer.test-wrapper.svelte');
   return { default: MockComponent };
 });
@@ -21,10 +22,13 @@ vi.mock('$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte',
 // Spy on the props forwarded to AssetViewer. The component dynamic-imports asset-viewer.svelte,
 // so we mock the module and record each invocation's props on this array. Tests assert against it.
 const assetViewerPropsCalls: Array<Record<string, unknown>> = [];
-vi.mock('$lib/components/asset-viewer/AssetViewer.svelte', () => {
+// Since v5.11 the space reaches the viewer as context (gallery/viewer-space), not as a prop: recorded the same way
+const viewerSpaceCalls: ViewerSpace[] = [];
+vi.mock('#lib/components/asset-viewer/AssetViewer.svelte', () => {
   return {
     default: function MockAssetViewer(_node: unknown, props: Record<string, unknown>) {
       assetViewerPropsCalls.push(props);
+      viewerSpaceCalls.push(getViewerSpace()());
       return { destroy: () => {} };
     },
   };
@@ -38,7 +42,7 @@ const mockAssets = [
 
 describe('SpaceSearchResults', () => {
   beforeAll(async () => {
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US' });
     await waitLocale('en-US');
   });
@@ -48,6 +52,7 @@ describe('SpaceSearchResults', () => {
     getAssetInfoMock.mockReset();
     getAssetInfoMock.mockResolvedValue({ id: 'asset-1', originalFileName: 'photo1.jpg' } as AssetResponseDto);
     assetViewerPropsCalls.length = 0;
+    viewerSpaceCalls.length = 0;
   });
 
   it('should render search results through the gallery viewer', () => {
@@ -430,8 +435,7 @@ describe('SpaceSearchResults', () => {
 
       await vi.waitFor(() => expect(assetViewerPropsCalls.length).toBeGreaterThan(0));
 
-      const props = assetViewerPropsCalls.at(-1)!;
-      expect(props.space).toEqual({ id: 'space-1', canWrite: true });
+      expect(viewerSpaceCalls.at(-1)?.space).toEqual({ id: 'space-1', canWrite: true });
     });
 
     it('should call getAssetInfo WITH spaceId when spaceId prop is set', async () => {

@@ -1,6 +1,6 @@
+import { Route } from '#lib/route.ts';
+import { authenticate } from '#lib/utils/auth.ts';
 import { redirect } from '@sveltejs/kit';
-import { Route } from '$lib/route';
-import { authenticate } from '$lib/utils/auth';
 import type { PageLoad } from './$types';
 
 // space + members come from the parent [spaceId] layout load.

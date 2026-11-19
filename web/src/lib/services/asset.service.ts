@@ -1,20 +1,46 @@
+import { ProjectionType } from '#lib/constants.ts';
 import {
-  AssetEditAction,
+  getGalleryAssetActions,
+  getGalleryAssetBulkActions,
+  type GalleryAssetActionOptions,
+  type GalleryAssetBulkActionOptions,
+} from '#lib/gallery/asset-actions.ts';
+import { resetLibraryView } from '#lib/gallery/library-view/library-view.svelte.ts';
+import { animateRemoval, celebrate } from '#lib/gallery/motion/index.ts';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { specialAlbumOf } from '#lib/managers/special-albums.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import AssetAddToAlbumModal from '#lib/modals/AssetAddToAlbumModal.svelte';
+import AssetTagModal from '#lib/modals/AssetTagModal.svelte';
+import ProfileImageCropperModal from '#lib/modals/ProfileImageCropperModal.svelte';
+import SharedLinkCreateModal from '#lib/modals/SharedLinkCreateModal.svelte';
+import { removeAssetFromAlbumMutation } from '#lib/queries/album.query.ts';
+import { executeMutation, readPreloadedQuery } from '#lib/queries/client.ts';
+import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+import { Route } from '#lib/route.ts';
+import { SlideshowState, slideshowStore } from '#lib/stores/slideshow.store.ts';
+import { downloadUrl, getAssetMediaUrl, getSharedLink, sleep } from '#lib/utils.ts';
+import type { OnFavorite } from '#lib/utils/actions.ts';
+import { newAlbumFromAssets } from '#lib/utils/album-from-selection.ts';
+import { showUndoArchiveToast } from '#lib/utils/asset-utils.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { beforeChange, favoritesDone, ratingDone, removedFromAlbumDone, taggedDone } from '#lib/utils/undoable.ts';
+import {
   AssetJobName,
   AssetMediaSize,
   AssetTypeEnum,
   AssetVisibility,
   bulkTagAssets,
-  editAsset,
-  getAssetEdits,
   getAssetInfo,
-  removeAssetFromAlbum,
-  removeAssetEdits,
   runAssetJobs,
   updateAsset,
   updateAssetFavorites,
+  updateAssets,
   type AlbumResponseDto,
-  type AssetEditActionItemDto,
   type AssetJobsDto,
   type AssetResponseDto,
 } from '@immich/sdk';
@@ -22,6 +48,8 @@ import { modalManager, toastManager, type ActionItem } from '@immich/ui';
 import {
   mdiAccountCircleOutline,
   mdiAlertOutline,
+  mdiArchiveArrowDownOutline,
+  mdiArchiveArrowUpOutline,
   mdiCogRefreshOutline,
   mdiCompare,
   mdiContentCopy,
@@ -45,74 +73,18 @@ import {
   mdiPlus,
   mdiPlusBoxMultipleOutline,
   mdiPresentationPlay,
-  mdiRotateLeft,
-  mdiRotateRight,
   mdiShareVariantOutline,
   mdiTagMultipleOutline,
   mdiTagPlusOutline,
 } from '@mdi/js';
-import type { MessageFormatter } from 'svelte-i18n';
+import { t, type MessageFormatter } from 'svelte-i18n';
+import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
-import { ProjectionType } from '$lib/constants';
-import { vaultEdition } from '$lib/gallery/edition';
-import { celebrate } from '$lib/gallery/motion';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-import { specialAlbumOf } from '$lib/managers/special-albums.svelte';
-import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.svelte';
-import AssetTagModal from '$lib/modals/AssetTagModal.svelte';
-import ProfileImageCropperModal from '$lib/modals/ProfileImageCropperModal.svelte';
-import SelectionShareModal from '$lib/modals/SelectionShareModal.svelte';
-import { Route } from '$lib/route';
-import { SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
-import { getAssetMediaUrl, getSharedLink, sleep } from '$lib/utils';
-import { downloadUrl } from '$lib/utils';
-import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
-import { canEditAsset } from '$lib/utils/asset-editability';
-import { getEditableAssetsWithWarning } from '$lib/utils/asset-utils';
-import { waitForEditRendered } from '$lib/utils/edit-rendered';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
-import {
-  beforeChange,
-  editsDone,
-  favoritesDone,
-  ratingDone,
-  removedFromAlbumDone,
-  taggedDone,
-} from '$lib/utils/undoable';
 
 export const getAssetBulkActions = (
   $t: MessageFormatter,
-  {
-    album,
-    editableSelectedAssetIds,
-    shareSpaceId,
-    fromSpaceId,
-  }: {
-    /**
-     * The album whose page is showing this selection. Upstream passed it positionally; it moved
-     * into this bag next to the fork's options. Gates RemoveFromAlbum.
-     */
-    album?: AlbumResponseDto;
-    /**
-     * #734: which of the current selection the caller may edit (resolved by `SelectionToolbar`
-     * via `POST /assets/editable`). When set, Tag sends only these and reports the skipped count;
-     * omitted on every other surface, which keeps upstream's all-owned behaviour.
-     */
-    editableSelectedAssetIds?: string[];
-    /**
-     * Local Omarchy layer: #1018, set where `SelectionToolbar` creates links against its space (a space Owner/Editor
-     * whose selection reaches past what they own): Share then sends the whole selection against the space, as the
-     * toolbar's own CreateSharedLinkAction does, for Show selected to offer the same link.
-     */
-    shareSpaceId?: string;
-    /** Local Omarchy layer: the Space whose page shows this selection, which the Share sheet does not offer to add to. */
-    fromSpaceId?: string;
-  } = {},
+  album?: AlbumResponseDto,
+  gallery?: GalleryAssetBulkActionOptions,
 ) => {
   const assetIds = assetMultiSelectManager.assets.map((asset) => asset.id);
   const ownedAssets = assetMultiSelectManager.ownedAssets;
@@ -124,11 +96,23 @@ export const getAssetBulkActions = (
   };
 
   const AddToAlbum: ActionItem = {
-    // Local Omarchy layer: a vault's Gallery has no Spaces (gallery/edition)
-    title: vaultEdition() ? $t('add_to_album') : $t('add_to_album_or_space'),
+    title: $t('add_to_album'),
     icon: mdiPlus,
     shortcuts: [{ key: 'l' }],
-    onAction: () => modalManager.show(AssetAddToCollectionModal, { assetIds }),
+    onAction: () => modalManager.show(AssetAddToAlbumModal, { assetIds }),
+  };
+
+  const Archive: ActionItem = {
+    title: $t('to_archive'),
+    icon: mdiArchiveArrowDownOutline,
+    shortcuts: [{ key: 'a', shift: true }],
+    $if: () => assetMultiSelectManager.isAllUserOwned && !assetMultiSelectManager.isAllArchived,
+    onAction: async () => {
+      const assets = ownedAssets.filter((asset) => asset.visibility !== AssetVisibility.Archive);
+      if (await handleSetVisibility(assets, AssetVisibility.Archive)) {
+        assetMultiSelectManager.clear();
+      }
+    },
   };
 
   // Local Omarchy layer: N makes an album of the selection, named by where and when (utils/album-from-selection), and
@@ -140,7 +124,7 @@ export const getAssetBulkActions = (
     icon: mdiPlusBoxMultipleOutline,
     shortcuts: [{ key: 'n' }],
     $if: () =>
-      (!fromSpaceId || assetMultiSelectManager.isAllUserOwned) &&
+      (!gallery?.fromSpaceId || assetMultiSelectManager.isAllUserOwned) &&
       assetMultiSelectManager.selectionActive &&
       !assetViewerManager.isViewing &&
       !document.activeElement?.closest('input, textarea, select, [contenteditable]'),
@@ -151,12 +135,10 @@ export const getAssetBulkActions = (
     },
   };
 
-  // Local Omarchy layer: Share opens the Share sheet for photos (shareSelection, below), with the same guards
   const CreateSharedLink: ActionItem = {
     title: $t('share'),
     icon: mdiShareVariantOutline,
-    $if: () => !vaultEdition(), // Local Omarchy layer: a vault's Gallery shares nothing (gallery/edition)
-    onAction: () => shareSelection($t, { shareSpaceId, fromSpaceId }),
+    onAction: () => modalManager.show(SharedLinkCreateModal, { assetIds }),
   };
 
   const RemoveFromAlbum: ActionItem = {
@@ -172,25 +154,25 @@ export const getAssetBulkActions = (
   const Tag: ActionItem = {
     title: $t('tag'),
     icon: mdiTagMultipleOutline,
-    $if: () =>
-      authManager.preferences.tags.enabled &&
-      (assetMultiSelectManager.isAllUserOwned || (editableSelectedAssetIds?.length ?? 0) > 0),
+    $if: () => authManager.preferences.tags.enabled && assetMultiSelectManager.isAllUserOwned,
     onAction: async () => {
-      // #734: a space Owner/Editor may tag a member's assets. Send only the editable subset and
-      // report what was skipped; a selection that resolves to nothing editable never opens the
-      // modal, which would otherwise "succeed" with an empty id list.
-      const ids =
-        editableSelectedAssetIds === undefined
-          ? assetIds
-          : getEditableAssetsWithWarning(assetMultiSelectManager.assets, editableSelectedAssetIds);
-      if (ids.length === 0) {
-        return;
-      }
-      if (await modalManager.show(AssetTagModal, { assetIds: ids })) {
+      if (await modalManager.show(AssetTagModal, { assetIds })) {
         assetMultiSelectManager.clear();
       }
     },
     shortcuts: { key: 't' },
+  };
+
+  const Unarchive: ActionItem = {
+    title: $t('unarchive'),
+    icon: mdiArchiveArrowUpOutline,
+    shortcuts: [{ key: 'a', shift: true }],
+    $if: () => assetMultiSelectManager.isAllUserOwned && assetMultiSelectManager.isAllArchived,
+    onAction: async () => {
+      if (await handleSetVisibility(ownedAssets, AssetVisibility.Timeline)) {
+        assetMultiSelectManager.clear();
+      }
+    },
   };
 
   const RefreshFacesJob: ActionItem = {
@@ -218,115 +200,38 @@ export const getAssetBulkActions = (
     $if: () => ownedAssets.every((asset) => asset.isVideo),
   };
 
-  return {
+  return getGalleryAssetBulkActions($t, gallery, {
     AddToAlbum,
     NewAlbum,
+    Archive,
     CreateSharedLink,
     RemoveFromAlbum,
     Tag,
+    Unarchive,
     RefreshFacesJob,
     RefreshMetadataJob,
     RegenerateThumbnailJob,
     TranscodeVideoJob,
-  };
-};
-
-/**
- * Local Omarchy layer: Share on a selection, from every selection bar, the photos' right-click menu, Ctrl+K and Show
- * selected's foot, opens the Share sheet for photos (modals/SelectionShareModal): Add to the Space that leads, then a
- * link. Gallery (#853): `Permission.AssetShare` is owner ∪ partner only and rejects the ENTIRE request if it names one
- * asset the caller does not own, so the link and the Space take the owned subset and the sheet says what was left out;
- * with nothing of mine selected there is nothing to share, which a toast says instead. `ownedAssets` falls back to the
- * full selection when unauthenticated, so that is refused first. On a space surface the selection bar may scope the
- * link to the space (#1018, `shareSpaceId`): the link then takes the whole selection, against the space, and the sheet
- * warns before other members' photos become public; a Space still takes only my own.
- */
-export const shareSelection = async (
-  $t: MessageFormatter,
-  { shareSpaceId, fromSpaceId }: { shareSpaceId?: string; fromSpaceId?: string } = {},
-) => {
-  if (!authManager.authenticated) {
-    return;
-  }
-  const assetIds = assetMultiSelectManager.assets.map(({ id }) => id);
-  const ownedAssetIds = assetMultiSelectManager.ownedAssets.map(({ id }) => id);
-  if (shareSpaceId) {
-    await modalManager.show(SelectionShareModal, {
-      assetIds,
-      ownedAssetIds,
-      spaceId: shareSpaceId,
-      contributedCount: assetIds.length - ownedAssetIds.length,
-      fromSpaceId,
-    });
-    return;
-  }
-  if (ownedAssetIds.length === 0) {
-    toastManager.warning($t('shared_link_nothing_owned_to_share'));
-    return;
-  }
-  await modalManager.show(SelectionShareModal, {
-    assetIds: ownedAssetIds,
-    ownedAssetIds,
-    excludedCount: assetIds.length - ownedAssetIds.length,
-    fromSpaceId,
   });
 };
 
 export const getAssetActions = (
   $t: MessageFormatter,
   asset: AssetResponseDto & { stackPrimaryAssetId?: string },
-  {
-    space,
-    album,
-  }: {
-    /**
-     * The shared space this asset is being viewed through, when the viewer sits on a space
-     * surface. Drives the add-to-album gating below; absent everywhere else.
-     */
-    space?: { id: string; canWrite: boolean };
-    /**
-     * The album this asset is being viewed through. Upstream passed it positionally; it moved
-     * into this bag so the fork's `space` and it can coexist. Gates RemoveFromAlbum.
-     */
-    album?: AlbumResponseDto;
-  } = {},
+  album?: AlbumResponseDto,
+  gallery?: GalleryAssetActionOptions,
 ) => {
   const sharedLink = getSharedLink();
   const authUser = authManager.authenticated ? authManager.user : undefined;
   const isOwner = !!(authUser && authUser.id === asset.ownerId);
-  const isAlbumOwner = !!(authUser && authUser.id === album?.albumUsers[0].user.id);
-  const smartSearchEnabled = featureFlagsManager.value.smartSearch;
+  const isAlbumOwner = !!(authUser && authUser.id === album?.albumUsers.at(0)?.user.id);
+  const smartSearchEnabled = !!authUser && readPreloadedQuery(getUserConfigQuery()).machineLearning.clip.enabled;
 
-  // Server-side `Permission.AssetShare` is owner ∪ partner only, so album or space membership grants
-  // no share access. Gating on `authUser` alone offered a shared-album/space viewer a button that
-  // `POST /shared-links` then rejected with "Not found or no asset.share access" (#871).
-  //
-  // `|| !asset.ownerId`: a `showMetadata: false` shared link returns SanitizedAssetResponseDto, which
-  // omits `ownerId` altogether, so ownership is unknowable client-side there — treat unknown as
-  // shareable rather than hiding the button from the owner of the asset they linked.
-  const canShare = !!authUser && (isOwner || !asset.ownerId);
-
-  // #889: an asset the caller does not own reaches an album only through the #764 contribution
-  // path, which the server accepts solely for albums linked to a space where the caller is
-  // Owner/Editor, so the action is dropped for a space Viewer, who has no contribution path at all.
-  // Mirrors the multi-select rule in `getSelectionCapabilities`. The picker itself is the timeline's
-  // (#1119): it asks the server which albums accept the asset. Off a space surface `space` is
-  // undefined and nothing changes: partner-shared assets do land in the caller's own album
-  // (Permission.AssetShare), and the viewer cannot evaluate that from the DTO.
-  const canAddToAlbum = isOwner || space === undefined || space.canWrite;
-
-  // Local Omarchy layer: the photo's own Share opens the Share sheet for photos (modals/SelectionShareModal), as a
-  // selection's does: Add to the Space that leads (my own photo only, never the Space it is seen through), then a link
   const Share: ActionItem = {
     title: $t('share'),
     icon: mdiShareVariantOutline,
-    $if: () => canShare && !asset.isTrashed && asset.visibility !== AssetVisibility.Locked && !vaultEdition(),
-    onAction: () =>
-      modalManager.show(SelectionShareModal, {
-        assetIds: [asset.id],
-        ownedAssetIds: isOwner ? [asset.id] : [],
-        fromSpaceId: space?.id,
-      }),
+    $if: () => !!(authUser && !asset.isTrashed && asset.visibility !== AssetVisibility.Locked),
+    onAction: () => modalManager.show(SharedLinkCreateModal, { assetIds: [asset.id] }),
   };
 
   const Download: ActionItem = {
@@ -377,10 +282,7 @@ export const getAssetActions = (
   const Favorite: ActionItem = {
     title: $t('to_favorite'),
     icon: mdiHeartOutline,
-    // #763: favoriting is per-user — any authenticated reader may favorite. Shared-link
-    // sessions are explicitly excluded: auth.user there is the LINK OWNER, and an anonymous
-    // visitor must never write favorites in the owner's name (spec §5.1).
-    $if: () => !!authUser && !sharedLink && !asset.isFavorite,
+    $if: () => isOwner && !asset.isFavorite,
     onAction: () => handleFavorite(asset),
     shortcuts: [{ key: 'f' }],
   };
@@ -388,30 +290,25 @@ export const getAssetActions = (
   const Unfavorite: ActionItem = {
     title: $t('unfavorite'),
     icon: mdiHeart,
-    $if: () => !!authUser && !sharedLink && asset.isFavorite,
+    $if: () => isOwner && asset.isFavorite,
     onAction: () => handleUnfavorite(asset),
     shortcuts: [{ key: 'f' }],
   };
 
-  // Server-authoritative on a single-asset read (`asset.canEdit`); falls back to ownership when
-  // the field was never resolved (e.g. bulk/list surfaces). See `canEditAsset` (#734).
-  const isEditable = () => canEditAsset(asset, { userId: authUser?.id });
-
   const Rate: ActionItem = {
     title: $t('rate_asset'),
     description: $t('rate_asset_description'),
-    // #734: ratings are a metadata edit, open to a space Owner/Editor of a member's asset.
-    $if: () => isEditable() && authManager.preferences.ratings.enabled,
+    $if: () => isOwner && authManager.preferences.ratings.enabled,
     onAction: ({ event }) => handleRate(asset, event instanceof KeyboardEvent ? Number(event.key) : NaN),
     shortcuts: [0, 1, 2, 3, 4, 5].map((key) => ({ key: String(key) })),
   };
 
   const AddToAlbum: ActionItem = {
-    title: vaultEdition() ? $t('add_to_album') : $t('add_to_album_or_space'),
+    title: $t('add_to_album'),
     icon: mdiPlus,
     shortcuts: [{ key: 'l' }],
-    $if: () => canAddToAlbum && asset.visibility !== AssetVisibility.Locked && !asset.isTrashed,
-    onAction: () => modalManager.show(AssetAddToCollectionModal, { assetIds: [asset.id] }),
+    $if: () => asset.visibility !== AssetVisibility.Locked && !asset.isTrashed,
+    onAction: () => modalManager.show(AssetAddToAlbumModal, { assetIds: [asset.id] }),
   };
 
   const RemoveFromAlbum: ActionItem = {
@@ -468,29 +365,6 @@ export const getAssetActions = (
     shortcuts: { key: 't' },
   };
 
-  const canEditImage = () =>
-    !sharedLink &&
-    isEditable() &&
-    asset.type === AssetTypeEnum.Image &&
-    !asset.livePhotoVideoId &&
-    asset.exifInfo?.projectionType !== ProjectionType.EQUIRECTANGULAR &&
-    !asset.originalPath.toLowerCase().endsWith('.insp') &&
-    !asset.originalPath.toLowerCase().endsWith('.gif') &&
-    !asset.originalPath.toLowerCase().endsWith('.svg');
-
-  const canEditVideo = () => {
-    if (sharedLink || !isEditable() || asset.type !== AssetTypeEnum.Video || asset.livePhotoVideoId) {
-      return false;
-    }
-    // Duration must be known and >= 2 seconds
-    if (!asset.duration) {
-      return false;
-    }
-    return asset.duration >= 2000;
-  };
-
-  const canEdit = () => canEditImage() || canEditVideo();
-
   const TagPeople: ActionItem = {
     title: $t('tag_people'),
     icon: mdiFaceRecognition,
@@ -503,7 +377,15 @@ export const getAssetActions = (
     title: $t('editor'),
     // Local Omarchy layer: what the editor does (crop and rotate, a video's trim), not the sliders Adjust wears beside it
     icon: asset.type === AssetTypeEnum.Video ? mdiMovieEditOutline : mdiCropRotate,
-    $if: canEdit,
+    $if: () =>
+      !sharedLink &&
+      isOwner &&
+      asset.type === AssetTypeEnum.Image &&
+      !asset.livePhotoVideoId &&
+      asset.exifInfo?.projectionType !== ProjectionType.EQUIRECTANGULAR &&
+      !asset.originalPath.toLowerCase().endsWith('.insp') &&
+      !asset.originalPath.toLowerCase().endsWith('.gif') &&
+      !asset.originalPath.toLowerCase().endsWith('.svg'),
     onAction: () => assetViewerManager.openEditor(),
     shortcuts: [{ key: 'e' }],
   };
@@ -519,7 +401,10 @@ export const getAssetActions = (
     title: $t('view_in_timeline'),
     icon: mdiImageSearch,
     $if: () => isOwner && asset.visibility !== AssetVisibility.Locked && !asset.isArchived && !asset.isTrashed,
-    onAction: () => goto(Route.photos({ at: asset.stackPrimaryAssetId ?? asset.id })),
+    onAction: () => {
+      resetLibraryView();
+      return goto(Route.photos({ at: asset.stackPrimaryAssetId ?? asset.id }));
+    },
   };
 
   const ViewSimilar: ActionItem = {
@@ -528,27 +413,6 @@ export const getAssetActions = (
     $if: () =>
       asset.visibility !== AssetVisibility.Locked && !asset.isArchived && !asset.isTrashed && smartSearchEnabled,
     onAction: () => goto(Route.search({ queryAssetId: asset.stackPrimaryAssetId ?? asset.id })),
-  };
-
-  const RotateRight: ActionItem = {
-    title: $t('rotate_right'),
-    icon: mdiRotateRight,
-    $if: canEditImage,
-    onAction: () => handleQuickRotate(asset, 90),
-  };
-
-  const RotateLeft: ActionItem = {
-    title: $t('rotate_left'),
-    icon: mdiRotateLeft,
-    $if: canEditImage,
-    onAction: () => handleQuickRotate(asset, 270),
-  };
-
-  const Rotate180: ActionItem = {
-    title: $t('rotate_180'),
-    icon: mdiRotateRight,
-    $if: canEditImage,
-    onAction: () => handleQuickRotate(asset, 180),
   };
 
   const RefreshFacesJob: ActionItem = {
@@ -576,7 +440,7 @@ export const getAssetActions = (
     $if: () => asset.type === AssetTypeEnum.Video,
   };
 
-  return {
+  return getGalleryAssetActions($t, asset, gallery, {
     Share,
     Download,
     DownloadOriginal,
@@ -600,14 +464,11 @@ export const getAssetActions = (
     SetProfilePicture,
     ViewInTimeline,
     ViewSimilar,
-    RotateRight,
-    RotateLeft,
-    Rotate180,
     RefreshFacesJob,
     RefreshMetadataJob,
     RegenerateThumbnailJob,
     TranscodeVideoJob,
-  };
+  });
 };
 
 export const handleDownloadAsset = async (asset: AssetResponseDto, { edited }: { edited: boolean }) => {
@@ -665,10 +526,10 @@ const handleFavorite = async (asset: AssetResponseDto) => {
 
   celebrate('favorite');
   try {
-    await updateAssetFavorites({ assetFavoriteUpdateDto: { ids: [asset.id], isFavorite: true } });
+    const response = await updateAsset({ id: asset.id, updateAssetDto: { isFavorite: true } });
     // Local Omarchy layer: with an Undo, kept in the bar's undo history too (utils/undoable)
     favoritesDone([asset.id], true, $t('added_to_favorites'));
-    eventManager.emit('AssetUpdate', { ...asset, isFavorite: true });
+    eventManager.emit('AssetUpdate', response);
   } catch (error) {
     handleError(error, $t('errors.unable_to_add_remove_favorites', { values: { favorite: asset.isFavorite } }));
   }
@@ -678,11 +539,38 @@ const handleUnfavorite = async (asset: AssetResponseDto) => {
   const $t = await getFormatter();
 
   try {
-    await updateAssetFavorites({ assetFavoriteUpdateDto: { ids: [asset.id], isFavorite: false } });
+    const response = await updateAsset({ id: asset.id, updateAssetDto: { isFavorite: false } });
     favoritesDone([asset.id], false, $t('removed_from_favorites'));
-    eventManager.emit('AssetUpdate', { ...asset, isFavorite: false });
+    eventManager.emit('AssetUpdate', response);
   } catch (error) {
     handleError(error, $t('errors.unable_to_add_remove_favorites', { values: { favorite: asset.isFavorite } }));
+  }
+};
+
+export const toggleFavoriteAssets = async (
+  assets: Pick<AssetResponseDto, 'id' | 'isFavorite'>[],
+  isFavorite: boolean,
+  onFavorite?: OnFavorite,
+) => {
+  const ids = assets.map((a) => a.id);
+  const $t = get(t);
+
+  try {
+    if (ids.length > 0) {
+      // Gallery #763: favorites are per user; this route also accepts assets the caller can only view.
+      await updateAssetFavorites({ assetFavoriteUpdateDto: { ids, isFavorite } });
+    }
+
+    for (const asset of assets) {
+      asset.isFavorite = isFavorite;
+    }
+
+    onFavorite?.(ids, isFavorite);
+
+    // Local Omarchy layer: the toast's Undo is kept in the bar's undo history too (utils/undoable)
+    favoritesDone(ids, isFavorite);
+  } catch (error) {
+    handleError(error, $t('errors.unable_to_add_remove_favorites', { values: { favorite: isFavorite } }));
   }
 };
 
@@ -726,6 +614,34 @@ export const handleTagAssets = async (assetIds: string[], tagIds: string[]) => {
   }
 };
 
+const handleSetVisibility = async (assets: TimelineAsset[], visibility: AssetVisibility) => {
+  const $t = await getFormatter();
+  const ids = assets.map((asset) => asset.id);
+  // Local Omarchy layer: what each photo was, so archiving and unarchiving can both be taken back, from the toast or
+  // later from the bar's undo (utils/asset-utils showUndoArchiveToast)
+  const prior = assets.map(({ id, visibility }) => ({ id, visibility }));
+  const archived = visibility === AssetVisibility.Archive;
+
+  try {
+    await updateAssets({ assetBulkUpdateDto: { ids, visibility } });
+
+    if (archived) {
+      animateRemoval(ids, 'archive');
+      showUndoArchiveToast($t('archived_count', { values: { count: assets.length } }), prior, assets, true);
+      eventManager.emit('AssetsArchive', ids);
+    } else {
+      // Timeline
+      showUndoArchiveToast($t('unarchived_count', { values: { count: assets.length } }), prior, assets, false);
+      eventManager.emit('AssetsUnarchive', assets);
+    }
+  } catch (error) {
+    handleError(error, $t('errors.unable_to_archive_unarchive', { values: { archived } }));
+    return false;
+  }
+
+  return true;
+};
+
 const handleBulkRemoveAssetsFromAlbum = async (assetIds: string[], album: AlbumResponseDto) => {
   const $t = await getFormatter();
 
@@ -744,20 +660,14 @@ const handleBulkRemoveAssetsFromAlbum = async (assetIds: string[], album: AlbumR
 const handleRemoveAssetsFromAlbum = async (assetIds: string[], album: AlbumResponseDto) => {
   const $t = await getFormatter();
 
-  try {
-    const results = await removeAssetFromAlbum({
-      id: album.id,
-      bulkIdsDto: { ids: assetIds },
-    });
-
-    const removedIds = results.filter(({ success }) => success).map(({ id }) => id);
-
-    // Local Omarchy layer: with an Undo, kept in the bar's undo history too (utils/undoable)
-    removedFromAlbumDone(album.id, removedIds, $t('assets_removed_count', { values: { count: removedIds.length } }));
-    eventManager.emit('AlbumRemoveAssets', { assetIds, albumIds: [album.id] });
-  } catch (error) {
-    handleError(error, $t('errors.error_removing_assets_from_album'));
-  }
+  await executeMutation(removeAssetFromAlbumMutation, [{ id: album.id, bulkIdsDto: { ids: assetIds } }], {
+    onSuccess: (results) => {
+      const removedIds = results.filter(({ success }) => success).map(({ id }) => id);
+      // Local Omarchy layer: with an Undo, kept in the bar's undo history too (utils/undoable)
+      removedFromAlbumDone(album.id, removedIds, $t('assets_removed_count', { values: { count: removedIds.length } }));
+      eventManager.emit('AlbumRemoveAssets', { assetIds, albumIds: [album.id] });
+    },
+  });
 };
 
 const getAssetJobMessage = ($t: MessageFormatter, job: AssetJobName) => {
@@ -779,50 +689,5 @@ const handleRunAssetJob = async (dto: AssetJobsDto) => {
     toastManager.primary(getAssetJobMessage($t, dto.name));
   } catch (error) {
     handleError(error, $t('errors.unable_to_submit_job'));
-  }
-};
-
-export const normalizeAngle = (angle: number): number => ((angle % 360) + 360) % 360;
-
-export const mergeRotation = (
-  existingEdits: AssetEditActionItemDto[],
-  additionalAngle: number,
-): AssetEditActionItemDto[] => {
-  const otherEdits = existingEdits.filter((e) => e.action !== AssetEditAction.Rotate);
-  const existingRotate = existingEdits.find((e) => e.action === AssetEditAction.Rotate);
-  const existingAngle = (existingRotate?.parameters as { angle?: number })?.angle ?? 0;
-  const merged = normalizeAngle(existingAngle + additionalAngle);
-
-  if (merged === 0) {
-    return otherEdits;
-  }
-
-  return [...otherEdits, { action: AssetEditAction.Rotate, parameters: { angle: merged } }];
-};
-
-const handleQuickRotate = async (asset: AssetResponseDto, angle: number) => {
-  const $t = await getFormatter();
-
-  try {
-    const existing = await getAssetEdits({ id: asset.id });
-    const before = existing.edits.map(({ action, parameters }) => ({ action, parameters }));
-    const edits = mergeRotation(before, angle);
-
-    // Local Omarchy layer: wait for the server to draw the turned photo however long its queue takes (utils/edit-rendered)
-    const editRendered = waitForEditRendered(asset.id, asset.thumbhash);
-
-    await (edits.length === 0
-      ? removeAssetEdits({ id: asset.id })
-      : editAsset({ id: asset.id, assetEditsCreateDto: { edits } }));
-
-    const refreshedAsset = await editRendered;
-    assetViewerManager.setAsset(refreshedAsset);
-    eventManager.emit('AssetUpdate', refreshedAsset);
-    eventManager.emit('AssetEditsApplied', asset.id);
-    // Local Omarchy layer: a quick rotate has no toast of its own, so its undo is recorded quietly (utils/undoable)
-    const turn = angle === 90 ? 'rotate_right' : angle === 180 ? 'rotate_180' : 'rotate_left';
-    editsDone(`${$t(turn)} · ${asset.originalFileName}`, [{ id: asset.id, edits: before }]);
-  } catch (error) {
-    handleError(error, $t('rotate_error'));
   }
 };

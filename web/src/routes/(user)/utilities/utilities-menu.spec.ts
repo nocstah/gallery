@@ -1,14 +1,14 @@
-import '@testing-library/jest-dom';
-import { render } from '@testing-library/svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
 import {
+  SECOND_CURATOR_FEATURES,
   libraryContextFile,
   mainLibrary,
-  SECOND_CURATOR_FEATURES,
   secondLibrary,
   secondOffering,
   serving,
-} from '@test-data/factories/library-context-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
+import '@testing-library/jest-dom';
+import { render } from '@testing-library/svelte';
 import UtilitiesMenu from './UtilitiesMenu.svelte';
 
 // Local Omarchy layer: Utilities › Bank slips is Curator's (it reads each slip's amount and files slips into QR), so it

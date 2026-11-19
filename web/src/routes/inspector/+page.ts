@@ -1,6 +1,6 @@
-import { INSPECTOR_TITLE, INSPECTOR_WINDOW } from '$lib/managers/inspector-link.svelte';
-import { authenticate } from '$lib/utils/auth';
-import { getFormatter } from '$lib/utils/i18n';
+import { INSPECTOR_TITLE, INSPECTOR_WINDOW } from '#lib/managers/inspector-link.svelte.ts';
+import { authenticate } from '#lib/utils/auth.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
 import type { PageLoad } from './$types';
 
 // Local Omarchy layer: the inspector window (lib/components/inspector), outside the user pages' shell (no bar, no

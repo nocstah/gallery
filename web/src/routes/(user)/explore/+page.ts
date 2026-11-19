@@ -1,27 +1,27 @@
+import { createFilterState } from '#lib/components/filter-panel/filter-panel.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { memoryManager } from '#lib/managers/memory-manager.svelte.ts';
+import { authenticate } from '#lib/utils/auth.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { buildPhotosTimelineOptions } from '#lib/utils/photos-filter-options.ts';
+import { weekDaysAcrossYears, weekYears, type WeekYear } from '#lib/utils/week-across-years.ts';
 import {
-  type AssetResponseDto,
+  MemorySearchOrder,
+  TimeBucketSize,
   getAllPeople,
   getAssetsByCity,
   getExploreData,
   getTimeBucketCovers,
   getTimeBuckets,
-  MemorySearchOrder,
-  TimeBucketSize,
+  type AssetResponseDto,
 } from '@immich/sdk';
-import { createFilterState } from '$lib/components/filter-panel/filter-panel';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { memoryManager } from '$lib/managers/memory-manager.svelte';
-import { authenticate } from '$lib/utils/auth';
-import { getFormatter } from '$lib/utils/i18n';
-import { buildPhotosTimelineOptions } from '$lib/utils/photos-filter-options';
-import { weekDaysAcrossYears, weekYears, type WeekYear } from '$lib/utils/week-across-years';
 import type { PageLoad } from './$types';
 
 /**
- * Local Omarchy layer: this week in every past year with photos in it, one photo each (utils/week-across-years), from
- * the Photos page's own timeline: its months, then the covers of this week's days in the years that have photos in
- * the week's months. Two requests; a failure leaves the row out.
- */
+Local Omarchy layer: this week in every past year with photos in it, one photo each (utils/week-across-years), from
+the Photos page's own timeline: its months, then the covers of this week's days in the years that have photos in
+the week's months. Two requests; a failure leaves the row out.
+*/
 const loadWeekAcrossYears = async (): Promise<WeekYear[]> => {
   if (!authManager.authenticated) {
     return [];

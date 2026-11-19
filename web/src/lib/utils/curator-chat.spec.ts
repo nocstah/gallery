@@ -1,4 +1,4 @@
-import { chatStream, createChatEventParser, CuratorError, type ChatEvent } from '$lib/utils/curator';
+import { CuratorError, chatStream, createChatEventParser, type ChatEvent } from '#lib/utils/curator.ts';
 
 const encoder = new TextEncoder();
 

@@ -1,75 +1,86 @@
 <script lang="ts">
-  import { afterNavigate, goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import type { ActionArray } from '$lib/actions/use-actions';
-  import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import SearchBarQuery from '$lib/components/omarchy/SearchBarQuery.svelte';
-  import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import GalleryViewer from '$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
-  import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
-  import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
-  import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
-  import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
-  import DeleteAssets from '$lib/components/timeline/actions/DeleteAssetsAction.svelte';
-  import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
-  import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
-  import RotateAction from '$lib/components/timeline/actions/RotateAction.svelte';
-  import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
-  import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
-  import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
-  import { QueryParameter } from '$lib/constants';
-  import GalleryPhotoMenu from '$lib/gallery/photo-menu/GalleryPhotoMenu.svelte';
-  import { parseSearchTerms } from '$lib/gallery/search/parse-search-terms';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { barSlot } from '$lib/managers/bar-slot.svelte';
-  import { registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-  import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
-  import type { Viewport } from '$lib/managers/timeline-manager/types';
-  import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
-  import { Route } from '$lib/route';
-  import { getAssetBulkActions } from '$lib/services/asset.service';
-  import { countSearchResults, countSmartSearchResults, type SearchTerms } from '$lib/services/search.service';
-  import { lang, locale } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl, handlePromiseError } from '$lib/utils';
-  import { parseUtcDate } from '$lib/utils/date-time';
-  import { handleError } from '$lib/utils/handle-error';
-  import { isAlbumsRoute, isPeopleRoute } from '$lib/utils/navigation';
+  import ActionMenuItem from '#lib/components/ActionMenuItem.svelte';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import SearchBarQuery from '#lib/components/omarchy/SearchBarQuery.svelte';
+  // Kioku's spinner, as the branding gives every page (branding/scripts/apply-branding.sh patch_loading_spinner)
+  import LoadingSpinner from '#lib/components/shared-components/LoadingSpinner.svelte';
+  import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import GalleryViewer from '#lib/components/shared-components/gallery-viewer/GalleryViewer.svelte';
+  import AssetSelectControlBar from '#lib/components/timeline/AssetSelectControlBar.svelte';
+  import ChangeDate from '#lib/components/timeline/actions/ChangeDateAction.svelte';
+  import ChangeDescription from '#lib/components/timeline/actions/ChangeDescriptionAction.svelte';
+  import ChangeLocation from '#lib/components/timeline/actions/ChangeLocationAction.svelte';
+  import DeleteAssets from '#lib/components/timeline/actions/DeleteAssetsAction.svelte';
+  import DownloadAction from '#lib/components/timeline/actions/DownloadAction.svelte';
+  import FavoriteAction from '#lib/components/timeline/actions/FavoriteAction.svelte';
+  import RotateAction from '#lib/components/timeline/actions/RotateAction.svelte';
+  import SetVisibilityAction from '#lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import SpecialAlbumAction from '#lib/components/timeline/actions/SpecialAlbumAction.svelte';
+  import { QueryParameter } from '#lib/constants.ts';
+  import ArchiveAction from '#lib/gallery/actions/ArchiveAction.svelte';
+  import GalleryPhotoMenu from '#lib/gallery/photo-menu/GalleryPhotoMenu.svelte';
+  import { parseSearchTerms } from '#lib/gallery/search/parse-search-terms.ts';
+  import {
+    getScopedPersonNames,
+    isVisibleSearchKey,
+    registerSearchSelection,
+    sharedSpacesDefault,
+  } from '#lib/gallery/search/search-page.ts';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { barSlot } from '#lib/managers/bar-slot.svelte.ts';
+  import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
+  import { globalSearchManager } from '#lib/managers/global-search-manager.svelte.ts';
+  import { offeredSpecialAlbums } from '#lib/managers/special-albums.svelte.ts';
+  import type { TimelineAsset, Viewport } from '#lib/managers/timeline-manager/types.ts';
+  import SearchAddAllToCollectionModal from '#lib/modals/SearchAddAllToCollectionModal.svelte';
+  import { createPreloadedQuery } from '#lib/queries/client.ts';
+  import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+  import { Route } from '#lib/route.ts';
+  import { getAssetBulkActions } from '#lib/services/asset.service.ts';
+  import { countSearchResults, countSmartSearchResults, type SearchTerms } from '#lib/services/search.service.ts';
+  import { lang, locale } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl, handlePromiseError } from '#lib/utils.ts';
+  import { parseUtcDate } from '#lib/utils/date-time.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { isAlbumsRoute, isPeopleRoute } from '#lib/utils/navigation.ts';
   import {
     clearRecentSearches,
     readRecentSearches,
     rememberSearch,
     type RecentSearch,
-  } from '$lib/utils/recent-searches';
+  } from '#lib/utils/recent-searches.ts';
   import {
     getSearchModeText,
     isTextSearchMode,
     searchModeField,
     withSearchModeText,
     type TextSearchMode,
-  } from '$lib/utils/search-mode-terms';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
+  } from '#lib/utils/search-mode-terms.ts';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
   import {
-    type AlbumResponseDto,
     AssetMediaSize,
-    type AssetResponseDto,
     AssetVisibility,
     getPerson,
     getTagById,
     searchAssets,
-    searchPerson,
     searchSmart,
+    type AlbumResponseDto,
+    type AssetResponseDto,
   } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, IconButton, modalManager } from '@immich/ui';
   import { mdiClose, mdiDotsVertical, mdiHistory, mdiPlus, mdiSelectAll } from '@mdi/js';
   import { untrack } from 'svelte';
   import { t, type Translations } from 'svelte-i18n';
+  import type { Attachment } from 'svelte/attachments';
   import { MediaQuery } from 'svelte/reactivity';
+  import { afterNavigate, goto } from '$app/navigation';
+  import { page } from '$app/state';
+
+  const query = createPreloadedQuery(getUserConfigQuery);
+  const config = $derived(query.data);
+  const smartSearchEnabled = $derived(config.machineLearning.clip.enabled);
 
   const viewport: Viewport = $state({ width: 0, height: 0 });
   let searchResultsElement: HTMLElement | undefined = $state();
@@ -77,19 +88,15 @@
   // Local Omarchy layer: the page lives in the shell (2026-10-15), so the shell's panel scrolls the results, not the
   // window: the grid follows that panel and is as tall as it
   let scroller = $state<HTMLElement>();
-  const scrollerActions: ActionArray = [
-    (node: HTMLElement) => {
-      scroller = node;
-      const resized = new ResizeObserver(() => (viewport.height = node.clientHeight));
-      resized.observe(node);
-      return {
-        destroy: () => {
-          resized.disconnect();
-          scroller = undefined;
-        },
-      };
-    },
-  ];
+  const followScroller: Attachment<HTMLElement> = (node) => {
+    scroller = node;
+    const resized = new ResizeObserver(() => (viewport.height = node.clientHeight));
+    resized.observe(node);
+    return () => {
+      resized.disconnect();
+      scroller = undefined;
+    };
+  };
 
   // The GalleryViewer pushes it's own history state, which causes weird
   // behavior for history.back(). To prevent that we store the previous page
@@ -109,20 +116,13 @@
   let searchSerial = 0;
 
   let searchQuery = $derived(page.url.searchParams.get(QueryParameter.QUERY));
-  let smartSearchEnabled = $derived(featureFlagsManager.value.smartSearch);
   let terms = $derived<SearchTerms>(searchQuery ? parseSearchTerms<SearchTerms>(searchQuery) : {});
-  let searchTermKeys = $derived(getVisibleSearchKeys(terms));
+  let searchTermKeys = $derived(getObjectKeys(terms).filter(isVisibleSearchKey));
   const hasSearch = $derived(searchTermKeys.length > 0);
 
-  // #830: this page is Gallery's global search surface, but a URL-driven search only ever
-  // covered the caller's own (and partner) assets. A Space member who opened "Show similar
-  // photos" on a photo shared with them — or pasted the same `queryAssetId` URL — got zero
-  // results while the space owner got a long list. Opt into shared spaces the way the command
-  // palette already does (#894); the server scopes them to spaces the member has kept in their
-  // timeline. Spread before `terms` so an explicit value in the URL still wins, and skip it
-  // entirely for a space-scoped URL — the server rejects `spaceId` + `withSharedSpaces`.
+  // #830: shared spaces unless the URL says otherwise (gallery/search/search-page).
   // (Local Omarchy layer: shared by the search, its count and "Add all".)
-  const searchTerms = $derived<SearchTerms>({ ...(!terms.spaceId && { withSharedSpaces: true }), ...terms });
+  const searchTerms = $derived<SearchTerms>({ ...sharedSpacesDefault(terms), ...terms });
 
   // Local Omarchy layer: the field in the bar holds the text the terms search by, in the mode it searches with
   // (smart, filename, description or OCR, the palette's modes); every other term is a chip under the bar. With no text
@@ -174,7 +174,9 @@
     });
   });
 
-  afterNavigate(({ from }) => {
+  afterNavigate(({ from, shallow, type }) => {
+    if (shallow && type === 'goto') return;
+
     // Prevent setting previousRoute to the current page.
     if (from?.url && from.route.id !== page.route.id) {
       previousRoute = from.url.href;
@@ -207,42 +209,17 @@
     onAssetDelete(assetIds);
   };
 
-  const onFavorite = (ids: string[], isFavorite: boolean) => {
-    for (const id of ids) {
-      const asset = searchResultAssets.find((asset) => asset.id === id);
-      if (asset) {
-        asset.isFavorite = isFavorite;
-      }
-    }
-  };
-
-  const onArchive = (ids: string[], visibility: AssetVisibility) => {
-    // Local Omarchy layer: the search asks for Timeline unless told otherwise (loadNextPage), so what is archived (To do,
-    // Villa) leaves the results, as it leaves the timeline
-    if ((terms.visibility ?? AssetVisibility.Timeline) !== visibility) {
-      removeResults(ids);
-      return;
-    }
-    for (const id of ids) {
-      const asset = searchResultAssets.find((asset) => asset.id === id);
-      if (asset) {
-        asset.visibility = visibility;
-      }
-    }
-  };
-
-  const onUndoDelete = () => {
-    void onSearchQueryUpdate();
-  };
-
-  registerSelectionContext({
-    getAssets: () => assetMultiSelectManager.assets,
-    clearSelection: () => assetMultiSelectManager.clear(),
-    canAddToAlbum: () => true,
-    getOnFavorite: () => onFavorite,
-    getOnArchive: () => onArchive,
-    getOnDelete: () => onAssetDelete,
-    getOnUndoDelete: () => onUndoDelete,
+  // Local Omarchy layer: the search asks for Timeline unless told otherwise (loadNextPage), so what is archived (To do,
+  // Villa) leaves the results, as it leaves the timeline; and what leaves the results leaves the count too
+  const { onFavorite, onArchive } = registerSearchSelection({
+    getAssets: () => searchResultAssets,
+    setAssets: (assets) => {
+      removedCount += searchResultAssets.length - assets.length;
+      searchResultAssets = assets;
+    },
+    getVisibility: () => terms.visibility ?? AssetVisibility.Timeline,
+    onDelete: onAssetDelete,
+    reload: onSearchQueryUpdate,
   });
 
   const handleSelectAll = () => {
@@ -302,7 +279,7 @@
 
     try {
       const { albums, assets } =
-        ('query' in searchDto || 'queryAssetId' in searchDto) && smartSearchEnabled
+        ('query' in searchDto || 'queryAssetId' in searchDto) && config.machineLearning.clip.enabled
           ? await searchSmart({
               smartSearchDto: { visibility: AssetVisibility.Timeline, ...searchDto, language: $lang },
             })
@@ -338,7 +315,7 @@
       return;
     }
     assetMultiSelectManager.clear();
-    await goto(Route.search(next), { keepFocus: true, noScroll: true });
+    await goto(Route.search(next), { reset: false });
   };
 
   // ...and a mode picked beside the field searches its text that way; the palette opens in that mode from then on
@@ -427,23 +404,12 @@
     return keyMap[key] || key;
   }
 
-  const isScopedPersonToken = (personId: string) =>
-    personId.startsWith('person:') || personId.startsWith('space-person:');
-
   async function getPersonName(personIds: string[]) {
-    const scopedPersonIds = personIds.filter((personId) => isScopedPersonToken(personId));
-    const scopedPeople =
-      scopedPersonIds.length > 0 ? await searchPerson({ name: '', withHidden: true, withSharedSpaces: true }) : [];
-    const scopedPeopleByFilterId = new Map(
-      scopedPeople.map((person) => [person.filterId ?? `person:${person.id}`, person]),
-    );
-
+    const scopedPersonNames = await getScopedPersonNames(personIds);
     const personNames = await Promise.all(
       personIds.map(async (personId) => {
-        if (isScopedPersonToken(personId)) {
-          const person = scopedPeopleByFilterId.get(personId);
-
-          return person?.name || $t('no_name');
+        if (scopedPersonNames.has(personId)) {
+          return scopedPersonNames.get(personId) || $t('no_name');
         }
 
         const person = await getPerson({ id: personId });
@@ -482,12 +448,22 @@
     }
   };
 
+  // (removeResults: Local Omarchy layer, the count follows)
+  const onAssetsArchive = (assetIds: string[]) => {
+    if (!terms.visibility || terms.visibility === AssetVisibility.Timeline) {
+      removeResults(assetIds);
+    }
+  };
+
+  // TODO: add back in opposite case
+  const onAssetsUnarchive = (assets: TimelineAsset[]) => {
+    if (terms.visibility === AssetVisibility.Archive) {
+      removeResults(assets.map((asset) => asset.id));
+    }
+  };
+
   function getObjectKeys<T extends object>(obj: T): (keyof T)[] {
     return Object.keys(obj) as (keyof T)[];
-  }
-
-  function getVisibleSearchKeys(terms: SearchTerms) {
-    return getObjectKeys(terms).filter((key) => key !== 'withSharedSpaces');
   }
 
   function removeFilter(key: keyof SearchTerms) {
@@ -506,7 +482,7 @@
   });
 </script>
 
-<OnEvents {onAlbumAddAssets} />
+<OnEvents {onAlbumAddAssets} {onAssetsArchive} {onAssetsUnarchive} />
 
 <!-- Local Omarchy layer: every result into an album or a Space, right beside the count it adds (in the bar, or under it
      with the count on a narrow bar): it stood at the end of the chips row, some 1,700px from the count on the AORUS.
@@ -548,7 +524,7 @@
      back arrow, and this fork showed a notice there pointing to Ctrl+K): the sidebar stays, the query is a field in the
      one bar, the other terms are chips over the results, and the selection bar takes the bar's place (below the
      shell) -->
-<UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} barFitsNavbar use={scrollerActions}>
+<UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} barFitsNavbar {@attach followScroller}>
   {#if hasSearch && ((countText && !barRoomy) || chipKeys.length > 0)}
     <div class="ws-search-terms" data-testid="search-terms">
       {#if countText && !barRoomy}
@@ -556,7 +532,7 @@
         {@render addAll()}
       {/if}
       {#each chipKeys as searchKey (searchKey)}
-        {@const value = terms[searchKey]}
+        {const value = $derived(terms[searchKey])}
         <span class="ws-search-term">
           {#if searchKey === 'queryAssetId' && typeof value === 'string'}
             <!-- a photo to find others like: the photo itself, small -->
@@ -719,7 +695,7 @@
 
 {#if assetMultiSelectManager.selectionActive}
   <AssetSelectControlBar>
-    {@const Actions = getAssetBulkActions($t)}
+    {const Actions = $derived(getAssetBulkActions($t))}
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
 
     <ActionButton action={Actions.CreateSharedLink} />

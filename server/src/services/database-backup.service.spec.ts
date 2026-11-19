@@ -11,15 +11,15 @@ import { systemConfigStub } from 'test/fixtures/system-config.stub.js';
 import { AutoMocked, ServiceMocks, automock, getMocks, mockDuplex, mockSpawn } from 'test/utils.js';
 
 /**
- * Every backup file operation now goes through a storage backend, so these are the seams the service is
- * asserted against.
- *
- * Deliberately STATEFUL, tracking the keys it holds: a fake whose `get` succeeds for any key and whose
- * `list` ignores what was written would pass a service that promoted the wrong key or forgot to write at
- * all, and would make the dump-then-promote flow untestable end to end. `put` drains its source, because
- * the dump pipeline only completes once something has consumed the gzip output, exactly as a real backend
- * does. Tests that only care about one call still override the individual mocks.
- */
+Every backup file operation now goes through a storage backend, so these are the seams the service is
+asserted against.
+
+Deliberately STATEFUL, tracking the keys it holds: a fake whose `get` succeeds for any key and whose
+`list` ignores what was written would pass a service that promoted the wrong key or forgot to write at
+all, and would make the dump-then-promote flow untestable end to end. `put` drains its source, because
+the dump pipeline only completes once something has consumed the gzip output, exactly as a real backend
+does. Tests that only care about one call still override the individual mocks.
+*/
 const fakeBackend = () => {
   const held = new Map<string, number>();
 
@@ -72,9 +72,10 @@ const fakeBackend = () => {
 type FakeBackend = ReturnType<typeof fakeBackend>;
 
 const listingUnder =
+  // eslint-disable-next-line unicorn/no-unnecessary-parameters
   (prefix: string) =>
-  (...filenames: string[]) =>
-    filenames.map((filename) => ({ key: `${prefix}${filename}`, size: 1 }));
+    (...filenames: string[]) =>
+      filenames.map((filename) => ({ key: `${prefix}${filename}`, size: 1 }));
 
 const configWithS3 = (enabled: boolean) =>
   ({ backup: { database: { ...defaults.backup.database, s3: { enabled } } } }) as SystemConfig;
@@ -104,6 +105,7 @@ describe(DatabaseBackupService.name, () => {
 
   beforeEach(() => {
     mocks = getMocks();
+    mocks.process.isCommandAvailable.mockResolvedValue(false);
     staging = fakeBackend();
     remote = fakeBackend();
     store = { staging: staging as never, key: (filename) => `backups/${filename}`, prefix: 'backups/' };
@@ -431,6 +433,13 @@ describe(DatabaseBackupService.name, () => {
       `);
     });
 
+    it('should abort the backup and remove the temporary file when the signal is aborted', async () => {
+      await expect(sut.createDatabaseBackup('', AbortSignal.abort())).rejects.toThrow('The operation was aborted');
+      // Gallery #1226: the dump goes through the backup store, so the staged .tmp key is what gets removed.
+      expect(staging.delete).toHaveBeenCalledWith(expect.stringMatching(/\.tmp$/));
+      expect(staging.rename).not.toHaveBeenCalled();
+    });
+
     it('should run a database backup successfully', async () => {
       const result = await sut.handleBackupDatabase();
       expect(result).toBe(JobStatus.Success);
@@ -454,6 +463,27 @@ describe(DatabaseBackupService.name, () => {
       await sut.handleBackupDatabase();
       expect(remote.put).not.toHaveBeenCalled();
       expect(staging.delete).not.toHaveBeenCalled();
+    });
+
+    it('should compress with gzip when pigz is not installed', async () => {
+      await sut.handleBackupDatabase();
+      expect(mocks.process.isCommandAvailable).toHaveBeenCalledWith('pigz');
+      expect(mocks.process.spawnDuplexStream).toHaveBeenLastCalledWith('gzip', ['--rsyncable']);
+    });
+
+    it.each([
+      { cores: 1, processes: '1' },
+      { cores: 8, processes: '6' },
+      { cores: 72, processes: '32' },
+    ])('should compress with pigz on $processes of $cores cores when it is installed', async ({ cores, processes }) => {
+      mocks.process.isCommandAvailable.mockResolvedValue(true);
+      mocks.process.availableParallelism.mockReturnValue(cores);
+      await sut.handleBackupDatabase();
+      expect(mocks.process.spawnDuplexStream).toHaveBeenLastCalledWith('pigz', [
+        '--rsyncable',
+        '--processes',
+        processes,
+      ]);
     });
 
     it('should fail if pg_dump fails', async () => {

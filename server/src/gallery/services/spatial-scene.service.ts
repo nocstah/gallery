@@ -1,10 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { AuthDto } from 'src/dtos/auth.dto.js';
-import type { ArgOf } from 'src/repositories/event.repository.js';
-import type { JobItem, JobOf } from 'src/types.js';
-import type { ImmichMediaResponse } from 'src/utils/file.js';
 import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants.js';
 import { OnEvent, OnJob } from 'src/decorators.js';
+import type { AuthDto } from 'src/dtos/auth.dto.js';
 import {
   AssetType,
   AssetVisibility,
@@ -16,9 +13,12 @@ import {
   QueueName,
 } from 'src/enum.js';
 import { depthMapPath, isSpatialSceneEnabled } from 'src/gallery/utils/spatial-scene.js';
+import type { ArgOf } from 'src/repositories/event.repository.js';
 import { BaseService } from 'src/services/base.service.js';
 import { StorageService } from 'src/services/storage.service.js';
+import type { JobItem, JobOf } from 'src/types.js';
 import { isPanorama } from 'src/utils/asset.util.js';
+import type { ImmichMediaResponse } from 'src/utils/file.js';
 
 /** Spatial Scene: a depth map per photo, computed after upload (specs/2026-10-29-spatial-scene-design.md). */
 @Injectable()
@@ -110,7 +110,7 @@ export class SpatialSceneService extends BaseService {
 
     const { modelName } = machineLearning.spatialScene;
     try {
-      const depth = await this.machineLearningRepository.estimateDepth(asset.previewPath, { modelName });
+      const depth = await this.galleryMachineLearningRepository.estimateDepth(asset.previewPath, { modelName });
 
       // The ML call can outlast a model switch, whose ConfigUpdate has already queued a forced run under the new
       // model: a map from the old one must not be stored over it.

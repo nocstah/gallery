@@ -1,10 +1,10 @@
 <script lang="ts">
-  import StarRating, { type Rating } from '$lib/elements/StarRating.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { handlePromiseError } from '$lib/utils';
-  import { applyContextualFilter } from '$lib/utils/filter-target';
-  import { handleError } from '$lib/utils/handle-error';
-  import { ratingDone } from '$lib/utils/undoable';
+  import StarRating, { type Rating } from '#lib/elements/StarRating.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { handlePromiseError } from '#lib/utils.ts';
+  import { applyContextualFilter } from '#lib/utils/filter-target.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { ratingDone } from '#lib/utils/undoable.ts';
   import { updateAsset, type AssetResponseDto } from '@immich/sdk';
   import { IconButton } from '@immich/ui';
   import { mdiFilterOutline } from '@mdi/js';
@@ -33,12 +33,12 @@
   };
 
   /**
-   * R6 — the stars ARE the editing control (a star click already means "set the rating to N"), so
-   * the filter cannot live on the value. It gets its own icon.
-   *
-   * R9 — and only when there is a rating to filter BY: parseRating (filter-url.ts) rejects anything
-   * outside 1..5, so an unrated asset's icon would close the asset viewer and apply nothing at all.
-   */
+  R6 — the stars ARE the editing control (a star click already means "set the rating to N"), so
+  the filter cannot live on the value. It gets its own icon.
+  
+  R9 — and only when there is a rating to filter BY: parseRating (filter-url.ts) rejects anything
+  outside 1..5, so an unrated asset's icon would close the asset viewer and apply nothing at all.
+  */
   let filterableRating = $derived(rating !== null && rating >= 1 && rating <= 5 ? rating : undefined);
 </script>
 

@@ -1,15 +1,15 @@
+import SetVisibilityAction from '#lib/components/timeline/actions/SetVisibilityAction.svelte';
 import { modalManager } from '@immich/ui';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
 
 // Local Omarchy layer: the Locked Folder's dialogs are titled by the button that opens them, so the way in and the
 // way out each read one way (the test harness's svelte-i18n resolves keys to themselves: src/test-data/setup.ts)
 describe('SetVisibilityAction', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(modalManager, 'showDialog').mockResolvedValue(false);
+    vi.spyOn(modalManager, 'showDialog').mockResolvedValue(false as never);
   });
 
   it('asks to move photos into the Locked Folder in the words of its button', async () => {

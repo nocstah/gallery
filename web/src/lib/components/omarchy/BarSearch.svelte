@@ -2,8 +2,8 @@
   // Local Omarchy layer: search in the one bar is an icon until you want it. Clicking it opens the search field in
   // place, growing leftwards over the middle of the bar, with the results dropping below as before; it folds back to
   // the icon once the search is closed and the field left. Ctrl+K still opens the full search window.
-  import GlobalSearch from '$lib/components/global-search/global-search.svelte';
-  import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
+  import GlobalSearch from '#lib/components/global-search/global-search.svelte';
+  import { globalSearchManager } from '#lib/managers/global-search-manager.svelte.ts';
   import { Icon } from '@immich/ui';
   import { mdiMagnify } from '@mdi/js';
   import { tick } from 'svelte';

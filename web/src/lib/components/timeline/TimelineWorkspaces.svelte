@@ -7,14 +7,14 @@
   // switches Hyprland workspaces. The months are left to the scrubber and the Months overview: a row of twelve took the
   // room the years need in a narrower window. A narrower bar shows fewer years and a shorter month name; nothing
   // folds, moves or opens over the photos.
-  import TimelineMonthHeading from '$lib/components/timeline/TimelineMonthHeading.svelte';
-  import TimelineOverviewSwitch from '$lib/components/timeline/TimelineOverviewSwitch.svelte';
-  import { monthInView } from '$lib/managers/timeline-heading.svelte';
-  import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import type { TimelineGrouping, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
-  import { desktopMotion, type WorkspaceMotion } from '$lib/utils/desktop-motion';
-  import { cutAtEnds } from '$lib/utils/strip-ends';
-  import { YearSlide, type YearSlideMoves } from '$lib/utils/year-slide';
+  import TimelineMonthHeading from '#lib/components/timeline/TimelineMonthHeading.svelte';
+  import TimelineOverviewSwitch from '#lib/components/timeline/TimelineOverviewSwitch.svelte';
+  import { monthInView } from '#lib/managers/timeline-heading.svelte.ts';
+  import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import type { TimelineGrouping, ViewportTopMonth } from '#lib/managers/timeline-manager/types.ts';
+  import { desktopMotion, type WorkspaceMotion } from '#lib/utils/desktop-motion.ts';
+  import { cutAtEnds } from '#lib/utils/strip-ends.ts';
+  import { YearSlide, type YearSlideMoves } from '#lib/utils/year-slide.ts';
   import { Icon } from '@immich/ui';
   import { mdiChevronLeft, mdiChevronRight } from '@mdi/js';
   import { untrack } from 'svelte';

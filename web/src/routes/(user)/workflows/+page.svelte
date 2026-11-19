@@ -1,11 +1,14 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import { Route } from '$lib/route';
-  import { getWorkflowActions, getWorkflowsActions, getWorkflowShowSchemaAction } from '$lib/services/workflow.service';
-  import { getTriggerName } from '$lib/utils/workflow';
-  import { getWorkflowForShare, type WorkflowResponseDto } from '@immich/sdk';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { createPreloadedQuery, queryClient } from '#lib/queries/client.ts';
+  import { getWorkflowForShareQuery, searchWorkflowsQuery } from '#lib/queries/workflow.query.ts';
+  import { Route } from '#lib/route.ts';
+  import {
+    getWorkflowActions,
+    getWorkflowShowSchemaAction,
+    getWorkflowsActions,
+  } from '#lib/services/workflow.service.ts';
+  import { getTriggerName } from '#lib/utils/workflow.ts';
   import { Button, CodeBlock, ContextMenuButton, Icon, MenuItemType } from '@immich/ui';
   import { mdiClose, mdiFlashOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -18,7 +21,8 @@
 
   let { data }: Props = $props();
 
-  let workflows = $state<WorkflowResponseDto[]>(data.workflows);
+  const query = createPreloadedQuery(searchWorkflowsQuery);
+  const workflows = $derived(query.data);
 
   const expandedIds = new SvelteSet<string>();
 
@@ -31,21 +35,7 @@
   };
 
   const { Create, UseTemplate } = $derived(getWorkflowsActions($t));
-
-  const onWorkflowCreate = async (response: WorkflowResponseDto) => {
-    await goto(Route.viewWorkflow(response));
-  };
-
-  const onWorkflowUpdate = (response: WorkflowResponseDto) => {
-    workflows = workflows.map((workflow) => (workflow.id === response.id ? response : workflow));
-  };
-
-  const onWorkflowDelete = (response: WorkflowResponseDto) => {
-    workflows = workflows.filter(({ id }) => id !== response.id);
-  };
 </script>
-
-<OnEvents {onWorkflowCreate} {onWorkflowUpdate} {onWorkflowDelete} />
 
 <UserPageLayout title={data.meta.title} actions={[UseTemplate, Create]} scrollbar={false}>
   <!-- Local Omarchy layer: the workflows as rows on the page's gutter, split by hairlines (upstream: a card each in a
@@ -78,7 +68,7 @@
       <p class="ws-workflows-note">{$t('workflows_help_text')}</p>
       <ul class="ws-workflows">
         {#each workflows as workflow (workflow.id)}
-          {@const { ToggleEnabled, Duplicate, Logs, Edit, Delete } = getWorkflowActions($t, workflow)}
+          {const { ToggleEnabled, Duplicate, Logs, Edit, Delete } = $derived(getWorkflowActions($t, workflow))}
 
           <li class="ws-workflow" class:ws-workflow-off={!workflow.enabled}>
             <div class="ws-workflow-row">
@@ -115,7 +105,7 @@
             </div>
 
             {#if expandedIds.has(workflow.id)}
-              {#await getWorkflowForShare({ id: workflow.id }) then result}
+              {#await queryClient.query(getWorkflowForShareQuery(workflow.id)) then result}
                 <div class="ws-workflow-schema">
                   <CodeBlock code={JSON.stringify(result, null, 2)} lineNumbers />
                   <Button

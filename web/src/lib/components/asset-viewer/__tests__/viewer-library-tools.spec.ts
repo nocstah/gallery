@@ -1,21 +1,21 @@
+import AssetViewerNavBar from '#lib/components/asset-viewer/AssetViewerNavBar.svelte';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import {
+  SECOND_CURATOR_FEATURES,
+  libraryContextFile,
+  mainLibrary,
+  secondOffering,
+  serving,
+} from '#test/kioku/factories/library-context-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
+import { getResizeObserverMock } from '#test/kioku/mocks/resize-observer.mock.ts';
 import { AssetTypeEnum, AssetVisibility } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { screen } from '@testing-library/svelte';
-import { getResizeObserverMock } from '$lib/__mocks__/resize-observer.mock';
-import AssetViewerNavBar from '$lib/components/asset-viewer/AssetViewerNavBar.svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { renderWithTooltips } from '$tests/helpers';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import {
-  libraryContextFile,
-  mainLibrary,
-  SECOND_CURATOR_FEATURES,
-  secondOffering,
-  serving,
-} from '@test-data/factories/library-context-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 
 // Local Omarchy layer: the photo viewer's bar offers each of Curator's tools only where this library's Curator offers
 // what it is for (gallery/libraries): Adjust, Live effects and Copy subject its live tools, Remove objects the restorer,
@@ -24,12 +24,12 @@ import { userAdminFactory } from '@test-data/factories/user-factory';
 
 const { kinds, health } = vi.hoisted(() => ({ kinds: vi.fn(), health: vi.fn() }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/utils/curator')>();
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/utils/curator.ts')>();
   return { ...actual, curator: { ...actual.curator, kinds, health } };
 });
 
-vi.mock(import('$lib/managers/feature-flags-manager.svelte'), function () {
+vi.mock(import('#lib/managers/feature-flags-manager.svelte.ts'), function () {
   return {
     featureFlagsManager: {
       init: vi.fn(),

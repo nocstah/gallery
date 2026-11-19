@@ -5,12 +5,11 @@
   // when (data type, at the row's end), and the photos it is about as a strip of the grid's own square tiles, each
   // opening in the viewer, then +N for the rest where they live. Comments show their text; hearts come together. A link
   // I made says what it shows, who can open it and when it ends in the Shared links page's words (SharedLinkFacts).
-  import SharedLinkFacts from '$lib/components/omarchy/SharedLinkFacts.svelte';
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import { Route } from '$lib/route';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { relativeTime } from '$lib/utils/relative-time';
-  import { linkName } from '$lib/utils/shared-link-words';
+  import SharedLinkFacts from '#lib/components/omarchy/SharedLinkFacts.svelte';
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import { Route } from '#lib/route.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { relativeTime } from '#lib/utils/relative-time.ts';
   import {
     fullTime,
     groupByDay,
@@ -18,14 +17,15 @@
     type FeedItem,
     type FeedPerson,
     type FeedPlace,
-  } from '$lib/utils/shared-feed';
-  import { formatGroupTitle } from '$lib/utils/timeline-util';
+  } from '#lib/utils/shared-feed.ts';
+  import { linkName } from '#lib/utils/shared-link-words.ts';
+  import { formatGroupTitle } from '#lib/utils/timeline-util.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiImageAlbum } from '@mdi/js';
   import { DateTime } from 'luxon';
-  import { SvelteSet } from 'svelte/reactivity';
   import { locale, t } from 'svelte-i18n';
+  import { SvelteSet } from 'svelte/reactivity';
 
   type Props = {
     items: FeedItem[];
@@ -136,7 +136,7 @@
     item.kind === 'added' ? Math.max(item.count, item.photoIds.length) : item.photoIds.length;
 
   /** what a link shows, where the item's place does not say it: "Album", "Memory", "12 photos" (a link to photos
-   * without words of its own is placed under Shared links, so its count is said here, as its row's name) */
+  without words of its own is placed under Shared links, so its count is said here, as its row's name) */
   const linkWhat = (item: Extract<FeedItem, { kind: 'link' }>) => {
     const named = linkName($t, item.link);
     return named.what ?? named.name;
@@ -166,10 +166,10 @@
 {/snippet}
 
 {#snippet strip(item: FeedItem)}
-  {@const photos = item.photoIds.filter((id) => !missing.has(id))}
-  {@const shown = photos.slice(0, WIDE)}
-  {@const wideMore = total(item) - shown.length}
-  {@const narrowMore = total(item) - Math.min(NARROW, shown.length)}
+  {const photos = $derived(item.photoIds.filter((id) => !missing.has(id)))}
+  {const shown = $derived(photos.slice(0, WIDE))}
+  {const wideMore = $derived(total(item) - shown.length)}
+  {const narrowMore = $derived(total(item) - Math.min(NARROW, shown.length))}
   {#if shown.length > 0}
     <div class="ws-feed-strip">
       {#each shown as id, index (id)}
@@ -194,7 +194,7 @@
 {/snippet}
 
 {#snippet comments(item: FeedItem, list: FeedComment[], several: boolean)}
-  {@const latest = list.slice(-COMMENTS)}
+  {const latest = $derived(list.slice(-COMMENTS))}
   <ul class="ws-feed-comments">
     {#each latest as comment (comment.id)}
       <li class="ws-feed-comment">

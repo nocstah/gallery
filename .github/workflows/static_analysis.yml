@@ -29,6 +29,7 @@ jobs:
               - 'mobile/**'
               - 'open-api/**'
               - 'i18n/en.json'
+              - 'native/**'
               - 'i18n/gallery/en.json'
           force-filters: |
             - '.github/workflows/static_analysis.yml'
@@ -52,7 +53,7 @@ jobs:
           token: ${{ github.token }}
 
       - name: Setup Mise
-        uses: immich-app/devtools/actions/use-mise@06a9ef925332c91be647d6256642b86b398592c8 # use-mise-action-v3.2.1
+        uses: immich-app/devtools/actions/use-mise@caac7f7e4298458a14238959504f411fc6cc7f06 # use-mise-action-v3.2.3
         with:
           github_token: ${{ github.token }}
           working_directory: ./mobile

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import GroupTab from '$lib/elements/GroupTab.svelte';
-  import SearchBar from '$lib/elements/SearchBar.svelte';
-  import { AlbumFilter, albumViewSettings } from '$lib/stores/preferences.store';
-  import { createAlbumAndRedirect, findFilterOption } from '$lib/utils/album-utils';
+  import GroupTab from '#lib/elements/GroupTab.svelte';
+  import SearchBar from '#lib/elements/SearchBar.svelte';
+  import { AlbumFilter, albumViewSettings } from '#lib/stores/preferences.store.ts';
+  import { createAlbumAndRedirect, findFilterOption } from '#lib/utils/album-utils.ts';
   import { Button } from '@immich/ui';
   import { mdiPlusBoxOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';

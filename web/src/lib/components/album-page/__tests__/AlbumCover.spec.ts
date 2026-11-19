@@ -1,11 +1,11 @@
+import AlbumCover from '#lib/components/album-page/AlbumCover.svelte';
+import { qrManager } from '#lib/managers/special-albums.svelte.ts';
+import { getAssetMediaUrl } from '#lib/utils.ts';
+import { albumFactory } from '#test/kioku/factories/album-factory.ts';
 import { render } from '@testing-library/svelte';
-import AlbumCover from '$lib/components/album-page/AlbumCover.svelte';
-import { qrManager } from '$lib/managers/special-albums.svelte';
-import { getAssetMediaUrl } from '$lib/utils';
-import { albumFactory } from '@test-data/factories/album-factory';
 
-vi.mock('$lib/utils');
-vi.mock('$lib/managers/slip-covers.svelte', () => ({
+vi.mock('#lib/utils.ts');
+vi.mock('#lib/managers/slip-covers.svelte.ts', () => ({
   slipCovers: { isSlip: (assetId: string | null | undefined) => assetId === 'a-bank-slip' },
 }));
 

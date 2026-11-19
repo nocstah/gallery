@@ -1,11 +1,11 @@
+import { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { getAnimateMock } from '#test/kioku/mocks/animate.mock.ts';
+import { getIntersectionObserverMock } from '#test/kioku/mocks/intersection-observer.mock.ts';
+import { getVisualViewportMock } from '#test/kioku/mocks/visual-viewport.mock.ts';
 import type { ActionItem } from '@immich/ui';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { getAnimateMock } from '$lib/__mocks__/animate.mock';
-import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
-import { getVisualViewportMock } from '$lib/__mocks__/visual-viewport.mock';
-import { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { timelineAssetFactory } from '@test-data/factories/asset-factory';
 import SelectionReviewModal from './SelectionReviewModal.svelte';
 
 // Local Omarchy layer: Show selected, the review of a selection from the selection bar's count

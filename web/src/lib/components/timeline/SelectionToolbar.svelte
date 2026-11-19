@@ -1,36 +1,35 @@
 <script lang="ts">
-  import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
-  import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
-  import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
-  import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
-  import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
-  import CreateSharedLink from '$lib/components/timeline/actions/CreateSharedLinkAction.svelte';
-  import DeleteAssets from '$lib/components/timeline/actions/DeleteAssetsAction.svelte';
-  import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
-  import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
-  import RemoveFromAlbum from '$lib/components/timeline/actions/RemoveFromAlbumAction.svelte';
-  import RemoveFromSpaceAction from '$lib/components/timeline/actions/RemoveFromSpaceAction.svelte';
-  import RotateAction from '$lib/components/timeline/actions/RotateAction.svelte';
-  import SelectAllAssets from '$lib/components/timeline/actions/SelectAllAction.svelte';
-  import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
-  import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
-  import SelectionGroup from '$lib/components/timeline/SelectionGroup.svelte';
-  import { offerFromSelectionBar } from '$lib/gallery/photo-menu/selection-bar.svelte';
-  import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import ActionMenuItem from '#lib/components/ActionMenuItem.svelte';
+  import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import AssetSelectControlBar from '#lib/components/timeline/AssetSelectControlBar.svelte';
+  import SelectionGroup from '#lib/components/timeline/SelectionGroup.svelte';
+  import ChangeDate from '#lib/components/timeline/actions/ChangeDateAction.svelte';
+  import ChangeDescription from '#lib/components/timeline/actions/ChangeDescriptionAction.svelte';
+  import ChangeLocation from '#lib/components/timeline/actions/ChangeLocationAction.svelte';
+  import DeleteAssets from '#lib/components/timeline/actions/DeleteAssetsAction.svelte';
+  import DownloadAction from '#lib/components/timeline/actions/DownloadAction.svelte';
+  import FavoriteAction from '#lib/components/timeline/actions/FavoriteAction.svelte';
+  import RemoveFromSpaceAction from '#lib/components/timeline/actions/RemoveFromSpaceAction.svelte';
+  import RotateAction from '#lib/components/timeline/actions/RotateAction.svelte';
+  import SelectAllAssets from '#lib/components/timeline/actions/SelectAllAction.svelte';
+  import SetVisibilityAction from '#lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import ArchiveAction from '#lib/gallery/actions/ArchiveAction.svelte';
+  import { offerFromSelectionBar } from '#lib/gallery/photo-menu/selection-bar.svelte.ts';
+  import AlbumStackBulkActions from '#lib/gallery/stack/AlbumStackBulkActions.svelte';
+  import type { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import type {
     AlbumContext,
     CommandContext,
     SelectionCommandContext,
     SpaceContext,
-  } from '$lib/managers/command-context-manager.svelte';
-  import { getSelectionCapabilities } from '$lib/managers/selection-capabilities';
-  import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import { getAssetBulkActions } from '$lib/services/asset.service';
-  import { resolveEditableAssetIds } from '$lib/utils/asset-editability';
-  import type { OnArchive, OnDelete, OnFavorite, OnSetVisibility, OnUndoDelete } from '$lib/utils/actions';
+  } from '#lib/managers/command-context-manager.svelte.ts';
+  import { getSelectionCapabilities } from '#lib/managers/selection-capabilities.ts';
+  import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import { getAssetBulkActions } from '#lib/services/asset.service.ts';
+  import type { OnArchive, OnDelete, OnFavorite, OnSetVisibility, OnUndoDelete } from '#lib/utils/actions.ts';
+  import { resolveEditableAssetIds } from '#lib/utils/asset-editability.ts';
   import {
     AlbumUserRole,
     type AlbumResponseDto,
@@ -42,17 +41,17 @@
   import { t } from 'svelte-i18n';
 
   /**
-   * Reusable multi-select action bar, gated by the pure `getSelectionCapabilities`
-   * rule engine (see `$lib/managers/selection-capabilities.ts`). Unlike the
-   * personal/album/space pages, this component does NOT depend on
-   * `registerSelectionContext` / `registerAlbumContext` / `registerSpaceContext`
-   * being called — it derives its own minimal `CommandContext` from explicit
-   * props + the `assetInteraction` (assetMultiSelectManager) singleton, so it
-   * also works on surfaces (space-person, space-album) that register none of
-   * those contexts.
-   *
-   * See `specs/2026-07-24-selection-toolbar-consistency-design.md`.
-   */
+  Reusable multi-select action bar, gated by the pure `getSelectionCapabilities`
+  rule engine (see `#lib/managers/selection-capabilities.ts`). Unlike the
+  personal/album/space pages, this component does NOT depend on
+  `registerSelectionContext` / `registerAlbumContext` / `registerSpaceContext`
+  being called — it derives its own minimal `CommandContext` from explicit
+  props + the `assetInteraction` (assetMultiSelectManager) singleton, so it
+  also works on surfaces (space-person, space-album) that register none of
+  those contexts.
+  
+  See `specs/2026-07-24-selection-toolbar-consistency-design.md`.
+  */
   interface Props {
     /** Absent on surfaces with no timeline behind them — e.g. smart search results. */
     timelineManager?: TimelineManager;
@@ -62,10 +61,10 @@
     /** Present on album surfaces (regular album OR space album). */
     album?: AlbumResponseDto;
     /**
-     * Present on space surfaces (direct space OR space album). `members` drives the #734
-     * editable-subset fallback (`canEditAsset`'s space derivation) when `POST /assets/editable`
-     * is unreachable — absent it, the fallback narrows to the owned subset, same as pre-#734.
-     */
+    Present on space surfaces (direct space OR space album). `members` drives the #734
+    editable-subset fallback (`canEditAsset`'s space derivation) when `POST /assets/editable`
+    is unreachable — absent it, the fallback narrows to the owned subset, same as pre-#734.
+    */
     space?: { id: string; canWrite: boolean; members?: SharedSpaceMemberResponseDto[] };
     downloadFilename?: string;
     /** Remove-from-album / remove-from-space result handler. */
@@ -94,17 +93,6 @@
     onAssetDelete,
     onUndoDelete,
   }: Props = $props();
-
-  // RemoveFromAlbumAction's `album` prop is `$bindable()` — it reassigns it locally
-  // after re-fetching album info post-removal. Mirror that with a writable $derived
-  // rather than binding the prop directly (props aren't guaranteed assignable
-  // targets, and this keeps the fallback well-typed when `album` is undefined).
-  // Reassigning a $derived locally overrides it until `album` itself changes again.
-  // The fallback branch is never actually rendered/read: RemoveFromAlbum only
-  // renders when the real `album` prop is present (see the `{:else if ... &&
-  // album}` gate below).
-  const EMPTY_ALBUM = {} as AlbumResponseDto;
-  let localAlbum = $derived(album ?? EMPTY_ALBUM);
 
   const currentUserId = $derived(authManager.authenticated ? authManager.user.id : null);
 
@@ -224,10 +212,10 @@
     space: spaceCtx,
     selection: selectionCtx,
     userId: currentUserId,
-    isAdmin: authManager.authenticated ? authManager.user.isAdmin : false,
+    isAdmin: authManager.authenticated && authManager.user.isAdmin,
   });
 
-  const tagsEnabled = $derived(authManager.authenticated ? authManager.preferences.tags.enabled : false);
+  const tagsEnabled = $derived(authManager.authenticated && authManager.preferences.tags.enabled);
   const caps = $derived(getSelectionCapabilities(ctx, tagsEnabled));
 
   // #1018: the same shape for sharing — when the selection reaches beyond what the caller owns and
@@ -242,7 +230,7 @@
   // (against the space where the bar's own does), and New album with Add to album or space where adding is allowed (New
   // album stays out where the picker is narrowed to the space's albums)
   const reviewActions = () => {
-    const { CreateSharedLink, NewAlbum, AddToAlbum } = getAssetBulkActions($t, {
+    const { CreateSharedLink, NewAlbum, AddToAlbum } = getAssetBulkActions($t, undefined, {
       editableSelectedAssetIds,
       shareSpaceId,
       fromSpaceId: space?.id,
@@ -253,11 +241,14 @@
 
 {#if assetInteraction.selectionActive}
   <AssetSelectControlBar {reviewActions}>
-    {@const Actions = getAssetBulkActions($t, {
-      editableSelectedAssetIds,
-      shareSpaceId,
-      fromSpaceId: space?.id,
-    })}
+    {const Actions = $derived(
+      getAssetBulkActions($t, undefined, {
+        editableSelectedAssetIds,
+        shareSpaceId,
+        fromSpaceId: space?.id,
+        removeFromAlbum: caps.canRemoveFromAlbum && album ? { album, onRemove } : undefined,
+      }),
+    )}
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
     <!-- Local Omarchy layer: the actions in groups split by hairlines (SelectionGroup), as on Photos: the selection
          itself, what keeps or shares it (Add to album by its name, the ink primary, where it was a bare +), taking the
@@ -275,7 +266,7 @@
         >
       {/if}
       {#if caps.canShare}
-        <CreateSharedLink spaceId={shareSpaceId} fromSpaceId={space?.id} />
+        <ActionButton action={Actions.CreateSharedLink} />
       {/if}
       {#if caps.canFavorite}
         <FavoriteAction removeFavorite={assetInteraction.isAllFavorite} {onFavorite} />
@@ -309,6 +300,11 @@
             <SetVisibilityAction menuItem {onVisibilitySet} />
           {/if}
         {/if}
+        <!-- Stacking is owner-only filing (server: StackService.create). Album pages only; hidden over search
+             results, which the page passes without a timeline. -->
+        {#if album && timelineManager && assetInteraction.isAllUserOwned}
+          <AlbumStackBulkActions />
+        {/if}
         {#if caps.canSetCover && onSetCover}
           {#if album}
             <MenuOption text={$t('set_as_album_cover')} icon={mdiImageOutline} onClick={() => onSetCover?.()} />
@@ -320,7 +316,7 @@
           <ActionMenuItem action={Actions.Tag} />
         {/if}
         {#if caps.canRemoveFromAlbum && album}
-          <RemoveFromAlbum menuItem bind:album={localAlbum} {onRemove} />
+          <ActionMenuItem action={Actions.RemoveFromAlbum} />
         {/if}
         {#if caps.canDelete && onAssetDelete}
           <DeleteAssets menuItem {onAssetDelete} {onUndoDelete} />

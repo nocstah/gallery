@@ -1,5 +1,4 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import type { MergeAuthorizer } from 'src/services/identity-merge-propagation.service.js';
 import { AuthDto } from 'src/dtos/auth.dto.js';
 import {
   DetachScopedPersonDto,
@@ -15,10 +14,38 @@ import {
 } from 'src/dtos/person.dto.js';
 import { JobName, Permission } from 'src/enum.js';
 import { crossOwnerMergeAuthorizer, resolveMinimumFaceCount } from 'src/gallery/utils/people-config.js';
+import { AccessRepository } from 'src/repositories/access.repository.js';
 import { BaseService } from 'src/services/base.service.js';
+import type { MergeAuthorizer } from 'src/services/identity-merge-propagation.service.js';
 import { asDateTimeString } from 'src/utils/date.js';
 import { ImmichMediaResponse } from 'src/utils/file.js';
 import { findOrFail } from 'src/utils/misc.js';
+
+/** `PersonService.getThumbnail`'s access check: owner or shared-space reader, and never a Locked Folder crop. */
+export const requireThumbnailAccess = async (accessRepository: AccessRepository, auth: AuthDto, id: string) => {
+  const ids = new Set([id]);
+  const ownerAccess = await accessRepository.galleryPerson.checkOwnerAccess(auth.user.id, ids);
+  const isOwner = ownerAccess.has(id);
+  if (!isOwner) {
+    const isShared = await accessRepository.galleryPerson.checkSharedSpaceAccess(auth.user.id, ids);
+    if (!isShared.has(id)) {
+      throw new BadRequestException('Not found or no person.read access');
+    }
+  }
+
+  // Fork (#869 follow-up): both arms above grant person.read off ANY reachable face, while the thumbnail
+  // is a crop of the representative face's photo specifically. The owner needs an elevated session to be
+  // handed back a crop of their own Locked Folder photo; a shared-space viewer must never receive one at
+  // all — the folder belongs to the owner, so the viewer's own elevation says nothing about it.
+  if (isOwner && auth.session?.hasElevatedPermission) {
+    return;
+  }
+
+  const isUnlocked = await accessRepository.galleryPerson.checkUnlockedThumbnailAccess(ids);
+  if (!isUnlocked.has(id)) {
+    throw new BadRequestException('Not found or no person.read access');
+  }
+};
 
 @Injectable()
 export class GalleryPeopleService extends BaseService {
@@ -46,7 +73,7 @@ export class GalleryPeopleService extends BaseService {
       });
     }
 
-    return this.personRepository.getPeopleOverviewStatistics(auth.user.id, {
+    return this.galleryPersonRepository.getPeopleOverviewStatistics(auth.user.id, {
       minimumFaceCount,
     });
   }
@@ -64,19 +91,19 @@ export class GalleryPeopleService extends BaseService {
       });
     }
 
-    return this.personRepository.getPeopleFaceStatistics(auth.user.id, {
+    return this.galleryPersonRepository.getPeopleFaceStatistics(auth.user.id, {
       minimumFaceCount,
     });
   }
 
   /**
-   * The scoped merge (POST /people/same-person): merge people named by scoped refs — the actor's own people and
-   * any space person they can repair. The planner resolves and RBAC-checks the refs, collapses profiles that
-   * would land in the same scope, and propagates the identity merge everywhere it is attached (issue #733).
-   *
-   * The only thing gated here is the destructive cross-owner case: a merge that would combine two of ANOTHER
-   * user's people. Re-pointing another owner's single person is free — that is what recognition does on its own.
-   */
+  The scoped merge (POST /people/same-person): merge people named by scoped refs — the actor's own people and
+  any space person they can repair. The planner resolves and RBAC-checks the refs, collapses profiles that
+  would land in the same scope, and propagates the identity merge everywhere it is attached (issue #733).
+  
+  The only thing gated here is the destructive cross-owner case: a merge that would combine two of ANOTHER
+  user's people. Re-pointing another owner's single person is free — that is what recognition does on its own.
+  */
   async mergeScopedPeople(auth: AuthDto, dto: MergeScopedPeopleDto): Promise<void> {
     await this.identityMergePropagationService.mergeScopedProfiles(
       auth,
@@ -108,7 +135,7 @@ export class GalleryPeopleService extends BaseService {
     // unscoped list.
     const isOwner = await this.accessRepository.galleryPerson.checkOwnerAccess(auth.user.id, new Set([id]));
     const scope = isOwner.has(id) ? undefined : { memberUserId: auth.user.id };
-    const rows = await this.personRepository.getRepresentativeFaces({
+    const rows = await this.galleryPersonRepository.getRepresentativeFaces({
       personId: id,
       take,
       skip: (dto.page - 1) * dto.size,
@@ -137,13 +164,13 @@ export class GalleryPeopleService extends BaseService {
 
   async getFaceThumbnail(auth: AuthDto, personId: string, faceId: string): Promise<ImmichMediaResponse> {
     await this.requireAccess({ auth, permission: Permission.PersonRead, ids: [personId] });
-    const face = await this.personRepository.getRepresentativeFaceForUpdate({ personId, assetFaceId: faceId });
+    const face = await this.galleryPersonRepository.getRepresentativeFaceForUpdate({ personId, assetFaceId: faceId });
     if (!face) {
       throw new NotFoundException();
     }
 
     await this.requireAccess({ auth, permission: Permission.AssetRead, ids: [face.assetId] });
-    const sourcePath = await this.backendMedia.getFaceThumbnailSource(face.assetId);
+    const sourcePath = await this.backendMedia.getFaceThumbnailSource(face);
     if (!sourcePath) {
       throw new NotFoundException();
     }
@@ -174,7 +201,7 @@ export class GalleryPeopleService extends BaseService {
       }
     }
 
-    const face = await this.personRepository.getRepresentativeFaceForUpdate({
+    const face = await this.galleryPersonRepository.getRepresentativeFaceForUpdate({
       personId: id,
       assetFaceId: dto.assetFaceId,
     });

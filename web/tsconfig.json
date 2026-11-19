@@ -1,33 +1,18 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "es2022",
-    "moduleResolution": "bundler",
+    "module": "esnext",
     "noImplicitOverride": true,
-    "resolveJsonModule": true,
+    "paths": {
+      "#i18n/*": ["../i18n/gallery/merged/*"],
+      "#test/*": ["./test/*"]
+    },
     "rootDir": ".",
-    "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
     "target": "es2022",
-    "types": ["vitest/globals"]
+    "types": ["$app/types", "vitest/globals"]
   },
-  "exclude": ["vite.config.ts"],
-  "include": [
-    ".svelte-kit/ambient.d.ts",
-    ".svelte-kit/env.d.ts",
-    ".svelte-kit/non-ambient.d.ts",
-    ".svelte-kit/types/**/$types.d.ts",
-    "src/**/*.js",
-    "src/**/*.ts",
-    "src/**/*.svelte",
-    "test/**/*",
-    "tests/**/*",
-    "memory-player/src/**/*",
-    "vite.memory.config.ts"
-  ],
-  "extends": "./.svelte-kit/tsconfig.json"
+  "exclude": ["vite.config.ts", "src/service-worker/*"],
+  "extends": "$app/tsconfig",
+  "include": ["src", "test/unit", "test/kioku", "vite.config.ts", "memory-player/src", "vite.memory.config.ts"]
 }

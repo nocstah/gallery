@@ -1,19 +1,19 @@
+import { PeriodFaceManager, type PeriodScope } from '#lib/managers/period-faces.ts';
+import { BRIGHT } from '#test/kioku/thumbhash.ts';
 import {
   AssetOrder,
   AssetTypeEnum,
   AssetVisibility,
+  TimeBucketSize,
   getAssetInfo,
   getAssetOcr,
   getTimeBucket,
   getTimeBucketCovers,
   searchAssets,
-  TimeBucketSize,
   type AssetResponseDto,
   type SearchResponseDto,
   type TimeBucketCoverResponseDto,
 } from '@immich/sdk';
-import { PeriodFaceManager, type PeriodScope } from '$lib/managers/period-faces';
-import { BRIGHT } from '@test-data/thumbhash';
 
 // Local Omarchy layer: the Years and Months overviews' faces are asked of Gallery with the timeline's own filters and
 // kept for the page load (managers/period-faces)
@@ -35,8 +35,9 @@ const scope: PeriodScope = {
   withSharedSpaces: true,
   bucketSize: TimeBucketSize.Year,
 };
-const cover = (timeBucket: string, id: string): TimeBucketCoverResponseDto => ({
-  timeBucket,
+// a cover for the one year these tests have, 2025
+const cover = (id: string): TimeBucketCoverResponseDto => ({
+  timeBucket: '2025-01-01',
   representativeAssetId: id,
   representativeThumbhash: BRIGHT,
   representativeRatio: 1.5,
@@ -52,7 +53,7 @@ const asset = (id: string, camera: boolean) =>
     height: 3024,
   }) as unknown as AssetResponseDto;
 const found = (...items: AssetResponseDto[]) => ({ assets: { items } }) as unknown as SearchResponseDto;
-const server = () => Promise.resolve([cover('2025-01-01', 'newest')]);
+const server = () => Promise.resolve([cover('newest')]);
 const years = [{ timeBucket: '2025-01-01', count: 1100 }];
 const searchedIds = (call: unknown[]) => {
   const { metadataSearchDto } = call[0] as { metadataSearchDto: { filter: { or: { id: { eq: string } }[] } } };
@@ -64,9 +65,7 @@ describe('PeriodFaceManager', () => {
     vi.clearAllMocks();
     // the year's newest favourite photo is a camera's; its newest photo is the server's cover, a screenshot
     vi.mocked(getTimeBucketCovers).mockImplementation((args: CoversArgs) =>
-      Promise.resolve(
-        args.isFavorite ? [cover('2025-01-01', 'kept')] : args.$type ? [cover('2025-01-01', 'newest')] : [],
-      ),
+      Promise.resolve(args.isFavorite ? [cover('kept')] : args.$type ? [cover('newest')] : []),
     );
     vi.mocked(searchAssets).mockImplementation(({ metadataSearchDto }) => {
       const ids = (metadataSearchDto.filter?.or ?? []).map(({ id }) => id?.eq ?? '');
@@ -81,7 +80,7 @@ describe('PeriodFaceManager', () => {
 
     const covers = await faces.covers(scope, years, server);
 
-    expect(covers).toEqual([cover('2025-01-01', 'kept')]);
+    expect(covers).toEqual([cover('kept')]);
     expect(getTimeBucketCovers).toHaveBeenCalledWith(
       {
         ...scope,
@@ -109,9 +108,9 @@ describe('PeriodFaceManager', () => {
     const faces = new PeriodFaceManager();
     await faces.covers(scope, years, server);
     vi.clearAllMocks();
-    vi.mocked(getTimeBucketCovers).mockResolvedValue([cover('2025-01-01', 'another')]);
+    vi.mocked(getTimeBucketCovers).mockResolvedValue([cover('another')]);
 
-    expect(await faces.covers(scope, years, server)).toEqual([cover('2025-01-01', 'kept')]);
+    expect(await faces.covers(scope, years, server)).toEqual([cover('kept')]);
     expect(getTimeBucketCovers).not.toHaveBeenCalled();
     expect(searchAssets).not.toHaveBeenCalled();
   });
@@ -124,7 +123,7 @@ describe('PeriodFaceManager', () => {
     ]) {
       const faces = new PeriodFaceManager();
 
-      expect(await faces.covers(other, years, server)).toEqual([cover('2025-01-01', 'newest')]);
+      expect(await faces.covers(other, years, server)).toEqual([cover('newest')]);
     }
     expect(getTimeBucketCovers).not.toHaveBeenCalled();
   });
@@ -139,10 +138,10 @@ describe('PeriodFaceManager', () => {
       const covers = faces.covers(scope, years, server);
       await vi.advanceTimersByTimeAsync(4000);
 
-      expect(await covers).toEqual([cover('2025-01-01', 'newest')]);
-      answer([cover('2025-01-01', 'kept')]);
+      expect(await covers).toEqual([cover('newest')]);
+      answer([cover('kept')]);
       await vi.advanceTimersByTimeAsync(10);
-      expect(await faces.covers(scope, years, server)).toEqual([cover('2025-01-01', 'newest')]);
+      expect(await faces.covers(scope, years, server)).toEqual([cover('newest')]);
     } finally {
       vi.useRealTimers();
     }
@@ -150,13 +149,13 @@ describe('PeriodFaceManager', () => {
 
   it("tells a picture's kind by a search for a camera's data, then one for the rest, then its details", async () => {
     vi.mocked(getTimeBucketCovers).mockImplementation((args: CoversArgs) =>
-      Promise.resolve(args.isFavorite ? [] : args.$type ? [cover('2025-01-01', 'elsewhere')] : []),
+      Promise.resolve(args.isFavorite ? [] : args.$type ? [cover('elsewhere')] : []),
     );
     vi.mocked(searchAssets).mockResolvedValue(found());
     vi.mocked(getAssetInfo).mockResolvedValue({ ...asset('elsewhere', true), exifInfo: { make: 'Canon' } });
     const faces = new PeriodFaceManager();
 
-    expect(await faces.covers(scope, years, server)).toEqual([cover('2025-01-01', 'elsewhere')]);
+    expect(await faces.covers(scope, years, server)).toEqual([cover('elsewhere')]);
     expect(vi.mocked(searchAssets).mock.calls.map((call) => searchedIds(call))).toEqual([['elsewhere'], ['elsewhere']]);
     expect(getAssetInfo).toHaveBeenCalledWith(
       { id: 'elsewhere', spaceId: undefined },
@@ -166,7 +165,7 @@ describe('PeriodFaceManager', () => {
 
   it("reads a small period's list where neither end qualifies, newest first", async () => {
     vi.mocked(getTimeBucketCovers).mockImplementation((args: CoversArgs) =>
-      Promise.resolve(args.$type === AssetTypeEnum.Image && !args.isFavorite ? [cover('2025-01-01', 'screen')] : []),
+      Promise.resolve(args.$type === AssetTypeEnum.Image && !args.isFavorite ? [cover('screen')] : []),
     );
     vi.mocked(searchAssets).mockImplementation(({ metadataSearchDto }) => {
       const ids = (metadataSearchDto.filter?.or ?? []).map(({ id }) => id?.eq ?? '');
@@ -197,6 +196,6 @@ describe('PeriodFaceManager', () => {
     const faces = new PeriodFaceManager();
 
     await expect(faces.covers(scope, years, () => Promise.reject(new Error('offline')))).rejects.toThrow('offline');
-    expect(await faces.covers(scope, years, server)).toEqual([cover('2025-01-01', 'newest')]);
+    expect(await faces.covers(scope, years, server)).toEqual([cover('newest')]);
   });
 });

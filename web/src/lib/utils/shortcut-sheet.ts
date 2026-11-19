@@ -3,13 +3,13 @@
 // Download, with no word on where each applies; Ctrl+Z, Ctrl+A, Ctrl+D, Ctrl+B, the page keys, Shift+middle-click,
 // L, N, ⇧I and the AI inbox's keys were missing. Every key here is bound in the source (the file named beside it), and
 // a row shows only for an account it works for.
+import type { CuratorFeature } from '#lib/gallery/libraries/library-file.ts';
 import type { MessageFormatter } from 'svelte-i18n';
-import type { CuratorFeature } from '$lib/gallery/libraries/library-file';
 
 /**
- * One way to press a shortcut: its keys in order. 'Shift' draws as ⇧ (and is read out as Shift), 'click' and
- * 'middle-click' are the pointer's, anything else is the key's own label.
- */
+One way to press a shortcut: its keys in order. 'Shift' draws as ⇧ (and is read out as Shift), 'click' and
+'middle-click' are the pointer's, anything else is the key's own label.
+*/
 export type KeyCombo = readonly string[];
 
 export type ShortcutRow = {
@@ -29,15 +29,15 @@ export type SheetAccount = {
   /** the server's admin, the owner: Villa, QR and the AI inbox are theirs */
   owner: boolean;
   /** what Curator does for this account here: whether it works for it (utils/curator's curatorIsMine), each where this
-   * library's Curator offers it (gallery/libraries' curatorOffers): the AI inbox's keys (inbox), saving a frame
-   * (live), a film's music (memories) */
+  library's Curator offers it (gallery/libraries' curatorOffers): the AI inbox's keys (inbox), saving a frame
+  (live), a film's music (memories) */
   curator: readonly CuratorFeature[];
   /** star ratings are on in this account's preferences */
   ratings: boolean;
   /** tags are on in this account's preferences */
   tags: boolean;
   /** the inspector window is offered here (managers/inspector-link's inspectorFits): not on a phone or a touch screen,
-   * which has no second screen to put it on; offered when not said */
+  which has no second screen to put it on; offered when not said */
   inspector?: boolean;
 };
 

@@ -5,16 +5,16 @@
   // move's progress, how it ended, the copies left unfinished here and, after a person's move, where this library's
   // face recognition put that person. Without ?move= it lists the moves that involve this library. Only where the
   // page conditions hold (move-gates); anyone else, and any vault's Gallery, goes to Photos.
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import { currentLibrary, isMainLibrary, libraryHas } from '$lib/gallery/libraries/library-context.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { Route } from '$lib/route';
-  import { getByteUnitString } from '$lib/utils/byte-units';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { currentLibrary, isMainLibrary, libraryHas } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { getByteUnitString } from '#lib/utils/byte-units.ts';
   import { Button } from '@immich/ui';
   import { onDestroy, onMount } from 'svelte';
   import { locale, t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import MoveFaces from './MoveFaces.svelte';
   import MoveUnfinished from './MoveUnfinished.svelte';
   import { holdWords } from './hold-reasons';
@@ -32,7 +32,7 @@
     quietHours,
     sideOf,
   } from './move-words';
-  import { askFaces, isEnded, listMoves, MOVE_ID, MOVE_LIMIT, moveStatus, type MoveStatus } from './mover';
+  import { MOVE_ID, MOVE_LIMIT, askFaces, isEnded, listMoves, moveStatus, type MoveStatus } from './mover';
 
   /** The hand-off reaches the mover within moments of the click; the page waits a minute for it. */
   const WAIT_MS = 60_000;
@@ -239,7 +239,7 @@
         {:else}
           <ul>
             {#each moves as move (move.move)}
-              {@const moveSide = sideOf(move, here?.id)}
+              {const moveSide = $derived(sideOf(move, here?.id))}
               <li class="ws-move-part">
                 <a href={`/moves?move=${move.move}`} class="ws-move-row">
                   <span class="ws-move-row-words">
@@ -272,7 +272,7 @@
         {/if}
       </section>
     {:else}
-      {@const plan = status.plan}
+      {const plan = $derived(status.plan)}
       <section class="ws-move-frame" data-state={status.state}>
         {#if status.state === 'checking' || status.state === 'planning'}
           <p class="ws-move-part" role="status">{$t('moves_reading', { values: names })}</p>
@@ -389,7 +389,7 @@
               </Button>
             </div>
           {:else if side === 'source' && here}
-            {@const destination = libraryById(status.destination)}
+            {const destination = $derived(libraryById(status.destination))}
             <div class="ws-move-part">
               <p>{$t('moves_confirm_there', { values: names })}</p>
               {#if destination}
@@ -409,7 +409,7 @@
                 <p class="ws-move-muted">{$t('moves_needs_key', { values: { library: names.source } })}</p>
               {/if}
             {:else}
-              {@const phase = phaseWords($t, status)}
+              {const phase = $derived(phaseWords($t, status))}
               {#if phase}
                 <p class="ws-move-muted">{phase}</p>
               {/if}

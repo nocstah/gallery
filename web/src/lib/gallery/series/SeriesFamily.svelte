@@ -8,14 +8,14 @@
   // asks about first. Off, once it was turned off (or Gallery no longer has the link Curator holds): it says so, with
   // the password switch again and Make a new family link. The link itself is series-state's to make and delete. What
   // the page gives under these (the family page's title: SeriesTitle) closes the section.
-  import { asUrl } from '$lib/services/shared-link.service';
-  import { handleError } from '$lib/utils/handle-error';
+  import { asUrl } from '#lib/services/shared-link.service.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
   import type { SharedLinkResponseDto } from '@immich/sdk';
   import { Field, Icon, Input, PasswordInput, Switch } from '@immich/ui';
   import { mdiCheck, mdiContentCopy } from '@mdi/js';
   import { onDestroy, tick, type Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
-  import { locale } from '$lib/stores/preferences.store';
   import type { Coming } from './series-api';
   import { isoDay, seriesMonth } from './series-days';
   import type { SeriesLinking } from './series-state.svelte';

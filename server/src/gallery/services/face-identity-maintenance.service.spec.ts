@@ -6,6 +6,8 @@ import {
   FACE_IDENTITY_BACKFILL_MAX_CONTINUATIONS,
   FaceIdentityMaintenanceService,
 } from 'src/gallery/services/face-identity-maintenance.service.js';
+import { LoggingRepository } from 'src/repositories/logging.repository.js';
+import { PersonService } from 'src/services/person.service.js';
 import { factory } from 'test/small.factory.js';
 import { ServiceMocks, newTestService } from 'test/utils.js';
 
@@ -14,12 +16,12 @@ const recognitionCounts = (overrides: Partial<QueueStatisticsDto> = {}) =>
     active: 1,
     waiting: 0,
     delayed: 0,
-    paused: 0,
     completed: 0,
     failed: 0,
     ...overrides,
   });
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 const configValidateTestConfig = (enabled: boolean, maxDistance: number, suggestionMaxDistance: number) =>
   ({
     machineLearning: {
@@ -31,6 +33,7 @@ const onConfigUpdateTestConfig = (
   suggestionsEnabled: boolean,
   machineLearningEnabled: boolean = true,
   facialRecognitionEnabled: boolean = true,
+  // eslint-disable-next-line unicorn/no-unnecessary-parameters
   recognitionMaxDistance: number = 0.5,
   suggestionsMaxDistance: number = 0.7,
 ) =>
@@ -46,6 +49,17 @@ const onConfigUpdateTestConfig = (
   }) as SystemConfig;
 
 describe(FaceIdentityMaintenanceService.name, () => {
+  describe('createFor', () => {
+    it("logs under the creating service's context", () => {
+      const setContext = vi.spyOn(LoggingRepository.prototype, 'setContext');
+
+      FaceIdentityMaintenanceService.createFor(newTestService(PersonService).sut);
+
+      expect(setContext).toHaveBeenLastCalledWith(PersonService.name);
+      setContext.mockRestore();
+    });
+  });
+
   let sut: FaceIdentityMaintenanceService;
   let mocks: ServiceMocks;
 
@@ -75,8 +89,6 @@ describe(FaceIdentityMaintenanceService.name, () => {
     faceIdentityMock.deletePendingSharedSpaceFaceMatchBackfillTargets.mockResolvedValue(void 0);
     faceIdentityMock.deleteUnreferencedIdentities ??= vi.fn();
     faceIdentityMock.deleteUnreferencedIdentities.mockResolvedValue(void 0);
-    (mocks.person as any).getPeopleOverviewStatistics ??= vi.fn();
-    (mocks.person as any).getPeopleFaceStatistics ??= vi.fn();
     (mocks.faceIdentity as any).getAccessiblePersonByProfileId.mockResolvedValue(void 0);
     (mocks.faceIdentity as any).getAccessibleProfileIdentityId.mockResolvedValue(void 0);
     mocks.sharedSpace.getSpaceIdsWithFaceRecognitionEnabled.mockResolvedValue([]);
@@ -92,6 +104,7 @@ describe(FaceIdentityMaintenanceService.name, () => {
   // `mocks.systemMetadata.get` is one mock shared by every key, so a bare `mockResolvedValue` would answer the
   // one-shot suggestion-sweep marker AND the system config with the same object. These two helpers key on the
   // metadata key so a test can pin one without disturbing the other.
+  // eslint-disable-next-line unicorn/no-unnecessary-parameters
   const useSuggestionSweepAlreadyRun = (config?: unknown) =>
     mocks.systemMetadata.get.mockImplementation(
       (key: SystemMetadataKey) =>
@@ -182,14 +195,10 @@ describe(FaceIdentityMaintenanceService.name, () => {
       await sut.onBootstrap();
 
       expect(mocks.job.searchJobs).toHaveBeenCalledWith(QueueName.PeopleBackfill, {
-        status: expect.arrayContaining([
-          QueueJobStatus.Active,
-          QueueJobStatus.Delayed,
-          QueueJobStatus.Paused,
-          QueueJobStatus.Waiting,
-        ]),
+        status: expect.arrayContaining([QueueJobStatus.Active, QueueJobStatus.Delayed, QueueJobStatus.Waiting]),
       });
-      expect(mocks.job.searchJobs.mock.calls[0][1]?.status).toHaveLength(4);
+      // bullmq 6 has no paused list: a paused queue reports its jobs as waiting
+      expect(mocks.job.searchJobs.mock.calls[0][1]?.status).toHaveLength(3);
       expect(mocks.job.queue).not.toHaveBeenCalled();
     });
 
@@ -272,7 +281,6 @@ describe(FaceIdentityMaintenanceService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -292,7 +300,6 @@ describe(FaceIdentityMaintenanceService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 5,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -307,8 +314,9 @@ describe(FaceIdentityMaintenanceService.name, () => {
       expect(mocks.job.queue).not.toHaveBeenCalledWith({ name: JobName.FaceIdentityBackfill, data: {} });
     });
 
-    it('requeues itself with a delay when FacialRecognition has paused jobs', async () => {
-      mocks.job.getJobCounts.mockResolvedValue(recognitionCounts({ active: 1, paused: 2 }));
+    it('requeues itself with a delay when a paused FacialRecognition queue still holds jobs', async () => {
+      // bullmq 6 reports the jobs of a paused queue as waiting
+      mocks.job.getJobCounts.mockResolvedValue(recognitionCounts({ active: 1, waiting: 2 }));
 
       await expect(sut.handleFaceIdentityMaintenanceAfterRecognition({})).resolves.toBe(JobStatus.Success);
 
@@ -324,7 +332,6 @@ describe(FaceIdentityMaintenanceService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 1,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 3,
@@ -343,7 +350,6 @@ describe(FaceIdentityMaintenanceService.name, () => {
       mocks.job.getJobCounts.mockResolvedValue({
         active: 3,
         waiting: 0,
-        paused: 0,
         completed: 0,
         failed: 0,
         delayed: 0,
@@ -378,7 +384,7 @@ describe(FaceIdentityMaintenanceService.name, () => {
       await expect(sut.handleFaceIdentityMaintenanceAfterRecognition({})).resolves.toBe(JobStatus.Skipped);
 
       expect(mocks.job.searchJobs).toHaveBeenCalledWith(QueueName.PeopleBackfill, {
-        status: [QueueJobStatus.Active, QueueJobStatus.Delayed, QueueJobStatus.Paused, QueueJobStatus.Waiting],
+        status: [QueueJobStatus.Active, QueueJobStatus.Delayed, QueueJobStatus.Waiting],
       });
       expect(mocks.job.queue).not.toHaveBeenCalledWith({ name: JobName.FaceIdentityBackfill, data: {} });
     });

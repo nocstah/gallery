@@ -1,12 +1,12 @@
 <script lang="ts">
-  import AlbumCard from '$lib/components/album-page/AlbumCard.svelte';
-  import LazyAlbumGrid from '$lib/gallery/components/lazy-album-grid.svelte';
-  import Portal from '$lib/elements/Portal.svelte';
-  import { albumFolders } from '$lib/managers/album-folders.svelte';
-  import { Route } from '$lib/route';
-  import { getAlbumActions } from '$lib/services/album.service';
-  import { albumViewSettings } from '$lib/stores/preferences.store';
-  import { type AlbumGroup, isAlbumGroupCollapsed, toggleAlbumGroupCollapsing } from '$lib/utils/album-utils';
+  import AlbumCard from '#lib/components/album-page/AlbumCard.svelte';
+  import Portal from '#lib/elements/Portal.svelte';
+  import LazyAlbumGrid from '#lib/gallery/components/lazy-album-grid.svelte';
+  import { albumFolders } from '#lib/managers/album-folders.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { getAlbumActions } from '#lib/services/album.service.ts';
+  import { albumViewSettings } from '#lib/stores/preferences.store.ts';
+  import { isAlbumGroupCollapsed, toggleAlbumGroupCollapsing, type AlbumGroup } from '#lib/utils/album-utils.ts';
   import type { AlbumResponseDto } from '@immich/sdk';
   import { Icon, menuManager, type ActionItem } from '@immich/ui';
   import { mdiChevronRight } from '@mdi/js';
@@ -73,9 +73,20 @@
       <LazyAlbumGrid items={albums} gridClass="ws-album-grid">
         {#snippet chunk(chunkAlbums)}
           {#each chunkAlbums as album (album.id)}
-            {@const { Edit, Pin, MoveToFolder, Merge, ToggleTimeline, Share, Download, MakeBook, Leave, Delete } =
-              getAlbumActions($t, album)}
-            {@const items = [Edit, Pin, MoveToFolder, Merge, ToggleTimeline, Share, Download, MakeBook, Leave, Delete]}
+            {const { Edit, Pin, MoveToFolder, Merge, ToggleTimeline, Share, Download, MakeBook, Leave, Delete } =
+              $derived(getAlbumActions($t, album))}
+            {const items = $derived([
+              Edit,
+              Pin,
+              MoveToFolder,
+              Merge,
+              ToggleTimeline,
+              Share,
+              Download,
+              MakeBook,
+              Leave,
+              Delete,
+            ])}
             <a
               href={Route.viewAlbum(album)}
               class="h-fit"

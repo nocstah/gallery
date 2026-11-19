@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { isAbsolute } from 'node:path';
-import type { AuthDto } from 'src/dtos/auth.dto.js';
 import { StorageCore } from 'src/cores/storage.core.js';
 import { AssetEditableDto, AssetEditableResponseDto, AssetFavoriteUpdateDto } from 'src/dtos/asset.dto.js';
+import type { AuthDto } from 'src/dtos/auth.dto.js';
 import { AssetType, JobName, Permission } from 'src/enum.js';
+import { AssetSpacesDto, AssetSpacesResponseDto } from 'src/gallery/dtos/asset-spaces.dto.js';
 import {
   AssetImageAdjustDto,
   AssetImageAdjustResponseDto,
@@ -11,6 +12,7 @@ import {
   isNeutralImageAdjust,
 } from 'src/gallery/dtos/image-adjust.dto.js';
 import { AssetVideoTrimDto, AssetVideoTrimResponseDto } from 'src/gallery/dtos/video-trim.dto.js';
+import { checkAssetEditAccess } from 'src/gallery/utils/access-grants.js';
 import { logCrossOwnerEdit } from 'src/gallery/utils/cross-owner-edit.js';
 import { AccessRepository } from 'src/repositories/access.repository.js';
 import { AssetFavoriteRepository } from 'src/repositories/asset-favorite.repository.js';
@@ -19,11 +21,11 @@ import { requireAccess } from 'src/utils/access.js';
 import { isPanorama } from 'src/utils/asset.util.js';
 
 /**
- * #763 canonical write surface for per-user favorites (PUT /assets/favorites), also called by
- * the deprecated `isFavorite` alias on AssetService `update`/`updateAll` (§8.1) — the alias keeps its own,
- * STRICTER Permission.AssetUpdate route guard, so it can only ever be narrower than this function,
- * never wider. See specs/2026-07-20-per-user-favorites-design.md §5.1.
- */
+#763 canonical write surface for per-user favorites (PUT /assets/favorites), also called by
+the deprecated `isFavorite` alias on AssetService `update`/`updateAll` (§8.1) — the alias keeps its own,
+STRICTER Permission.AssetUpdate route guard, so it can only ever be narrower than this function,
+never wider. See specs/2026-07-20-per-user-favorites-design.md §5.1.
+*/
 export const updateAssetFavorites = async (
   accessRepository: AccessRepository,
   assetFavoriteRepository: AssetFavoriteRepository,
@@ -51,15 +53,36 @@ export const updateAssetFavorites = async (
     : assetFavoriteRepository.removeAll(auth.user.id, dto.ids));
 };
 
-// Fork asset endpoints served by GalleryAssetController: per-user favorites, the editable-subset query, video trim and
-// image colour adjustment.
+// Fork asset endpoints served by GalleryAssetController: per-user favorites, the editable-subset and spaces-of-assets
+// queries, video trim and image colour adjustment.
 @Injectable()
 export class GalleryAssetService extends BaseService {
   async getEditable(auth: AuthDto, dto: AssetEditableDto): Promise<AssetEditableResponseDto> {
     // Deliberately a bare access check, not a second implementation of the rule: this IS
     // the same call the write will make, so the answer cannot drift from enforcement.
-    const editable = await this.checkAccess({ auth, permission: Permission.AssetUpdate, ids: dto.assetIds });
+    const editable = await checkAssetEditAccess(this.accessRepository, { auth, ids: dto.assetIds });
     return { editableAssetIds: [...editable] };
+  }
+
+  async getSpaces(auth: AuthDto, dto: AssetSpacesDto): Promise<AssetSpacesResponseDto> {
+    // The link's owner is not the visitor: never list their spaces, whatever the route metadata says.
+    if (auth.sharedLink) {
+      return { assets: [] };
+    }
+    // Most thumbnails are in no space: find the hits first, so the access check only runs on them.
+    const rows = await this.sharedSpaceRepository.getMemberSpaceIdsByAssetIds(auth.user.id, dto.assetIds);
+    const readable = await this.checkAccess({
+      auth,
+      permission: Permission.AssetRead,
+      ids: rows.map(({ assetId }) => assetId),
+    });
+    const spaceIds = new Map<string, string[]>();
+    for (const { assetId, spaceId } of rows) {
+      if (readable.has(assetId)) {
+        spaceIds.set(assetId, [...(spaceIds.get(assetId) ?? []), spaceId]);
+      }
+    }
+    return { assets: [...spaceIds].map(([assetId, ids]) => ({ assetId, spaceIds: ids })) };
   }
 
   updateFavorites(auth: AuthDto, dto: AssetFavoriteUpdateDto): Promise<void> {
@@ -136,7 +159,7 @@ export class GalleryAssetService extends BaseService {
     await this.videoTrimRepository.upsert(id, dto.startTime, dto.endTime);
     // The trimmed thumbnails are the asset's edited ones, which clients request while isEdited is set.
     await this.assetRepository.update({ id, isEdited: true });
-    await this.jobRepository.queue({ name: JobName.AssetEditThumbnailGeneration, data: { id } });
+    await this.jobRepository.queue({ name: JobName.AssetVideoTrimGenerate, data: { id } });
     await logCrossOwnerEdit(this.accessRepository, this.sharedSpaceRepository, this.logger, auth, [id]);
 
     return { startTime: dto.startTime, endTime: dto.endTime, originalDuration: durationSeconds };
@@ -149,8 +172,8 @@ export class GalleryAssetService extends BaseService {
       await this.assetRepository.update({ id, isEdited: false });
       await logCrossOwnerEdit(this.accessRepository, this.sharedSpaceRepository, this.logger, auth, [id]);
     }
-    // The edit job removes the trimmed files and regenerates thumbnails; clients wait for its AssetEditReadyV2.
-    await this.jobRepository.queue({ name: JobName.AssetEditThumbnailGeneration, data: { id } });
+    // The trim job removes the trimmed files and regenerates thumbnails; clients wait for its AssetEditReadyV2.
+    await this.jobRepository.queue({ name: JobName.AssetVideoTrimGenerate, data: { id } });
   }
 
   async getAdjust(auth: AuthDto, id: string): Promise<AssetImageAdjustResponseDto> {

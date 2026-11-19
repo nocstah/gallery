@@ -1,120 +1,132 @@
 <script lang="ts">
-  import { vaultEdition } from '$lib/gallery/edition';
-  import { goto, invalidate, onNavigate } from '$app/navigation';
-  import { navigating, page } from '$app/state';
-  import { scrollMemoryClearer } from '$lib/actions/scroll-memory';
-  import AlbumMap from '$lib/components/album-page/AlbumMap.svelte';
-  import AlbumSharedSpaceLinks from '$lib/components/album-page/AlbumSharedSpaceLinks.svelte';
-  import ActivityStatus from '$lib/components/asset-viewer/ActivityStatus.svelte';
-  import ActivityViewer from '$lib/components/asset-viewer/ActivityViewer.svelte';
-  import ActiveFiltersBar from '$lib/components/filter-panel/active-filters-bar.svelte';
-  import FilterPanel from '$lib/components/filter-panel/filter-panel.svelte';
-  import FilterToolbar from '$lib/components/filter-panel/filter-toolbar.svelte';
-  import { clearTimelineTemporalFilter } from '$lib/utils/timeline-temporal-filters';
+  import { scrollMemoryClearer } from '#lib/actions/scroll-memory.svelte.ts';
+  import ActionMenuItem from '#lib/components/ActionMenuItem.svelte';
+  import HeaderActionButton from '#lib/components/HeaderActionButton.svelte';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import AlbumMap from '#lib/components/album-page/AlbumMap.svelte';
+  import AlbumSharedSpaceLinks from '#lib/components/album-page/AlbumSharedSpaceLinks.svelte';
+  import ActivityStatus from '#lib/components/asset-viewer/ActivityStatus.svelte';
+  import ActivityViewer from '#lib/components/asset-viewer/ActivityViewer.svelte';
+  import AlbumStory from '#lib/components/curator/AlbumStory.svelte';
+  import SmartAlbumBadge from '#lib/components/curator/SmartAlbumBadge.svelte';
+  import ActiveFiltersBar from '#lib/components/filter-panel/active-filters-bar.svelte';
+  import FilterPanel from '#lib/components/filter-panel/filter-panel.svelte';
   import {
     clearFilters,
     createFilterState,
     getActiveFilterCount,
     loadFilterCollapsed,
     type FilterState,
-  } from '$lib/components/filter-panel/filter-panel';
-  import HeaderActionButton from '$lib/components/HeaderActionButton.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
-  import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
-  import { albumFolders } from '$lib/managers/album-folders.svelte';
-  import { offeredSpecialAlbums, specialAlbumOf } from '$lib/managers/special-albums.svelte';
-  import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
-  import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
-  import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
-  import DeleteAssets from '$lib/components/timeline/actions/DeleteAssetsAction.svelte';
-  import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
-  import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
-  import RotateAction from '$lib/components/timeline/actions/RotateAction.svelte';
-  import SelectAllAssets from '$lib/components/timeline/actions/SelectAllAction.svelte';
-  import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
-  import MoveToActions from '$lib/gallery/moves/MoveToActions.svelte';
-  import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
-  import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
-  import SelectionGroup from '$lib/components/timeline/SelectionGroup.svelte';
-  import Timeline from '$lib/components/timeline/Timeline.svelte';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
-  import { AlbumPageViewMode } from '$lib/constants';
-  import { activityManager } from '$lib/managers/activity-manager.svelte';
-  import { assetMultiSelectManager, AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { registerAlbumContext, registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import type { TimelineAsset, TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
-  import { Route } from '$lib/route';
+  } from '#lib/components/filter-panel/filter-panel.ts';
+  import FilterToolbar from '#lib/components/filter-panel/filter-toolbar.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import AlbumBarTitle from '#lib/components/omarchy/AlbumBarTitle.svelte';
+  import AlbumDescriptionField from '#lib/components/omarchy/AlbumDescriptionField.svelte';
+  import AlbumPeopleStrip from '#lib/components/omarchy/AlbumPeopleStrip.svelte';
+  import BarFilterButton from '#lib/components/omarchy/BarFilterButton.svelte';
+  import EmptyState from '#lib/components/omarchy/EmptyState.svelte';
+  import SmartSearchResults from '#lib/components/search/smart-search-results.svelte';
+  import ControlAppBar from '#lib/components/shared-components/ControlAppBar.svelte';
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import AssetSelectControlBar from '#lib/components/timeline/AssetSelectControlBar.svelte';
+  import SelectionGroup from '#lib/components/timeline/SelectionGroup.svelte';
+  import TileContextMenu from '#lib/components/timeline/TileContextMenu.svelte';
+  import Timeline from '#lib/components/timeline/Timeline.svelte';
+  import ChangeDate from '#lib/components/timeline/actions/ChangeDateAction.svelte';
+  import ChangeDescription from '#lib/components/timeline/actions/ChangeDescriptionAction.svelte';
+  import ChangeLocation from '#lib/components/timeline/actions/ChangeLocationAction.svelte';
+  import DeleteAssets from '#lib/components/timeline/actions/DeleteAssetsAction.svelte';
+  import DownloadAction from '#lib/components/timeline/actions/DownloadAction.svelte';
+  import FavoriteAction from '#lib/components/timeline/actions/FavoriteAction.svelte';
+  import RotateAction from '#lib/components/timeline/actions/RotateAction.svelte';
+  import SelectAllAssets from '#lib/components/timeline/actions/SelectAllAction.svelte';
+  import SetVisibilityAction from '#lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import SpecialAlbumAction from '#lib/components/timeline/actions/SpecialAlbumAction.svelte';
+  import { AlbumPageViewMode } from '#lib/constants.ts';
+  import LinkAlbumToSpaceMenuOption from '#lib/gallery/LinkAlbumToSpaceMenuOption.svelte';
+  import ArchiveAction from '#lib/gallery/actions/ArchiveAction.svelte';
+  import { vaultEdition } from '#lib/gallery/edition.ts';
+  import MoveToActions from '#lib/gallery/moves/MoveToActions.svelte';
+  import AlbumStackBulkActions from '#lib/gallery/stack/AlbumStackBulkActions.svelte';
+  import AlbumStackEvents from '#lib/gallery/stack/AlbumStackEvents.svelte';
+  import AlbumStackMenuOptions from '#lib/gallery/stack/AlbumStackMenuOptions.svelte';
+  import { albumStackPreferences } from '#lib/gallery/stack/album-stack-preferences.svelte.ts';
+  import { getTimelineTopVisibleAnchor } from '#lib/gallery/timeline/timeline-anchor.ts';
+  import { activityManager } from '#lib/managers/activity-manager.svelte.ts';
+  import { albumFolders } from '#lib/managers/album-folders.svelte.ts';
+  import { AssetMultiSelectManager, assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { barSlot } from '#lib/managers/bar-slot.svelte.ts';
+  import { registerAlbumContext, registerSelectionContext } from '#lib/managers/command-context-manager.svelte.ts';
+  import { globalSearchManager } from '#lib/managers/global-search-manager.svelte.ts';
+  import { offeredSpecialAlbums, specialAlbumOf } from '#lib/managers/special-albums.svelte.ts';
+  import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import type {
+    TimelineAsset,
+    TimelineGrouping,
+    TimelineTemporalAnchor,
+  } from '#lib/managers/timeline-manager/types.ts';
+  import SearchAddAllToCollectionModal from '#lib/modals/SearchAddAllToCollectionModal.svelte';
   import {
-    getAlbumActions,
-    getAlbumAssetsActions,
-    handleDeleteAlbum,
-    handleLinkAlbumToSpace,
-    isAlbumEditor,
-    isAlbumOwner,
-  } from '$lib/services/album.service';
-  import { getGlobalActions } from '$lib/services/app.service';
-  import { getAssetBulkActions } from '$lib/services/asset.service';
-  import { SlideshowNavigation, SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
-  import { handlePromiseError } from '$lib/utils';
-  import { buildAlbumAssetPickerFilterConfig, buildAlbumDetailFilterConfig } from '$lib/utils/album-filter-config';
-  import { buildAlbumAssetPickerOptions, buildAlbumTimelineOptions } from '$lib/utils/album-filter-options';
-  import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
-  import { resolveFilterNames } from '$lib/utils/filter-name-resolution';
-  import { filterStateToSearchTerms } from '$lib/utils/filter-search-terms';
-  import type { SearchTerms } from '$lib/services/search.service';
-  import { buildFilterStateUrl, isFilterStateUrlUnchanged, withoutAtParam } from '$lib/utils/filter-target';
-  import { decodeFilterParams } from '$lib/utils/filter-url';
-  import { lang } from '$lib/stores/preferences.store';
-  import { handleError } from '$lib/utils/handle-error';
-  import { isAlbumsRoute, navigate, type AssetGridRouteSearchParams } from '$lib/utils/navigation';
-  import { handlePhotosRemoveFilter } from '$lib/utils/photos-filter-options';
+    deleteAlbumMutation,
+    getAlbumInfoQuery,
+    invalidateAlbum,
+    updateAlbumInfoMutation,
+  } from '#lib/queries/album.query.ts';
+  import { createPreloadedQuery, executeMutation } from '#lib/queries/client.ts';
+  import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+  import { Route } from '#lib/route.ts';
+  import { getAlbumActions, getAlbumAssetsActions, isAlbumEditor, isAlbumOwner } from '#lib/services/album.service.ts';
+  import { getGlobalActions } from '#lib/services/app.service.ts';
+  import { getAssetBulkActions } from '#lib/services/asset.service.ts';
+  import type { SearchTerms } from '#lib/services/search.service.ts';
+  import { lang } from '#lib/stores/preferences.store.ts';
+  import { SlideshowNavigation, SlideshowState, slideshowStore } from '#lib/stores/slideshow.store.ts';
+  import { handlePromiseError } from '#lib/utils.ts';
+  import { buildAlbumAssetPickerFilterConfig, buildAlbumDetailFilterConfig } from '#lib/utils/album-filter-config.ts';
+  import { buildAlbumAssetPickerOptions, buildAlbumTimelineOptions } from '#lib/utils/album-filter-options.ts';
+  import { curatorIsMine } from '#lib/utils/curator.ts';
+  import { getAlbumDateRange } from '#lib/utils/date-time.ts';
+  import { resolveFilterNames } from '#lib/utils/filter-name-resolution.ts';
+  import { filterStateToSearchTerms } from '#lib/utils/filter-search-terms.ts';
+  import { buildFilterStateUrl, isFilterStateUrlUnchanged, withoutAtParam } from '#lib/utils/filter-target.ts';
+  import { decodeFilterParams } from '#lib/utils/filter-url.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { isAlbumsRoute, navigate, type AssetGridRouteSearchParams } from '#lib/utils/navigation.ts';
+  import { handlePhotosRemoveFilter } from '#lib/utils/photos-filter-options.ts';
+  import { quickTrashInAlbum, takeOutOfAlbum } from '#lib/utils/quick-trash.ts';
   import {
-    type ActivatableTimelineBucket,
-    getTimelineBucketZoomTarget,
-    getTimelineManagerTimeBuckets,
-  } from '$lib/utils/timeline-zoom-navigation';
-  import { getTimelineTopVisibleAnchor } from '$lib/managers/timeline-manager/timeline-anchor';
-  import SmartSearchResults from '$lib/components/search/smart-search-results.svelte';
-  import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-  import { buildSearchablePageUrl, getSearchablePageState } from '$lib/utils/searchable-page-search';
+    removeSearchResults,
+    selectAllSearchResults,
+    updateSearchResults,
+  } from '#lib/utils/search-result-selection.ts';
+  import { buildSearchablePageUrl, getSearchablePageState } from '#lib/utils/searchable-page-search.ts';
   import {
     buildSmartSearchFacetKey,
     buildSmartSearchFacetsParams,
     mapSmartSearchFacetsToFilterSuggestions,
-  } from '$lib/utils/space-search';
-  import { consumeTypedSearchNamesInto } from '$lib/utils/typed-search/typed-search-name-cache';
-  import { quickTrashInAlbum, takeOutOfAlbum } from '$lib/utils/quick-trash';
-  import { removeSearchResults, selectAllSearchResults, updateSearchResults } from '$lib/utils/search-result-selection';
+  } from '#lib/utils/space-search.ts';
+  import { clearTimelineTemporalFilter } from '#lib/utils/timeline-temporal-filters.ts';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
+  import {
+    getTimelineBucketZoomTarget,
+    getTimelineManagerTimeBuckets,
+    type ActivatableTimelineBucket,
+  } from '#lib/utils/timeline-zoom-navigation.ts';
+  import { consumeTypedSearchNamesInto } from '#lib/utils/typed-search/typed-search-name-cache.ts';
   import {
     AlbumUserRole,
     AssetOrder,
-    type AssetVisibility,
-    getAlbumInfo,
     searchSmartFacets,
-    updateAlbumInfo,
     type AlbumResponseDto,
     type AssetResponseDto,
+    type AssetVisibility,
     type SmartSearchFacetsResponseDto,
   } from '@immich/sdk';
-  import {
-    ActionButton,
-    Button,
-    CommandPaletteDefaultProvider,
-    Icon,
-    IconButton,
-    modalManager,
-    toastManager,
-  } from '@immich/ui';
+  import { ActionButton, Button, CommandPaletteDefaultProvider, Icon, IconButton, modalManager } from '@immich/ui';
   import {
     mdiAccountEye,
     mdiAccountEyeOutline,
@@ -124,44 +136,35 @@
     mdiImageOutline,
     mdiImagePlusOutline,
     mdiLink,
-    mdiLinkVariantPlus,
     mdiPlayOutline,
     mdiPresentationPlay,
     mdiTelevisionPlay,
   } from '@mdi/js';
   import { onDestroy, onMount, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
-  import { fly } from 'svelte/transition';
   import { MediaQuery, SvelteMap } from 'svelte/reactivity';
-  import type { PageData } from './$types';
-  import AlbumDescriptionField from '$lib/components/omarchy/AlbumDescriptionField.svelte';
-  import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
-  import SmartAlbumBadge from '$lib/components/curator/SmartAlbumBadge.svelte';
-  import { curatorIsMine } from '$lib/utils/curator';
-  import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import AlbumBarTitle from '$lib/components/omarchy/AlbumBarTitle.svelte';
-  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
-  import AlbumPeopleStrip from '$lib/components/omarchy/AlbumPeopleStrip.svelte';
-  import BarFilterButton from '$lib/components/omarchy/BarFilterButton.svelte';
-  import { barSlot } from '$lib/managers/bar-slot.svelte';
-  import { getAlbumDateRange } from '$lib/utils/date-time';
+  import { fly } from 'svelte/transition';
+  import { goto, onNavigate } from '$app/navigation';
+  import { page, type ReadonlyURL } from '$app/state';
+  import type { PageProps } from './$types';
 
-  interface Props {
-    data: PageData;
-  }
+  let { params }: PageProps = $props();
 
-  let { data = $bindable() }: Props = $props();
+  const queries = {
+    config: createPreloadedQuery(getUserConfigQuery),
+    album: createPreloadedQuery(() => getAlbumInfoQuery(params.albumId)),
+  };
+  const config = $derived(queries.config.data);
+  const album = $derived(queries.album.data);
   let { slideshowState, slideshowNavigation } = slideshowStore;
   let oldAt: AssetGridRouteSearchParams | null | undefined = $state();
-  let album = $state(data.album);
   /**
-   * E9 — the route already scopes the timeline to this album, and the server's `albumId` is a
-   * SCALAR driving one inner join, so album ∩ album is impossible. A stray `?albumId=` must be
-   * IGNORED: dropping it here keeps it out of the active-filter count, out of the chip bar, and
-   * out of the next URL write. buildAlbumTimelineOptions already refuses to forward it.
-   */
-  const hydrateAlbumFilters = (url: URL): FilterState => ({
+  E9 — the route already scopes the timeline to this album, and the server's `albumId` is a
+  SCALAR driving one inner join, so album ∩ album is impossible. A stray `?albumId=` must be
+  IGNORED: dropping it here keeps it out of the active-filter count, out of the chip bar, and
+  out of the next URL write. buildAlbumTimelineOptions already refuses to forward it.
+  */
+  const hydrateAlbumFilters = (url: ReadonlyURL): FilterState => ({
     ...createFilterState(),
     ...decodeFilterParams(url),
     albumId: undefined,
@@ -290,7 +293,7 @@
     oldAt = { at: assetViewerManager.gridScrollTarget?.at };
     await navigate(
       { targetRoute: 'current', assetId: null, assetGridRouteSearchParams: { at: null } },
-      { replaceState: true },
+      { replace: true },
     );
   };
 
@@ -312,16 +315,14 @@
   // ...and the ⋮ menu's "hide this album from my timeline" says which way it goes, on a page opened straight from a link
   onMount(() => void albumFolders.ready());
 
-  const refreshAlbum = async () => {
-    album = await getAlbumInfo({ id: album.id });
-  };
+  const refreshAlbum = () => invalidateAlbum(album.id);
 
   const setModeToView = async () => {
     timelineManager.suspendTransitions = true;
     viewMode = AlbumPageViewMode.VIEW;
     await navigate(
       { targetRoute: 'current', assetId: null, assetGridRouteSearchParams: { at: oldAt?.at } },
-      { replaceState: true, forceNavigate: true },
+      { replace: true, forceNavigate: true },
     );
     oldAt = null;
   };
@@ -406,24 +407,21 @@
     await updateThumbnail(firstAsset.id);
   };
 
-  const updateThumbnail = async (assetId: string) => {
-    try {
-      const response = await updateAlbumInfo({
-        id: album.id,
-        updateAlbumDto: {
-          albumThumbnailAssetId: assetId,
-        },
-      });
-      eventManager.emit('AlbumUpdate', response);
-      toastManager.primary($t('album_cover_updated'));
-    } catch (error) {
-      handleError(error, $t('errors.unable_to_update_album_cover'));
-    }
-  };
+  const updateThumbnail = (assetId: string) =>
+    executeMutation(
+      () =>
+        updateAlbumInfoMutation({
+          success: { toast: 'album_cover_updated' },
+          error: { toast: 'errors.unable_to_update_album_cover' },
+        }),
+      [{ id: album.id, updateAlbumDto: { albumThumbnailAssetId: assetId } }],
+    );
 
-  onNavigate(async ({ to }) => {
+  onNavigate(async ({ to, shallow, type }) => {
+    if (shallow && type === 'goto') return;
+
     if (!isAlbumsRoute(to?.route.id) && album.assetCount === 0 && !album.albumName) {
-      await handleDeleteAlbum(album, { notify: false, prompt: false });
+      await executeMutation(() => deleteAlbumMutation({}), [{ id: album.id }]);
     }
   });
 
@@ -446,12 +444,18 @@
         : undefined,
   });
 
-  $effect(() => {
-    if (data.album.id === album.id) {
+  // Navigating straight from one album to a sibling keeps this component alive (only the route param
+  // changes), so album-scoped local state is re-seeded by hand. `pre` so the switch re-seeds the
+  // filters before the URL effect below sees the new URL.
+  let shownAlbumId: string | undefined;
+  $effect.pre(() => {
+    const id = album.id;
+    if (shownAlbumId === undefined || id === shownAlbumId) {
+      shownAlbumId = id;
       return;
     }
 
-    album = data.album;
+    shownAlbumId = id;
     albumFilters = hydrateAlbumFilters(page.url);
     committedSearchQuery = getSearchablePageState(page.url).query;
     searchIsLoading = false;
@@ -535,10 +539,10 @@
   });
 
   /**
-   * Facets for the ACTIVE search, scoped to this album — the source of the result count and of the
-   * temporal picker's buckets while a query is running. Memoised on the request shape so a filter
-   * change that cannot alter the facets (sortOrder) does not refetch.
-   */
+  Facets for the ACTIVE search, scoped to this album — the source of the result count and of the
+  temporal picker's buckets while a query is running. Memoised on the request shape so a filter
+  change that cannot alter the facets (sortOrder) does not refetch.
+  */
   async function loadAlbumSmartFacets(nextFilters: FilterState): Promise<SmartSearchFacetsResponseDto | undefined> {
     const query = committedSearchQuery.trim();
     if (!query) {
@@ -689,16 +693,16 @@
   });
 
   /**
-   * The album scope handed to smart search — this album alone, matching the browse timeline's own
-   * `albumId` scope and the personal person tokens its filter panel speaks.
-   */
+  The album scope handed to smart search — this album alone, matching the browse timeline's own
+  `albumId` scope and the personal person tokens its filter panel speaks.
+  */
   const searchAlbumIds = $derived([album.id]);
 
   /**
-   * Browse order. An album carries its own `order`, but the navbar sort dropdown renders on every
-   * searchable page — browse mode included — so an EXPLICIT `?sort=` has to win, or the control
-   * would visibly do nothing here. Absent that param the album's own order stands.
-   */
+  Browse order. An album carries its own `order`, but the navbar sort dropdown renders on every
+  searchable page — browse mode included — so an EXPLICIT `?sort=` has to win, or the control
+  would visibly do nothing here. Absent that param the album's own order stands.
+  */
   const browseOrder = $derived.by(() => {
     if (!getSearchablePageState(page.url).hasExplicitSort) {
       return album.order ?? authManager.preferences.albums.defaultAssetOrder;
@@ -710,11 +714,16 @@
     if (viewMode === AlbumPageViewMode.SELECT_ASSETS) {
       return buildAlbumAssetPickerOptions(album.id, pickerFilters);
     }
-    const albumOptions = buildAlbumTimelineOptions(album.id, browseOrder, albumFilters);
+    // Stacks collapse to one photo the album holds (buildAlbumTimelineOptions' withStacked); the album's ⋮ menu chooses
+    // whether a stack's badge counts only the album's photos (AlbumStackMenuOptions)
+    const albumOptions = {
+      ...buildAlbumTimelineOptions(album.id, browseOrder, albumFilters),
+      ...(albumStackPreferences.countInAlbum && { stackCountInAlbum: true }),
+    };
     return isBrowseTimeline ? { ...albumOptions, grouping: timelineGrouping } : albumOptions;
   });
 
-  const isShared = $derived(viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : album.albumUsers.length > 1);
+  const isShared = $derived(viewMode !== AlbumPageViewMode.SELECT_ASSETS && album.albumUsers.length > 1);
 
   $effect(() => {
     if (assetViewerManager.isViewing || !isShared) {
@@ -752,10 +761,10 @@
   });
 
   const isSelectionMode = $derived(
-    viewMode === AlbumPageViewMode.SELECT_ASSETS ? true : viewMode === AlbumPageViewMode.SELECT_THUMBNAIL,
+    viewMode === AlbumPageViewMode.SELECT_ASSETS || viewMode === AlbumPageViewMode.SELECT_THUMBNAIL,
   );
   const singleSelect = $derived(
-    viewMode === AlbumPageViewMode.SELECT_ASSETS ? false : viewMode === AlbumPageViewMode.SELECT_THUMBNAIL,
+    viewMode !== AlbumPageViewMode.SELECT_ASSETS && viewMode === AlbumPageViewMode.SELECT_THUMBNAIL,
   );
   const showArchiveIcon = $derived(viewMode !== AlbumPageViewMode.SELECT_ASSETS);
   const onSelect = ({ id }: { id: string }) => {
@@ -794,7 +803,7 @@
     if (isFilterStateUrlUnchanged(page.url, nextUrl)) {
       return;
     }
-    void goto(nextUrl, { replaceState: true, keepFocus: true, noScroll: true });
+    void goto(nextUrl, { replace: true, reset: false });
   }
 
   $effect(() => globalSearchManager.registerSearchablePageFilters(() => albumFilters));
@@ -805,7 +814,7 @@
     if (!nextUrl) {
       return;
     }
-    void goto(nextUrl, { replaceState: true, keepFocus: true, noScroll: true });
+    void goto(nextUrl, { replace: true, reset: false });
   };
 
   function clearAlbumTemporalFilter() {
@@ -823,40 +832,13 @@
     viewMode = AlbumPageViewMode.VIEW;
   };
 
-  const onAlbumAddAssets = async ({ albumIds, assetIds }: { albumIds: string[]; assetIds: string[] }) => {
+  const onAlbumAddAssets = async ({ albumIds }: { albumIds: string[]; assetIds: string[] }) => {
     if (!albumIds.includes(album.id)) {
       return;
     }
 
-    album = { ...album, assetCount: album.assetCount + assetIds.length };
-
     timelineMultiSelectManager.clear();
     await setModeToView();
-  };
-
-  const onAlbumShare = async () => {
-    await refreshAlbum();
-    await setModeToView();
-  };
-
-  const onAlbumUserUpdate = ({ albumId, userId, role }: { albumId: string; userId: string; role: AlbumUserRole }) => {
-    if (albumId !== album.id) {
-      return;
-    }
-
-    const albumUsers = album.albumUsers.map((albumUser) =>
-      albumUser.user.id === userId ? { ...albumUser, role } : albumUser,
-    );
-    album = { ...album, albumUsers };
-  };
-
-  const onAlbumUpdate = async (newAlbum: AlbumResponseDto) => {
-    album = newAlbum;
-
-    // invalidating during navigation causes an infinite page load
-    await navigating.complete;
-
-    await invalidate('album:data');
   };
 
   const { Cast } = $derived(getGlobalActions($t));
@@ -872,17 +854,11 @@
   });
 </script>
 
-<OnEvents
-  onSharedLinkCreate={refreshAlbum}
-  onSharedLinkDelete={refreshAlbum}
-  {onAlbumDelete}
-  {onAlbumAddAssets}
-  {onAlbumRemoveAssets}
-  {onAlbumShare}
-  {onAlbumUserUpdate}
-  onAlbumUserDelete={refreshAlbum}
-  {onAlbumUpdate}
-/>
+<!-- Local Omarchy layer: a merge, or an album from a selection undone (utils/album-merge, utils/album-from-selection),
+     still says so with an event -->
+<OnEvents {onAlbumDelete} {onAlbumAddAssets} {onAlbumRemoveAssets} onAssetsDelete={() => refreshAlbum()} />
+<AlbumStackEvents albumId={album.id} {timelineManager} />
+
 <CommandPaletteDefaultProvider name={$t('album')} actions={[AddAssets, Upload, Close, ...Object.values(Actions)]} />
 
 {#snippet albumBarLeading()}
@@ -897,7 +873,8 @@
     class="shrink-0"
     onclick={() => backToAlbums()}
   />
-  <AlbumBarTitle {album} {isEditor} onUpdate={(albumName) => (album = { ...album, albumName })} />
+  <!-- the bar's name saves through the SDK itself: the album's query reads the new name back -->
+  <AlbumBarTitle {album} {isEditor} onUpdate={() => void refreshAlbum()} />
 {/snippet}
 
 {#snippet albumBarButtons()}
@@ -908,6 +885,7 @@
       size="small"
       color="secondary"
       onclick={(event: MouseEvent) => Actions.Share.onAction({ event, action: Actions.Share })}
+      aria-label={$t('share')}
     >
       <span class="ws-action-label">{$t('share')}</span>
     </Button>
@@ -950,7 +928,7 @@
       />
     {/if}
 
-    {#if featureFlagsManager.value.map}
+    {#if config.map.enabled}
       <AlbumMap {album} filters={albumFilters} />
     {/if}
 
@@ -985,6 +963,7 @@
           onClick={() => timelineManager.toggleShowAssetOwners()}
         />
       {/if}
+      <AlbumStackMenuOptions />
       <ActionMenuItem action={Actions.Options} />
       {#if isOwned && album.assetCount > 0}
         <MenuOption
@@ -994,16 +973,9 @@
         />
       {/if}
 
-      {#if isOwned && !vaultEdition()}
-        <MenuOption
-          icon={mdiLinkVariantPlus}
-          text={$t('link_album_to_space')}
-          onClick={async () => {
-            if (await handleLinkAlbumToSpace(album)) {
-              await refreshAlbum();
-            }
-          }}
-        />
+      <!-- Local Omarchy layer: a vault's Gallery links nothing to a Space (gallery/edition) -->
+      {#if !vaultEdition()}
+        <LinkAlbumToSpaceMenuOption {album} onLinked={refreshAlbum} />
       {/if}
       <ActionMenuItem action={Actions.Pin} />
       <ActionMenuItem action={Actions.MoveToFolder} />
@@ -1036,7 +1008,7 @@
   leading={albumBarLeading}
   buttons={albumBarButtons}
 >
-  <div class="flex h-full overflow-hidden" use:scrollMemoryClearer={{ routeStartsWith: Route.albums() }}>
+  <div class="flex h-full overflow-hidden" {@attach scrollMemoryClearer({ routeStartsWith: Route.albums() })}>
     <div class="relative w-full shrink">
       <!-- Local Omarchy layer: a box, not a second <main>: the album lives in the shell, whose main holds it -->
       <div class="relative h-full overflow-hidden">
@@ -1235,13 +1207,7 @@
                            details' gap (components/omarchy/AlbumDescriptionField) -->
                       {#if isEditor || album.description}
                         <div class="ws-album-description">
-                          <AlbumDescriptionField
-                            id={album.id}
-                            {isEditor}
-                            bind:description={
-                              () => album.description, (description) => (album = { ...album, description })
-                            }
-                          />
+                          <AlbumDescriptionField id={album.id} {isEditor} description={album.description} />
                         </div>
                       {/if}
                       <!-- Local Omarchy layer: the story of the event or trip the album holds, Curator's, so only for
@@ -1340,7 +1306,7 @@
           <!-- Local Omarchy layer: what a person does most leads (Favorite, Add to album, New album, Share, then the
                special albums: a special album's way out, or the others); the menu puts its own downloads and copies
                with Download, and the edits and the ways out of the album come last -->
-          {@const MenuActions = getAssetBulkActions($t, { album })}
+          {const MenuActions = $derived(getAssetBulkActions($t, album))}
           <FavoriteAction
             menuItem
             removeFavorite={assetMultiSelectManager.isAllFavorite}
@@ -1363,7 +1329,7 @@
             <DownloadAction menuItem filename={album.albumName} />
           {/snippet}
           {#snippet more()}
-            {@const Edits = getAssetBulkActions($t, { album })}
+            {const Edits = $derived(getAssetBulkActions($t, album))}
             {#if isEditor && assetMultiSelectManager.assets.length === 1}
               <MenuOption
                 text={$t('set_as_album_cover')}
@@ -1407,7 +1373,7 @@
 
 {#if assetMultiSelectManager.selectionActive}
   <AssetSelectControlBar>
-    {@const Actions = getAssetBulkActions($t, { album })}
+    {const Actions = $derived(getAssetBulkActions($t, album))}
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
     <!-- Local Omarchy layer: the actions in groups split by hairlines (SelectionGroup), as on Photos: the selection
          itself, what keeps or shares it (Add to album by its name, where it was a bare +), a special album's way out,
@@ -1452,6 +1418,8 @@
             {/if}
           {/each}
           <SetVisibilityAction menuItem onVisibilitySet={handleSetVisibility} />
+          <!-- Stack / Unstack, as on Photos; not over search results, which have no timeline to reload -->
+          {#if !showSearchResults}<AlbumStackBulkActions />{/if}
         {/if}
         {#if isEditor && assetMultiSelectManager.assets.length === 1}
           <MenuOption

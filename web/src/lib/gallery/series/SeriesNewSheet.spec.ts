@@ -1,7 +1,7 @@
+import { albumSource, seriesCard, smartAlbum } from '#test/kioku/factories/series-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import type { Mock } from 'vitest';
-import { albumSource, seriesCard, smartAlbum } from '@test-data/factories/series-factory';
 import SeriesNewSheet from './SeriesNewSheet.svelte';
 import type { SeriesCard } from './series-api';
 
@@ -13,7 +13,7 @@ import type { SeriesCard } from './series-api';
 const mocks = vi.hoisted(() => ({
   auth: { authenticated: true, user: { id: 'owner-id', isAdmin: true }, params: {} },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
 
 type Asked = { method: string; path: string; body?: unknown };
 let asked: Asked[];

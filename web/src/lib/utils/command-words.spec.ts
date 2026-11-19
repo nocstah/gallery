@@ -1,5 +1,5 @@
+import { backupCopy, backupWhen, databaseBackup } from '#lib/utils/command-words.ts';
 import { DateTime } from 'luxon';
-import { backupCopy, backupWhen, databaseBackup } from '$lib/utils/command-words';
 
 const now = DateTime.fromISO('2026-10-23T10:15:00');
 

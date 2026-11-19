@@ -1,6 +1,6 @@
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { quickTrash, quickTrashInAlbum, quickTrashTarget, takeOutOfAlbum } from '$lib/utils/quick-trash';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { quickTrash, quickTrashInAlbum, quickTrashTarget, takeOutOfAlbum } from '#lib/utils/quick-trash.ts';
 
 const mocks = vi.hoisted(() => ({
   deleteAssets: vi.fn(() => Promise.resolve()),
@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
   removedFromAlbumDone: vi.fn(),
   warning: vi.fn(),
 }));
-vi.mock('$lib/utils/actions', () => ({ deleteAssets: mocks.deleteAssets }));
-vi.mock('$lib/utils/undoable', () => ({ removedFromAlbumDone: mocks.removedFromAlbumDone }));
+vi.mock('#lib/utils/actions.ts', () => ({ deleteAssets: mocks.deleteAssets }));
+vi.mock('#lib/utils/undoable.ts', () => ({ removedFromAlbumDone: mocks.removedFromAlbumDone }));
 vi.mock('@immich/sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/sdk')>()),
   removeAssetFromAlbum: mocks.removeAssetFromAlbum,
@@ -19,7 +19,7 @@ vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),
   toastManager: { warning: mocks.warning },
 }));
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: {
     get value() {
       return { trash: mocks.trash };

@@ -1,6 +1,6 @@
+import { contrast, mix } from '#lib/theme/derive.ts';
+import { GLASS_DENSITY_CEILING, GLASS_DENSITY_FLOOR, glassDensity } from '#lib/theme/glass-density.ts';
 import { describe, expect, it } from 'vitest';
-import { contrast, mix } from '$lib/theme/derive';
-import { GLASS_DENSITY_CEILING, GLASS_DENSITY_FLOOR, glassDensity } from '$lib/theme/glass-density';
 
 // Local Omarchy layer: the glass chrome's ground is as dense as its faintest words (the muted ink halfway to the ink)
 // need to keep 4.6:1 over a white photo and a black one, in the theme's own colours

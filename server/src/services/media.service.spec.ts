@@ -1,7 +1,6 @@
 import { ShallowDehydrateObject } from 'kysely';
 import { OutputInfo } from 'sharp';
-import type { AudioStreamInfo, JobCounts, RawImageInfo, VideoFormat, VideoStreamInfo } from 'src/types.js';
-import { StorageCore } from 'src/cores/storage.core.js';
+import { Mock } from 'vitest';
 import { Exif } from 'src/database.js';
 import { SystemConfig } from 'src/dtos/config.dto.js';
 import { AssetEditAction } from 'src/dtos/editing.dto.js';
@@ -22,11 +21,13 @@ import {
   TranscodePolicy,
   VideoCodec,
 } from 'src/enum.js';
+import { storageBackends } from 'src/gallery/utils/storage-backends.js';
 import { MediaService } from 'src/services/media.service.js';
+import type { AudioStreamInfo, JobCounts, RawImageInfo, VideoFormat, VideoStreamInfo } from 'src/types.js';
 import { AssetFaceFactory } from 'test/factories/asset-face.factory.js';
 import { AssetFactory } from 'test/factories/asset.factory.js';
 import { PersonFactory } from 'test/factories/person.factory.js';
-import { probeStub, videoInfoStub } from 'test/fixtures/media.stub.js';
+import { probeStub } from 'test/fixtures/media.stub.js';
 import { personThumbnailStub } from 'test/fixtures/person.stub.js';
 import { systemConfigStub } from 'test/fixtures/system-config.stub.js';
 import { getForGenerateThumbnail } from 'test/mappers.js';
@@ -36,6 +37,10 @@ import { ServiceMocks, makeStream, newTestService } from 'test/utils.js';
 const fullsizeBuffer = Buffer.from('embedded image data');
 const rawBuffer = Buffer.from('raw image data');
 const extractedBuffer = Buffer.from('embedded image file');
+
+/** StorageCore.getImagePath with the media location stripped: where a derivative lives as an S3 key */
+const expectedKey = (asset: { id: string; ownerId: string }, name: string) =>
+  `thumbs/${asset.ownerId}/${asset.id.slice(0, 2)}/${asset.id.slice(2, 4)}/${asset.id}_${name}`;
 
 describe(MediaService.name, () => {
   let sut: MediaService;
@@ -47,40 +52,6 @@ describe(MediaService.name, () => {
 
   it('should be defined', () => {
     expect(sut).toBeDefined();
-  });
-
-  describe('persistFile', () => {
-    afterEach(() => {
-      // vitest.config.mjs sets no restoreMocks and there are no setupFiles, so a
-      // getWriteBackend spy would leak into every later test in this file and
-      // silently run the disk-mode tests against S3.
-      vi.restoreAllMocks();
-    });
-
-    it('uploads to the write backend and removes the local temp (S3 mode)', async () => {
-      const put = vi.fn().mockResolvedValue(void 0);
-      const stream = makeStream([Buffer.from('data')]);
-      const { StorageService } = await import('src/services/storage.service.js');
-      vi.spyOn(StorageService, 'getWriteBackend').mockReturnValue({ put } as any);
-      mocks.storage.createPlainReadStream.mockReturnValue(stream as any);
-
-      const result = await (sut as any).persistFile('/local/out.jpg', 'thumbs/aa/bb/x.jpg', 'image/jpeg');
-
-      expect(mocks.storage.createPlainReadStream).toHaveBeenCalledWith('/local/out.jpg');
-      expect(put).toHaveBeenCalledWith('thumbs/aa/bb/x.jpg', stream, { contentType: 'image/jpeg' });
-      expect(mocks.storage.unlink).toHaveBeenCalledWith('/local/out.jpg');
-      expect(result).toBe('thumbs/aa/bb/x.jpg');
-    });
-
-    it('returns the local path and deletes nothing (disk mode)', async () => {
-      // StorageService.diskBackend is undefined in this spec file, so getWriteBackend()
-      // returns undefined and persistFile takes its disk branch.
-      const result = await (sut as any).persistFile('/local/out.jpg', 'thumbs/aa/bb/x.jpg', 'image/jpeg');
-
-      expect(result).toBe('/local/out.jpg');
-      expect(mocks.storage.createPlainReadStream).not.toHaveBeenCalled();
-      expect(mocks.storage.unlink).not.toHaveBeenCalled();
-    });
   });
 
   // TODO these should all become medium tests of either the service or the repository.
@@ -363,21 +334,80 @@ describe(MediaService.name, () => {
       expect(mocks.move.getByEntity).not.toHaveBeenCalled();
     });
 
-    it('should leave the files of an S3 asset where they are', async () => {
-      const asset = AssetFactory.from({ originalPath: 'upload/user/ab/cd/file.jpg' })
-        .files([AssetFileType.FullSize, AssetFileType.Preview, AssetFileType.Thumbnail])
-        .build();
-      for (const file of asset.files) {
-        file.path = `thumbs/user/ab/cd/${file.type}.jpeg`;
-      }
-      mocks.assetJob.getForMigrationJob.mockResolvedValue(asset);
+    describe('with S3 files', () => {
+      let s3Backend: { exists: Mock; copy: Mock; stat: Mock; delete: Mock };
+      let previousS3Backend: unknown;
 
-      await expect(sut.handleAssetMigration({ id: asset.id })).resolves.toBe(JobStatus.Success);
+      beforeEach(() => {
+        previousS3Backend = (storageBackends as any).s3Backend;
+        s3Backend = {
+          exists: vi.fn().mockResolvedValue(true),
+          copy: vi.fn().mockResolvedValue(void 0),
+          stat: vi.fn().mockResolvedValue({ size: 1024 }),
+          delete: vi.fn().mockResolvedValue(void 0),
+        };
+        (storageBackends as any).s3Backend = s3Backend;
+        mocks.move.create.mockImplementation((move) => Promise.resolve({ id: `move-${move.pathType}`, ...move }));
+      });
 
-      expect(mocks.move.create).not.toHaveBeenCalled();
-      expect(mocks.move.getByEntity).not.toHaveBeenCalled();
-      expect(mocks.storage.rename).not.toHaveBeenCalled();
-      expect(mocks.storage.copyFile).not.toHaveBeenCalled();
+      afterEach(() => {
+        (storageBackends as any).s3Backend = previousS3Backend;
+      });
+
+      it('should move the files of an S3 asset within S3 to their expected keys', async () => {
+        const asset = AssetFactory.from({ originalPath: 'upload/user/ab/cd/file.jpg' })
+          .files([AssetFileType.FullSize, AssetFileType.Preview, AssetFileType.Thumbnail])
+          .build();
+        for (const file of asset.files) {
+          file.path = `thumbs/user/ab/cd/${file.type}.jpeg`;
+        }
+        mocks.assetJob.getForMigrationJob.mockResolvedValue(asset);
+
+        await expect(sut.handleAssetMigration({ id: asset.id })).resolves.toBe(JobStatus.Success);
+
+        const moves = [
+          [AssetFileType.FullSize, expectedKey(asset, 'fullsize.jpeg')],
+          [AssetFileType.Preview, expectedKey(asset, 'preview.jpeg')],
+          [AssetFileType.Thumbnail, expectedKey(asset, 'thumbnail.webp')],
+        ] as const;
+        for (const [type, newPath] of moves) {
+          const oldPath = `thumbs/user/ab/cd/${type}.jpeg`;
+          expect(mocks.move.create).toHaveBeenCalledWith({ entityId: asset.id, pathType: type, oldPath, newPath });
+          expect(s3Backend.copy).toHaveBeenCalledWith(oldPath, newPath);
+          expect(mocks.asset.upsertFile).toHaveBeenCalledWith({ assetId: asset.id, type, path: newPath });
+          expect(s3Backend.delete).toHaveBeenCalledWith(oldPath);
+          expect(mocks.move.delete).toHaveBeenCalledWith(`move-${type}`);
+        }
+        expect(s3Backend.copy).toHaveBeenCalledTimes(3);
+        expect(s3Backend.delete).toHaveBeenCalledTimes(3);
+        expect(mocks.storage.mkdirSync).not.toHaveBeenCalled();
+        expect(mocks.storage.rename).not.toHaveBeenCalled();
+        expect(mocks.storage.copyFile).not.toHaveBeenCalled();
+      });
+
+      it('should make no S3 calls for files already at their expected keys', async () => {
+        const asset = AssetFactory.from({ originalPath: 'upload/user/ab/cd/file.jpg' })
+          .files([AssetFileType.FullSize, AssetFileType.Preview, AssetFileType.Thumbnail])
+          .build();
+        const names = {
+          [AssetFileType.FullSize]: 'fullsize.jpeg',
+          [AssetFileType.Preview]: 'preview.jpeg',
+          [AssetFileType.Thumbnail]: 'thumbnail.webp',
+        } as Record<AssetFileType, string>;
+        for (const file of asset.files) {
+          file.path = expectedKey(asset, names[file.type]);
+        }
+        mocks.assetJob.getForMigrationJob.mockResolvedValue(asset);
+
+        await expect(sut.handleAssetMigration({ id: asset.id })).resolves.toBe(JobStatus.Success);
+
+        expect(mocks.move.getByEntity).not.toHaveBeenCalled();
+        expect(mocks.move.create).not.toHaveBeenCalled();
+        expect(mocks.asset.upsertFile).not.toHaveBeenCalled();
+        for (const call of Object.values(s3Backend)) {
+          expect(call).not.toHaveBeenCalled();
+        }
+      });
     });
 
     it('should move asset files', async () => {
@@ -519,6 +549,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         expect.any(String),
       );
@@ -532,6 +563,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 4,
         },
         expect.any(String),
       );
@@ -614,6 +646,30 @@ describe(MediaService.name, () => {
           isTransparent: false,
         },
       ]);
+    });
+
+    it('should generate WebP video thumbnails when JPEG XL is configured', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/path.ext' }).exif().build();
+      mocks.systemMetadata.get.mockResolvedValue({
+        image: { preview: { format: ImageFormat.Jxl }, thumbnail: { format: ImageFormat.Jxl } },
+      });
+      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue({
+        ...getForGenerateThumbnail(asset),
+        ...probeStub.videoStream2160p,
+      });
+
+      await sut.handleGenerateThumbnails({ id: asset.id });
+
+      expect(mocks.media.transcode).toHaveBeenCalledWith(
+        '/original/path.ext',
+        expect.stringMatching(/_preview\.webp$/),
+        expect.any(Object),
+      );
+      expect(mocks.media.transcode).toHaveBeenCalledWith(
+        '/original/path.ext',
+        expect.stringMatching(/_thumbnail\.webp$/),
+        expect.any(Object),
+      );
     });
 
     it('should tonemap thumbnail for hdr video', async () => {
@@ -791,6 +847,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         previewPath,
       );
@@ -804,6 +861,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 4,
         },
         thumbnailPath,
       );
@@ -839,6 +897,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         previewPath,
       );
@@ -852,6 +911,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 4,
         },
         thumbnailPath,
       );
@@ -935,6 +995,24 @@ describe(MediaService.name, () => {
       ]);
     });
 
+    it('should never set isProgressive for JPEG XL', async () => {
+      const asset = AssetFactory.from().exif().build();
+      mocks.systemMetadata.get.mockResolvedValue({
+        image: {
+          preview: { format: ImageFormat.Jxl, progressive: true },
+          thumbnail: { format: ImageFormat.Jxl, progressive: true },
+        },
+      });
+      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
+
+      await sut.handleGenerateThumbnails({ id: asset.id });
+
+      expect(mocks.asset.upsertFiles).toHaveBeenCalledWith([
+        expect.objectContaining({ type: AssetFileType.Preview, isProgressive: false }),
+        expect.objectContaining({ type: AssetFileType.Thumbnail, isProgressive: false }),
+      ]);
+    });
+
     it('should never set isProgressive for videos', async () => {
       const asset = AssetFactory.from({ type: AssetType.Video, originalPath: '/original/path.ext' }).exif().build();
       mocks.systemMetadata.get.mockResolvedValue({
@@ -1004,7 +1082,7 @@ describe(MediaService.name, () => {
       await sut.handleGenerateThumbnails({ id: asset.id });
 
       expect(mocks.media.probe).not.toHaveBeenCalled();
-      expect(mocks.media.extractFrame).not.toHaveBeenCalled();
+      expect(mocks.videoTrim.extractFrame).not.toHaveBeenCalled();
       expect(mocks.media.decodeImage).toHaveBeenCalledOnce();
       expect(mocks.media.decodeImage).toHaveBeenCalledWith(asset.originalPath, {
         colorspace: Colorspace.Srgb,
@@ -1031,7 +1109,7 @@ describe(MediaService.name, () => {
 
       expect(ensureLocalFile).toHaveBeenCalledWith(asset.originalPath);
       expect(mocks.media.probe).not.toHaveBeenCalled();
-      expect(mocks.media.extractFrame).not.toHaveBeenCalled();
+      expect(mocks.videoTrim.extractFrame).not.toHaveBeenCalled();
       expect(mocks.media.decodeImage).toHaveBeenCalledWith('/tmp/immich-s3-heic.tmp', {
         colorspace: Colorspace.Srgb,
         processInvalidImages: false,
@@ -1189,6 +1267,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         expect.any(String),
       );
@@ -1224,6 +1303,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         expect.any(String),
       );
@@ -1237,6 +1317,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         expect.any(String),
       );
@@ -1270,6 +1351,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         expect.any(String),
       );
@@ -1283,6 +1365,7 @@ describe(MediaService.name, () => {
           size: 1440,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         expect.any(String),
       );
@@ -1319,6 +1402,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         expect.any(String),
       );
@@ -1383,6 +1467,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         expect.any(String),
       );
@@ -1424,6 +1509,7 @@ describe(MediaService.name, () => {
           progressive: false,
           processInvalidImages: false,
           edits: [],
+          decodingTier: 0,
         },
         expect.any(String),
       );
@@ -1609,491 +1695,48 @@ describe(MediaService.name, () => {
       expect(mocks.asset.update).toHaveBeenCalledWith(expect.objectContaining({ thumbhash: thumbhashBuffer }));
     });
 
-    it('should trim a video that has a trim', async () => {
-      const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-      mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-      mocks.media.probe.mockResolvedValue({
-        ...videoInfoStub.noAudioStreams,
-        format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-      });
-      mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-      mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-      expect(mocks.media.trim).toHaveBeenCalledWith(expect.any(String), expect.any(String), 5, 20);
-    });
-
-    it('always trims the original, even if an encoded video row is present', async () => {
-      const asset = AssetFactory.from({ type: AssetType.Video })
+    it('should keep the ocr search text if the edits have no crop', async () => {
+      const asset = AssetFactory.from()
         .exif()
-        .files([{ type: AssetFileType.EncodedVideo, isEdited: false, path: 'encoded-video/owner/ab/cd/video.mp4' }])
+        .edit({ action: AssetEditAction.Rotate, parameters: { angle: 90 } })
         .build();
       mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-      mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-      mocks.media.probe.mockResolvedValue({
-        ...videoInfoStub.noAudioStreams,
-        format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-      });
-      mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-      mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
+      mocks.ocr.getByAssetId.mockResolvedValue([factory.assetOcr({ assetId: asset.id, text: 'Hello World' })]);
 
       await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
 
-      // The encoded video is never a valid ffmpeg input: on S3 its path is a relative key.
-      // The original is both readable and higher quality.
-      expect(mocks.media.trim).toHaveBeenCalledWith(asset.originalPath, expect.any(String), 5, 20);
+      expect(mocks.ocr.updateOcrVisibilities).toHaveBeenCalledWith(asset.id, [], [], 'Hello World');
     });
 
-    it('should record the trimmed duration after trimming', async () => {
-      const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-      mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-      mocks.media.probe.mockResolvedValue({
-        ...videoInfoStub.noAudioStreams,
-        format: { ...videoInfoStub.noAudioStreams.format, duration: 19.5 },
+    it('should tokenize the ocr search text inside the crop', async () => {
+      const asset = AssetFactory.from()
+        .exif({ exifImageWidth: 1000, exifImageHeight: 1000 })
+        .edit({ action: AssetEditAction.Crop, parameters: { x: 0, y: 0, width: 500, height: 500 } })
+        .build();
+      const inside = factory.assetOcr({ assetId: asset.id, text: '東京タワー' });
+      const outside = factory.assetOcr({
+        assetId: asset.id,
+        text: 'World',
+        x1: 0.6,
+        y1: 0.6,
+        x2: 0.8,
+        y2: 0.6,
+        x3: 0.8,
+        y3: 0.8,
+        x4: 0.6,
+        y4: 0.8,
       });
-      mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-      mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
+      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
+      mocks.ocr.getByAssetId.mockResolvedValue([inside, outside]);
 
       await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
 
-      expect(mocks.videoTrim.setDuration).toHaveBeenCalledWith(asset.id, 19_500);
-    });
-
-    it('should generate thumbnails from extracted frame after trim', async () => {
-      const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-      mocks.videoTrim.get.mockResolvedValue({ startTime: 0, endTime: 10 });
-      mocks.media.probe.mockResolvedValue({
-        ...videoInfoStub.noAudioStreams,
-        format: { ...videoInfoStub.noAudioStreams.format, duration: 10 },
-      });
-      mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-      mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-      expect(mocks.media.extractFrame).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.stringMatching(/\.frame-[\w-]+\.jpg$/),
-        expect.any(Number),
+      expect(mocks.ocr.updateOcrVisibilities).toHaveBeenCalledWith(
+        asset.id,
+        [inside],
+        [outside],
+        '東京 京タ タワ ワー',
       );
-      expect(mocks.media.generateThumbnail).toHaveBeenCalled();
-    });
-
-    it('should return failed when trim ffmpeg errors', async () => {
-      const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-      mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-      mocks.media.trim.mockRejectedValue(new Error('FFmpeg error'));
-
-      const result = await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-      expect(result).toBe(JobStatus.Failed);
-    });
-
-    it('should serialize concurrent trim jobs for the same asset', async () => {
-      // Rapid re-trims race: the second job overwrites `{id}_edited.mp4` while the
-      // first may still read it, and the first job's temp-frame cleanup deletes the
-      // frame the second just extracted (issue #743 item 2).
-      const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-      mocks.videoTrim.get.mockResolvedValue({ startTime: 1, endTime: 3 });
-      mocks.media.probe.mockResolvedValue({
-        ...videoInfoStub.noAudioStreams,
-        format: { ...videoInfoStub.noAudioStreams.format, duration: 2 },
-      });
-      mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-      const order: string[] = [];
-      let releaseFirstTrim!: () => void;
-      mocks.media.trim
-        .mockImplementationOnce(async () => {
-          order.push('trim1:start');
-          await new Promise<void>((resolve) => (releaseFirstTrim = resolve));
-          order.push('trim1:end');
-        })
-        .mockImplementationOnce(() => {
-          order.push('trim2:start');
-          return Promise.resolve();
-        });
-
-      const first = sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-      await vi.waitFor(() => expect(order).toContain('trim1:start'));
-
-      const second = sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-      // Give the second job time to (incorrectly) reach ffmpeg — it must block instead.
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      expect(order).toEqual(['trim1:start']);
-
-      releaseFirstTrim();
-      await Promise.all([first, second]);
-      expect(order).toEqual(['trim1:start', 'trim1:end', 'trim2:start']);
-    });
-
-    it('should use a distinct temp frame path per trim invocation', async () => {
-      // The in-process lock does not cover overlapping trims in different worker
-      // processes — with a fixed frame name, one job's temp-frame cleanup unlinks
-      // the frame another job is still reading (issue #743 item 2).
-      const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-      mocks.videoTrim.get.mockResolvedValue({ startTime: 1, endTime: 3 });
-      mocks.media.probe.mockResolvedValue({
-        ...videoInfoStub.noAudioStreams,
-        format: { ...videoInfoStub.noAudioStreams.format, duration: 2 },
-      });
-      mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-      const framePaths = mocks.media.extractFrame.mock.calls.map(([, framePath]) => framePath);
-      expect(framePaths).toHaveLength(2);
-      expect(framePaths[0]).not.toBe(framePaths[1]);
-    });
-
-    it('should trim to a temporary path and rename into place', async () => {
-      // ffmpeg writing `{id}_edited.mp4` in place lets a concurrent reader (probe /
-      // frame extraction in another worker process) see a partial file; an atomic
-      // rename means readers only ever open a complete video (issue #743 item 2).
-      const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-      mocks.videoTrim.get.mockResolvedValue({ startTime: 1, endTime: 3 });
-      mocks.media.probe.mockResolvedValue({
-        ...videoInfoStub.noAudioStreams,
-        format: { ...videoInfoStub.noAudioStreams.format, duration: 2 },
-      });
-      mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-      const [, trimOutputPath] = mocks.media.trim.mock.calls[0];
-      expect(trimOutputPath).not.toMatch(/_edited\.mp4$/);
-      expect(mocks.storage.rename).toHaveBeenCalledWith(trimOutputPath, expect.stringMatching(/_edited\.mp4$/));
-    });
-
-    it('cleans up the trimmed video when a post-trim step fails', async () => {
-      const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-      mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-      mocks.media.probe.mockResolvedValue({
-        ...videoInfoStub.noAudioStreams,
-        format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-      });
-      // trim() succeeds, but a later step (frame extraction) throws. The locally-written
-      // trimmed video must not be left behind — on S3 outputPath is a pod-local temp.
-      mocks.media.extractFrame.mockRejectedValue(new Error('bad frame'));
-
-      await expect(sut.handleAssetEditThumbnailGeneration({ id: asset.id })).rejects.toThrow('bad frame');
-
-      const outputPath = StorageCore.getEditedEncodedVideoPath(asset as any);
-      expect(mocks.storage.unlink).toHaveBeenCalledWith(outputPath);
-    });
-
-    it('should handle video undo by cleaning up edited files', async () => {
-      const asset = AssetFactory.from({ type: AssetType.Video })
-        .exif()
-        .files([
-          { type: AssetFileType.EncodedVideo, isEdited: true, path: '/edited-video.mp4' },
-          { type: AssetFileType.Preview, isEdited: true, path: '/edited-preview.jpg' },
-        ])
-        .build();
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-
-      const result = await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-      expect(result).toBe(JobStatus.Success);
-      expect(mocks.job.queue).toHaveBeenCalledWith({
-        name: JobName.AssetGenerateThumbnails,
-        data: { id: asset.id },
-      });
-    });
-
-    it('deletes the edited encoded video when the trim is undone', async () => {
-      const asset = AssetFactory.from({ type: AssetType.Video })
-        .exif()
-        .files([{ type: AssetFileType.Preview, isEdited: true, path: '/data/preview_edited.jpeg' }])
-        .build();
-      // no edits => the undo path
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue({
-        ...getForGenerateThumbnail(asset),
-        edits: [],
-      } as any);
-      mocks.asset.getEditedEncodedVideo.mockResolvedValue({
-        id: 'file-id-1',
-        path: 'encoded-video/owner/ab/cd/video_edited.mp4',
-      });
-
-      await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-      // Without this, getForVideo (isEdited DESC) keeps serving the TRIMMED video after an undo.
-      expect(mocks.asset.deleteFiles).toHaveBeenCalledWith([expect.objectContaining({ id: 'file-id-1' })]);
-      expect(mocks.job.queue).toHaveBeenCalledWith({
-        name: JobName.FileDelete,
-        data: { files: ['encoded-video/owner/ab/cd/video_edited.mp4'] },
-      });
-    });
-
-    it('undoes cleanly when there is no edited encoded video', async () => {
-      // No edited files at all — unlike U1, this isolates the assertion to the
-      // getEditedEncodedVideo guard: an unrelated edited Preview row would also
-      // produce a deleteFiles call via syncFiles' own cleanup, which would make
-      // the "no deleteFiles call" assertion below pass/fail for the wrong reason.
-      const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-      mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue({
-        ...getForGenerateThumbnail(asset),
-        edits: [],
-      } as any);
-      mocks.asset.getEditedEncodedVideo.mockResolvedValue(void 0);
-
-      const result = await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-      expect(result).toBe(JobStatus.Success);
-      expect(mocks.asset.deleteFiles).not.toHaveBeenCalled();
-    });
-
-    describe('trim video persistence (S3)', () => {
-      afterEach(() => {
-        // vitest.config.mjs sets no restoreMocks and there are no setupFiles, so a
-        // getWriteBackend spy would leak into every later test in this file and
-        // silently run the disk-mode tests against S3.
-        vi.restoreAllMocks();
-      });
-
-      it('uploads the trimmed video under the _edited key and stores that key (S3)', async () => {
-        const put = vi.fn().mockResolvedValue(void 0);
-        const { StorageService } = await import('src/services/storage.service.js');
-        vi.spyOn(StorageService, 'getWriteBackend').mockReturnValue({ put } as any);
-        mocks.storage.createPlainReadStream.mockReturnValue(makeStream([Buffer.from('mp4')]) as any);
-
-        const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-        mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-        mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-        mocks.media.probe.mockResolvedValue({
-          ...videoInfoStub.noAudioStreams,
-          format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-        });
-        mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-        mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-        await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-        const editedKey = StorageCore.getRelativeEditedEncodedVideoPath(asset as any);
-        expect(put).toHaveBeenCalledWith(editedKey, expect.anything(), { contentType: 'video/mp4' });
-        expect(mocks.asset.upsertFiles).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ type: AssetFileType.EncodedVideo, isEdited: true, path: editedKey }),
-          ]),
-        );
-      });
-
-      it('does not commit the trimmed duration when persisting the video fails (S3)', async () => {
-        // Upload fails part-way. The new duration must NOT already be committed, or the DB would
-        // report the trimmed length while getForVideo still serves the full-length original.
-        const put = vi.fn().mockRejectedValue(new Error('s3 down'));
-        const { StorageService } = await import('src/services/storage.service.js');
-        vi.spyOn(StorageService, 'getWriteBackend').mockReturnValue({ put } as any);
-        mocks.storage.createPlainReadStream.mockReturnValue(makeStream([Buffer.from('mp4')]) as any);
-
-        const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-        mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-        mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-        mocks.media.probe.mockResolvedValue({
-          ...videoInfoStub.noAudioStreams,
-          format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-        });
-        mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-        mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-        await expect(sut.handleAssetEditThumbnailGeneration({ id: asset.id })).rejects.toThrow('s3 down');
-
-        expect(mocks.asset.update).not.toHaveBeenCalledWith(expect.objectContaining({ duration: expect.anything() }));
-      });
-
-      it('never uploads the trimmed video over the transcoded original (S3)', async () => {
-        const put = vi.fn().mockResolvedValue(void 0);
-        const { StorageService } = await import('src/services/storage.service.js');
-        vi.spyOn(StorageService, 'getWriteBackend').mockReturnValue({ put } as any);
-        mocks.storage.createPlainReadStream.mockReturnValue(makeStream([Buffer.from('mp4')]) as any);
-
-        const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-        mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-        mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-        mocks.media.probe.mockResolvedValue({
-          ...videoInfoStub.noAudioStreams,
-          format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-        });
-        mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-        mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-        await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-        const nonEditedKey = StorageCore.getRelativeEncodedVideoPath(asset as any);
-        const keys = put.mock.calls.map((call) => call[0]);
-        expect(keys).not.toContain(nonEditedKey);
-      });
-
-      it('uploads the trimmed video only after the thumbnail frame is extracted (S3)', async () => {
-        const put = vi.fn().mockResolvedValue(void 0);
-        const { StorageService } = await import('src/services/storage.service.js');
-        vi.spyOn(StorageService, 'getWriteBackend').mockReturnValue({ put } as any);
-        mocks.storage.createPlainReadStream.mockReturnValue(makeStream([Buffer.from('mp4')]) as any);
-
-        const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-        mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-        mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-        mocks.media.probe.mockResolvedValue({
-          ...videoInfoStub.noAudioStreams,
-          format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-        });
-        mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-        mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-        await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-        // persistFile unlinks the local file after upload, so extractFrame MUST run first.
-        const extractOrder = mocks.media.extractFrame.mock.invocationCallOrder[0];
-        const putOrder = put.mock.invocationCallOrder[0];
-        expect(extractOrder).toBeLessThan(putOrder);
-      });
-
-      it('does not delete the edited video it just re-uploaded when re-trimming (S3)', async () => {
-        const put = vi.fn().mockResolvedValue(void 0);
-        const { StorageService } = await import('src/services/storage.service.js');
-        vi.spyOn(StorageService, 'getWriteBackend').mockReturnValue({ put } as any);
-        mocks.storage.createPlainReadStream.mockReturnValue(makeStream([Buffer.from('mp4')]) as any);
-
-        const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-        const editedKey = StorageCore.getRelativeEditedEncodedVideoPath(asset as any);
-        const withExistingEdit = {
-          ...getForGenerateThumbnail(asset),
-          files: [
-            {
-              type: AssetFileType.EncodedVideo,
-              isEdited: true,
-              path: editedKey,
-              isProgressive: false,
-              isTransparent: false,
-            },
-          ],
-        };
-        mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(withExistingEdit as any);
-        mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-        mocks.media.probe.mockResolvedValue({
-          ...videoInfoStub.noAudioStreams,
-          format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-        });
-        mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-        mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-        await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-        // The key is deterministic, so the re-trim overwrote the same object. syncFiles must
-        // NOT then queue a delete for it — that would erase what we just uploaded.
-        const deletedFiles = mocks.job.queue.mock.calls
-          .filter(([job]) => job.name === JobName.FileDelete)
-          .flatMap(([job]) => (job as any).data.files as string[]);
-        expect(deletedFiles).not.toContain(editedKey);
-      });
-
-      it('uploads the trim thumbnails under _edited keys and stores those keys (S3)', async () => {
-        const put = vi.fn().mockResolvedValue(void 0);
-        const { StorageService } = await import('src/services/storage.service.js');
-        vi.spyOn(StorageService, 'getWriteBackend').mockReturnValue({ put } as any);
-        mocks.storage.createPlainReadStream.mockReturnValue(makeStream([Buffer.from('data')]) as any);
-
-        const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-        mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-        mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-        mocks.media.probe.mockResolvedValue({
-          ...videoInfoStub.noAudioStreams,
-          format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-        });
-        mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-        mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-        await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-        const putKeys = put.mock.calls.map((call) => call[0] as string);
-        const thumbnailKeys = putKeys.filter((key) => key.startsWith('thumbs/'));
-
-        // preview + thumbnail at minimum (fullsize too, when the config generates one)
-        expect(thumbnailKeys.length).toBeGreaterThanOrEqual(2);
-        for (const key of thumbnailKeys) {
-          expect(key).toContain('_edited');
-        }
-
-        // and the keys — not local paths — are what get written to the DB
-        const upserted = mocks.asset.upsertFiles.mock.calls.flatMap(([files]) => files as any[]);
-        const upsertedThumbs = upserted.filter((file) => file.type !== AssetFileType.EncodedVideo);
-        expect(upsertedThumbs.length).toBeGreaterThanOrEqual(2);
-        for (const file of upsertedThumbs) {
-          expect(file.path.startsWith('/')).toBe(false);
-          expect(file.path).toContain('_edited');
-        }
-      });
-
-      it('never overwrites the non-edited preview or thumbnail objects (S3)', async () => {
-        const put = vi.fn().mockResolvedValue(void 0);
-        const { StorageService } = await import('src/services/storage.service.js');
-        vi.spyOn(StorageService, 'getWriteBackend').mockReturnValue({ put } as any);
-        mocks.storage.createPlainReadStream.mockReturnValue(makeStream([Buffer.from('data')]) as any);
-
-        const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-        mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-        mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-        mocks.media.probe.mockResolvedValue({
-          ...videoInfoStub.noAudioStreams,
-          format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-        });
-        mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-        mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-        await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-        // A trim must not clobber the asset's normal preview/thumbnail objects: every
-        // image key it writes carries the _edited marker.
-        //
-        // Asserted without a bare for-of over a filtered array: with zero thumbnail uploads
-        // such a loop never executes and the test passes with no assertions at all.
-        const putKeys = put.mock.calls.map((call) => call[0] as string);
-        const thumbnailKeys = putKeys.filter((key) => key.startsWith('thumbs/'));
-
-        expect(thumbnailKeys.length).toBeGreaterThanOrEqual(2);
-        expect(thumbnailKeys.every((key) => key.includes('_edited'))).toBe(true);
-
-        // and specifically not the non-edited keys, which belong to the untrimmed asset.
-        // Derived from the edited keys themselves, so this cannot pass by comparing against
-        // a key string that was never a real target.
-        for (const editedKey of thumbnailKeys) {
-          expect(putKeys).not.toContain(editedKey.replace('_edited', ''));
-        }
-      });
-
-      it('keeps disk-mode trim paths absolute and uploads nothing (regression guard)', async () => {
-        // No getWriteBackend spy: StorageService.diskBackend is undefined in this spec file,
-        // so persistFile takes its disk branch. Nothing here may become a relative key.
-        const asset = AssetFactory.from({ type: AssetType.Video }).exif().build();
-        mocks.assetJob.getForGenerateThumbnailJob.mockResolvedValue(getForGenerateThumbnail(asset));
-        mocks.videoTrim.get.mockResolvedValue({ startTime: 5, endTime: 25 });
-        mocks.media.probe.mockResolvedValue({
-          ...videoInfoStub.noAudioStreams,
-          format: { ...videoInfoStub.noAudioStreams.format, duration: 20 },
-        });
-        mocks.media.decodeImage.mockResolvedValue({ data: rawBuffer, info: rawInfo as OutputInfo });
-        mocks.media.getImageMetadata.mockResolvedValue({ width: 1920, height: 1080, isTransparent: false });
-
-        await sut.handleAssetEditThumbnailGeneration({ id: asset.id });
-
-        const upserted = mocks.asset.upsertFiles.mock.calls.flatMap(([files]) => files);
-        expect(upserted.length).toBeGreaterThanOrEqual(3); // edited video + preview + thumbnail
-        for (const file of upserted) {
-          expect(file.path.startsWith('/')).toBe(true);
-        }
-        expect(mocks.storage.createPlainReadStream).not.toHaveBeenCalled();
-      });
     });
   });
 
@@ -2191,6 +1834,7 @@ describe(MediaService.name, () => {
           ],
           processInvalidImages: false,
           size: 250,
+          decodingTier: 4,
         },
         expect.any(String),
       );
@@ -2199,6 +1843,54 @@ describe(MediaService.name, () => {
         personGroupId: person.personGroupId,
         thumbnailPath: expect.any(String),
       });
+    });
+
+    it("should use the representative face's best frame for a video sampled across the whole video", async () => {
+      const person = PersonFactory.create();
+      const framePath = '/data/thumbs/user-id/as/se/asset-id_faces/face-id.jpeg';
+
+      mocks.person.getDataForThumbnailGenerationJob.mockResolvedValue(personThumbnailStub.videoThumbnail);
+      mocks.videoFace.getRepresentativeFramePath.mockResolvedValue(framePath);
+      mocks.media.generateThumbnail.mockResolvedValue();
+      mocks.media.decodeImage.mockResolvedValue({
+        data: Buffer.from(''),
+        info: { width: 1000, height: 1000 } as OutputInfo,
+      });
+
+      await expect(
+        sut.handleGeneratePersonThumbnail({ ownerId: person.ownerId, personGroupId: person.personGroupId }),
+      ).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.videoFace.getRepresentativeFramePath).toHaveBeenCalledWith({
+        ownerId: person.ownerId,
+        personGroupId: person.personGroupId,
+      });
+      expect(mocks.media.decodeImage).toHaveBeenCalledWith(framePath, expect.anything());
+    });
+
+    it('should crop a small video face from its best frame with its surroundings', async () => {
+      const person = PersonFactory.create();
+      mocks.person.getDataForThumbnailGenerationJob.mockResolvedValue({
+        ...personThumbnailStub.videoThumbnail,
+        x1: 100,
+        y1: 100,
+        x2: 120,
+        y2: 120,
+      });
+      mocks.videoFace.getRepresentativeFramePath.mockResolvedValue(
+        '/data/thumbs/user-id/as/se/asset-id_faces/face-id.jpeg',
+      );
+      mocks.media.generateThumbnail.mockResolvedValue();
+      mocks.media.decodeImage.mockResolvedValue({
+        data: Buffer.from(''),
+        info: { width: 1000, height: 1000 } as OutputInfo,
+      });
+
+      await sut.handleGeneratePersonThumbnail({ ownerId: person.ownerId, personGroupId: person.personGroupId });
+
+      // A 20 px face is cropped as a 50 px region (2.5x) around its centre, not as the face alone.
+      const [, options] = mocks.media.generateThumbnail.mock.calls[0];
+      expect(options.edits).toEqual([{ action: 'crop', parameters: { x: 207, y: 152, width: 136, height: 136 } }]);
     });
 
     it('should use preview path if video', async () => {
@@ -2244,6 +1936,7 @@ describe(MediaService.name, () => {
           ],
           processInvalidImages: false,
           size: 250,
+          decodingTier: 4,
         },
         expect.any(String),
       );
@@ -2292,6 +1985,7 @@ describe(MediaService.name, () => {
           ],
           processInvalidImages: false,
           size: 250,
+          decodingTier: 4,
         },
         expect.any(String),
       );
@@ -2336,6 +2030,7 @@ describe(MediaService.name, () => {
           ],
           processInvalidImages: false,
           size: 250,
+          decodingTier: 4,
         },
         expect.any(String),
       );
@@ -2380,6 +2075,7 @@ describe(MediaService.name, () => {
           ],
           processInvalidImages: false,
           size: 250,
+          decodingTier: 4,
         },
         expect.any(String),
       );
@@ -2424,6 +2120,7 @@ describe(MediaService.name, () => {
           ],
           processInvalidImages: false,
           size: 250,
+          decodingTier: 4,
         },
         expect.any(String),
       );
@@ -2473,6 +2170,7 @@ describe(MediaService.name, () => {
           ],
           processInvalidImages: false,
           size: 250,
+          decodingTier: 4,
         },
         expect.any(String),
       );
@@ -2515,7 +2213,7 @@ describe(MediaService.name, () => {
       ).resolves.toBe(JobStatus.Success);
 
       expect(mocks.media.probe).not.toHaveBeenCalled();
-      expect(mocks.media.extractFrame).not.toHaveBeenCalled();
+      expect(mocks.videoTrim.extractFrame).not.toHaveBeenCalled();
       expect(mocks.media.decodeImage).toHaveBeenCalledWith(data.originalPath, {
         colorspace: Colorspace.P3,
         processInvalidImages: false,
@@ -2548,7 +2246,7 @@ describe(MediaService.name, () => {
 
       expect(ensureLocalFile).toHaveBeenCalledWith(data.originalPath);
       expect(mocks.media.probe).not.toHaveBeenCalled();
-      expect(mocks.media.extractFrame).not.toHaveBeenCalled();
+      expect(mocks.videoTrim.extractFrame).not.toHaveBeenCalled();
       expect(mocks.media.decodeImage).toHaveBeenCalledWith('/tmp/immich-s3-person-heic.tmp', {
         colorspace: Colorspace.P3,
         processInvalidImages: false,

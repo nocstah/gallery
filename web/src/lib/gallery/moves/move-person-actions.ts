@@ -3,12 +3,12 @@
 // videos on this library's timeline that are the owner's own, and their archived ones only when the dialog's tick
 // asks for them; the mover lists them itself. Offered where a move can start (move-gates), for a person who is the
 // owner's own and not a grouped one.
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
 import type { PersonResponseDto } from '@immich/sdk';
 import { modalManager, type ActionItem } from '@immich/ui';
 import { mdiImageMove } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
 import { page } from '$app/state';
-import { authManager } from '$lib/managers/auth-manager.svelte';
 import MoveDialog from './MoveDialog.svelte';
 import { canMovePerson, movePerson, moveTargets } from './move-gates';
 

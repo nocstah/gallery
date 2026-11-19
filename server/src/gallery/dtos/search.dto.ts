@@ -1,9 +1,9 @@
 import { createZodDto } from 'nestjs-zod';
 import z from 'zod';
 import { HistoryBuilder } from 'src/decorators.js';
-import { ScopedPrimaryProfileSchema } from 'src/dtos/person.dto.js';
 import { TimeBucketsResponseSchema } from 'src/dtos/time-bucket.dto.js';
-import { AssetOrderSchema, AssetTypeSchema, AssetVisibilitySchema } from 'src/enum.js';
+import { AssetOrderSchema, AssetTypeSchema, AssetVisibilitySchema, LibraryViewSchema } from 'src/enum.js';
+import { ScopedPrimaryProfileSchema } from 'src/gallery/dtos/person.dto.js';
 import { IsNotSiblingOf, boundedTextFilter, isoDatetimeToDate, stringToBool } from 'src/validation.js';
 
 // Fork search request fields, merged into upstream's schemas in src/dtos/search.dto.ts with one `.extend(...)` each
@@ -45,6 +45,7 @@ export const GallerySearchFilterExtension = {
   spaceId: z.uuidv4().optional().describe('Shared space ID to filter by'),
   spacePersonIds: z.array(z.uuidv4()).optional().describe('Shared space person IDs to filter by'),
   withSharedSpaces: z.boolean().optional().describe('Include shared spaces the user is a member of'),
+  libraryView: LibraryViewSchema.optional(),
 };
 
 /** SearchPeopleSchema */
@@ -102,9 +103,9 @@ export const GalleryMetadataSearchExtension = {
 export const GalleryStatisticsSearchExtension = { description: descriptionFilter };
 
 /**
- * SmartSearchSchema. Not marked DEPRECATED_FLAT_FIELD: that meta advertises a structured V3 replacement, and
- * neither field has one (`order` here means relevance-vs-date on smart search).
- */
+SmartSearchSchema. Not marked DEPRECATED_FLAT_FIELD: that meta advertises a structured V3 replacement, and
+neither field has one (`order` here means relevance-vs-date on smart search).
+*/
 export const GallerySmartSearchExtension = {
   order: AssetOrderSchema.optional().describe('Sort order (omit for relevance)'),
   // POST body, so a real boolean — stringToBool is for the query-string suggestion DTOs.
@@ -250,17 +251,17 @@ export class FilterSuggestionsRequestDto extends createZodDto(FilterSuggestionsR
 export class SmartSearchFacetsResponseDto extends createZodDto(SmartSearchFacetsResponseSchema) {}
 
 /**
- * `POST /search/options` (specs/2026-10-23-mobile-search-redesign-design.md, Slice 1). One request shape, two modes,
- * each counting exactly what its results call returns:
- * - **Browse** (no `query` / `queryAssetId`): `GET /timeline/buckets` with the same filters (`albumIds[0]` as its
- *   `albumId`). Its rules apply: people ALL, tags ANY, rating a minimum, visibility unset = timeline + archive, the owner
- *   scope is the caller (plus timeline partners with `withPartners`) unless an album or space is given, and the same
- *   combinations are refused.
- * - **Query**: `POST /search/smart` with the same filters (`withPartners` and `withStacked` ignored; partners shown in
- *   the timeline are always searched). People ALL, tags ALL, rating a minimum, visibility unset = everything not locked.
- *
- * A POST body, so `tagIds: null` can mean "untagged" (which `/timeline/buckets` cannot express).
- */
+`POST /search/options` (specs/2026-10-23-mobile-search-redesign-design.md, Slice 1). One request shape, two modes,
+each counting exactly what its results call returns:
+- **Browse** (no `query` / `queryAssetId`): `GET /timeline/buckets` with the same filters (`albumIds[0]` as its
+  `albumId`). Its rules apply: people ALL, tags ANY, rating a minimum, visibility unset = timeline + archive, the owner
+  scope is the caller (plus timeline partners with `withPartners`) unless an album or space is given, and the same
+  combinations are refused.
+- **Query**: `POST /search/smart` with the same filters (`withPartners` and `withStacked` ignored; partners shown in
+  the timeline are always searched). People ALL, tags ALL, rating a minimum, visibility unset = everything not locked.
+
+A POST body, so `tagIds: null` can mean "untagged" (which `/timeline/buckets` cannot express).
+*/
 /** What one `POST /search/options` request computes. */
 export const searchOptionsDimensions = [
   'availability',
@@ -322,6 +323,7 @@ const SearchOptionsRequestSchema = z
       .boolean()
       .optional()
       .describe('Browse mode: count only the primary asset of each stack, as on /timeline/buckets'),
+    libraryView: LibraryViewSchema.optional(),
     query: z.string().trim().optional().describe('Query mode: count over the smart-search results for this text'),
     queryAssetId: z
       .uuidv4()

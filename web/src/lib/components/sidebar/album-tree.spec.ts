@@ -1,3 +1,5 @@
+import { SPRING_MS, sidebarDrop } from '#lib/managers/sidebar-drop.svelte.ts';
+import { albumTreeOpen } from '#lib/stores/preferences.store.ts';
 import type { SharedSpaceAlbumFolderDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/svelte';
@@ -5,12 +7,10 @@ import { tick } from 'svelte';
 import { addMessages } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { sidebarDrop, SPRING_MS } from '$lib/managers/sidebar-drop.svelte';
-import { albumTreeOpen } from '$lib/stores/preferences.store';
 import AlbumTree from './album-tree.svelte';
 
 const mocks = vi.hoisted(() => ({ showPinMenu: vi.fn() }));
-vi.mock('$lib/utils/pin-menu', () => ({ showPinMenu: mocks.showPinMenu }));
+vi.mock('#lib/utils/pin-menu.ts', () => ({ showPinMenu: mocks.showPinMenu }));
 
 // Local Omarchy layer: albums in their folders as a Mac-like tree in the sidebar (components/sidebar/album-tree)
 const folder = (id: string, name: string, parentId: string | null = null) =>

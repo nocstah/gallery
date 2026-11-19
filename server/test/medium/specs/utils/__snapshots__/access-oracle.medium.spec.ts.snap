@@ -391,6 +391,9 @@ exports[`checkAccess oracle > asset.read 1`] = `
 
 exports[`checkAccess oracle > asset.share 1`] = `
 {
+  "albumViewer": [
+    "ownAsset",
+  ],
   "owner": [
     "albumSpaceAsset",
     "archivedSpaceAsset",
@@ -420,20 +423,14 @@ exports[`checkAccess oracle > asset.update 1`] = `
   "owner": [
     "albumSpaceAsset",
     "archivedSpaceAsset",
-    "contributedAsset",
-    "editorAsset",
     "libraryAsset",
     "ownAsset",
     "spaceAsset",
     "stackAsset",
   ],
   "spaceEditor": [
-    "albumSpaceAsset",
-    "archivedSpaceAsset",
     "contributedAsset",
     "editorAsset",
-    "libraryAsset",
-    "spaceAsset",
   ],
 }
 `;
@@ -579,6 +576,8 @@ exports[`checkAccess oracle > cleanup.read 1`] = `{}`;
 
 exports[`checkAccess oracle > cleanup.update 1`] = `{}`;
 
+exports[`checkAccess oracle > clusterGroup.admin 1`] = `{}`;
+
 exports[`checkAccess oracle > clusterGroup.leave 1`] = `{}`;
 
 exports[`checkAccess oracle > clusterGroup.read 1`] = `{}`;
@@ -686,6 +685,12 @@ exports[`checkAccess oracle > partner.update 1`] = `
 }
 `;
 
+exports[`checkAccess oracle > passkey.delete 1`] = `{}`;
+
+exports[`checkAccess oracle > passkey.read 1`] = `{}`;
+
+exports[`checkAccess oracle > passkey.update 1`] = `{}`;
+
 exports[`checkAccess oracle > person.create 1`] = `
 {
   "owner": [
@@ -789,6 +794,29 @@ exports[`checkAccess oracle > queueJob.delete 1`] = `{}`;
 exports[`checkAccess oracle > queueJob.read 1`] = `{}`;
 
 exports[`checkAccess oracle > queueJob.update 1`] = `{}`;
+
+exports[`checkAccess oracle > requireAssetEditAccess 1`] = `
+{
+  "owner": [
+    "albumSpaceAsset",
+    "archivedSpaceAsset",
+    "contributedAsset",
+    "editorAsset",
+    "libraryAsset",
+    "ownAsset",
+    "spaceAsset",
+    "stackAsset",
+  ],
+  "spaceEditor": [
+    "albumSpaceAsset",
+    "archivedSpaceAsset",
+    "contributedAsset",
+    "editorAsset",
+    "libraryAsset",
+    "spaceAsset",
+  ],
+}
+`;
 
 exports[`checkAccess oracle > server.about 1`] = `{}`;
 

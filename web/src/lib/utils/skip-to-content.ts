@@ -30,10 +30,10 @@ export const firstPhotoInView = (grid: HTMLElement) => {
 };
 
 /**
- * Lands the focus on the page's photo grid; false when the page has none (the skip link then takes its own way). The
- * grid takes the focus without scrolling, and the next Tab from it goes to its first photo in view, for as long as the
- * focus stays on the grid itself.
- */
+Lands the focus on the page's photo grid; false when the page has none (the skip link then takes its own way). The
+grid takes the focus without scrolling, and the next Tab from it goes to its first photo in view, for as long as the
+focus stays on the grid itself.
+*/
 export const skipToContent = (root: ParentNode = document) => {
   const grid = pageGrid(root);
   if (!grid) {

@@ -1,9 +1,9 @@
 import {
+  MAX_SCALE,
+  MIN_SCALE,
   cutRows,
   fitsOneLine,
   justifiedRow,
-  MAX_SCALE,
-  MIN_SCALE,
   type CutDay,
   type CutOptions,
   type RowPart,
@@ -13,14 +13,14 @@ import {
 const DELL: CutOptions = { width: 963, rowHeight: 235, spacing: 10, gap: 10, share: true };
 
 const day = (...ratios: number[]): CutDay => ({ ratios });
-/** How tall a row stands against the target height, before any cap. */
-const scaleOf = (row: RowPart[], days: CutDay[], { width, rowHeight, spacing, gap }: CutOptions) => {
+/** How tall a row stands against the target height on the Dell, before any cap. */
+const scaleOf = (row: RowPart[], days: CutDay[]) => {
+  const { width, rowHeight, spacing, gap } = DELL;
   const ratios = row.flatMap((part) => days[part.day].ratios.slice(part.from, part.to));
   const fixed = (ratios.length - row.length) * spacing + (row.length - 1) * gap;
   return (width - fixed) / ratios.reduce((sum, ratio) => sum + ratio, 0) / rowHeight;
 };
-const shortRows = (rows: RowPart[][], days: CutDay[], options: CutOptions) =>
-  rows.filter((row) => scaleOf(row, days, options) > MAX_SCALE).length;
+const shortRows = (rows: RowPart[][], days: CutDay[]) => rows.filter((row) => scaleOf(row, days) > MAX_SCALE).length;
 /** Every photo once, in order. */
 const photosOf = (rows: RowPart[][]) =>
   rows.flatMap((row) =>
@@ -57,7 +57,7 @@ describe(cutRows.name, () => {
     expect(fitsOneLine(days[0].ratios, DELL)).toBe(false);
     const rows = cutRows(days, DELL);
 
-    expect(shortRows(rows, days, DELL)).toBe(0);
+    expect(shortRows(rows, days)).toBe(0);
     // the two portraits end the first day's second row
     const shared = rows.find((row) => row.some((part) => part.day === 1))!;
     expect(shared.map((part) => part.day)).toEqual([0, 1]);
@@ -73,7 +73,7 @@ describe(cutRows.name, () => {
     expect(days.every((d) => fitsOneLine(d.ratios, DELL))).toBe(true);
     const rows = cutRows(days, DELL);
 
-    expect(shortRows(rows, days, DELL)).toBe(0);
+    expect(shortRows(rows, days)).toBe(0);
     expect(photosOf(rows)).toEqual(allPhotos(days));
   });
 
@@ -90,7 +90,7 @@ describe(cutRows.name, () => {
     const rows = cutRows(days, DELL);
 
     for (const row of rows) {
-      const scale = scaleOf(row, days, DELL);
+      const scale = scaleOf(row, days);
       expect(scale).toBeGreaterThanOrEqual(MIN_SCALE);
       expect(scale).toBeLessThanOrEqual(MAX_SCALE);
     }
@@ -103,7 +103,7 @@ describe(cutRows.name, () => {
     const handed = cutRows(days, { ...DELL, handOn: 0.5 });
     expect(handed).toEqual([[{ day: 0, from: 0, to: 4 }], [{ day: 1, from: 0, to: 1 }]]);
     // without a next month to take it, the month fills its own last row
-    expect(shortRows(cutRows(days, DELL), days, DELL)).toBe(0);
+    expect(shortRows(cutRows(days, DELL), days)).toBe(0);
   });
 
   describe('with day labels', () => {

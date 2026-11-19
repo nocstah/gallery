@@ -1,6 +1,6 @@
+import { vaultEdition } from '#lib/gallery/edition.ts';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { vaultEdition } from '$lib/gallery/edition';
 import { currentLibrary, isMainLibrary, listsSeveralLibraries } from './library-context.svelte';
 
 // Local Omarchy layer: the open library is never in doubt. The bar's chip names it wherever Kioku lists another (Main

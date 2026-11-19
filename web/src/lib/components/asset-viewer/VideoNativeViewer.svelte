@@ -1,24 +1,21 @@
 <script lang="ts">
-  import FaceEditorPanel from '$lib/components/asset-viewer/face-editor/FaceEditorPanel.svelte';
-  import VideoRemoteViewer from '$lib/components/asset-viewer/VideoRemoteViewer.svelte';
-  import { saveFrame } from '$lib/components/curator/save-frame.svelte';
-  import { assetViewerFadeDuration } from '$lib/constants';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { castManager } from '$lib/managers/cast-manager.svelte';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { mediaCapabilitiesManager } from '$lib/managers/media-capabilities-manager.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import {
-    autoPlayVideo,
-    lang,
-    loopVideo as loopVideoPreference,
-    videoViewerMuted,
-    videoViewerVolume,
-  } from '$lib/stores/preferences.store';
-  import { getAssetHlsSessionUrl, getAssetHlsUrl, getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
+  import VideoRemoteViewer from '#lib/components/asset-viewer/VideoRemoteViewer.svelte';
+  import FaceEditorPanel from '#lib/components/asset-viewer/face-editor/FaceEditorPanel.svelte';
+  import { saveFrame } from '#lib/components/curator/save-frame.svelte.ts';
+  import { assetViewerFadeDuration } from '#lib/constants.ts';
+  import VideoFaceBox from '#lib/gallery/asset-viewer/VideoFaceBox.svelte';
+  import { galleryViewerVideo } from '#lib/gallery/asset-viewer/viewer-video.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { castManager } from '#lib/managers/cast-manager.svelte.ts';
+  import { mediaCapabilitiesManager } from '#lib/managers/media-capabilities-manager.svelte.ts';
+  import { createPreloadedQuery } from '#lib/queries/client.ts';
+  import { getPublicConfigQuery } from '#lib/queries/config-public.query.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { autoPlayVideo, lang, loopVideo as loopVideoPreference } from '#lib/stores/preferences.store.ts';
+  import { getAssetHlsSessionUrl, getAssetHlsUrl, getAssetMediaUrl, getAssetPlaybackUrl } from '#lib/utils.ts';
   import { AssetMediaSize, type AssetResponseDto } from '@immich/sdk';
-  import { Icon, shortcuts } from '@immich/ui';
+  import { Icon, LoadingSpinner, shortcuts } from '@immich/ui';
   import {
     mdiCheck,
     mdiChevronLeft,
@@ -53,7 +50,9 @@
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
   import './immich-time-range';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
+
+  const query = createPreloadedQuery(getPublicConfigQuery);
+  const publicConfig = $derived(query.data);
 
   interface Props {
     asset: AssetResponseDto;
@@ -67,14 +66,6 @@
     onVideoEnded?: () => void;
     onVideoStarted?: () => void;
     onClose?: () => void;
-    /**
-     * Slice 8 gap closure — the same rule DetailPanel.svelte's People row and PhotoViewer.svelte's
-     * FaceEditorPanel use for THIS same asset (`resolveCanEditSpacePeople`). See
-     * `FaceEditorPanel.svelte` for how these two decide between the owner `FaceEditor` and the
-     * space-flavoured `SpaceFaceEditor`.
-     */
-    spaceId?: string;
-    canEditSpacePeople?: boolean;
   }
 
   let {
@@ -87,8 +78,6 @@
     onPreviousAsset = () => {},
     onNextAsset = () => {},
     onVideoEnded = () => {},
-    spaceId,
-    canEditSpacePeople = false,
     onVideoStarted = () => {},
     onClose = () => {},
   }: Props = $props();
@@ -97,7 +86,7 @@
   let isLoading = $state(true);
   let hasLoadedMetadata = $state(false);
   // HLS transcodes the original, so a trimmed video (the only edited kind) plays the trimmed file instead.
-  let useHls = $derived(featureFlagsManager.value.realtimeTranscoding && !asset.isEdited);
+  let useHls = $derived(publicConfig.ffmpeg.realtime.enabled && !asset.isEdited);
   let assetFileUrl = $derived.by(() => {
     if (useHls) {
       return getAssetHlsUrl(assetId);
@@ -362,21 +351,6 @@
     event.currentTarget?.dispatchEvent(new Event('timeupdate'));
   };
   const onSeeked = () => (isScrubbing = false);
-
-  const onVolumeChange = (event: Event) => {
-    const video = event.currentTarget as HTMLVideoElement;
-    $videoViewerMuted = video.muted;
-    $videoViewerVolume = video.volume;
-  };
-
-  $effect(() => {
-    if (!videoPlayer) {
-      return;
-    }
-
-    videoPlayer.muted = $videoViewerMuted;
-    videoPlayer.volume = $videoViewerVolume;
-  });
 </script>
 
 <svelte:body
@@ -440,7 +414,6 @@
             oncanplay={(e: Event) => handleCanPlay(e.currentTarget as HTMLVideoElement)}
             onloadedmetadata={() => (hasLoadedMetadata = true)}
             onended={onVideoEnded}
-            onvolumechange={onVolumeChange}
             onseeking={onSeeking}
             onseeked={onSeeked}
             onplaying={(e: Event) => {
@@ -452,7 +425,7 @@
               hasFocused = true;
             }}
             onclose={onClose}
-            muted={$videoViewerMuted}
+            {@attach galleryViewerVideo}
             poster={getAssetMediaUrl({ id: asset.id, size: AssetMediaSize.Preview, cacheKey })}
           ></hls-video>
         {:else}
@@ -469,7 +442,6 @@
             oncanplay={(e) => handleCanPlay(e.currentTarget)}
             onloadedmetadata={() => (hasLoadedMetadata = true)}
             onended={onVideoEnded}
-            onvolumechange={onVolumeChange}
             onseeking={onSeeking}
             onseeked={onSeeked}
             onplaying={(e) => {
@@ -481,7 +453,7 @@
               hasFocused = true;
             }}
             onclose={onClose}
-            muted={$videoViewerMuted}
+            {@attach galleryViewerVideo}
             poster={getAssetMediaUrl({ id: asset.id, size: AssetMediaSize.Preview, cacheKey })}
           ></video>
         {/if}
@@ -510,10 +482,10 @@
           </media-settings-menu>
         {/if}
 
-        <div
-          class="flex h-32 w-full flex-col justify-end bg-linear-to-b to-black/80 px-4"
-          class:ws-video-foot={fillStage}
-        >
+        <div class="relative isolate flex h-32 w-full flex-col justify-end px-4" class:ws-video-foot={fillStage}>
+          <div
+            class="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-48 bg-black/80 mask-smoothstep-to-top"
+          ></div>
           <media-control-bar part="bottom" class="flex h-10 w-full gap-2">
             <media-play-button class="shrink-0 rounded-full p-2 outline-none">
               <Icon slot="play" icon={mdiPlay} />
@@ -555,15 +527,14 @@
 
       {#if assetViewerManager.isFaceEditMode && videoPlayer && hasLoadedMetadata}
         <FaceEditorPanel
-          htmlElement={videoPlayer}
+          htmlElement={isHlsElement(videoPlayer) ? videoPlayer.nativeEl : videoPlayer}
           {containerWidth}
           {containerHeight}
           {assetId}
-          {spaceId}
-          {canEditSpacePeople}
-          onClose={() => assetViewerManager.closeFaceEditMode()}
+          {asset}
         />
       {/if}
+      <VideoFaceBox video={hasLoadedMetadata ? videoPlayer : undefined} {containerWidth} {containerHeight} />
     {/if}
   </div>
 {/if}

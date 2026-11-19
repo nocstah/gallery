@@ -2,7 +2,7 @@
 // One scale per form factor (desktop / narrow), multiplied onto the timeline's base row height and
 // remembered per browser. Shift+wheel, Ctrl+wheel and trackpad pinch (delivered as Ctrl+wheel) zoom
 // continuously; + / - step and 0 resets; TimelineWorkspaces renders a slider bound to `scale`.
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 
 const STORAGE_KEY = 'omarchy-thumbnail-zoom';
 export const ZOOM_MIN = 0.45;
@@ -48,26 +48,24 @@ class ThumbnailZoomManager {
   #scales = $state<Stored>(load());
   #dayLabels = $state(loadDayLabels());
   #expandStacks = $state(
-    browser
-      ? (() => {
-          try {
-            return localStorage.getItem(EXPAND_STACKS_KEY) === 'on';
-          } catch {
-            return false;
-          }
-        })()
-      : false,
+    browser &&
+      (() => {
+        try {
+          return localStorage.getItem(EXPAND_STACKS_KEY) === 'on';
+        } catch {
+          return false;
+        }
+      })(),
   );
   #compact = $state(
-    browser
-      ? (() => {
-          try {
-            return localStorage.getItem(COMPACT_KEY) === 'on';
-          } catch {
-            return false;
-          }
-        })()
-      : false,
+    browser &&
+      (() => {
+        try {
+          return localStorage.getItem(COMPACT_KEY) === 'on';
+        } catch {
+          return false;
+        }
+      })(),
   );
   mode = $state<Mode>('desktop');
 
@@ -133,9 +131,9 @@ class ThumbnailZoomManager {
   }
 
   /**
-   * Photo spacing for a desktop gap. Like Mac Photos, the seams tighten as thumbnails shrink: the full
-   * gap from the default size up, easing down to ~1px at the smallest size. Compact pins the tight seam.
-   */
+  Photo spacing for a desktop gap. Like Mac Photos, the seams tighten as thumbnails shrink: the full
+  gap from the default size up, easing down to ~1px at the smallest size. Compact pins the tight seam.
+  */
   spacingFor(gap: number) {
     const shrink = Math.min(1, Math.max(0, (this.scale - ZOOM_MIN) / (1 - ZOOM_MIN)));
     const auto = Math.max(1, Math.round(gap * (0.1 + 0.9 * shrink)));

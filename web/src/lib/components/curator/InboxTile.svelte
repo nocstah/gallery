@@ -6,7 +6,7 @@
   // opens as it is. The tiles are decoration beside the words, so the placeholder is too; its tooltip says why, and
   // truly: "All black" for a picture that is (in "Accidental shots" the very reason for the card), "No preview" only
   // where Gallery has none.
-  import { isBlankPicture } from '$lib/utils/curator-inbox';
+  import { isBlankPicture } from '#lib/utils/curator-inbox.ts';
   import { Icon } from '@immich/ui';
   import { mdiImageOffOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';

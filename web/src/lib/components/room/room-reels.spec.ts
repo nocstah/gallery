@@ -1,3 +1,6 @@
+import { memoryCards } from '#lib/utils/memory-cards.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { BRIGHT } from '#test/kioku/thumbhash.ts';
 import {
   AssetTypeEnum,
   MemoryType,
@@ -5,14 +8,11 @@ import {
   type AssetResponseDto,
   type MemoryResponseDto,
 } from '@immich/sdk';
-import { memoryCards } from '$lib/utils/memory-cards';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { BRIGHT } from '@test-data/thumbhash';
 import {
+  LIVING_ALBUM,
   dimFilmsLast,
   inTimeOrder,
   livingAlbums,
-  LIVING_ALBUM,
   roomCaption,
   roomRequest,
   shareOut,

@@ -4,8 +4,8 @@
   // a game, low disk). The runs that failed in the last week come first (#failed, where the command center's and the
   // Health tab's count of them lead), since the routine runs push them out of the recent list within hours. The list
   // refreshes itself while anything is queued or running.
-  import { curator, type Health, type JobKind, type JobRow } from '$lib/utils/curator';
-  import { relativeTime } from '$lib/utils/relative-time';
+  import { curator, type Health, type JobKind, type JobRow } from '#lib/utils/curator.ts';
+  import { relativeTime } from '#lib/utils/relative-time.ts';
   import { onDestroy, onMount, tick } from 'svelte';
   import { locale, t, type Translations } from 'svelte-i18n';
 

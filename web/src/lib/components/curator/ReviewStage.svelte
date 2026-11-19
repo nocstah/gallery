@@ -4,12 +4,12 @@
   // from, copies next to each other, an album's spread of photos, the reel itself, a restored version over its
   // original, the people found in a video each at their moment with their face boxed. Each piece of evidence opens in
   // the zoomable inspector, titled as review mode heads the suggestion.
-  import InboxInspector from '$lib/components/curator/InboxInspector.svelte';
-  import { inspectionItems } from '$lib/utils/inbox-inspection';
-  import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { reelUrl, videoPersonUrl, type Suggestion } from '$lib/utils/curator';
-  import { videoPeopleOf, videoPersonCaption } from '$lib/utils/inbox-video-people';
+  import InboxInspector from '#lib/components/curator/InboxInspector.svelte';
+  import RestoreCompare from '#lib/components/curator/RestoreCompare.svelte';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { reelUrl, videoPersonUrl, type Suggestion } from '#lib/utils/curator.ts';
+  import { inspectionItems } from '#lib/utils/inbox-inspection.ts';
+  import { videoPeopleOf, videoPersonCaption } from '#lib/utils/inbox-video-people.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { t } from 'svelte-i18n';
 
@@ -127,7 +127,7 @@
   {:else if suggestion.kind === 'video.people' && videoPeople.length > 0}
     <div class="stage-pair">
       {#each videoPeople as person (person.person_id)}
-        {@const caption = videoPersonCaption(person)}
+        {const caption = $derived(videoPersonCaption(person))}
         <button
           type="button"
           class="stage-big"

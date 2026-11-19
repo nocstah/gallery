@@ -47,10 +47,10 @@ const calendarMonthsBetween = (then: Date, now: Date) =>
   (now.getDate() < then.getDate() ? 1 : 0);
 
 /**
- * How long ago `when` was, from `now`, in the reader's language and the data type's few characters: "now", "5m ago",
- * "2h ago" today; "yesterday", "2d ago" … "6d ago" by the calendar; then "1w ago", "4mo ago", "2y ago". A time a
- * moment ahead of the clock reads "now". So a time never disagrees with the day it is listed under.
- */
+How long ago `when` was, from `now`, in the reader's language and the data type's few characters: "now", "5m ago",
+"2h ago" today; "yesterday", "2d ago" … "6d ago" by the calendar; then "1w ago", "4mo ago", "2y ago". A time a
+moment ahead of the clock reads "now". So a time never disagrees with the day it is listed under.
+*/
 export const relativeTime = (when: string | number | Date, now: number, locale?: string): string => {
   const then = when instanceof Date ? when.getTime() : typeof when === 'number' ? when : Date.parse(when);
   if (!Number.isFinite(then)) {

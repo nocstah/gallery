@@ -10,7 +10,7 @@ import FilterPanelSheetWrapper from '../filter-panel-sheet.test-wrapper.svelte';
 // svelte/reactivity's MediaQuery reads matchMedia when the module loads, so the manager is mocked with a switch.
 // Reduced motion keeps the sheet's slide out of the way of the assertions.
 const { media } = vi.hoisted(() => ({ media: { maxMd: true } }));
-vi.mock('$lib/stores/media-query-manager.svelte', () => ({
+vi.mock('#lib/stores/media-query-manager.svelte.ts', () => ({
   mediaQueryManager: {
     get maxMd() {
       return media.maxMd;
@@ -33,7 +33,7 @@ vi.mock('$lib/stores/media-query-manager.svelte', () => ({
 const COLLAPSED_KEY = 'gallery-filter-collapsed';
 
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US' });
   await waitLocale('en-US');
 });

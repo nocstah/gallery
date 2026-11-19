@@ -108,6 +108,7 @@
           "admin.asset_offline_description",
           "admin.backup_onboarding_description",
           "admin.backup_onboarding_footer",
+          "admin.backups_hide_reminder_description",
           "admin.confirm_delete_library_assets",
           "admin.maintenance_integrity_checksum_mismatch_description",
           "admin.maintenance_integrity_missing_file_description",
@@ -127,6 +128,8 @@
           "my_immich_description",
           "my_immich_title",
           "no_libraries_message",
+          "passkeys_on_server",
+          "passkeys_on_server_description",
           "recently_added_description",
           "reset_pin_code_description",
           "search_type_description",
@@ -220,6 +223,7 @@
         "_why": "the server software's releases and versions: Noodle Gallery publishes them, and the server image stays Noodle's",
         "keys": [
           "admin.maintenance_restore_backup_different_version",
+          "support_ensure_latest",
           "support_third_party_description",
           "version_announcement_message"
         ]
@@ -235,6 +239,7 @@
           "purchase_license_subtitle",
           "purchase_panel_info_1",
           "purchase_panel_info_2",
+          "purchase_product_key_description",
           "supporter"
         ]
       },
@@ -285,6 +290,9 @@
       { "token": "Immich", "near": "github\\.com/immich-app/immich[`'\"]", "why": "Help › About: the upstream project's own link, for the owner (the AGPL credit)" },
       { "token": "Immich", "near": "%22(author|name)%22%3A%22Immich%22", "why": "the Obtainium link names the phone app as upstream did; the phone app is Noodle's to rename" },
       { "token": "Immich", "near": "alt=\"Immich logo\"", "why": "@immich/ui's own Logo, which only a Modal given icon={true} draws, and no page does; it is installed in the image, out of a source rewrite's reach" },
+      { "token": "Immich", "near": "\"[A-Za-z0-9+/]{6}\":\\[", "why": "FUTO Backups' own pages (@futo-org/backups-orchestrator-ui, installed in the image, out of a source rewrite's reach), shown only once the admin turns on the backups beta (backup.beta, off by default): FUTO's product, built for the Immich server it backs up; its lingui catalog, an entry being \"<6-character id>\":[…]" },
+      { "token": "Immich", "near": "(?:[\\w$]\\(\\)|[\\w$])`[^`]*(?<![A-Za-z])Immich(?![A-Za-z])", "why": "FUTO Backups' own pages (@futo-org/backups-orchestrator-ui, installed in the image, out of a source rewrite's reach), shown only once the admin turns on the backups beta (backup.beta, off by default): FUTO's product, built for the Immich server it backs up; its lingui text macros, a tagged template (t`…`), a form Kioku's own text never takes" },
+      { "token": "Immich", "near": "name\\.includes\\(`Immich`\\)|\\{name:`Immich`,worm:", "why": "FUTO Backups' own pages (@futo-org/backups-orchestrator-ui, installed in the image, out of a source rewrite's reach), shown only once the admin turns on the backups beta (backup.beta, off by default): FUTO's product, built for the Immich server it backs up; the backup repository it makes and looks for by that name" },
       { "token": "Gallery", "near": "/\\* Gallery theme:", "why": "a comment heading a theme's generated CSS, never shown" },
       { "file": "^web/\\.well-known/security\\.txt$", "why": "the server software's security contact, Noodle's" }
     ],

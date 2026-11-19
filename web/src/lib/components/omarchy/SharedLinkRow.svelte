@@ -6,20 +6,20 @@
   // deletes the link (the memory Share sheet's Turn off does the same), so whoever opens it reads that it has ended. A
   // link that has ended is Edit, to open it again, and Remove. On a phone the three fold into one ⋮. A memory's link
   // takes its film with it: Curator forgets the film it kept for the link (utils/curator: forgetLinkFilm).
-  import { goto } from '$app/navigation';
-  import SharedLinkFacts from '$lib/components/omarchy/SharedLinkFacts.svelte';
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { Route } from '$lib/route';
-  import { asUrl } from '$lib/services/shared-link.service';
-  import { copyToClipboard, getAssetMediaUrl } from '$lib/utils';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import { curatorIsMine, forgetLinkFilm } from '$lib/utils/curator';
-  import { handleError } from '$lib/utils/handle-error';
-  import { linkEnd, linkKind, linkName } from '$lib/utils/shared-link-words';
-  import { AssetMediaSize, removeSharedLink, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
+  import SharedLinkFacts from '#lib/components/omarchy/SharedLinkFacts.svelte';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { asUrl } from '#lib/services/shared-link.service.ts';
+  import { copyToClipboard, getAssetMediaUrl } from '#lib/utils.ts';
+  import { curatorIsMine, forgetLinkFilm } from '#lib/utils/curator.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { linkEnd, linkKind, linkName } from '#lib/utils/shared-link-words.ts';
+  import { AssetMediaSize, SharedLinkType, removeSharedLink, type SharedLinkResponseDto } from '@immich/sdk';
   import { ContextMenuButton, Icon, MenuItemType, modalManager, toastManager, type ActionItem } from '@immich/ui';
   import { mdiContentCopy, mdiImageMultipleOutline, mdiLinkOff, mdiPencilOutline, mdiTrashCanOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
 
   type Props = {
     sharedLink: SharedLinkResponseDto;

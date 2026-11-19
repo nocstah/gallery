@@ -1,15 +1,15 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { resetTileGrid, tileGrid } from '#lib/gallery/__mocks__/tile-grid.ts';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 import type { PersonResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import type { Component } from 'svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { timelineAssetFactory } from '@test-data/factories/asset-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
-import { resetTileGrid, tileGrid } from '@test-data/mocks/tile-grid';
 import PersonDetailPage from './+page.svelte';
 
 // Local Omarchy layer: viewing a person's photos, a right-click on a photo opens Kioku's menu (gallery/photo-menu), not
@@ -23,32 +23,25 @@ const { mockPage } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: { value: { peopleStatistics: true, trash: true } },
 }));
 
-vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn(), goto: vi.fn(), invalidateAll: vi.fn() }));
-
-vi.mock('$app/stores', () => ({
-  page: {
-    subscribe: (run: (value: typeof mockPage) => void) => {
-      run(mockPage);
-      return () => {};
-    },
-  },
-  navigating: {
-    subscribe: (run: (value: null) => void) => {
-      run(null);
-      return () => {};
-    },
-  },
+// the global fake's other exports stay (a factory mock throws on a name it does not return)
+vi.mock('$app/navigation', async () => ({
+  ...(await import('#test/unit/mocks/app-navigation.ts')),
+  afterNavigate: vi.fn(),
+  goto: vi.fn(),
+  invalidateAll: vi.fn(),
+  refreshAll: vi.fn(),
 }));
 
-vi.mock('$app/state', () => ({ page: mockPage }));
+// the page reads `page` from $app/state, and its scroll memory clearer `navigating`
+vi.mock('$app/state', () => ({ page: mockPage, navigating: { to: null } }));
 
 vi.mock('@immich/ui', async (importOriginal) => {
   const original = await importOriginal<typeof import('@immich/ui')>();
-  const { default: MockContextMenuButton } = await import('@test-data/mocks/action-context-menu.stub.svelte');
+  const { default: MockContextMenuButton } = await import('#lib/gallery/__mocks__/action-context-menu.stub.svelte');
   return {
     ...original,
     ContextMenuButton: MockContextMenuButton,
@@ -57,28 +50,28 @@ vi.mock('@immich/ui', async (importOriginal) => {
   };
 });
 
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/OnEvents.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/OnEvents.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/Timeline.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/tile-timeline.stub.svelte');
+vi.mock('#lib/components/timeline/Timeline.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/tile-timeline.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/assets/thumbnail/ImageThumbnail.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/image-thumbnail.stub.svelte');
+vi.mock('#lib/components/assets/thumbnail/ImageThumbnail.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/image-thumbnail.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/people/people-merge-selector.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/people-merge-selector.stub.svelte');
+vi.mock('#lib/components/people/people-merge-selector.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/people-merge-selector.stub.svelte');
   return { default: MockComponent };
 });
 

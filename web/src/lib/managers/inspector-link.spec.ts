@@ -5,8 +5,8 @@ import {
   subjectOfTimelineAsset,
   type InspectorMessage,
   type InspectorSubject,
-} from '$lib/managers/inspector-link.svelte';
-import { timelineAssetFactory } from '@test-data/factories/asset-factory';
+} from '#lib/managers/inspector-link.svelte.ts';
+import { timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
 
 // Local Omarchy layer: the main window and the inspector window, each with its own BroadcastChannel on one name, as two
 // windows of one browser profile have.

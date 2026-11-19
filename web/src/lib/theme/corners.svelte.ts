@@ -3,7 +3,7 @@
 // radius whatever the theme: the chrome by --ws-radius (omarchy-world.css's :root[data-corners='rounded']), the photo
 // tiles by --tile-radius, which follows the zoom so that small tiles are barely rounded and the gaps between them stay
 // lines. Faces stay round either way. app.html sets the attribute before the first paint.
-import { thumbnailZoomManager, ZOOM_MAX, ZOOM_MIN } from '$lib/managers/thumbnail-zoom-manager.svelte';
+import { ZOOM_MAX, ZOOM_MIN, thumbnailZoomManager } from '#lib/managers/thumbnail-zoom-manager.svelte.ts';
 
 const KEY = 'gallery.corners';
 
@@ -40,9 +40,9 @@ class Corners {
 export const corners = new Corners();
 
 /**
- * A photo tile's corner with rounded corners on: ~2px at the smallest size, 6px at the default, up to the chrome's
- * 8px for big tiles, halved in Compact. Undefined without them: the tiles take the theme's radius (--ws-radius).
- */
+A photo tile's corner with rounded corners on: ~2px at the smallest size, 6px at the default, up to the chrome's
+8px for big tiles, halved in Compact. Undefined without them: the tiles take the theme's radius (--ws-radius).
+*/
 export const tileRadius = () => {
   if (!corners.rounded) {
     return;

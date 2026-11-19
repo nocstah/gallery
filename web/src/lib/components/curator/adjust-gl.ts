@@ -124,7 +124,7 @@ export class AdjustPreview {
   }
 
   /** The photo, its pixels taken as they are: the caller drew it into an sRGB canvas, which converted its colours
-   * from the profile it carries, as Curator converts the full-size photo. */
+  from the profile it carries, as Curator converts the full-size photo. */
   photo(source: HTMLCanvasElement) {
     const gl = this.#gl;
     gl.activeTexture(gl.TEXTURE0);

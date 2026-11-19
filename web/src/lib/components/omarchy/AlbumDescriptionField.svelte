@@ -4,8 +4,8 @@
   // else, so a viewer never sees "Add a description". On a phone (below 640px) an editor's album without a description
   // shows one quiet line instead of the empty field, "+ Add a description" in muted meta type, which opens the field;
   // left empty, the field goes back to the line (DESIGN.md, Album page).
-  import AlbumDescription from '$lib/components/album-page/AlbumDescription.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
+  import AlbumDescription from '#lib/components/album-page/AlbumDescription.svelte';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
   import { Icon } from '@immich/ui';
   import { mdiPlus } from '@mdi/js';
   import { flushSync } from 'svelte';
@@ -29,8 +29,11 @@
     flushSync();
     field?.querySelector('textarea')?.focus();
   };
+  // upstream's AlbumDescription saves on its own (the album query brings the words back), so what was typed is read
+  // from its field
   const onFocusOut = (event: FocusEvent) => {
-    if (!description && !field?.contains(event.relatedTarget as Node | null)) {
+    const typed = field?.querySelector('textarea')?.value.trim();
+    if (!description && !typed && !field?.contains(event.relatedTarget as Node | null)) {
       writing = false;
     }
   };
@@ -43,7 +46,7 @@
   </button>
 {:else}
   <div bind:this={field} onfocusout={onFocusOut}>
-    <AlbumDescription {id} {isEditor} bind:description />
+    <AlbumDescription {id} {isEditor} {description} />
   </div>
 {/if}
 

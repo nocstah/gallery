@@ -1,10 +1,10 @@
+import { linkEnd, linkEndDay, linkFacts, linkKind } from '#lib/utils/shared-link-words.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
 import { AssetTypeEnum, SharedLinkType } from '@immich/sdk';
 import { DateTime } from 'luxon';
 import { init, register, t, waitLocale } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { linkEnd, linkEndDay, linkFacts, linkKind } from '$lib/utils/shared-link-words';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 
 const photo = () => assetFactory.build({ type: AssetTypeEnum.Image });
 const video = () => assetFactory.build({ type: AssetTypeEnum.Video });
@@ -78,7 +78,7 @@ describe('linkEndDay', () => {
 describe('linkFacts', () => {
   beforeAll(async () => {
     await init({ fallbackLocale: 'en-US' });
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await waitLocale('en-US');
   });
 

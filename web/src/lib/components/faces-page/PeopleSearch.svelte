@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { initInput } from '$lib/actions/focus';
-  import { maximumLengthSearchPeople } from '$lib/constants';
-  import SearchBar from '$lib/elements/SearchBar.svelte';
-  import { createPeopleSearch } from '$lib/gallery/people/people-search';
-  import { handleError } from '$lib/utils/handle-error';
-  import type { PersonResponseDto } from '@immich/sdk';
+  import { initInput } from '#lib/actions/focus.ts';
+  import { maximumLengthSearchPeople } from '#lib/constants.ts';
+  import SearchBar from '#lib/elements/SearchBar.svelte';
+  import { createPeopleSearch } from '#lib/gallery/people/people-search.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { type PersonResponseDto } from '@immich/sdk';
   import { onDestroy } from 'svelte';
   import { t } from 'svelte-i18n';
 

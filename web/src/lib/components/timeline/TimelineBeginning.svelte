@@ -4,8 +4,8 @@
   // character) and one quiet line: "It all begins here" and that photo's day. It shows once the timeline's last month
   // is loaded, only where the timeline runs newest first by the day the photos were taken, and the leadout takes its
   // height, so the scroll ends under it.
-  import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
+  import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
   import { AssetOrder, AssetOrderBy } from '@immich/sdk';
   import { onDestroy } from 'svelte';
   import { t } from 'svelte-i18n';

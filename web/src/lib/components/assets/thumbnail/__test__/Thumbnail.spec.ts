@@ -1,12 +1,12 @@
+import Thumbnail from '#lib/components/assets/thumbnail/Thumbnail.svelte';
+import { livePhotoMark } from '#lib/components/assets/thumbnail/live-mark.ts';
+import { getTabbable } from '#lib/utils/focus-util.ts';
+import { timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { getIntersectionObserverMock } from '#test/kioku/mocks/intersection-observer.mock.ts';
 import { mdiMotionPlayOutline, mdiPlayCircleOutline } from '@mdi/js';
 import { render } from '@testing-library/svelte';
-import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
-import Thumbnail from '$lib/components/assets/thumbnail/Thumbnail.svelte';
-import { livePhotoMark } from '$lib/components/assets/thumbnail/live-mark';
-import { getTabbable } from '$lib/utils/focus-util';
-import { timelineAssetFactory } from '@test-data/factories/asset-factory';
 
-vi.mock('$lib/utils/navigation', () => ({
+vi.mock('#lib/utils/navigation.ts', () => ({
   currentUrlReplaceAssetId: vi.fn(),
   isSharedLinkRoute: vi.fn().mockReturnValue(false),
 }));

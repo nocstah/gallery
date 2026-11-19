@@ -1,32 +1,36 @@
-import { AlbumUserRole, AssetOrder } from '@immich/sdk';
+import { reactivePageMock as mockPage } from '#lib/gallery/__mocks__/reactive-page.mock.svelte.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { barSlot } from '#lib/managers/bar-slot.svelte.ts';
+import { qrManager } from '#lib/managers/special-albums.svelte.ts';
+import { getAlbumInfoQuery } from '#lib/queries/album.query.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+import { albumFactory } from '#test/kioku/factories/album-factory.ts';
+import { timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
+import { getAnimateMock } from '#test/kioku/mocks/animate.mock.ts';
+import { defaultUserConfig } from '#test/unit/gallery-config-defaults.ts';
+import { AlbumUserRole, AssetOrder, type AlbumResponseDto } from '@immich/sdk';
 import { modalManager } from '@immich/ui';
 import '@testing-library/jest-dom';
 import { fireEvent, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAnimateMock } from '$lib/__mocks__/animate.mock';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { barSlot } from '$lib/managers/bar-slot.svelte';
-import { qrManager } from '$lib/managers/special-albums.svelte';
-import { renderWithTooltips } from '$tests/helpers';
-import { albumFactory } from '@test-data/factories/album-factory';
-import { timelineAssetFactory } from '@test-data/factories/asset-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
-import { reactivePageMock as mockPage } from '@test-data/mocks/reactive-page.mock.svelte';
 import AlbumPage from './+page.svelte';
 
 // Local Omarchy layer: a closed menu keeps its rows, hidden and inert (ContextMenu), and a hidden row has no accessible
-// name for a role query to match, so what a menu offers is read from its rows' own words (its key hints left out)
-const menuRow = (name: string) =>
+// name for a role query to match, so the Slideshow row is found by its own words (its key hints left out)
+const slideshowRow = () =>
   screen.queryAllByRole('menuitem', { hidden: true }).find((row) => {
     const copy = row.cloneNode(true) as HTMLElement;
     for (const hint of copy.querySelectorAll('[aria-hidden="true"]')) {
       hint.remove();
     }
-    return copy.textContent?.trim() === name;
+    return copy.textContent?.trim() === 'slideshow';
   }) ?? null;
 
 const {
@@ -54,26 +58,27 @@ vi.mock('$app/navigation', () => ({
 // The mock module and the spec import the SAME singleton, so assigning mockPage.url in a test is
 // what the page's $effect sees.
 vi.mock('$app/state', async () => {
-  const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
-  return { page: reactivePageMock };
+  const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
+  // `navigating`: the scroll memory (actions/scroll-memory.svelte) reads where a navigation goes
+  return { page: reactivePageMock, navigating: { to: null } };
 });
 
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
   const { default: MockUserPageLayout } = await import('./mock-user-page-layout.test-wrapper.svelte');
   return { default: MockUserPageLayout };
 });
 
-vi.mock('$lib/components/timeline/Timeline.svelte', async () => {
+vi.mock('#lib/components/timeline/Timeline.svelte', async () => {
   const { default: MockTimeline } = await import('./mock-timeline.test-wrapper.svelte');
   return { default: MockTimeline };
 });
 
-vi.mock('$lib/components/search/smart-search-results.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/smart-search-results.stub.svelte');
+vi.mock('#lib/components/search/smart-search-results.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/smart-search-results.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/managers/global-search-manager.svelte', () => ({
+vi.mock('#lib/managers/global-search-manager.svelte.ts', () => ({
   globalSearchManager: {
     // Returns a teardown, matching the real registration the page's $effect consumes.
     registerSearchablePageFilters: vi.fn(() => vi.fn()),
@@ -81,17 +86,17 @@ vi.mock('$lib/managers/global-search-manager.svelte', () => ({
   },
 }));
 
-vi.mock('$lib/managers/command-context-manager.svelte', () => ({
+vi.mock('#lib/managers/command-context-manager.svelte.ts', () => ({
   registerAlbumContext: registerAlbumContextMock,
   registerSelectionContext: registerSelectionContextMock,
 }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: mockFeatureFlagsManager as never,
 }));
 
-vi.mock('$lib/utils/navigation', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/utils/navigation')>();
+vi.mock('#lib/utils/navigation.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/utils/navigation.ts')>();
   return {
     ...actual,
     isAlbumsRoute: () => true,
@@ -159,14 +164,18 @@ function renderPage(album = albumFactory.build({ assetCount: 2 })) {
 
   sdkMock.getSearchSuggestions.mockImplementation((() => Promise.resolve([] as string[])) as never);
 
-  return renderWithTooltips(AlbumPage, {
-    data: {
-      album,
-      asset: undefined,
-      error: undefined,
-      meta: { title: album.albumName },
-    },
-  });
+  return renderWithTooltips(AlbumPage, albumPageProps(album));
+}
+
+// The page reads its album and the user config from preloaded queries (upstream's album queries), as its load leaves
+// them; the map follows the config's map flag (mockFeatureFlagsManager stands for it here)
+function albumPageProps(album: AlbumResponseDto) {
+  queryClient.setQueryData(getAlbumInfoQuery(album.id).queryKey, album);
+  queryClient.setQueryData(getUserConfigQuery().queryKey, {
+    ...defaultUserConfig,
+    map: { ...defaultUserConfig.map, enabled: mockFeatureFlagsManager.value.map },
+  } as never);
+  return { params: { albumId: album.id } } as never;
 }
 
 describe('album detail filter panel route', () => {
@@ -577,7 +586,7 @@ describe('album detail filter panel route', () => {
     expect(screen.getByTestId('active-chip')).toHaveTextContent('First Album Person');
 
     // A real navigation to another album always moves page.url/page.params in lockstep with
-    // data.album (the URL change is what drives the new load in the first place). Move them here
+    // the album param (the URL change is what drives the new load in the first place). Move them here
     // too, so this proves filters reset because the new album's URL carries none of its own —
     // not merely because a mock forgot to move.
     mockPage.reset('https://gallery.test/albums/album-2', {
@@ -587,14 +596,7 @@ describe('album detail filter panel route', () => {
 
     await view.rerender({
       component: AlbumPage,
-      componentProps: {
-        data: {
-          album: secondAlbum,
-          asset: undefined,
-          error: undefined,
-          meta: { title: secondAlbum.albumName },
-        },
-      },
+      componentProps: albumPageProps(secondAlbum),
     });
 
     await waitFor(() => expect(screen.queryByTestId('active-chip')).not.toBeInTheDocument());
@@ -678,9 +680,8 @@ describe('album detail filter panel route', () => {
 
       await waitFor(() =>
         expect(gotoMock).toHaveBeenCalledWith('/albums/album-1?people=person-view', {
-          replaceState: true,
-          keepFocus: true,
-          noScroll: true,
+          replace: true,
+          reset: false,
         }),
       );
     });
@@ -694,9 +695,8 @@ describe('album detail filter panel route', () => {
 
       await waitFor(() =>
         expect(gotoMock).toHaveBeenCalledWith('/albums/album-1', {
-          replaceState: true,
-          keepFocus: true,
-          noScroll: true,
+          replace: true,
+          reset: false,
         }),
       );
     });
@@ -1128,7 +1128,7 @@ describe('album detail filter panel route', () => {
       qrManager.albumId = album.id;
       renderPage(album);
 
-      await waitFor(() => expect(menuRow('slideshow')).toBeInTheDocument());
+      await waitFor(() => expect(slideshowRow()).toBeInTheDocument());
       expect(screen.queryByTestId('album-room')).not.toBeInTheDocument();
     });
 
@@ -1147,7 +1147,7 @@ describe('album detail filter panel route', () => {
 
       await waitFor(() => expect(screen.getByRole('button', { name: 'back' })).toBeInTheDocument());
       expect(screen.queryByRole('button', { name: 'play' })).not.toBeInTheDocument();
-      expect(menuRow('slideshow')).not.toBeInTheDocument();
+      expect(slideshowRow()).not.toBeInTheDocument();
     });
   });
 });

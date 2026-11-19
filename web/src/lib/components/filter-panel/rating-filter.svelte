@@ -28,8 +28,8 @@
      muted ink. A second press takes it back -->
 <div class="flex gap-1" role="group" aria-label={$t('rating')} data-testid="rating-filter">
   {#each visibleStars as star (star)}
-    {@const filled = selectedRating !== undefined && star <= selectedRating}
-    {@const isOrphaned = availableRatings !== undefined && !availableRatings.includes(star)}
+    {const filled = $derived(selectedRating !== undefined && star <= selectedRating)}
+    {const isOrphaned = $derived(availableRatings !== undefined && !availableRatings.includes(star))}
     <button
       type="button"
       class="flex items-center justify-center p-0.5 {isOrphaned ? 'opacity-50' : ''}"

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import UserSettingsList from './UserSettingsList.svelte';
-  import { getKeyboardActions } from '$lib/services/keyboard.service';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { getKeyboardActions } from '#lib/services/keyboard.service.ts';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
+  import UserSettingsList from './UserSettingsList.svelte';
 
   type Props = {
     data: PageData;
@@ -17,6 +17,6 @@
 <UserPageLayout title={data.meta.title} actions={[KeyboardShortcuts]}>
   <!-- Local Omarchy layer: one column on the page's own gutter, not a box in the middle (omarchy-world.css) -->
   <div class="ws-page-column">
-    <UserSettingsList keys={data.keys} sessions={data.sessions} />
+    <UserSettingsList />
   </div>
 </UserPageLayout>

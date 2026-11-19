@@ -1,4 +1,4 @@
-import { calendarDaysBetween, relativeTime } from '$lib/utils/relative-time';
+import { calendarDaysBetween, relativeTime } from '#lib/utils/relative-time.ts';
 
 // every date here is in the test's own time zone, as the reader's would be
 const at = (year: number, month: number, day: number, hour = 12, minute = 0) =>

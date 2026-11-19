@@ -6,6 +6,9 @@ node_modules
 .env
 .env.*
 !.env.example
+/test-results
+/playwright-report
+/.vitest
 
 # impeccable-live-ignore-start
 .impeccable/hook.cache.json

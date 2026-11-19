@@ -1,15 +1,15 @@
 <script lang="ts">
-  import AlbumViewer from '$lib/components/album-page/AlbumViewer.svelte';
-  import IndividualSharedViewer from '$lib/components/share-page/IndividualSharedViewer.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { setSharedLink } from '$lib/utils';
-  import { handleError } from '$lib/utils/handle-error';
-  import { navigate } from '$lib/utils/navigation';
+  import AlbumViewer from '#lib/components/album-page/AlbumViewer.svelte';
+  import IndividualSharedViewer from '#lib/components/share-page/IndividualSharedViewer.svelte';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { setSharedLink } from '#lib/utils.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { navigate } from '#lib/utils/navigation.ts';
   import {
+    SharedLinkType,
     isHttpError,
     sharedLinkLogin,
-    SharedLinkType,
     type AssetResponseDto,
     type SharedLinkResponseDto,
   } from '@immich/sdk';
@@ -21,8 +21,6 @@
     data: {
       meta: {
         title: string;
-        description?: string;
-        imageUrl?: string;
       };
 
       sharedLink?: SharedLinkResponseDto;
@@ -36,7 +34,7 @@
   const { data }: Props = $props();
 
   let { sharedLink, passwordRequired, key, slug, meta } = $state(data);
-  let { title, description } = $state(meta);
+  let { title } = $state(meta);
   let isOwned = $derived(authManager.authenticated && authManager.user.id === sharedLink?.userId);
   let password = $state('');
   // Local Omarchy layer: a wrong password is said under the field (the server's 401 "Invalid password"), not in a
@@ -65,13 +63,10 @@
       setSharedLink(sharedLink);
       passwordRequired = false;
       title = (sharedLink.album ? sharedLink.album.albumName : $t('public_share')) + ' - Immich';
-      description =
-        sharedLink.description ||
-        $t('shared_photos_and_videos_count', { values: { assetCount: sharedLink.assets.length } });
       await tick();
       await navigate(
         { targetRoute: 'current', assetId: null, assetGridRouteSearchParams: assetViewerManager.gridScrollTarget },
-        { forceNavigate: true, replaceState: true },
+        { forceNavigate: true, replace: true },
       );
     } catch (error) {
       if (isHttpError(error) && error.status === 401) {
@@ -98,7 +93,6 @@
 
 <svelte:head>
   <title>{title}</title>
-  <meta name="description" content={description} />
 </svelte:head>
 {#if passwordRequired}
   <!-- Local Omarchy layer: the password prompt in the Empty State's grammar (DESIGN.md, Error pages), on its own on the

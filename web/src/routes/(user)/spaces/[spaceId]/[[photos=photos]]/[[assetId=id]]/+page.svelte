@@ -1,88 +1,96 @@
 <script lang="ts">
-  import { goto, invalidateAll } from '$app/navigation';
-  import { page } from '$app/state';
-  import FilterPanel from '$lib/components/filter-panel/filter-panel.svelte';
-  import ActiveFiltersBar from '$lib/components/filter-panel/active-filters-bar.svelte';
-  import FilterToolbar from '$lib/components/filter-panel/filter-toolbar.svelte';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import ActiveFiltersBar from '#lib/components/filter-panel/active-filters-bar.svelte';
+  import FilterPanel from '#lib/components/filter-panel/filter-panel.svelte';
   import {
     ALL_FILTER_SECTIONS,
     buildFilterContext,
-    createFilterState,
     clearFilters,
+    createFilterState,
     getActiveFilterCount,
     loadFilterCollapsed,
     type FilterPanelConfig,
     type FilterState,
-  } from '$lib/components/filter-panel/filter-panel';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import SmartSearchResults from '$lib/components/search/smart-search-results.svelte';
-  import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
-  import SpaceNewAssetsDivider from '$lib/components/spaces/space-new-assets-divider.svelte';
-  import SpaceOnboardingBanner from '$lib/components/spaces/space-onboarding-banner.svelte';
-  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
-  import SpaceAssetLimitWarning from '$lib/components/spaces/space-asset-limit-warning.svelte';
-  import SelectionToolbar from '$lib/components/timeline/SelectionToolbar.svelte';
-  import SpacePhotoMenu from '$lib/gallery/photo-menu/SpacePhotoMenu.svelte';
-  import Timeline from '$lib/components/timeline/Timeline.svelte';
-  import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import type { TimelineAsset, TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
-  import { removeSearchResults, selectAllSearchResults, updateSearchResults } from '$lib/utils/search-result-selection';
-  import { registerSelectionContext, registerSpaceContext } from '$lib/managers/command-context-manager.svelte';
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-  import { spaceUiManager } from '$lib/managers/space-ui-manager.svelte';
-  import { Route } from '$lib/route';
-  import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { lang } from '$lib/stores/preferences.store';
-  import { dismissedOnboardingSpaceIds } from '$lib/stores/space-view.store';
-  import { handleError } from '$lib/utils/handle-error';
-  import { getPhotosPersonFilterThumbnailUrl } from '$lib/utils/photos-filter-options';
+  } from '#lib/components/filter-panel/filter-panel.ts';
+  import FilterToolbar from '#lib/components/filter-panel/filter-toolbar.svelte';
+  import EmptyState from '#lib/components/omarchy/EmptyState.svelte';
+  import SmartSearchResults from '#lib/components/search/smart-search-results.svelte';
+  import ControlAppBar from '#lib/components/shared-components/ControlAppBar.svelte';
+  import SpaceAssetLimitWarning from '#lib/components/spaces/space-asset-limit-warning.svelte';
+  import SpaceNewAssetsDivider from '#lib/components/spaces/space-new-assets-divider.svelte';
+  import SpaceOnboardingBanner from '#lib/components/spaces/space-onboarding-banner.svelte';
+  import SelectionToolbar from '#lib/components/timeline/SelectionToolbar.svelte';
+  import Timeline from '#lib/components/timeline/Timeline.svelte';
+  import { MAX_SPACE_ASSETS_PER_REQUEST } from '#lib/constants.ts';
+  import SpacePhotoMenu from '#lib/gallery/photo-menu/SpacePhotoMenu.svelte';
+  import { getTimelineTopVisibleAnchor } from '#lib/gallery/timeline/timeline-anchor.ts';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { registerSelectionContext, registerSpaceContext } from '#lib/managers/command-context-manager.svelte.ts';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import { globalSearchManager } from '#lib/managers/global-search-manager.svelte.ts';
+  import { spaceUiManager } from '#lib/managers/space-ui-manager.svelte.ts';
+  import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import type {
+    TimelineAsset,
+    TimelineGrouping,
+    TimelineTemporalAnchor,
+  } from '#lib/managers/timeline-manager/types.ts';
+  import SearchAddAllToCollectionModal from '#lib/modals/SearchAddAllToCollectionModal.svelte';
+  import { Route } from '#lib/route.ts';
+  import type { SearchTerms } from '#lib/services/search.service.ts';
+  import { lang } from '#lib/stores/preferences.store.ts';
+  import { dismissedOnboardingSpaceIds } from '#lib/stores/space-view.store.ts';
+  import { resolveFilterNames } from '#lib/utils/filter-name-resolution.ts';
+  import { filterStateToSearchTerms } from '#lib/utils/filter-search-terms.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { getPhotosPersonFilterThumbnailUrl } from '#lib/utils/photos-filter-options.ts';
+  import {
+    removeSearchResults,
+    selectAllSearchResults,
+    updateSearchResults,
+  } from '#lib/utils/search-result-selection.ts';
   import {
     buildSearchablePageUrl,
     getSearchablePageFilterState,
     getSearchablePageState,
-  } from '$lib/utils/searchable-page-search';
-  import { consumeTypedSearchNamesInto } from '$lib/utils/typed-search/typed-search-name-cache';
+  } from '#lib/utils/searchable-page-search.ts';
+  import { buildSpaceTimelineOptions, handleSpaceRemoveFilter } from '#lib/utils/space-filter-options.ts';
   import {
     buildSmartSearchFacetKey,
     buildSmartSearchFacetsParams,
     mapSmartSearchFacetsToFilterSuggestions,
-  } from '$lib/utils/space-search';
-  import { buildSpaceTimelineOptions, handleSpaceRemoveFilter } from '$lib/utils/space-filter-options';
-  import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
-  import type { SearchTerms } from '$lib/services/search.service';
-  import { resolveFilterNames } from '$lib/utils/filter-name-resolution';
-  import { filterStateToSearchTerms } from '$lib/utils/filter-search-terms';
+  } from '#lib/utils/space-search.ts';
   import {
-    type ActivatableTimelineBucket,
     getTimelineBucketZoomTarget,
     getTimelineManagerTimeBuckets,
-  } from '$lib/utils/timeline-zoom-navigation';
-  import { getTimelineTopVisibleAnchor } from '$lib/managers/timeline-manager/timeline-anchor';
+    type ActivatableTimelineBucket,
+  } from '#lib/utils/timeline-zoom-navigation.ts';
+  import { consumeTypedSearchNamesInto } from '#lib/utils/typed-search/typed-search-name-cache.ts';
   import {
-    addAssets,
-    type AssetResponseDto,
     AssetTypeEnum,
     AssetVisibility,
+    SearchSuggestionType,
+    SharedSpaceRole,
+    addAssets,
     getFilterSuggestions,
     getSearchSuggestions,
     getSpace,
     markSpaceViewed,
     searchSmartFacets,
-    SharedSpaceRole,
-    SearchSuggestionType,
     updateSpace,
+    type AssetResponseDto,
     type SharedSpaceMemberResponseDto,
     type SharedSpaceResponseDto,
     type SmartSearchFacetsResponseDto,
   } from '@immich/sdk';
   import { IconButton, modalManager, toastManager } from '@immich/ui';
   import { mdiImageOutline, mdiPlus } from '@mdi/js';
-  import { t } from 'svelte-i18n';
   import { untrack } from 'svelte';
+  import { t } from 'svelte-i18n';
   import { SvelteMap } from 'svelte/reactivity';
+  import { goto, invalidateAll } from '$app/navigation';
+  import { page } from '$app/state';
   import type { PageData } from './$types';
 
   type ViewMode = 'view' | 'select-assets' | 'select-cover';
@@ -683,9 +691,8 @@
       return;
     }
     void goto(nextUrl, {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
   };
 
@@ -700,9 +707,8 @@
       return;
     }
     void goto(nextUrl, {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
   }
 

@@ -1,5 +1,5 @@
-import { onScrubberKey } from '$lib/gallery/timeline/scrubber-keys';
-import { onPageKey } from '$lib/utils/page-keys';
+import { onScrubberKey } from '#lib/gallery/timeline/scrubber-keys.ts';
+import { onPageKey } from '#lib/utils/page-keys.ts';
 
 // Local Omarchy layer: once a click gave the scrubber the focus, Page Up / Page Down still page the photos
 describe('scrubber keys', () => {

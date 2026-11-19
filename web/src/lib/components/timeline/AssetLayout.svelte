@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import type { ViewerAsset } from '$lib/managers/timeline-manager/viewer-asset.svelte';
-  import type { VirtualScrollManager } from '$lib/managers/VirtualScrollManager/VirtualScrollManager.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { uploadAssetsStore } from '$lib/stores/upload';
-  import { desktopMotion } from '$lib/utils/desktop-motion';
-  import type { CommonPosition } from '$lib/utils/layout-utils';
+  import type { VirtualScrollManager } from '#lib/managers/VirtualScrollManager/VirtualScrollManager.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import type { ViewerAsset } from '#lib/managers/timeline-manager/viewer-asset.svelte.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { uploadAssetsStore } from '#lib/stores/upload.ts';
+  import { desktopMotion } from '#lib/utils/desktop-motion.ts';
+  import type { CommonPosition } from '#lib/utils/layout-utils.ts';
   import type { Snippet } from 'svelte';
   import { flip } from 'svelte/animate';
 
@@ -58,8 +58,8 @@
 <!-- Image grid -->
 <div data-image-grid class="relative overflow-clip" style:height={height + 'px'} style:width={width + 'px'}>
   {#each viewerAssets as viewerAsset (viewerAsset.id)}
-    {@const position = viewerAsset.position!}
-    {@const asset = viewerAsset.asset!}
+    {const position = $derived(viewerAsset.position!)}
+    {const asset = $derived(viewerAsset.asset!)}
 
     <!-- note: don't remove data-asset-id - its used by web e2e tests -->
     <div

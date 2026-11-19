@@ -1,8 +1,8 @@
+import { PlacesGroupBy, type PlacesViewSettings } from '#lib/stores/preferences.store.ts';
 import type { AssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { PlacesGroupBy, type PlacesViewSettings } from '$lib/stores/preferences.store';
 import PlacesList from './PlacesList.svelte';
 
 // Local Omarchy layer: Places' empty states stand on the gutter in the Empty State's grammar (DESIGN.md, Places), and a

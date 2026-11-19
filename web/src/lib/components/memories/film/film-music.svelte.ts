@@ -1,4 +1,4 @@
-import type { MemoryTrack } from '$lib/utils/curator';
+import type { MemoryTrack } from '#lib/utils/curator.ts';
 
 // Local Omarchy layer: the film's music (DESIGN.md, Memories, The film): songs from the owner's own library that
 // Curator picked for the memory, best first, played on plain <audio> elements from Curator's origin (no crossorigin,
@@ -32,18 +32,19 @@ export const unlockFilmSound = () => {
     const audio = new Audio(SILENCE);
     unlocked.add(audio);
     spares.push(audio);
-    void audio.play().then(
-      () => {
+    // the catch hears only the play's refusal: reading an attribute and pausing do not throw
+    void audio
+      .play()
+      .then(() => {
         if (audio.getAttribute('src') === SILENCE) {
           audio.pause();
         }
-      },
-      () => {
+      })
+      .catch(() => {
         // not allowed after all: the film still offers Turn on sound
         unlocked.delete(audio);
         spares.splice(spares.indexOf(audio), 1);
-      },
-    );
+      });
   }
 };
 
@@ -166,7 +167,7 @@ export class FilmMusic {
       'ended',
       () => {
         if (audio === this.#audio && this.playing) {
-          this.#switchTo(this.#nextPlayable(), 0);
+          this.#switchTo(this.#nextPlayable());
         }
       },
       { signal },
@@ -183,7 +184,7 @@ export class FilmMusic {
             this.failed = true;
             this.playing = false;
           } else if (this.playing) {
-            this.#switchTo(this.#nextPlayable(), 0);
+            this.#switchTo(this.#nextPlayable());
           }
         }
       },
@@ -218,8 +219,9 @@ export class FilmMusic {
     this.#fade(audio, 0, ms, () => this.#release(audio));
   }
 
-  #switchTo(index: number, fadeOutMs: number) {
-    this.#retire(this.#audio, fadeOutMs);
+  // on from a song that has ended or cannot play, so it goes at once
+  #switchTo(index: number) {
+    this.#retire(this.#audio, 0);
     this.index = index;
     this.#audio = this.#element(index);
     if (this.playing) {

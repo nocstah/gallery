@@ -1,15 +1,15 @@
-import { AssetTypeEnum, AssetVisibility } from '@immich/sdk';
-import { assetFactory } from '@test-data/factories/asset-factory';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
 import {
+  SECOND_CURATOR_FEATURES,
   libraryContextFile,
   mainLibrary,
-  SECOND_CURATOR_FEATURES,
   secondOffering,
   secondWithout,
   serving,
-} from '@test-data/factories/library-context-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
+import { AssetTypeEnum, AssetVisibility } from '@immich/sdk';
 import { CURATOR_FEATURES, type CuratorFeature } from './library-file';
 
 // Local Omarchy layer: a library's Curator that runs only some of Main's jobs lists what it offers (curatorFeatures),
@@ -34,7 +34,7 @@ const pageIn = async (file?: unknown) => {
   if (file !== undefined) {
     await context.loadLibraryContext(serving(file));
   }
-  const { authManager } = await import('$lib/managers/auth-manager.svelte');
+  const { authManager } = await import('#lib/managers/auth-manager.svelte.ts');
   authManager.setUser(userAdminFactory.build({ id: 'me', isAdmin: true }));
   authManager.setPreferences(preferencesFactory.build());
 };
@@ -52,13 +52,13 @@ const video = assetFactory.build({
 type Tool = [name: string, offered: () => Promise<boolean>];
 
 /** Each feature's tools that ask Curator first (or go by its answer), each saying whether it is offered once asked. The
- * pages, the sidebar's and Utilities' rows, the album page's smart badge and story have specs of their own. */
+pages, the sidebar's and Utilities' rows, the album page's smart badge and story have specs of their own. */
 const TOOLS: Record<CuratorFeature, Tool[]> = {
   inbox: [
     [
       "Ctrl+K's AI inbox and command center",
       async () => {
-        const { NAVIGATION_ITEMS } = await import('$lib/managers/navigation-items');
+        const { NAVIGATION_ITEMS } = await import('#lib/managers/navigation-items.ts');
         const routes = new Set(NAVIGATION_ITEMS.map(({ route }) => route));
         return routes.has('/inbox') && routes.has('/command');
       },
@@ -68,7 +68,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       'Look Up',
       async () => {
-        const { lookUp } = await import('$lib/components/curator/look-up.svelte');
+        const { lookUp } = await import('#lib/components/curator/look-up.svelte.ts');
         lookUp.check();
         await answered();
         return lookUp.available;
@@ -77,7 +77,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       "Ctrl+K's chat",
       async () => {
-        const { NAVIGATION_ITEMS } = await import('$lib/managers/navigation-items');
+        const { NAVIGATION_ITEMS } = await import('#lib/managers/navigation-items.ts');
         return NAVIGATION_ITEMS.some(({ route }) => route === '/chat');
       },
     ],
@@ -86,7 +86,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       "a memory's Share and Save as video",
       async () => {
-        const { filmVideos } = await import('$lib/managers/film-video-manager.svelte');
+        const { filmVideos } = await import('#lib/managers/film-video-manager.svelte.ts');
         filmVideos.check();
         await answered();
         return filmVideos.available;
@@ -95,7 +95,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       "a memory's title and cover from Curator's facts",
       async () => {
-        const { memoryFacts } = await import('$lib/managers/memory-facts.svelte');
+        const { memoryFacts } = await import('#lib/managers/memory-facts.svelte.ts');
         memoryFacts.request(['memory']);
         await answered();
         return memoryFacts.get('memory') !== undefined;
@@ -106,7 +106,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       "an album's Make photo book",
       async () => {
-        const { photoBooks } = await import('$lib/managers/photo-book-manager.svelte');
+        const { photoBooks } = await import('#lib/managers/photo-book-manager.svelte.ts');
         photoBooks.check();
         await answered();
         return photoBooks.available;
@@ -115,8 +115,8 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       "Ctrl+K's year book",
       async () => {
-        const { photoBooks } = await import('$lib/managers/photo-book-manager.svelte');
-        const { COMMAND_ITEMS } = await import('$lib/managers/command-items');
+        const { photoBooks } = await import('#lib/managers/photo-book-manager.svelte.ts');
+        const { COMMAND_ITEMS } = await import('#lib/managers/command-items.ts');
         photoBooks.check();
         await answered();
         const command = COMMAND_ITEMS.find(({ id }) => id === 'cmd:photo_book');
@@ -128,7 +128,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       'Remove objects',
       async () => {
-        const { removeObjects } = await import('$lib/components/curator/remove-objects.svelte');
+        const { removeObjects } = await import('#lib/components/curator/remove-objects.svelte.ts');
         removeObjects.check();
         await answered();
         return removeObjects.available;
@@ -139,7 +139,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       'Live effects',
       async () => {
-        const { liveEffects } = await import('$lib/components/curator/live-effects.svelte');
+        const { liveEffects } = await import('#lib/components/curator/live-effects.svelte.ts');
         liveEffects.check();
         await answered();
         return liveEffects.available;
@@ -148,7 +148,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       'Adjust',
       async () => {
-        const { adjustPhoto } = await import('$lib/components/curator/adjust-photo.svelte');
+        const { adjustPhoto } = await import('#lib/components/curator/adjust-photo.svelte.ts');
         adjustPhoto.check();
         await answered();
         return adjustPhoto.available;
@@ -157,7 +157,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       'Save frame as photo',
       async () => {
-        const { saveFrame } = await import('$lib/components/curator/save-frame.svelte');
+        const { saveFrame } = await import('#lib/components/curator/save-frame.svelte.ts');
         saveFrame.check();
         await answered();
         return saveFrame.available;
@@ -166,7 +166,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       'Copy subject',
       async () => {
-        const { lookUp } = await import('$lib/components/curator/look-up.svelte');
+        const { lookUp } = await import('#lib/components/curator/look-up.svelte.ts');
         lookUp.check();
         await answered();
         return lookUp.answers('live');
@@ -177,7 +177,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       'Download for WhatsApp or Telegram',
       async () => {
-        const { canShareVideo } = await import('$lib/utils/share-video');
+        const { canShareVideo } = await import('#lib/utils/share-video.ts');
         return canShareVideo(video);
       },
     ],
@@ -186,7 +186,7 @@ const TOOLS: Record<CuratorFeature, Tool[]> = {
     [
       'Pick the best',
       async () => {
-        const { lookUp } = await import('$lib/components/curator/look-up.svelte');
+        const { lookUp } = await import('#lib/components/curator/look-up.svelte.ts');
         lookUp.check();
         await answered();
         return lookUp.answers('picks');

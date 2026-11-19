@@ -1,25 +1,25 @@
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '#test/kioku/factories/library-context-factory.ts';
 import { AssetVisibility } from '@immich/sdk';
-import { fireEvent, render, screen, cleanup } from '@testing-library/svelte';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
 import { addMessages, locale } from 'svelte-i18n';
 import { afterEach, expect, it, vi } from 'vitest';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { timelineAssetFactory } from '@test-data/factories/asset-factory';
-import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
 import TileContextMenu from './TileContextMenu.test-wrapper.svelte';
 
 const { start } = vi.hoisted(() => ({ start: vi.fn() }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: { authenticated: true, isSharedLink: false, user: { id: 'me', isAdmin: true } },
 }));
-vi.mock('$lib/utils/curator', () => ({ curatorIsMine: () => true }));
-vi.mock('$lib/utils', () => ({ getAssetMediaUrl: () => '/test-thumbnail.png' }));
-vi.mock('$lib/managers/share-video-manager.svelte', () => ({ shareVideos: { start } }));
-vi.mock('$lib/managers/language-manager.svelte', () => ({ languageManager: { rtl: false } }));
-vi.mock('$lib/managers/stack-expand-manager.svelte', () => ({ stackExpandManager: {} }));
-vi.mock('$lib/managers/thumbnail-zoom-manager.svelte', () => ({ thumbnailZoomManager: {} }));
-vi.mock('$lib/components/curator/stack-pick.svelte', () => ({ stackPick: {} }));
-vi.mock('$lib/utils/copy-subject', () => ({ copySubject: vi.fn() }));
-vi.mock('$lib/utils/reveal', () => ({ revealInPhotos: vi.fn() }));
+vi.mock('#lib/utils/curator.ts', () => ({ curatorIsMine: () => true }));
+vi.mock('#lib/utils.ts', () => ({ getAssetMediaUrl: () => '/test-thumbnail.png' }));
+vi.mock('#lib/managers/share-video-manager.svelte.ts', () => ({ shareVideos: { start } }));
+vi.mock('#lib/managers/language-manager.svelte.ts', () => ({ languageManager: { rtl: false } }));
+vi.mock('#lib/managers/stack-expand-manager.svelte.ts', () => ({ stackExpandManager: {} }));
+vi.mock('#lib/managers/thumbnail-zoom-manager.svelte.ts', () => ({ thumbnailZoomManager: {} }));
+vi.mock('#lib/components/curator/stack-pick.svelte.ts', () => ({ stackPick: {} }));
+vi.mock('#lib/utils/copy-subject.ts', () => ({ copySubject: vi.fn() }));
+vi.mock('#lib/utils/reveal.ts', () => ({ revealInPhotos: vi.fn() }));
 
 afterEach(() => {
   cleanup();

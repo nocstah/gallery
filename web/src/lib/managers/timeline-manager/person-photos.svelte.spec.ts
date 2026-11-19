@@ -1,8 +1,8 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { toTimeBucketsRequest } from '#lib/gallery/timeline/request-options.ts';
+import { curator } from '#lib/utils/curator.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
 import { AssetVisibility, TimeBucketSize, type AssetResponseDto, type SearchResponseDto } from '@immich/sdk';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { curator } from '$lib/utils/curator';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { toTimeBucketsRequest } from './internal/request-options';
 import { PersonPhotos } from './person-photos';
 import { TimelineManager } from './timeline-manager.svelte';
 
@@ -74,7 +74,7 @@ describe('face page photo source', () => {
     const buckets = manager.timelineBuckets;
     expect(buckets).toHaveLength(1);
     expect(buckets[0].count).toBe(3);
-    await manager.loadCoversForBuckets(buckets.map((bucket) => bucket.timeBucket));
+    await manager.bucketLayout.loadCovers(buckets.map((bucket) => bucket.timeBucket));
     expect(buckets[0].representativeAssetId).toBe('july-7');
     expect(sdkMock.getTimeBucketCovers).not.toHaveBeenCalled();
   });

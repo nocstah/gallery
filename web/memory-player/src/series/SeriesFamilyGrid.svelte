@@ -3,10 +3,10 @@
   // tiles on the page's ground, two columns on a phone and columns of 15rem or more on a wider screen, as the shared
   // memory's grid; a clip's tile has its play mark. A photo opens the film from it, a clip plays whole with its sound
   // (SeriesFamilyClip). Back and Escape go back to where All photos was opened from; Play plays the day from its start.
-  import type { FilmMedia } from '../../../src/lib/components/memories/film/film-media';
   import { Icon } from '@immich/ui';
   import { mdiArrowLeft, mdiPlay } from '@mdi/js';
   import { t } from 'svelte-i18n';
+  import type { FilmMedia } from '../../../src/lib/components/memories/film/film-media';
   import type { SeriesDay } from './series-family';
 
   type Props = {
@@ -57,7 +57,7 @@
   </header>
   <ul class="family-grid">
     {#each day.assets as asset, index (asset.id)}
-      {@const clip = asset.type === 'VIDEO'}
+      {const clip = $derived(asset.type === 'VIDEO')}
       <li>
         <button
           type="button"

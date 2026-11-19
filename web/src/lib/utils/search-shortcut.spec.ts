@@ -1,5 +1,5 @@
+import { matchesShortcut, shortcuts } from '#lib/actions/shortcut.ts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { matchesShortcut, shortcuts } from '$lib/actions/shortcut';
 import { isEditableTarget, searchShortcuts } from './search-shortcut';
 
 const keydown = (init: KeyboardEventInit) => new KeyboardEvent('keydown', init);
@@ -127,7 +127,7 @@ describe('searchShortcuts', () => {
   });
 });
 
-// These tests drive the REAL `shortcuts` action from `$lib/actions/shortcut` — attached
+// These tests drive the REAL `shortcuts` action from `#lib/actions/shortcut.ts` — attached
 // to a live DOM node, dispatching real `keydown` events at the focused element — rather
 // than calling `option.onShortcut` directly like `fire()` above does. `fire()` cannot
 // exercise `preventDefault` ordering because it bypasses the action entirely; the action

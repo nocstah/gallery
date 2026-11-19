@@ -1,8 +1,8 @@
 <script lang="ts">
-  import RoleBadge from '$lib/components/spaces/role-badge.svelte';
-  import SpaceCollage from '$lib/components/spaces/space-collage.svelte';
-  import { Route } from '$lib/route';
-  import { relativeTime } from '$lib/utils/relative-time';
+  import RoleBadge from '#lib/components/spaces/role-badge.svelte';
+  import SpaceCollage from '#lib/components/spaces/space-collage.svelte';
+  import { Route } from '#lib/route.ts';
+  import { relativeTime } from '#lib/utils/relative-time.ts';
   import type { SharedSpaceResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiDotsVertical, mdiPin, mdiPinOff } from '@mdi/js';
@@ -103,12 +103,12 @@
 </div>
 
 {#snippet spaceRow(space: SharedSpaceResponseDto)}
-  {@const collageAssets = getCollageAssets(space)}
-  {@const colorBarClass = getColorBarClass(space.color)}
-  {@const newBadgeClass = getNewBadgeClass(space.color)}
-  {@const currentRole = getCurrentUserRole(space)}
-  {@const newCount = space.newAssetCount ?? 0}
-  {@const isPinned = pinnedIds.includes(space.id)}
+  {const collageAssets = $derived(getCollageAssets(space))}
+  {const colorBarClass = $derived(getColorBarClass(space.color))}
+  {const newBadgeClass = $derived(getNewBadgeClass(space.color))}
+  {const currentRole = $derived(getCurrentUserRole(space))}
+  {const newCount = $derived(space.newAssetCount ?? 0)}
+  {const isPinned = $derived(pinnedIds.includes(space.id))}
   <tr
     class="border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900"
     data-testid="space-row"

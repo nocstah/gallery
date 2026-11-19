@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import SpaceCollage from '$lib/components/spaces/space-collage.svelte';
-  import { slipCovers } from '$lib/managers/slip-covers.svelte';
-  import { Route } from '$lib/route';
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import SpaceCollage from '#lib/components/spaces/space-collage.svelte';
+  import { slipCovers } from '#lib/managers/slip-covers.svelte.ts';
+  import { Route } from '#lib/route.ts';
   import { UserAvatarColor, type SharedSpaceResponseDto } from '@immich/sdk';
   import { Button, Icon } from '@immich/ui';
   import { mdiAccountMultipleOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
 
   interface Props {
     item: SharedSpaceResponseDto;

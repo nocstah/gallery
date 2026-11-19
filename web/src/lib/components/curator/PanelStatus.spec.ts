@@ -11,13 +11,13 @@ const { curatorMock } = vi.hoisted(() => ({
   curatorMock: { inbox: vi.fn(), libraryHealth: vi.fn() },
 }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: curatorMock,
 }));
 
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
   await waitLocale('en-US');
 });

@@ -1,4 +1,4 @@
-import { datesOf, placeOf, suggestAlbumName, type NamedAsset } from '$lib/utils/album-naming';
+import { datesOf, placeOf, suggestAlbumName, type NamedAsset } from '#lib/utils/album-naming.ts';
 
 // the locale's ranges put thin spaces around the dash
 const plain = (text: string) => text.replaceAll(/\s/g, ' ');

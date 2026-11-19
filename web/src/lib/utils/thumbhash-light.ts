@@ -5,10 +5,10 @@
 import { thumbHashToAverageRGBA } from 'thumbhash';
 
 /**
- * Below this a picture reads as dim. On the owner's library (677 favourite photos, 1,275 photos of 40 months) the
- * darkest tenth lies under 0.06 and the darkest quarter under 0.10; the middle is 0.16 to 0.19. A night shot or an
- * unlit room lands under it, a room by daylight or an evening lamp at about it, a day outside well above.
- */
+Below this a picture reads as dim. On the owner's library (677 favourite photos, 1,275 photos of 40 months) the
+darkest tenth lies under 0.06 and the darkest quarter under 0.10; the middle is 0.16 to 0.19. A night shot or an
+unlit room lands under it, a room by daylight or an evening lamp at about it, a day outside well above.
+*/
 export const DIM_BELOW = 0.1;
 
 const linear = (channel: number) => (channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);

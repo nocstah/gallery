@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { slipCovers } from '$lib/managers/slip-covers.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { iconCoverOf } from '$lib/utils/slips';
+  import { slipCovers } from '#lib/managers/slip-covers.svelte.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { iconCoverOf } from '#lib/utils/slips.ts';
+  import { AssetMediaSize, type AlbumNameDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiImageMultipleOutline } from '@mdi/js';
-  import { AssetMediaSize, type AlbumNameDto } from '@immich/sdk';
   import { t } from 'svelte-i18n';
 
   interface Props {

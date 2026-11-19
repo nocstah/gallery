@@ -28,19 +28,19 @@
   // was a chevron and a link, so an album page had 172 tab stops before its first photo, 142 of them in the sidebar.
   // A long folder the tree opened by itself shows only the way to what is on screen, the rest behind "+N more": the
   // whole folder opened under an album page, some 140 rows.
-  import { dropSpring, dropTarget, sidebarDrop } from '$lib/managers/sidebar-drop.svelte';
-  import { albumTreeOpen } from '$lib/stores/preferences.store';
-  import { albumKey, folderKey, moreKey, shownAt, treeKey, visibleRows } from '$lib/utils/album-tree';
-  import { showPinMenu } from '$lib/utils/pin-menu';
+  import { dropSpring, dropTarget, sidebarDrop } from '#lib/managers/sidebar-drop.svelte.ts';
+  import { albumTreeOpen } from '#lib/stores/preferences.store.ts';
+  import { albumKey, folderKey, moreKey, shownAt, treeKey, visibleRows } from '#lib/utils/album-tree.ts';
+  import { showPinMenu } from '#lib/utils/pin-menu.ts';
   import type { SharedSpaceAlbumFolderDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import {
     mdiChevronDown,
     mdiChevronRight,
+    mdiEyeOffOutline,
     mdiFolderOpenOutline,
     mdiFolderOutline,
     mdiImageAlbum,
-    mdiEyeOffOutline,
     mdiShareVariantOutline,
   } from '@mdi/js';
   import { tick, untrack } from 'svelte';
@@ -81,7 +81,7 @@
   // by name the way a person numbers them ("2" before "10", years in order), as on the Albums page
   const byName = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
-  const parentOf = $derived(new Map(folders.map(({ id, parentId }) => [id, parentId ?? null])));
+  const parentOf = $derived(new Map(folders.map(({ id, parentId = null }) => [id, parentId])));
 
   // a folder whose parent is gone, or an album whose folder is, sits at the top rather than nowhere
   const placed = (folderId: string | null | undefined) => (folderId && parentOf.has(folderId) ? folderId : null);
@@ -173,7 +173,7 @@
   $effect(() => {
     const keys = chain.map((folderId) => key(folderId));
     // what is on screen has been found in the tree (the albums and folders load after the tree is made)
-    const found = activeAlbumId ? !!onScreenAlbum : activeFolderId ? parentOf.has(activeFolderId) : true;
+    const found = activeAlbumId ? !!onScreenAlbum : !activeFolderId || parentOf.has(activeFolderId);
     // revealed once per arrival and chain: the albums and folders loading in later find the chain, and loading again
     // with nothing changed leaves a folder closed by hand closed
     const reveal = `${onScreen}|${keys.join('/')}`;
@@ -276,13 +276,13 @@
      link owns the group of rows under it; the row on screen is the selected one (selected and current, and no other
      row says either); the chevrons are the pointer's, since → and ← open and close a folder -->
 {#snippet level(parentId: string | null, depth: number)}
-  {@const shown = shownOf(parentId)}
+  {const shown = $derived(shownOf(parentId))}
   {#each shown.folders as folder (folder.id)}
-    {@const open = isOpen(folder.id)}
-    {@const filled = filledFolder(folder.id)}
-    {@const active = folder.id === activeFolderId}
-    {@const rowKey = folderKey(folder.id)}
-    {@const group = `ws-tree-${scope}-${folder.id}`}
+    {const open = $derived(isOpen(folder.id))}
+    {const filled = $derived(filledFolder(folder.id))}
+    {const active = $derived(folder.id === activeFolderId)}
+    {const rowKey = $derived(folderKey(folder.id))}
+    {const group = $derived(`ws-tree-${scope}-${folder.id}`)}
     <li role="none" data-drop-group>
       <div
         class="ws-tree-row"
@@ -338,8 +338,8 @@
     </li>
   {/each}
   {#each shown.albums as album (album.id)}
-    {@const active = album.id === activeAlbumId}
-    {@const rowKey = albumKey(album.id)}
+    {const active = $derived(album.id === activeAlbumId)}
+    {const rowKey = $derived(albumKey(album.id))}
     <li role="none">
       <!-- the right-click menu is a shortcut (the context menu key opens it on a focused row too): the album's own
            menus carry the same item -->
@@ -384,8 +384,8 @@
     </li>
   {/each}
   {#if parentId !== null && (shown.hidden > 0 || shown.less)}
-    {@const folderId = parentId}
-    {@const rowKey = moreKey(folderId)}
+    {const folderId = $derived(parentId)}
+    {const rowKey = $derived(moreKey(folderId))}
     <!-- a long level the tree opened keeps to the way to what is on screen: the rest wait here, shown in place on a
          press (or under carried photos), and the row then offers less again -->
     <li role="none">

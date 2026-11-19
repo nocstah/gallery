@@ -2,7 +2,7 @@
   // Local Omarchy layer: one day in Coming up (gallery/series): the day, the memory's title and line as the family will
   // see them, its photos in film order, the song, what changed since it was prepared, and what the owner can do with it.
   // Each button is described by the memory's title, so a screen reader hears which day it is about.
-  import { joinNames } from '$lib/utils/memory-title';
+  import { joinNames } from '#lib/utils/memory-title.ts';
   import { Icon } from '@immich/ui';
   import { mdiMusicNote, mdiPlay } from '@mdi/js';
   import { t } from 'svelte-i18n';

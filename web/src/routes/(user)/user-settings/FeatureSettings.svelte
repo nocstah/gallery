@@ -1,15 +1,21 @@
 <script lang="ts">
-  import { vaultEdition } from '$lib/gallery/edition';
-  import SettingAccordion from '$lib/components/shared-components/settings/SettingAccordion.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
-  import { setSidebarRowHidden, sidebarRowsHidden } from '$lib/stores/sidebar-rows';
-  import { handleError } from '$lib/utils/handle-error';
+  import SettingAccordion from '#lib/components/shared-components/settings/SettingAccordion.svelte';
+  import { vaultEdition } from '#lib/gallery/edition.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { createPreloadedQuery } from '#lib/queries/client.ts';
+  import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+  import { getServerConfigQuery } from '#lib/queries/server-info.query.ts';
+  import { setSidebarRowHidden, sidebarRowsHidden } from '#lib/stores/sidebar-rows.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
   import { AssetOrder, updateMyPreferences } from '@immich/sdk';
   import { Button, Field, NumberInput, Select, Switch, toastManager } from '@immich/ui';
   import { t, type Translations } from 'svelte-i18n';
   import { get } from 'svelte/store';
   import { fade } from 'svelte/transition';
+
+  const query = createPreloadedQuery(getUserConfigQuery);
+  const config = $derived(query.data);
+  const serverConfigQuery = createPreloadedQuery(getServerConfigQuery);
 
   // Albums
   let defaultAssetOrder = $state(authManager.preferences.albums?.defaultAssetOrder ?? AssetOrder.Desc);
@@ -22,10 +28,10 @@
   let memoriesEnabled = $state(authManager.preferences.memories?.enabled ?? true);
   let memoriesDuration = $state(authManager.preferences.memories?.duration ?? 5);
   let memoriesSidebar = $state(authManager.preferences.memories?.sidebarWeb ?? true);
-  const availableMemoryTypes = $derived(serverConfigManager.value.availableMemoryTypes ?? []);
+  const availableMemoryTypes = $derived(serverConfigQuery.data.availableMemoryTypes ?? []);
   let memoryTypes = $state<Record<string, boolean>>(
     Object.fromEntries(
-      (serverConfigManager.value.availableMemoryTypes ?? []).map((key) => [
+      (serverConfigQuery.data.availableMemoryTypes ?? []).map((key) => [
         key,
         authManager.preferences.memories?.types?.[key] ?? true,
       ]),
@@ -37,7 +43,9 @@
   // Local Omarchy layer: People is in the sidebar unless hidden in this browser (stores/sidebar-rows), not by
   // upstream's people.sidebarWeb, which is off until someone finds this switch; that preference is left alone
   let peopleSidebar = $state(!get(sidebarRowsHidden).people);
-  let peopleMinFaces = $state(authManager.preferences.people?.minimumFaces ?? serverConfigManager.value.minFaces);
+  let peopleMinFaces = $state(
+    authManager.preferences.people?.minimumFaces ?? config.machineLearning.facialRecognition.minFaces,
+  );
 
   // Ratings
   let ratingsEnabled = $state(authManager.preferences.ratings?.enabled ?? false);

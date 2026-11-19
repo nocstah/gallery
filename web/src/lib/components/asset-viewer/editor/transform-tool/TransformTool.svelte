@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { shortcuts } from '$lib/actions/shortcut';
-  import AdjustPanel from '$lib/gallery/edit/AdjustPanel.svelte';
-  import { imageAdjustManager } from '$lib/gallery/edit/image-adjust-manager.svelte';
-  import { transformManager } from '$lib/managers/edit/transform-manager.svelte';
+  import { shortcuts } from '#lib/actions/shortcut.ts';
+  import AdjustPanel from '#lib/gallery/edit/AdjustPanel.svelte';
+  import { imageAdjustManager } from '#lib/gallery/edit/image-adjust-manager.svelte.ts';
+  import { transformManager } from '#lib/managers/edit/transform-manager.svelte.ts';
   import { Button, HStack, IconButton } from '@immich/ui';
   import { mdiFlipHorizontal, mdiFlipVertical, mdiRotateLeft, mdiRotateRight } from '@mdi/js';
   import { t } from 'svelte-i18n';

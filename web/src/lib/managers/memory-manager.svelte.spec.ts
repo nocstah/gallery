@@ -2,15 +2,15 @@
 // A memory leaves the page at once and Gallery deletes it only once its toast has gone, so the toast's Undo puts it back
 // exactly; an Undo after that makes it again from what it held. A photo is taken out of a memory at once and added
 // back. Every Gallery call here is a mock: no memory is touched.
+import { reactivePageMock as mockPage } from '#lib/gallery/__mocks__/reactive-page.mock.svelte.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { memoryManager } from '#lib/managers/memory-manager.svelte.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { userPreferencesManager } from '#lib/managers/user-preferences-manager.svelte.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
 import { AssetTypeEnum, BulkIdErrorReason, MemorySearchOrder, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
 import { goto } from '$app/navigation';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { memoryManager } from '$lib/managers/memory-manager.svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { reactivePageMock as mockPage } from '@test-data/mocks/reactive-page.mock.svelte';
 
 const ROUTE = '/(user)/memories/[id]/[[photos=photos]]/[[assetId=id]]';
 
@@ -18,17 +18,17 @@ const auth = vi.hoisted(() => ({
   // not signed in while the manager is made, so it loads nothing by itself; signed in for each test
   authManager: { authenticated: false, user: { id: 'me', isAdmin: false }, params: {} },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => auth);
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => auth);
 
 vi.mock('$app/state', async () => {
-  const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
+  const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
   return { page: reactivePageMock };
 });
 
 // a navigation moves the page, as the router would, so the manager can tell where it is
 vi.mock('$app/navigation', () => ({
   goto: vi.fn(async (href: string) => {
-    const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
+    const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
     const url = new URL(href, 'https://gallery.test');
     const id = url.pathname.split('/', 3)[2];
     reactivePageMock.reset(url.href, {

@@ -1,10 +1,10 @@
 // Local Omarchy layer: Pin to sidebar / Unpin from sidebar (stores/pinned-albums), one action for every album menu
 // (the album card's right-click and ⋮, the album page's ⋮) and the right-click menu of an album's row in the sidebar.
+import { pinnedAlbums } from '#lib/stores/pinned-albums.svelte.ts';
 import { menuManager, type ActionItem } from '@immich/ui';
 import { mdiPinOffOutline, mdiPinOutline } from '@mdi/js';
 import { t, type MessageFormatter } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { pinnedAlbums } from '$lib/stores/pinned-albums.svelte';
 
 export const getPinAction = ($t: MessageFormatter, albumId: string): ActionItem => {
   const pinned = pinnedAlbums.has(albumId);

@@ -1,4 +1,4 @@
-import { themeManager, ThemePreference } from '@immich/ui';
+import { ThemePreference, themeManager } from '@immich/ui';
 import { render } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it } from 'vitest';
 import AuthPageLayout from './AuthPageLayout.svelte';

@@ -3,10 +3,10 @@
   // source after the copy arrived here, most often because this library had not read them yet or a detail would not
   // carry. Each is on the timeline without some of its details. Moving the same photos again finishes them with no
   // new copy; deleting them here is the other way. This library's own thumbnails, from the mover's list of ids.
+  import { Route } from '#lib/route.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { t } from 'svelte-i18n';
-  import { Route } from '$lib/route';
-  import { getAssetMediaUrl } from '$lib/utils';
 
   type Props = { ids: readonly string[]; names: { source: string; library: string } };
 

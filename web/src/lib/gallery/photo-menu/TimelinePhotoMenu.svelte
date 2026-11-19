@@ -1,11 +1,11 @@
 <script lang="ts">
   // Local Omarchy layer: the photo menu (PhotoMenu) on a page's timeline, and on the smart-search results some pages
   // show in its place. Before the timeline is there a right-click is the browser's.
-  import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
+  import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
   import type { AssetResponseDto } from '@immich/sdk';
   import type { ComponentProps } from 'svelte';
   import PhotoMenu from './PhotoMenu.svelte';
-  import { findTimelinePhoto, GALLERY_GRID, photoMenuOffers, TIMELINE_GRID, type PhotoMenuPage } from './photo-menu';
+  import { GALLERY_GRID, TIMELINE_GRID, findTimelinePhoto, photoMenuOffers, type PhotoMenuPage } from './photo-menu';
 
   type Props = Omit<ComponentProps<typeof PhotoMenu>, 'grid' | 'findAsset' | 'stacks' | 'offer'> & {
     /** whose menu this is: what that page's bar offers (photo-menu.ts) */

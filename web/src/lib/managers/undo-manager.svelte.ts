@@ -3,11 +3,11 @@
 // ones, newest first, and Ctrl+Z takes back the newest. The history lasts as long as the page (a reload starts it
 // afresh) and keeps the last 30. An entry leaves once it is undone, from the bar, Ctrl+Z or its toast's own Undo
 // button alike, so nothing is taken back twice.
+import { handleError } from '#lib/utils/handle-error.ts';
 import { toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { page } from '$app/state';
-import { handleError } from '$lib/utils/handle-error';
 
 export type UndoEntry = {
   id: number;
@@ -23,7 +23,7 @@ export type UndoEntry = {
 const LIMIT = 30;
 
 /** The page an action was taken on (its route and params, not the photo open in it): an undo made from another page
- * leaves the first page's own callbacks alone (they would act on a page that is gone). */
+leaves the first page's own callbacks alone (they would act on a page that is gone). */
 export const pageKey = () => {
   try {
     const params = Object.entries(page.params ?? {})

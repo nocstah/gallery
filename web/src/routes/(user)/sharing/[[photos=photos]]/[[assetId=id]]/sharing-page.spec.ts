@@ -1,3 +1,7 @@
+import en from '#i18n/en.json';
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { albumFactory } from '#test/kioku/factories/album-factory.ts';
+import { sharedSpaceFactory } from '#test/kioku/factories/shared-space-factory.ts';
 import {
   getActivities,
   getAllAlbums,
@@ -13,14 +17,10 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import type { Component } from 'svelte';
 import { addMessages, init } from 'svelte-i18n';
-import en from '$i18n/en.json';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { albumFactory } from '@test-data/factories/album-factory';
-import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
 import SharingPage from './+page.svelte';
 
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: MockComponent };
 });
 

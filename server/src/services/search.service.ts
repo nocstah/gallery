@@ -31,6 +31,7 @@ import {
   TagSuggestionRequestDto,
   TagSuggestionResponseDto,
 } from 'src/gallery/dtos/search.dto.js';
+import { assertGallerySearchScope } from 'src/gallery/utils/search-scope.js';
 import { AssetSearchScope } from 'src/repositories/search.repository.js';
 import { BaseService } from 'src/services/base.service.js';
 import { requireElevatedPermission } from 'src/utils/access.js';
@@ -103,12 +104,12 @@ export class SearchService extends BaseService {
   }
 
   /**
-   * #867: the places strip is scoped like the home timeline (own + timeline-enabled spaces), not
-   * like an owner-private surface. Without it a space member saw no tile for a city that only
-   * exists on assets shared with them, even though the location filter listed that city and the
-   * filtered timeline returned those assets. The recently-added strip below stays owner-scoped — it
-   * answers "what did I just add", and /recently-added is itself an owner surface.
-   */
+  #867: the places strip is scoped like the home timeline (own + timeline-enabled spaces), not
+  like an owner-private surface. Without it a space member saw no tile for a city that only
+  exists on assets shared with them, even though the location filter listed that city and the
+  filtered timeline returned those assets. The recently-added strip below stays owner-scoped — it
+  answers "what did I just add", and /recently-added is itself an owner surface.
+  */
   async getExploreData(auth: AuthDto) {
     const { timelineSpaceIds } = await this.resolveViewerScope(auth, 'search', { withSharedSpaces: true });
     const options = { maxFields: 12, minAssetsPerField: 5, timelineSpaceIds };
@@ -138,50 +139,16 @@ export class SearchService extends BaseService {
     ];
   }
 
-  /**
-   * Fork RBAC (H-1): trash is an owner-private state; a shared-space-scoped search must never enumerate
-   * another member's trashed assets. Reject withDeleted / trashedAfter / trashedBefore / isOffline when a
-   * space scope (spaceId or withSharedSpaces) is set — mirrors timeBucketChecks (timeline.service.ts) and
-   * the caller-proof SQL gate in searchAssetBuilder. trashedAfter/trashedBefore/isOffline implicitly flip
-   * withDeleted (searchAssetBuilder :676), so they are rejected too. StatisticsSearchDto has no withDeleted
-   * field (optional here → undefined); it is still reachable via the implicit-flip params.
-   */
-  private rejectTrashParamsForSpaceScope(dto: {
-    spaceId?: string;
-    withSharedSpaces?: boolean;
-    withDeleted?: boolean;
-    trashedAfter?: Date;
-    trashedBefore?: Date;
-    isOffline?: boolean;
-  }): void {
-    const spaceScope = !!dto.spaceId || !!dto.withSharedSpaces;
-    const wantsTrashOrOffline = !!dto.withDeleted || !!dto.trashedAfter || !!dto.trashedBefore || !!dto.isOffline;
-    if (spaceScope && wantsTrashOrOffline) {
-      throw new BadRequestException('Trashed and offline assets are not available when searching a shared space');
-    }
-  }
-
   async searchMetadata(auth: AuthDto, dto: MetadataSearchDto): Promise<SearchResponseDto> {
     if (isNewShapeRequest(dto)) {
       return this.searchMetadataV3(auth, dto);
     }
-    this.rejectTrashParamsForSpaceScope(dto);
 
     if (dto.visibility === AssetVisibility.Locked) {
       requireElevatedPermission(auth);
     }
 
-    if (dto.spaceId && dto.withSharedSpaces) {
-      throw new BadRequestException('Cannot use both spaceId and withSharedSpaces');
-    }
-
-    if (dto.spacePersonIds?.length && !dto.spaceId) {
-      throw new BadRequestException('spacePersonIds requires spaceId');
-    }
-
-    if (dto.spaceId) {
-      await this.requireAccess({ auth, permission: Permission.SharedSpaceRead, ids: [dto.spaceId] });
-    }
+    await assertGallerySearchScope(this.accessRepository, auth, dto);
 
     let checksum: Buffer | undefined;
     if (dto.checksum) {
@@ -227,19 +194,8 @@ export class SearchService extends BaseService {
     if (isNewShapeRequest(dto)) {
       return this.searchStatisticsV3(auth, dto);
     }
-    this.rejectTrashParamsForSpaceScope(dto);
 
-    if (dto.spaceId && dto.withSharedSpaces) {
-      throw new BadRequestException('Cannot use both spaceId and withSharedSpaces');
-    }
-
-    if (dto.spacePersonIds?.length && !dto.spaceId) {
-      throw new BadRequestException('spacePersonIds requires spaceId');
-    }
-
-    if (dto.spaceId) {
-      await this.requireAccess({ auth, permission: Permission.SharedSpaceRead, ids: [dto.spaceId] });
-    }
+    await assertGallerySearchScope(this.accessRepository, auth, dto);
 
     const userIds = await this.getUserIdsToSearch(auth, dto.visibility);
     if (dto.visibility === AssetVisibility.Locked) {
@@ -263,23 +219,12 @@ export class SearchService extends BaseService {
     if (isNewShapeRequest(dto)) {
       return this.searchRandomV3(auth, dto);
     }
-    this.rejectTrashParamsForSpaceScope(dto);
 
     if (dto.visibility === AssetVisibility.Locked) {
       requireElevatedPermission(auth);
     }
 
-    if (dto.spaceId && dto.withSharedSpaces) {
-      throw new BadRequestException('Cannot use both spaceId and withSharedSpaces');
-    }
-
-    if (dto.spacePersonIds?.length && !dto.spaceId) {
-      throw new BadRequestException('spacePersonIds requires spaceId');
-    }
-
-    if (dto.spaceId) {
-      await this.requireAccess({ auth, permission: Permission.SharedSpaceRead, ids: [dto.spaceId] });
-    }
+    await assertGallerySearchScope(this.accessRepository, auth, dto);
 
     const userIds = await this.getUserIdsToSearch(auth, dto.visibility);
     const resolvedDto = {
@@ -297,23 +242,11 @@ export class SearchService extends BaseService {
   }
 
   async searchLargeAssets(auth: AuthDto, dto: LargeAssetSearchDto): Promise<AssetResponseDto[]> {
-    this.rejectTrashParamsForSpaceScope(dto);
-
     if (dto.visibility === AssetVisibility.Locked) {
       requireElevatedPermission(auth);
     }
 
-    if (dto.spaceId && dto.withSharedSpaces) {
-      throw new BadRequestException('Cannot use both spaceId and withSharedSpaces');
-    }
-
-    if (dto.spacePersonIds?.length && !dto.spaceId) {
-      throw new BadRequestException('spacePersonIds requires spaceId');
-    }
-
-    if (dto.spaceId) {
-      await this.requireAccess({ auth, permission: Permission.SharedSpaceRead, ids: [dto.spaceId] });
-    }
+    await assertGallerySearchScope(this.accessRepository, auth, dto);
 
     const userIds = await this.getUserIdsToSearch(auth, dto.visibility);
     const resolvedDto = {
@@ -631,31 +564,19 @@ export class SearchService extends BaseService {
       requireElevatedPermission(auth);
     }
 
-    this.rejectTrashParamsForSpaceScope(dto);
-
-    if (dto.spaceId && dto.withSharedSpaces) {
-      throw new BadRequestException('Cannot use both spaceId and withSharedSpaces');
-    }
-
-    if (dto.spaceId) {
-      await this.requireAccess({ auth, permission: Permission.SharedSpaceRead, ids: [dto.spaceId] });
-    }
-
-    if (dto.spacePersonIds?.length && !dto.spaceId) {
-      throw new BadRequestException('spacePersonIds requires spaceId');
-    }
+    await assertGallerySearchScope(this.accessRepository, auth, dto);
 
     /**
-     * An `albumIds` scope makes the ALBUM the access boundary, exactly as `searchMetadata` already
-     * treats it (see the matching branch there): check `AlbumRead` up front, then leave `userIds`
-     * unset so `albumConfinedToViewer` re-gates the rows in the query builder.
-     *
-     * Keeping the owner-scoping `userIds` here instead was a filter-honesty bug. An album page
-     * BROWSES by album access — timeline.service resolves `albumSpaceIds` from plain membership —
-     * and shows every member's photos; searching that same album then returned only the caller's
-     * own, silently, beside a grid that had just shown everyone's. It also split query mode from
-     * browse mode for the same `?album=` filter everywhere else.
-     */
+    An `albumIds` scope makes the ALBUM the access boundary, exactly as `searchMetadata` already
+    treats it (see the matching branch there): check `AlbumRead` up front, then leave `userIds`
+    unset so `albumConfinedToViewer` re-gates the rows in the query builder.
+    
+    Keeping the owner-scoping `userIds` here instead was a filter-honesty bug. An album page
+    BROWSES by album access — timeline.service resolves `albumSpaceIds` from plain membership —
+    and shows every member's photos; searching that same album then returned only the caller's
+    own, silently, beside a grid that had just shown everyone's. It also split query mode from
+    browse mode for the same `?album=` filter everywhere else.
+    */
     const albumIds = 'albumIds' in dto ? dto.albumIds : undefined;
     const albumScoped = !!albumIds?.length;
     if (albumScoped) {

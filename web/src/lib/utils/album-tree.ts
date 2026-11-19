@@ -36,12 +36,12 @@ export interface Shown<F, A> {
 }
 
 /**
- * What a level shows. A level the person opened (a folder's chevron or →, the top of the tree) shows everything in it.
- * A level the tree opened only to show what is on screen shows everything while it is short; once it holds more than
- * LONG_LEVEL rows it keeps to the way there: its folders while they are few (else the one on the way), and of its
- * albums only the one on screen; the rest wait behind "+N more", which shows them in place (`more`) and then offers to
- * show less again.
- */
+What a level shows. A level the person opened (a folder's chevron or →, the top of the tree) shows everything in it.
+A level the tree opened only to show what is on screen shows everything while it is short; once it holds more than
+LONG_LEVEL rows it keeps to the way there: its folders while they are few (else the one on the way), and of its
+albums only the one on screen; the rest wait behind "+N more", which shows them in place (`more`) and then offers to
+show less again.
+*/
 export const shownAt = <F extends { id: string }, A extends { id: string }>(
   folders: F[],
   albums: A[],
@@ -116,16 +116,16 @@ export const visibleRows = ({ shown, filled, isOpen }: TreeWalk): TreeRow[] => {
 };
 
 /**
- * What a key does on the focused row: move the focus, open or close a folder, show the rest of a level or less of it
- * (by its folder's id, '' at the top), or follow the row's link.
- */
+What a key does on the focused row: move the focus, open or close a folder, show the rest of a level or less of it
+(by its folder's id, '' at the top), or follow the row's link.
+*/
 export type TreeMove =
   { focus: string } | { open: string } | { close: string } | { more: string } | { less: string } | { follow: string };
 
 /**
- * The tree's own keys, from the row with the focus. Undefined for a key the tree leaves alone (Enter on a link, which
- * the link follows by itself, or any key it does not use). Right to left, → and ← swap, as the rows' indent does.
- */
+The tree's own keys, from the row with the focus. Undefined for a key the tree leaves alone (Enter on a link, which
+the link follows by itself, or any key it does not use). Right to left, → and ← swap, as the rows' indent does.
+*/
 export const treeKey = (rows: TreeRow[], at: string, key: string, rtl = false): TreeMove | undefined => {
   const index = rows.findIndex((row) => row.key === at);
   const row = rows[index];

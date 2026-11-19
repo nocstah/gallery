@@ -1,10 +1,7 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
-  import ActiveFiltersBar from '$lib/components/filter-panel/active-filters-bar.svelte';
-  import FilterPanel from '$lib/components/filter-panel/filter-panel.svelte';
-  import FilterToolbar from '$lib/components/filter-panel/filter-toolbar.svelte';
+  import ActionMenuItem from '#lib/components/ActionMenuItem.svelte';
+  import ActiveFiltersBar from '#lib/components/filter-panel/active-filters-bar.svelte';
+  import FilterPanel from '#lib/components/filter-panel/filter-panel.svelte';
   import {
     clearFilters,
     createFilterState,
@@ -12,62 +9,72 @@
     loadFilterCollapsed,
     type FilterPanelConfig,
     type FilterState,
-  } from '$lib/components/filter-panel/filter-panel';
-  import SmartSearchResults from '$lib/components/search/smart-search-results.svelte';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
-  import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
-  import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
-  import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
-  import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
-  import DeleteAssets from '$lib/components/timeline/actions/DeleteAssetsAction.svelte';
-  import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
-  import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
-  import LinkLivePhotoAction from '$lib/components/timeline/actions/LinkLivePhotoAction.svelte';
-  import SelectAllAssets from '$lib/components/timeline/actions/SelectAllAction.svelte';
-  import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
-  import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
-  import Timeline from '$lib/components/timeline/Timeline.svelte';
-  import { AssetAction } from '$lib/constants';
-  import TimelinePhotoMenu from '$lib/gallery/photo-menu/TimelinePhotoMenu.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-  import { getTimelineTopVisibleAnchor } from '$lib/managers/timeline-manager/timeline-anchor';
-  import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import type { TimelineAsset, TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
-  import { removeSearchResults, selectAllSearchResults, updateSearchResults } from '$lib/utils/search-result-selection';
-  import { getAssetBulkActions } from '$lib/services/asset.service';
-  import { lang } from '$lib/stores/preferences.store';
-  import { type OnLink, type OnUnlink } from '$lib/utils/actions';
-  import { openFileUploadDialog } from '$lib/utils/file-uploader';
-  import { withNameCapture } from '$lib/utils/filter-name-capture';
-  import { handlePhotosRemoveFilter } from '$lib/utils/photos-filter-options';
-  import { buildRecentlyAddedFilterConfig } from '$lib/utils/recently-added-filter-config';
+  } from '#lib/components/filter-panel/filter-panel.ts';
+  import FilterToolbar from '#lib/components/filter-panel/filter-toolbar.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import EmptyState from '#lib/components/omarchy/EmptyState.svelte';
+  import SmartSearchResults from '#lib/components/search/smart-search-results.svelte';
+  import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import AssetSelectControlBar from '#lib/components/timeline/AssetSelectControlBar.svelte';
+  import Timeline from '#lib/components/timeline/Timeline.svelte';
+  import ChangeDate from '#lib/components/timeline/actions/ChangeDateAction.svelte';
+  import ChangeDescription from '#lib/components/timeline/actions/ChangeDescriptionAction.svelte';
+  import ChangeLocation from '#lib/components/timeline/actions/ChangeLocationAction.svelte';
+  import DeleteAssets from '#lib/components/timeline/actions/DeleteAssetsAction.svelte';
+  import DownloadAction from '#lib/components/timeline/actions/DownloadAction.svelte';
+  import FavoriteAction from '#lib/components/timeline/actions/FavoriteAction.svelte';
+  import LinkLivePhotoAction from '#lib/components/timeline/actions/LinkLivePhotoAction.svelte';
+  import SelectAllAssets from '#lib/components/timeline/actions/SelectAllAction.svelte';
+  import SetVisibilityAction from '#lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import { AssetAction } from '#lib/constants.ts';
+  import ArchiveAction from '#lib/gallery/actions/ArchiveAction.svelte';
+  import TimelinePhotoMenu from '#lib/gallery/photo-menu/TimelinePhotoMenu.svelte';
+  import { getTimelineTopVisibleAnchor } from '#lib/gallery/timeline/timeline-anchor.ts';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { globalSearchManager } from '#lib/managers/global-search-manager.svelte.ts';
+  import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import type {
+    TimelineAsset,
+    TimelineGrouping,
+    TimelineTemporalAnchor,
+  } from '#lib/managers/timeline-manager/types.ts';
+  import { getAssetBulkActions } from '#lib/services/asset.service.ts';
+  import { getStackBulkActions } from '#lib/services/stack.service.ts';
+  import { lang } from '#lib/stores/preferences.store.ts';
+  import { type OnLink, type OnUnlink } from '#lib/utils/actions.ts';
+  import { openFileUploadDialog } from '#lib/utils/file-uploader.ts';
+  import { withNameCapture } from '#lib/utils/filter-name-capture.ts';
+  import { handlePhotosRemoveFilter } from '#lib/utils/photos-filter-options.ts';
+  import { buildRecentlyAddedFilterConfig } from '#lib/utils/recently-added-filter-config.ts';
   import {
     buildRecentlyAddedPickerBucketOptions,
     buildRecentlyAddedTimelineOptions,
     shouldShowRecentlyAddedCount,
-  } from '$lib/utils/recently-added-filter-options';
+  } from '#lib/utils/recently-added-filter-options.ts';
+  import {
+    removeSearchResults,
+    selectAllSearchResults,
+    updateSearchResults,
+  } from '#lib/utils/search-result-selection.ts';
   import {
     buildSearchablePageUrl,
     getSearchablePageFilterState,
     getSearchablePageState,
-  } from '$lib/utils/searchable-page-search';
+  } from '#lib/utils/searchable-page-search.ts';
   import {
     buildSmartSearchFacetKey,
     buildSmartSearchFacetsParams,
     mapSmartSearchFacetsToFilterSuggestions,
-  } from '$lib/utils/space-search';
-  import { getTimelineBucketZoomTarget, type ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
-  import { consumeTypedSearchNamesInto } from '$lib/utils/typed-search/typed-search-name-cache';
+  } from '#lib/utils/space-search.ts';
+  import { getTimelineBucketZoomTarget, type ActivatableTimelineBucket } from '#lib/utils/timeline-zoom-navigation.ts';
+  import { consumeTypedSearchNamesInto } from '#lib/utils/typed-search/typed-search-name-cache.ts';
   import {
-    type AssetResponseDto,
-    type AssetVisibility,
     getTimeBuckets,
     searchSmartFacets,
+    type AssetResponseDto,
+    type AssetVisibility,
     type SmartSearchFacetsResponseDto,
   } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider } from '@immich/ui';
@@ -75,8 +82,9 @@
   import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
   import { SvelteMap } from 'svelte/reactivity';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import type { PageData } from './$types';
-  import { getStackBulkActions } from '$lib/services/stack.service';
 
   type Props = {
     data: PageData;
@@ -354,7 +362,7 @@
     if (!nextUrl) {
       return;
     }
-    void goto(nextUrl, { replaceState: true, keepFocus: true, noScroll: true });
+    void goto(nextUrl, { replace: true, reset: false });
   }
 
   function syncFilterUrl(nextFilters: FilterState) {
@@ -375,7 +383,7 @@
     if (!nextUrl || nextUrl === page.url.pathname + page.url.search) {
       return;
     }
-    void goto(nextUrl, { replaceState: true, keepFocus: true, noScroll: true });
+    void goto(nextUrl, { replace: true, reset: false });
   }
 
   function handleFiltersChange(nextFilters: FilterState) {
@@ -564,8 +572,8 @@
 
 {#if assetMultiSelectManager.selectionActive}
   <AssetSelectControlBar>
-    {@const Actions = getAssetBulkActions($t)}
-    {@const StackActions = getStackBulkActions($t)}
+    {const Actions = $derived(getAssetBulkActions($t))}
+    {const StackActions = $derived(getStackBulkActions($t))}
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
 
     <ActionButton action={Actions.CreateSharedLink} />

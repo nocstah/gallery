@@ -1,19 +1,19 @@
-import type { SharedSpaceResponseDto } from '@immich/sdk';
 import {
+  EDGE,
+  LEAVE_MS,
+  SPRING_MS,
   accepts,
   dropSpring,
   dropTarget,
-  EDGE,
-  LEAVE_MS,
   offerFor,
   sidebarDrop,
   sourceOf,
-  SPRING_MS,
   type Carry,
   type DropTarget,
-} from '$lib/managers/sidebar-drop.svelte';
-import type { SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+} from '#lib/managers/sidebar-drop.svelte.ts';
+import type { SpecialAlbumManager } from '#lib/managers/special-albums.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import type { SharedSpaceResponseDto } from '@immich/sdk';
 
 // Local Omarchy layer: photos carried to the sidebar (managers/sidebar-drop): which rows take them, what the carried
 // photo says, and folders that spring open under it and close again. happy-dom has no layout, so the tests hand the
@@ -240,8 +240,8 @@ describe('sidebar drop: over the sidebar', () => {
     vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 100, 256, 800));
     let scrollTop = 200;
     Object.defineProperty(panel, 'scrollTop', { get: () => scrollTop, configurable: true });
-    panel.scrollBy = (options?: number | ScrollToOptions, y?: number) => {
-      scrollTop += typeof options === 'number' ? (y ?? 0) : (options?.top ?? 0);
+    panel.scrollBy = (options?: number | ScrollToOptions, y = 0) => {
+      scrollTop += typeof options === 'number' ? y : (options?.top ?? 0);
     };
 
     expect(sidebarDrop.over({ x: 100, y: 500 })).toBe(true);

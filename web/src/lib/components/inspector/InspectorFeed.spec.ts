@@ -1,12 +1,12 @@
+import InspectorFeed from '#lib/components/inspector/InspectorFeed.svelte';
+import { INSPECTOR_CHANNEL, inspectorFeed, type InspectorMessage } from '#lib/managers/inspector-link.svelte.ts';
 import { fireEvent, render } from '@testing-library/svelte';
-import InspectorFeed from '$lib/components/inspector/InspectorFeed.svelte';
-import { INSPECTOR_CHANNEL, inspectorFeed, type InspectorMessage } from '$lib/managers/inspector-link.svelte';
 
 // Local Omarchy layer: the main window's side of the inspector, as the user pages' layout mounts it.
 const mocks = vi.hoisted(() => ({ authenticated: true, isSharedLink: false, phone: false, coarse: false }));
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
-vi.mock('$lib/stores/media-query-manager.svelte', () => ({
+vi.mock('#lib/stores/media-query-manager.svelte.ts', () => ({
   mediaQueryManager: {
     get isPhone() {
       return mocks.phone;
@@ -20,7 +20,7 @@ vi.mock('$lib/stores/media-query-manager.svelte', () => ({
     minLg: true,
   },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: {
     get authenticated() {
       return mocks.authenticated;

@@ -2,18 +2,18 @@
   // Local Omarchy layer: Albums in the sidebar opens into the albums' tree, like My Albums on the Mac: the Albums
   // page's folders (the Library Space's, managers/album-folders) with their albums, then every other album of mine at
   // the top. To do and Villa have rows of their own above Albums, so they are not repeated here.
-  import { page } from '$app/state';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import AlbumTree, { type TreeAlbum } from '$lib/components/sidebar/album-tree.svelte';
-  import { albumFolders } from '$lib/managers/album-folders.svelte';
-  import { specialAlbums } from '$lib/managers/special-albums.svelte';
-  import { Route } from '$lib/route';
-  import { pinnedAlbums } from '$lib/stores/pinned-albums.svelte';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
-  import { handleError } from '$lib/utils/handle-error';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import AlbumTree, { type TreeAlbum } from '#lib/components/sidebar/album-tree.svelte';
+  import { albumFolders } from '#lib/managers/album-folders.svelte.ts';
+  import { specialAlbums } from '#lib/managers/special-albums.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { pinnedAlbums } from '#lib/stores/pinned-albums.svelte.ts';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
   import { getAllAlbums, type AlbumResponseDto } from '@immich/sdk';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   let owned = $state<AlbumResponseDto[]>([]);
 
@@ -36,10 +36,10 @@
     // shared with people or by a link (plan A): marked in the tree
     const shared = new Set(owned.filter((album) => album.shared || album.hasSharedLink).map(({ id }) => id));
     return [
-      ...albumFolders.linked.map(({ id, albumName, folderId }) => ({
+      ...albumFolders.linked.map(({ id, albumName, folderId = null }) => ({
         id,
         name: albumName,
-        folderId: folderId ?? null,
+        folderId,
       })),
       ...outside.map(({ id, albumName }) => ({ id, name: albumName, folderId: null })),
     ]

@@ -1,11 +1,11 @@
+import { BRIGHT, DIM, flatThumbhash } from '#test/kioku/thumbhash.ts';
 import { AssetTypeEnum } from '@immich/sdk';
-import { BRIGHT, DIM, flatThumbhash } from '@test-data/thumbhash';
 import {
+  SHARP_SIDE,
   mayOpen,
   opensLit,
   passesGate,
   roomOpening,
-  SHARP_SIDE,
   wantsCamera,
   type OpeningPicture,
 } from './room-opening';

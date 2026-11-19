@@ -1,6 +1,6 @@
-import { seriesIdOf } from '$lib/gallery/series/series-route';
-import { authenticate } from '$lib/utils/auth';
-import { getFormatter } from '$lib/utils/i18n';
+import { seriesIdOf } from '#lib/gallery/series/series-route.ts';
+import { authenticate } from '#lib/utils/auth.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
 import type { PageLoad } from './$types';
 
 export const load = (async ({ url, params }) => {

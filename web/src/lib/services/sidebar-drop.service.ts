@@ -4,15 +4,15 @@
 // album picker offers first); To do, Villa and QR through their own move, never the toggle that could take photos
 // out; a Space through the Add to album or Space picker's own dispatch; and New album through the N key's own album of
 // the selection (utils/album-from-selection: named by where and when, its toast's Open and Undo, the last album).
-import { spaceToCollection } from '$lib/components/shared-components/collection-selection/collection-selection-utils';
-import { mineOf, sidebarDrop, type Carry, type DropTarget } from '$lib/managers/sidebar-drop.svelte';
-import { addAssetsToAlbumWithOutcome } from '$lib/services/album.service';
-import { addAssetsToCollections } from '$lib/services/collection.service';
-import { recentAlbumsDropdown } from '$lib/stores/preferences.store';
-import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
+import { spaceToCollection } from '#lib/components/shared-components/collection-selection/collection-selection-utils.ts';
+import { addAssetsToAlbumWithOutcome } from '#lib/gallery/album/album-add.ts';
+import { mineOf, sidebarDrop, type Carry, type DropTarget } from '#lib/managers/sidebar-drop.svelte.ts';
+import { addAssetsToCollections } from '#lib/services/collection.service.ts';
+import { recentAlbumsDropdown } from '#lib/stores/preferences.store.ts';
+import { newAlbumFromAssets } from '#lib/utils/album-from-selection.ts';
 
 /** What the drop changed for the grid: the photos a special album took out of view, and whether the selection
- * that was carried has done its job (it leaves with the photos). */
+that was carried has done its job (it leaves with the photos). */
 export type DropResult = { archived: string[]; clear: boolean };
 
 const KEPT: DropResult = { archived: [], clear: false };
@@ -40,7 +40,7 @@ export const dropOn = async (target: DropTarget, carry: Carry): Promise<DropResu
 };
 
 /** A new album of the carried photos (the carry holds every one of them: a lift that cannot name its photo offers no
- * New album), lit in the sidebar's tree. */
+New album), lit in the sidebar's tree. */
 const makeAlbum = async (carry: Carry): Promise<DropResult | undefined> => {
   const album = await newAlbumFromAssets(carry.assets);
   if (!album) {

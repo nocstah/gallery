@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { cleanClass } from '$lib';
-  import AssetCover from '$lib/components/sharedlinks-page/covers/AssetCover.svelte';
-  import NoCover from '$lib/components/sharedlinks-page/covers/NoCover.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { iconCoverOf } from '$lib/utils/slips';
+  import { cleanClass } from '#lib';
+  import AssetCover from '#lib/components/sharedlinks-page/covers/AssetCover.svelte';
+  import NoCover from '#lib/components/sharedlinks-page/covers/NoCover.svelte';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { iconCoverOf } from '#lib/utils/slips.ts';
   import { type AlbumResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { t } from 'svelte-i18n';

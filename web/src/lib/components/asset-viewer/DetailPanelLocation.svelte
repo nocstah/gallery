@@ -1,21 +1,21 @@
 <script lang="ts">
-  import { vaultEdition } from '$lib/gallery/edition';
-  import { page } from '$app/state';
-  import GeolocationPointPickerModal from '$lib/modals/GeolocationPointPickerModal.svelte';
-  import { applyContextualFilter, buildContextualMapUrl } from '$lib/utils/filter-target';
-  import { handleError } from '$lib/utils/handle-error';
-  import { beforeChange, placesDone } from '$lib/utils/undoable';
+  import { vaultEdition } from '#lib/gallery/edition.ts';
+  import GeolocationPointPickerModal from '#lib/modals/GeolocationPointPickerModal.svelte';
+  import { applyContextualFilter, buildContextualMapUrl } from '#lib/utils/filter-target.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { beforeChange, placesDone } from '#lib/utils/undoable.ts';
   import { updateAsset, type AssetResponseDto } from '@immich/sdk';
   import { Icon, IconButton, modalManager } from '@immich/ui';
   import { mdiMapMarkerOutline, mdiMapOutline, mdiPencil } from '@mdi/js';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   type Props = {
     isOwner: boolean;
     /**
-     * R4/E2 — false on a shared link, where there is no timeline to filter. Threaded from
-     * DetailPanel exactly like `isOwner`.
-     */
+    R4/E2 — false on a shared link, where there is no timeline to filter. Threaded from
+    DetailPanel exactly like `isOwner`.
+    */
     canFilter?: boolean;
     asset: AssetResponseDto;
   };
@@ -35,7 +35,7 @@
   // centers it on this asset. Null on an album, which has no map URL (see buildContextualMapUrl).
   const mapUrl = $derived(
     buildContextualMapUrl(
-      page.url,
+      new URL(page.url.href),
       asset.exifInfo?.latitude && asset.exifInfo.longitude
         ? { lat: asset.exifInfo.latitude, lng: asset.exifInfo.longitude, zoom: 12.5 }
         : undefined,

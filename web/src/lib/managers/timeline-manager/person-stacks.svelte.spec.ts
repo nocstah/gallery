@@ -1,11 +1,11 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { toTimeBucketsRequest } from '#lib/gallery/timeline/request-options.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { stackExpandManager } from '#lib/managers/stack-expand-manager.svelte.ts';
+import { curator } from '#lib/utils/curator.ts';
+import { fromISODateTimeUTCToObject } from '#lib/utils/timeline-util.ts';
+import { assetFactory, timelineAssetFactory, toResponseDto } from '#test/kioku/factories/asset-factory.ts';
 import { AssetVisibility, TimeBucketSize, type TimeBucketAssetResponseDto } from '@immich/sdk';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
-import { curator } from '$lib/utils/curator';
-import { fromISODateTimeUTCToObject } from '$lib/utils/timeline-util';
-import { assetFactory, timelineAssetFactory, toResponseDto } from '@test-data/factories/asset-factory';
-import { toTimeBucketsRequest } from './internal/request-options';
 import { PersonStackIndex, type PersonStackGroup } from './person-stacks';
 import { TimelineManager } from './timeline-manager.svelte';
 
@@ -199,7 +199,7 @@ describe('person timeline integration', () => {
       },
     ]);
     await manager.updateOptions({ ...options, grouping: 'month' });
-    await manager.loadCoversForBuckets(['2026-02-01']);
+    await manager.bucketLayout.loadCovers(['2026-02-01']);
     expect(manager.timelineBuckets[0].representativeAssetId).toBe('matching');
     expect(manager.assetCount).toBe(3);
   });

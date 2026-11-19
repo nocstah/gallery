@@ -1,12 +1,12 @@
+import SidebarNavGroup from '#lib/components/sidebar/sidebar-nav-group.svelte';
+import { reactivePageMock as mockPage } from '#lib/gallery/__mocks__/reactive-page.mock.svelte.ts';
+import { sidebarGroupsClosed } from '#lib/stores/preferences.store.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { addMessages } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import SidebarNavGroup from '$lib/components/sidebar/sidebar-nav-group.svelte';
-import { sidebarGroupsClosed } from '$lib/stores/preferences.store';
-import { reactivePageMock as mockPage } from '@test-data/mocks/reactive-page.mock.svelte';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   sidebarModeStore: {
@@ -16,14 +16,14 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
+vi.mock('#lib/stores/sidebar-mode.svelte.ts', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
 vi.mock('@immich/ui', async () => {
-  const navbarGroup = await import('@test-data/mocks/navbar-group.stub.svelte');
-  const noop = await import('@test-data/mocks/noop-component.svelte');
+  const navbarGroup = await import('#lib/gallery/__mocks__/navbar-group.stub.svelte');
+  const noop = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { NavbarGroup: navbarGroup.default, Icon: noop.default };
 });
 vi.mock('$app/state', async () => {
-  const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
+  const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
   return { page: reactivePageMock };
 });
 

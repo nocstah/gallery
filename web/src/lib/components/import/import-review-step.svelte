@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ImportOptions } from '$lib/managers/import-manager.svelte';
-  import type { TakeoutAlbum, TakeoutMediaItem } from '$lib/utils/google-takeout-parser';
+  import type { ImportOptions } from '#lib/managers/import-manager.svelte.ts';
+  import type { TakeoutAlbum, TakeoutMediaItem } from '#lib/utils/google-takeout-parser.ts';
   import { Checkbox, Icon, Switch } from '@immich/ui';
   import { mdiAlertOutline, mdiArrowLeft, mdiUpload } from '@mdi/js';
   import { t } from 'svelte-i18n';

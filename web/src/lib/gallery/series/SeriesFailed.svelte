@@ -2,7 +2,7 @@
   // Local Omarchy layer: From the beginning when Curator could not be asked (gallery/series), the page's own state as
   // the AI inbox says it: not answering (and on which port to start it), not the owner's, or Curator's own words, with
   // Retry; a series' own page has the way back to the list beside it.
-  import { curatorPort, type CuratorError } from '$lib/utils/curator';
+  import { curatorPort, type CuratorError } from '#lib/utils/curator.ts';
   import type { Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
 

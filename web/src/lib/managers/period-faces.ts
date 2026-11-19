@@ -4,6 +4,18 @@
 // back to Years, from Months to All and back, or a timeline made again (its filters cleared and set) shows the same
 // faces at once, and nothing changes face under the reader's eyes. At most AT_ONCE questions are in flight over the
 // page; a choice that takes longer than PATIENCE_MS shows the server's covers instead, and those stay.
+import { isTextHeavy } from '#lib/utils/folder-faces.ts';
+import {
+  PeriodTier,
+  choosePeriodFaces,
+  periodVerdict,
+  type CoverPick,
+  type ListedPicture,
+  type PeriodPicture,
+  type PeriodRequest,
+  type PeriodSources,
+  type PeriodVerdict,
+} from '#lib/utils/period-faces.ts';
 import {
   AssetOrder,
   AssetTypeEnum,
@@ -16,18 +28,6 @@ import {
   type AssetResponseDto,
   type TimeBucketCoverResponseDto,
 } from '@immich/sdk';
-import { isTextHeavy } from '$lib/utils/folder-faces';
-import {
-  choosePeriodFaces,
-  PeriodTier,
-  periodVerdict,
-  type CoverPick,
-  type ListedPicture,
-  type PeriodPicture,
-  type PeriodRequest,
-  type PeriodSources,
-  type PeriodVerdict,
-} from '$lib/utils/period-faces';
 
 /** A timeline's covers request without its periods: its filters, its bucket size (year or month) and its order. */
 export type PeriodScope = Omit<Parameters<typeof getTimeBucketCovers>[0], 'timeBuckets'>;
@@ -44,7 +44,7 @@ const COVERS_AT_ONCE = 100;
 const SEARCH_AT_ONCE = 50;
 
 /** Whether the folder rule chooses this timeline's faces: not the Trash, the Archive, the Locked Folder or a shared
- * link's grid (which has no overviews), whose periods keep the server's covers. */
+link's grid (which has no overviews), whose periods keep the server's covers. */
 const chooses = (scope: PeriodScope) =>
   !scope.isTrashed &&
   (scope.visibility === undefined || scope.visibility === AssetVisibility.Timeline) &&
@@ -93,10 +93,10 @@ export class PeriodFaceManager {
   #waiting: Array<() => void> = [];
 
   /**
-   * The covers of these periods: the face each has shown before, else its face by the folder rule, else (nothing
-   * qualifies, or the choice took too long) the server's cover from `server`. Fails only when there is nothing to show
-   * and the server's covers failed too, so the timeline asks again.
-   */
+  The covers of these periods: the face each has shown before, else its face by the folder rule, else (nothing
+  qualifies, or the choice took too long) the server's cover from `server`. Fails only when there is nothing to show
+  and the server's covers failed too, so the timeline asks again.
+  */
   async covers(
     scope: PeriodScope,
     periods: PeriodRequest[],
@@ -208,7 +208,7 @@ export class PeriodFaceManager {
   }
 
   /** What these pictures are: one search for those with a camera's data, one for the rest, then the photo's details
-   * for any the searches do not reach (another account's photo in an album shared with me). Kept per picture. */
+  for any the searches do not reach (another account's photo in an album shared with me). Kept per picture. */
   async #tell(ids: string[], scope: PeriodScope): Promise<Map<string, PeriodVerdict>> {
     const missing = ids.filter((id) => !this.#verdicts.has(id));
     for (const part of chunks(missing, SEARCH_AT_ONCE)) {

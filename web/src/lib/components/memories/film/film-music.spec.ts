@@ -1,4 +1,4 @@
-import type { MemoryTrack } from '$lib/utils/curator';
+import type { MemoryTrack } from '#lib/utils/curator.ts';
 import { FilmMusic, unlockFilmSound } from './film-music.svelte';
 
 const track = (id: string): MemoryTrack => ({

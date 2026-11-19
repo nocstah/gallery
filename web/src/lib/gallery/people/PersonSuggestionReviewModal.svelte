@@ -1,18 +1,16 @@
 <script lang="ts">
-  import { beforeNavigate } from '$app/navigation';
-  import { page } from '$app/state';
-  import { shouldIgnoreEvent } from '$lib/actions/shortcut';
-  import FaceCrop from '$lib/components/faces-page/face-crop.svelte';
-  import ShortcutKeycap from '$lib/gallery/components/shortcut-keycap.svelte';
-  import { faceSuggestionContextExpanded } from '$lib/gallery/people/face-suggestion-context.store';
-  import SuggestionAssetDetails from '$lib/gallery/asset-context/asset-context-details.svelte';
-  import SuggestionAssetSummary from '$lib/gallery/people/suggestion-asset-summary.svelte';
-  import { getSuggestionAssetHref } from '$lib/gallery/people/suggestion-asset-href';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { getContentMetrics } from '$lib/utils/container-utils';
-  import { handleError } from '$lib/utils/handle-error';
-  import { getBoundingBox } from '$lib/utils/people-utils';
-  import type { Faces } from '$lib/managers/asset-viewer-manager.svelte';
+  import { shouldIgnoreEvent } from '#lib/actions/shortcut.ts';
+  import FaceCrop from '#lib/components/faces-page/face-crop.svelte';
+  import SuggestionAssetDetails from '#lib/gallery/asset-context/asset-context-details.svelte';
+  import ShortcutKeycap from '#lib/gallery/components/shortcut-keycap.svelte';
+  import { faceSuggestionContextExpanded } from '#lib/gallery/people/face-suggestion-context.store.ts';
+  import { getSuggestionAssetHref } from '#lib/gallery/people/suggestion-asset-href.ts';
+  import SuggestionAssetSummary from '#lib/gallery/people/suggestion-asset-summary.svelte';
+  import type { Faces } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { getContentMetrics } from '#lib/utils/container-utils.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { getBoundingBox } from '#lib/utils/people-utils.ts';
   import {
     AssetMediaSize,
     type PersonFaceSuggestionPageResponseDto,
@@ -28,8 +26,10 @@
     mdiEyeOffOutline,
   } from '@mdi/js';
   import { onMount } from 'svelte';
-  import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { t } from 'svelte-i18n';
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+  import { beforeNavigate } from '$app/navigation';
+  import { page } from '$app/state';
 
   type PageReq = { page: number; size: number };
 
@@ -90,7 +90,7 @@
 
   const current = $derived(items[index]);
   const currentChoice = $derived(current ? choices.get(current.assetFaceId) : undefined);
-  const currentSaved = $derived(current ? savedFaceIds.has(current.assetFaceId) : false);
+  const currentSaved = $derived(!!current && savedFaceIds.has(current.assetFaceId));
   const pendingCount = $derived(choices.size - savedFaceIds.size);
   const photoUrl = $derived(current ? getAssetMediaUrl({ id: current.assetId, size: AssetMediaSize.Preview }) : '');
   const allDone = $derived(!loading && !current);

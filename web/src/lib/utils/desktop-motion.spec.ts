@@ -1,4 +1,4 @@
-import { cubicBezier, readDesktopMotion } from '$lib/utils/desktop-motion';
+import { cubicBezier, readDesktopMotion } from '#lib/utils/desktop-motion.ts';
 
 const TOKENS = [
   '--ws-open-ms',

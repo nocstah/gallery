@@ -1,6 +1,6 @@
+import { applyTextFilters, buildFilterContext, type FilterState } from '#lib/components/filter-panel/filter-panel.ts';
+import { handleRemoveFilter } from '#lib/utils/filter-remove.ts';
 import { AssetOrder, AssetTypeEnum, AssetVisibility } from '@immich/sdk';
-import { applyTextFilters, buildFilterContext, type FilterState } from '$lib/components/filter-panel/filter-panel';
-import { handleRemoveFilter } from '$lib/utils/filter-remove';
 
 export function buildSpaceTimelineOptions(spaceId: string, filters: FilterState): Record<string, unknown> {
   // Local Omarchy layer: archived photos stay out of a Space's Photos as they stay out of Photos (bank slips and

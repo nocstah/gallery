@@ -8,9 +8,9 @@
     AlbumGroupBy,
     AlbumSortBy,
     AlbumViewMode,
-    albumViewSettings,
     SortOrder,
-  } from '$lib/stores/preferences.store';
+    albumViewSettings,
+  } from '#lib/stores/preferences.store.ts';
   import {
     collapseAllAlbumGroups,
     expandAllAlbumGroups,
@@ -19,11 +19,10 @@
     getSelectedAlbumGroupOption,
     groupOptionsMetadata,
     sortOptionsMetadata,
-  } from '$lib/utils/album-utils';
-  import { generateId } from '$lib/utils/generate-id';
-  import { tick } from 'svelte';
+  } from '#lib/utils/album-utils.ts';
   import { Icon } from '@immich/ui';
   import { mdiSortVariant, mdiUnfoldLessHorizontal, mdiUnfoldMoreHorizontal } from '@mdi/js';
+  import { tick } from 'svelte';
   import { t } from 'svelte-i18n';
 
   interface Props {
@@ -36,7 +35,8 @@
   let open = $state(false);
   let box = $state<HTMLElement>();
   let button = $state<HTMLButtonElement>();
-  const sheetId = `albums-view-${generateId()}`;
+  const uid = $props.id();
+  const sheetId = `albums-view-${uid}`;
 
   const sortBy = $derived(findSortOptionMetadata($albumViewSettings.sortBy).id);
   // grouping by year is not offered while the albums are sorted by when they were made or changed

@@ -5,19 +5,16 @@
   // gives a name and face when an account here has it. The projects' own links, the Noodle Gallery and upstream
   // Immich ones, are for the owner, the server's admin, under About with the server's details; the version stays for
   // everyone. apply-branding (patch_help_modal) rewrites the project URLs below by their exact text, so they stay as
-  // upstream wrote them, and the upstream ones between the BRANDING:UPSTREAM markers.
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import ServerAboutModal from '$lib/modals/ServerAboutModal.svelte';
-  import { userInteraction } from '$lib/stores/user.svelte';
-  import { contactPerson, helpContact, SUPPORT_URL_VARIABLE } from '$lib/utils/help-contact';
-  import {
-    getAboutInfo,
-    getVersionHistory,
-    searchUsers,
-    type ServerAboutResponseDto,
-    type UserResponseDto,
-  } from '@immich/sdk';
+  // upstream wrote them (the docs one is ExternalRoute.docs(), which it rewrites in route.ts), and the upstream ones
+  // between the BRANDING:UPSTREAM markers.
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import ServerAboutModal from '#lib/modals/ServerAboutModal.svelte';
+  import { queryClient } from '#lib/queries/client.ts';
+  import { getAboutInfoQuery, getVersionHistoryQuery } from '#lib/queries/server-info.query.ts';
+  import { ExternalRoute } from '#lib/route.ts';
+  import { SUPPORT_URL_VARIABLE, contactPerson, helpContact } from '#lib/utils/help-contact.ts';
+  import { searchUsers, type ServerAboutResponseDto, type UserResponseDto } from '@immich/sdk';
   import { Icon, Modal, ModalBody, modalManager } from '@immich/ui';
   import {
     mdiBugOutline,
@@ -29,14 +26,14 @@
     mdiPhoneOutline,
     mdiServerOutline,
   } from '@mdi/js';
-  import { type SimpleIcon, siDiscord } from 'simple-icons';
+  import { siDiscord, type SimpleIcon } from 'simple-icons';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
 
-  interface Props {
+  type Props = {
     onClose: () => void;
     info?: ServerAboutResponseDto;
-  }
+  };
 
   let { onClose, info: given }: Props = $props();
 
@@ -56,7 +53,7 @@
 
   onMount(async () => {
     try {
-      info ??= userInteraction.aboutInfo ?? (await getAboutInfo());
+      info ??= await queryClient.query(getAboutInfoQuery());
     } catch {
       return;
     }
@@ -71,7 +68,7 @@
       return;
     }
     const about = info;
-    const versions = userInteraction.versions ?? (await getVersionHistory().catch(() => []));
+    const versions = await queryClient.query(getVersionHistoryQuery()).catch(() => []);
     onClose();
     await modalManager.show(ServerAboutModal, { info: about, versions });
   };
@@ -156,11 +153,7 @@
         <section class="ws-sheet-section" data-testid="help-about">
           <div class="ws-sheet-head"><h3 class="ws-sheet-title">{$t('about')}</h3></div>
           <div class="ws-help-links">
-            {@render link(
-              `https://docs.${info.version}.archive.immich.app/overview/introduction`,
-              mdiInformationOutline,
-              $t('documentation'),
-            )}
+            {@render link(ExternalRoute.docs(), mdiInformationOutline, $t('documentation'))}
             {@render link('https://github.com/immich-app/immich/', mdiGithub, $t('source'))}
             {@render link(
               'https://github.com/immich-app/immich/issues/new/choose',

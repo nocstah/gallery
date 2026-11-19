@@ -3,9 +3,9 @@
 // socket can miss the event; then the photo kept its old picture until a reload while a toast said the rotation had
 // failed. This waits for the event or, failing that, for the photo's thumbhash to change, for up to a minute, and
 // returns the photo as the server now has it.
+import { waitForWebsocketEvent } from '#lib/stores/websocket.ts';
+import { sleep } from '#lib/utils.ts';
 import { getAssetInfo, type AssetResponseDto } from '@immich/sdk';
-import { waitForWebsocketEvent } from '$lib/stores/websocket';
-import { sleep } from '$lib/utils';
 
 const POLL_MS = 1500;
 

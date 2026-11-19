@@ -1,40 +1,55 @@
-import { describe, expect, it, vi } from 'vitest';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { Route } from '$lib/route';
-import { isAlmostExactNavMatch, NAVIGATION_ITEMS } from './navigation-items';
+import { Route } from '#lib/route.ts';
+import { describe, expect, it } from 'vitest';
+import { params } from '../../params';
+import { NAVIGATION_ITEMS, editionItems, isAlmostExactNavMatch } from './navigation-items';
 import { specialAlbums } from './special-albums.svelte';
 
-// __dirname is not defined in ESM (vitest default). Derive it from import.meta.url.
-const here = dirname(fileURLToPath(import.meta.url));
+// The specs run in the browser, so the route tree comes from Vite's glob rather than off disk. Keys are
+// root-relative (`/src/routes/(user)/photos/[[assetId=id]]/+page.svelte`); the loaders are never called.
+const ROUTES_ROOT = '/src/routes';
+const PAGE_DIRS = new Set(
+  Object.keys(import.meta.glob('/src/routes/**/+page.svelte')).map((file) => file.slice(0, -'/+page.svelte'.length)),
+);
+// Every directory on the way to a page. A directory with no page below it can never resolve a route, so
+// leaving those out does not change what resolveRoute accepts.
+const CHILD_DIRS = new Map<string, Set<string>>();
+for (const pageDir of PAGE_DIRS) {
+  const parts = pageDir.slice(ROUTES_ROOT.length).split('/').filter(Boolean);
+  let dir = ROUTES_ROOT;
+  for (const part of parts) {
+    CHILD_DIRS.set(dir, (CHILD_DIRS.get(dir) ?? new Set()).add(part));
+    dir += `/${part}`;
+  }
+}
+const join = (dir: string, name: string) => `${dir}/${name}`;
 
-// web/src/lib/managers/ -> up 2 dirs -> web/src/routes
-const ROUTES_ROOT = resolve(here, '..', '..', 'routes');
+// The source files, as raw text.
+const SOURCES = import.meta.glob<string>('/src/**/*.{ts,svelte,js}', { query: '?raw', import: 'default' });
 
-// Local Omarchy layer: the param matchers (`[name=matcher]` -> web/src/params/<matcher>.ts), so a required param
-// resolves only for a segment its matcher accepts (e.g. `(user)/[special=special]` serves /todo and /villa)
-const MATCHERS = import.meta.glob<{ match: (param: string) => boolean }>('../../params/*.ts', { eager: true });
+// Local Omarchy layer: the param matchers (`[name=matcher]` -> `params.<matcher>` in web/src/params.ts), so a required
+// param resolves only for a segment its matcher accepts (e.g. `(user)/[special=special]` serves /todo and /villa)
+type Matcher = { '~standard': { validate: (value: unknown) => Promise<unknown> | { issues?: unknown } } };
+const MATCHERS = params as unknown as Record<string, Matcher | undefined>;
 
 /**
- * Resolves a NAVIGATION_ITEMS `route` (a URL pathname, optionally with a
- * `?query` or `#hash` suffix) to a real SvelteKit page directory under
- * `web/src/routes`, i.e. proves the route isn't a dead hardcoded string.
- *
- * Has to understand two SvelteKit filesystem-routing constructs that don't
- * appear in the URL:
- *  - route GROUPS `(name)` — transparent, consume zero path segments
- *    (e.g. all user pages live under `routes/(user)/...`)
- *  - OPTIONAL params `[[name=matcher]]` — may consume one path segment OR be
- *    skipped entirely (e.g. `routes/(user)/photos/[[assetId=id]]/+page.svelte`
- *    serves plain `/photos` by skipping the optional segment)
- *
- * Returns true iff some path through the directory tree consumes all of
- * `segments` and lands on a directory containing `+page.svelte`.
- */
+Resolves a NAVIGATION_ITEMS `route` (a URL pathname, optionally with a
+`?query` or `#hash` suffix) to a real SvelteKit page directory under
+`web/src/routes`, i.e. proves the route isn't a dead hardcoded string.
+
+Has to understand two SvelteKit filesystem-routing constructs that don't
+appear in the URL:
+ - route GROUPS `(name)` — transparent, consume zero path segments
+   (e.g. all user pages live under `routes/(user)/...`)
+ - OPTIONAL params `[[name=matcher]]` — may consume one path segment OR be
+   skipped entirely (e.g. `routes/(user)/photos/[[assetId=id]]/+page.svelte`
+   serves plain `/photos` by skipping the optional segment)
+
+Returns true iff some path through the directory tree consumes all of
+`segments` and lands on a directory containing `+page.svelte`.
+*/
 function resolveRoute(pathname: string, dir = ROUTES_ROOT, segments = pathToSegments(pathname)): boolean {
   if (segments.length === 0) {
-    if (existsSync(join(dir, '+page.svelte'))) {
+    if (PAGE_DIRS.has(dir)) {
       return true;
     }
     // Even with no segments left, a route-group or optional-param directory
@@ -79,12 +94,7 @@ function pathToSegments(pathname: string): string[] {
 }
 
 function childDirs(dir: string): string[] {
-  if (!existsSync(dir)) {
-    return [];
-  }
-  return readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
+  return [...(CHILD_DIRS.get(dir) ?? [])];
 }
 
 function isRouteGroup(name: string): boolean {
@@ -101,7 +111,8 @@ function isRequiredParam(name: string): boolean {
 
 function paramAccepts(name: string, segment: string): boolean {
   const matcher = /=(\w+)]$/.exec(name)?.[1];
-  return !matcher || !!MATCHERS[`../../params/${matcher}.ts`]?.match(segment);
+  const result = matcher ? MATCHERS[matcher]?.['~standard'].validate(segment) : undefined;
+  return !matcher || (!!result && !(result instanceof Promise) && !result.issues);
 }
 
 describe('NAVIGATION_ITEMS schema', () => {
@@ -198,7 +209,7 @@ describe('NAVIGATION_ITEMS schema', () => {
 
   // Local Omarchy layer: a vault's Gallery is the vault edition (gallery/edition), which leaves out of Ctrl+K what its
   // sidebar leaves out
-  it("leaves out of a vault's Gallery what it has none of", async () => {
+  it("leaves out of a vault's Gallery what it has none of", () => {
     const left = NAVIGATION_ITEMS.filter((item) => item.inVaults === false).map((item) => item.route);
     expect(new Set(left)).toEqual(
       new Set([
@@ -220,15 +231,11 @@ describe('NAVIGATION_ITEMS schema', () => {
         Route.sharedLinks(),
       ]),
     );
-    vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
-    vi.resetModules();
-    try {
-      const { NAVIGATION_ITEMS: vault } = await import('./navigation-items');
-      expect(vault).toHaveLength(NAVIGATION_ITEMS.length - left.length);
-      expect(vault.filter((item) => item.inVaults === false)).toEqual([]);
-    } finally {
-      vi.unstubAllEnvs();
-    }
+    // the browser keeps a loaded module, so the vault list is asked for directly rather than re-imported under the flag
+    const vault = editionItems(true);
+    expect(editionItems(false)).toHaveLength(NAVIGATION_ITEMS.length);
+    expect(vault).toHaveLength(NAVIGATION_ITEMS.length - left.length);
+    expect(vault.filter((item) => item.inVaults === false)).toEqual([]);
   });
 
   // Local Omarchy layer: Ctrl+K offers a special album as the sidebar does (managers/special-albums' ownerOnly, through
@@ -242,33 +249,22 @@ describe('NAVIGATION_ITEMS schema', () => {
     expect(NAVIGATION_ITEMS.find((i) => i.route === '/todo')?.adminOnly).toBe(false);
   });
 
-  it("no source file references the migrated 'nav:theme' literal", () => {
+  it("no source file references the migrated 'nav:theme' literal", async () => {
     // Pinned invariant: after Task 6, the theme toggle lives as cmd:theme in
     // the commands registry. If this assertion trips, a stale 'nav:theme'
     // reference slipped back in — check navigation-items, global-search-manager,
     // or test fixtures. This drift-guard is what keeps dual rendering from
-    // regressing. The spec file itself is excluded via the suffix check.
-    function walk(dir: string, acc: string[] = []): string[] {
-      for (const entry of readdirSync(dir)) {
-        const full = join(dir, entry);
-        if (statSync(full).isDirectory()) {
-          walk(full, acc);
-        } else if (!full.endsWith('.spec.ts') && /\.(ts|svelte|js)$/.test(full)) {
-          acc.push(full);
-        }
-      }
-      return acc;
-    }
-    const srcRoot = resolve(here, '..', '..');
-    const files = walk(srcRoot);
-    const offenders = files.filter((f) => readFileSync(f, 'utf8').includes('nav:theme'));
+    // regressing. The spec files are excluded via the suffix check.
+    const files = Object.entries(SOURCES).filter(([file]) => !file.endsWith('.spec.ts'));
+    expect(files.length).toBeGreaterThan(100);
+    // In parallel: one request to Vite per file, one at a time, outlasts the test timeout in a full run.
+    const sources = await Promise.all(files.map(([file, load]) => load().then((source) => [file, source] as const)));
+    const offenders = sources.filter(([, source]) => source.includes('nav:theme')).map(([file]) => file);
     expect(offenders).toEqual([]);
-  });
+  }, 60_000);
 
-  it('drift guard: every systemSettings isOpen key exists in the accordion source', () => {
-    // From web/src/lib/managers/ up 2 dirs → web/src/, then into routes/admin/...
-    const sourcePath = resolve(here, '..', '..', 'routes', 'admin', 'system-settings', '+page.svelte');
-    const source = readFileSync(sourcePath, 'utf8');
+  it('drift guard: every systemSettings isOpen key exists in the accordion source', async () => {
+    const source = await SOURCES['/src/routes/admin/system-settings/+page.svelte']();
     const sourceKeys = new Set([...source.matchAll(/key:\s*'([a-z-]+)'/g)].map((m) => m[1]));
     const ourKeys = NAVIGATION_ITEMS.filter((i) => i.category === 'systemSettings').map((i) =>
       i.route.replace('/admin/system-settings?isOpen=', ''),
@@ -278,9 +274,8 @@ describe('NAVIGATION_ITEMS schema', () => {
     }
   });
 
-  it('drift guard: every accordion source key has a systemSettings navigation item', () => {
-    const sourcePath = resolve(here, '..', '..', 'routes', 'admin', 'system-settings', '+page.svelte');
-    const source = readFileSync(sourcePath, 'utf8');
+  it('drift guard: every accordion source key has a systemSettings navigation item', async () => {
+    const source = await SOURCES['/src/routes/admin/system-settings/+page.svelte']();
     const sourceKeys = new Set([...source.matchAll(/key:\s*'([a-z-]+)'/g)].map((m) => m[1]));
     const ourKeys = new Set(
       NAVIGATION_ITEMS.filter((i) => i.category === 'systemSettings').map((i) =>
@@ -305,13 +300,10 @@ describe('NAVIGATION_ITEMS schema', () => {
     });
   });
 
-  it('drift guard: every page in the sidebar can be opened from Ctrl+K', () => {
+  it('drift guard: every page in the sidebar can be opened from Ctrl+K', async () => {
     // Local Omarchy layer: the command center, AI inbox and chat were added to the sidebar without a palette entry,
     // so typing "inbox" found nothing. Every href in the sidebar, a literal or a Route helper, must be in the list.
-    const source = readFileSync(
-      resolve(here, '..', 'components', 'shared-components', 'side-bar', 'UserSidebar.svelte'),
-      'utf8',
-    );
+    const source = await SOURCES['/src/lib/components/shared-components/side-bar/UserSidebar.svelte']();
     const routes = Route as unknown as Record<string, () => string>;
     const hrefs = [
       ...[...source.matchAll(/href="(\/[^"]*)"/g)].map((m) => m[1]),

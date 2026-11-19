@@ -1,6 +1,6 @@
+import PhotoBookModal from '#lib/modals/PhotoBookModal.svelte';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import PhotoBookModal from '$lib/modals/PhotoBookModal.svelte';
 
 // Local Omarchy layer: the photo book dialog (managers/photo-book-manager) answers with the title, about how many
 // photos and, for a year's book, the year; the title follows the year until it is typed over.

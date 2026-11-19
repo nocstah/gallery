@@ -317,6 +317,24 @@ describe('Database Migration Scenarios', { timeout: 60_000 }, () => {
       expect([await ledger(db, 'kysely_migrations'), await ledger(db, 'gallery_migrations')]).toEqual(before);
     }));
 
+  // Scenario C8: RC builds recorded a fork migration under a name it lost after the ledger split.
+  it('should rename an RC-era fork name in gallery_migrations', () =>
+    withDatabase('migration_test_rc_gallery_names', async (db) => {
+      await createRepo(db).runMigrations();
+      await sql`UPDATE "gallery_migrations" SET "name" = '1799400000000-ScopeJitOffToDatabase'
+        WHERE "name" = '1799800000000-ScopeJitOffToDatabase'`.execute(db);
+      const before = await ledger(db, 'gallery_migrations');
+
+      await createRepo(db).runMigrations();
+
+      const after = await ledger(db, 'gallery_migrations');
+      expect(after.map(({ name }) => name)).toEqual(await fileNames(galleryFolder));
+      expect(after.find(({ name }) => name === '1799800000000-ScopeJitOffToDatabase')?.timestamp).toBe(
+        before.find(({ name }) => name === '1799400000000-ScopeJitOffToDatabase')?.timestamp,
+      );
+      await expectIdempotentBoot(db);
+    }));
+
   // Scenario D: Rollback reverts the newest fork migration first and leaves upstream's ledger alone
   it('should revert the last fork migration first', () =>
     withDatabase('migration_test_rollback', async (db) => {
@@ -360,18 +378,19 @@ describe('Database Migration Scenarios', { timeout: 60_000 }, () => {
       await expectSplitLedgers(db);
     }));
 
-  // Scenario H: the fork migration disables PostgreSQL JIT for the connecting role.
+  // Scenario H: the fork migrations leave PostgreSQL JIT disabled on Immich's database.
   // JIT-compiling the high-cost (but fast-executing) cross-space People aggregates
   // adds a ~2s per-backend LLVM penalty; jit=off makes the People page ~4x faster
-  // and regresses nothing (see 1783628194057-DisablePostgresJit).
-  it('should disable PostgreSQL JIT for the connecting role', async () => {
+  // and regresses nothing (see 1783628194057-DisablePostgresJit). 1799800000000-ScopeJitOffToDatabase
+  // then moves the setting from the role to the database, so the database entry is what is asserted.
+  it('should disable PostgreSQL JIT for the database', async () => {
     const dbName = 'migration_test_jit';
     const setup = await createRawDatabase(dbName);
     await createRepo(setup).runMigrations();
     await setup.destroy();
 
     // Open a fresh connection, as the app pool would, after the migration ran.
-    // ALTER ROLE ... SET applies to new connections, so this reflects runtime behavior.
+    // ALTER DATABASE ... SET applies to new connections, so this reflects runtime behavior.
     const testUrl = process.env.IMMICH_TEST_POSTGRES_URL!;
     const templateDb = testUrl.split('/').pop()!;
     const db = new Kysely<DB>(
@@ -381,7 +400,10 @@ describe('Database Migration Scenarios', { timeout: 60_000 }, () => {
       const { rows } = await sql<{ jit: string; configured: boolean }>`
         SELECT current_setting('jit') AS jit,
                EXISTS (
-                 SELECT 1 FROM pg_roles WHERE rolname = current_user AND 'jit=off' = ANY (rolconfig)
+                 SELECT 1
+                   FROM pg_db_role_setting s
+                   JOIN pg_database d ON d.oid = s.setdatabase
+                  WHERE d.datname = current_database() AND s.setrole = 0 AND 'jit=off' = ANY (s.setconfig)
                ) AS configured
       `.execute(db);
       expect(rows[0].configured).toBe(true);
@@ -408,6 +430,14 @@ const bootStockImmich = async (db: Kysely<any>) => {
 };
 
 const bootGallery = (db: Kysely<any>) => createRepo(db).runMigrations();
+
+// The stand-in for stock Immich runs this branch's upstream folder, which on a rolling branch holds migrations the
+// tagged release does not ship. The revert removes their rows (the tagged migrator would abort on them), so the
+// stand-in runs exactly those again; on a branch at the tag the list is empty.
+const postTagUpstreamNames = (upstreamNames: string[]) => {
+  const script = readFileSync(join(repoRoot, 'scripts', 'revert-to-immich.sql'), 'utf8');
+  return upstreamNames.filter((name) => script.includes(`'${name}'`));
+};
 
 const runRevertScript = async (db: Kysely<any>) => {
   const script = readFileSync(join(repoRoot, 'scripts', 'revert-to-immich.sql'), 'utf8')
@@ -796,7 +826,8 @@ describe('Switching from Immich 3.3 with people shared between users', { timeout
           db,
         ),
       ).resolves.toMatchObject({ rows: [{ split: null, ledger: null }] });
-      await expect(bootStockImmich(db)).resolves.toEqual([]);
+      const rerun = await bootStockImmich(db);
+      expect(rerun.map(({ migrationName }) => migrationName)).toEqual(postTagUpstreamNames(upstreamNames));
 
       // And back to Gallery once more.
       const reverted = await immichState(db);

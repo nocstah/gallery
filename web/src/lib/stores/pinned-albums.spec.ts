@@ -15,7 +15,7 @@ const httpError = (status: number) => Object.assign(new Error(`HTTP ${status}`),
 // the store reads what is pinned when it is made, so each test makes it afresh
 const fresh = async () => {
   vi.resetModules();
-  const store = await import('$lib/stores/pinned-albums.svelte');
+  const store = await import('#lib/stores/pinned-albums.svelte.ts');
   return store.pinnedAlbums;
 };
 const pinnedAfterReload = async () => {

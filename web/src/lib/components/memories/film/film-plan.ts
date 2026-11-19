@@ -39,7 +39,7 @@ export const FILM_TIMING = {
 /** A photo fills the frame (cropped) when the crop keeps at least this share of it; else it is shown whole. */
 export const FILL_KEEPS = 0.6;
 /** A wide photo in a wide frame fills it with less: a phone on its side, its browser's bars taking height, is far wider
- * than any camera's shape, and a 4:3 photo left whole there sits small between empty sides. */
+than any camera's shape, and a 4:3 photo left whole there sits small between empty sides. */
 const WIDE_FILL_KEEPS = 0.45;
 
 /** The drift: a photo that fills the frame moves between these scales, a whole one breathes a little. */
@@ -143,7 +143,7 @@ export type FilmPlanInput = {
   /** the songs, the one to play first first */
   tracks?: FilmTrack[];
   /** the tempo the cuts follow (the first song's when the film began; a skip keeps it, so the shots keep their
-   * times); left out, the first song's */
+  times); left out, the first song's */
   bpm?: number | null;
   /** where the songs begin (the film's start; later when a skip starts the next song) */
   musicFrom?: number;
@@ -202,13 +202,14 @@ const inside = (camera: FilmCamera, window: { w: number; h: number }): FilmCamer
   };
 };
 
-const mix = (a: number, b: number, share: number) => a + (b - a) * share;
+// a share of the way from the middle of the photo to `to`
+const fromMiddle = (to: number, share: number) => 0.5 + (to - 0.5) * share;
 
 /**
- * How a shot moves: a photo that fills the frame zooms in toward its faces or out from them, every other shot the
- * other way; without faces it zooms on its middle with a small pan, again alternating. A whole photo breathes in or
- * out a little; a video holds still. Reduced motion: no drift at all, the crop still toward the faces.
- */
+How a shot moves: a photo that fills the frame zooms in toward its faces or out from them, every other shot the
+other way; without faces it zooms on its middle with a small pan, again alternating. A whole photo breathes in or
+out a little; a video holds still. Reduced motion: no drift at all, the crop still toward the faces.
+*/
 const driftOf = (
   kind: FilmShot['kind'],
   fit: FilmShot['fit'],
@@ -235,7 +236,7 @@ const driftOf = (
     return { from: still, to: still };
   }
   const wide = inside(
-    { scale: DRIFT.wide, x: mix(0.5, target.x, focus ? 0.3 : 0), y: mix(0.5, target.y, focus ? 0.3 : 0) },
+    { scale: DRIFT.wide, x: fromMiddle(target.x, focus ? 0.3 : 0), y: fromMiddle(target.y, focus ? 0.3 : 0) },
     window,
   );
   const near = inside({ scale: DRIFT.near, ...target }, window);
@@ -261,9 +262,9 @@ export const splitSentences = (story: string | null | undefined, locale?: string
 type Slot = { start: number; end: number };
 
 /**
- * The story's sentences on the shots after the title card: each sentence over as many shots as its length asks (a
- * long one stays over two photos), one at a time; when there are more sentences than shots, a shot takes two.
- */
+The story's sentences on the shots after the title card: each sentence over as many shots as its length asks (a
+long one stays over two photos), one at a time; when there are more sentences than shots, a shot takes two.
+*/
 const storyTexts = (sentences: string[], slots: Slot[]): FilmText[] => {
   if (sentences.length === 0 || slots.length === 0) {
     return [];
@@ -552,11 +553,11 @@ export const shotOfAsset = (plan: FilmPlan, assetId: string) =>
 const percent = (value: number) => `${round(value, 3)}%`;
 
 /**
- * A shot as CSS for the player: how big the photo is laid out (a share of the frame) and its transform at the start
- * and at the end, origin at its top-left corner, so the drift is a transform and an opacity only, on the GPU. A photo
- * that fills the frame is laid out as large as the frame's shape asks of it and moved so the camera's point sits in the
- * middle; a whole photo is the frame's size (object-fit: contain) and only scales, around its middle.
- */
+A shot as CSS for the player: how big the photo is laid out (a share of the frame) and its transform at the start
+and at the end, origin at its top-left corner, so the drift is a transform and an opacity only, on the GPU. A photo
+that fills the frame is laid out as large as the frame's shape asks of it and moved so the camera's point sits in the
+middle; a whole photo is the frame's size (object-fit: contain) and only scales, around its middle.
+*/
 export const shotFrame = (shot: FilmShot, aspect: number) => {
   if (shot.fit === 'whole' || !shot.ratio) {
     return {

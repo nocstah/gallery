@@ -1,25 +1,27 @@
 import { Expression, Kysely, SelectQueryBuilder, SqlBool, expressionBuilder } from 'kysely';
+import { withLibraryView } from 'src/gallery/utils/library-view.js';
 import type { AssetSearchBuilderOptions } from 'src/repositories/search.repository.js';
 import { DB } from 'src/schema/index.js';
 import { searchAssetBuilderLegacy } from 'src/utils/database.js';
 import { without } from 'src/utils/filter-suggestions.js';
+import type { ViewerScope } from 'src/utils/viewer-scope.js';
 
 /**
- * The filter panel's shared vocabulary, defined once for every fork surface that answers it: the
- * timeline buckets, filter suggestions, smart-search facets, the filtered map, the space people
- * lists, and the taken range of search results (searchAssetBuilderWithLocalTaken below). Viewer
- * scope (owner / space / visibility) is NOT part of it; each caller keeps its own.
- *
- * - taken: `asset.localDateTime`, the wall-clock time the timeline groups its buckets by, so a month
- *   a client sends is the same month the grid shows. `takenAfter` is inclusive, `takenBefore`
- *   exclusive. Clients send wall-clock ranges as UTC: the start of the first day and the start of
- *   the day after the last one (web filter-panel.ts, mobile search_api.repository.dart).
- * - place/camera: `null` means "has no value" (IS NULL), `undefined` and `''` mean "no filter".
- * - rating: a minimum (`>=`); `null` means unrated.
- *
- * `searchAssetBuilderLegacy` itself is upstream and untouched (fileCreatedAt, inclusive bound, exact
- * rating unless `ratingIsMinimum`); see specs/2026-07-23-search-v3-coexistence-design.md.
- */
+The filter panel's shared vocabulary, defined once for every fork surface that answers it: the
+timeline buckets, filter suggestions, smart-search facets, the filtered map, the space people
+lists, and the taken range of search results (searchAssetBuilderWithLocalTaken below). Viewer
+scope (owner / space / visibility) is NOT part of it; each caller keeps its own.
+
+- taken: `asset.localDateTime`, the wall-clock time the timeline groups its buckets by, so a month
+  a client sends is the same month the grid shows. `takenAfter` is inclusive, `takenBefore`
+  exclusive. Clients send wall-clock ranges as UTC: the start of the first day and the start of
+  the day after the last one (web filter-panel.ts, mobile search_api.repository.dart).
+- place/camera: `null` means "has no value" (IS NULL), `undefined` and `''` mean "no filter".
+- rating: a minimum (`>=`); `null` means unrated.
+
+`searchAssetBuilderLegacy` itself is upstream and untouched (fileCreatedAt, inclusive bound, exact
+rating unless `ratingIsMinimum`); see specs/2026-07-23-search-v3-coexistence-design.md.
+*/
 export interface AssetFilter {
   takenAfter?: Date | string;
   takenBefore?: Date | string;
@@ -95,12 +97,23 @@ export function withAssetFilter<T extends SelectQueryBuilder<DB, any, any>>(
 }
 
 /**
- * Upstream search (`searchAssetBuilderLegacy`) with its taken range swapped for this module's, so
- * search results agree with the timeline, suggestions and facets. Everything else stays upstream.
- */
-export function searchAssetBuilderWithLocalTaken(kysely: Kysely<DB>, options: AssetSearchBuilderOptions) {
-  return withAssetFilter(searchAssetBuilderLegacy(kysely, without(options, 'takenAfter', 'takenBefore')), {
+Upstream search (`searchAssetBuilderLegacy`) with its taken range swapped for this module's, so
+search results agree with the timeline, suggestions and facets, and narrowed to the timeline's
+library view (#1038). Everything else stays upstream.
+A stock or third-party client (`upstreamTakenRange`, set by resolveViewerScope) builds its range from
+device-local instants for upstream's inclusive `fileCreatedAt` bounds, so it gets upstream's builder unchanged.
+*/
+export function searchAssetBuilderWithLocalTaken(
+  kysely: Kysely<DB>,
+  options: AssetSearchBuilderOptions & Pick<ViewerScope, 'upstreamTakenRange'>,
+) {
+  const libraryView = { ...options, callerId: options.authUserId };
+  if (options.upstreamTakenRange) {
+    return withLibraryView(searchAssetBuilderLegacy(kysely, options), libraryView);
+  }
+  const query = withAssetFilter(searchAssetBuilderLegacy(kysely, without(options, 'takenAfter', 'takenBefore')), {
     takenAfter: options.takenAfter,
     takenBefore: options.takenBefore,
   });
+  return withLibraryView(query, libraryView);
 }

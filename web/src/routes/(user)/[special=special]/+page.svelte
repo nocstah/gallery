@@ -1,9 +1,9 @@
 <script lang="ts">
   // Local Omarchy layer: a special album (To do, Villa) before anything has gone there; once the album exists its
   // sidebar row opens it instead
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import { specialAlbums } from '$lib/managers/special-albums.svelte';
-  import { Route } from '$lib/route';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { specialAlbums } from '#lib/managers/special-albums.svelte.ts';
+  import { Route } from '#lib/route.ts';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 

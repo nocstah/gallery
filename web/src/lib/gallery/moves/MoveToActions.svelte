@@ -5,18 +5,18 @@
   // libraries', so each menu keeps its one line. A row shows only where a move can start: the page conditions
   // (move-gates), and a selection with photos of the owner's own and none in the trash. On a person's page the move
   // names that person too, so the destination can say where its face recognition put them.
-  import { page } from '$app/state';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import type { Library } from '$lib/gallery/libraries/library-file';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import type { Library } from '#lib/gallery/libraries/library-file.ts';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import type { PersonResponseDto } from '@immich/sdk';
   import { Button, modalManager } from '@immich/ui';
   import { mdiImageMove } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
   import MoveDialog from './MoveDialog.svelte';
-  import { canMoveFrom, isOwnPerson, movePerson, moveTargets, type MoveSelection } from './move-gates';
+  import { canMoveFrom, isOwnPerson, movePerson, moveTargets } from './move-gates';
 
   type Props = {
     menuItem?: boolean;
@@ -35,17 +35,24 @@
   const selection = $derived(canMoveFrom(page.url, userAgent, owner, assetMultiSelectManager.assets));
   const targets = $derived(selection ? moveTargets() : []);
 
-  // the selection as the row was drawn, since a right-click menu closes before its row's action runs
-  const move = (destination: Library, chosen: MoveSelection) => () => {
-    void modalManager.show(MoveDialog, {
-      request: {
-        kind: 'selection',
-        ids: chosen.ids,
-        notOwned: chosen.notOwned,
-        ...(person && isOwnPerson(person) && { person: movePerson(person) }),
-      },
-      destination,
-    });
+  // the selection as the row was drawn, since a right-click menu closes before its row's action runs (a row is drawn
+  // only with a selection)
+  const move = (destination: Library) => {
+    const chosen = selection;
+    return () => {
+      if (!chosen) {
+        return;
+      }
+      void modalManager.show(MoveDialog, {
+        request: {
+          kind: 'selection',
+          ids: chosen.ids,
+          notOwned: chosen.notOwned,
+          ...(person && isOwnPerson(person) && { person: movePerson(person) }),
+        },
+        destination,
+      });
+    };
   };
 </script>
 
@@ -55,17 +62,11 @@
       <MenuOption
         icon={mdiImageMove}
         text={$t('moves_move_to', { values: { library: destination.name } })}
-        onClick={move(destination, selection)}
+        onClick={move(destination)}
         testId="move-to-library"
       />
     {:else}
-      <Button
-        leadingIcon={mdiImageMove}
-        size="medium"
-        color="secondary"
-        variant="ghost"
-        onclick={move(destination, selection)}
-      >
+      <Button leadingIcon={mdiImageMove} size="medium" color="secondary" variant="ghost" onclick={move(destination)}>
         {$t('moves_move_to', { values: { library: destination.name } })}
       </Button>
     {/if}

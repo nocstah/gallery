@@ -1,38 +1,38 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import HeaderActionButton from '$lib/components/HeaderActionButton.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { Route } from '$lib/route';
-  import { getAssetActions } from '$lib/services/asset.service';
-  import { removeTag } from '$lib/utils/asset-utils';
-  import { buildContextualFilterUrl } from '$lib/utils/filter-target';
-  import { untaggedDone } from '$lib/utils/undoable';
+  import HeaderActionButton from '#lib/components/HeaderActionButton.svelte';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { getAssetActions } from '#lib/services/asset.service.ts';
+  import { removeTag } from '#lib/utils/asset-utils.ts';
+  import { buildContextualFilterUrl } from '#lib/utils/filter-target.ts';
+  import { untaggedDone } from '#lib/utils/undoable.ts';
   import { getAssetInfo, type AssetResponseDto } from '@immich/sdk';
   import { Badge, IconButton, Link, Text } from '@immich/ui';
   import { mdiOpenInNew } from '@mdi/js';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   interface Props {
     asset: AssetResponseDto;
     isOwner: boolean;
     /**
-     * #734: widens the ADD-tag affordance to a space editor. Per-tag REMOVE stays gated on the
-     * real `isOwner` below — not because removal always 403s for an editor (it doesn't:
-     * `TagService.removeAssets` passes `canAlwaysRemove: Permission.TagDelete`, and
-     * `asset.util.ts:81-85` short-circuits the per-asset check for the caller's OWN tags, so an
-     * editor removing a tag they added themselves succeeds today). The real reason is that
-     * `TagResponseDto` carries no `userId`, so the client cannot tell which tags on this asset are
-     * the caller's own versus the owner's, and offering remove on all of them would fail on the
-     * owner's. Defaults to `isOwner` so every call site keeps today's behavior unless it
-     * explicitly widens editability.
-     */
+    #734: widens the ADD-tag affordance to a space editor. Per-tag REMOVE stays gated on the
+    real `isOwner` below — not because removal always 403s for an editor (it doesn't:
+    `TagService.removeAssets` passes `canAlwaysRemove: Permission.TagDelete`, and
+    `asset.util.ts:81-85` short-circuits the per-asset check for the caller's OWN tags, so an
+    editor removing a tag they added themselves succeeds today). The real reason is that
+    `TagResponseDto` carries no `userId`, so the client cannot tell which tags on this asset are
+    the caller's own versus the owner's, and offering remove on all of them would fail on the
+    owner's. Defaults to `isOwner` so every call site keeps today's behavior unless it
+    explicitly widens editability.
+    */
     canEdit?: boolean;
     /**
-     * R4/E2 — false on a shared link, where there is no timeline to filter. Threaded from
-     * DetailPanel exactly like `isOwner`. (Tags are already shared-link-suppressed by the section
-     * gate below; this is belt-and-braces.)
-     */
+    R4/E2 — false on a shared link, where there is no timeline to filter. Threaded from
+    DetailPanel exactly like `isOwner`. (Tags are already shared-link-suppressed by the section
+    gate below; this is belt-and-braces.)
+    */
     canFilter?: boolean;
     spaceId?: string;
   }
@@ -93,7 +93,7 @@
           -->
           {#if canFilter}
             <Link
-              href={buildContextualFilterUrl(page.url, { tagIds: [tag.id] })}
+              href={buildContextualFilterUrl(new URL(page.url.href), { tagIds: [tag.id] })}
               aria-label="{$t('filter_by_tag')}: {tag.value}"
               underline={false}
               class="px-2 font-light"

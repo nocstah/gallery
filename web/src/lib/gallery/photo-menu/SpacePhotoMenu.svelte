@@ -4,11 +4,11 @@
   // for the selection, as the bar works it out (selection-bar.svelte.ts): what the viewer's role allows, the photos they
   // may edit (#734), Share through the Space (#1018). The bar shows whenever the menu does, since both act on the
   // selection the right-click makes.
-  import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
+  import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
   import type { AssetResponseDto } from '@immich/sdk';
   import type { ComponentProps } from 'svelte';
   import PhotoMenu from './PhotoMenu.svelte';
-  import { findTimelinePhoto, GALLERY_GRID, spaceOffer, TIMELINE_GRID, type PhotoMenuOffer } from './photo-menu';
+  import { GALLERY_GRID, TIMELINE_GRID, findTimelinePhoto, spaceOffer, type PhotoMenuOffer } from './photo-menu';
   import { selectionBarOffer } from './selection-bar.svelte';
 
   type Props = Omit<

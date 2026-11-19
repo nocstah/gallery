@@ -1,13 +1,13 @@
 <script lang="ts">
-  import AlbumTableHeader from '$lib/components/album-page/AlbumsTableHeader.svelte';
-  import LazyAlbumTableBody from '$lib/gallery/components/lazy-album-table-body.svelte';
-  import { AlbumGroupBy, albumViewSettings } from '$lib/stores/preferences.store';
+  import AlbumTableHeader from '#lib/components/album-page/AlbumsTableHeader.svelte';
+  import LazyAlbumTableBody from '#lib/gallery/components/lazy-album-table-body.svelte';
+  import { AlbumGroupBy, albumViewSettings } from '#lib/stores/preferences.store.ts';
   import {
     isAlbumGroupCollapsed,
     sortOptionsMetadata,
     toggleAlbumGroupCollapsing,
     type AlbumGroup,
-  } from '$lib/utils/album-utils';
+  } from '#lib/utils/album-utils.ts';
   import { Icon } from '@immich/ui';
   import { mdiChevronRight } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -34,8 +34,8 @@
     <LazyAlbumTableBody albums={groupedAlbums[0].albums} />
   {:else}
     {#each groupedAlbums as albumGroup (albumGroup.id)}
-      {@const isCollapsed = isAlbumGroupCollapsed($albumViewSettings, albumGroup.id)}
-      {@const iconRotation = isCollapsed ? 'rotate-0' : 'rotate-90'}
+      {const isCollapsed = $derived(isAlbumGroupCollapsed($albumViewSettings, albumGroup.id))}
+      {const iconRotation = $derived(isCollapsed ? 'rotate-0' : 'rotate-90')}
       <tbody
         class="mt-4 block w-full overflow-y-auto rounded-md border dark:border-immich-dark-gray dark:text-immich-dark-fg"
       >

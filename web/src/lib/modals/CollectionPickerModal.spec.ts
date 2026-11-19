@@ -1,18 +1,18 @@
 // CollectionPickerModal.spec.ts — follows the house pattern (sdk.mock + Modal global stubs)
+import '#lib/gallery/__mocks__/sdk.mock.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { getAnimateMock } from '#test/kioku/mocks/animate.mock.ts';
+import { getIntersectionObserverMock } from '#test/kioku/mocks/intersection-observer.mock.ts';
+import { getVisualViewportMock } from '#test/kioku/mocks/visual-viewport.mock.ts';
 import { SharedSpaceRole, type AlbumResponseDto, type SharedSpaceResponseDto } from '@immich/sdk';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
-import { getAnimateMock } from '$lib/__mocks__/animate.mock';
-import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
-import '$lib/__mocks__/sdk.mock';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { getVisualViewportMock } from '$lib/__mocks__/visual-viewport.mock';
 import CollectionPickerModal from './CollectionPickerModal.svelte';
 
 const { mockUser, mockHandleError } = vi.hoisted(() => ({
   mockUser: { current: { id: 'me', isAdmin: false } },
   mockHandleError: vi.fn(),
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: {
     get authenticated() {
       return mockUser.current !== null;
@@ -22,7 +22,7 @@ vi.mock('$lib/managers/auth-manager.svelte', () => ({
     },
   },
 }));
-vi.mock('$lib/utils/handle-error', () => ({ handleError: mockHandleError }));
+vi.mock('#lib/utils/handle-error.ts', () => ({ handleError: mockHandleError }));
 
 const album = (id: string, name: string): AlbumResponseDto =>
   ({
@@ -45,9 +45,9 @@ const space = (id: string, name: string): SharedSpaceResponseDto =>
     assetCount: 1,
     recentAssetIds: [],
   }) as unknown as SharedSpaceResponseDto;
-/** An album owned by someone else that the caller is a member of — `getAllAlbums` returns these too. */
-const albumSharedWithMe = (id: string, name: string): AlbumResponseDto =>
-  ({ ...album(id, name), ownerId: 'someone-else', shared: true }) as unknown as AlbumResponseDto;
+/** An album (a2) owned by someone else that the caller is a member of — `getAllAlbums` returns these too. */
+const albumSharedWithMe = (name: string): AlbumResponseDto =>
+  ({ ...album('a2', name), ownerId: 'someone-else', shared: true }) as unknown as AlbumResponseDto;
 /** A space created by someone else, with the caller holding `role` (or not a member at all). */
 const spaceWhereIAm = (id: string, name: string, role: SharedSpaceRole | null): SharedSpaceResponseDto =>
   ({
@@ -146,7 +146,7 @@ describe('CollectionPickerModal', () => {
     // ones, and no filter returns both. Narrowing the query back down has to fail this test.
     sdkMock.getAllAlbums.mockImplementation(({ isOwned, isShared }: { isOwned?: boolean; isShared?: boolean }) => {
       const mine = album('a1', 'Trip');
-      const theirs = albumSharedWithMe('a2', 'Familie');
+      const theirs = albumSharedWithMe('Familie');
       if (isOwned === true) {
         return Promise.resolve([mine]);
       }
@@ -476,10 +476,11 @@ describe('CollectionPickerModal — expanding a space into its albums', () => {
 // ---------------------------------------------------------------------------
 
 describe('CollectionPickerModal — restricted to a space', () => {
-  const linkedAlbum = (id: string, name: string) =>
+  // the album linked to the space: Space Trip (sa1)
+  const linkedAlbum = () =>
     ({
-      id,
-      albumName: name,
+      id: 'sa1',
+      albumName: 'Space Trip',
       assetCount: 2,
       albumThumbnailAssetId: null,
       shared: true,
@@ -494,7 +495,7 @@ describe('CollectionPickerModal — restricted to a space', () => {
     render(CollectionPickerModal, { assetCount: 3, onClose, restrictToSpaceId: 'space-1' });
 
   it('lists the albums linked to that space instead of the user’s own albums', async () => {
-    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum('sa1', 'Space Trip')]);
+    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum()]);
     renderRestricted();
 
     await waitFor(() => expect(screen.getAllByTestId('row-album-sa1').length).toBeGreaterThan(0));
@@ -503,7 +504,7 @@ describe('CollectionPickerModal — restricted to a space', () => {
   });
 
   it('never offers spaces — no space pool accepts an asset the caller does not own', async () => {
-    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum('sa1', 'Space Trip')]);
+    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum()]);
     sdkMock.getAllSpaces.mockResolvedValue([space('s1', 'Family')]);
     renderRestricted();
 
@@ -513,7 +514,7 @@ describe('CollectionPickerModal — restricted to a space', () => {
   });
 
   it('hides both create rows — a brand-new album is not space-linked, so contributions could not land in it', async () => {
-    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum('sa1', 'Space Trip')]);
+    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum()]);
     renderRestricted();
 
     await waitFor(() => expect(screen.getAllByTestId('row-album-sa1').length).toBeGreaterThan(0));
@@ -522,7 +523,7 @@ describe('CollectionPickerModal — restricted to a space', () => {
   });
 
   it('explains why the list is narrowed', async () => {
-    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum('sa1', 'Space Trip')]);
+    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum()]);
     renderRestricted();
 
     await waitFor(() => expect(screen.getByTestId('restricted-to-space-notice')).toBeTruthy());
@@ -530,7 +531,7 @@ describe('CollectionPickerModal — restricted to a space', () => {
 
   it('confirms with the chosen linked album', async () => {
     const onClose = vi.fn();
-    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum('sa1', 'Space Trip')]);
+    sdkMock.getSharedSpaceAlbums.mockResolvedValue([linkedAlbum()]);
     renderRestricted(onClose);
 
     const rows = await screen.findAllByRole('button', { name: /Space Trip/ });
@@ -636,7 +637,7 @@ describe('CollectionPickerModal — valid targets for a known selection', () => 
     render(CollectionPickerModal, { props: { assetCount: assetIds.length, assetIds, onClose: vi.fn() } });
 
   it('hides albums that accept none of an owned selection, and shows no hint', async () => {
-    sdkMock.getAllAlbums.mockResolvedValue([album('a1', 'Trip'), albumSharedWithMe('a2', 'Viewer only')]);
+    sdkMock.getAllAlbums.mockResolvedValue([album('a1', 'Trip'), albumSharedWithMe('Viewer only')]);
     sdkMock.getAllSpaces.mockResolvedValue([space('s1', 'Family')]);
     sdkMock.getAlbumAddTargets.mockResolvedValue({
       albums: [{ albumId: 'a1', acceptedAssetCount: 1 }],

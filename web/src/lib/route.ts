@@ -1,8 +1,8 @@
-import { getBaseUrl, IntegrityReport, QueueName, type MetadataSearchDto, type SmartSearchDto } from '@immich/sdk';
+import type { FilterState } from '#lib/components/filter-panel/filter-panel.ts';
+import { OpenQueryParam, QueryParameter, type SharedLinkTab } from '#lib/constants.ts';
+import { encodeFilterParams } from '#lib/utils/filter-url.ts';
+import { IntegrityReport, QueueName, getBaseUrl, type MetadataSearchDto, type SmartSearchDto } from '@immich/sdk';
 import { omitBy } from 'lodash-es';
-import type { FilterState } from '$lib/components/filter-panel/filter-panel';
-import { OpenQueryParam, QueryParameter, type SharedLinkTab } from '$lib/constants';
-import { encodeFilterParams } from '$lib/utils/filter-url';
 
 const asQueueSlug = (name: QueueName) => {
   return name.replaceAll(/[A-Z]/g, (m) => '-' + m.toLowerCase());
@@ -16,11 +16,7 @@ export const fromQueueSlug = (slug: string): QueueName | undefined => {
 };
 
 type QueryValue = number | string | boolean;
-const asQueryString = (
-  params?: Record<string, QueryValue | undefined>,
-  options?: { skipEmptyStrings?: boolean; skipNullValues?: boolean },
-) => {
-  const { skipEmptyStrings = true, skipNullValues = true } = options ?? {};
+const asQueryString = (params?: Record<string, QueryValue | undefined>) => {
   const items = Object.entries(params ?? {})
     .filter((item): item is [string, QueryValue] => {
       const value = item[1];
@@ -29,11 +25,11 @@ const asQueryString = (
         return false;
       }
 
-      if (skipNullValues && value === null) {
+      if (value === null) {
         return false;
       }
 
-      return !(skipEmptyStrings && value === '');
+      return value !== '';
     })
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
 
@@ -104,9 +100,9 @@ export const Route = {
     }
 
     const point =
-      params?.zoom !== undefined && params?.lat !== undefined && params?.lng !== undefined
-        ? `#${params.zoom}/${params.lat}/${params.lng}`
-        : '';
+      params?.zoom === undefined || params?.lat === undefined || params?.lng === undefined
+        ? ''
+        : `#${params.zoom}/${params.lat}/${params.lng}`;
 
     const searchString = search.toString();
     return '/map' + (searchString ? `?${searchString}` : '') + point;
@@ -209,6 +205,12 @@ export const Route = {
   workflows: () => '/workflows',
   viewWorkflow: ({ id }: { id: string }) => `/workflows/${id}`,
 
+  // backups
+  backups: () => '/admin/backups',
+  backupSettings: () => '/admin/backups/settings',
+  backupAttempts: () => '/admin/backups/attempts',
+  backupSnapshots: () => '/admin/backups/snapshots',
+
   // face cleanup
   faceCleanup: () => '/admin/face-cleanup',
   faceCleanupScan: () => '/admin/face-cleanup/scan',
@@ -235,4 +237,8 @@ export const Route = {
 
     return resolved;
   },
+};
+
+export const ExternalRoute = {
+  docs: () => 'https://docs.immich.app/overview/quick-start',
 };

@@ -1,6 +1,6 @@
+import { comingDays, seriesCard } from '#test/kioku/factories/series-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
-import { comingDays, seriesCard } from '@test-data/factories/series-factory';
 import SeriesPage from './SeriesPage.svelte';
 import type { Coming, SeriesCard } from './series-api';
 import { POLL_MS } from './series-state.svelte';
@@ -21,9 +21,9 @@ const mocks = vi.hoisted(() => ({
   success: vi.fn(),
   danger: vi.fn(),
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: stub } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: stub } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: stub };
 });
 vi.mock('@immich/ui', async (importOriginal) => ({

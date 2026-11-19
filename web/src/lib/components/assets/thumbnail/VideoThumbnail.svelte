@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { cleanClass } from '$lib';
-  import { Icon } from '@immich/ui';
+  import { cleanClass } from '#lib';
+  import { keyboardManager } from '#lib/stores/keyboard-manager.svelte.ts';
+  import { formatDuration } from '#lib/utils/duration.ts';
+  import { Icon, LoadingSpinner } from '@immich/ui';
   import { mdiAlertCircleOutline, mdiPauseCircleOutline, mdiPlayCircleOutline } from '@mdi/js';
   import type { ClassValue } from 'svelte/elements';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
-  import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
-  import { formatDuration } from '$lib/utils/duration';
 
   interface Props {
     url: string;
@@ -18,7 +17,7 @@
     pauseIcon?: string;
     class?: ClassValue;
     /** Local Omarchy layer: the corner badge's own hook (`ws-live-badge`: a Live Photo's mark, shown only while the tile
-     * is pointed at or holds the focus) */
+    is pointed at or holds the focus) */
     badgeClass?: ClassValue;
   }
 

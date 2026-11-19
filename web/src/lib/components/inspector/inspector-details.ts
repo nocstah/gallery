@@ -1,12 +1,19 @@
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { getAssetMediaUrl } from '#lib/utils.ts';
+import { getByteUnitString } from '#lib/utils/byte-units.ts';
+import { curator, type Story } from '#lib/utils/curator.ts';
+import { fromISODateTime, fromISODateTimeUTC, fromISODateTimeUTCToObject, getTimes } from '#lib/utils/timeline-util.ts';
+import { weekAround, weekDaysAcrossYears, weekYears, type WeekYear } from '#lib/utils/week-across-years.ts';
 import {
   AssetMediaSize,
   AssetVisibility,
+  TimeBucketSize,
   getAllAlbums,
   getAssetInfo,
   getTimeBucket,
   getTimeBucketCovers,
   getTimeBuckets,
-  TimeBucketSize,
   type AlbumResponseDto,
   type AssetResponseDto,
   type ExifResponseDto,
@@ -16,13 +23,6 @@ import {
   type TimeBucketsResponseDto,
 } from '@immich/sdk';
 import { DateTime } from 'luxon';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { getAssetMediaUrl } from '$lib/utils';
-import { getByteUnitString } from '$lib/utils/byte-units';
-import { curator, type Story } from '$lib/utils/curator';
-import { fromISODateTime, fromISODateTimeUTC, fromISODateTimeUTCToObject, getTimes } from '$lib/utils/timeline-util';
-import { weekAround, weekDaysAcrossYears, weekYears, type WeekYear } from '$lib/utils/week-across-years';
 
 // Local Omarchy layer: what the inspector window (Inspector.svelte) asks Gallery and Curator about the photo a main
 // window points at, and how it says it. A sweep over the grid reaches the inspector only as the photos the pointer
@@ -107,10 +107,10 @@ export class InspectorDetailsLoader {
 export const DAYS_KEPT = 40;
 
 /**
- * The photos of one day as Photos shows them (the timeline's day: its visibility, a partner's and the Spaces' photos
- * in it, a stack as its cover), in the order they were taken: the strip under the details, which adds the day around
- * the photo on screen.
- */
+The photos of one day as Photos shows them (the timeline's day: its visibility, a partner's and the Spaces' photos
+in it, a stack as its cover), in the order they were taken: the strip under the details, which adds the day around
+the photo on screen.
+*/
 export type InspectorDay = { key: string; photos: TimelineAsset[] };
 
 type DayFetcher = (day: string, signal: AbortSignal) => Promise<TimeBucketAssetResponseDto>;
@@ -169,10 +169,10 @@ export const dayPhotosOf = (bucket: TimeBucketAssetResponseDto): TimelineAsset[]
 };
 
 /**
- * A photo's day for the strip: one request for a day not seen lately (the timeline's day bucket, one request
- * however many photos it holds), cancelled when another day is asked for first; the last days are kept, so moving
- * along one day, or back to it, asks nothing again.
- */
+A photo's day for the strip: one request for a day not seen lately (the timeline's day bucket, one request
+however many photos it holds), cancelled when another day is asked for first; the last days are kept, so moving
+along one day, or back to it, asks nothing again.
+*/
 export class InspectorDayLoader {
   #kept = new Map<string, InspectorDay>();
   #pending?: { key: string; controller: AbortController; promise: Promise<InspectorDay | undefined> };
@@ -235,10 +235,10 @@ export class InspectorDayLoader {
 }
 
 /**
- * A day with no other photo, across the years: the seven days around it in every other year whose months hold photos,
- * one photo a year, the one of its day nearest the photo's (utils/week-across-years, as Explore's week). `years` are
- * the other years, the newest first.
- */
+A day with no other photo, across the years: the seven days around it in every other year whose months hold photos,
+one photo a year, the one of its day nearest the photo's (utils/week-across-years, as Explore's week). `years` are
+the other years, the newest first.
+*/
 export type InspectorYears = { key: string; years: WeekYear[] };
 
 /** how many days' years are kept */
@@ -258,10 +258,10 @@ const galleryYears: YearsFetchers = {
 };
 
 /**
- * A day's years: the timeline's months once (kept a while, shared by every day), then one request for the covers of
- * the day's seven days in the years that hold photos in their months, cancelled when another day is asked for first;
- * the last days are kept, so going back to one asks nothing again.
- */
+A day's years: the timeline's months once (kept a while, shared by every day), then one request for the covers of
+the day's seven days in the years that hold photos in their months, cancelled when another day is asked for first;
+the last days are kept, so going back to one asks nothing again.
+*/
 export class InspectorYearsLoader {
   #kept = new Map<string, InspectorYears>();
   #months?: { at: number; promise: Promise<TimeBucketsResponseDto[]> };
@@ -351,11 +351,11 @@ export class InspectorYearsLoader {
 }
 
 /**
- * The years' tiles laid out to fill the room left under the details: as many columns as give the largest tiles that
- * still fit it, each tile between 3:4 and 3:2 and at least `min` wide, never a tile wider than half the room; where
- * even the smallest do not fit (a short window), tiles of `min` in as many columns as hold them, and the details
- * scroll.
- */
+The years' tiles laid out to fill the room left under the details: as many columns as give the largest tiles that
+still fit it, each tile between 3:4 and 3:2 and at least `min` wide, never a tile wider than half the room; where
+even the smallest do not fit (a short window), tiles of `min` in as many columns as hold them, and the details
+scroll.
+*/
 export const fitYearTiles = (
   count: number,
   { width, height, gap, min }: { width: number; height: number; gap: number; min: number },
@@ -385,10 +385,10 @@ export const fitYearTiles = (
 export const STORY_ALBUMS = 4;
 
 /**
- * Curator's story of the trip or event a photo belongs to, by the albums it is in (Curator tells an album's story by
- * the event its photos come from); each album is asked once a page load, its answer kept, a refusal kept as none.
- * Curator acts for its owner only: the caller asks curatorIsMine() first.
- */
+Curator's story of the trip or event a photo belongs to, by the albums it is in (Curator tells an album's story by
+the event its photos come from); each album is asked once a page load, its answer kept, a refusal kept as none.
+Curator acts for its owner only: the caller asks curatorIsMine() first.
+*/
 export class InspectorStories {
   #byAlbum = new Map<string, Promise<Story | null>>();
 
@@ -434,10 +434,10 @@ export const previewUrlOf = (id: string, thumbhash: string | null) =>
 export type TakenParts = { day: Intl.DateTimeFormatPart[]; time: string };
 
 /**
- * When the photo was taken, as the Info panel says it (DetailPanelDate): the camera's own clock in its own time zone
- * where the photo carries one, else the local time the server worked out for it. `day` is the date in the reader's
- * order as parts (so the year can be set apart), `time` the weekday and time, with the zone when there is one.
- */
+When the photo was taken, as the Info panel says it (DetailPanelDate): the camera's own clock in its own time zone
+where the photo carries one, else the local time the server worked out for it. `day` is the date in the reader's
+order as parts (so the year can be set apart), `time` the weekday and time, with the zone when there is one.
+*/
 export const takenOf = (
   asset: Pick<AssetResponseDto, 'exifInfo' | 'localDateTime'>,
   locale?: string,

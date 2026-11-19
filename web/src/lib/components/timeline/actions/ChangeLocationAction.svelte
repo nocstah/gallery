@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { vaultEdition } from '$lib/gallery/edition';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import GeolocationPointPickerModal from '$lib/modals/GeolocationPointPickerModal.svelte';
-  import { getEditableAssetsWithWarning, getOwnedAssetsWithWarning } from '$lib/utils/asset-utils';
-  import { handleError } from '$lib/utils/handle-error';
-  import { beforeChange, placesDone } from '$lib/utils/undoable';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import { vaultEdition } from '#lib/gallery/edition.ts';
+  import { getEditableAssetsWithWarning } from '#lib/gallery/utils/editable-assets.ts';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import GeolocationPointPickerModal from '#lib/modals/GeolocationPointPickerModal.svelte';
+  import { getOwnedAssetsWithWarning } from '#lib/utils/asset-utils.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { beforeChange, placesDone } from '#lib/utils/undoable.ts';
   import { updateAssets } from '@immich/sdk';
   import { modalManager, toastManager } from '@immich/ui';
   import { mdiMapMarkerMultipleOutline } from '@mdi/js';
@@ -15,10 +16,10 @@
   type Props = {
     menuItem?: boolean;
     /**
-     * #734: which of the current selection the caller may edit — send only these. Omitted on
-     * surfaces that don't resolve it (every render site outside `SelectionToolbar.svelte`),
-     * where it falls back to the pre-#734 ownership-only filter.
-     */
+    #734: which of the current selection the caller may edit — send only these. Omitted on
+    surfaces that don't resolve it (every render site outside `SelectionToolbar.svelte`),
+    where it falls back to the pre-#734 ownership-only filter.
+    */
     editableSelectedAssetIds?: string[];
   };
 

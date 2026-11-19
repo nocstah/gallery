@@ -276,17 +276,23 @@ if [[ ! -f $assets/favicon.ico && -n $favicon_drawn ]]; then
   [[ $(wc -w <<<"$sizes") -eq ${#frames[@]} ]] || die "favicon.ico did not take its ${#frames[@]} sizes"
   echo "  favicon.ico <- the ${sizes% } px PNGs"
 fi
-# A 24 px favicon is new with Kioku: app.html lists it beside the other sizes, once there is one
+# Upstream's app.html links an SVG tab icon, Noodle's own mark, beside favicon.ico. Kioku has drawn no SVG one: its tab
+# icon is the PNG cuts above (the petal on a paper tile), so app.html lists each size in the SVG's place, the 24 px
+# one (new with Kioku) too once there is one
+favicons='<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />'
 if [[ -f $ROOT/web/static/favicon-24.png ]]; then
-  rule web/src/app.html 1 <<'RULE'
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
-=>
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
-    <link rel="icon" type="image/png" sizes="24x24" href="/favicon-24.png" />
-RULE
+  favicons+=$'\n    <link rel="icon" type="image/png" sizes="24x24" href="/favicon-24.png" />'
 else
-  echo "  no 24 px favicon drawn: app.html keeps its sizes"
+  echo "  no 24 px favicon drawn: app.html lists the other sizes"
 fi
+for px in 32 48 96 144; do
+  favicons+=$'\n    '"<link rel=\"icon\" type=\"image/png\" sizes=\"${px}x${px}\" href=\"/favicon-${px}.png\" />"
+done
+rule web/src/app.html 1 <<RULE
+<link rel="icon" type="image/svg+xml" sizes="any" href="/icon.svg" />
+=>
+$favicons
+RULE
 required=$(jq '[.assets.files[] | select(.optional | not)] | length' "$BRAND")
 if ((${#missing[@]} > 0)); then
   echo "  warning: ${#missing[@]} of $required assets not drawn yet; Noodle's stay in their place:"

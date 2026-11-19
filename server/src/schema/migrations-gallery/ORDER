@@ -82,3 +82,7 @@
 1799500000000-AddCleanupTables
 1799600000000-AddAssetQualityScreenshotVersion
 1799700000000-AddAssetSpatialSceneTable
+1799800000000-ScopeJitOffToDatabase
+1799900000000-AddAssetDataSaverVideoTable
+1800000000000-AddAssetFaceVideoFrameTable
+1800100000000-AddVideoPetsSampledAt

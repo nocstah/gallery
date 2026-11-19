@@ -2,16 +2,16 @@ import { MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import type { MessageFormatter } from 'svelte-i18n';
 
 /**
- * Titles and subtitles for generated memory cards.
- *
- * Memory rules deliberately persist no prose: a memory is generated once by the server and then
- * read for days by clients in whatever language each viewer picked, so any English baked in at
- * generation time is stuck (#1045). Each rule instead stores structured facts in `data.context`,
- * and the card text is assembled here, in the viewer's language, every render.
- *
- * Memories generated before that change still carry `title`/`subtitle`, so those win when present
- * — an old card keeps reading as it did rather than falling back to "Unknown".
- */
+Titles and subtitles for generated memory cards.
+
+Memory rules deliberately persist no prose: a memory is generated once by the server and then
+read for days by clients in whatever language each viewer picked, so any English baked in at
+generation time is stuck (#1045). Each rule instead stores structured facts in `data.context`,
+and the card text is assembled here, in the viewer's language, every render.
+
+Memories generated before that change still carry `title`/`subtitle`, so those win when present
+— an old card keeps reading as it did rather than falling back to "Unknown".
+*/
 
 type RuleContext = Record<string, unknown>;
 
@@ -47,9 +47,9 @@ const asYears = (context: RuleContext): number[] | undefined =>
     : undefined;
 
 /**
- * "September 2025" / "septembre 2025". Built with `Intl` rather than an i18n message, so month
- * names come from the locale data instead of needing twelve translated strings.
- */
+"September 2025" / "septembre 2025". Built with `Intl` rather than an i18n message, so month
+names come from the locale data instead of needing twelve translated strings.
+*/
 const formatMonthYear = (locale: string | undefined, year: number, month: number) =>
   new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
     new Date(Date.UTC(year, month - 1, 1)),
@@ -263,8 +263,8 @@ export const getMemoryTitle = (
     }
   }
 
-  // immich-30831's birthday type. Gallery keeps these rows off every list (spec
-  // 2026-09-24), so this only titles one reached by id.
+  // immich-30831's birthday type, Gallery's only birthday memory since OD-3. The `birthday` rule
+  // builders above title the rule rows earlier releases generated.
   if (memory.type === MemoryType.Birthday) {
     const name = (memory.data as Record<string, unknown>).personName;
     if (typeof name === 'string') {
@@ -284,10 +284,10 @@ export const getMemorySubtitle = (memory: MemoryResponseDto, translate: MessageF
 };
 
 /**
- * Local Omarchy layer: the line under a card titled by its facts (utils/memory-title: "Siem Reap · October 2025"). The
- * title says when, so an on-this-day memory's line says how long ago, which was its title before ("1 year ago"), and
- * the two rules whose line repeated the month (people together, a person's throwback) count their photos alone.
- */
+Local Omarchy layer: the line under a card titled by its facts (utils/memory-title: "Siem Reap · October 2025"). The
+title says when, so an on-this-day memory's line says how long ago, which was its title before ("1 year ago"), and
+the two rules whose line repeated the month (people together, a person's throwback) count their photos alone.
+*/
 export const getMemoryCardSubtitle = (
   memory: MemoryResponseDto,
   translate: MessageFormatter,

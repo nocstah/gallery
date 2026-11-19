@@ -1,4 +1,4 @@
-import { celebrate, pulse, trajectory } from '$lib/gallery/motion/celebrate';
+import { celebrate, pulse, trajectory } from '#lib/gallery/motion/celebrate.ts';
 
 describe('trajectory', () => {
   it('launches along the angle and falls under gravity', () => {

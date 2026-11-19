@@ -3,17 +3,24 @@
   // are the Share sheet's (modals/AlbumShareModal): the owner gets one way there instead of upstream's second copy of
   // the people and links (whose Create link was the long form the sheet's one press replaced); anyone else still sees
   // who the album is shared with.
-  import HeaderActionButton from '$lib/components/HeaderActionButton.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
+  import HeaderActionButton from '#lib/components/HeaderActionButton.svelte';
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import { getAlbumQuery, updateAlbumInfoMutation } from '#lib/queries/album.query.ts';
+  import { executeMutation, queryClient } from '#lib/queries/client.ts';
   import {
     getAlbumActions,
     handleRemoveUserFromAlbum,
-    handleUpdateAlbum,
     handleUpdateUserAlbumRole,
-  } from '$lib/services/album.service';
-  import { AlbumUserRole, AssetOrder, getAlbumInfo, type AlbumResponseDto, type UserResponseDto } from '@immich/sdk';
+  } from '#lib/services/album.service.ts';
+  import {
+    AlbumUserRole,
+    AssetOrder,
+    type AlbumResponseDto,
+    type UpdateAlbumDto,
+    type UserResponseDto,
+  } from '@immich/sdk';
   import { Field, HStack, Modal, ModalBody, Select, Stack, Switch, Text, type SelectOption } from '@immich/ui';
+  import { createQuery } from '@tanstack/svelte-query';
   import { t } from 'svelte-i18n';
 
   type Props = {
@@ -22,7 +29,13 @@
     onClose: () => void;
   };
 
-  let { album, readOnly = false, onClose }: Props = $props();
+  let { album: initialAlbum, readOnly = false, onClose }: Props = $props();
+
+  const query = createQuery(
+    () => getAlbumQuery(initialAlbum.id),
+    () => queryClient,
+  );
+  const album = $derived(query.data ?? initialAlbum);
 
   const handleRoleSelect = async (user: UserResponseDto, role: AlbumUserRole | 'none') => {
     if (role === 'none') {
@@ -33,14 +46,8 @@
     await handleUpdateUserAlbumRole({ albumId: album.id, userId: user.id, role });
   };
 
-  const refreshAlbum = async () => {
-    album = await getAlbumInfo({ id: album.id });
-  };
-
-  const onAlbumUserDelete = async ({ userId }: { userId: string }) => {
-    album.albumUsers = album.albumUsers.filter(({ user: { id } }) => id !== userId);
-    await refreshAlbum();
-  };
+  const updateAlbum = (updateAlbumDto: UpdateAlbumDto) =>
+    executeMutation(updateAlbumInfoMutation, [{ id: album.id, updateAlbumDto }]);
 
   const { Share } = $derived(getAlbumActions($t, album));
   // the sheet takes over from here, so this box closes as it opens
@@ -52,8 +59,6 @@
     },
   });
 </script>
-
-<OnEvents {onAlbumUserDelete} onAlbumShare={refreshAlbum} onAlbumUpdate={(newAlbum) => (album = newAlbum)} />
 
 <Modal title={readOnly ? $t('album') : $t('options')} {onClose} size="small">
   <ModalBody>
@@ -69,14 +74,14 @@
                   { label: $t('newest_first'), value: AssetOrder.Desc },
                   { label: $t('oldest_first'), value: AssetOrder.Asc },
                 ]}
-                onChange={(value) => handleUpdateAlbum(album, { order: value })}
+                onChange={(value) => updateAlbum({ order: value })}
               />
             </Field>
           {/if}
           <Field label={$t('comments_and_likes')} description={$t('let_others_respond')} disabled={readOnly}>
             <Switch
               checked={album.isActivityEnabled}
-              onCheckedChange={(checked) => handleUpdateAlbum(album, { isActivityEnabled: checked })}
+              onCheckedChange={(checked) => updateAlbum({ isActivityEnabled: checked })}
             />
           </Field>
         </div>

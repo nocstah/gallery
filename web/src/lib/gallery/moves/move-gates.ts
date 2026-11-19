@@ -1,12 +1,13 @@
+import { vaultEdition } from '#lib/gallery/edition.ts';
+import { currentLibrary, libraries, otherLibraries } from '#lib/gallery/libraries/library-context.svelte.ts';
+import type { Library } from '#lib/gallery/libraries/library-file.ts';
+import { isDesktop, isLoopback } from '#lib/gallery/vaults/launcher.ts';
 // Local Omarchy layer: where Move to <library> is offered (gallery/moves). The mover listens on this computer only, so
 // a page reaches for it only where it can be reached and only for the owner: never in a vault's Gallery, only where
 // the library context lists another library, only on this library's own registered address, in this desktop's
 // browser. Elsewhere (another device, the tailnet, a vault) no page ever asks 127.0.0.1:2297 anything.
 import { AssetVisibility, type PersonResponseDto } from '@immich/sdk';
-import { vaultEdition } from '$lib/gallery/edition';
-import { currentLibrary, libraries, otherLibraries } from '$lib/gallery/libraries/library-context.svelte';
-import type { Library } from '$lib/gallery/libraries/library-file';
-import { isDesktop, isLoopback } from '$lib/gallery/vaults/launcher';
+import type { ReadonlyURL } from '$app/state';
 import type { MovePerson } from './mover';
 
 /** Who is signed in, as far as a move cares: their id, and whether they are the owner (the server's admin). */
@@ -19,11 +20,11 @@ export const ownLibraryAddress = (): string | undefined => {
 };
 
 /**
- * The page conditions: not a vault's Gallery, another library listed, this page served from this library's own
- * registered address on this computer, this desktop's browser, and the owner signed in. The menu rows, the progress
- * panel and the move page all ask this first.
- */
-export const moverPageAllowed = (url: URL, userAgent: string, owner: MoveOwner): boolean =>
+The page conditions: not a vault's Gallery, another library listed, this page served from this library's own
+registered address on this computer, this desktop's browser, and the owner signed in. The menu rows, the progress
+panel and the move page all ask this first.
+*/
+export const moverPageAllowed = (url: ReadonlyURL, userAgent: string, owner: MoveOwner): boolean =>
   !vaultEdition() &&
   otherLibraries().length > 0 &&
   ownLibraryAddress() === url.origin &&
@@ -38,9 +39,9 @@ export const moveTargets = (): readonly Library[] => otherLibraries();
 export const libraryById = (id: string): Library | undefined => libraries().find((library) => library.id === id);
 
 /**
- * A move's page in its destination, at that library's own address: the move's id, and the source it comes from, which
- * the page names while the move is on its way.
- */
+A move's page in its destination, at that library's own address: the move's id, and the source it comes from, which
+the page names while the move is on its way.
+*/
 export const movePageUrl = (destination: Library, move: string, source: string) => {
   const url = new URL('/moves', destination.url);
   url.searchParams.set('move', move);
@@ -59,12 +60,12 @@ type Movable = { id: string; ownerId: string; isTrashed: boolean; visibility?: A
 export type MoveSelection = { ids: string[]; notOwned: number };
 
 /**
- * Whether a selection can move from here, and what of it: the page conditions, no photo in the trash or in the Locked
- * Folder (the mover's key cannot read one there, so it would only stay behind), and at least one photo the owner's
- * own. Only those go; a person's page can show a partner's photos too, and those stay.
- */
+Whether a selection can move from here, and what of it: the page conditions, no photo in the trash or in the Locked
+Folder (the mover's key cannot read one there, so it would only stay behind), and at least one photo the owner's
+own. Only those go; a person's page can show a partner's photos too, and those stay.
+*/
 export const canMoveFrom = (
-  url: URL,
+  url: ReadonlyURL,
   userAgent: string,
   owner: MoveOwner,
   assets: readonly Movable[],
@@ -81,9 +82,9 @@ export const canMoveFrom = (
 };
 
 /**
- * Whether a person is the owner's own here, as the person page reads them: no grouped person (a filterId spans
- * Spaces, so its photos are chosen with Select all instead) and no Space's person. The mover checks it again.
- */
+Whether a person is the owner's own here, as the person page reads them: no grouped person (a filterId spans
+Spaces, so its photos are chosen with Select all instead) and no Space's person. The mover checks it again.
+*/
 export const isOwnPerson = (person: PersonResponseDto) =>
   !person.filterId &&
   person.primaryProfile?.type !== 'space-person' &&
@@ -92,7 +93,7 @@ export const isOwnPerson = (person: PersonResponseDto) =>
 
 /** Whether a person's photos can move from here: the page conditions, and the person the owner's own. */
 export const canMovePerson = (
-  url: URL,
+  url: ReadonlyURL,
   userAgent: string,
   owner: MoveOwner,
   person: PersonResponseDto | undefined,

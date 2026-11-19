@@ -1,11 +1,12 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:immich_mobile/domain/models/person.model.dart';
+import 'package:immich_mobile/data/store.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/gallery/cleanup/widgets/library_cleanup_button.dart';
+import 'package:immich_mobile/gallery/widgets/library_collection_cards.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/presentation/widgets/images/local_album_thumbnail.widget.dart';
 import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
@@ -14,7 +15,6 @@ import 'package:immich_mobile/presentation/widgets/people/partner_user_avatar.wi
 import 'package:immich_mobile/providers/gallery_nav/bottom_nav_height.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/album.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/memory.provider.dart';
-import 'package:immich_mobile/providers/infrastructure/people.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/user.provider.dart';
 import 'package:immich_mobile/providers/server_info.provider.dart';
 import 'package:immich_mobile/providers/shared_space.provider.dart';
@@ -145,7 +145,7 @@ class _CollectionCards extends ConsumerWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            if (ref.watch(serverSupportsSpacesProvider)) const _SpacesCollectionCard(),
+            if (ref.watch(serverSupportsSpacesProvider)) const SpacesCollectionCard(),
             const _PeopleCollectionCard(),
             const _PlacesCollectionCard(),
             const _LocalAlbumsCollectionCard(),
@@ -158,98 +158,12 @@ class _CollectionCards extends ConsumerWidget {
   }
 }
 
-class _SpacesCollectionCard extends ConsumerWidget {
-  const _SpacesCollectionCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final spacesAsync = ref.watch(sharedSpacesProvider);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isTablet = constraints.maxWidth > 600;
-        final widthFactor = isTablet ? 0.25 : 0.5;
-        final size = context.width * widthFactor - 20.0;
-
-        return GestureDetector(
-          onTap: () => context.pushRoute(const SpacesRoute()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: size,
-                width: size,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(Radius.circular(20)),
-                    gradient: LinearGradient(
-                      colors: [context.colorScheme.primary.withAlpha(30), context.colorScheme.primary.withAlpha(25)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                  child: spacesAsync.widgetWhen(
-                    onLoading: () => const Center(child: CircularProgressIndicator()),
-                    onData: (spaces) {
-                      if (spaces.isEmpty) {
-                        return Center(
-                          child: Icon(Icons.workspaces_outlined, size: 48, color: context.colorScheme.primary),
-                        );
-                      }
-                      return GridView.count(
-                        crossAxisCount: 2,
-                        padding: const EdgeInsets.all(12),
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: spaces.take(4).map((space) {
-                          final thumbnailId = space.thumbnailAssetId.value;
-                          if (thumbnailId == null) {
-                            return DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.surfaceContainerHigh,
-                                borderRadius: const BorderRadius.all(Radius.circular(10)),
-                              ),
-                              child: Icon(Icons.workspaces_outlined, color: context.colorScheme.primary),
-                            );
-                          }
-                          return ClipRRect(
-                            borderRadius: const BorderRadius.all(Radius.circular(10)),
-                            child: Image(
-                              image: RemoteImageProvider(url: getThumbnailUrlForRemoteId(thumbnailId)),
-                              fit: BoxFit.cover,
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  context.t.spaces,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    color: context.colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
 class _PeopleCollectionCard extends ConsumerWidget {
   const _PeopleCollectionCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final people = ref.watch(getAllPeopleProvider(PeopleSortBy.photoCount));
+    final people = ref.watch(Store.people.all());
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -514,105 +428,61 @@ final sharedWithPartnerProvider = StreamProvider.autoDispose<Iterable<Partner>>(
   return ref.watch(partnerServiceProvider).search(currentUser.id, .sharedWith);
 });
 
-/// Albums entry point on the Library tab.
-///
-/// Public (unlike its sibling cards) so a widget test can pin the route it
-/// pushes: with Spaces occupying the middle nav slot by default
-/// (`SettingsKey.navShowSpaces`), the Library tab is where the albums list is
-/// reached from — this card and the `albums` tile in [_QuickAccessButtonList]
-/// are its only two entry points. Pumping the whole [DriftLibraryPage] to cover
-/// that would mean standing up the app bar's auth/server stack plus a maplibre
-/// platform view.
-@visibleForTesting
-class AlbumsCollectionCard extends ConsumerWidget {
-  const AlbumsCollectionCard({super.key});
+class _QuickAccessItem {
+  final Widget leading;
+  final String title;
+  final VoidCallback onTap;
+  final EdgeInsetsGeometry? contentPadding;
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final albumState = ref.watch(remoteAlbumProvider);
-    final albums = albumState.albums;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isTablet = constraints.maxWidth > 600;
-        final widthFactor = isTablet ? 0.25 : 0.5;
-        final size = context.width * widthFactor - 20.0;
-
-        return GestureDetector(
-          key: const Key('library-albums-card'),
-          onTap: () => context.pushRoute(const AlbumsRoute()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: size,
-                width: size,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(Radius.circular(20)),
-                    gradient: LinearGradient(
-                      colors: [context.colorScheme.primary.withAlpha(30), context.colorScheme.primary.withAlpha(25)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    padding: const EdgeInsets.all(12),
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: albums.take(4).map((album) {
-                      final thumbnailId = album.thumbnailAssetId;
-                      if (thumbnailId == null) {
-                        return DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: context.colorScheme.surfaceContainerHigh,
-                            borderRadius: const BorderRadius.all(Radius.circular(10)),
-                          ),
-                          child: Icon(Icons.photo_album_outlined, color: context.colorScheme.primary),
-                        );
-                      }
-                      return ClipRRect(
-                        borderRadius: const BorderRadius.all(Radius.circular(10)),
-                        child: Image(
-                          image: RemoteImageProvider(url: getThumbnailUrlForRemoteId(thumbnailId)),
-                          fit: BoxFit.cover,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  context.t.albums,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    color: context.colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  const _QuickAccessItem({required this.leading, required this.title, required this.onTap, this.contentPadding});
 }
 
 class _QuickAccessButtonList extends ConsumerWidget {
   const _QuickAccessButtonList();
+
+  static const _tileRadius = 20.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final partnerSharedWithAsync = ref.watch(sharedWithPartnerProvider);
     final partners = partnerSharedWithAsync.valueOrNull ?? [];
     final showSpaces = ref.watch(serverSupportsSpacesProvider);
-    const topShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-    );
+
+    final items = [
+      if (showSpaces)
+        _QuickAccessItem(
+          leading: const Icon(Icons.workspaces_outlined, size: 26),
+          title: context.t.spaces,
+          onTap: () => context.pushRoute(const SpacesRoute()),
+        ),
+      _QuickAccessItem(
+        leading: const Icon(Icons.folder_outlined, size: 26),
+        title: context.t.folders,
+        onTap: () => context.pushRoute(FolderRoute()),
+      ),
+      _QuickAccessItem(
+        leading: const Icon(Icons.lock_outline_rounded, size: 26),
+        title: context.t.locked_folder,
+        onTap: () => context.pushRoute(const LockedFolderRoute()),
+      ),
+      _QuickAccessItem(
+        leading: const Icon(Icons.group_outlined, size: 26),
+        title: context.t.partners,
+        onTap: () => context.pushRoute(const PartnerRoute()),
+      ),
+      _QuickAccessItem(
+        leading: const Icon(Icons.photo_album_outlined, size: 26),
+        title: context.t.albums,
+        onTap: () => context.pushRoute(const AlbumsRoute()),
+      ),
+      for (final partner in partners)
+        _QuickAccessItem(
+          contentPadding: const EdgeInsets.only(left: 12.0, right: 18.0),
+          leading: PartnerUserAvatar(userId: partner.id, name: partner.name),
+          title: context.t.partner_list_user_photos(user: partner.name),
+          onTap: () => context.pushRoute(PartnerDetailRoute(partner: partner)),
+        ),
+    ];
 
     return SliverPadding(
       padding: const EdgeInsets.only(left: 16, top: 12, right: 16, bottom: 32),
@@ -620,7 +490,7 @@ class _QuickAccessButtonList extends ConsumerWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             border: Border.all(color: context.colorScheme.onSurface.withAlpha(10), width: 1),
-            borderRadius: const BorderRadius.all(Radius.circular(20)),
+            borderRadius: const BorderRadius.all(Radius.circular(_tileRadius)),
             gradient: LinearGradient(
               colors: [
                 context.colorScheme.primary.withAlpha(10),
@@ -631,94 +501,33 @@ class _QuickAccessButtonList extends ConsumerWidget {
               end: Alignment.bottomCenter,
             ),
           ),
-          child: ListView(
+          child: ListView.builder(
             shrinkWrap: true,
             padding: EdgeInsets.zero,
             physics: const NeverScrollableScrollPhysics(),
-            children: [
-              if (showSpaces)
-                ListTile(
-                  shape: topShape,
-                  leading: const Icon(Icons.workspaces_outlined, size: 26),
-                  title: Text(
-                    context.t.spaces,
-                    style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final isFirst = index == 0;
+              final isLast = index == items.length - 1;
+              return ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(isFirst ? _tileRadius : 0),
+                    topRight: Radius.circular(isFirst ? _tileRadius : 0),
+                    bottomLeft: Radius.circular(isLast ? _tileRadius : 0),
+                    bottomRight: Radius.circular(isLast ? _tileRadius : 0),
                   ),
-                  onTap: () => context.pushRoute(const SpacesRoute()),
                 ),
-              ListTile(
-                shape: showSpaces ? null : topShape,
-                leading: const Icon(Icons.folder_outlined, size: 26),
-                title: Text(
-                  context.t.folders,
-                  style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
-                ),
-                onTap: () => context.pushRoute(FolderRoute()),
-              ),
-              ListTile(
-                leading: const Icon(Icons.lock_outline_rounded, size: 26),
-                title: Text(
-                  context.t.locked_folder,
-                  style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
-                ),
-                onTap: () => context.pushRoute(const LockedFolderRoute()),
-              ),
-              ListTile(
-                leading: const Icon(Icons.group_outlined, size: 26),
-                title: Text(
-                  context.t.partners,
-                  style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
-                ),
-                onTap: () => context.pushRoute(const PartnerRoute()),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_album_outlined, size: 26),
-                title: Text(
-                  context.t.albums,
-                  style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500),
-                ),
-                onTap: () => context.pushRoute(const AlbumsRoute()),
-              ),
-              _PartnerList(partners: partners.toList()),
-            ],
+                contentPadding: item.contentPadding,
+                leading: item.leading,
+                title: Text(item.title, style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
+                onTap: item.onTap,
+              );
+            },
           ),
         ),
       ),
-    );
-  }
-}
-
-class _PartnerList extends StatelessWidget {
-  const _PartnerList({required this.partners});
-
-  final List<Partner> partners;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: EdgeInsets.zero,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: partners.length,
-      shrinkWrap: true,
-      itemBuilder: (context, index) {
-        final partner = partners[index];
-        final isLastItem = index == partners.length - 1;
-        return ListTile(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(isLastItem ? 20 : 0),
-              bottomRight: Radius.circular(isLastItem ? 20 : 0),
-            ),
-          ),
-          contentPadding: const EdgeInsets.only(left: 12.0, right: 18.0),
-          leading: PartnerUserAvatar(userId: partner.id, name: partner.name),
-          title: Text(
-            context.t.partner_list_user_photos(user: partner.name),
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-          onTap: () => context.pushRoute(PartnerDetailRoute(partner: partner)),
-        );
-      },
     );
   }
 }

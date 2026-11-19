@@ -7,6 +7,8 @@ import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/platform_extensions.dart';
+import 'package:immich_mobile/gallery/video/data_saver_video.dart';
+import 'package:immich_mobile/gallery/video_faces/video_moments.widgets.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/is_motion_video_playing.provider.dart';
 import 'package:immich_mobile/providers/asset_viewer/video_player_provider.dart';
@@ -169,7 +171,7 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
       }
 
       final isOriginalVideo = ref.read(appConfigProvider).viewer.loadOriginalVideo;
-      final String postfixUrl = isOriginalVideo ? 'original' : 'video/playback';
+      final String postfixUrl = isOriginalVideo ? 'original' : await ref.read(remoteVideoRouteProvider).resolve();
       final String assetId = remoteAsset.livePhotoVideoId ?? remoteAsset.id;
       final String videoUrl = '$serverEndpoint/assets/$assetId/$postfixUrl';
 
@@ -323,16 +325,22 @@ class NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widge
   Widget build(BuildContext context) {
     final isCasting = ref.watch(castProvider.select((c) => c.isCasting));
     final status = ref.watch(videoPlayerProvider(widget.asset.id).select((v) => v.status));
+    // https://github.com/flutter/flutter/issues/97499: iOS platform views are only disposed in frames containing platform views, or on
+    // the first frame after a platform view disappears. Animating this view away uses those disappearing frames. Instead, forcibly remove
+    // the view from the tree when we start a route transition, which has the side effect of properly ordering the `dispose`
+    final isRouteActive = ModalRoute.of(context)?.isActive ?? true;
+    final showPlayer = !isCasting && isRouteActive;
 
     return IgnorePointer(
       child: Stack(
         children: [
-          if (!_isVideoReady || widget.asset.isMotionPhoto || isCasting) Positioned.fill(child: widget.image),
-          if (!isCasting) ...[
+          if (!_isVideoReady || widget.asset.isMotionPhoto || !showPlayer) Positioned.fill(child: widget.image),
+          if (showPlayer) ...[
             Visibility.maintain(
               visible: _isVideoReady,
               child: NativeVideoPlayerView(onViewReady: _initController),
             ),
+            VideoFaceBoxOverlay(assetId: widget.asset.id),
             Center(
               child: AnimatedOpacity(
                 opacity: status == VideoPlaybackStatus.buffering ? 1.0 : 0.0,

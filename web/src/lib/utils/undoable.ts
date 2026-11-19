@@ -2,6 +2,11 @@
 // succeeded, records how to take it back, and shows the action's toast with an Undo; the undo puts the old state back
 // on the server and lets every live view catch up (utils/asset-refresh, or the stack and album events). Trash and
 // archive record theirs where they happen (utils/actions, utils/asset-utils), and people theirs in services/person.
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { waitForWebsocketEvent } from '#lib/stores/websocket.ts';
+import { refreshAssets } from '#lib/utils/asset-refresh.ts';
 import {
   addAssetsToAlbum,
   bulkTagAssets,
@@ -26,11 +31,6 @@ import { toastManager } from '@immich/ui';
 import { DateTime } from 'luxon';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import { waitForWebsocketEvent } from '$lib/stores/websocket';
-import { refreshAssets } from '$lib/utils/asset-refresh';
 
 type Tone = 'primary' | 'info' | 'success' | 'warning';
 
@@ -40,7 +40,7 @@ type Tone = 'primary' | 'info' | 'success' | 'warning';
 export const UNDO_TOAST_MS = 8000;
 
 /** The toast of a done action, with an Undo that takes back its history entry (in the tone its own toast had: `info`
- * or `warning` for a partly done one). */
+or `warning` for a partly done one). */
 export const toastUndoable = (description: string, entry: number, tone: Tone = 'primary') => {
   const $t = get(t);
   toastManager[tone](
@@ -116,14 +116,14 @@ const restack = async (shapes: StackShape[]) => {
 };
 
 /** The stacks the given photos are in before they are stacked (stacking moves them, and merges a stack whose cover is
- * among them); undefined when there are too many to read, and the stacking then records no undo. */
+among them); undefined when there are too many to read, and the stacking then records no undo. */
 export const stacksBefore = async (assetIds: string[]): Promise<StackShape[] | undefined> => {
   if (assetIds.length > 50) {
     return undefined;
   }
   try {
     const assets = await Promise.all(assetIds.map((id) => getAssetInfo({ ...authManager.params, id })));
-    const stackIds = new Set(assets.flatMap(({ stack }) => (stack ? [stack.id] : [])));
+    const stackIds = new Set(assets.flatMap(({ stack }) => (stack ? stack.id : [])));
     const stacks = await Promise.all([...stackIds].map((id) => getStack({ id })));
     return stacks.map((stack) => shapeOf(stack));
   } catch {
@@ -313,7 +313,7 @@ const groupBy = <T>(entries: [string, T][], key: (value: T) => string) => {
 };
 
 /** What an undo says: done, and (for dates and places) how many had nothing to go back to (Gallery cannot take a
- * date or a place away from a photo, only change it). */
+date or a place away from a photo, only change it). */
 export const undone = (label: string, kept = 0) => {
   const $t = get(t);
   const done = $t('undone', { values: { action: label } });
@@ -321,7 +321,7 @@ export const undone = (label: string, kept = 0) => {
 };
 
 /** A date change (one photo or many, to a date or by an offset): undone by giving each photo its old date and time
- * zone back. The time goes back with its own offset; a named zone (Asia/Bangkok) goes back by name. */
+zone back. The time goes back with its own offset; a named zone (Asia/Bangkok) goes back by name. */
 export const datesDone = (ids: string[], before: Map<string, Before> | undefined) => {
   if (!before) {
     return;
@@ -401,7 +401,7 @@ export const descriptionDone = (asset: { id: string; originalFileName: string },
 };
 
 /** Tagging: undone by taking each tag off just the photos that did not have it before (read by beforeChange), so a
- * tag a photo already had stays on it. Too many photos to read beforehand: the plain toast, no undo. */
+tag a photo already had stays on it. Too many photos to read beforehand: the plain toast, no undo. */
 export const taggedDone = (
   assetIds: string[],
   tagIds: string[],
@@ -460,8 +460,8 @@ export const editsOf = async (id: string): Promise<Edits> => {
 };
 
 /** Rotations and the editor's edits: undone by giving each photo its edits from before, then waiting until the server
- * has drawn them again (a video takes longer). `toast` is the action's own toast, which gains the Undo; without one
- * the undo is recorded quietly, as a quick rotate has no toast of its own. */
+has drawn them again (a video takes longer). `toast` is the action's own toast, which gains the Undo; without one
+the undo is recorded quietly, as a quick rotate has no toast of its own. */
 export const editsDone = (
   label: string,
   before: { id: string; edits: Edits }[],

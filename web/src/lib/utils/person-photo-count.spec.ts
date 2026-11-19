@@ -1,10 +1,10 @@
+import { personPhotoCount } from '#lib/utils/person-photo-count.ts';
 import { init, register, t, waitLocale } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { personPhotoCount } from '$lib/utils/person-photo-count';
 
 describe('personPhotoCount', () => {
   beforeAll(async () => {
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
     await waitLocale('en-US');
   });

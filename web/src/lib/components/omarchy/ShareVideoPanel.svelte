@@ -2,9 +2,9 @@
   // Local Omarchy layer: the videos being made ready for a chat app (managers/share-video-manager), in a square panel
   // in the corner: each with its progress while Curator makes it, then its size once the browser has saved it (save it
   // again from here), or that it failed (try again). The close button clears the finished ones.
-  import { SHARE_APPS, shareVideos } from '$lib/managers/share-video-manager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
-  import { getByteUnitString } from '$lib/utils/byte-units';
+  import { SHARE_APPS, shareVideos } from '#lib/managers/share-video-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getByteUnitString } from '#lib/utils/byte-units.ts';
   import { Icon } from '@immich/ui';
   import { mdiClose, mdiDownload, mdiReload } from '@mdi/js';
   import { t } from 'svelte-i18n';

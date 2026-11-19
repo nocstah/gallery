@@ -5,6 +5,7 @@ import { SearchSuggestionType } from 'src/dtos/search.dto.js';
 import { AssetVisibility, JobName, SharedSpaceRole, SourceType, UserMetadataKey } from 'src/enum.js';
 import { FaceSearchRepository } from 'src/gallery/repositories/face-search.repository.js';
 import { FilterSuggestionRepository } from 'src/gallery/repositories/filter-suggestion.repository.js';
+import { GalleryAssetRepository } from 'src/gallery/repositories/gallery-asset.repository.js';
 import { QueueMaintenanceRepository } from 'src/gallery/repositories/queue-maintenance.repository.js';
 import { SmartFacetRepository } from 'src/gallery/repositories/smart-facet.repository.js';
 import { FaceIdentityMaintenanceService } from 'src/gallery/services/face-identity-maintenance.service.js';
@@ -44,6 +45,7 @@ const axisEmbedding = (axis: 'first' | 'second') => {
   return '[' + values.join(',') + ']';
 };
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 const setup = (db?: Kysely<DB>) => {
   const { ctx, sut } = newMediumService(PersonService, {
     database: db || defaultDatabase,
@@ -80,12 +82,14 @@ const setup = (db?: Kysely<DB>) => {
   return { ctx, sut, faceIdentityRepository: ctx.get(FaceIdentityRepository) };
 };
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 const setupSharedSpace = (db?: Kysely<DB>) => {
   const { ctx, sut } = newMediumService(SharedSpaceService, {
     database: db || defaultDatabase,
     real: [
       AccessRepository,
       AssetRepository,
+      GalleryAssetRepository,
       ConfigRepository,
       // L7: removeMember wraps the membership delete + owned-album unlink in
       // this.databaseRepository.transaction() — needs a real connection to the test DB.
@@ -144,6 +148,7 @@ const drainSharedSpaceFaceMatchFromBackfillJobs = async (
   }
 };
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 const setupSearch = (db?: Kysely<DB>) => {
   const { ctx, sut } = newMediumService(SearchService, {
     database: db || defaultDatabase,
@@ -2920,7 +2925,7 @@ describe('People identity RBAC projection', () => {
     const jobs = ctx.getMock(JobRepository);
     jobs.waitForQueueCompletion.mockResolvedValue();
     jobs.empty.mockResolvedValue();
-    jobs.getJobCounts.mockResolvedValue({ active: 0, waiting: 0, delayed: 0, paused: 0, failed: 0, completed: 0 });
+    jobs.getJobCounts.mockResolvedValue({ active: 0, waiting: 0, delayed: 0, failed: 0, completed: 0 });
     ctx.getMock(SystemMetadataRepository).set.mockResolvedValue();
     await ctx.database.deleteFrom('user').execute();
     const { user: owner } = await ctx.newUser();

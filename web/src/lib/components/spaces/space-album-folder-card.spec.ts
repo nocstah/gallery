@@ -1,14 +1,14 @@
-import type { SharedSpaceAlbumFolderDto, SharedSpaceLinkedAlbumDto } from '@immich/sdk';
-import { mdiFolderOutline } from '@mdi/js';
-import { fireEvent, screen } from '@testing-library/svelte';
-import SpaceAlbumFolderCard from '$lib/components/spaces/space-album-folder-card.svelte';
+import SpaceAlbumFolderCard from '#lib/components/spaces/space-album-folder-card.svelte';
 import {
   getActiveDragPayload,
   readDragPayload,
   setActiveDragPayload,
   writeDragPayload,
-} from '$lib/utils/space-album-folder-dnd';
-import { renderWithTooltips } from '$tests/helpers';
+} from '#lib/utils/space-album-folder-dnd.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
+import type { SharedSpaceAlbumFolderDto, SharedSpaceLinkedAlbumDto } from '@immich/sdk';
+import { mdiFolderOutline } from '@mdi/js';
+import { fireEvent, screen } from '@testing-library/svelte';
 
 const folder = {
   id: 'trips',
@@ -22,8 +22,7 @@ const folder = {
 
 const otherFolder = { ...folder, id: 'family', name: 'Family' };
 
-const album = (id: string, folderId: string | null = null) =>
-  ({ id, albumName: id, folderId }) as SharedSpaceLinkedAlbumDto;
+const album = () => ({ id: 'a1', albumName: 'a1', folderId: null }) as SharedSpaceLinkedAlbumDto;
 
 const makeDataTransfer = () => {
   const store = new Map<string, string>();
@@ -215,7 +214,7 @@ describe('SpaceAlbumFolderCard', () => {
       const { container } = renderWithTooltips(SpaceAlbumFolderCard, {
         ...defaults,
         folders: [folder, otherFolder],
-        albums: [album('a1')],
+        albums: [album()],
       });
       const card = container.querySelector('[data-testid="space-album-folder-card"]')!;
 
@@ -245,7 +244,7 @@ describe('SpaceAlbumFolderCard', () => {
         ...defaults,
         canManage: false,
         folders: [folder, otherFolder],
-        albums: [album('a1')],
+        albums: [album()],
       });
       const card = container.querySelector('[data-testid="space-album-folder-card"]')!;
 
@@ -261,7 +260,7 @@ describe('SpaceAlbumFolderCard', () => {
       const { container } = renderWithTooltips(SpaceAlbumFolderCard, {
         ...defaults,
         folders: [folder, otherFolder],
-        albums: [album('a1')],
+        albums: [album()],
         onDropItem,
       });
       const card = container.querySelector('[data-testid="space-album-folder-card"]')!;

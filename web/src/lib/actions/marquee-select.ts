@@ -18,12 +18,12 @@
 // sidebar while over it. Only rendered tiles can be hit, so tiles that scroll out of view keep whatever state the box
 // gave them. Touch keeps Immich's own long-press (Thumbnail.svelte skips mouse and pen holds inside
 // [data-ws-gestures]).
+import type { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { sidebarDrop, sourceOf, type Offer } from '#lib/managers/sidebar-drop.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import type { DropResult } from '#lib/services/sidebar-drop.service.ts';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { sidebarDrop, sourceOf, type Offer } from '$lib/managers/sidebar-drop.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import type { DropResult } from '$lib/services/sidebar-drop.service';
 
 type Options = {
   assetInteraction: AssetMultiSelectManager;
@@ -33,7 +33,7 @@ type Options = {
   /** photos a hold may not pick (those already in the album being added to) */
   locked?: (id: string) => boolean;
   /** hold and drag a photo onto another to stack them (the timeline, the default); elsewhere photos only go to the
-   * sidebar */
+  sidebar */
   stacking?: boolean;
   /** what scrolls, when it is not the grid itself: the pane the grid sits in, or null for the page */
   scroller?: HTMLElement | null;
@@ -431,7 +431,7 @@ export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
           // the folders on the way to the row stay open; the photos go there once the drop's service has loaded
           sidebarDrop.end(true);
           const selection = fromSelection;
-          void import('$lib/services/sidebar-drop.service')
+          void import('#lib/services/sidebar-drop.service.ts')
             .then(({ dropOn }) => dropOn(into, carry))
             .then((result) => {
               if (!result) {
@@ -450,7 +450,7 @@ export const marqueeSelect = (grid: HTMLElement, initial: Options) => {
           const ids = [target, ...dragIds];
           // loaded on first use: the stack service pulls in the uploader and the album service, which the
           // timeline has no other need of (and its unit test mocks around)
-          void import('$lib/services/stack.service').then(({ handleStack }) => handleStack(ids));
+          void import('#lib/services/stack.service.ts').then(({ handleStack }) => handleStack(ids));
         } else {
           settleGhost(tileFor(grid, startTile?.dataset.asset ?? ''));
         }

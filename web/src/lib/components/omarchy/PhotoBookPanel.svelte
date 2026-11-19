@@ -5,11 +5,11 @@
   // lab, its cover, and a light preview of the spreads for reading on screen. The close button clears the finished
   // ones. It also asks Curator, once someone is signed in, whether it makes books at all; the layout mounts it for
   // Curator's owner alone (utils/curator's curatorIsMine).
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { photoBooks, type BookItem } from '$lib/managers/photo-book-manager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
-  import { getByteUnitString } from '$lib/utils/byte-units';
-  import { bookFileUrl, type BookPart } from '$lib/utils/curator';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { photoBooks, type BookItem } from '#lib/managers/photo-book-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getByteUnitString } from '#lib/utils/byte-units.ts';
+  import { bookFileUrl, type BookPart } from '#lib/utils/curator.ts';
   import { Icon } from '@immich/ui';
   import { mdiClose, mdiDownload, mdiOpenInNew, mdiReload } from '@mdi/js';
   import { t } from 'svelte-i18n';

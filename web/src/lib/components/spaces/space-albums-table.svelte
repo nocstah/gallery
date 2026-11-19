@@ -1,21 +1,18 @@
 <script lang="ts">
-  import { SortOrder, locale } from '$lib/stores/preferences.store';
-  import { spaceAlbumViewSettings } from '$lib/stores/space-album-view-settings.store';
-  import {
-    isSpaceAlbumGroupCollapsed,
-    toggleSpaceAlbumGroupCollapsing,
-    type SpaceAlbumGroup,
-  } from '$lib/utils/space-album-grouping';
-  import LazyChunks from '$lib/gallery/components/lazy-chunks.svelte';
-  import SpaceAlbumsTableHeader from '$lib/components/spaces/space-albums-table-header.svelte';
+  import SpaceAlbumsTableHeader from '#lib/components/spaces/space-albums-table-header.svelte';
+  import { dateFormats } from '#lib/constants.ts';
+  import LazyChunks from '#lib/gallery/components/lazy-chunks.svelte';
+  import { Route } from '#lib/route.ts';
+  import { SortOrder, locale } from '#lib/stores/preferences.store.ts';
+  import { spaceAlbumViewSettings } from '#lib/stores/space-album-view-settings.store.ts';
+  import { isAlbumGroupCollapsed, toggleAlbumGroupCollapsing } from '#lib/utils/album-utils.ts';
+  import { EMPTY_FOLDER_SUMMARY, buildFolderSummaries, getFolderContents } from '#lib/utils/space-album-folders.ts';
+  import { type SpaceAlbumGroup } from '#lib/utils/space-album-grouping.ts';
   import {
     SpaceAlbumSortBy,
     spaceAlbumMenuColumnStyle,
     spaceAlbumSortOptionsMetadata,
-  } from '$lib/utils/space-album-sort';
-  import { buildFolderSummaries, EMPTY_FOLDER_SUMMARY, getFolderContents } from '$lib/utils/space-album-folders';
-  import { dateFormats } from '$lib/constants';
-  import { Route } from '$lib/route';
+  } from '#lib/utils/space-album-sort.ts';
   import { type SharedSpaceAlbumFolderDto, type SharedSpaceLinkedAlbumDto } from '@immich/sdk';
   import { ContextMenuButton, Icon } from '@immich/ui';
   import { mdiChevronRight, mdiFolder } from '@mdi/js';
@@ -201,12 +198,12 @@
   {/if}
   {#if grouped}
     {#each groups as group (group.id)}
-      {@const collapsed = isSpaceAlbumGroupCollapsed($spaceAlbumViewSettings, group.id)}
-      {@const iconRotation = collapsed ? 'rotate-0' : 'rotate-90'}
+      {const collapsed = $derived(isAlbumGroupCollapsed($spaceAlbumViewSettings, group.id))}
+      {const iconRotation = $derived(collapsed ? 'rotate-0' : 'rotate-90')}
       <tbody class="mt-4 block w-full">
         <tr
           class="flex w-full place-items-center p-2 md:py-3 md:ps-5 md:pe-5"
-          onclick={() => toggleSpaceAlbumGroupCollapsing(group.id)}
+          onclick={() => toggleAlbumGroupCollapsing(group.id, spaceAlbumViewSettings)}
           aria-expanded={!collapsed}
           data-testid="space-album-group-header-{group.id}"
         >

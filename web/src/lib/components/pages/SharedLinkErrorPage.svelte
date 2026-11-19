@@ -5,11 +5,11 @@
   // all three, and they tell the person holding it what to do: ask whoever sent it for a new one. Gallery's own look,
   // on its own on the ground (a link's visitor has no shell), the same words as the public link page's
   // (immich-public-proxy, whose files live with the deployment).
-  import { page } from '$app/state';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { Route } from '$lib/route';
-  import { errorCode, errorPageKind } from '$lib/utils/error-page';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { errorCode, errorPageKind } from '#lib/utils/error-page.ts';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   const kind = $derived(
     errorPageKind({

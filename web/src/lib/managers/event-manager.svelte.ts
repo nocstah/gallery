@@ -1,25 +1,24 @@
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { BaseEventManager } from '#lib/utils/base-event-manager.svelte.ts';
+import type { TreeNode } from '#lib/utils/tree-utils.ts';
 import type {
+  AdminConfigDto,
   AlbumResponseDto,
   AlbumUserRole,
   ApiKeyResponseDto,
   AssetResponseDto,
   IntegrityReport,
   JobCreateDto,
-  LibraryResponseDto,
   LoginResponseDto,
+  PasskeyResponseDto,
   PersonResponseDto,
   QueueResponseDto,
   ReleaseEventV1,
   SharedLinkResponseDto,
   StackResponseDto,
-  AdminConfigDto,
   TagResponseDto,
   UserAdminResponseDto,
-  WorkflowResponseDto,
 } from '@immich/sdk';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { BaseEventManager } from '$lib/utils/base-event-manager.svelte';
-import type { TreeNode } from '$lib/utils/tree-utils';
 
 export type Events = {
   AppInit: [];
@@ -34,6 +33,10 @@ export type Events = {
   ApiKeyCreate: [ApiKeyResponseDto];
   ApiKeyUpdate: [ApiKeyResponseDto];
   ApiKeyDelete: [ApiKeyResponseDto];
+
+  PasskeyCreate: [PasskeyResponseDto];
+  PasskeyUpdate: [PasskeyResponseDto];
+  PasskeyDelete: [PasskeyResponseDto];
 
   AssetUpdate: [AssetResponseDto];
   AssetsArchive: [string[]];
@@ -54,6 +57,13 @@ export type Events = {
   AlbumUserUpdate: [{ albumId: string; userId: string; role: AlbumUserRole }];
   AlbumUserDelete: [{ albumId: string; userId: string }];
 
+  // Local Omarchy layer: upstream dropped these with v5.11 (its shared-link lists are queries now). Kioku's Share
+  // sheets, the shared-link rows, the album tree and the series state still answer a link made, changed or removed
+  // (shared-link.service emits them, after refreshing upstream's queries)
+  SharedLinkCreate: [SharedLinkResponseDto];
+  SharedLinkUpdate: [SharedLinkResponseDto];
+  SharedLinkDelete: [SharedLinkResponseDto];
+
   // #1041: `hiddenFromMyTimeline` tells listeners the receiving space is one the emitting user has
   // hidden from their own timeline, so a timeline showing those assets is now stale. Optional —
   // absent means "not known to be hidden", which listeners must treat as "leave the timeline alone".
@@ -61,6 +71,7 @@ export type Events = {
   SpaceRemoveAssets: [{ assetIds: string[]; spaceId: string }];
   SpaceLinkAlbum: [{ spaceId: string }];
   SpaceUnlinkAlbum: [{ spaceId: string }];
+  SpaceUpdate: [{ spaceId: string }];
 
   PersonUpdate: [PersonResponseDto];
   PersonShare: [{ personId: string }];
@@ -74,10 +85,6 @@ export type Events = {
 
   QueueUpdate: [QueueResponseDto];
 
-  SharedLinkCreate: [SharedLinkResponseDto];
-  SharedLinkUpdate: [SharedLinkResponseDto];
-  SharedLinkDelete: [SharedLinkResponseDto];
-
   StackCreate: [StackResponseDto];
   /** Unstacked, with assets to handle */
   StackDelete: [{ id: string; assets: AssetResponseDto[] }];
@@ -90,12 +97,6 @@ export type Events = {
 
   UserPinCodeReset: [];
 
-  UserAdminCreate: [UserAdminResponseDto];
-  UserAdminUpdate: [UserAdminResponseDto];
-  UserAdminRestore: [UserAdminResponseDto];
-  // soft deleted
-  UserAdminDelete: [UserAdminResponseDto];
-  // confirmed permanently deleted from server
   UserAdminDeleted: [{ id: string }];
 
   SessionLocked: [];
@@ -107,14 +108,6 @@ export type Events = {
   IntegrityReportDeleted: [{ type?: IntegrityReport; id?: string }];
 
   JobCreate: [{ dto: JobCreateDto }];
-
-  LibraryCreate: [LibraryResponseDto];
-  LibraryUpdate: [LibraryResponseDto];
-  LibraryDelete: [{ id: string }];
-
-  WorkflowCreate: [WorkflowResponseDto];
-  WorkflowUpdate: [WorkflowResponseDto];
-  WorkflowDelete: [WorkflowResponseDto];
 
   ReleaseEvent: [ReleaseEventV1];
 

@@ -1,12 +1,12 @@
 <script lang="ts">
-  import Combobox from '$lib/components/shared-components/Combobox.svelte';
-  import DateInput from '$lib/elements/DateInput.svelte';
-  import DurationInput from '$lib/elements/DurationInput.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import { getPreferredTimeZone, getTimezones, toIsoDate, type ZoneOption } from '$lib/modals/timezone-utils';
-  import { getEditableAssetsWithWarning } from '$lib/utils/asset-utils';
-  import { handleError } from '$lib/utils/handle-error';
-  import { beforeChange, datesDone } from '$lib/utils/undoable';
+  import Combobox from '#lib/components/shared-components/Combobox.svelte';
+  import DateInput from '#lib/elements/DateInput.svelte';
+  import DurationInput from '#lib/elements/DurationInput.svelte';
+  import { getEditableAssetsWithWarning } from '#lib/gallery/utils/editable-assets.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import { getPreferredTimeZone, getTimezones, toIsoDate, type ZoneOption } from '#lib/modals/timezone-utils.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { beforeChange, datesDone } from '#lib/utils/undoable.ts';
   import { updateAssets } from '@immich/sdk';
   import { Field, FormModal, Label, Switch } from '@immich/ui';
   import { mdiCalendarEdit } from '@mdi/js';

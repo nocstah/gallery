@@ -3,9 +3,9 @@
   // first, in a sheet under the icon: a row takes its action back. The icon shows only while there is something to
   // undo (one less icon in the bar the rest of the time). Ctrl+Z belongs to the user pages' layout, so it also works on
   // pages without this bar (an album).
-  import { undoManager } from '$lib/managers/undo-manager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
-  import { relativeTime } from '$lib/utils/relative-time';
+  import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { relativeTime } from '#lib/utils/relative-time.ts';
   import { Icon } from '@immich/ui';
   import { mdiUndoVariant } from '@mdi/js';
   import { tick } from 'svelte';

@@ -1,23 +1,23 @@
+import { reactiveProps } from '#lib/gallery/__mocks__/reactive-props.svelte.ts';
+import type { MemoryTrack } from '#lib/utils/curator.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
 import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { rgbaToThumbHash } from 'thumbhash';
-import type { MemoryTrack } from '$lib/utils/curator';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { reactiveProps } from '@test-data/reactive-props.svelte';
 import MemoryFilm from './MemoryFilm.svelte';
 import { storyOf, type FilmPlan, type FilmStoryCue } from './film-plan';
 import { privateFilmMedia } from './private-film-media';
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: { authenticated: false, params: {}, preferences: { memories: { duration: 5 } } },
 }));
 
-const memory = (count = 3): MemoryResponseDto =>
+const memory = (): MemoryResponseDto =>
   ({
     id: 'memory-1',
     ownerId: 'owner',
-    assets: Array.from({ length: count }, (_, index) =>
+    assets: Array.from({ length: 3 }, (_, index) =>
       assetFactory.build({
         id: `asset-${index}`,
         type: AssetTypeEnum.Image,

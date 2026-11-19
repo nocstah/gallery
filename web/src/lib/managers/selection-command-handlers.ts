@@ -1,22 +1,22 @@
+import { MAX_SPACE_ASSETS_PER_REQUEST } from '#lib/constants.ts';
+import { libraryNamed } from '#lib/gallery/libraries/library-words.ts';
+import { animateRemoval } from '#lib/gallery/motion/index.ts';
+import type { CommandContext, SelectionCommandContext } from '#lib/managers/command-context-manager.svelte.ts';
+import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
+import { pageKey, undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import AssetAddToCollectionModal from '#lib/modals/AssetAddToCollectionModal.svelte';
+import AssetDeleteConfirmModal from '#lib/modals/AssetDeleteConfirmModal.svelte';
+import { showDeleteModal } from '#lib/stores/preferences.store.ts';
+import { undoDeleteAssets } from '#lib/utils/actions.ts';
+import { newAlbumFromAssets } from '#lib/utils/album-from-selection.ts';
+import { showUndoArchiveToast } from '#lib/utils/asset-utils.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { announceCovers, handOverCovers } from '#lib/utils/stack-covers.ts';
+import { favoritesDone } from '#lib/utils/undoable.ts';
 import { AssetVisibility, deleteAssets as deleteBulk, updateAssetFavorites, updateAssets } from '@immich/sdk';
 import { modalManager, toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
-import { libraryNamed } from '$lib/gallery/libraries/library-words';
-import { animateRemoval } from '$lib/gallery/motion';
-import type { CommandContext, SelectionCommandContext } from '$lib/managers/command-context-manager.svelte';
-import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-import { pageKey, undoManager } from '$lib/managers/undo-manager.svelte';
-import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.svelte';
-import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte';
-import { showDeleteModal } from '$lib/stores/preferences.store';
-import { undoDeleteAssets } from '$lib/utils/actions';
-import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
-import { showUndoArchiveToast } from '$lib/utils/asset-utils';
-import { handleError } from '$lib/utils/handle-error';
-import { announceCovers, handOverCovers } from '$lib/utils/stack-covers';
-import { favoritesDone } from '$lib/utils/undoable';
 
 const getSelection = (ctx?: CommandContext): SelectionCommandContext | null => ctx?.selection ?? null;
 

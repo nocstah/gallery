@@ -6,10 +6,10 @@ type Translate = (key: Translations) => string;
 export type SettingsSection = { key: string; title: string; subtitle: string };
 
 /**
- * Source file of each system-settings section, by the section `key` the settings page uses. A section is
- * searchable by the translated text of every `$t('…')` key its component renders, so a query like "merge",
- * "delete" or "cache" finds the setting inside a section whose title does not mention it (#1112).
- */
+Source file of each system-settings section, by the section `key` the settings page uses. A section is
+searchable by the translated text of every `$t('…')` key its component renders, so a query like "merge",
+"delete" or "cache" finds the setting inside a section whose title does not mention it (#1112).
+*/
 const SECTION_SOURCES: Record<string, string | string[]> = {
   authentication: '/src/routes/admin/system-settings/AuthSettings.svelte',
   backup: '/src/routes/admin/system-settings/BackupSettings.svelte',
@@ -18,7 +18,11 @@ const SECTION_SOURCES: Record<string, string | string[]> = {
   job: '/src/routes/admin/system-settings/JobSettings.svelte',
   'external-library': '/src/routes/admin/system-settings/LibrarySettings.svelte',
   logging: '/src/routes/admin/system-settings/LoggingSettings.svelte',
-  'machine-learning': '/src/routes/admin/system-settings/MachineLearningSettings.svelte',
+  'machine-learning': [
+    '/src/routes/admin/system-settings/MachineLearningSettings.svelte',
+    '/src/lib/gallery/components/admin/video-face-settings.svelte',
+    '/src/lib/gallery/components/admin/video-pet-settings.svelte',
+  ],
   classification: '/src/routes/admin/system-settings/ClassificationSettings.svelte',
   location: '/src/routes/admin/system-settings/MapSettings.svelte',
   metadata: '/src/routes/admin/system-settings/MetadataSettings.svelte',
@@ -35,7 +39,10 @@ const SECTION_SOURCES: Record<string, string | string[]> = {
   trash: '/src/routes/admin/system-settings/TrashSettings.svelte',
   'user-settings': '/src/routes/admin/system-settings/UserSettings.svelte',
   'version-check': '/src/routes/admin/system-settings/NewVersionCheckSettings.svelte',
-  'video-transcoding': '/src/routes/admin/system-settings/FFmpegSettings.svelte',
+  'video-transcoding': [
+    '/src/routes/admin/system-settings/FFmpegSettings.svelte',
+    '/src/lib/gallery/components/admin/data-saver-video-settings.svelte',
+  ],
 };
 
 // Raw sources, fetched only when someone first searches the settings page.

@@ -154,7 +154,6 @@ class ServiceMocks {
     _stubUserService();
     _stubPartnerService();
     _stubAssetService();
-    _stubActionService();
     _stubRemoteAlbumService();
     _stubCleanupService();
     _stubTagApi();
@@ -193,10 +192,6 @@ class ServiceMocks {
     when(asset.deleteLocal).thenAnswer((_) async => 0);
   }
 
-  void _stubActionService() {
-    when(action.removeFromSpace).thenAnswer((_) async => 0);
-  }
-
   void _stubRemoteAlbumService() {
     when(album.removeAssets).thenAnswer((_) async => 0);
     when(album.updateAlbum).thenAnswer((_) async => RemoteAlbumFactory.create());
@@ -208,6 +203,7 @@ class ServiceMocks {
 
   void _stubTagApi() {
     when(tag.bulkTagAssets).thenAnswer((_) async => 0);
+    when(tag.untagAssets).thenAnswer((_) async => 0);
     when(tag.upsert).thenAnswer((_) async => const []);
     when(tag.getAll).thenAnswer((_) async => const []);
   }
@@ -391,10 +387,7 @@ extension type const AssetServiceStub(MockAssetService service) implements Stub<
       () => service.deleteLocal(any(), trash: any(named: 'trash'));
 }
 
-extension type const ActionServiceStub(MockActionService service) implements Stub<MockActionService> {
-  Future<int> Function() get removeFromSpace =>
-      () => service.removeFromSpace(any(), any());
-}
+extension type const ActionServiceStub(MockActionService service) implements Stub<MockActionService> {}
 
 extension type const RemoteAlbumServiceStub(MockRemoteAlbumService service) implements Stub<MockRemoteAlbumService> {
   Future<int> Function() get removeAssets =>
@@ -464,6 +457,9 @@ extension type const PermissionRepositoryStub(MockPermissionRepository repo) imp
 extension type const TagApiRepositoryStub(MockTagApiRepository repo) implements Stub<MockTagApiRepository> {
   Future<int> Function() get bulkTagAssets =>
       () => repo.bulkTagAssets(any(), any());
+
+  Future<int> Function() get untagAssets =>
+      () => repo.untagAssets(any(), any());
 
   Future<List<Tag>> Function() get upsert =>
       () => repo.upsert(any());

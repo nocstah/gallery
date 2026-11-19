@@ -1,10 +1,10 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { peopleRanking } from '#lib/managers/people-ranking.svelte.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 import type { PeopleResponseDto, PersonResponseDto } from '@immich/sdk';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { peopleRanking } from '$lib/managers/people-ranking.svelte';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 
 // Local Omarchy layer: the People page's order for the lists that carry ids and names only (the filter rail's People,
 // an album's faces). The manager is one per page load, so the tests run in order and sign out between them.

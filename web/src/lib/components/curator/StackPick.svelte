@@ -4,9 +4,9 @@
   // the best few two at a time, both ways round, and names the photo that best keeps the moment, with why and whether
   // the two judges agreed. When it is not the cover already: Make it the cover (accepts the suggestion, undo in the
   // AI inbox's history) or Keep current. Closed before Curator is done, the suggestion waits in the AI inbox.
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { curator, type JobRow, type StackPick } from '$lib/utils/curator';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { curator, type JobRow, type StackPick } from '#lib/utils/curator.ts';
   import { AssetMediaSize, getStack } from '@immich/sdk';
   import { Icon, toastManager } from '@immich/ui';
   import { mdiClose, mdiStarFourPointsOutline } from '@mdi/js';

@@ -4,9 +4,9 @@
 // its previews and its recents): only one Photos would show, on the timeline, and never one of QR's. Every slip the
 // house recognises is archived, filed into QR or kept out by Gallery's receipts classification (Auto/Receipts), so the
 // timeline alone keeps them out, and QR's own stay out whatever their visibility.
+import { slipCovers } from '#lib/managers/slip-covers.svelte.ts';
+import { qrManager, specialAlbumOf, type SpecialAlbumManager } from '#lib/managers/special-albums.svelte.ts';
 import { AssetVisibility, type AssetResponseDto } from '@immich/sdk';
-import { slipCovers } from '$lib/managers/slip-covers.svelte';
-import { qrManager, specialAlbumOf, type SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
 
 /** The special album whose icon covers an album (QR, or QR's for an album whose cover is one of its slips), if any. */
 export const iconCoverOf = (
@@ -21,9 +21,9 @@ export const iconCoverOf = (
 };
 
 /**
- * Whether a photo may show among the photos Ctrl+K offers: on the timeline (where its visibility is known), and not one
- * of QR's slips, by QR's photos as last read or by QR's tag, which the special album gives what it holds.
- */
+Whether a photo may show among the photos Ctrl+K offers: on the timeline (where its visibility is known), and not one
+of QR's slips, by QR's photos as last read or by QR's tag, which the special album gives what it holds.
+*/
 export const shownAmongPhotos = (
   asset: Pick<AssetResponseDto, 'id'> & Partial<Pick<AssetResponseDto, 'visibility' | 'tags'>>,
 ) => {

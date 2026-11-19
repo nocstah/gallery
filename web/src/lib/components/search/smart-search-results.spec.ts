@@ -1,11 +1,11 @@
+import type { FilterState } from '#lib/components/filter-panel/filter-panel.ts';
+import SmartSearchResultsRerunHost from '#lib/components/search/smart-search-results-rerun.test-host.svelte';
+import SmartSearchResults from '#lib/components/search/smart-search-results.svelte';
+import SmartSearchResultsHost from '#lib/components/search/smart-search-results.test-host.svelte';
+import { SEARCH_FILTER_DEBOUNCE_MS, buildSmartSearchFacetsParams } from '#lib/utils/space-search.ts';
 import { AssetOrder, AssetVisibility } from '@immich/sdk';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FilterState } from '$lib/components/filter-panel/filter-panel';
-import SmartSearchResultsRerunHost from '$lib/components/search/smart-search-results-rerun.test-host.svelte';
-import SmartSearchResults from '$lib/components/search/smart-search-results.svelte';
-import SmartSearchResultsHost from '$lib/components/search/smart-search-results.test-host.svelte';
-import { buildSmartSearchFacetsParams, SEARCH_FILTER_DEBOUNCE_MS } from '$lib/utils/space-search';
 
 const searchSmartMock = vi.fn();
 vi.mock('@immich/sdk', async (importOriginal) => {
@@ -31,10 +31,10 @@ const baseProps = {
 const mockEmptyResult = { assets: { items: [], nextPage: null } };
 
 /**
- * The shared mock never invokes its callback, so the infinite-scroll sentinel can't be driven from a
- * test. Capture the callbacks instead — the newest belongs to the live sentinel — so paging can be
- * exercised alongside the search-clearing behaviour it shares state with.
- */
+The shared mock never invokes its callback, so the infinite-scroll sentinel can't be driven from a
+test. Capture the callbacks instead — the newest belongs to the live sentinel — so paging can be
+exercised alongside the search-clearing behaviour it shares state with.
+*/
 let intersectionCallbacks: IntersectionObserverCallback[] = [];
 
 const getCapturingIntersectionObserverMock = () =>

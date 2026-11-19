@@ -1,7 +1,7 @@
+import AlbumPeopleStrip from '#lib/components/omarchy/AlbumPeopleStrip.svelte';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import AlbumPeopleStrip from '$lib/components/omarchy/AlbumPeopleStrip.svelte';
 
 // Local Omarchy layer: the album's people as faces in its details. A face narrows the album to the person; on a phone
 // the faces are one scrolling row, each named for a screen reader, its name shown over it while a finger rests on it
@@ -11,8 +11,8 @@ const mocks = vi.hoisted(() => ({
   people: [] as { id: string; name: string; thumbnailUrl?: string }[],
 }));
 
-vi.mock('$lib/stores/media-query-manager.svelte', () => ({ mediaQueryManager: mocks.mediaQueryManager }));
-vi.mock('$lib/utils/album-filter-config', () => ({
+vi.mock('#lib/stores/media-query-manager.svelte.ts', () => ({ mediaQueryManager: mocks.mediaQueryManager }));
+vi.mock('#lib/utils/album-filter-config.ts', () => ({
   buildAlbumDetailFilterConfig: () => ({ baselineProvider: () => Promise.resolve({ people: mocks.people }) }),
 }));
 

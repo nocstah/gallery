@@ -1,3 +1,10 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { scrollTimelineToTemporalAnchor } from '#lib/gallery/timeline/timeline-anchor.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { getTimelineMonthByDate } from '#lib/managers/timeline-manager/internal/search-support.svelte.ts';
+import { AbortError } from '#lib/utils.ts';
+import { fromISODateTimeUTCToObject } from '#lib/utils/timeline-util.ts';
+import { assetFactory, timelineAssetFactory, toResponseDto } from '#test/kioku/factories/asset-factory.ts';
 import {
   AssetOrderBy,
   AssetVisibility,
@@ -7,19 +14,12 @@ import {
 } from '@immich/sdk';
 import { Settings } from 'luxon';
 import { tick } from 'svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { getTimelineMonthByDate } from '$lib/managers/timeline-manager/internal/search-support.svelte';
-import { scrollTimelineToTemporalAnchor } from '$lib/managers/timeline-manager/timeline-anchor';
-import { AbortError } from '$lib/utils';
-import { fromISODateTimeUTCToObject } from '$lib/utils/timeline-util';
-import { assetFactory, timelineAssetFactory, toResponseDto } from '@test-data/factories/asset-factory';
 import { TimelineManager } from './timeline-manager.svelte';
 import type { TimelineAsset } from './types';
 
 // Local Omarchy layer: the overviews' faces are managers/period-faces' (its own tests); here the server's covers pass
 // through, so these tests keep reading the timeline's own requests
-vi.mock('$lib/managers/period-faces', () => ({
+vi.mock('#lib/managers/period-faces.ts', () => ({
   periodFaces: {
     covers: (_scope: unknown, _periods: unknown, server: () => Promise<unknown>) => server(),
   },
@@ -218,6 +218,22 @@ describe('TimelineManager', () => {
 
       await timelineManager.updateOptions({ visibility: AssetVisibility.Timeline, personIds: ['person-2'] });
       expect(timelineManager.reloadToken).toBeGreaterThan(afterFirst);
+    });
+  });
+
+  describe('reload', () => {
+    it('rebuilds the month objects on every reload, so views keyed on them remount their month DOM', async () => {
+      sdkMock.getTimeBuckets.mockResolvedValue([{ timeBucket: '2024-01-01', count: 1 }]);
+      const timelineManager = new TimelineManager();
+
+      await timelineManager.updateOptions({ visibility: AssetVisibility.Timeline, personIds: ['person-1'] });
+      const [first] = timelineManager.months;
+
+      await timelineManager.updateOptions({ visibility: AssetVisibility.Timeline, personIds: ['person-2'] });
+      const [second] = timelineManager.months;
+
+      expect(second.viewId).toBe(first.viewId);
+      expect(second).not.toBe(first);
     });
   });
 
@@ -1033,7 +1049,7 @@ describe('TimelineManager', () => {
     });
   });
 
-  describe('loadCoversForBuckets', () => {
+  describe('bucketLayout.loadCovers', () => {
     it('fetches only requested buckets, dedupes, and applies covers', async () => {
       sdkMock.getTimeBuckets.mockResolvedValue([
         { timeBucket: '2024-01-01', count: 3 },
@@ -1050,8 +1066,8 @@ describe('TimelineManager', () => {
       const timelineManager = new TimelineManager();
       await timelineManager.updateOptions({ grouping: 'year' });
 
-      await timelineManager.loadCoversForBuckets(['2024-01-01']);
-      await timelineManager.loadCoversForBuckets(['2024-01-01']); // deduped — no second request
+      await timelineManager.bucketLayout.loadCovers(['2024-01-01']);
+      await timelineManager.bucketLayout.loadCovers(['2024-01-01']); // deduped — no second request
 
       expect(sdkMock.getTimeBucketCovers).toHaveBeenCalledTimes(1);
       expect(sdkMock.getTimeBucketCovers).toHaveBeenCalledWith(
@@ -1068,7 +1084,7 @@ describe('TimelineManager', () => {
       const timelineManager = new TimelineManager();
       await timelineManager.updateOptions({ grouping: 'day' });
 
-      await timelineManager.loadCoversForBuckets(['2024-01-01']);
+      await timelineManager.bucketLayout.loadCovers(['2024-01-01']);
 
       expect(sdkMock.getTimeBucketCovers).not.toHaveBeenCalled();
     });
@@ -1080,7 +1096,7 @@ describe('TimelineManager', () => {
 
       // First call: reject — cover should remain null and keys should be un-marked
       sdkMock.getTimeBucketCovers.mockRejectedValueOnce(new Error('network error'));
-      await timelineManager.loadCoversForBuckets(['2024-01-01']);
+      await timelineManager.bucketLayout.loadCovers(['2024-01-01']);
 
       const bucket = timelineManager.timelineBuckets.find((b) => b.timeBucket === '2024-01-01')!;
       expect(bucket.representativeAssetId).toBeNull();
@@ -1095,7 +1111,7 @@ describe('TimelineManager', () => {
           representativeRatio: null,
         },
       ]);
-      await timelineManager.loadCoversForBuckets(['2024-01-01']);
+      await timelineManager.bucketLayout.loadCovers(['2024-01-01']);
 
       expect(sdkMock.getTimeBucketCovers).toHaveBeenCalledTimes(2);
       expect(bucket.representativeAssetId).toBe('retry-asset');
@@ -1110,7 +1126,7 @@ describe('TimelineManager', () => {
       let resolveCovers!: (v: import('@immich/sdk').TimeBucketCoverResponseDto[]) => void;
       sdkMock.getTimeBucketCovers.mockReturnValueOnce(new Promise((r) => (resolveCovers = r)));
 
-      const p = timelineManager.loadCoversForBuckets(['2024-01-01']); // starts request at sequence N
+      const p = timelineManager.bucketLayout.loadCovers(['2024-01-01']); // starts request at sequence N
 
       // Re-init bumps #initSequence and rebuilds timelineBuckets
       sdkMock.getTimeBucketCovers.mockResolvedValue([]);
@@ -1144,12 +1160,12 @@ describe('TimelineManager', () => {
       ]);
       const timelineManager = new TimelineManager();
       await timelineManager.updateOptions({ grouping: 'year' });
-      await timelineManager.loadCoversForBuckets(['2024-01-01']);
+      await timelineManager.bucketLayout.loadCovers(['2024-01-01']);
       expect(sdkMock.getTimeBucketCovers).toHaveBeenCalledTimes(1);
 
       // Re-init triggers clear of #coverRequested
       await timelineManager.updateOptions({ grouping: 'year', personIds: ['person-1'] });
-      await timelineManager.loadCoversForBuckets(['2024-01-01']);
+      await timelineManager.bucketLayout.loadCovers(['2024-01-01']);
       expect(sdkMock.getTimeBucketCovers).toHaveBeenCalledTimes(2);
     });
 
@@ -1169,7 +1185,7 @@ describe('TimelineManager', () => {
       const timelineManager = new TimelineManager();
       await timelineManager.updateOptions({ grouping: 'year', timelineAlbumId: 'album-1' });
 
-      await timelineManager.loadCoversForBuckets(['2024-01-01']);
+      await timelineManager.bucketLayout.loadCovers(['2024-01-01']);
 
       // Both main and album cover requests are made
       expect(sdkMock.getTimeBucketCovers).toHaveBeenCalledTimes(2);
@@ -1258,6 +1274,105 @@ describe('TimelineManager', () => {
       expect(ids).toContain(assetA.id);
       expect(ids).toContain(assetB.id);
       expect(ids).not.toContain(assetC.id);
+    });
+  });
+
+  describe('album timeline with stacked photos', () => {
+    let timelineManager: TimelineManager;
+    // a stacked album's reload is queued as a microtask and its requests resolve at once: a macrotask lets it finish
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+    const reloads = () => sdkMock.getTimeBuckets.mock.calls.length;
+    const albumMember = () =>
+      deriveLocalDateTimeFromFileCreatedAt(
+        timelineAssetFactory.build({ fileCreatedAt: fromISODateTimeUTCToObject('2024-02-10T12:00:00.000Z') }),
+      );
+    const stackOf = (...assets: AssetResponseDto[]) => ({
+      id: 'stack-1',
+      primaryAssetId: assets[0].id,
+      assets,
+    });
+
+    beforeEach(async () => {
+      timelineManager = new TimelineManager();
+      sdkMock.getTimeBuckets.mockResolvedValue([]);
+      await timelineManager.updateViewport({ width: 1588, height: 1000 });
+      await timelineManager.updateOptions({ albumId: 'album-1', withStacked: true });
+    });
+
+    afterEach(() => {
+      timelineManager.destroy();
+    });
+
+    // The server picks which album member stands for a stack, so the album reloads rather than patching locally.
+    it.each(['StackCreate', 'StackUpdate'] as const)('reloads the album on %s', async (event) => {
+      const member = albumMember();
+      timelineManager.upsertAssets([member]);
+      const before = reloads();
+
+      eventManager.emit(event, stackOf(assetFactory.build({ id: member.id }), assetFactory.build()));
+      await settle();
+
+      expect(reloads()).toBe(before + 1);
+      expect(sdkMock.getTimeBuckets.mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({ albumId: 'album-1', withStacked: true }),
+      );
+    });
+
+    it('does not insert stack members the album does not hold on StackDelete', async () => {
+      const outsider = assetFactory.build();
+      const before = reloads();
+
+      eventManager.emit('StackDelete', { id: 'stack-1', assets: [outsider] });
+      await settle();
+
+      expect(reloads()).toBe(before + 1);
+      expect(timelineManager.getTimelineMonthByAssetId(outsider.id)).toBeUndefined();
+    });
+
+    // Removing (from the album, or to the trash) the photo that stands for a stack: a stack-mate may take its place.
+    it('reloads the album when a removed photo stood for a stack, and only then', async () => {
+      // Local Omarchy layer: the photo that stands for a stack is its cover (the other photos stay folded under it)
+      const member = albumMember();
+      const stacked = { ...member, stack: { id: 'stack-1', primaryAssetId: member.id, assetCount: 3 } };
+      const plain = albumMember();
+      timelineManager.upsertAssets([stacked, plain]);
+      const before = reloads();
+
+      timelineManager.removeAssets([plain.id]);
+      await settle();
+      expect(reloads()).toBe(before);
+
+      eventManager.emit('AlbumRemoveAssets', { assetIds: [stacked.id], albumIds: ['album-1'] });
+      await settle();
+      expect(reloads()).toBe(before + 1);
+    });
+
+    // The manager's own listener and the album page's AlbumStackEvents both fire for one event (Safari can miss the
+    // former): one reload, and the page's options effect during it does not start another.
+    it('runs one reload for triggers in the same task, and keeps its options while reloading', async () => {
+      const before = reloads();
+
+      expect(timelineManager.reloadAlbumStacks()).toBe(true);
+      expect(timelineManager.reloadAlbumStacks()).toBe(true);
+      eventManager.emit('AlbumAddAssets', { assetIds: ['a'], albumIds: ['album-1'] });
+      await timelineManager.updateOptions({ albumId: 'album-1', withStacked: true });
+      await settle();
+
+      expect(reloads()).toBe(before + 1);
+    });
+
+    // Adding a photo (say the stack's primary, from the viewer's strip) can change which stack-mate shows.
+    it('reloads the album when photos are added to it, not to another album', async () => {
+      const before = reloads();
+
+      eventManager.emit('AlbumAddAssets', { assetIds: ['a'], albumIds: ['other-album'] });
+      await settle();
+      expect(reloads()).toBe(before);
+
+      eventManager.emit('AlbumAddAssets', { assetIds: ['a'], albumIds: ['album-1'] });
+      await settle();
+      expect(reloads()).toBe(before + 1);
+      expect(sdkMock.getAssetInfo).not.toHaveBeenCalled();
     });
   });
 

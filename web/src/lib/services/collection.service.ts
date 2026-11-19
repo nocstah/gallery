@@ -1,28 +1,28 @@
-import { toastManager } from '@immich/ui';
 import {
   isHiddenFromMyTimeline,
   type PickerCollection,
-} from '$lib/components/shared-components/collection-selection/collection-selection-utils';
-import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { addAssetsToAlbums } from '$lib/services/album.service';
-import { addAssetsToSpace } from '$lib/services/space.service';
-import { getFormatter } from '$lib/utils/i18n';
+} from '#lib/components/shared-components/collection-selection/collection-selection-utils.ts';
+import { MAX_SPACE_ASSETS_PER_REQUEST } from '#lib/constants.ts';
+import { addAssetsToAlbums } from '#lib/gallery/album/album-add.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { addAssetsToSpace } from '#lib/services/space.service.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { toastManager } from '@immich/ui';
 
 type AddToCollectionsOptions = {
   /**
-   * The selection contains assets the caller does not own, so they can only land as #764
-   * space contributions. Two consequences:
-   *
-   * - every album is dispatched on its own, because only the single-album endpoint
-   *   (`POST /albums/:id/assets`) runs `tryContributeDeniedAssets`; the batched
-   *   `PUT /albums/assets` would silently drop every non-owned asset;
-   * - spaces are dropped, because `POST /shared-spaces/:id/assets` requires
-   *   `Permission.AssetShare` on every id and rejects the whole request otherwise.
-   *
-   * The picker already hides spaces in this mode; dropping them here keeps the guarantee
-   * even if a caller passes some anyway.
-   */
+  The selection contains assets the caller does not own, so they can only land as #764
+  space contributions. Two consequences:
+  
+  - every album is dispatched on its own, because only the single-album endpoint
+    (`POST /albums/:id/assets`) runs `tryContributeDeniedAssets`; the batched
+    `PUT /albums/assets` would silently drop every non-owned asset;
+  - spaces are dropped, because `POST /shared-spaces/:id/assets` requires
+    `Permission.AssetShare` on every id and rejects the whole request otherwise.
+  
+  The picker already hides spaces in this mode; dropping them here keeps the guarantee
+  even if a caller passes some anyway.
+  */
   contributionMode?: boolean;
 };
 

@@ -1,30 +1,30 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import type { Action } from '$lib/components/asset-viewer/actions/action';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
-  import SharedFeedList from '$lib/components/omarchy/SharedFeed.svelte';
-  import Portal from '$lib/elements/Portal.svelte';
-  import { assetCacheManager } from '$lib/managers/AssetCacheManager.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { SharedFeed } from '$lib/managers/shared-feed.svelte';
-  import SpaceCreateModal from '$lib/modals/SpaceCreateModal.svelte';
-  import { Route } from '$lib/route';
-  import { AlbumFilter, albumViewSettings } from '$lib/stores/preferences.store';
-  import { pinnedSpaceIds } from '$lib/stores/space-view.store';
-  import type { HeaderButtonActionItem } from '$lib/types';
-  import { handlePromiseError } from '$lib/utils';
-  import { navigateToAsset } from '$lib/utils/asset-utils';
-  import { lazyComponent } from '$lib/utils/lazy-component.svelte';
-  import { navigate } from '$lib/utils/navigation';
-  import { toFeedPerson, type FeedItem, type FeedPerson } from '$lib/utils/shared-feed';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import type { Action } from '#lib/components/asset-viewer/actions/action.ts';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import EmptyState from '#lib/components/omarchy/EmptyState.svelte';
+  import SharedFeedList from '#lib/components/omarchy/SharedFeed.svelte';
+  import Portal from '#lib/elements/Portal.svelte';
+  import { assetCacheManager } from '#lib/managers/AssetCacheManager.svelte.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { SharedFeed } from '#lib/managers/shared-feed.svelte.ts';
+  import SpaceCreateModal from '#lib/modals/SpaceCreateModal.svelte';
+  import { Route } from '#lib/route.ts';
+  import { AlbumFilter, albumViewSettings } from '#lib/stores/preferences.store.ts';
+  import { pinnedSpaceIds } from '#lib/stores/space-view.store.ts';
+  import type { HeaderButtonActionItem } from '#lib/types.ts';
+  import { handlePromiseError } from '#lib/utils.ts';
+  import { navigateToAsset } from '#lib/utils/asset-utils.ts';
+  import { lazyComponent } from '#lib/utils/lazy-component.svelte.ts';
+  import { navigate } from '#lib/utils/navigation.ts';
+  import { toFeedPerson, type FeedItem, type FeedPerson } from '#lib/utils/shared-feed.ts';
   import { UserAvatarColor, type AssetResponseDto } from '@immich/sdk';
   import { modalManager } from '@immich/ui';
   import { mdiAccountOutline, mdiBookOpenOutline, mdiImageAlbum } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
   import type { PageData } from './$types';
 
   type Props = {
@@ -142,7 +142,7 @@
   };
 
   // Mounting the viewer through `{#await}` leaves it permanently unreactive on reopen. See lazyComponent().
-  const LazyAssetViewer = lazyComponent(() => import('$lib/components/asset-viewer/AssetViewer.svelte'));
+  const LazyAssetViewer = lazyComponent(() => import('#lib/components/asset-viewer/AssetViewer.svelte'));
 </script>
 
 <OnEvents onAssetsDelete={(assetIds) => feed.forget(assetIds)} />
@@ -195,7 +195,7 @@
 
 {#if assetViewerManager.isViewing}
   {#if LazyAssetViewer.current}
-    {@const AssetViewer = LazyAssetViewer.current}
+    {const AssetViewer = $derived(LazyAssetViewer.current)}
     <Portal target="body">
       <AssetViewer
         {cursor}

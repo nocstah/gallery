@@ -1,6 +1,6 @@
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { CuratorError } from '$lib/utils/curator';
-import { secondWithout, serving } from '@test-data/factories/library-context-factory';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { CuratorError } from '#lib/utils/curator.ts';
+import { secondWithout, serving } from '#test/kioku/factories/library-context-factory.ts';
 import { seriesApi, seriesFailure } from './series-api';
 
 // Local Omarchy layer: Curator's series routes as the web asks them (gallery/series): the method, the path under

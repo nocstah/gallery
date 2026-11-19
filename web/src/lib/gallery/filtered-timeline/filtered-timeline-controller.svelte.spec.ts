@@ -1,21 +1,25 @@
-import { type SmartSearchFacetsResponseDto } from '@immich/sdk';
+import type { FilterPanelConfig, FilterState } from '#lib/components/filter-panel/filter-panel.ts';
+import { reactivePageMock as mockPage } from '#lib/gallery/__mocks__/reactive-page.mock.svelte.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { albumStackPreferences } from '#lib/gallery/stack/album-stack-preferences.svelte.ts';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+import type { TimelineManagerOptions } from '#lib/managers/timeline-manager/types.ts';
+import { storeTypedSearchNames } from '#lib/utils/typed-search/typed-search-name-cache.ts';
+import { factory } from '#test/unit/factories.ts';
+import { LibraryView, type SmartSearchFacetsResponseDto } from '@immich/sdk';
+import type { ActionItem } from '@immich/ui';
 import { flushSync } from 'svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { createFilterState, type FilterPanelConfig, type FilterState } from '$lib/components/filter-panel/filter-panel';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import type { TimelineManagerOptions } from '$lib/managers/timeline-manager/types';
-import { storeTypedSearchNames } from '$lib/utils/typed-search/typed-search-name-cache';
-import { assetFactory, timelineAssetFactory } from '@test-data/factories/asset-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
-import { reactivePageMock as mockPage } from '@test-data/mocks/reactive-page.mock.svelte';
 import { createAlbumTimeline } from './album-timeline';
 import { FilteredTimelineController, type FilteredTimelineConfig } from './filtered-timeline-controller.svelte';
 import { createPhotosTimeline } from './photos-timeline';
 import { createRecentlyAddedTimeline } from './recently-added-timeline.svelte';
 import { createSpaceTimeline } from './space-timeline';
+
+// Loaded after sdk.mock.ts: browser mode links static imports in order, and filter-panel.ts imports
+// @immich/sdk, so importing it statically ahead of sdk.mock.ts would bind the real SDK for the whole file.
+const { createFilterState } = await import('#lib/components/filter-panel/filter-panel.ts');
 
 const { gotoMock, registerSelectionContextMock, topVisibleAnchorMock } = vi.hoisted(() => ({
   gotoMock: vi.fn(),
@@ -23,19 +27,22 @@ const { gotoMock, registerSelectionContextMock, topVisibleAnchorMock } = vi.hois
   topVisibleAnchorMock: vi.fn(),
 }));
 
-vi.mock('$app/navigation', () => ({ goto: gotoMock }));
+vi.mock('$app/navigation', async () => ({
+  ...(await import('#test/unit/mocks/app-navigation.ts')),
+  goto: gotoMock,
+}));
 vi.mock('$app/state', async () => {
-  const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
+  const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
   return { page: reactivePageMock };
 });
-vi.mock('$lib/managers/global-search-manager.svelte', () => ({
+vi.mock('#lib/managers/global-search-manager.svelte.js', () => ({
   globalSearchManager: { registerSearchablePageFilters: vi.fn(() => vi.fn()) },
 }));
-vi.mock('$lib/managers/command-context-manager.svelte', () => ({
+vi.mock('#lib/managers/command-context-manager.svelte.js', () => ({
   registerSelectionContext: registerSelectionContextMock,
 }));
-vi.mock('$lib/utils/filter-name-resolution', () => ({ resolveFilterNames: vi.fn(() => Promise.resolve()) }));
-vi.mock('$lib/managers/timeline-manager/timeline-anchor', () => ({
+vi.mock('#lib/utils/filter-name-resolution.js', () => ({ resolveFilterNames: vi.fn(() => Promise.resolve()) }));
+vi.mock('#lib/gallery/timeline/timeline-anchor.js', () => ({
   getTimelineTopVisibleAnchor: topVisibleAnchorMock,
 }));
 
@@ -132,8 +139,8 @@ describe('FilteredTimelineController', () => {
         Promise.resolve({ ...emptySuggestions(), people: [{ id: 'p9', name: 'Bob' }], tags: [] }),
       ),
     };
-    authManager.setUser(userAdminFactory.build({ id: 'me' }));
-    authManager.setPreferences(preferencesFactory.build());
+    authManager.setUser(factory.user({ id: 'me' }));
+    authManager.setPreferences(factory.preferences());
     mockPage.reset('https://gallery.test/photos');
   });
 
@@ -154,7 +161,7 @@ describe('FilteredTimelineController', () => {
       const [url, options] = gotoMock.mock.calls[0];
       expect(url).toContain('favorite=true');
       expect(url).not.toContain('sort=');
-      expect(options).toEqual({ replaceState: true, keepFocus: true, noScroll: true });
+      expect(options).toEqual({ replace: true, reset: false });
     });
 
     it('keeps sort=desc when a query is committed or the sort is explicit', () => {
@@ -206,7 +213,7 @@ describe('FilteredTimelineController', () => {
       expect(sut.smartFacets?.total).toBe(3);
       const fetch = pendingFacets();
       void sut.loadSmartFacets({ ...sut.filters, isFavorite: true });
-      sut.searchResults = [assetFactory.build()];
+      sut.searchResults = [factory.asset()];
 
       navigate('/photos?q=dog');
       expect(fetch.signal()?.aborted).toBe(true);
@@ -224,7 +231,7 @@ describe('FilteredTimelineController', () => {
     it('clears the results in filter-state mode', () => {
       navigate('/albums/a1?q=cat');
       const sut = createController({ urlMode: 'filter-state', hydrate: () => createFilterState() });
-      sut.searchResults = [assetFactory.build()];
+      sut.searchResults = [factory.asset()];
       navigate('/albums/a1?q=dog');
       expect(sut.searchResults).toEqual([]);
     });
@@ -327,7 +334,7 @@ describe('FilteredTimelineController', () => {
       expect(noZoom.grouping).toBe('day');
 
       const sut = createController();
-      assetMultiSelectManager.selectAsset(timelineAssetFactory.build());
+      assetMultiSelectManager.selectAsset(factory.timelineAsset());
       sut.onTimelineBucketActivate(bucket);
       expect(sut.grouping).toBe('day');
 
@@ -386,7 +393,7 @@ describe('FilteredTimelineController', () => {
     it('act on the search results in query mode and the timeline in browse mode', () => {
       navigate('/photos?q=cat');
       const sut = createController();
-      const asset = assetFactory.build({ isFavorite: false });
+      const asset = factory.asset({ isFavorite: false });
       sut.searchResults = [asset];
       sut.onFavorite([asset.id], true);
       expect(sut.searchResults[0].isFavorite).toBe(true);
@@ -407,6 +414,24 @@ describe('FilteredTimelineController', () => {
       expect(sut.timelineReloadToken).toBe(1);
     });
 
+    it('hides browse-only actions while search results show, keeping their own condition', () => {
+      const onAction = vi.fn();
+      const actions: Record<'Stack' | 'Unstack', ActionItem> = {
+        Stack: { title: 'stack', onAction },
+        Unstack: { title: 'unstack', onAction, $if: () => false },
+      };
+
+      navigate('/photos?q=cat');
+      const sut = createController();
+      const guarded = sut.browseOnly(actions);
+      expect(guarded.Stack.$if?.()).toBe(false);
+
+      navigate('/photos');
+      expect(guarded.Stack.$if?.()).toBe(true);
+      expect(guarded.Unstack.$if?.()).toBe(false);
+      expect(guarded.Stack.onAction).toBe(onAction);
+    });
+
     it('registers no handlers while the route cannot act', () => {
       const sut = createController();
       sut.registerSelectionContext({ canAct: () => false });
@@ -422,6 +447,7 @@ describe('FilteredTimelineController', () => {
   // 9: a persistent route switching entity must keep the typed-search names for the new URL,
   // whichever of its entity effect and the controller's URL effect runs first.
   describe('entity switch', () => {
+    // eslint-disable-next-line unicorn/no-unnecessary-parameters
     const switchTo = (url: string, setEntity: (id: string) => void, id: string) => {
       storeTypedSearchNames(url, { personNames: new Map([['p1', 'Ann']]), tagNames: new Map() });
       mockPage.url = new URL(url, 'https://gallery.test');
@@ -529,6 +555,66 @@ describe('FilteredTimelineController', () => {
       for (const [key, value] of Object.entries(expected)) {
         expect(dto[key as keyof typeof dto]).toEqual(value);
       }
+    });
+  });
+
+  it('hides the library view during a text search, which spans every photo', () => {
+    const sut = createController({ showLibraryView: () => true });
+    expect(sut.showLibraryView).toBe(true);
+
+    sut.query = 'beach';
+    flushSync();
+
+    expect(sut.showLibraryView).toBe(false);
+    expect(createController().showLibraryView).toBe(false);
+  });
+
+  it('counts a library view as active only while it is offered and applied', () => {
+    const personal = () => ({ libraryView: LibraryView.Personal }) as TimelineManagerOptions;
+    const sut = createController({ showLibraryView: () => true, timelineOptions: personal });
+    expect(sut.libraryViewActive).toBe(true);
+    expect(sut.activeFilterCount).toBe(0);
+
+    sut.query = 'beach';
+    flushSync();
+    expect(sut.libraryViewActive).toBe(false);
+
+    expect(createController({ showLibraryView: () => true }).libraryViewActive).toBe(false);
+    expect(createController({ showLibraryView: () => false, timelineOptions: personal }).libraryViewActive).toBe(false);
+  });
+
+  it('treats a library view as narrowing, and reloads on a space add under it', () => {
+    const sut = createController({
+      timelineOptions: () => ({ libraryView: LibraryView.Personal }) as TimelineManagerOptions,
+    });
+    expect(sut.isNarrowed).toBe(true);
+    expect(createController().isNarrowed).toBe(false);
+
+    sut.onSpaceAddAssets({});
+    expect(sut.timelineReloadToken).toBe(1);
+  });
+
+  describe('album stack count setting', () => {
+    afterEach(() => {
+      albumStackPreferences.countInAlbum = false;
+    });
+
+    it('collapses stacks and asks for album-only counts only when the setting is on', () => {
+      navigate('/albums/a1');
+      const sut = create(() =>
+        createAlbumTimeline({
+          name: 'album',
+          getAlbum: () => ({ id: 'a1', albumUsers: [] }) as never,
+          getTimelineManager: () => undefined,
+          isBrowse: () => true,
+        }),
+      );
+      expect(sut.options).toMatchObject({ albumId: 'a1', withStacked: true });
+      expect(sut.options).not.toHaveProperty('stackCountInAlbum');
+
+      albumStackPreferences.countInAlbum = true;
+      flushSync();
+      expect(sut.options).toMatchObject({ albumId: 'a1', withStacked: true, stackCountInAlbum: true });
     });
   });
 });

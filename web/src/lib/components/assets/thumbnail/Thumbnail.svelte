@@ -1,18 +1,19 @@
 <script lang="ts">
-  import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
-  import { t } from 'svelte-i18n';
-  import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
-  import { ProjectionType } from '$lib/constants';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { inspectorFeed } from '$lib/managers/inspector-link.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { locale, playVideoThumbnailOnHover } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
-  import { moveFocus } from '$lib/utils/focus-util';
-  import { currentUrlReplaceAssetId } from '$lib/utils/navigation';
-  import { getAltText } from '$lib/utils/thumbnail-util';
-  import { tileDateLabel } from '$lib/utils/timeline-dates';
+  import Thumbhash from '#lib/components/Thumbhash.svelte';
+  import { ProjectionType } from '#lib/constants.ts';
+  import SpaceBadge from '#lib/gallery/space-badge/SpaceBadge.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { inspectorFeed } from '#lib/managers/inspector-link.svelte.ts';
+  import { stackExpandManager } from '#lib/managers/stack-expand-manager.svelte.ts';
+  import { thumbnailZoomManager } from '#lib/managers/thumbnail-zoom-manager.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { locale, playVideoThumbnailOnHover } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl, getAssetPlaybackUrl } from '#lib/utils.ts';
+  import { moveFocus } from '#lib/utils/focus-util.ts';
+  import { currentUrlReplaceAssetId } from '#lib/utils/navigation.ts';
+  import { getAltText } from '#lib/utils/thumbnail-util.ts';
+  import { tileDateLabel } from '#lib/utils/timeline-dates.ts';
   import { AssetMediaSize, AssetVisibility, type UserResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import {
@@ -27,12 +28,13 @@
     mdiRotate360,
   } from '@mdi/js';
   import { onMount, untrack } from 'svelte';
+  import { t } from 'svelte-i18n';
   import type { ClassValue } from 'svelte/elements';
   import { fade } from 'svelte/transition';
-  import Thumbhash from '$lib/components/Thumbhash.svelte';
   import ImageThumbnail from './ImageThumbnail.svelte';
-  import { livePhotoMark } from './live-mark';
   import VideoThumbnail from './VideoThumbnail.svelte';
+  import { livePhotoMark } from './live-mark';
+
   interface Props {
     asset: TimelineAsset;
     groupIndex?: number;
@@ -51,7 +53,7 @@
     /** Local Omarchy layer: the month this photo begins in the timeline grid ("SEP"), set on that photo only */
     monthMark?: string;
     /** Local Omarchy layer: false in a grid of favourites only (Favorites, the favourites filter), where a heart on
-     * every tile would say nothing */
+    every tile would say nothing */
     showFavoriteIcon?: boolean;
     imageClass?: ClassValue;
     brokenAssetClass?: ClassValue;
@@ -299,11 +301,11 @@
   data-thumbnail-focus-container
   data-stack-member={stackGroup ? true : undefined}
   data-stack-dimmed={stackDimmed ? true : undefined}
-  data-selected={selected ? true : undefined}
+  data-selected={selected || undefined}
   data-month-start={monthMark ? true : undefined}
   data-peek-video={asset.isVideo ? getAssetPlaybackUrl({ id: asset.id, cacheKey: asset.thumbhash }) : undefined}
-  data-readonly={readonly ? true : undefined}
-  data-disabled={disabled ? true : undefined}
+  data-readonly={readonly || undefined}
+  data-disabled={disabled || undefined}
   tabindex={0}
   role="link"
 >
@@ -405,13 +407,19 @@
           </p>
         {/if}
 
+        <!-- Local Omarchy layer: a month's first tile keeps its corner for the month mark (ws-month-mark) -->
+        <SpaceBadge
+          assetId={asset.id}
+          enabled={!readonly}
+          covered={mouseOver || selected || selectionCandidate || !!monthMark}
+        />
         <!-- Favorite asset star -->
         {#if showsHeart}
           <div
             class={['absolute inset-s-2 bottom-2 z-2', { 'ws-favorite-pop': favoritePop }]}
             onanimationend={() => (favoritePop = false)}
           >
-            <Icon data-icon-favorite icon={mdiHeart} size="24" class="text-white" />
+            <Icon data-icon-favorite data-testid="favorite-icon" icon={mdiHeart} size="24" class="text-white" />
           </div>
         {/if}
 
@@ -427,7 +435,13 @@
 
         {#if !authManager.isSharedLink && showArchiveIcon && asset.visibility === AssetVisibility.Archive}
           <div class={['absolute inset-s-2 z-2', showsHeart ? 'bottom-10' : 'bottom-2']}>
-            <Icon data-icon-archive icon={mdiArchiveArrowDownOutline} size="24" class="text-white" />
+            <Icon
+              data-icon-archive
+              data-testid="archive-icon"
+              icon={mdiArchiveArrowDownOutline}
+              size="24"
+              class="text-white"
+            />
           </div>
         {/if}
 
@@ -480,8 +494,8 @@
           <Icon icon={mdiCameraBurst} size="16" />
         </div>
       {:else if asset.stack && showStackedIcon}
-        {@const stackId = asset.stack.id}
-        {@const expanded = stackExpandManager.isExpanded(stackId)}
+        {const stackId = $derived(asset.stack.id)}
+        {const expanded = $derived(stackExpandManager.isExpanded(stackId))}
         <button
           type="button"
           class={[
@@ -522,6 +536,7 @@
 
     {#if selectionCandidate}
       <div
+        data-testid="selection-candidate"
         class={['absolute top-0 z-2 size-full bg-immich-primary opacity-40', { 'rounded-xl': selected }]}
         in:fade={{ duration: 100 }}
         out:fade={{ duration: 100 }}

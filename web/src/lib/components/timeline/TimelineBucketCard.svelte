@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Thumbhash from '$lib/components/Thumbhash.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
+  import Thumbhash from '#lib/components/Thumbhash.svelte';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import type { ActivatableTimelineBucket } from '#lib/utils/timeline-zoom-navigation.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { t } from 'svelte-i18n';
 
@@ -19,7 +19,7 @@
     disabled?: boolean;
     onActivate: (bucket: ActivatableTimelineBucket) => void;
     /** Local Omarchy layer: in the Years and Months grid, how full the period is against the busiest one (0 to 1),
-     * drawn as a bar under its count */
+    drawn as a bar under its count */
     density?: number;
     /** Local Omarchy layer: a month named alone ("Oct"), where its row in the Months grid names the year */
     short?: boolean;

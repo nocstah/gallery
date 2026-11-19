@@ -1,14 +1,14 @@
-import { AssetVisibility } from '@immich/sdk';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
 import {
   cleanupLibrary,
   libraryContextFile,
   mainLibrary,
   secondLibrary,
   serving,
-} from '@test-data/factories/library-context-factory';
-import { personFactory } from '@test-data/factories/person-factory';
-import { canMoveFrom, canMovePerson, movePerson, moverPageAllowed, moveTargets } from './move-gates';
+} from '#test/kioku/factories/library-context-factory.ts';
+import { personFactory } from '#test/kioku/factories/person-factory.ts';
+import { AssetVisibility } from '@immich/sdk';
+import { canMoveFrom, canMovePerson, movePerson, moveTargets, moverPageAllowed } from './move-gates';
 
 // Local Omarchy layer: where Move to <library> is offered (gallery/moves). The page conditions (not a vault's Gallery,
 // another library listed, this library's own registered address on this computer, this desktop's browser, the owner),
@@ -18,8 +18,8 @@ const desktop = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0
 const owner = { id: 'owner-id', isAdmin: true };
 const here = new URL('/photos', secondLibrary.url);
 
-const load = (libraries: unknown[] = [mainLibrary, secondLibrary], current = secondLibrary) =>
-  loadLibraryContext(serving(libraryContextFile(current, libraries)));
+const load = (libraries: unknown[] = [mainLibrary, secondLibrary]) =>
+  loadLibraryContext(serving(libraryContextFile(secondLibrary, libraries)));
 
 const asset = (id: string, overrides: Partial<{ ownerId: string; isTrashed: boolean }> = {}) => ({
   id,

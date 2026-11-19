@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import SidebarNavItem from '$lib/components/sidebar/sidebar-nav-item.svelte';
-  import { canLaunchVaultChooser, VAULT_CHOOSER_URI } from '$lib/gallery/vaults/launcher';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import SidebarNavItem from '#lib/components/sidebar/sidebar-nav-item.svelte';
+  import { VAULT_CHOOSER_URI, canLaunchVaultChooser } from '#lib/gallery/vaults/launcher.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import { mdiSafeSquareOutline } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   let userAgent = $state('');
   onMount(() => {

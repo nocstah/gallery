@@ -1,6 +1,6 @@
+import { personFactory } from '#test/kioku/factories/person-factory.ts';
 import '@testing-library/jest-dom';
 import { render, screen, waitFor, within } from '@testing-library/svelte';
-import { personFactory } from '@test-data/factories/person-factory';
 import MoveFaces from './MoveFaces.svelte';
 import type { MoveFacesReport } from './mover';
 

@@ -1,12 +1,9 @@
-import { AssetTypeEnum } from '@immich/sdk';
-import { get } from 'svelte/store';
-import type { Faces } from '$lib/managers/asset-viewer-manager.svelte';
-import { PeopleSortBy, peopleViewSettings } from '$lib/stores/preferences.store';
-import type { Size } from '$lib/utils/container-utils';
+import { PeopleSortBy, peopleViewSettings } from '#lib/gallery/stores/preferences.store.ts';
+import type { Faces } from '#lib/managers/asset-viewer-manager.svelte.ts';
+import type { Size } from '#lib/utils/container-utils.ts';
 import {
   appendUniqueById,
   clampFaceBoxToImage,
-  type FaceBox,
   getAdminFacePreviewUrl,
   getBoundingBox,
   getFaceCropTransform,
@@ -15,7 +12,10 @@ import {
   sortPeople,
   sortPeopleForManagement,
   zoomImageToBase64,
-} from '$lib/utils/people-utils';
+  type FaceBox,
+} from '#lib/utils/people-utils.ts';
+import { AssetTypeEnum } from '@immich/sdk';
+import { get } from 'svelte/store';
 
 const makeFace = (overrides: Partial<Faces> = {}): Faces => ({
   id: 'face-1',
@@ -333,9 +333,49 @@ describe('getFaceCropTransform', () => {
 });
 
 describe(zoomImageToBase64.name, () => {
+  beforeEach(() => {
+    // A server without the face crop route, so video faces fall back to cropping the poster thumbnail.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("uses the server's crop of a video face, cut from its best frame, when the server has one", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new Blob(['jpeg'], { type: 'image/jpeg' })));
+    vi.stubGlobal('fetch', fetchMock);
+    const imageSpy = vi.fn();
+    vi.stubGlobal('Image', imageSpy);
+
+    const crop = await zoomImageToBase64(makeFace(), 'asset-1', AssetTypeEnum.Video, undefined);
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/faces/face-1/thumbnail'));
+    expect(crop).toMatch(/^data:image\/jpeg;base64,/);
+    expect(imageSpy).not.toHaveBeenCalled();
+  });
+
+  it('asks for a new crop when a refresh moved the face, so the browser never shows the old frame', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => new Response(new Blob(['jpeg'], { type: 'image/jpeg' })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await zoomImageToBase64(makeFace(), 'asset-1', AssetTypeEnum.Video, undefined);
+    await zoomImageToBase64(makeFace({ boundingBoxX1: 1010 }), 'asset-1', AssetTypeEnum.Video, undefined);
+    await zoomImageToBase64(makeFace(), 'asset-1', AssetTypeEnum.Video, undefined);
+
+    const [first, moved, again] = fetchMock.mock.calls.map(([url]) => url);
+    expect(moved).not.toBe(first);
+    expect(again).toBe(first);
+  });
+
+  it('never asks the server for a photo face, which is cropped from the full image on screen', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await zoomImageToBase64(makeFace(), 'asset-1', AssetTypeEnum.Image, undefined);
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('sets anonymous CORS before loading video thumbnails and face crop images', async () => {

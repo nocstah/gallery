@@ -40,10 +40,10 @@ export const placeLine = (stats: PlaceStats, locale?: string) =>
   `${stats.count.toLocaleString(locale)} · ${placeYears(stats)}`;
 
 /**
- * Places in the order they stand: those that hold the most photos first, then by name; a place whose count is not
- * known yet keeps its turn after the counted ones, in the order it came. `keyOf` says which place an item is, and
- * `statsOf` what is known of it.
- */
+Places in the order they stand: those that hold the most photos first, then by name; a place whose count is not
+known yet keeps its turn after the counted ones, in the order it came. `keyOf` says which place an item is, and
+`statsOf` what is known of it.
+*/
 export const rankPlaces = <T>(
   places: T[],
   keyOf: (place: T) => PlaceKey,

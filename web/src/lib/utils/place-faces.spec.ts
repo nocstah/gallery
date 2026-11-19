@@ -1,13 +1,13 @@
-import { AssetTypeEnum, AssetVisibility, type SearchFilter } from '@immich/sdk';
 import {
-  choosePlaceFace,
-  firstBright,
   PLACE_LOOKED_AT,
   PLACE_LOOKS,
+  choosePlaceFace,
+  firstBright,
   placeFilter,
   type PlacePicture,
-} from '$lib/utils/place-faces';
-import { BRIGHT, DIM } from '@test-data/thumbhash';
+} from '#lib/utils/place-faces.ts';
+import { BRIGHT, DIM } from '#test/kioku/thumbhash.ts';
+import { AssetTypeEnum, AssetVisibility, type SearchFilter } from '@immich/sdk';
 
 // Local Omarchy layer: a place's face is a photo without people that looks like the place (utils/place-faces)
 const riverton = { city: 'Riverton', country: 'Examplestan' };

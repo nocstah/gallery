@@ -2,8 +2,8 @@
   // Local Omarchy layer: who a series leaves out (gallery/series). Curator keeps only Gallery person ids; their names and
   // faces come from Gallery with the owner's session, each person once while the page is open. Add someone opens the
   // people picker Kioku already has, without the people already listed; each change is saved at once.
-  import PeoplePickerModal from '$lib/modals/PeoplePickerModal.svelte';
-  import { getPeopleThumbnailUrl } from '$lib/utils';
+  import PeoplePickerModal from '#lib/modals/PeoplePickerModal.svelte';
+  import { getPeopleThumbnailUrl } from '#lib/utils.ts';
   import { getPerson, type PersonResponseDto } from '@immich/sdk';
   import { Icon, modalManager } from '@immich/ui';
   import { mdiClose, mdiPlus } from '@mdi/js';
@@ -68,8 +68,8 @@
   <p class="ws-sharing-none">{$t('memory_series_leave_out_body')}</p>
   <ul class="series-people" aria-busy={saving || undefined}>
     {#each ids as id (id)}
-      {@const person = people.get(id)}
-      {@const name = nameOf(id)}
+      {const person = $derived(people.get(id))}
+      {const name = $derived(nameOf(id))}
       <li class="series-person" data-testid="series-person" data-id={id}>
         {#if person}
           <img src={getPeopleThumbnailUrl(person)} alt="" loading="lazy" draggable="false" />

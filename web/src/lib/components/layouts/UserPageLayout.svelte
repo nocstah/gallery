@@ -3,30 +3,28 @@
 </script>
 
 <script lang="ts">
-  import { useActions, type ActionArray } from '$lib/actions/use-actions';
-  import OmarchyBar from '$lib/components/omarchy/OmarchyBar.svelte';
-  import TimelineMonthHeading from '$lib/components/timeline/TimelineMonthHeading.svelte';
-  import { barSlot } from '$lib/managers/bar-slot.svelte';
-  import { monthInView, timelineHeading } from '$lib/managers/timeline-heading.svelte';
-  import UserSidebar from '$lib/components/shared-components/side-bar/UserSidebar.svelte';
-  import { shortcuts } from '$lib/actions/shortcut';
-  import { sidebarMedia } from '$lib/stores/sidebar-media.svelte';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import type { HeaderButtonActionItem } from '$lib/types';
-  import { openFileUploadDialog } from '$lib/utils/file-uploader';
-  import { getTabbable } from '$lib/utils/focus-util';
-  import { generateId } from '$lib/utils/generate-id';
+  import { shortcuts } from '#lib/actions/shortcut.ts';
+  import OmarchyBar from '#lib/components/omarchy/OmarchyBar.svelte';
+  import UserSidebar from '#lib/components/shared-components/side-bar/UserSidebar.svelte';
+  import TimelineMonthHeading from '#lib/components/timeline/TimelineMonthHeading.svelte';
+  import { barSlot } from '#lib/managers/bar-slot.svelte.ts';
+  import { monthInView, timelineHeading } from '#lib/managers/timeline-heading.svelte.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { sidebarMedia } from '#lib/stores/sidebar-media.svelte.ts';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
+  import type { HeaderButtonActionItem } from '#lib/types.ts';
+  import { openFileUploadDialog } from '#lib/utils/file-uploader.ts';
+  import { getTabbable } from '#lib/utils/focus-util.ts';
   import {
-    countPageControls,
-    foldsPageButtons,
-    keepsSheetOpen,
     PAGE_FIT_FOLD,
     POPUP,
     POPUP_CHOICE,
+    countPageControls,
+    foldsPageButtons,
+    keepsSheetOpen,
     sheetOffset,
     tightensFurther,
-  } from '$lib/utils/page-bar-fit';
+  } from '#lib/utils/page-bar-fit.ts';
   import { Button, ContextMenuButton, HStack, Icon, isMenuItemType, type MenuItemType } from '@immich/ui';
   import { mdiDotsVertical } from '@mdi/js';
   import { tick, untrack, type Snippet } from 'svelte';
@@ -38,18 +36,17 @@
     barFitsNavbar?: boolean;
     title?: string | undefined;
     /**
-     * Local Omarchy layer: the page heads its body with its name as a poster (the AI inbox, Command center): the bar
-     * leaves the name to it, and carries it only on a phone, where the poster gives way (styles/omarchy-world.css)
-     */
+    Local Omarchy layer: the page heads its body with its name as a poster (the AI inbox, Command center): the bar
+    leaves the name to it, and carries it only on a phone, where the poster gives way (styles/omarchy-world.css)
+    */
     titleInBody?: boolean;
     /**
-     * Local Omarchy layer: the page heads its body with a name of its own, its h1 (a Space's album: the album's name,
-     * where the bar names the Space it is in), so the bar's title is text
-     */
+    Local Omarchy layer: the page heads its body with a name of its own, its h1 (a Space's album: the album's name,
+    where the bar names the Space it is in), so the bar's title is text
+    */
     headingInBody?: boolean;
     description?: string | undefined;
     scrollbar?: boolean;
-    use?: ActionArray;
     actions?: Array<HeaderButtonActionItem | MenuItemType>;
     leading?: Snippet;
     descriptionTrailing?: Snippet;
@@ -66,13 +63,13 @@
     headingInBody = false,
     description = undefined,
     scrollbar = true,
-    use = [],
     actions = [],
     leading,
     descriptionTrailing,
     sidebar,
     buttons,
     children,
+    ...rest
   }: Props = $props();
 
   const enabledActions = $derived(
@@ -194,7 +191,8 @@
   // Space with the first control focused); a press on one of its buttons or a choice in a menu or list one of them
   // opened, a click outside, Escape or the focus moving on closes it, and the ⋮ takes the focus back where the sheet
   // had it
-  const sheetId = `page-tools-${generateId()}`;
+  const uid = $props.id();
+  const sheetId = `page-tools-${uid}`;
   let sheetOpen = $state(false);
   const sheetShown = $derived(folded && sheetOpen);
   let foldButton = $state<HTMLButtonElement>();
@@ -418,7 +416,10 @@
                   leadingIcon={action.icon}
                   onclick={(event: MouseEvent) => action.onAction({ event, action })}
                   title={action.data?.title ?? action.title}
+                  aria-label={action.title}
                 >
+                  <!-- Local Omarchy layer: a narrow bar hides the label (ws-action-label); since @immich/ui 3.4 `title` is a
+                       tooltip, not the attribute, so the button keeps its name through aria-label -->
                   <span class="ws-action-label">{action.title}</span>
                 </Button>
               {/each}
@@ -471,7 +472,7 @@
     <div
       class="{scrollbarClass} absolute {hasTitleClass} w-full overflow-y-auto p-2"
       data-title-in-bar={titleInBody && titleInBar ? '' : undefined}
-      use:useActions={use}
+      {...rest}
     >
       {@render children?.()}
     </div>

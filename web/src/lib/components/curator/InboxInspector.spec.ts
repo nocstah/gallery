@@ -1,19 +1,19 @@
+import { kindAction } from '#lib/utils/curator-inbox.ts';
+import { type Suggestion } from '#lib/utils/curator.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import { type Suggestion } from '$lib/utils/curator';
-import { kindAction } from '$lib/utils/curator-inbox';
 import InboxInspector from './InboxInspector.svelte';
 import ReviewMode from './ReviewMode.svelte';
 import SuggestionVisual from './SuggestionVisual.svelte';
 
 const { decide, waitingIn } = vi.hoisted(() => ({ decide: vi.fn(), waitingIn: vi.fn() }));
-vi.mock('$lib/utils/curator', async (original) => ({
-  ...(await original<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (original) => ({
+  ...(await original<typeof import('#lib/utils/curator.ts')>()),
   curator: { decide, undo: vi.fn(), reopen: vi.fn() },
 }));
-vi.mock('$lib/utils/curator-inbox', async (original) => ({
-  ...(await original<typeof import('$lib/utils/curator-inbox')>()),
+vi.mock('#lib/utils/curator-inbox.ts', async (original) => ({
+  ...(await original<typeof import('#lib/utils/curator-inbox.ts')>()),
   waitingIn,
 }));
 vi.mock('@immich/sdk', async (original) => ({
@@ -39,7 +39,7 @@ const suggestion = (overrides: Partial<Suggestion> = {}): Suggestion => ({
 });
 
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
   await waitLocale('en-US');
 });

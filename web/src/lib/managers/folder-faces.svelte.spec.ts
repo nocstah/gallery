@@ -1,3 +1,4 @@
+import { FolderFaceManager } from '#lib/managers/folder-faces.svelte.ts';
 import {
   AssetTypeEnum,
   AssetVisibility,
@@ -7,7 +8,6 @@ import {
   type AssetResponseDto,
   type SearchResponseDto,
 } from '@immich/sdk';
-import { FolderFaceManager } from '$lib/managers/folder-faces.svelte';
 
 // Local Omarchy layer: the Albums page's folder faces are asked of Gallery once per page load (managers/folder-faces)
 vi.mock('@immich/sdk', async () => ({

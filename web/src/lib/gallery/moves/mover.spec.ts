@@ -1,18 +1,18 @@
 import {
+  MOVER_ORIGIN,
+  MOVE_ID,
+  MoverError,
+  POST_TIMEOUT_MS,
+  READ_TIMEOUT_MS,
   askFaces,
   cancelMove,
   confirmMove,
   giveKey,
   isEnded,
   listMoves,
-  MOVE_ID,
-  MOVER_ORIGIN,
-  MoverError,
   moveStatus,
   newMoveId,
   parseStatus,
-  POST_TIMEOUT_MS,
-  READ_TIMEOUT_MS,
   startMove,
 } from './mover';
 

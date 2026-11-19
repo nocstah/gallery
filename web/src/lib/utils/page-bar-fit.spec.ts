@@ -1,11 +1,11 @@
 import {
+  PAGE_FIT_FOLD,
   countPageControls,
   foldsPageButtons,
   keepsSheetOpen,
-  PAGE_FIT_FOLD,
   sheetOffset,
   tightensFurther,
-} from '$lib/utils/page-bar-fit';
+} from '#lib/utils/page-bar-fit.ts';
 
 const html = (markup: string) => {
   const box = document.createElement('div');

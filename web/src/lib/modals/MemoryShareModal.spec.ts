@@ -1,17 +1,20 @@
+import { buildFilmPlan } from '#lib/components/memories/film/film-plan.ts';
+import type { MemoryPresentation } from '#lib/components/memories/memory-sharing.ts';
+import '#lib/gallery/__mocks__/sdk.mock.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+import { locale as formatLocale } from '#lib/stores/preferences.store.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
+import { getAnimateMock } from '#test/kioku/mocks/animate.mock.ts';
+import { defaultUserConfig } from '#test/unit/gallery-config-defaults.ts';
 import { AssetTypeEnum, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
 import { modalManager } from '@immich/ui';
 import '@testing-library/jest-dom';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { init, locale, register, waitLocale } from 'svelte-i18n';
-import { getAnimateMock } from '$lib/__mocks__/animate.mock';
-import '$lib/__mocks__/sdk.mock';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { buildFilmPlan } from '$lib/components/memories/film/film-plan';
-import type { MemoryPresentation } from '$lib/components/memories/memory-sharing';
-import { locale as formatLocale } from '$lib/stores/preferences.store';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 import MemoryShareModal from './MemoryShareModal.svelte';
 
 const { makeSharedLink, prepare, save, shareMemory, keepFilm, memoryShares, forgetMemoryShare } = vi.hoisted(() => ({
@@ -27,19 +30,23 @@ vi.mock('@immich/ui', async (importOriginal) => {
   const original = await importOriginal<typeof import('@immich/ui')>();
   return { ...original, modalManager: { show: vi.fn(), showDialog: vi.fn() } };
 });
-vi.mock('$lib/managers/film-video-manager.svelte', () => ({
+vi.mock('#lib/managers/film-video-manager.svelte.ts', () => ({
   filmVideos: { items: [], shareDialogOpen: false, prepare, save },
 }));
-vi.mock('$lib/utils/curator', () => ({
+vi.mock('#lib/utils/curator.ts', () => ({
   curator: { shareMemory, keepFilm, memoryShares, forgetMemoryShare },
   curatorIsMine: () => true,
   FILM_MOST_SECONDS: 300,
 }));
-vi.mock('$lib/utils', () => ({ copyToClipboard: vi.fn() }));
-vi.mock('$lib/managers/server-config-manager.svelte', () => ({
-  serverConfigManager: { value: { externalDomain: 'https://photos.example' } },
-}));
-vi.mock('$lib/services/shared-link.service', () => ({
+vi.mock('#lib/utils.ts', () => ({ copyToClipboard: vi.fn() }));
+// the external domain links are given out with (user config); gallery-setup clears the query cache before each test
+beforeEach(() =>
+  queryClient.setQueryData(getUserConfigQuery().queryKey, {
+    ...defaultUserConfig,
+    server: { ...defaultUserConfig.server, externalDomain: 'https://photos.example' },
+  }),
+);
+vi.mock('#lib/services/shared-link.service.ts', () => ({
   makeSharedLink,
   SHARE_LINK_DAYS: 30,
   handleUpdateSharedLink: vi.fn(),
@@ -101,8 +108,8 @@ const madeLink = (overrides: Partial<SharedLinkResponseDto> = {}) =>
 
 beforeAll(async () => {
   await init({ fallbackLocale: 'en-US' });
-  register('en-US', () => import('$i18n/en.json'));
-  register('de', () => import('$i18n/de.json'));
+  register('en-US', () => import('#i18n/en.json'));
+  register('de', () => import('#i18n/de.json'));
   await waitLocale('en-US');
 });
 beforeEach(() => {
@@ -128,7 +135,7 @@ beforeEach(() => {
   shareMemory.mockResolvedValue({ ready: true, count: 2 });
   memoryShares.mockResolvedValue({ shares: {} });
   forgetMemoryShare.mockResolvedValue({ forgotten: true, songs: 1 });
-  vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+  vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
   sdkMock.removeSharedLink.mockResolvedValue(undefined as never);
 });
 // `Modal` mounts a bits-ui dialog whose body scroll lock releases on a 24ms timer
@@ -447,7 +454,7 @@ describe('turning it off', () => {
   });
 
   it('leaves the link on when the question is declined', async () => {
-    vi.mocked(modalManager.showDialog).mockResolvedValue(false);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(false);
     await shared();
 
     await userEvent.click(screen.getByRole('button', { name: 'Turn off' }));

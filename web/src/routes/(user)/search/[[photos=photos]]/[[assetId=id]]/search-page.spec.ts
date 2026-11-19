@@ -1,3 +1,9 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { QueryParameter } from '#lib/constants.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+import { readRecentSearches, rememberSearch } from '#lib/utils/recent-searches.ts';
+import { defaultUserConfig } from '#test/unit/gallery-config-defaults.ts';
 import { AssetVisibility, type AssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
@@ -5,9 +11,6 @@ import { userEvent } from '@testing-library/user-event';
 import type { Component } from 'svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { goto } from '$app/navigation';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { QueryParameter } from '$lib/constants';
-import { readRecentSearches, rememberSearch } from '$lib/utils/recent-searches';
 import SearchPage from './+page.svelte';
 
 const {
@@ -66,136 +69,131 @@ vi.mock('$app/navigation', () => ({
 
 vi.mock('$app/state', () => ({ page: mockPage }));
 
-vi.mock('$lib/components/ActionMenuItem.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/ActionMenuItem.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
 // Local Omarchy layer: the page lives in the shell (UserPageLayout); the bar stub renders what the page puts in the one
 // bar (its query field), as the real bar does
-vi.mock('$lib/components/omarchy/OmarchyBar.svelte', async () => {
-  const module = await import('@test-data/mocks/omarchy-bar-rail-aware.stub.svelte');
+vi.mock('#lib/components/omarchy/OmarchyBar.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/omarchy-bar-rail-aware.stub.svelte');
   return { default: module.default };
 });
 
-vi.mock('$lib/components/shared-components/side-bar/UserSidebar.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/side-bar/UserSidebar.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/OnEvents.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/OnEvents.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/LoadingSpinner.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/LoadingSpinner.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/context-menu/ButtonContextMenu.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/context-menu/ButtonContextMenu.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/ControlAppBar.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/ControlAppBar.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte', async () => {
+vi.mock('#lib/components/shared-components/gallery-viewer/GalleryViewer.svelte', async () => {
   const { default: MockComponent } = await import('./mock-gallery-viewer.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/AssetSelectControlBar.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/AssetSelectControlBar.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ArchiveAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/gallery/actions/ArchiveAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ChangeDateAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/ChangeDateAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ChangeDescriptionAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/ChangeDescriptionAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ChangeLocationAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/ChangeLocationAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/CreateSharedLinkAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/DeleteAssetsAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/DeleteAssetsAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/DownloadAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/DownloadAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/FavoriteAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/FavoriteAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/RotateAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/RotateAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/SetVisibilityAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/SetVisibilityAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/TagAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/TagAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
-  return { default: MockComponent };
-});
-
-vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({
+vi.mock('#lib/managers/asset-multi-select-manager.svelte.ts', () => ({
   assetMultiSelectManager: mockAssetMultiSelectManager,
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mockAuthManager }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mockAuthManager }));
 
-vi.mock('$lib/managers/command-context-manager.svelte', () => ({
+vi.mock('#lib/managers/command-context-manager.svelte.ts', () => ({
   registerSelectionContext: mockRegisterSelectionContext,
 }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: mockFeatureFlagsManager,
 }));
 
-vi.mock('$lib/managers/global-search-manager.svelte', () => ({
+vi.mock('#lib/managers/global-search-manager.svelte.ts', () => ({
   globalSearchManager: mockGlobalSearchManager,
 }));
 
-vi.mock('$lib/services/asset.service', () => ({
+vi.mock('#lib/services/asset.service.ts', () => ({
   getAssetBulkActions: vi.fn(() => ({})),
 }));
 
-vi.mock('$lib/utils/navigation', () => ({
+vi.mock('#lib/utils/navigation.ts', () => ({
   isAlbumsRoute: vi.fn(() => false),
   isPeopleRoute: vi.fn(() => false),
 }));
 
-vi.mock('$lib/utils/timeline-util', () => ({
+vi.mock('#lib/utils/timeline-util.ts', () => ({
   isTimelineAsset: vi.fn(Boolean),
   isTimelineAssets: vi.fn((assets) => Array.isArray(assets)),
   toTimelineAsset: vi.fn((asset) => asset),
@@ -214,7 +212,7 @@ vi.mock('@immich/sdk', async () => {
   };
 });
 
-function makeAsset(overrides: Partial<AssetResponseDto> = {}): AssetResponseDto {
+function makeAsset(): AssetResponseDto {
   return {
     id: 'asset-1',
     ownerId: 'user-1',
@@ -224,13 +222,12 @@ function makeAsset(overrides: Partial<AssetResponseDto> = {}): AssetResponseDto 
     fileCreatedAt: '2026-01-01T00:00:00.000Z',
     localDateTime: '2026-01-01T00:00:00.000Z',
     type: 'IMAGE',
-    ...overrides,
   } as AssetResponseDto;
 }
 
 // the page's words in English, so the tests read what a person reads (the counts among them)
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US' });
   await waitLocale('en-US');
 });
@@ -243,7 +240,16 @@ const searchedTerms = () => {
   return JSON.parse(new URL(url, 'https://gallery.test').searchParams.get(QueryParameter.QUERY) ?? '{}') as unknown;
 };
 
+// The page reads smart search from the user config (machineLearning.clip), as upstream's query left it; the specs still
+// switch it with mockFeatureFlagsManager.value.smartSearch, so each render seeds the config from that
 function renderPage() {
+  queryClient.setQueryData(getUserConfigQuery().queryKey, {
+    ...defaultUserConfig,
+    machineLearning: {
+      ...defaultUserConfig.machineLearning,
+      clip: { enabled: mockFeatureFlagsManager.value.smartSearch },
+    },
+  } as never);
   return render(TestWrapper as Component<{ component: typeof SearchPage; componentProps: Record<string, never> }>, {
     component: SearchPage,
     componentProps: {},
@@ -545,7 +551,7 @@ describe('Search page in the shell', () => {
 
     await waitFor(() => expect(goto).toHaveBeenCalled());
     expect(searchedTerms()).toEqual({ city: 'Berlin', query: 'sunset' });
-    expect(vi.mocked(goto).mock.calls.at(-1)?.[1]).toMatchObject({ keepFocus: true });
+    expect(vi.mocked(goto).mock.calls.at(-1)?.[1]).toMatchObject({ reset: false });
   });
 
   it('searches the text in the mode picked beside the field, which the palette then keeps', async () => {

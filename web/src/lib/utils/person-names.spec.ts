@@ -1,4 +1,4 @@
-import { isRepeatedName, nameKey, personSpanLine, repeatedNames } from '$lib/utils/person-names';
+import { isRepeatedName, nameKey, personSpanLine, repeatedNames } from '#lib/utils/person-names.ts';
 
 // Local Omarchy layer: telling apart people who bear the same name (DESIGN.md, People)
 describe(repeatedNames.name, () => {

@@ -11,9 +11,9 @@
 // fronts a year. A period is asked about in rounds, each round one request for all the periods it is about: the
 // newest favourite photo and the newest photo of every period; then, where those leave room for better, the oldest of
 // each; then, for a period where neither end of it qualifies, its list of photos; then its newest video.
+import { FaceKind, faceKind, type FacePicture } from '#lib/utils/folder-faces.ts';
+import { isDim } from '#lib/utils/thumbhash-light.ts';
 import { AssetOrder } from '@immich/sdk';
-import { FaceKind, faceKind, type FacePicture } from '$lib/utils/folder-faces';
-import { isDim } from '$lib/utils/thumbhash-light';
 
 /** A picture that could front a period, as a covers request or a period's list gives it. */
 export type PeriodPicture = { id: string; thumbhash: string | null; ratio: number | null };
@@ -34,7 +34,7 @@ export type ListedPicture = PeriodPicture & { isFavorite: boolean; isImage: bool
 export type CoverPick = { tier: PeriodTier; order: AssetOrder };
 
 /** What Gallery says of a candidate: its kind (folder-faces' kinds) and, for a picture without a camera's data, whether
- * its recognised text makes it a page of words (undefined until asked). */
+its recognised text makes it a page of words (undefined until asked). */
 export type PeriodVerdict = { kind: FaceKind; textHeavy?: boolean };
 
 /** Where a period's faces are read from (managers/period-faces: the timeline's covers and buckets, Gallery's search). */
@@ -62,7 +62,7 @@ const ORDER_OLDEST = 1;
 const ORDER_LISTED = 2;
 
 /** How a candidate ranks, lower first: its tier, a camera's photo before a plain picture, a bright one before a dim one,
- * then the order it was found in. Undefined: never a period's face (a screenshot, a document, a page of words). */
+then the order it was found in. Undefined: never a period's face (a screenshot, a document, a page of words). */
 export const periodRank = (candidate: PeriodCandidate, verdict: PeriodVerdict | undefined): number[] | undefined => {
   if (!verdict) {
     return undefined;
@@ -115,7 +115,7 @@ export const bestCandidate = (
 };
 
 /** The likeliest faces in a period's list first: its favourites, then Live Photos (a camera took them), then pictures
- * of a photo's shape (a phone's screen is taller than 1.9:1), the bright before the dim, else as listed. */
+of a photo's shape (a phone's screen is taller than 1.9:1), the bright before the dim, else as listed. */
 export const listOrder = (pictures: ListedPicture[]): ListedPicture[] => {
   const score = (picture: ListedPicture) => [
     picture.isFavorite ? 0 : 1,
@@ -131,11 +131,11 @@ export const listOrder = (pictures: ListedPicture[]): ListedPicture[] => {
 };
 
 /**
- * Each period's face, by the folder rule (above): the picture, or nothing where nothing qualifies (the caller shows the
- * server's cover there). `tiers` are those the timeline can show (a timeline of videos has only videos; Favorites only
- * favourites). Each round asks only about the periods it could still improve, and a picture is asked about only where
- * it could front its period; a question that fails leaves its answer out, as if Gallery had none.
- */
+Each period's face, by the folder rule (above): the picture, or nothing where nothing qualifies (the caller shows the
+server's cover there). `tiers` are those the timeline can show (a timeline of videos has only videos; Favorites only
+favourites). Each round asks only about the periods it could still improve, and a picture is asked about only where
+it could front its period; a question that fails leaves its answer out, as if Gallery had none.
+*/
 export const choosePeriodFaces = async (
   periods: PeriodRequest[],
   sources: PeriodSources,
@@ -331,7 +331,7 @@ export const choosePeriodFaces = async (
 };
 
 /** What a picture is as a period's face: folder-faces' kind, read as `camera` says (a search that finds only pictures
- * with a camera make knows that without their EXIF). */
+with a camera make knows that without their EXIF). */
 export const periodVerdict = (picture: FacePicture, camera?: boolean): PeriodVerdict => ({
   kind: faceKind(picture, camera),
 });

@@ -1,21 +1,24 @@
 /**
- * RBAC oracle for the viewer-scoped read surfaces: runs every surface that applies resolveViewerScope or the
- * space visibility rules, for a fixed cast of actors over one seeded world, and snapshots what each actor gets back
- * by label. An asset label ends in `*` when that surface reports it as a favourite for that actor, and a call that
- * throws is recorded as `error:<class>`. A refactor of the scope, favourite or album-membership code must leave the
- * snapshot untouched; a deliberate behaviour change updates it with `-u` and says so in its commit.
- */
-import { Kysely } from 'kysely';
+RBAC oracle for the viewer-scoped read surfaces: runs every surface that applies resolveViewerScope or the
+space visibility rules, for a fixed cast of actors over one seeded world, and snapshots what each actor gets back
+by label. An asset label ends in `*` when that surface reports it as a favourite for that actor, and a call that
+throws is recorded as `error:<class>`. A refactor of the scope, favourite or album-membership code must leave the
+snapshot untouched; a deliberate behaviour change updates it with `-u` and says so in its commit.
+*/
+import { Kysely, sql } from 'kysely';
 import { DownloadInfoDto } from 'src/dtos/download.dto.js';
 import { FilteredMapMarkerDto } from 'src/dtos/gallery-map.dto.js';
 import { MapMarkerDto } from 'src/dtos/map.dto.js';
 import { MetadataSearchDto, SearchSuggestionType } from 'src/dtos/search.dto.js';
 import { TimeBucketDto } from 'src/dtos/time-bucket.dto.js';
-import { AlbumUserRole, AssetStatus, AssetVisibility, SharedLinkType, TimeBucketSize } from 'src/enum.js';
+import { AlbumUserRole, AssetStatus, AssetVisibility, MemoryType, SharedLinkType, TimeBucketSize } from 'src/enum.js';
 import { SearchOptionsRequestDto, searchOptionsDimensions } from 'src/gallery/dtos/search.dto.js';
 import { FilterSuggestionRepository } from 'src/gallery/repositories/filter-suggestion.repository.js';
+import { GalleryAssetRepository } from 'src/gallery/repositories/gallery-asset.repository.js';
 import { SmartFacetRepository } from 'src/gallery/repositories/smart-facet.repository.js';
 import { SpaceAlbumRepository } from 'src/gallery/repositories/space-album.repository.js';
+import { GalleryAlbumService } from 'src/gallery/services/gallery-album.service.js';
+import { GalleryAssetService } from 'src/gallery/services/gallery-asset.service.js';
 import { GallerySearchService } from 'src/gallery/services/gallery-search.service.js';
 import { AccessRepository } from 'src/repositories/access.repository.js';
 import { AlbumUserRepository } from 'src/repositories/album-user.repository.js';
@@ -79,6 +82,7 @@ const seed = async () => {
       AssetEditRepository,
       AssetFavoriteRepository,
       AssetRepository,
+      GalleryAssetRepository,
       ConfigRepository,
       CryptoRepository,
       DatabaseRepository,
@@ -229,12 +233,14 @@ const seed = async () => {
     await ctx.newTagAsset({ tagIds: [tag.id], assetIds });
     return tag.id;
   };
-  await newTag('tagOwn', owner.id, [ownAsset]);
+  const tagOwn = await newTag('tagOwn', owner.id, [ownAsset]);
   const tagSpace = await newTag('tagSpace', owner.id, [spaceAsset, spaceLocked, libraryAsset]);
   await newTag('tagEditor', spaceEditor.id, [editorAsset]);
 
-  const newMemory = async (name: string, ownerId: string, assetIds: string[]) => {
-    const { memory } = await ctx.newMemory({ ownerId });
+  const newMemory = async (name: string, ownerId: string, assetIds: string[], rule = false) => {
+    const { memory } = await ctx.newMemory(
+      rule ? { ownerId, type: MemoryType.Rule, data: { ruleId: 'season_recap', dedupeKey: name } } : { ownerId },
+    );
     label(name, memory.id);
     for (const assetId of assetIds) {
       await ctx.newMemoryAsset({ memoryId: memory.id, assetId });
@@ -243,6 +249,16 @@ const seed = async () => {
   };
   const memOwner = await newMemory('memOwner', owner.id, [ownAsset, ownArchived, spaceAsset]);
   const memViewer = await newMemory('memViewer', spaceViewer.id, [spaceAsset, spaceArchived, libraryAsset, petAsset]);
+  // A rule memory, which a stock client cannot decode (F5).
+  await newMemory('memRule', owner.id, [ownAsset], true);
+  // An Immich birthday memory, which every client here can decode (OD-3).
+  const { memory: memBirthday } = await ctx.newMemory({
+    ownerId: owner.id,
+    type: MemoryType.Birthday,
+    data: { personId: pet.personGroupId, personName: 'Rex', year: 2020 },
+  });
+  label('memBirthday', memBirthday.id);
+  await ctx.newMemoryAsset({ memoryId: memBirthday.id, assetId: ownAsset });
 
   const newLink = async (name: string, dto: Parameters<typeof ctx.newSharedLink>[0]) => {
     const { sharedLink } = await ctx.newSharedLink(dto);
@@ -294,6 +310,8 @@ const seed = async () => {
     albumEditor: user(albumEditor.id),
     albumViewer: user(albumViewer.id),
     stranger: user(stranger.id),
+    // The owner through a stock Immich or third-party client (AuthService.authenticate marks it).
+    stockOwner: { ...user(owner.id), stockClient: true as const },
     albumLink: link(albumLink, { albumId: ownAlbum.id }),
     individualLink: link(individualLink, {}),
     spaceLink: link(spaceLink, { spaceId: space.id }),
@@ -310,6 +328,8 @@ const seed = async () => {
       space: space.id,
       ownAlbum: ownAlbum.id,
       spaceAlbum: spaceAlbum.id,
+      tagOwn,
+      stack: stack.id,
       tagSpace,
       pet: pet.personGroupId,
       memories: { memOwner, memViewer },
@@ -373,12 +393,16 @@ const matrix = async <V>(
 beforeAll(async () => {
   defaultDatabase = await getKyselyDB();
   world = await seed();
+  // Indexes created on the template's empty tables record them as known-empty (reltuples = 0), so plans cached
+  // while seeding can keep treating them as empty; on CI the slowest case went past 5 s. ANALYZE refreshes the
+  // statistics and invalidates those plans (same fix as face-repair.resolve.spec.ts).
+  await sql`analyze`.execute(defaultDatabase);
 });
 
 describe('viewer-scope RBAC oracle', () => {
   it('timeline buckets and bucket contents', async () => {
     const sut = world.ctx.getService(TimelineService);
-    const { owner, space, ownAlbum, spaceAlbum, tagSpace } = world.ids;
+    const { owner, space, ownAlbum, spaceAlbum, tagOwn, tagSpace } = world.ids;
     const variants = {
       personal: (auth: Auth) => ({
         userId: me(auth),
@@ -416,6 +440,14 @@ describe('viewer-scope RBAC oracle', () => {
         userId: me(auth),
         withSharedSpaces: true,
         tagIds: [tagSpace],
+        visibility: AssetVisibility.Timeline,
+      }),
+      // The tag page's single tagId is access-checked (owned or reached through a space); tagIds above are not.
+      tagPageOwn: (auth: Auth) => ({ userId: me(auth), tagId: tagOwn, visibility: AssetVisibility.Timeline }),
+      tagPageSpace: (auth: Auth) => ({
+        userId: me(auth),
+        withSharedSpaces: true,
+        tagId: tagSpace,
         visibility: AssetVisibility.Timeline,
       }),
       partnerTimeline: () => ({ userId: owner, visibility: AssetVisibility.Timeline }),
@@ -800,17 +832,22 @@ describe('viewer-scope RBAC oracle', () => {
     const result: Record<string, unknown> = {};
     for (const [actor, auth] of Object.entries(world.actors)) {
       const detail: string[] = [];
+      const canEdit: string[] = [];
       for (const id of Object.values(world.assets)) {
         const asset = await attempt(
           () => assetService.get(auth, id),
           (dto) => dto,
         );
+        if ((asset as { canEdit?: boolean }).canEdit) {
+          canEdit.push(name(id));
+        }
         if (typeof asset === 'object' && asset) {
           detail.push(...assetList([asset as { id: string; isFavorite?: boolean }]));
         }
       }
       result[actor] = {
         detail: sorted(detail),
+        canEdit: sorted(canEdit),
         statistics: await attempt(
           () => assetService.getStatistics(auth, {}),
           (stats) => stats,
@@ -844,6 +881,69 @@ describe('viewer-scope RBAC oracle', () => {
               .toSorted((a, b) => a.stack.localeCompare(b.stack)),
         ),
       };
+    }
+    expect(result).toMatchSnapshot();
+  });
+
+  it('spaces showing each asset (thumbnail badge)', async () => {
+    const sut = world.ctx.getService(GalleryAssetService);
+    const assetIds = Object.values(world.assets);
+    const result: Record<string, unknown> = {};
+    for (const [actor, auth] of Object.entries(world.actors)) {
+      result[actor] = await attempt(
+        () => sut.getSpaces(auth, { assetIds }),
+        ({ assets }) =>
+          Object.fromEntries(
+            assets
+              .map(({ assetId, spaceIds }) => [name(assetId), sorted(spaceIds.map((id) => name(id)))] as const)
+              .toSorted(([a], [b]) => a.localeCompare(b)),
+          ),
+      );
+    }
+    expect(result).toMatchSnapshot();
+  });
+
+  // GET /albums/{id}/stacks/{stackId}: a stack narrowed to an album's members, so it must never show an actor more
+  // than GET /stacks/{id} (the `stacks` cell above) does.
+  it('album stacks', async () => {
+    const sut = world.ctx.getService(GalleryAlbumService);
+    const { ownAlbum, spaceAlbum, stack } = world.ids;
+    const result: Record<string, unknown> = {};
+    for (const [actor, auth] of Object.entries(world.actors)) {
+      result[actor] = {
+        ownAlbum: await attempt(
+          () => sut.getStack(auth, ownAlbum, stack),
+          ({ assets }) => assetList(assets),
+        ),
+        spaceAlbum: await attempt(
+          () => sut.getStack(auth, spaceAlbum, stack),
+          ({ assets }) => assetList(assets),
+        ),
+      };
+    }
+    expect(result).toMatchSnapshot();
+  });
+
+  // The one write surface here: which assets each actor can put its own tag on through PUT /tags/assets. #734 lets a
+  // space Owner/Editor tag a member's space asset (AssetUpdate plus the space edit grant); a viewer, a non-member and
+  // a shared link tag nothing. Runs last because it writes; each actor's tag is deleted again.
+  it('tag writes', async () => {
+    const sut = world.ctx.getService(TagService);
+    world.ctx.getMock(EventRepository).emit.mockResolvedValue();
+    const result: Record<string, unknown> = {};
+    for (const [actor, auth] of Object.entries(world.actors)) {
+      const { tag } = await world.ctx.newTag({ userId: me(auth), value: `write-${actor}` });
+      const bulk = await attempt(
+        () => sut.bulkTagAssets(auth, { tagIds: [tag.id], assetIds: Object.values(world.assets) }),
+        ({ count }) => count,
+      );
+      const tagged = await world.ctx.database
+        .selectFrom('tag_asset')
+        .select('assetId as id')
+        .where('tagId', '=', tag.id)
+        .execute();
+      result[actor] = { bulk, tagged: labelsOf(tagged) };
+      await world.ctx.database.deleteFrom('tag').where('id', '=', tag.id).execute();
     }
     expect(result).toMatchSnapshot();
   });

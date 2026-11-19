@@ -3,7 +3,7 @@
   // a few factual sentences by the local text model, from the photos' captions, places, people and dates), as a
   // labelled paragraph. Outside the inbox the label says the text is the model's; on an inbox card (`kind` is the
   // suggestion's) it says what accepting does with the story instead, and `clamp` keeps a long one to three lines.
-  import type { Story } from '$lib/utils/curator';
+  import type { Story } from '#lib/utils/curator.ts';
   import { t } from 'svelte-i18n';
 
   interface Props {

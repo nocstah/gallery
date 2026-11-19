@@ -5,14 +5,14 @@
   // smart albums (gallery/libraries). A media type's album (Selfies, Panoramas) has no Photos page search behind it, so
   // it only offers to stop. An album of fewer than all of its people together says how many ("at least 2 of them").
   // Where From the beginning is the owner's, it also offers A memory a day from this album (gallery/series).
-  import { goto } from '$app/navigation';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import { openAlbumSeries, smartAlbumStopped } from '$lib/gallery/series/series-album.svelte';
-  import { seriesIsMine } from '$lib/gallery/series/series-route';
-  import { curator, type SmartAlbum } from '$lib/utils/curator';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import { openAlbumSeries, smartAlbumStopped } from '#lib/gallery/series/series-album.svelte.ts';
+  import { seriesIsMine } from '#lib/gallery/series/series-route.ts';
+  import { curator, type SmartAlbum } from '#lib/utils/curator.ts';
   import { Icon, modalManager, toastManager } from '@immich/ui';
   import { mdiAutoFix } from '@mdi/js';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
 
   interface Props {
     albumId: string;
@@ -89,7 +89,7 @@
       <button type="button" onclick={editSearch}>{$t('smart_album_edit')}</button>
     {/if}
     {#if seriesIsMine()}
-      {@const smartId = smart.id}
+      {const smartId = $derived(smart.id)}
       <button type="button" data-testid="smart-album-series" onclick={() => openAlbumSeries(smartId)}>
         {$t('memory_series_from_album')}
       </button>

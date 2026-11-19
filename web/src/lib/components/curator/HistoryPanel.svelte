@@ -1,8 +1,8 @@
 <script lang="ts">
   // Local Omarchy layer: every change Curator has written, newest first, each undoable on its own. Undo refuses when
   // the photo, stack or person changed again since, so it never overwrites a newer choice.
-  import { curator, type HistoryEntry } from '$lib/utils/curator';
-  import { getAssetMediaUrl } from '$lib/utils';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { curator, type HistoryEntry } from '#lib/utils/curator.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { onMount } from 'svelte';
   import { locale, t } from 'svelte-i18n';

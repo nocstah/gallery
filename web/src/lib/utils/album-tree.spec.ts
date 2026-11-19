@@ -1,13 +1,13 @@
 import {
+  LONG_LEVEL,
   albumKey,
   folderKey,
-  LONG_LEVEL,
   moreKey,
   shownAt,
   treeKey,
   visibleRows,
   type TreeWalk,
-} from '$lib/utils/album-tree';
+} from '#lib/utils/album-tree.ts';
 
 // Local Omarchy layer: the sidebar's album trees as one tab stop (components/sidebar/album-tree)
 const items = (prefix: string, count: number) =>

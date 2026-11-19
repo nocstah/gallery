@@ -1,10 +1,10 @@
+import { opensLit } from '#lib/components/room/room-opening.ts';
+import { memoryFacts } from '#lib/managers/memory-facts.svelte.ts';
+import type { MemoriesPreferences } from '#lib/managers/user-preferences-manager.svelte.ts';
+import { getMemoryCardSubtitle } from '#lib/utils/memory-card.ts';
+import { memoryCount, memoryTitle } from '#lib/utils/memory-title.ts';
 import { MemorySearchOrder, MemoryType, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
 import type { MessageFormatter } from 'svelte-i18n';
-import { opensLit } from '$lib/components/room/room-opening';
-import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-import type { MemoriesPreferences } from '$lib/managers/user-preferences-manager.svelte';
-import { getMemoryCardSubtitle } from '$lib/utils/memory-card';
-import { memoryCount, memoryTitle } from '$lib/utils/memory-title';
 
 // Local Omarchy layer: the cards the memories are shown as (DESIGN.md, Memories). The server makes a memory per rule
 // and per day, so one trip a year ago came back as four cards that read "Siem Reap · October 2025": the day before
@@ -23,7 +23,7 @@ export const MEMORY_SECTIONS: MemorySection[] = ['today', 'earlier', 'upcoming']
 
 export type MemoryCard = {
   /** the memory the card opens, by whose address, story and songs it plays: the one that stands for the most (a trip
-   * before one of its days) */
+  before one of its days) */
   lead: MemoryResponseDto;
   /** every memory the card holds, the lead first, then in the order they came */
   members: MemoryResponseDto[];
@@ -35,10 +35,10 @@ export type MemoryCard = {
 };
 
 /**
- * The wall clock read as UTC, in milliseconds. A memory's `showAt` and `hideAt` hold calendar dates as UTC midnight
- * (immich-32166), and the server compares them with the wall clock read so, so the page does too: at 3 in the morning
- * east of Greenwich today's memories are already today's.
- */
+The wall clock read as UTC, in milliseconds. A memory's `showAt` and `hideAt` hold calendar dates as UTC midnight
+(immich-32166), and the server compares them with the wall clock read so, so the page does too: at 3 in the morning
+east of Greenwich today's memories are already today's.
+*/
 export const wallClockAsUtc = (date = new Date()) =>
   Date.UTC(
     date.getFullYear(),
@@ -98,15 +98,15 @@ export type MemorySpan = { start: string; end: string };
 
 const TRIP_KINDS = new Set(['trip_anniversary', 'recent_trip']);
 /** a day whatever its photos' dates: a birthday (its photos of several years), on this day (in a place: of one day in
- * several years) */
+several years) */
 const DAY_KINDS = new Set(['birthday', 'on_this_day', 'on_this_day_place']);
 const DAY = /^\d{4}-\d{2}-\d{2}/;
 
 /**
- * Whether a card is a memory of several days: a trip, or one of the wider looks back (a month's, a season's, two people
- * together) whose days run over more than one, by Curator's span where the page has it, else by its photos' days. On
- * this day is a day, even on a card that holds two days of one place and month (yesterday's on this day and today's).
- */
+Whether a card is a memory of several days: a trip, or one of the wider looks back (a month's, a season's, two people
+together) whose days run over more than one, by Curator's span where the page has it, else by its photos' days. On
+this day is a day, even on a card that holds two days of one place and month (yesterday's on this day and today's).
+*/
 const ofSeveralDays = (card: MemoryCard, spanOf?: (memory: MemoryResponseDto) => MemorySpan | null | undefined) => {
   let first: string | undefined;
   let last: string | undefined;
@@ -122,7 +122,7 @@ const ofSeveralDays = (card: MemoryCard, spanOf?: (memory: MemoryResponseDto) =>
     const days =
       span && DAY.test(span.start) && DAY.test(span.end)
         ? [span.start, span.end]
-        : member.assets.map(({ localDateTime }) => localDateTime ?? '').filter((day) => DAY.test(day));
+        : member.assets.map(({ localDateTime = '' }) => localDateTime).filter((day) => DAY.test(day));
     for (const value of days) {
       const day = value.slice(0, 10);
       first = first === undefined || day < first ? day : first;
@@ -135,11 +135,11 @@ const ofSeveralDays = (card: MemoryCard, spanOf?: (memory: MemoryResponseDto) =>
 type TodayRank = { dim: number; kind: number; count: number };
 
 /**
- * Where a card of today's stands, the first difference deciding: a film that would open dim across the room (none of
- * its pictures passes Room's light gate, components/room/room-opening) after every other; then a birthday, a trip or a
- * memory of several days, the rest; then the one that holds more photos: the most any of its memories stands for (a
- * trip's whole count, `weight`), or the photos it plays when those are more; then as the server sent them.
- */
+Where a card of today's stands, the first difference deciding: a film that would open dim across the room (none of
+its pictures passes Room's light gate, components/room/room-opening) after every other; then a birthday, a trip or a
+memory of several days, the rest; then the one that holds more photos: the most any of its memories stands for (a
+trip's whole count, `weight`), or the photos it plays when those are more; then as the server sent them.
+*/
 const todayRank = (
   card: MemoryCard,
   weight: (memory: MemoryResponseDto) => number,
@@ -164,16 +164,16 @@ const unionInTimeOrder = (members: MemoryResponseDto[]): AssetResponseDto[] => {
 };
 
 /**
- * The cards, in the order every page shows them: today's in their one order (todayRank: a film that would open dim
- * last, before it a birthday, a trip or a memory of several days, then the rest, each by the photos it holds), the
- * earlier ones (a birthday first, then as the server sent them: the newest days first), then the upcoming ones (the
- * soonest first). `keyOf` is what a card is known by, the title of facts; memories with the same key in today's and
- * the earlier ones are one card, which stands with today's when any of them is today's, and the upcoming ones are put
- * together only with each other, so a film of today never holds a day still to come. Memories without a key (a
- * birthday, one with nothing to title it by) stand alone, and an empty memory is not shown, as upstream never shows
- * one. `weight` is how much a memory stands for (its photos, or Curator's count of them); between memories of one kind
- * the heavier leads. `spanOf` is the days a memory covers by Curator's facts, where the page has them.
- */
+The cards, in the order every page shows them: today's in their one order (todayRank: a film that would open dim
+last, before it a birthday, a trip or a memory of several days, then the rest, each by the photos it holds), the
+earlier ones (a birthday first, then as the server sent them: the newest days first), then the upcoming ones (the
+soonest first). `keyOf` is what a card is known by, the title of facts; memories with the same key in today's and
+the earlier ones are one card, which stands with today's when any of them is today's, and the upcoming ones are put
+together only with each other, so a film of today never holds a day still to come. Memories without a key (a
+birthday, one with nothing to title it by) stand alone, and an empty memory is not shown, as upstream never shows
+one. `weight` is how much a memory stands for (its photos, or Curator's count of them); between memories of one kind
+the heavier leads. `spanOf` is the days a memory covers by Curator's facts, where the page has them.
+*/
 export const memoryCards = (
   memories: MemoryResponseDto[],
   keyOf: (memory: MemoryResponseDto) => string | undefined,
@@ -247,10 +247,10 @@ export const cardOfMemory = (cards: MemoryCard[], memoryId: string): MemoryCard 
 // today, six photos ----
 
 /**
- * What the Memories page asks Gallery for (the memory manager's applyPreferences): every memory the server still keeps,
- * the newest first, the upcoming ones only while the reader shows them, and only the kept ones while the reader keeps
- * to those. Not a day's (`for`): a Today card also holds the earlier days' memories that read the same.
- */
+What the Memories page asks Gallery for (the memory manager's applyPreferences): every memory the server still keeps,
+the newest first, the upcoming ones only while the reader shows them, and only the kept ones while the reader keeps
+to those. Not a day's (`for`): a Today card also holds the earlier days' memories that read the same.
+*/
 export const memoriesPageSearch = ({ showUpcoming, onlyFavorites }: MemoriesPreferences) => ({
   order: MemorySearchOrder.Desc,
   isSaved: onlyFavorites ? true : undefined,
@@ -258,23 +258,23 @@ export const memoriesPageSearch = ({ showUpcoming, onlyFavorites }: MemoriesPref
 });
 
 /**
- * What Room asks Gallery for (components/room/room-source), whose films are the Today cards (2026-10-24, the owner's
- * "always play everything"): every memory the server keeps that has come due, the newest first, kept or not, whatever
- * the Memories page's settings in this browser say. They are the page's own (favourites only, upcoming shown or not),
- * and had kept Room to the favourites alone; an upcoming memory never joins a Today card, so none is asked for.
- */
+What Room asks Gallery for (components/room/room-source), whose films are the Today cards (2026-10-24, the owner's
+"always play everything"): every memory the server keeps that has come due, the newest first, kept or not, whatever
+the Memories page's settings in this browser say. They are the page's own (favourites only, upcoming shown or not),
+and had kept Room to the favourites alone; an upcoming memory never joins a Today card, so none is asked for.
+*/
 export const roomMemoriesSearch = () => ({
   order: MemorySearchOrder.Desc,
   isUpcoming: false,
 });
 
 /**
- * The memories as their cards, as every page shows them: keyed by the title of facts in one locale (utils/memory-title,
- * so a key does not move with the reader's language), the heavier of one kind leading by Curator's count, and a
- * memory's days by Curator's span (managers/memory-facts). The memory manager's cards (the Memories page, Explore, the
- * Command center's Today) and Room's chain are these. Without Curator (a family account, Curator not answering in
- * time) each memory titles itself, and its photos say its days.
- */
+The memories as their cards, as every page shows them: keyed by the title of facts in one locale (utils/memory-title,
+so a key does not move with the reader's language), the heavier of one kind leading by Curator's count, and a
+memory's days by Curator's span (managers/memory-facts). The memory manager's cards (the Memories page, Explore, the
+Command center's Today) and Room's chain are these. Without Curator (a family account, Curator not answering in
+time) each memory titles itself, and its photos say its days.
+*/
 export const cardsByFacts = (memories: MemoryResponseDto[], now = wallClockAsUtc()): MemoryCard[] =>
   memoryCards(
     memories,
@@ -332,11 +332,11 @@ const KIND_WORDS = new Map<string, MessageKey>([
 ]);
 
 /**
- * A card's line in data type: its kind, how long ago and, for a trip, how many days ("On this day · 13 years ago",
- * "Trip · 1 year ago · 4 days", "Trip · 11 days", "Sunsets · 7 years ago"). A birthday's title already says what it is,
- * so its line is the rule's own ("Photos from different years"), as is the line of a kind this does not know. A
- * memory of this year says no "ago"; one across several years (on this day in a place) says the rule's own years.
- */
+A card's line in data type: its kind, how long ago and, for a trip, how many days ("On this day · 13 years ago",
+"Trip · 1 year ago · 4 days", "Trip · 11 days", "Sunsets · 7 years ago"). A birthday's title already says what it is,
+so its line is the rule's own ("Photos from different years"), as is the line of a kind this does not know. A
+memory of this year says no "ago"; one across several years (on this day in a place) says the rule's own years.
+*/
 export const memoryCardLine = (
   card: Pick<MemoryCard, 'lead' | 'assets'>,
   translate: MessageFormatter,

@@ -1,3 +1,7 @@
+import { commandContextManager } from '#lib/managers/command-context-manager.svelte.ts';
+import { GlobalSearchManager, type Provider, type Sections } from '#lib/managers/global-search-manager.svelte.ts';
+import ShortcutsModal from '#lib/modals/ShortcutsModal.svelte';
+import { addEntry, getEntries, __resetForTests as resetRecentStore } from '#lib/stores/cmdk-recent.ts';
 import { AssetVisibility, getFilterSuggestions, getMlHealth, searchAssets, searchSmart } from '@immich/sdk';
 import { modalManager } from '@immich/ui';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
@@ -5,10 +9,6 @@ import userEvent from '@testing-library/user-event';
 import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { goto } from '$app/navigation';
-import { commandContextManager } from '$lib/managers/command-context-manager.svelte';
-import { GlobalSearchManager, type Provider, type Sections } from '$lib/managers/global-search-manager.svelte';
-import ShortcutsModal from '$lib/modals/ShortcutsModal.svelte';
-import { addEntry, getEntries, __resetForTests as resetRecentStore } from '$lib/stores/cmdk-recent';
 import GlobalSearch from '../global-search.svelte';
 
 // Shared hoisted user mock — navigation provider and render-time recent filter both
@@ -25,7 +25,7 @@ const { mockUser } = vi.hoisted(() => ({
     current: { id: 'test-user', isAdmin: false } as { id: string; isAdmin: boolean } | null,
   },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: {
     get authenticated() {
       return mockUser.current !== null;
@@ -41,7 +41,7 @@ const { mockFlags } = vi.hoisted(() => ({
     valueOrUndefined: { search: true, map: true, trash: true } as Record<string, boolean> | undefined,
   },
 }));
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: mockFlags,
 }));
 
@@ -58,7 +58,7 @@ vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
 // Local Omarchy layer: QR's bank slips as the palette reads them when it opens (managers/slip-covers): known at once
 // here, and none, so no test reads QR's album
-vi.mock('$lib/managers/slip-covers.svelte', () => ({
+vi.mock('#lib/managers/slip-covers.svelte.ts', () => ({
   slipCovers: { isSlip: () => false, load: () => Promise.resolve(), known: true },
 }));
 
@@ -66,7 +66,7 @@ vi.mock('$lib/managers/slip-covers.svelte', () => ({
 // window.matchMedia in a test doesn't retroactively update existing instances.
 // Mock the manager module directly and expose a mutable flag.
 const { mediaState } = vi.hoisted(() => ({ mediaState: { minLg: false, maxMd: false } }));
-vi.mock('$lib/stores/media-query-manager.svelte', () => ({
+vi.mock('#lib/stores/media-query-manager.svelte.ts', () => ({
   mediaQueryManager: {
     get minLg() {
       return mediaState.minLg;
@@ -117,11 +117,11 @@ function installPhotoStub(m: GlobalSearchManager, items: Array<{ id: string; ori
 }
 
 /**
- * Stub every entity provider (photos + albums + spaces + people + places + tags) to
- * return exactly one ok item. Used by the section-ordering test to ensure every
- * section actually renders — otherwise `GlobalSearchSection` elides its heading for
- * idle/empty/loading statuses and the DOM ordering assertion becomes meaningless.
- */
+Stub every entity provider (photos + albums + spaces + people + places + tags) to
+return exactly one ok item. Used by the section-ordering test to ensure every
+section actually renders — otherwise `GlobalSearchSection` elides its heading for
+idle/empty/loading statuses and the DOM ordering assertion becomes meaningless.
+*/
 function stubAllEntitySections(m: GlobalSearchManager) {
   const providers = (m as unknown as { providers: Record<keyof Sections, Provider> }).providers;
   // Albums / spaces providers normally write `sections.albums` / `sections.spaces`

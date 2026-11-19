@@ -1,25 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import {
-  type ExpressionBuilder,
-  type Insertable,
-  type Kysely,
-  type NotNull,
-  type Selectable,
-  type ShallowDehydrateObject,
-  type Updateable,
-  sql,
-} from 'kysely';
+import { sql, type ExpressionBuilder, type Insertable, type Kysely, type Updateable } from 'kysely';
 import { jsonArrayFrom, jsonObjectFrom } from 'kysely/helpers/postgres';
 import { InjectKysely } from 'nestjs-kysely';
 import { columns } from 'src/database.js';
 import { Chunked, ChunkedArray, ChunkedSet, DummyValue, GenerateSql } from 'src/decorators.js';
 import { AlbumUserCreateDto, MapAlbumDto } from 'src/dtos/album.dto.js';
-import { AlbumUserRole } from 'src/enum.js';
+import { AlbumUserRole, SharedSpaceRole } from 'src/enum.js';
 import { albumCoverIsLiveContribution } from 'src/gallery/utils/album-cover.js';
-import { projectedDuration } from 'src/gallery/utils/projected-duration.js';
 import { DB } from 'src/schema/index.js';
 import { AlbumTable } from 'src/schema/tables/album.table.js';
-import { AssetExifTable } from 'src/schema/tables/asset-exif.table.js';
 import { asUuid, dummy, withDefaultVisibility } from 'src/utils/database.js';
 import { accessibleSpaceAlbums, albumMembership, spaceVisibilityGate } from 'src/utils/shared-space-album-scope.js';
 
@@ -29,10 +18,6 @@ export interface AlbumAssetCount {
   startDate: Date | null;
   endDate: Date | null;
   lastModifiedAssetTimestamp: Date | null;
-}
-
-export interface AlbumInfoOptions {
-  withAssets: boolean;
 }
 
 const withAlbumUsers = (authUserId?: string) => (eb: ExpressionBuilder<DB, 'album'>) =>
@@ -55,28 +40,6 @@ const withSharedLink = (eb: ExpressionBuilder<DB, 'album'>) =>
     eb.selectFrom('shared_link').selectAll('shared_link').whereRef('shared_link.albumId', '=', 'album.id'),
   ).as('sharedLinks');
 
-const withAssets = (eb: ExpressionBuilder<DB, 'album'>) => {
-  return eb
-    .selectFrom((eb) =>
-      eb
-        .selectFrom('asset')
-        .selectAll('asset')
-        .select(projectedDuration)
-        .leftJoin('asset_exif', 'asset.id', 'asset_exif.assetId')
-        .select((eb) =>
-          eb.table('asset_exif').$castTo<ShallowDehydrateObject<Selectable<AssetExifTable>>>().as('exifInfo'),
-        )
-        .innerJoin('album_asset', 'album_asset.assetId', 'asset.id')
-        .whereRef('album_asset.albumId', '=', 'album.id')
-        .where('asset.deletedAt', 'is', null)
-        .$call(withDefaultVisibility)
-        .orderBy('asset.fileCreatedAt', 'desc')
-        .as('asset'),
-    )
-    .select((eb) => eb.fn.jsonAgg('asset').as('assets'))
-    .as('assets');
-};
-
 const isAlbumOwned = (ownerId: string) => (eb: ExpressionBuilder<DB, 'album'>) =>
   eb.exists(
     eb
@@ -90,8 +53,8 @@ const isAlbumOwned = (ownerId: string) => (eb: ExpressionBuilder<DB, 'album'>) =
 export class AlbumRepository {
   constructor(@InjectKysely() private db: Kysely<DB>) {}
 
-  @GenerateSql({ params: [DummyValue.UUID, { withAssets: true }, DummyValue.UUID] })
-  getById(id: string, options: AlbumInfoOptions, authUserId?: string) {
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID] })
+  getById(id: string, authUserId?: string) {
     return this.db
       .with('album_user', (qb) => qb.selectFrom('album_user').selectAll().where('album_user.albumId', '=', id))
       .selectFrom('album')
@@ -100,26 +63,24 @@ export class AlbumRepository {
       .where('album.deletedAt', 'is', null)
       .select(withAlbumUsers(authUserId))
       .select(withSharedLink)
-      .$if(options.withAssets, (eb) => eb.select(withAssets))
-      .$narrowType<{ assets: NotNull }>()
       .executeTakeFirst();
   }
 
   /**
-   * Albums containing `assetId` that the caller can actually open — the asset-viewer info panel
-   * reads this to render "Contained in" (#796). Two access paths are unioned: shared directly into
-   * the album (`album_user`), or the album is linked into a shared space the caller can access.
-   *
-   * Deliberately NOT every album containing the asset: album names are user-authored and a space
-   * member must not learn the owner's private album titles. Callers do not separately authorize
-   * `assetId` (see AlbumService.getAll) — this scoping IS the access check.
-   *
-   * An asset reaches an album through EITHER membership table, so both are checked (#1095): the
-   * owner's own `album_asset` row, or a cross-owner `album_space_asset` contribution (#764). The
-   * previous `innerJoin('album_asset')` dropped every contribution-only album, so a member who
-   * added someone else's space asset saw it in the album grid but never in "Contained in" — the
-   * count from `getMetadataForIds` already unions both arms, and this now agrees with it.
-   */
+  Albums containing `assetId` that the caller can actually open — the asset-viewer info panel
+  reads this to render "Contained in" (#796). Two access paths are unioned: shared directly into
+  the album (`album_user`), or the album is linked into a shared space the caller can access.
+  
+  Deliberately NOT every album containing the asset: album names are user-authored and a space
+  member must not learn the owner's private album titles. Callers do not separately authorize
+  `assetId` (see AlbumService.getAll) — this scoping IS the access check.
+  
+  An asset reaches an album through EITHER membership table, so both are checked (#1095): the
+  owner's own `album_asset` row, or a cross-owner `album_space_asset` contribution (#764). The
+  previous `innerJoin('album_asset')` dropped every contribution-only album, so a member who
+  added someone else's space asset saw it in the album grid but never in "Contained in" — the
+  count from `getMetadataForIds` already unions both arms, and this now agrees with it.
+  */
   @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID] })
   getByAssetId(ownerId: string, assetId: string) {
     // A space member must never learn that another member's Hidden/Locked asset sits in a linked
@@ -136,39 +97,38 @@ export class AlbumRepository {
           .where((e) => spaceVisibilityGate(e)),
       );
 
-    return (
-      this.db
-        .selectFrom('album')
-        .selectAll('album')
+    // The `album.deletedAt` filter is the A1 invariant, covering both arms of the share check: a
+    // soft-deleted album is never returned.
+    return this.db
+      .selectFrom('album')
+      .selectAll('album')
+      .where((eb) =>
         // The asset is in the album as an own row, or as a contribution made through a space the caller
         // is a member of (a contribution is only reachable through the one space it was made to).
-        .where((eb) =>
-          eb.exists(
-            eb
-              .selectFrom(albumMembership(eb, 'album.id', { memberUserId: ownerId }).as('album_members'))
-              .select(eb.lit(1).as('exists'))
-              .where('album_members.assetId', '=', asUuid(assetId)),
-          ),
-        )
+        eb.exists(
+          eb
+            .selectFrom(albumMembership(eb, 'album.id', { memberUserId: ownerId }).as('album_members'))
+            .select(eb.lit(1).as('exists'))
+            .where('album_members.assetId', '=', asUuid(assetId)),
+        ),
+      )
+      .where((eb) =>
         // ...and the caller can open the album: a direct share, or a link into a space they can access.
         // A contribution implies the latter, and is space-shareable by construction.
-        .where((eb) =>
-          eb.or([
-            eb.exists(
-              eb
-                .selectFrom('album_user')
-                .whereRef('album_user.albumId', '=', 'album.id')
-                .where('album_user.userId', '=', ownerId),
-            ),
-            eb.and([eb('album.id', 'in', (e) => accessibleSpaceAlbums(e, ownerId)), isSpaceShareable(eb)]),
-          ]),
-        )
-        // The A1 invariant, covering both arms above — a soft-deleted album is never returned.
-        .where('album.deletedAt', 'is', null)
-        .select(withAlbumUsers(ownerId))
-        .orderBy('album.createdAt', 'desc')
-        .execute()
-    );
+        eb.or([
+          eb.exists(
+            eb
+              .selectFrom('album_user')
+              .whereRef('album_user.albumId', '=', 'album.id')
+              .where('album_user.userId', '=', ownerId),
+          ),
+          eb.and([eb('album.id', 'in', (e) => accessibleSpaceAlbums(e, ownerId)), isSpaceShareable(eb)]),
+        ]),
+      )
+      .where('album.deletedAt', 'is', null)
+      .select(withAlbumUsers(ownerId))
+      .orderBy('album.createdAt', 'desc')
+      .execute();
   }
 
   @GenerateSql({ params: [DummyValue.UUID, [DummyValue.UUID]] })
@@ -211,9 +171,10 @@ export class AlbumRepository {
   async getMetadataForIds(
     ids: string[],
     // #1018: `spaceId` narrows the contributed arm to a single space instead of every space
-    // `forUserId` belongs to. Set for shared-link reads, where widening would count another
-    // space's contributions into a public link's total.
-    { forUserId, spaceId }: { forUserId?: string; spaceId?: string } = {},
+    // `forUserId` belongs to, and `memberRole` requires that membership to hold one of those roles.
+    // Both are set for shared-link reads, where widening would count another space's contributions,
+    // or a demoted creator's, into a public link's total.
+    { forUserId, spaceId, memberRole }: { forUserId?: string; spaceId?: string; memberRole?: SharedSpaceRole[] } = {},
   ): Promise<AlbumAssetCount[]> {
     // Guard against running invalid query when ids list is empty.
     if (ids.length === 0) {
@@ -231,7 +192,9 @@ export class AlbumRepository {
             albumMembership(
               eb,
               ids,
-              forUserId ? { memberUserId: forUserId, ...(spaceId && { spaceId }) } : undefined,
+              forUserId
+                ? { memberUserId: forUserId, ...(spaceId && { spaceId }), ...(memberRole && { memberRole }) }
+                : undefined,
             ).as('album_members'),
           (join) => join.onRef('album_members.assetId', '=', 'asset.id'),
         )
@@ -333,12 +296,12 @@ export class AlbumRepository {
   }
 
   /**
-   * Get asset IDs for the given album ID.
-   *
-   * @param albumId Album ID to get asset IDs for.
-   * @param assetIds Optional list of asset IDs to filter on.
-   * @returns Set of Asset IDs for the given album ID.
-   */
+  Get asset IDs for the given album ID.
+  
+  @param albumId Album ID to get asset IDs for.
+  @param assetIds Optional list of asset IDs to filter on.
+  @returns Set of Asset IDs for the given album ID.
+  */
   @GenerateSql({ params: [DummyValue.UUID, [DummyValue.UUID]] })
   @ChunkedSet({ paramIndex: 1 })
   async getAssetIds(albumId: string, assetIds: string[]): Promise<Set<string>> {
@@ -431,8 +394,6 @@ export class AlbumRepository {
       .selectFrom('album')
       .selectAll('album')
       .select(withAlbumUsers(authUserId))
-      .select(withAssets)
-      .$narrowType<{ assets: NotNull }>()
       .executeTakeFirstOrThrow();
 
     return result;
@@ -486,13 +447,13 @@ export class AlbumRepository {
   }
 
   /**
-   * Makes sure all thumbnails for albums are updated by:
-   * - Removing thumbnails from albums without assets
-   * - Removing references of thumbnails to assets outside the album
-   * - Setting a thumbnail when none is set and the album contains assets
-   *
-   * @returns Amount of updated album thumbnails or undefined when unknown
-   */
+  Makes sure all thumbnails for albums are updated by:
+  - Removing thumbnails from albums without assets
+  - Removing references of thumbnails to assets outside the album
+  - Setting a thumbnail when none is set and the album contains assets
+  
+  @returns Amount of updated album thumbnails or undefined when unknown
+  */
   async updateThumbnails(): Promise<number | undefined> {
     // Subquery for getting a new thumbnail.
 
@@ -538,12 +499,12 @@ export class AlbumRepository {
   }
 
   /**
-   * Get per-user asset contribution counts for a single album.
-   * Excludes deleted assets, orders by count desc.
-   * L1: also excludes Hidden/Locked assets (withDefaultVisibility) — the per-user totals are
-   * PII-adjacent (album.service.get gates the whole field to direct readers), and without this
-   * gate a contributor's Hidden/Locked asset count could still be inferred from the total.
-   */
+  Get per-user asset contribution counts for a single album.
+  Excludes deleted assets, orders by count desc.
+  L1: also excludes Hidden/Locked assets (withDefaultVisibility) — the per-user totals are
+  PII-adjacent (album.service.get gates the whole field to direct readers), and without this
+  gate a contributor's Hidden/Locked asset count could still be inferred from the total.
+  */
   @GenerateSql({ params: [DummyValue.UUID] })
   getContributorCounts(id: string) {
     return withDefaultVisibility(

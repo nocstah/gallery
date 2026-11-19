@@ -4,14 +4,14 @@
   // weakest matches still in, so the cut can be set by eye. With two or more people, how many of them each photo
   // holds: any of them, at least 2 of them up to one fewer than all, or all of them together, the default and what
   // the Photos page shows (Gallery's search finds the photos holding all of them).
-  import { getAssetMediaUrl } from '$lib/utils';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
   import {
     curator,
     type SmartAlbum,
     type SmartPreview,
     type SmartRule,
     type SmartStrictness,
-  } from '$lib/utils/curator';
+  } from '#lib/utils/curator.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { Field, FormModal, HelperText, Input, toastManager } from '@immich/ui';
   import { mdiAutoFix } from '@mdi/js';

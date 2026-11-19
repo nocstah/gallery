@@ -5,12 +5,12 @@
   // the settings; Curator renders the new version and proposes it, and the panel accepts that at once (Keep was the
   // yes): the new version goes on top of the photo's stack, the original untouched, with an Undo in the toast and the
   // bar (Curator's own undo of it). Closed while Curator renders, the new version waits in the AI inbox.
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { undoManager } from '$lib/managers/undo-manager.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { refreshAssets } from '$lib/utils/asset-refresh';
-  import { curator, type JobRow } from '$lib/utils/curator';
-  import { toastUndoable } from '$lib/utils/undoable';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { refreshAssets } from '#lib/utils/asset-refresh.ts';
+  import { curator, type JobRow } from '#lib/utils/curator.ts';
+  import { toastUndoable } from '#lib/utils/undoable.ts';
   import { AssetMediaSize, getAssetInfo, getStack, type AssetResponseDto } from '@immich/sdk';
   import { Icon, modalManager } from '@immich/ui';
   import { mdiClose, mdiTuneVariant } from '@mdi/js';
@@ -18,15 +18,15 @@
   import { t } from 'svelte-i18n';
   import { AdjustPreview } from './adjust-gl';
   import {
+    FILTERS,
+    SLIDERS,
+    VIGNETTE,
     changes,
     colour,
     effective,
-    FILTERS,
     lutData,
     neutral,
-    SLIDERS,
     sourceMatrix,
-    VIGNETTE,
     type AdjustSettings,
     type FilterName,
     type Slider,
@@ -458,7 +458,7 @@
 <svelte:window onkeydowncapture={onKeydown} onkeyupcapture={onKeyup} onblur={() => (original = false)} />
 
 {#snippet slider(key: Slider)}
-  {@const value = percent(settings[key])}
+  {const value = $derived(percent(settings[key]))}
   <label class="adjust-row" ondblclick={() => set(key, 0)}>
     <span class="adjust-name">{$t(`adjust_${key}`)}</span>
     <span class="adjust-value" class:is-set={value !== 0}>{signed(value)}</span>
@@ -548,7 +548,7 @@
       {:else if tab === 'filters'}
         <div class="adjust-filters">
           {#each CHOICES as name (name)}
-            {@const chosen = (settings.filter ?? 'none') === name}
+            {const chosen = $derived((settings.filter ?? 'none') === name)}
             <button
               type="button"
               class="adjust-filter"
@@ -562,7 +562,7 @@
           {/each}
         </div>
         {#if settings.filter}
-          {@const value = percent(settings.intensity)}
+          {const value = $derived(percent(settings.intensity))}
           <label class="adjust-row" ondblclick={() => (settings.intensity = 1)}>
             <span class="adjust-name">{$t('adjust_intensity')}</span>
             <span class="adjust-value is-set">{value}</span>

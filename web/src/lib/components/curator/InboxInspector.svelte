@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { createInspectionZoom } from '$lib/actions/inspection-zoom';
-  import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
-  import { getAssetPlaybackUrl, getAssetUrl } from '$lib/utils';
-  import { formatDuration } from '$lib/utils/duration';
-  import type { InspectionItem } from '$lib/utils/inbox-inspection';
+  import { createInspectionZoom } from '#lib/actions/inspection-zoom.ts';
+  import RestoreCompare from '#lib/components/curator/RestoreCompare.svelte';
+  import { getAssetPlaybackUrl, getAssetUrl } from '#lib/utils.ts';
+  import { formatDuration } from '#lib/utils/duration.ts';
+  import type { InspectionItem } from '#lib/utils/inbox-inspection.ts';
   import { AssetTypeEnum, getAssetInfo } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import {
-    mdiClose,
     mdiChevronLeft,
     mdiChevronRight,
-    mdiMagnifyPlusOutline,
+    mdiClose,
     mdiMagnifyMinusOutline,
-    mdiPlay,
+    mdiMagnifyPlusOutline,
     mdiPause,
+    mdiPlay,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
 

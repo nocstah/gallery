@@ -1,12 +1,12 @@
+import { saveFrame } from '#lib/components/curator/save-frame.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
 import { AssetVisibility, type AlbumResponseDto, type AssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, screen } from '@testing-library/svelte';
-import { saveFrame } from '$lib/components/curator/save-frame.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { renderWithTooltips } from '$tests/helpers';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 import SaveFrameAction from './SaveFrameAction.svelte';
 
 // Local Omarchy layer: the viewer bar's Save frame as photo: there for the owner's own video on screen once Curator
@@ -15,8 +15,8 @@ import SaveFrameAction from './SaveFrameAction.svelte';
 
 const { kinds } = vi.hoisted(() => ({ kinds: vi.fn() }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: { kinds },
 }));
 

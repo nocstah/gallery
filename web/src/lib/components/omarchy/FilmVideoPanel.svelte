@@ -5,10 +5,10 @@
   // here), or that it failed (try again), or that it is longer than Curator saves. The close button clears the
   // finished ones. It also asks Curator, once someone is signed in, whether it saves films at all; the layout mounts
   // it for Curator's owner alone (utils/curator's curatorIsMine).
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { filmVideos, type FilmItem } from '$lib/managers/film-video-manager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
-  import { getByteUnitString } from '$lib/utils/byte-units';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { filmVideos, type FilmItem } from '#lib/managers/film-video-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getByteUnitString } from '#lib/utils/byte-units.ts';
   import { Icon } from '@immich/ui';
   import { mdiClose, mdiDownload, mdiReload, mdiShareVariant } from '@mdi/js';
   import { t } from 'svelte-i18n';

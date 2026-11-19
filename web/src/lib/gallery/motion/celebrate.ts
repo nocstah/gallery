@@ -1,12 +1,12 @@
+import { lastPressPoint } from '#lib/gallery/motion/press.ts';
+import { duration, ease, prefersReducedMotion, spring, springEasing } from '#lib/gallery/motion/tokens.ts';
 import { mdiHeart } from '@mdi/js';
-import { lastPressPoint } from '$lib/gallery/motion/press';
-import { duration, ease, prefersReducedMotion, spring, springEasing } from '$lib/gallery/motion/tokens';
 
 /**
- * Small particle bursts for moments worth marking (favoriting, finishing something). Kept rare and
- * small on purpose: a burst on every click stops being a reward. The pieces fly under simple gravity
- * from where the user pressed, so the effect is tied to their action and to nothing else on screen.
- */
+Small particle bursts for moments worth marking (favoriting, finishing something). Kept rare and
+small on purpose: a burst on every click stops being a reward. The pieces fly under simple gravity
+from where the user pressed, so the effect is tied to their action and to nothing else on screen.
+*/
 export type CelebrationKind = 'favorite' | 'success';
 
 export interface Origin {
@@ -127,9 +127,9 @@ const fly = (layer: HTMLElement, piece: Piece, origin: Origin, angle: number, sp
 };
 
 /**
- * Bursts particles from `origin`, or from the user's last press when it was recent. Does nothing
- * without an origin (a keyboard shortcut has no point to burst from) or when reduced motion is on.
- */
+Bursts particles from `origin`, or from the user's last press when it was recent. Does nothing
+without an origin (a keyboard shortcut has no point to burst from) or when reduced motion is on.
+*/
 export const celebrate = (kind: CelebrationKind, origin?: Origin): void => {
   const from = origin ?? lastPressPoint(1500);
   if (

@@ -1,6 +1,6 @@
+import { CURATOR_FEATURES } from '#lib/gallery/libraries/library-file.ts';
 import type { MessageFormatter } from 'svelte-i18n';
 import { describe, expect, it } from 'vitest';
-import { CURATOR_FEATURES } from '$lib/gallery/libraries/library-file';
 import { shortcutSections, type SheetAccount } from './shortcut-sheet';
 
 // Local Omarchy layer: the shortcuts sheet, grouped by where keys work, a row only for an account it works for

@@ -1,9 +1,9 @@
 import {
+  RECENT_SEARCHES_MAX,
   clearRecentSearches,
   readRecentSearches,
-  RECENT_SEARCHES_MAX,
   rememberSearch,
-} from '$lib/utils/recent-searches';
+} from '#lib/utils/recent-searches.ts';
 
 // Local Omarchy layer: the search page's recent searches, kept in this browser per account and never sent anywhere
 describe('recent searches', () => {

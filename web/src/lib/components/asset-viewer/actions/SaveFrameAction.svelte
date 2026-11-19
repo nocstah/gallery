@@ -4,11 +4,11 @@
   // while Curator works; Shift+S does the same (VLC's snapshot key; plain S is the photo viewer's slideshow). Inside an
   // album the photo joins that album too. On a phone the bar's extra tools wait in its ⋮, and this is a row there
   // (`menu`) with the same key and the same save.
-  import { shortcut } from '$lib/actions/shortcut';
-  import { saveFrame } from '$lib/components/curator/save-frame.svelte';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { getSharedLink } from '$lib/utils';
+  import { shortcut } from '#lib/actions/shortcut.ts';
+  import { saveFrame } from '#lib/components/curator/save-frame.svelte.ts';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { getSharedLink } from '#lib/utils.ts';
   import { AssetVisibility, type AlbumResponseDto, type AssetResponseDto } from '@immich/sdk';
   import { IconButton } from '@immich/ui';
   import { mdiCameraPlusOutline } from '@mdi/js';

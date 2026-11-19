@@ -1,38 +1,40 @@
 <script lang="ts">
-  import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
-  import type { OnAction, PreAction } from '$lib/components/asset-viewer/actions/action';
-  import ArchiveAction from '$lib/components/asset-viewer/actions/ArchiveAction.svelte';
-  import DeleteAction from '$lib/components/asset-viewer/actions/DeleteAction.svelte';
-  import RestoreAction from '$lib/components/asset-viewer/actions/RestoreAction.svelte';
-  import SaveFrameAction from '$lib/components/asset-viewer/actions/SaveFrameAction.svelte';
-  import SetVisibilityAction from '$lib/components/asset-viewer/actions/SetVisibilityAction.svelte';
-  import SpecialAlbumAction from '$lib/components/asset-viewer/actions/SpecialAlbumAction.svelte';
-  import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
-  import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
-  import { adjustPhoto } from '$lib/components/curator/adjust-photo.svelte';
-  import { liveEffects } from '$lib/components/curator/live-effects.svelte';
-  import { lookUp } from '$lib/components/curator/look-up.svelte';
-  import { shareVideos } from '$lib/managers/share-video-manager.svelte';
-  import { canShareVideo } from '$lib/utils/share-video';
-  import { copySubject } from '$lib/utils/copy-subject';
-  import LoadingDots from '$lib/components/LoadingDots.svelte';
-  import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { languageManager } from '$lib/managers/language-manager.svelte';
-  import { viewerTaken } from '$lib/components/asset-viewer/viewer-taken';
-  import { getAlbumAssetActions } from '$lib/services/album.service';
-  import { getGlobalActions } from '$lib/services/app.service';
-  import { getAssetActions } from '$lib/services/asset.service';
-  import { getSpatialSceneActions } from '$lib/gallery/spatial/spatial-scene.svelte';
-  import { getPersonAssetActions } from '$lib/services/person.service';
-  import { getStackActions } from '$lib/services/stack.service';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
-  import { getSharedLink, isEnabled, withoutIcons } from '$lib/utils';
-  import type { OnUndoDelete } from '$lib/utils/actions';
-  import { canEditAsset } from '$lib/utils/asset-editability';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
+  import ActionMenuItem from '#lib/components/ActionMenuItem.svelte';
+  import LoadingDots from '#lib/components/LoadingDots.svelte';
+  import ArchiveAction from '#lib/components/asset-viewer/actions/ArchiveAction.svelte';
+  import DeleteAction from '#lib/components/asset-viewer/actions/DeleteAction.svelte';
+  import RestoreAction from '#lib/components/asset-viewer/actions/RestoreAction.svelte';
+  import SaveFrameAction from '#lib/components/asset-viewer/actions/SaveFrameAction.svelte';
+  import SetVisibilityAction from '#lib/components/asset-viewer/actions/SetVisibilityAction.svelte';
+  import SpecialAlbumAction from '#lib/components/asset-viewer/actions/SpecialAlbumAction.svelte';
+  import type { OnAction, PreAction } from '#lib/components/asset-viewer/actions/action.ts';
+  import { viewerTaken } from '#lib/components/asset-viewer/viewer-taken.ts';
+  import { adjustPhoto } from '#lib/components/curator/adjust-photo.svelte.ts';
+  import { liveEffects } from '#lib/components/curator/live-effects.svelte.ts';
+  import { lookUp } from '#lib/components/curator/look-up.svelte.ts';
+  import { removeObjects } from '#lib/components/curator/remove-objects.svelte.ts';
+  import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import { getSpatialSceneActions } from '#lib/gallery/spatial/spatial-scene.svelte.ts';
+  import { viewerAlbumId } from '#lib/gallery/stack/album-stack-strip.ts';
+  import { getViewerSpace } from '#lib/gallery/viewer-space.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { languageManager } from '#lib/managers/language-manager.svelte.ts';
+  import { shareVideos } from '#lib/managers/share-video-manager.svelte.ts';
+  import { offeredSpecialAlbums } from '#lib/managers/special-albums.svelte.ts';
+  import { getAlbumAssetActions } from '#lib/services/album.service.ts';
+  import { getGlobalActions } from '#lib/services/app.service.ts';
+  import { getAssetActions } from '#lib/services/asset.service.ts';
+  import { getPersonAssetActions } from '#lib/services/person.service.ts';
+  import { getStackActions } from '#lib/services/stack.service.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getSharedLink, isEnabled, withoutIcons } from '#lib/utils.ts';
+  import type { OnUndoDelete } from '#lib/utils/actions.ts';
+  import { canEditAsset } from '#lib/utils/asset-editability.ts';
+  import { copySubject } from '#lib/utils/copy-subject.ts';
+  import { canShareVideo } from '#lib/utils/share-video.ts';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
   import {
     AssetTypeEnum,
     AssetVisibility,
@@ -69,12 +71,6 @@
     onClose?: () => void;
     isPlayingOriginalVideo: boolean;
     setPlayOriginalVideo: (value: boolean) => void;
-    /**
-     * Present on shared-space surfaces (direct space, space album, space person). Gates and
-     * narrows the add-to-album action for assets the caller does not own — see
-     * `getAssetActions` (#889).
-     */
-    space?: { id: string; canWrite: boolean };
   }
 
   let {
@@ -88,9 +84,9 @@
     onClose,
     isPlayingOriginalVideo = false,
     setPlayOriginalVideo,
-    space,
   }: Props = $props();
 
+  const { space } = $derived.by(getViewerSpace());
   const isOwner = $derived(authManager.authenticated && asset.ownerId === authManager.user.id);
   const isLocked = $derived(asset.visibility === AssetVisibility.Locked);
   // #734: a space Owner/Editor may edit a member's asset. Server-authoritative via `asset.canEdit`
@@ -117,9 +113,9 @@
   });
 
   const Actions = $derived(
-    getAssetActions($t, { ...asset, stackPrimaryAssetId: stack?.primaryAssetId }, { space, album }),
+    getAssetActions($t, { ...asset, stackPrimaryAssetId: stack?.primaryAssetId }, album, { space }),
   );
-  const StackActions = $derived(getStackActions($t, stack, asset));
+  const StackActions = $derived(getStackActions($t, stack, asset, !!viewerAlbumId(album)));
   const SpatialActions = $derived(getSpatialSceneActions($t, asset));
   const sharedLink = getSharedLink();
 
@@ -273,11 +269,11 @@
   <ActionMenuItem action={StackActions.RemoveAsset} />
 
   {#if album}
-    {@const { SetCover } = getAlbumAssetActions($t, album, asset)}
+    {const { SetCover } = $derived(getAlbumAssetActions($t, album, asset))}
     <ActionMenuItem action={SetCover} />
   {/if}
   {#if person}
-    {@const { SetFeaturedPhoto } = getPersonAssetActions($t, person, asset)}
+    {const { SetFeaturedPhoto } = $derived(getPersonAssetActions($t, person, asset))}
     <ActionMenuItem action={SetFeaturedPhoto} />
   {/if}
 

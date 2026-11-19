@@ -4,12 +4,7 @@ import { Insertable } from 'kysely';
 import { isUndefined, omitBy, pick } from 'lodash-es';
 import { DateTime, Duration, FixedOffsetZone } from 'luxon';
 import { Stats } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join, parse } from 'node:path';
-import type { ArgOf } from 'src/repositories/event.repository.js';
-import type { JobOf } from 'src/types.js';
-import { isDiskPath } from 'src/backends/disk-storage.backend.js';
-import { StorageCore } from 'src/cores/storage.core.js';
 import { Asset, AssetFile } from 'src/database.js';
 import { OnEvent, OnJob } from 'src/decorators.js';
 import {
@@ -24,14 +19,17 @@ import {
   JobStatus,
   QueueName,
   SourceType,
-  StorageFolder,
 } from 'src/enum.js';
 import { resolveAssumedUtcVideoZone, resolveDatelessFileDates } from 'src/gallery/utils/metadata-time-zone.js';
+import { isExtractedMotionPath } from 'src/gallery/utils/motion-path.js';
+import { getMotionVideoPath } from 'src/gallery/utils/storage-keys.js';
+import type { ArgOf } from 'src/repositories/event.repository.js';
 import { ReverseGeocodeResult } from 'src/repositories/map.repository.js';
 import { ImmichTags } from 'src/repositories/metadata.repository.js';
 import { AssetExifTable } from 'src/schema/tables/asset-exif.table.js';
 import { AssetFaceTable } from 'src/schema/tables/asset-face.table.js';
 import { BaseService } from 'src/services/base.service.js';
+import type { JobOf } from 'src/types.js';
 import { getAssetFiles } from 'src/utils/asset.util.js';
 import { isAssetChecksumConstraint } from 'src/utils/database.js';
 import { mergeTimeZone } from 'src/utils/date.js';
@@ -86,17 +84,17 @@ export function firstDateTime(tags: ImmichTags) {
 }
 
 /**
- * Recover a UTC offset for a zone-less EXIF capture time (issue #607).
- *
- * Android cameras commonly omit `OffsetTimeOriginal`, so the EXIF wall-clock
- * time has no timezone and would otherwise be assumed to be UTC. Clients upload
- * `fileCreatedAt` derived from the true capture instant, so the gap between the
- * wall clock (read as UTC) and that instant is the original offset.
- *
- * Returns a Luxon fixed-offset zone string (e.g. `UTC+2`, `UTC-4`) or null when
- * the gap is zero or does not resolve to a real-world offset — in which case
- * the caller keeps the existing UTC behaviour.
- */
+Recover a UTC offset for a zone-less EXIF capture time (issue #607).
+
+Android cameras commonly omit `OffsetTimeOriginal`, so the EXIF wall-clock
+time has no timezone and would otherwise be assumed to be UTC. Clients upload
+`fileCreatedAt` derived from the true capture instant, so the gap between the
+wall clock (read as UTC) and that instant is the original offset.
+
+Returns a Luxon fixed-offset zone string (e.g. `UTC+2`, `UTC-4`) or null when
+the gap is zero or does not resolve to a real-world offset — in which case
+the caller keeps the existing UTC behaviour.
+*/
 const deriveTimeZoneFromUploadedInstant = (exifLocalAsUtc: DateTime, fileCreatedAt: Date): string | null => {
   if (!exifLocalAsUtc.isValid || Number.isNaN(fileCreatedAt.getTime())) {
     return null;
@@ -333,7 +331,7 @@ export class MetadataService extends BaseService {
         exifTags.Author ??
         null,
       fps: video?.frameRate ?? validate(Number(exifTags.VideoFrameRate!)),
-      iso: validate(exifTags.RecommendedExposureIndex ?? exifTags.StandardOutputSensitivity ?? exifTags.ISO) as number,
+      iso: validate(exifTags.RecommendedExposureIndex || exifTags.StandardOutputSensitivity || exifTags.ISO) as number,
       exposureTime: exifTags.ExposureTime ?? null,
       lensModel: getLensModel(exifTags),
       fNumber: validate(exifTags.FNumber),
@@ -472,8 +470,7 @@ export class MetadataService extends BaseService {
 
     let sidecarPath = null;
     for (const candidate of this.getSidecarCandidates(asset)) {
-      const backend = await this.backendMedia.backendFor(candidate);
-      const isExists = await backend.exists(candidate, { readable: true });
+      const isExists = await this.backendMedia.exists(candidate, { readable: true });
       if (!isExists) {
         continue;
       }
@@ -558,38 +555,7 @@ export class MetadataService extends BaseService {
       return JobStatus.Skipped;
     }
 
-    if (isDiskPath(sidecarPath)) {
-      await this.metadataRepository.writeTags(sidecarPath, exif);
-    } else {
-      // S3 mode: work against a local temp file, then always upload the result to S3.
-      // If an existing sidecar is in S3, download it first so we preserve its contents;
-      // otherwise exiftool will create a fresh XMP at the temp path.
-      const backend = await this.backendMedia.backendFor(sidecarPath);
-      const sidecarExists = await backend.exists(sidecarPath);
-      let localSidecar: { localPath: string; cleanup: () => Promise<void> };
-      if (sidecarExists) {
-        localSidecar = await this.backendMedia.ensureLocalFile(sidecarPath);
-      } else {
-        const tempPath = join(tmpdir(), `immich-sidecar-${this.cryptoRepository.randomUUID()}.xmp`);
-        localSidecar = {
-          localPath: tempPath,
-          cleanup: async () => {
-            try {
-              await this.storageRepository.unlink(tempPath);
-            } catch {
-              // ignore — file may never have been created if writeTags failed
-            }
-          },
-        };
-      }
-      try {
-        await this.metadataRepository.writeTags(localSidecar.localPath, exif);
-        const stream = this.storageRepository.createPlainReadStream(localSidecar.localPath);
-        await backend.put(sidecarPath, stream, { contentType: 'application/xml' });
-      } finally {
-        await localSidecar.cleanup();
-      }
-    }
+    await this.backendMedia.writeSidecar(sidecarPath, (path) => this.metadataRepository.writeTags(path, exif));
 
     if (asset.files.length === 0) {
       await this.assetRepository.upsertFile({ assetId: id, type: AssetFileType.Sidecar, path: sidecarPath });
@@ -666,7 +632,7 @@ export class MetadataService extends BaseService {
         //
         // this is especially important in the case of UTC+0 where exiftool-vendored does not return tz/zone fields
         // and as such the tags aren't overwritten when returning all tags.
-        for (const tag of ['zone', 'tz', 'tzSource', 'zoneSource'] as const) {
+        for (const tag of ['zone', 'tz', 'zoneSource'] as const) {
           delete mediaTags[tag];
         }
       }
@@ -712,7 +678,7 @@ export class MetadataService extends BaseService {
         ? String(tag)
         : tag
             .split('|')
-            .map((t) => t.replaceAll('/', '|'))
+            .map((tag) => tag.replaceAll('/', '|'))
             .join('/'),
     );
 
@@ -775,7 +741,6 @@ export class MetadataService extends BaseService {
     this.logger.debug(`Starting motion photo video extraction for asset ${asset.id}: ${asset.originalPath}`);
 
     const effectiveOriginalPath = localOriginal || asset.originalPath;
-    const isS3Asset = !isDiskPath(asset.originalPath);
 
     try {
       const position = stats.size - length - padding;
@@ -791,15 +756,13 @@ export class MetadataService extends BaseService {
       }
       // Default video extraction
       else {
-        // Corrupted Samsung motion-photo metadata can report length + padding
-        // larger than the file, yielding a negative read position that throws
-        // RangeError. Skip extraction for these assets instead.
-        if (position < 0) {
+        if (length <= 0 || padding < 0 || position < 0) {
           this.logger.warn(
-            `Skipping motion photo extraction for ${asset.id}: ${asset.originalPath}: computed negative read position (${position})`,
+            `Skipping motion photo video extraction for asset ${asset.id}: video range is outside the file`,
           );
           return;
         }
+
         video = await this.storageRepository.readFile(effectiveOriginalPath, {
           buffer: Buffer.alloc(length),
           position,
@@ -815,9 +778,6 @@ export class MetadataService extends BaseService {
       if (!motionAsset) {
         try {
           const motionAssetId = this.cryptoRepository.randomUUID();
-          const motionPath = isS3Asset
-            ? StorageCore.getRelativeNestedPath(StorageFolder.EncodedVideo, asset.ownerId, `${motionAssetId}-MP.mp4`)
-            : StorageCore.getAndroidMotionPath(asset, motionAssetId);
           motionAsset = await this.assetRepository.create({
             id: motionAssetId,
             libraryId: asset.libraryId,
@@ -828,7 +788,7 @@ export class MetadataService extends BaseService {
             checksum,
             checksumAlgorithm: ChecksumAlgorithm.sha1File,
             ownerId: asset.ownerId,
-            originalPath: motionPath,
+            originalPath: getMotionVideoPath(asset, motionAssetId),
             originalFileName: `${parse(asset.originalFileName).name}.mp4`,
             visibility: AssetVisibility.Hidden,
           });
@@ -886,37 +846,24 @@ export class MetadataService extends BaseService {
         // (if it did, getByChecksum() would've returned a motionAsset with the same ID as livePhotoVideoId)
         // note asset.livePhotoVideoId is not motionAsset.id yet
         if (asset.livePhotoVideoId) {
+          // the old motion may be the user's own file (linked by livePhotoCID or manually), only remove ones Immich extracted
+          const oldMotion = await this.assetRepository.getById(asset.livePhotoVideoId);
+          const deleteOnDisk = !!oldMotion && isExtractedMotionPath(oldMotion.originalPath);
           await this.jobRepository.queue({
             name: JobName.AssetDelete,
-            data: { id: asset.livePhotoVideoId, deleteOnDisk: true },
+            data: { id: asset.livePhotoVideoId, deleteOnDisk },
           });
           this.logger.log(`Removed old motion photo video asset (${asset.livePhotoVideoId})`);
         }
       }
 
-      // write extracted motion video to storage
-      if (isDiskPath(motionAsset.originalPath)) {
-        // Disk mode
-        const existsOnDisk = await this.storageRepository.checkFileExists(motionAsset.originalPath);
-        if (!existsOnDisk) {
-          this.storageCore.ensureFolders(motionAsset.originalPath);
-          await this.storageRepository.createFile(motionAsset.originalPath, video);
-          this.logger.log(`Wrote motion photo video to ${motionAsset.originalPath}`);
+      // write extracted motion video to disk, especially if the encoded-video folder has been deleted
+      const isWritten = await this.backendMedia.writeFileIfMissing(motionAsset.originalPath, video, 'video/mp4');
+      if (isWritten) {
+        this.logger.log(`Wrote motion photo video to ${motionAsset.originalPath}`);
 
-          await this.handleMetadataExtraction({ id: motionAsset.id });
-          await this.jobRepository.queue({ name: JobName.AssetEncodeVideo, data: { id: motionAsset.id } });
-        }
-      } else {
-        // S3 mode — upload via backend
-        const backend = await this.backendMedia.backendFor(motionAsset.originalPath);
-        const exists = await backend.exists(motionAsset.originalPath);
-        if (!exists) {
-          await backend.put(motionAsset.originalPath, video, { contentType: 'video/mp4' });
-          this.logger.log(`Uploaded motion photo video to ${motionAsset.originalPath}`);
-
-          await this.handleMetadataExtraction({ id: motionAsset.id });
-          await this.jobRepository.queue({ name: JobName.AssetEncodeVideo, data: { id: motionAsset.id } });
-        }
+        await this.handleMetadataExtraction({ id: motionAsset.id });
+        await this.jobRepository.queue({ name: JobName.AssetEncodeVideo, data: { id: motionAsset.id } });
       }
 
       this.logger.debug(`Finished motion photo video extraction for asset ${asset.id}: ${asset.originalPath}`);

@@ -5,18 +5,19 @@
   // owner ticks them in (the owner, 30 October). Continue in <library> opens the destination's move page in a new tab
   // inside the click, so no pop-up blocker stands in the way, and only then makes the source key and hands the move
   // over; the owner confirms it there.
+  import { currentLibrary, isMainLibrary } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import type { Library } from '#lib/gallery/libraries/library-file.ts';
+  import { readPreloadedQuery } from '#lib/queries/client.ts';
+  import { getServerConfigQuery } from '#lib/queries/server-info.query.ts';
   import { AssetVisibility, getPersonStatistics, searchAssetStatistics } from '@immich/sdk';
   import { Button, HStack, Modal, ModalBody, ModalFooter } from '@immich/ui';
   import { mdiImageMove } from '@mdi/js';
   import { onDestroy, onMount } from 'svelte';
   import { t } from 'svelte-i18n';
-  import { currentLibrary, isMainLibrary } from '$lib/gallery/libraries/library-context.svelte';
-  import type { Library } from '$lib/gallery/libraries/library-file';
-  import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
   import { movePageUrl } from './move-gates';
   import { beginMove, moveManager, type MoveRequest } from './move-manager.svelte';
   import { errorWords, progressWords, sideOf } from './move-words';
-  import { isEnded, listMoves, MOVE_LIMIT, moveStatus, type MoverErrorCode, type MoveStatus } from './mover';
+  import { MOVE_LIMIT, isEnded, listMoves, moveStatus, type MoveStatus, type MoverErrorCode } from './mover';
 
   type Props = { request: MoveRequest; destination: Library; onClose: () => void };
 
@@ -31,7 +32,7 @@
   const person = $derived(request.person);
   const trashDays = (() => {
     try {
-      return serverConfigManager.value.trashDays;
+      return readPreloadedQuery(getServerConfigQuery()).trashDays;
     } catch {
       return;
     }

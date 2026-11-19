@@ -1,21 +1,19 @@
+import OmarchyBar from '#lib/components/omarchy/OmarchyBar.svelte';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import QueryTestWrapper from '#lib/gallery/components/query-test-wrapper.svelte';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { getNotificationsQuery } from '#lib/queries/notification.query.ts';
+import { setDefaultTabbleOptions } from '#lib/utils/focus-util.ts';
+import { libraryContextFile, secondLibrary, serving } from '#test/kioku/factories/library-context-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import OmarchyBar from '$lib/components/omarchy/OmarchyBar.svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { setDefaultTabbleOptions } from '$lib/utils/focus-util';
-import { libraryContextFile, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 
 // Local Omarchy layer: on a phone the one bar's bell moves into the account menu (a row with what is unread, a dot on
 // the avatar while something is); a wider bar keeps the bell.
 const mocks = vi.hoisted(() => ({
   mediaQueryManager: { isPhone: false, isFullSidebar: true },
-  notificationManager: {
-    notifications: [] as { id: string }[],
-    refresh: vi.fn().mockResolvedValue(undefined),
-  },
   sidebarModeStore: {
     layout: 'expanded' as 'overlay' | 'rail' | 'expanded' | 'hidden',
     toggleHidden: vi.fn(),
@@ -23,12 +21,11 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('$lib/stores/media-query-manager.svelte', () => ({ mediaQueryManager: mocks.mediaQueryManager }));
-vi.mock('$lib/stores/notification-manager.svelte', () => ({ notificationManager: mocks.notificationManager }));
-vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
-vi.mock('$lib/stores/sidebar.svelte', () => ({ sidebarStore: { isOpen: false, toggle: vi.fn() } }));
+vi.mock('#lib/stores/media-query-manager.svelte.ts', () => ({ mediaQueryManager: mocks.mediaQueryManager }));
+vi.mock('#lib/stores/sidebar-mode.svelte.ts', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
+vi.mock('#lib/stores/sidebar.svelte.ts', () => ({ sidebarStore: { isOpen: false, toggle: vi.fn() } }));
 vi.mock('$app/state', () => ({ page: { url: new URL('https://gallery.test/photos') } }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: {
     authenticated: true,
     user: { id: 'me', name: 'Test', email: 'test@example.com', isAdmin: false },
@@ -36,30 +33,34 @@ vi.mock('$lib/managers/auth-manager.svelte', () => ({
 }));
 
 // Written out one by one on purpose: vi.mock is hoisted and needs a literal path.
-vi.mock('$lib/components/omarchy/BarSearch.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/omarchy/BarSearch.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
-vi.mock('$lib/components/omarchy/BarUndo.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/omarchy/BarUndo.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
-vi.mock('$lib/components/omarchy/BarViewMenu.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/omarchy/BarViewMenu.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
-vi.mock('$lib/components/shared-components/UserAvatar.svelte', async () => {
-  const module = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/UserAvatar.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: module.default };
 });
-vi.mock('$lib/components/shared-components/navigation-bar/NotificationPanel.svelte', async () => {
-  const module = await import('@test-data/mocks/notification-panel.stub.svelte');
+vi.mock('#lib/components/shared-components/navigation-bar/NotificationPanel.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/notification-panel.stub.svelte');
   return { default: module.default };
 });
 
+// what is unread, as the notifications query holds it (queries/notification.query)
+const setUnread = (notifications: { id: string }[]) =>
+  queryClient.setQueryData(getNotificationsQuery().queryKey, notifications as never);
+
 type BarProps = { onUploadClick: () => void; railAware?: boolean };
 const renderBar = (props: Partial<BarProps> = {}) =>
-  render(TestWrapper as Component<{ component: typeof OmarchyBar; componentProps: BarProps }>, {
+  render(QueryTestWrapper as Component<{ component: typeof OmarchyBar; componentProps: BarProps }>, {
     component: OmarchyBar,
     componentProps: { onUploadClick: vi.fn(), ...props },
   });
@@ -67,13 +68,13 @@ const renderBar = (props: Partial<BarProps> = {}) =>
 describe('OmarchyBar notifications', () => {
   beforeEach(() => {
     mocks.mediaQueryManager.isPhone = false;
-    mocks.notificationManager.notifications = [];
+    setUnread([]);
     sdkMock.getAboutInfo.mockResolvedValue({} as never);
   });
 
   it('moves the bell into the account menu on a phone, with what is unread', async () => {
     mocks.mediaQueryManager.isPhone = true;
-    mocks.notificationManager.notifications = [{ id: 'one' }, { id: 'two' }];
+    setUnread([{ id: 'one' }, { id: 'two' }]);
     renderBar();
 
     expect(screen.queryByRole('button', { name: 'notifications' })).not.toBeInTheDocument();
@@ -101,7 +102,7 @@ describe('OmarchyBar notifications', () => {
   });
 
   it('keeps the bell on a wider bar, and the account menu without it', async () => {
-    mocks.notificationManager.notifications = [{ id: 'one' }];
+    setUnread([{ id: 'one' }]);
     renderBar();
 
     expect(screen.getByRole('button', { name: 'notifications' })).toBeInTheDocument();
@@ -118,7 +119,7 @@ describe('OmarchyBar notifications', () => {
 describe('OmarchyBar names', () => {
   beforeEach(() => {
     mocks.mediaQueryManager.isPhone = false;
-    mocks.notificationManager.notifications = [];
+    setUnread([]);
     mocks.sidebarModeStore.layout = 'expanded';
     sdkMock.getAboutInfo.mockResolvedValue({} as never);
   });
@@ -130,7 +131,7 @@ describe('OmarchyBar names', () => {
 
   it("adds what is unread to the account's name on a phone, where its dot stands for the bell", () => {
     mocks.mediaQueryManager.isPhone = true;
-    mocks.notificationManager.notifications = [{ id: 'one' }];
+    setUnread([{ id: 'one' }]);
     renderBar();
     expect(screen.getByTestId('bar-account')).toHaveAccessibleName('Test, notifications_unread_count');
   });

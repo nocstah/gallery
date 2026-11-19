@@ -89,6 +89,7 @@
   onmouseenter={() => isBirthday && confettiCount++}
   bind:this={card}
   bind:clientWidth={width}
+  data-testid="memory-card"
 >
   {#if item.src}
     <img
@@ -102,7 +103,7 @@
   {/if}
   {#if item.isSaved}
     <div class="absolute inset-s-2 top-2 p-1">
-      <Icon data-icon-favorite icon={mdiHeart} size="32" class="text-white" />
+      <Icon data-testid="favorite-icon" icon={mdiHeart} size="32" class="text-white" />
     </div>
   {/if}
   <div class="ws-memory-card-scrim absolute inset-s-0 top-0 size-full rounded-xl"></div>
@@ -121,12 +122,7 @@
     <p class="ws-memory-card-title flex items-center gap-2 whitespace-normal text-white">
       {#if isBirthday}
         <span class="relative">
-          <Icon
-            data-icon-birthday
-            icon={bottomLayerPath}
-            size="1.25em"
-            class="block transition-colors group-hover:text-logo-blue"
-          />
+          <Icon icon={bottomLayerPath} size="1.25em" class="block transition-colors group-hover:text-logo-blue" />
           <Icon
             icon={topLayerPath}
             size="1.25em"

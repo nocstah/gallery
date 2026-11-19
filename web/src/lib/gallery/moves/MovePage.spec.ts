@@ -1,7 +1,12 @@
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import {
+  libraryContextFile,
+  mainLibrary,
+  secondLibrary,
+  serving,
+} from '#test/kioku/factories/library-context-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 import MovePage from './MovePage.svelte';
 import { moveManager } from './move-manager.svelte';
 import { MOVER_ORIGIN } from './mover';
@@ -21,10 +26,10 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('$app/state', () => ({ page: mocks.page }));
 vi.mock('$app/navigation', () => ({ goto: mocks.goto, invalidateAll: vi.fn() }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
-vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({ assetMultiSelectManager: { clear: vi.fn() } }));
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: stub } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/managers/asset-multi-select-manager.svelte.ts', () => ({ assetMultiSelectManager: { clear: vi.fn() } }));
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: stub } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: stub };
 });
 vi.mock('@immich/sdk', async (importOriginal) => ({

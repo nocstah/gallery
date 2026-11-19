@@ -9,18 +9,18 @@
   // click leaves one out. A rule on amounts takes only slips whose two readings agree: one read once, or read two
   // ways, waits under "Check these" until clicked in; a code without an amount never goes to the Trash. The Trash
   // keeps them 30 days, and Undo brings back either move.
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { qrManager } from '$lib/managers/special-albums.svelte';
-  import { undoManager } from '$lib/managers/undo-manager.svelte';
-  import { slipsRule, type SlipsRule } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { curator, curatorPort, waitForJob, type Slip, type SlipList } from '$lib/utils/curator';
-  import { handleError } from '$lib/utils/handle-error';
-  import { toastUndoable } from '$lib/utils/undoable';
-  import { AssetMediaSize, deleteAssets as trashAssets, restoreAssets } from '@immich/sdk';
-  import { Field, Icon, modalManager, Switch } from '@immich/ui';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import LoadingSpinner from '#lib/components/shared-components/LoadingSpinner.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { qrManager } from '#lib/managers/special-albums.svelte.ts';
+  import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+  import { slipsRule, type SlipsRule } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { curator, curatorPort, waitForJob, type Slip, type SlipList } from '#lib/utils/curator.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { toastUndoable } from '#lib/utils/undoable.ts';
+  import { AssetMediaSize, restoreAssets, deleteAssets as trashAssets } from '@immich/sdk';
+  import { Field, Icon, Switch, modalManager } from '@immich/ui';
   import { mdiRefresh } from '@mdi/js';
   import { onMount, untrack } from 'svelte';
   import { locale, t } from 'svelte-i18n';

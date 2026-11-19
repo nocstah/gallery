@@ -1,10 +1,8 @@
 <script lang="ts">
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import type { OnFavorite } from '$lib/utils/actions';
-  import { handleError } from '$lib/utils/handle-error';
-  import { favoritesDone } from '$lib/utils/undoable';
-  import { updateAssetFavorites } from '@immich/sdk';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { toggleFavoriteAssets } from '#lib/services/asset.service.ts';
+  import type { OnFavorite } from '#lib/utils/actions.ts';
   import { IconButton } from '@immich/ui';
   import { mdiHeartMinusOutline, mdiHeartOutline, mdiTimerSand } from '@mdi/js';
   import { t } from 'svelte-i18n';
@@ -28,25 +26,8 @@
 
     try {
       const assets = assetMultiSelectManager.assets.filter((asset) => asset.isFavorite !== isFavorite);
-
-      const ids = assets.map(({ id }) => id);
-
-      if (ids.length > 0) {
-        await updateAssetFavorites({ assetFavoriteUpdateDto: { ids, isFavorite } });
-      }
-
-      for (const asset of assets) {
-        asset.isFavorite = isFavorite;
-      }
-
-      onFavorite?.(ids, isFavorite);
-
-      // Local Omarchy layer: the toast's Undo is kept in the bar's undo history too (utils/undoable)
-      favoritesDone(ids, isFavorite);
-
+      await toggleFavoriteAssets(assets, isFavorite, onFavorite);
       assetMultiSelectManager.clear();
-    } catch (error) {
-      handleError(error, $t('errors.unable_to_add_remove_favorites', { values: { favorite: isFavorite } }));
     } finally {
       loading = false;
     }

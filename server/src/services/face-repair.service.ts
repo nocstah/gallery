@@ -1,5 +1,4 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import type { JobOf } from 'src/types.js';
 import { AssetFace } from 'src/database.js';
 import { OnJob } from 'src/decorators.js';
 import { FaceRepairResolveRequest, FaceRepairResolveResponse, FaceRepairScanParams } from 'src/dtos/face-repair.dto.js';
@@ -8,6 +7,7 @@ import { RepairScanPerson, RepairScanRow, ScanInProgressError } from 'src/reposi
 import { OwnerPersonRow, PersonMetadataRow } from 'src/repositories/face-repair.repository.js';
 import { BaseService } from 'src/services/base.service.js';
 import { RepairReport, summarizeRepairPlan } from 'src/services/face-repair.summary.js';
+import type { JobOf } from 'src/types.js';
 import {
   FlagParams,
   ReattributionTally,
@@ -743,7 +743,7 @@ export class FaceRepairService extends BaseService {
     // flatMap, not map: a survivor with no context row is dropped rather than emitted half-populated.
     const flaggedFaces = (byPerson.get(personGroupId) ?? []).flatMap((f) => {
       const context = contextByFace.get(f.assetFaceId);
-      return context ? [{ assetFaceId: f.assetFaceId, suspectedOwnerId: f.suspectedOwnerId, ...context }] : [];
+      return context ? { assetFaceId: f.assetFaceId, suspectedOwnerId: f.suspectedOwnerId, ...context } : [];
     });
     return { personId: personGroupId, flaggedFaces };
   }
@@ -1295,12 +1295,12 @@ export class FaceRepairService extends BaseService {
   async getAdminFaceThumbnail(assetFaceId: string): Promise<ImmichMediaResponse> {
     let face: AssetFace;
     try {
-      face = await this.personRepository.getFaceByIdIncludingTombstoned(assetFaceId);
+      face = await this.galleryPersonRepository.getFaceByIdIncludingTombstoned(assetFaceId);
     } catch {
       throw new NotFoundException();
     }
 
-    const sourcePath = await this.backendMedia.getFaceThumbnailSource(face.assetId);
+    const sourcePath = await this.backendMedia.getFaceThumbnailSource(face);
     if (!sourcePath) {
       throw new NotFoundException();
     }
@@ -1318,12 +1318,12 @@ export class FaceRepairService extends BaseService {
     try {
       // NOT getFaceByIdIncludingTombstoned: that one serves faces on trashed assets, which is tolerable for
       // a face crop and not for a whole photo.
-      face = await this.personRepository.getFaceByIdOnLiveAsset(assetFaceId);
+      face = await this.galleryPersonRepository.getFaceByIdOnLiveAsset(assetFaceId);
     } catch {
       throw new NotFoundException();
     }
 
-    const sourcePath = await this.backendMedia.getFaceThumbnailSource(face.assetId);
+    const sourcePath = await this.backendMedia.getFaceThumbnailSource(face);
     if (!sourcePath) {
       throw new NotFoundException();
     }

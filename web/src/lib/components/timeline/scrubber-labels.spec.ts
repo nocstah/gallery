@@ -1,24 +1,26 @@
-import { pickYearLabels, yearRank, YEAR_LABEL_SPACING, type YearMark } from './scrubber-labels';
+import { YEAR_LABEL_SPACING, pickYearLabels, yearRank, type YearMark } from './scrubber-labels';
 
 // Local Omarchy layer: the scrubber's year names never run into each other, and the ones it keeps say the most.
 
-/** years from `newest` down, each `step` px above the one before it, the oldest at the foot */
-const years = (newest: number, oldest: number, step: number): YearMark[] =>
-  Array.from({ length: newest - oldest + 1 }, (_, index) => ({
-    year: newest - index,
-    at: (newest - oldest - index) * step,
+const NEWEST = 2026;
+
+/** years from `NEWEST` down to `oldest`, each `step` px above the one before it, the oldest at the foot */
+const years = (oldest: number, step: number): YearMark[] =>
+  Array.from({ length: NEWEST - oldest + 1 }, (_, index) => ({
+    year: NEWEST - index,
+    at: (NEWEST - oldest - index) * step,
   }));
 
 describe(pickYearLabels.name, () => {
   it('names every year where they all fit', () => {
-    const marks = years(2026, 2017, 40);
+    const marks = years(2017, 40);
     expect([...pickYearLabels(marks)].sort((a, b) => a - b)).toEqual(
       marks.map(({ year }) => year).sort((a, b) => a - b),
     );
   });
 
   it('keeps no two names closer than a name and its air', () => {
-    const marks = years(2026, 1977, 9);
+    const marks = years(1977, 9);
     const kept = marks.filter(({ year }) => pickYearLabels(marks).has(year));
     for (const [index, mark] of kept.entries()) {
       for (const other of kept.slice(index + 1)) {
@@ -28,7 +30,7 @@ describe(pickYearLabels.name, () => {
   });
 
   it('names the newest and the oldest year, then the decades, before the years between', () => {
-    const marks = years(2026, 1977, 9);
+    const marks = years(1977, 9);
     const kept = pickYearLabels(marks);
     for (const year of [2026, 1977, 2010, 2000, 1990]) {
       expect(kept.has(year), String(year)).toBe(true);

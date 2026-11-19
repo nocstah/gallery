@@ -18,7 +18,7 @@ export type YearSlideMoves = {
 };
 
 /** How long a cut (reduced motion, or the desktop's workspace animation off) keeps heading for its year: a press close
- * behind steps on from it before the month in view has caught up with the jump. */
+behind steps on from it before the month in view has caught up with the jump. */
 const CUT_HELD_MS = 300;
 
 export class YearSlide {

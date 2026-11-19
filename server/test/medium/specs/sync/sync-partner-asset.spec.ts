@@ -11,6 +11,7 @@ import { getKyselyDB, wait } from 'test/utils.js';
 
 let defaultDatabase: Kysely<DB>;
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 const setup = async (db?: Kysely<DB>) => {
   const ctx = new SyncTestContext(db || defaultDatabase);
   const { auth, user, session } = await ctx.newSyncAuthUser();
@@ -369,7 +370,8 @@ describe(SyncRequestType.PartnerAssetsV2, () => {
     // The recipient favorites a partner asset they don't own — their own stream must reflect it.
     await ctx.get(AssetFavoriteRepository).addAll(auth.user.id, [asset.id]);
 
-    const response = await ctx.syncStream(auth, [SyncRequestType.PartnerAssetsV2]);
+    // A Gallery client; a stock one gets upstream's false (sync-stock-client.spec.ts).
+    const response = await ctx.syncStream(auth, [SyncRequestType.PartnerAssetsV2, SyncRequestType.SharedSpacesV1]);
     expect(response).toEqual([
       {
         ack: expect.any(String),
@@ -408,7 +410,8 @@ describe(SyncRequestType.PartnerAssetsV2, () => {
     // The recipient favorites the historical partner asset before it backfills.
     await ctx.get(AssetFavoriteRepository).addAll(auth.user.id, [backfillAsset.id]);
 
-    const response = await ctx.syncStream(auth, [SyncRequestType.PartnerAssetsV2]);
+    // A Gallery client; a stock one gets upstream's false (sync-stock-client.spec.ts).
+    const response = await ctx.syncStream(auth, [SyncRequestType.PartnerAssetsV2, SyncRequestType.SharedSpacesV1]);
     const backfillEvents = response.filter((r: { type: string }) => r.type === SyncEntityType.PartnerAssetBackfillV2);
     const backfillRow = backfillEvents.find((r: { data: { id: string } }) => r.data.id === backfillAsset.id) as
       { data: { id: string; isFavorite: boolean } } | undefined;

@@ -1,27 +1,26 @@
 <script lang="ts">
-  import { isDefined } from '$lib';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import Timeline from '$lib/components/timeline/Timeline.svelte';
-  import { AssetAction } from '$lib/constants';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import type { TimelineDay } from '$lib/managers/timeline-manager/timeline-day.svelte';
-  import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import GeolocationPointPickerModal from '$lib/modals/GeolocationPointPickerModal.svelte';
-  import GeolocationUpdateConfirmModal from '$lib/modals/GeolocationUpdateConfirmModal.svelte';
-  import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
-  import type { LatLng } from '$lib/types';
-  import { setQueryValue } from '$lib/utils/navigation';
-  import { openFileUploadDialog } from '$lib/utils/file-uploader';
-  import { beforeChange, placesDone } from '$lib/utils/undoable';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
+  import { isDefined } from '#lib';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import Timeline from '#lib/components/timeline/Timeline.svelte';
+  import { AssetAction } from '#lib/constants.ts';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import type { TimelineDay } from '#lib/managers/timeline-manager/timeline-day.svelte.ts';
+  import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import GeolocationPointPickerModal from '#lib/modals/GeolocationPointPickerModal.svelte';
+  import GeolocationUpdateConfirmModal from '#lib/modals/GeolocationUpdateConfirmModal.svelte';
+  import { keyboardManager } from '#lib/stores/keyboard-manager.svelte.ts';
+  import type { LatLng } from '#lib/types.ts';
+  import { openFileUploadDialog } from '#lib/utils/file-uploader.ts';
+  import { setQueryValue } from '#lib/utils/navigation.ts';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
+  import { beforeChange, placesDone } from '#lib/utils/undoable.ts';
   import { AssetVisibility, getAssetInfo, updateAssets } from '@immich/sdk';
-  import { Button, Icon, modalManager } from '@immich/ui';
+  import { Button, Icon, LoadingSpinner, modalManager } from '@immich/ui';
   import { mdiMapMarkerMultipleOutline, mdiMapMarkerOutline, mdiSelectRemove } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
 
   type Props = {
     data: PageData;
@@ -177,6 +176,7 @@
         variant="ghost"
         onclick={() => assetMultiSelectManager.clear()}
         title={$t('unselect_all')}
+        aria-label={$t('unselect_all')}
       >
         <span class="ws-action-label">{$t('unselect_all')}</span>
       </Button>
@@ -188,6 +188,7 @@
       disabled={assetMultiSelectManager.assets.length === 0 || !point}
       onclick={() => handleUpdate()}
       title={$t('apply_count', { values: { count: assetMultiSelectManager.assets.length } })}
+      aria-label={$t('apply_count', { values: { count: assetMultiSelectManager.assets.length } })}
     >
       <span class="ws-action-label">
         {$t('apply_count', { values: { count: assetMultiSelectManager.assets.length } })}

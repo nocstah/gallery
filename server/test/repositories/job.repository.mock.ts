@@ -1,6 +1,6 @@
 import { Mocked, vitest } from 'vitest';
-import type { RepositoryInterface } from 'src/types.js';
 import { JobRepository } from 'src/repositories/job.repository.js';
+import type { RepositoryInterface } from 'src/types.js';
 
 export const newJobRepositoryMock = (): Mocked<RepositoryInterface<JobRepository>> => {
   return {
@@ -19,7 +19,6 @@ export const newJobRepositoryMock = (): Mocked<RepositoryInterface<JobRepository
     isActive: vitest.fn(),
     isPaused: vitest.fn(),
     getJobCounts: vitest.fn(),
-    getJobCountsWithRepair: vitest.fn(),
     clear: vitest.fn(),
     waitForQueueCompletion: vitest.fn(),
     removeJob: vitest.fn(),

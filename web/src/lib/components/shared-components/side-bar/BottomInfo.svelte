@@ -1,11 +1,20 @@
 <script lang="ts">
-  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { hideBackupsReminder } from '#lib/stores/preferences.store.ts';
+  import { ImmichBackupsSidebarItem } from '@futo-org/backups-orchestrator-ui';
   import ServerStatus from './ServerStatus.svelte';
   import StorageSpace from './StorageSpace.svelte';
 </script>
 
+<!-- Local Omarchy layer: no inset or rounding of its own; the storage line runs to the sidebar's edges (DESIGN.md) -->
 <div class="mt-auto">
   <StorageSpace />
+
+  {#if authManager.user.isAdmin && featureFlagsManager.value.backups && !$hideBackupsReminder}
+    <ImmichBackupsSidebarItem href={Route.backups()} />
+  {/if}
 </div>
 
 <!-- Local Omarchy layer: no PurchaseInfo. Nothing is for sale in this fork's build, and its button ("Support Noodle

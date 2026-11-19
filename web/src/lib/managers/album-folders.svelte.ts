@@ -6,6 +6,10 @@
 // onto one; an album that is not in the Space yet is added to it on the way. Gallery's "hide this album from my
 // timeline" works on an album of a Space too, so the album menus offer it here ("each album can i set it to hide from
 // showing its contents in main photos?").
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import AlbumHideFromMyTimelineConfirmModal from '#lib/modals/AlbumHideFromMyTimelineConfirmModal.svelte';
+import SpaceAlbumFolderPickerModal from '#lib/modals/SpaceAlbumFolderPickerModal.svelte';
+import { handleError } from '#lib/utils/handle-error.ts';
 import {
   createSharedSpaceAlbumFolder,
   createSpace,
@@ -26,10 +30,6 @@ import {
 import { modalManager } from '@immich/ui';
 import { t, type Translations } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import AlbumHideFromMyTimelineConfirmModal from '$lib/modals/AlbumHideFromMyTimelineConfirmModal.svelte';
-import SpaceAlbumFolderPickerModal from '$lib/modals/SpaceAlbumFolderPickerModal.svelte';
-import { handleError } from '$lib/utils/handle-error';
 
 /** The Space whose folders are the Albums page's (Curator files its albums into it by this name too). */
 export const FOLDER_SPACE = 'Library';
@@ -45,7 +45,7 @@ class AlbumFolderManager {
   folders = $state<SharedSpaceAlbumFolderDto[]>([]);
   linked = $state<SharedSpaceLinkedAlbumDto[]>([]);
   #folderIds = $derived(new Set(this.folders.map(({ id }) => id)));
-  #albumFolders = $derived(new Map(this.linked.map(({ id, folderId }) => [id, folderId ?? null])));
+  #albumFolders = $derived(new Map(this.linked.map(({ id, folderId = null }) => [id, folderId])));
   #loading?: Promise<void>;
 
   /** The folder an album sits in: its folder in the Space, or the top (null) for anything else. */
@@ -190,10 +190,10 @@ class AlbumFolderManager {
   }
 
   /**
-   * Hide from my timeline, or show again, as on the Space's own Albums tab: hiding asks first, with Gallery's count of
-   * the photos that go and of those that stay because another album of the Space still shows them. An album outside
-   * the Space joins it at the top first (its place on this page stays the same), and leaves again if I change my mind.
-   */
+  Hide from my timeline, or show again, as on the Space's own Albums tab: hiding asks first, with Gallery's count of
+  the photos that go and of those that stay because another album of the Space still shows them. An album outside
+  the Space joins it at the top first (its place on this page stays the same), and leaves again if I change my mind.
+  */
   async toggleTimeline(album: Pick<AlbumResponseDto, 'id' | 'albumName'>) {
     await this.ready();
     const hidden = this.hiddenFromTimeline(album.id);
@@ -275,11 +275,11 @@ class AlbumFolderManager {
 export const albumFolders = new AlbumFolderManager();
 
 /**
- * Library, the Space that holds the album folders, is the Albums page's engine rather than a Space of its own (plan A,
- * "Let's go with A"): every list of Spaces leaves it out, so its folders are seen once, under Albums, and an album is
- * never taken out of its folder by unlinking "Library" somewhere. Matched by the id the folders came from, or before
- * they have loaded, by its name and maker.
- */
+Library, the Space that holds the album folders, is the Albums page's engine rather than a Space of its own (plan A,
+"Let's go with A"): every list of Spaces leaves it out, so its folders are seen once, under Albums, and an album is
+never taken out of its folder by unlinking "Library" somewhere. Matched by the id the folders came from, or before
+they have loaded, by its name and maker.
+*/
 export const isLibrarySpace = (space: { id: string; name?: string | null; createdById?: string | null }) =>
   albumFolders.spaceId
     ? space.id === albumFolders.spaceId

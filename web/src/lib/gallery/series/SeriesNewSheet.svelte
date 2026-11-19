@@ -5,7 +5,7 @@
   // that one: Curator keeps one series an album. Then an optional span of days, from and to. Curator plans the series
   // and the sheet closes with its id for the page to open; what Curator refuses (a span that ends before it starts) is
   // said in its words, and the sheet stays. Nothing is made on Cancel.
-  import type { SmartAlbum } from '$lib/utils/curator';
+  import type { SmartAlbum } from '#lib/utils/curator.ts';
   import { Field, FormModal, Input } from '@immich/ui';
   import { mdiCalendarHeartOutline } from '@mdi/js';
   import { onMount } from 'svelte';
@@ -108,7 +108,7 @@
         {:else}
           <ul class="series-new-albums" data-testid="series-new-albums">
             {#each albums as album (album.id)}
-              {@const own = seriesOf(album)}
+              {const own = $derived(seriesOf(album))}
               <li>
                 <label class="series-new-album" data-testid="series-new-album" data-series={own?.id}>
                   <input type="radio" name="{id}-album" value={album.id} bind:group={albumId} />

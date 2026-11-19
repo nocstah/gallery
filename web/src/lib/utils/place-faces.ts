@@ -9,15 +9,15 @@
 // Where Gallery's machine learning does not answer, the place's favourites with no face found come first, then its
 // photos so, the newest three each time; the server's photo where none qualifies. The searches answer, for every
 // account, from what that account may see.
+import { isDim } from '#lib/utils/thumbhash-light.ts';
 import { AssetTypeEnum, AssetVisibility, type SearchFilter } from '@immich/sdk';
-import { isDim } from '$lib/utils/thumbhash-light';
 
 export type PlaceAt = { city: string; country?: string | null };
 export type PlacePicture = { id: string; thumbhash: string | null; isFavorite?: boolean };
 /** A search of the place's photos: those matching `filter`, `size` at most, best first. */
 export type PlaceSearch = (filter: SearchFilter, size: number) => Promise<PlacePicture[]>;
 /** How a place's photos are searched: by how much they look like `PLACE_LOOK` (Gallery's image search), or newest
- * first (its metadata search). */
+first (its metadata search). */
 export type PlaceSearches = { looks: PlaceSearch; newest: PlaceSearch };
 
 /** What a place looks like to Gallery's image search: its views, its buildings, its streets. */
@@ -43,7 +43,7 @@ export const firstBright = <T extends PlacePicture>(pictures: T[]): T | undefine
   pictures.find(({ thumbhash }) => !isDim(thumbhash)) ?? pictures[0];
 
 /** A place's face (see above); undefined where no photo qualifies. A failed image search falls to the newest photos; a
- * failed metadata search fails the choice. */
+failed metadata search fails the choice. */
 export const choosePlaceFace = async (
   place: PlaceAt,
   { looks, newest }: PlaceSearches,

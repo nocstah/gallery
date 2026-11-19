@@ -1,4 +1,4 @@
-import { mainLibrary } from '@test-data/factories/library-context-factory';
+import { mainLibrary } from '#test/kioku/factories/library-context-factory.ts';
 import { load } from './+page';
 
 // Local Omarchy layer: the move page's load (gallery/moves): the owner's only, the sign-in coming back with the
@@ -9,8 +9,8 @@ const { authenticate, getFormatter } = vi.hoisted(() => ({
   getFormatter: vi.fn(),
 }));
 
-vi.mock('$lib/utils/auth', () => ({ authenticate }));
-vi.mock(import('$lib/utils/i18n'), async (importOriginal) => ({
+vi.mock('#lib/utils/auth.ts', () => ({ authenticate }));
+vi.mock(import('#lib/utils/i18n.ts'), async (importOriginal) => ({
   ...(await importOriginal()),
   getFormatter,
 }));

@@ -1,13 +1,13 @@
+import AlbumDescriptionField from '#lib/components/omarchy/AlbumDescriptionField.svelte';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import AlbumDescriptionField from '$lib/components/omarchy/AlbumDescriptionField.svelte';
 
 // Local Omarchy layer: an album's description. Whoever may edit the album gets the field, everyone else the words
 // alone, so a viewer never sees "Add a description"; on a phone an editor's empty description is one quiet line that
 // opens the field.
 const mocks = vi.hoisted(() => ({ mediaQueryManager: { isPhone: false } }));
-vi.mock('$lib/stores/media-query-manager.svelte', () => ({ mediaQueryManager: mocks.mediaQueryManager }));
+vi.mock('#lib/stores/media-query-manager.svelte.ts', () => ({ mediaQueryManager: mocks.mediaQueryManager }));
 
 const renderField = (props: { isEditor: boolean; description?: string }) =>
   render(AlbumDescriptionField, { id: 'album-1', description: props.description ?? '', isEditor: props.isEditor });

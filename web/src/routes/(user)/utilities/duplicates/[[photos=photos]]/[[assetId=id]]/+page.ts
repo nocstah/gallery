@@ -1,7 +1,7 @@
+import { authenticate } from '#lib/utils/auth.ts';
+import { curator } from '#lib/utils/curator.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
 import { getAssetDuplicates } from '@immich/sdk';
-import { authenticate } from '$lib/utils/auth';
-import { curator } from '$lib/utils/curator';
-import { getFormatter } from '$lib/utils/i18n';
 import type { PageLoad } from './$types';
 
 export const load = (async ({ url }) => {

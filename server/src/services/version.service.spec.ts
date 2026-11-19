@@ -14,8 +14,8 @@ vitest.mock('node:fs', () => ({
   readFileSync: () => JSON.stringify({ version: 'v3.0.0', immichVersion: '2.7.5' }),
 }));
 
-const galleryVersion = { major: 3, minor: 0, patch: 0, prerelease: null };
-const baseVersion = { major: 2, minor: 7, patch: 5, prerelease: null };
+const galleryVersion = { major: 3, minor: 0, patch: 0, prerelease: null, featureLevel: expect.any(Number) };
+const baseVersion = { major: 2, minor: 7, patch: 5, prerelease: null, featureLevel: expect.any(Number) };
 
 describe(VersionService.name, () => {
   let sut: VersionService;
@@ -100,12 +100,15 @@ describe(VersionService.name, () => {
 
   describe('getVersion', () => {
     it('should respond the server version', () => {
-      expect(sut.getVersion()).toEqual({
+      const version = sut.getVersion();
+      expect(version).toEqual({
         major: 3,
         minor: 0,
         patch: 0,
         prerelease: null,
+        featureLevel: expect.any(Number),
       });
+      expect(Number.isSafeInteger(version.featureLevel)).toBe(true);
     });
 
     it('should respond the Gallery version to Gallery clients', () => {

@@ -1,17 +1,22 @@
+import en from '#i18n/en.json';
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import AssetDeleteConfirmModal from '#lib/modals/AssetDeleteConfirmModal.svelte';
+import { getStackActions } from '#lib/services/stack.service.ts';
+import { getTrashActions } from '#lib/services/trash.service.ts';
+import { deleteAssets } from '#lib/utils/actions.ts';
+import {
+  libraryContextFile,
+  mainLibrary,
+  secondLibrary,
+  serving,
+} from '#test/kioku/factories/library-context-factory.ts';
 import type { ActionItem } from '@immich/ui';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
 import { addMessages, locale, t } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import en from '$i18n/en.json';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte';
-import { getStackActions } from '$lib/services/stack.service';
-import { getTrashActions } from '$lib/services/trash.service';
-import { deleteAssets } from '$lib/utils/actions';
-import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 import { loadLibraryContext, resetLibraryContext } from './library-context.svelte';
 
 // Local Omarchy layer: outside Main every destructive confirmation names the library, and so does the toast after a
@@ -32,7 +37,7 @@ vi.mock('@immich/sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/sdk')>()),
   deleteAssets: mocks.deleteBulk,
 }));
-vi.mock('$lib/utils/stack-covers', () => ({
+vi.mock('#lib/utils/stack-covers.ts', () => ({
   handOverCovers: vi.fn(() => Promise.resolve([])),
   announceCovers: vi.fn(),
   restoreCovers: vi.fn(() => Promise.resolve()),

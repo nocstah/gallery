@@ -5,10 +5,10 @@
   // with its own play button and position below the frame (native controls would be cut in half by the divider).
   // On an inbox card every control is described by the card (`describedBy`), so a screen reader hears which photo's
   // versions it compares.
-  import { restoredUrl, type Suggestion } from '$lib/utils/curator';
-  import { formatDuration } from '$lib/utils/duration';
+  import { restoredUrl, type Suggestion } from '#lib/utils/curator.ts';
+  import { formatDuration } from '#lib/utils/duration.ts';
   import { Icon } from '@immich/ui';
-  import { mdiArrowLeftRight, mdiPause, mdiPlay, mdiFullscreen } from '@mdi/js';
+  import { mdiArrowLeftRight, mdiFullscreen, mdiPause, mdiPlay } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {

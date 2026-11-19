@@ -1,11 +1,18 @@
 import { WorkflowTrigger } from '@immich/plugin-sdk';
 import z from 'zod';
+import { asIntegerEnum } from 'src/utils/helpers.js';
 
 export * from 'src/gallery/enum.js';
 
 export enum AuthType {
   Password = 'password',
   OAuth = 'oauth',
+  Passkey = 'passkey',
+}
+
+export enum AuthChallengeType {
+  PasskeyRegistration = 'PasskeyRegistration',
+  PasskeyAuthentication = 'PasskeyAuthentication',
 }
 
 export enum ImmichCookie {
@@ -54,9 +61,7 @@ export enum ChecksumAlgorithm {
 }
 
 export enum AssetFileType {
-  /**
-   * An full/large-size image extracted/converted from RAW photos
-   */
+  /** An full/large-size image extracted/converted from RAW photos */
   FullSize = 'fullsize',
   Preview = 'preview',
   Thumbnail = 'thumbnail',
@@ -192,6 +197,7 @@ export enum Permission {
 
   ClusterGroupRead = 'clusterGroup.read',
   ClusterGroupLeave = 'clusterGroup.leave',
+  ClusterGroupAdmin = 'clusterGroup.admin',
   ClusterGroupRequestCreate = 'clusterGroupRequest.create',
   ClusterGroupRequestRead = 'clusterGroupRequest.read',
   ClusterGroupRequestDelete = 'clusterGroupRequest.delete',
@@ -249,6 +255,10 @@ export enum Permission {
   PartnerRead = 'partner.read',
   PartnerUpdate = 'partner.update',
   PartnerDelete = 'partner.delete',
+
+  PasskeyRead = 'passkey.read',
+  PasskeyUpdate = 'passkey.update',
+  PasskeyDelete = 'passkey.delete',
 
   PersonCreate = 'person.create',
   PersonRead = 'person.read',
@@ -387,9 +397,9 @@ export enum SharedLinkType {
   Album = 'ALBUM',
 
   /**
-   * Individual asset
-   * or group of assets that are not in an album
-   */
+  Individual asset
+  or group of assets that are not in an album
+  */
   Individual = 'INDIVIDUAL',
 }
 
@@ -410,7 +420,6 @@ export enum SystemMetadataKey {
   MediaLocation = 'MediaLocation',
   ReverseGeocodingState = 'reverse-geocoding-state',
   FacialRecognitionState = 'facial-recognition-state',
-  PetRecognitionState = 'pet-recognition-state',
   MemoriesState = 'memories-state',
   AdminOnboarding = 'admin-onboarding',
   MaintenanceMode = 'maintenance-mode',
@@ -419,10 +428,12 @@ export enum SystemMetadataKey {
   VersionCheckState = 'version-check-state',
   License = 'license',
   IntegrityChecksumCheckpoint = 'integrity-checksum-checkpoint',
+  PetRecognitionState = 'pet-recognition-state',
   ClassificationConfigState = 'classification-config-state',
   SharedSpaceFaceJobCleanupState = 'shared-space-face-job-cleanup-state',
   FaceSuggestionDefaultOnState = 'face-suggestion-default-on-state',
   PersonSuggestionScanJobCleanupState = 'person-suggestion-scan-job-cleanup-state',
+  StorageTemplateS3State = 'storage-template-s3-state',
 }
 
 export enum UserMetadataKey {
@@ -643,6 +654,7 @@ export const ColorspaceSchema = z.enum(Colorspace).describe('Colorspace').meta({
 
 export enum ImageFormat {
   Jpeg = 'jpeg',
+  Jxl = 'jxl',
   Webp = 'webp',
 }
 
@@ -718,10 +730,10 @@ export enum ImmichWorker {
 export enum ImmichTelemetry {
   Host = 'host',
   Api = 'api',
-  App = 'app',
   Io = 'io',
   Repo = 'repo',
   Job = 'job',
+  App = 'app',
 }
 
 export enum ExifOrientation {
@@ -851,9 +863,9 @@ export enum DvProfile {
 }
 
 /**
- * Dolby Vision base-layer signal-compatibility ID from the DOVI configuration record.
- * Identifies what the base HEVC/AVC layer renders as on a non-DV decoder.
- */
+Dolby Vision base-layer signal-compatibility ID from the DOVI configuration record.
+Identifies what the base HEVC/AVC layer renders as on a non-DV decoder.
+*/
 export enum DvSignalCompatibility {
   None = 0,
   Hdr10 = 1,
@@ -920,6 +932,7 @@ export enum QueueJobStatus {
   Complete = 'completed',
   Delayed = 'delayed',
   Waiting = 'waiting',
+  /** @deprecated use `waiting` instead */
   Paused = 'paused',
 }
 
@@ -943,6 +956,8 @@ export enum JobName {
   AssetGenerateThumbnails = 'AssetGenerateThumbnails',
 
   AuditTableCleanup = 'AuditTableCleanup',
+
+  AuthChallengeCleanup = 'AuthChallengeCleanup',
 
   DatabaseBackup = 'DatabaseBackup',
 
@@ -1022,6 +1037,10 @@ export enum JobName {
   SpatialSceneQueueAll = 'SpatialSceneQueueAll',
   SpatialScene = 'SpatialScene',
 
+  // Data Saver video
+  AssetEncodeDataSaverVideoQueueAll = 'AssetEncodeDataSaverVideoQueueAll',
+  AssetEncodeDataSaverVideo = 'AssetEncodeDataSaverVideo',
+
   // Workflow
   WorkflowAssetTrigger = 'WorkflowAssetTrigger',
 
@@ -1073,6 +1092,12 @@ export enum JobName {
   // Library Cleanup
   AssetAnalyzeQualityQueueAll = 'AssetAnalyzeQualityQueueAll',
   AssetAnalyzeQuality = 'AssetAnalyzeQuality',
+
+  // Rule memories, queued by MemoryGenerate
+  MemoryRuleGenerate = 'MemoryRuleGenerate',
+
+  // Video trim encode, poster and thumbnails (or their removal), queued by trim writes
+  AssetVideoTrimGenerate = 'AssetVideoTrimGenerate',
 }
 
 export const JobNameSchema = z.enum(JobName).describe('Job name').meta({ id: 'JobName' });
@@ -1130,6 +1155,8 @@ export enum DatabaseLock {
   HlsSessionCleanup = 850,
   PetRecognitionModelSwitch = 860,
   CleanupQualityRerun = 870,
+  FacialRecognition = 900,
+  DuplicateDetection = 1000,
 }
 
 export enum MaintenanceAction {
@@ -1137,6 +1164,7 @@ export enum MaintenanceAction {
   End = 'end',
   SelectDatabaseRestore = 'select_database_restore',
   RestoreDatabase = 'restore_database',
+  Rollback = 'rollback',
 }
 
 export const MaintenanceActionSchema = z
@@ -1439,9 +1467,7 @@ export enum AssetVisibility {
   Archive = 'archive',
   Timeline = 'timeline',
 
-  /**
-   * Video part of the LivePhotos and MotionPhotos
-   */
+  /** Video part of the LivePhotos and MotionPhotos */
   Hidden = 'hidden',
   Locked = 'locked',
 }
@@ -1478,8 +1504,6 @@ export enum ApiTag {
   AuthenticationAdmin = 'Authentication (admin)',
   Assets = 'Assets',
   AssetFiles = 'Asset files',
-  Classification = 'Classification',
-  Cleanup = 'Cleanup',
   ConfigUser = 'Config (user)',
   ConfigAdmin = 'Config (admin)',
   ConfigPublic = 'Config (public)',
@@ -1498,6 +1522,7 @@ export enum ApiTag {
   NotificationsAdmin = 'Notifications (admin)',
   ClusterGroups = 'Cluster groups',
   Partners = 'Partners',
+  Passkeys = 'Passkeys',
   People = 'People',
   Plugins = 'Plugins',
   Queues = 'Queues',
@@ -1505,9 +1530,7 @@ export enum ApiTag {
   Server = 'Server',
   Sessions = 'Sessions',
   SharedLinks = 'Shared links',
-  SharedSpaces = 'Shared Spaces',
   Stacks = 'Stacks',
-  StorageMigration = 'Storage Migration (admin)',
   Sync = 'Sync',
   SystemConfig = 'System config',
   SystemMetadata = 'System metadata',
@@ -1516,9 +1539,15 @@ export enum ApiTag {
   Trash = 'Trash',
   UsersAdmin = 'Users (admin)',
   Users = 'Users',
-  UserGroups = 'User Groups',
   Views = 'Views',
   Workflows = 'Workflows',
+
+  // Gallery fork tags
+  Classification = 'Classification',
+  Cleanup = 'Cleanup',
+  SharedSpaces = 'Shared Spaces',
+  StorageMigration = 'Storage Migration (admin)',
+  UserGroups = 'User Groups',
 }
 
 export const WorkflowTriggerSchema = z
@@ -1557,3 +1586,16 @@ export enum SearchOrderField {
 }
 
 export const SearchOrderFieldSchema = z.enum(SearchOrderField).meta({ id: 'SearchOrderField' });
+
+export enum ServerFeatureLevel {
+  FeatureLevel = 1,
+  Passkeys = 2,
+}
+
+export const ServerFeatureLevelSchema = z
+  .enum(ServerFeatureLevel)
+  .describe('Server feature level')
+  .meta({
+    id: 'ServerFeatureLevel',
+    ...asIntegerEnum(ServerFeatureLevel),
+  });

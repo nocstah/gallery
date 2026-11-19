@@ -1,11 +1,9 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
-  import ActiveFiltersBar from '$lib/components/filter-panel/active-filters-bar.svelte';
-  import FilterPanel from '$lib/components/filter-panel/filter-panel.svelte';
-  import FilterToolbar from '$lib/components/filter-panel/filter-toolbar.svelte';
-  import SmartSearchResults from '$lib/components/search/smart-search-results.svelte';
+  import ActionMenuItem from '#lib/components/ActionMenuItem.svelte';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import SmartAlbumModal from '#lib/components/curator/SmartAlbumModal.svelte';
+  import ActiveFiltersBar from '#lib/components/filter-panel/active-filters-bar.svelte';
+  import FilterPanel from '#lib/components/filter-panel/filter-panel.svelte';
   import {
     ALL_FILTER_SECTIONS,
     buildFilterContext,
@@ -15,103 +13,121 @@
     loadFilterCollapsed,
     type FilterPanelConfig,
     type FilterState,
-  } from '$lib/components/filter-panel/filter-panel';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
-  import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
-  import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
-  import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
-  import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
-  import DeleteAssets from '$lib/components/timeline/actions/DeleteAssetsAction.svelte';
-  import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
-  import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
-  import LinkLivePhotoAction from '$lib/components/timeline/actions/LinkLivePhotoAction.svelte';
-  import RotateAction from '$lib/components/timeline/actions/RotateAction.svelte';
-  import SelectAllAssets from '$lib/components/timeline/actions/SelectAllAction.svelte';
-  import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
-  import MoveToActions from '$lib/gallery/moves/MoveToActions.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
-  import Timeline from '$lib/components/timeline/Timeline.svelte';
-  import { barSlot } from '$lib/managers/bar-slot.svelte';
-  import TimelineWorkspaces from '$lib/components/timeline/TimelineWorkspaces.svelte';
-  import TimelineMonthHeading from '$lib/components/timeline/TimelineMonthHeading.svelte';
-  import TimelineOverviewSwitch from '$lib/components/timeline/TimelineOverviewSwitch.svelte';
-  import { monthInView } from '$lib/managers/timeline-heading.svelte';
-  import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
-  import SelectionGroup from '$lib/components/timeline/SelectionGroup.svelte';
-  import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
-  import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
-  import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
-  import type { ViewportTopMonth } from '$lib/managers/timeline-manager/types';
-  import { AssetAction } from '$lib/constants';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { registerSelectionContext } from '$lib/managers/command-context-manager.svelte';
-  import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-  import { memoryManager } from '$lib/managers/memory-manager.svelte';
-  import { nearestMonth, parseMonthJumpParam, type MonthJump } from '$lib/managers/month-jump';
-  import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import type { TimelineAsset, TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
-  import { removeSearchResults, selectAllSearchResults, updateSearchResults } from '$lib/utils/search-result-selection';
-  import { Route } from '$lib/route';
-  import { getAssetBulkActions } from '$lib/services/asset.service';
-  import { getStackBulkActions } from '$lib/services/stack.service';
-  import { lang, searchIncludeArchived } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl, memoryLaneTitle } from '$lib/utils';
+  } from '#lib/components/filter-panel/filter-panel.ts';
+  import FilterToolbar from '#lib/components/filter-panel/filter-toolbar.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import MemoryCard from '#lib/components/memories/MemoryCard.svelte';
+  import EmptyState from '#lib/components/omarchy/EmptyState.svelte';
+  import SmartSearchResults from '#lib/components/search/smart-search-results.svelte';
+  import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import AssetSelectControlBar from '#lib/components/timeline/AssetSelectControlBar.svelte';
+  import SelectionGroup from '#lib/components/timeline/SelectionGroup.svelte';
+  import TileContextMenu from '#lib/components/timeline/TileContextMenu.svelte';
+  import Timeline from '#lib/components/timeline/Timeline.svelte';
+  import TimelineMonthHeading from '#lib/components/timeline/TimelineMonthHeading.svelte';
+  import TimelineOverviewSwitch from '#lib/components/timeline/TimelineOverviewSwitch.svelte';
+  import TimelineWorkspaces from '#lib/components/timeline/TimelineWorkspaces.svelte';
+  import ChangeDate from '#lib/components/timeline/actions/ChangeDateAction.svelte';
+  import ChangeDescription from '#lib/components/timeline/actions/ChangeDescriptionAction.svelte';
+  import ChangeLocation from '#lib/components/timeline/actions/ChangeLocationAction.svelte';
+  import DeleteAssets from '#lib/components/timeline/actions/DeleteAssetsAction.svelte';
+  import DownloadAction from '#lib/components/timeline/actions/DownloadAction.svelte';
+  import FavoriteAction from '#lib/components/timeline/actions/FavoriteAction.svelte';
+  import LinkLivePhotoAction from '#lib/components/timeline/actions/LinkLivePhotoAction.svelte';
+  import RotateAction from '#lib/components/timeline/actions/RotateAction.svelte';
+  import SelectAllAssets from '#lib/components/timeline/actions/SelectAllAction.svelte';
+  import SetVisibilityAction from '#lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import SpecialAlbumAction from '#lib/components/timeline/actions/SpecialAlbumAction.svelte';
+  import { AssetAction } from '#lib/constants.ts';
+  import ArchiveAction from '#lib/gallery/actions/ArchiveAction.svelte';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import LibraryViewFilter from '#lib/gallery/library-view/LibraryViewFilter.svelte';
+  import {
+    keepSpacesLoaded,
+    libraryViewChips,
+    libraryViewOptions,
+    libraryViewShown,
+  } from '#lib/gallery/library-view/library-view.svelte.ts';
+  import MoveToActions from '#lib/gallery/moves/MoveToActions.svelte';
+  import RemoveFromSpaceButton from '#lib/gallery/space-remove/RemoveFromSpaceButton.svelte';
+  import { getTimelineTopVisibleAnchor } from '#lib/gallery/timeline/timeline-anchor.ts';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { barSlot } from '#lib/managers/bar-slot.svelte.ts';
+  import { registerSelectionContext } from '#lib/managers/command-context-manager.svelte.ts';
+  import { globalSearchManager } from '#lib/managers/global-search-manager.svelte.ts';
+  import { memoryManager } from '#lib/managers/memory-manager.svelte.ts';
+  import { nearestMonth, parseMonthJumpParam, type MonthJump } from '#lib/managers/month-jump.ts';
+  import { offeredSpecialAlbums } from '#lib/managers/special-albums.svelte.ts';
+  import { thumbnailZoomManager } from '#lib/managers/thumbnail-zoom-manager.svelte.ts';
+  import { monthInView } from '#lib/managers/timeline-heading.svelte.ts';
+  import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import type {
+    TimelineAsset,
+    TimelineGrouping,
+    TimelineTemporalAnchor,
+    ViewportTopMonth,
+  } from '#lib/managers/timeline-manager/types.ts';
+  import SearchAddAllToCollectionModal from '#lib/modals/SearchAddAllToCollectionModal.svelte';
+  import { Route } from '#lib/route.ts';
+  import { getAssetBulkActions } from '#lib/services/asset.service.ts';
+  import type { SearchTerms } from '#lib/services/search.service.ts';
+  import { getStackBulkActions } from '#lib/services/stack.service.ts';
+  import { lang, searchIncludeArchived } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl, memoryLaneTitle } from '#lib/utils.ts';
+  import { type OnLink, type OnUnlink } from '#lib/utils/actions.ts';
+  import { curator, curatorIsMine, type SmartAlbum } from '#lib/utils/curator.ts';
+  import { openFileUploadDialog } from '#lib/utils/file-uploader.ts';
+  import { resolveFilterNames } from '#lib/utils/filter-name-resolution.ts';
+  import { filterStateToSearchTerms } from '#lib/utils/filter-search-terms.ts';
+  import {
+    buildPhotosTimelineOptions,
+    getPhotosPersonFilterId,
+    getPhotosPersonFilterThumbnailUrl,
+    handlePhotosRemoveFilter,
+  } from '#lib/utils/photos-filter-options.ts';
+  import {
+    removeSearchResults,
+    selectAllSearchResults,
+    updateSearchResults,
+  } from '#lib/utils/search-result-selection.ts';
   import {
     buildSearchablePageUrl,
     getSearchablePageFilterState,
     getSearchablePageState,
-  } from '$lib/utils/searchable-page-search';
-  import { consumeTypedSearchNamesInto } from '$lib/utils/typed-search/typed-search-name-cache';
-  import { type OnLink, type OnUnlink } from '$lib/utils/actions';
-  import { openFileUploadDialog } from '$lib/utils/file-uploader';
-  import {
-    buildPhotosTimelineOptions,
-    getPhotosPersonFilterThumbnailUrl,
-    getPhotosPersonFilterId,
-    handlePhotosRemoveFilter,
-  } from '$lib/utils/photos-filter-options';
+  } from '#lib/utils/searchable-page-search.ts';
   import {
     buildSmartSearchFacetKey,
     buildSmartSearchFacetsParams,
     mapSmartSearchFacetsToFilterSuggestions,
-  } from '$lib/utils/space-search';
-  import { getAltText } from '$lib/utils/thumbnail-util';
+  } from '#lib/utils/space-search.ts';
+  import { getAltText } from '#lib/utils/thumbnail-util.ts';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
   import {
     getTimelineBucketZoomTarget,
-    type ActivatableTimelineBucket,
     getTimelineManagerTimeBuckets,
-  } from '$lib/utils/timeline-zoom-navigation';
-  import { getTimelineTopVisibleAnchor } from '$lib/managers/timeline-manager/timeline-anchor';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
-  import MemoryCard from '$lib/components/memories/MemoryCard.svelte';
+    type ActivatableTimelineBucket,
+  } from '#lib/utils/timeline-zoom-navigation.ts';
+  import { consumeTypedSearchNamesInto } from '#lib/utils/typed-search/typed-search-name-cache.ts';
   import {
-    type AssetResponseDto,
     AssetTypeEnum,
     AssetVisibility,
+    SearchSuggestionType,
     getFilterSuggestions,
     getSearchSuggestions,
     searchSmartFacets,
-    SearchSuggestionType,
+    type AssetResponseDto,
     type SmartSearchFacetsResponseDto,
   } from '@immich/sdk';
   import { ActionButton, CommandPaletteDefaultProvider, Icon, ImageCarousel, modalManager } from '@immich/ui';
-  import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
-  import SmartAlbumModal from '$lib/components/curator/SmartAlbumModal.svelte';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import { curator, curatorIsMine, type SmartAlbum } from '$lib/utils/curator';
-  import { resolveFilterNames } from '$lib/utils/filter-name-resolution';
-  import { filterStateToSearchTerms } from '$lib/utils/filter-search-terms';
-  import type { SearchTerms } from '$lib/services/search.service';
   import { mdiDotsVertical, mdiFilterOutline, mdiTelevisionPlay } from '@mdi/js';
   import { DateTime } from 'luxon';
   import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
   import { SvelteMap } from 'svelte/reactivity';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
 
   let timelineManager = $state<TimelineManager>() as TimelineManager;
 
@@ -166,8 +182,12 @@
   // deciding that client-side is exactly the in-memory simulation the preview endpoint had to
   // abandon for disagreeing with reality (§8.1 of the hide-from-timeline design doc).
   let timelineReloadToken = $state(0);
+  // #1248: Both / Personal / Spaces, the one remembered filter (gallery/library-view); the spaces list it reads stays
+  // loaded while the page is open
+  keepSpacesLoaded();
   const options = $derived({
     ...buildPhotosTimelineOptions(filters, authManager.user.id),
+    ...libraryViewOptions(),
     // Local Omarchy layer: the header's Expand stacks toggle shows every photo of a stack
     withStacked: !thumbnailZoomManager.expandStacks,
     grouping: timelineGrouping,
@@ -390,6 +410,12 @@
   };
 
   const hasActiveFilters = $derived(getActiveFilterCount(filters) > 0 || showSearchResults);
+  // #1248: the library view shows while browsing (a text search spans every photo) once a space is on the timeline;
+  // narrowing by it is no empty library either
+  const showLibraryView = $derived(libraryViewShown() && !showSearchResults);
+  const libraryViewActive = $derived(showLibraryView && !!libraryViewOptions().libraryView);
+  const pinnedChips = $derived(libraryViewActive ? libraryViewChips() : []);
+  const isNarrowed = $derived(hasActiveFilters || !!libraryViewOptions().libraryView);
 
   // Filter-panel collapse is driven here so a header filter button can reclaim the panel's space.
   let filterCollapsed = $state(loadFilterCollapsed(true)); // local Omarchy layer: the timeline leads
@@ -408,7 +434,8 @@
     if (query) {
       terms.query = query;
     } else {
-      terms.withSharedSpaces = true;
+      // #1248: what the library view narrows the timeline to
+      Object.assign(terms, { withSharedSpaces: true, ...libraryViewOptions() });
     }
     void modalManager.show(SearchAddAllToCollectionModal, {
       terms,
@@ -436,7 +463,7 @@
   });
   const handleSaveSmart = async () => {
     const query = committedQuery.trim();
-    const url = new URL(page.url);
+    const url = new URL(page.url.href);
     url.searchParams.delete('smart');
     const parts = [
       query && query[0].toUpperCase() + query.slice(1),
@@ -461,7 +488,7 @@
   // Use the timeline's *loaded* result (for the current options) rather than a bare
   // `assetCount === 0`: clearing a filter that had 0 results would otherwise flip this true
   // for a tick (stale count, reload pending), unmounting the filter panel and dropping focus.
-  const isTimelineEmpty = $derived(!!timelineManager?.isEmptyForOptions(options) && !hasActiveFilters);
+  const isTimelineEmpty = $derived(!!timelineManager?.isEmptyForOptions(options) && !isNarrowed);
 
   let selectedAssets = $derived(assetMultiSelectManager.assets);
   let isLinkActionAvailable = $derived.by(() => {
@@ -531,7 +558,8 @@
   // timeline alone, so the common path costs nothing. While search results are showing the
   // Timeline is unmounted (#908) and will build a fresh manager when it comes back anyway.
   const handleSpaceAddAssets = ({ hiddenFromMyTimeline }: { hiddenFromMyTimeline?: boolean }) => {
-    if (hiddenFromMyTimeline && !showSearchResults) {
+    // #1248: under the Personal or Spaces view an add to any space changes what the timeline holds
+    if ((hiddenFromMyTimeline || !!libraryViewOptions().libraryView) && !showSearchResults) {
       timelineReloadToken++;
     }
   };
@@ -571,7 +599,7 @@
     if (!nextUrl) {
       return;
     }
-    void goto(nextUrl, { replaceState: true, keepFocus: true, noScroll: true });
+    void goto(nextUrl, { replace: true, reset: false });
   }
 
   function syncFilterUrl(nextFilters: FilterState) {
@@ -584,7 +612,7 @@
     if (!nextUrl || nextUrl === page.url.pathname + page.url.search) {
       return;
     }
-    void goto(nextUrl, { replaceState: true, keepFocus: true, noScroll: true });
+    void goto(nextUrl, { replace: true, reset: false });
   }
 
   function handleFiltersChange(nextFilters: FilterState) {
@@ -709,9 +737,9 @@
     }
     untrack(() => {
       jumpTo = jump;
-      const url = new URL(page.url);
+      const url = new URL(page.url.href);
       url.searchParams.delete('jump');
-      void goto(url.pathname + url.search, { replaceState: true, keepFocus: true, noScroll: true });
+      void goto(url.pathname + url.search, { replace: true, reset: false });
     });
   });
   $effect(() => {
@@ -831,7 +859,7 @@
 {/snippet}
 
 {#snippet monthBar()}
-  {@const month = timelineManager ? monthInView(timelineManager, viewportMonth) : undefined}
+  {const month = $derived(timelineManager ? monthInView(timelineManager, viewportMonth) : undefined)}
   {#if month}
     <TimelineMonthHeading
       {month}
@@ -853,7 +881,8 @@
     >
       <!-- Local Omarchy layer: the funnel, as every filter affordance; sliders are Adjust's -->
       <Icon icon={mdiFilterOutline} size="20" />
-      {#if getActiveFilterCount(filters) > 0}<span class="ws-bar-dot" aria-hidden="true"></span>{/if}
+      {#if getActiveFilterCount(filters) > 0 || libraryViewActive}<span class="ws-bar-dot" aria-hidden="true"
+        ></span>{/if}
     </button>
   {/if}
 {/snippet}
@@ -862,7 +891,7 @@
      card in the Years overview; the card itself still opens the year's months -->
 {#snippet yearRoom(bucket: ActivatableTimelineBucket & { count: number })}
   {#if bucket.grouping === 'year' && bucket.count > 0}
-    {@const year = String(bucket.date.year)}
+    {const year = $derived(String(bucket.date.year))}
     <a
       class="ws-bucket-room"
       href={Route.room({ year })}
@@ -874,6 +903,10 @@
       <span>{$t('room')}</span>
     </a>
   {/if}
+{/snippet}
+
+{#snippet libraryViewSection()}
+  <LibraryViewFilter />
 {/snippet}
 
 <UserPageLayout
@@ -897,6 +930,7 @@
         {personNames}
         {tagNames}
         onFiltersChange={handleFiltersChange}
+        top={showLibraryView ? libraryViewSection : undefined}
       />
     {/key}
     <div class="flex flex-1 flex-col overflow-hidden">
@@ -916,6 +950,7 @@
           onAddAllToCollection={handleAddAllToCollection}
           onSaveSmart={smartAlbums ? handleSaveSmart : undefined}
           smartEditing={!!smartEditing}
+          pinned={pinnedChips}
         />
       {/snippet}
       <!-- Local Omarchy layer: min-h holds the bar at its idle 52px while selecting hides its 36px button -->
@@ -925,13 +960,13 @@
         onGroupingChange={handleTimelineGroupingChange}
         showGrouping={!showSearchResults && !groupingInBar}
         groupingDisabled={assetMultiSelectManager.selectionActive}
-        showFilters={hasActiveFilters}
+        showFilters={hasActiveFilters || pinnedChips.length > 0}
         filters={photoFiltersBar}
         showFilterButton={filterCollapsed &&
           !isTimelineEmpty &&
           !assetMultiSelectManager.selectionActive &&
           !groupingInBar}
-        filterActive={getActiveFilterCount(filters) > 0}
+        filterActive={getActiveFilterCount(filters) > 0 || libraryViewActive}
         onExpandFilters={() => (filterCollapsed = false)}
         showSearchButton={false}
         onSearch={() => globalSearchManager.open()}
@@ -995,7 +1030,7 @@
                 looking at denies the photo exists, and hides the one thing that would fix it —
                 clearing the filter. The upload call to action belongs to the unfiltered empty only.
               -->
-              {#if hasActiveFilters}
+              {#if isNarrowed}
                 <EmptyState
                   title={$t('timeline_empty_filtered_title')}
                   body={$t('timeline_empty_filtered_subtitle')}
@@ -1031,7 +1066,7 @@
   >
     <!-- Local Omarchy layer: what a person does most leads (Favorite, Add to album, New album, Share, then the special
          albums); the menu puts its own downloads and copies with Download, and the edits and ways out come last -->
-    {@const MenuActions = getAssetBulkActions($t)}
+    {const MenuActions = $derived(getAssetBulkActions($t))}
     <FavoriteAction menuItem removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
     <ActionMenuItem action={MenuActions.AddToAlbum} hint />
     <ActionMenuItem action={MenuActions.NewAlbum} hint />
@@ -1046,8 +1081,8 @@
     {/snippet}
     {#snippet more()}
       {#if assetMultiSelectManager.isAllUserOwned}
-        {@const Edits = getAssetBulkActions($t)}
-        {@const MenuStackActions = getStackBulkActions($t)}
+        {const Edits = $derived(getAssetBulkActions($t))}
+        {const MenuStackActions = $derived(getStackBulkActions($t))}
         <RotateAction />
         {#if !showSearchResults}
           <ActionMenuItem action={MenuStackActions.Stack} />
@@ -1069,8 +1104,8 @@
 
 {#if assetMultiSelectManager.selectionActive}
   <AssetSelectControlBar>
-    {@const Actions = getAssetBulkActions($t)}
-    {@const StackActions = getStackBulkActions($t)}
+    {const Actions = $derived(getAssetBulkActions($t))}
+    {const StackActions = $derived(getStackBulkActions($t))}
     <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
 
     <!-- Local Omarchy layer: the actions in groups split by hairlines (SelectionGroup): the selection itself, then
@@ -1091,8 +1126,15 @@
         ><ActionButton action={Actions.AddToAlbum} type="button" /></span
       >
       <ActionButton action={Actions.CreateSharedLink} />
+      <!-- #763: a favorite is a per-user overlay row, so it needs no ownership gate. -->
       <FavoriteAction removeFavorite={assetMultiSelectManager.isAllFavorite} onFavorite={handleFavorite} />
     </SelectionGroup>
+    {#if !showSearchResults}
+      <!-- #1250: out of a Space I own or edit, as on the Space's own page -->
+      <SelectionGroup>
+        <RemoveFromSpaceButton onLeaveTimeline={handleAssetDelete} />
+      </SelectionGroup>
+    {/if}
 
     {#if assetMultiSelectManager.isAllUserOwned}
       <!-- Local Omarchy layer: into a special album (To do B, Villa V), out of Photos until taken out again -->

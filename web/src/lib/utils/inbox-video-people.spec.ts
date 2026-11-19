@@ -1,5 +1,5 @@
-import type { Suggestion } from '$lib/utils/curator';
-import { videoOf, videoPeopleOf, videoPersonCaption, type VideoPerson } from '$lib/utils/inbox-video-people';
+import type { Suggestion } from '#lib/utils/curator.ts';
+import { videoOf, videoPeopleOf, videoPersonCaption, type VideoPerson } from '#lib/utils/inbox-video-people.ts';
 
 // Local Omarchy layer: a "People in this video" card (Curator's video.people). The people are stand-ins.
 

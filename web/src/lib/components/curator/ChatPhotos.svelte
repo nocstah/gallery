@@ -2,8 +2,8 @@
   // Local Omarchy layer: the photos a library-chat step found or showed, as thumbnails into the photo viewer. Twelve
   // at first, all that came with the answer on request (a search sends up to 60), and how many the search counted
   // beyond those. A visual search is ranked by likeness, so it has no count to give.
-  import { getAssetMediaUrl } from '$lib/utils';
-  import type { ChatPhotos } from '$lib/utils/curator';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import type { ChatPhotos } from '#lib/utils/curator.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { t } from 'svelte-i18n';
 

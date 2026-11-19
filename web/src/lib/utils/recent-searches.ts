@@ -1,5 +1,5 @@
-import type { SearchTerms } from '$lib/services/search.service';
-import type { TextSearchMode } from '$lib/utils/search-mode-terms';
+import type { SearchTerms } from '#lib/services/search.service.ts';
+import type { TextSearchMode } from '#lib/utils/search-mode-terms.ts';
 
 // Local Omarchy layer: the searches a person ran on the search page, offered again when they open it bare (DESIGN.md,
 // Search page). Kept in this browser alone, per account (two accounts on one browser never see each other's), never

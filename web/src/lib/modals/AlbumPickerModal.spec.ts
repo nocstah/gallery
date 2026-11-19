@@ -1,9 +1,9 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { getAnimateMock } from '#test/kioku/mocks/animate.mock.ts';
+import { getIntersectionObserverMock } from '#test/kioku/mocks/intersection-observer.mock.ts';
+import { getVisualViewportMock } from '#test/kioku/mocks/visual-viewport.mock.ts';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import { getAnimateMock } from '$lib/__mocks__/animate.mock';
-import { getIntersectionObserverMock } from '$lib/__mocks__/intersection-observer.mock';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { getVisualViewportMock } from '$lib/__mocks__/visual-viewport.mock';
 import AlbumPickerModal from './AlbumPickerModal.svelte';
 
 describe('AlbumPickerModal component', () => {
@@ -11,7 +11,7 @@ describe('AlbumPickerModal component', () => {
 
   beforeAll(async () => {
     await init({ fallbackLocale: 'en-US' });
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await waitLocale('en-US');
   });
 

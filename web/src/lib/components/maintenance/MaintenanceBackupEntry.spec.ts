@@ -1,18 +1,23 @@
+import { locale } from '#lib/stores/preferences.store.ts';
+import { relativeTime } from '#lib/utils/relative-time.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
 import { screen } from '@testing-library/svelte';
 import { DateTime } from 'luxon';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { locale } from '$lib/stores/preferences.store';
-import { relativeTime } from '$lib/utils/relative-time';
-import { renderWithTooltips } from '$tests/helpers';
 import MaintenanceBackupEntry from './MaintenanceBackupEntry.svelte';
 
-vi.mock('$lib/services/database-backups.service', () => ({
-  getDatabaseBackupActions: () => ({
-    Download: { type: 'command', title: 'Download', onAction: vi.fn() },
-    Delete: { type: 'command', title: 'Delete', onAction: vi.fn() },
-  }),
-  handleRestoreDatabaseBackup: vi.fn(),
-}));
+vi.mock('#lib/services/database-backups.service.ts', async (importOriginal) => {
+  const { getDatabaseBackupDateTime } =
+    await importOriginal<typeof import('#lib/services/database-backups.service.ts')>();
+  return {
+    getDatabaseBackupDateTime,
+    getDatabaseBackupActions: () => ({
+      Download: { type: 'command', title: 'Download', onAction: vi.fn() },
+      Delete: { type: 'command', title: 'Delete', onAction: vi.fn() },
+    }),
+    handleRestoreDatabaseBackup: vi.fn(),
+  };
+});
 
 describe('MaintenanceBackupEntry', () => {
   beforeEach(() => {

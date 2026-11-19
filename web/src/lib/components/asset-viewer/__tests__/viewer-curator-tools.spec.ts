@@ -1,13 +1,13 @@
+import AssetViewerNavBar from '#lib/components/asset-viewer/AssetViewerNavBar.svelte';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
+import { getResizeObserverMock } from '#test/kioku/mocks/resize-observer.mock.ts';
 import { AssetTypeEnum, AssetVisibility } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { screen } from '@testing-library/svelte';
-import { getResizeObserverMock } from '$lib/__mocks__/resize-observer.mock';
-import AssetViewerNavBar from '$lib/components/asset-viewer/AssetViewerNavBar.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { renderWithTooltips } from '$tests/helpers';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 
 // Local Omarchy layer: the photo viewer's bar offers Curator's tools (Adjust, Remove objects, Live effects, Look Up,
 // Copy subject) on the owner's own photos, and only while the account signed in is Curator's owner, the server's admin:
@@ -15,12 +15,12 @@ import { userAdminFactory } from '@test-data/factories/user-factory';
 
 const { kinds, health } = vi.hoisted(() => ({ kinds: vi.fn(), health: vi.fn() }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/utils/curator')>();
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/utils/curator.ts')>();
   return { ...actual, curator: { ...actual.curator, kinds, health } };
 });
 
-vi.mock(import('$lib/managers/feature-flags-manager.svelte'), function () {
+vi.mock(import('#lib/managers/feature-flags-manager.svelte.ts'), function () {
   return {
     featureFlagsManager: {
       init: vi.fn(),

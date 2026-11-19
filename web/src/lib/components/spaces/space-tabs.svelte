@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import { createFilterState } from '$lib/components/filter-panel/filter-panel';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { Route } from '$lib/route';
-  import { getSearchablePageFilterState, getSearchablePageState } from '$lib/utils/searchable-page-search';
+  import { createFilterState } from '#lib/components/filter-panel/filter-panel.ts';
+  import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { getSearchablePageFilterState, getSearchablePageState } from '#lib/utils/searchable-page-search.ts';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   interface Props {
     spaceId: string;
@@ -15,9 +15,9 @@
     isAdmin?: boolean;
     libraryCount?: number;
     /**
-     * Local Omarchy layer: a Space of one (Library, where the albums live): only the tabs that mean something to
-     * one person; Members and Activity wait until someone joins, and Libraries until one is linked
-     */
+    Local Omarchy layer: a Space of one (Library, where the albums live): only the tabs that mean something to
+    one person; Members and Activity wait until someone joins, and Libraries until one is linked
+    */
     personal?: boolean;
     /** Local Omarchy layer: the Space opens on its albums (its index route goes there), so Albums leads */
     albumsFirst?: boolean;
@@ -81,8 +81,8 @@
     photosActive
       ? Route.map({
           spaceId,
-          query: getSearchablePageState(page.url).query,
-          filters: { ...createFilterState(), ...getSearchablePageFilterState(page.url) },
+          query: getSearchablePageState(new URL(page.url.href)).query,
+          filters: { ...createFilterState(), ...getSearchablePageFilterState(new URL(page.url.href)) },
         })
       : Route.map({ spaceId }),
   );

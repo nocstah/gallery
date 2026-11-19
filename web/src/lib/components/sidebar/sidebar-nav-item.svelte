@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import { dropSpring, dropTarget, type DropTarget } from '$lib/managers/sidebar-drop.svelte';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
+  import { dropSpring, dropTarget, type DropTarget } from '#lib/managers/sidebar-drop.svelte.ts';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
   // @immich/ui re-exports its types (dist/index.d.ts: `export * from './types.js'`),
   // so IconLike / IconProps come from the package rather than being redeclared here.
   import { Icon, Link, type IconLike, type IconProps } from '@immich/ui';
   import { mdiChevronDown, mdiChevronRight } from '@mdi/js';
   import type { Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   interface Props {
     title: string;

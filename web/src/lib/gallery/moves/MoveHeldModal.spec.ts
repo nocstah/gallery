@@ -1,8 +1,13 @@
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import {
+  libraryContextFile,
+  mainLibrary,
+  secondLibrary,
+  serving,
+} from '#test/kioku/factories/library-context-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import type { Mock } from 'vitest';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 import MoveHeldModal from './MoveHeldModal.svelte';
 import { MOVER_ORIGIN, parseStatus, type MoveStatus } from './mover';
 
@@ -18,7 +23,7 @@ const ids = {
   d: '9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d',
 };
 
-const ended = (overrides: Record<string, unknown> = {}) =>
+const ended = () =>
   parseStatus({
     move: MOVE,
     source: 'second',
@@ -27,7 +32,6 @@ const ended = (overrides: Record<string, unknown> = {}) =>
     plan: { items: 10, new: 6, present: 0, held: 4 },
     progress: { moved: 6 },
     endedAt: '2026-10-29T21:00:00Z',
-    ...overrides,
   }) as MoveStatus;
 
 const held = [

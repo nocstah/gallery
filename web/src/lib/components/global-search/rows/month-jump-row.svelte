@@ -1,6 +1,6 @@
 <script lang="ts">
   // Local Omarchy layer: "July 2014" in Ctrl+K, the month (or year) Photos will open at (month-jump.ts).
-  import { formatMonthJump, type MonthJump } from '$lib/managers/month-jump';
+  import { formatMonthJump, type MonthJump } from '#lib/managers/month-jump.ts';
   import { Icon } from '@immich/ui';
   import { mdiCalendarMonthOutline } from '@mdi/js';
   import { locale, t } from 'svelte-i18n';

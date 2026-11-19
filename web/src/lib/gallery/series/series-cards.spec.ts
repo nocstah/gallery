@@ -1,11 +1,11 @@
+import { albumSource, dayFromToday, seriesCard } from '#test/kioku/factories/series-factory.ts';
 import type { MessageFormatter } from 'svelte-i18n';
-import { albumSource, dayFromToday, seriesCard } from '@test-data/factories/series-factory';
 import {
   albumNote,
   daysLeftWords,
   hasFamilyLink,
-  linksOf,
   linkWords,
+  linksOf,
   publicTitle,
   sourceName,
   spanWords,

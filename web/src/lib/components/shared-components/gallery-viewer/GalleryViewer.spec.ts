@@ -1,18 +1,18 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import type { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 import { AssetTypeEnum, AssetVisibility, type AssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import type { Component } from 'svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 import GalleryViewer from './GalleryViewer.svelte';
 
 // Local Omarchy layer: one stand-in special album (To do, key B), so its key can be pressed on the grid
 const { specialDone, specialMove } = vi.hoisted(() => ({ specialDone: vi.fn(), specialMove: vi.fn() }));
-vi.mock('$lib/managers/special-albums.svelte', () => {
+vi.mock('#lib/managers/special-albums.svelte.ts', () => {
   const specialAlbums = [{ key: 'omarchy-todo', shortcut: 'b', move: specialMove, done: specialDone }];
   return { specialAlbums, offeredSpecialAlbums: () => specialAlbums, specialAlbumOf: () => undefined };
 });
@@ -68,17 +68,17 @@ const { assetViewerPropsCalls, mockAssetInteraction, mockAssetViewerManager } = 
 const asAssetInteraction = (assetInteraction: typeof mockAssetInteraction) =>
   assetInteraction as unknown as AssetMultiSelectManager;
 
-vi.mock('$lib/components/assets/thumbnail/Thumbnail.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/thumbnail-with-label.stub.svelte');
+vi.mock('#lib/components/assets/thumbnail/Thumbnail.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/thumbnail-with-label.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/elements/Portal.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/sidebar.stub.svelte');
+vi.mock('#lib/elements/Portal.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/sidebar.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/asset-viewer/AssetViewer.svelte', () => {
+vi.mock('#lib/components/asset-viewer/AssetViewer.svelte', () => {
   return {
     default: function MockAssetViewer(_node: unknown, props: Record<string, unknown>) {
       assetViewerPropsCalls.push(props);
@@ -92,7 +92,7 @@ vi.mock('$lib/components/asset-viewer/AssetViewer.svelte', () => {
   };
 });
 
-vi.mock('$lib/managers/asset-viewer-manager.svelte', async () => {
+vi.mock('#lib/managers/asset-viewer-manager.svelte.ts', async () => {
   const { createSubscriber } = await import('svelte/reactivity');
   mockAssetViewerManager._track = createSubscriber((update) => {
     mockAssetViewerManager._notify = update;
@@ -106,11 +106,11 @@ vi.mock('$lib/managers/asset-viewer-manager.svelte', async () => {
   };
 });
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: { value: { trash: true } },
 }));
 
-vi.mock('$lib/utils/navigation', () => ({
+vi.mock('#lib/utils/navigation.ts', () => ({
   isSharedLinkRoute: vi.fn(() => false),
   navigate: vi.fn(),
 }));
@@ -123,7 +123,7 @@ vi.mock('lodash-es', async (importOriginal) => {
   };
 });
 
-function asset(id: string, localDateTime: string, overrides: Partial<AssetResponseDto> = {}): AssetResponseDto {
+function asset(id: string, localDateTime: string): AssetResponseDto {
   return {
     id,
     ownerId: 'user-1',
@@ -137,27 +137,24 @@ function asset(id: string, localDateTime: string, overrides: Partial<AssetRespon
     thumbhash: `${id}-thumbhash`,
     width: 1600,
     height: 900,
-    ...overrides,
   } as AssetResponseDto;
 }
 
 function renderViewer({
   assets = defaultAssets(),
   enableGrouping = true,
-  assetInteraction = asAssetInteraction(mockAssetInteraction),
   onIntersected,
   viewerAssets,
 }: {
   assets?: AssetResponseDto[];
   enableGrouping?: boolean;
-  assetInteraction?: AssetMultiSelectManager;
   onIntersected?: () => void;
   viewerAssets?: AssetResponseDto[];
 } = {}) {
   const componentProps = {
     assets,
     viewerAssets,
-    assetInteraction,
+    assetInteraction: asAssetInteraction(mockAssetInteraction),
     viewport: { width: 900, height: 700 },
     enableGrouping,
     onIntersected,
@@ -267,7 +264,7 @@ describe('GalleryViewer grouping', () => {
     // resolve to English text ("2015, 2 photos, show months") instead of the raw key.
     // The grouping tests target individual cards by their period + photo-count label, so
     // the interpolated output is load-bearing (the global setup's `dev` locale returns keys).
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US' });
     await waitLocale('en-US');
   });

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { vaultEdition } from '$lib/gallery/edition';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import { AssetAction } from '$lib/constants';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import { handleError } from '$lib/utils/handle-error';
-  import { setLockedWithCompanions } from '$lib/utils/locked-companions';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import { AssetAction } from '#lib/constants.ts';
+  import { vaultEdition } from '#lib/gallery/edition.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { setLockedWithCompanions } from '#lib/utils/locked-companions.ts';
   import { AssetVisibility } from '@immich/sdk';
   import { modalManager } from '@immich/ui';
   import { mdiLockOpenVariantOutline, mdiLockOutline } from '@mdi/js';

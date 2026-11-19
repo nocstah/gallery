@@ -1,27 +1,27 @@
+import { reactivePageMock } from '#lib/gallery/__mocks__/reactive-page.mock.svelte.ts';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { CuratorError, chatStream, curator, type ChatEvent } from '#lib/utils/curator.ts';
+import { secondWithCurator, serving } from '#test/kioku/factories/library-context-factory.ts';
 import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { goto } from '$app/navigation';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { chatStream, curator, CuratorError, type ChatEvent } from '$lib/utils/curator';
-import { secondWithCurator, serving } from '@test-data/factories/library-context-factory';
-import { reactivePageMock } from '@test-data/mocks/reactive-page.mock.svelte';
 import ChatPage from './+page.svelte';
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn(() => Promise.resolve()) }));
 
 vi.mock('$app/state', async () => {
-  const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
+  const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
   return { page: reactivePageMock };
 });
 
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: stub } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: stub } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: stub };
 });
 
-vi.mock('$lib/utils/curator', async (importOriginal) => {
-  const original = await importOriginal<typeof import('$lib/utils/curator')>();
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => {
+  const original = await importOriginal<typeof import('#lib/utils/curator.ts')>();
   return {
     ...original,
     chatStream: vi.fn(),
@@ -54,7 +54,7 @@ const renderPage = () => render(ChatPage, { data: { meta: { title: 'Chat' } } as
 const thread = () => within(document.querySelector<HTMLElement>('.chat-turns')!);
 
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
   await waitLocale('en-US');
 });
@@ -80,7 +80,7 @@ describe('the chat page', () => {
       expect.any(Function),
       expect.any(AbortSignal),
     );
-    expect(goto).toHaveBeenCalledWith('?id=c1', expect.objectContaining({ replaceState: true }));
+    expect(goto).toHaveBeenCalledWith('?id=c1', expect.objectContaining({ replace: true }));
   });
 
   it('shows the steps, the photos they found, a proposal to accept, and the answer', async () => {

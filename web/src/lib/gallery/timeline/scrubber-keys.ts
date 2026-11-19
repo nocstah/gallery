@@ -5,7 +5,7 @@
 // other key alone, so Page Up and Page Down reach utils/page-keys and page the photos.
 
 /** The scrubber's own keys: Arrow Down scrolls a little (Shift: more); Arrow Up does only with Shift, as the scrubber
- * itself steps a month back on Arrow Up. */
+itself steps a month back on Arrow Up. */
 export const onScrubberKey = (event: KeyboardEvent, scrollable: HTMLElement | undefined, shift: boolean) => {
   if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
     return;

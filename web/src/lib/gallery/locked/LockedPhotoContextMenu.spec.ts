@@ -1,19 +1,19 @@
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+import { timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
 import { AssetVisibility } from '@immich/sdk';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { addMessages, locale } from 'svelte-i18n';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import { timelineAssetFactory } from '@test-data/factories/asset-factory';
 import LockedPhotoContextMenu from './LockedPhotoContextMenu.svelte';
 
 const { confirm, move, remove } = vi.hoisted(() => ({ confirm: vi.fn(), move: vi.fn(), remove: vi.fn() }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: { authenticated: true, isSharedLink: false, user: { id: 'me', isAdmin: true } },
 }));
-vi.mock('$lib/utils/curator', () => ({ curatorIsMine: () => true }));
-vi.mock('$lib/utils/locked-companions', () => ({ setLockedWithCompanions: move }));
-vi.mock('$lib/utils/actions', () => ({ deleteAssets: remove }));
+vi.mock('#lib/utils/curator.ts', () => ({ curatorIsMine: () => true }));
+vi.mock('#lib/utils/locked-companions.ts', () => ({ setLockedWithCompanions: move }));
+vi.mock('#lib/utils/actions.ts', () => ({ deleteAssets: remove }));
 vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),
   modalManager: { showDialog: confirm, show: confirm },

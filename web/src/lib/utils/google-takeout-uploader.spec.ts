@@ -1,6 +1,6 @@
+import type { ImportOptions } from '#lib/managers/import-manager.svelte.ts';
+import type { TakeoutMediaItem } from '#lib/utils/google-takeout-parser.ts';
 import { AssetRejectReason, AssetUploadAction } from '@immich/sdk';
-import type { ImportOptions } from '$lib/managers/import-manager.svelte';
-import type { TakeoutMediaItem } from '$lib/utils/google-takeout-parser';
 
 vi.mock('@immich/sdk', () => ({
   getBaseUrl: vi.fn(() => 'http://localhost'),
@@ -12,12 +12,16 @@ vi.mock('@immich/sdk', () => ({
   AssetRejectReason: { Duplicate: 'duplicate', UnsupportedFormat: 'unsupported-format' },
 }));
 
-vi.mock('$lib/utils', () => ({
+vi.mock('#lib/utils.js', () => ({
   uploadRequest: vi.fn(),
 }));
 
-vi.mock('$lib/utils/album-utils', () => ({
+vi.mock('#lib/gallery/album/album-add.js', () => ({
   createAlbum: vi.fn(),
+}));
+
+vi.mock('#lib/utils/file-uploader.js', () => ({
+  hashFile: vi.fn(),
 }));
 
 function makeItem(overrides: Partial<TakeoutMediaItem> = {}): TakeoutMediaItem {
@@ -55,16 +59,20 @@ function defaultOptions(): ImportOptions {
 }
 
 describe('uploadTakeoutItem', () => {
-  let uploadTakeoutItem: typeof import('$lib/utils/google-takeout-uploader').uploadTakeoutItem;
+  let uploadTakeoutItem: typeof import('#lib/utils/google-takeout-uploader.ts').uploadTakeoutItem;
   let sdkMock: typeof import('@immich/sdk');
   let utilsMock: { uploadRequest: ReturnType<typeof vi.fn> };
+  let hashFileMock: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.resetAllMocks();
-    const mod = await import('$lib/utils/google-takeout-uploader');
+    const mod = await import('#lib/utils/google-takeout-uploader.ts');
     uploadTakeoutItem = mod.uploadTakeoutItem;
     sdkMock = await import('@immich/sdk');
-    utilsMock = (await import('$lib/utils')) as unknown as typeof utilsMock;
+    utilsMock = (await import('#lib/utils.ts')) as unknown as typeof utilsMock;
+    const fileUploader = await import('#lib/utils/file-uploader.ts');
+    hashFileMock = vi.mocked(fileUploader.hashFile);
+    hashFileMock.mockResolvedValue('b2953b8e364061cea5600e64ec5049d63f08efbe');
 
     // Default: checkBulkUpload accepts the asset (no duplicate)
     vi.mocked(sdkMock.checkBulkUpload).mockResolvedValue({
@@ -157,7 +165,7 @@ describe('uploadTakeoutItem', () => {
     expect(await uploadedFile.text()).toBe('lazy-bytes');
   });
 
-  it('hashes lazy file bytes for duplicate checks at upload time', async () => {
+  it('hashes lazy file bytes in the upload hash worker for duplicate checks', async () => {
     vi.mocked(sdkMock.checkBulkUpload).mockResolvedValue({
       results: [
         {
@@ -177,6 +185,7 @@ describe('uploadTakeoutItem', () => {
     const result = await uploadTakeoutItem(item, defaultOptions());
 
     expect(getFile).toHaveBeenCalledOnce();
+    expect(hashFileMock).toHaveBeenCalledWith(await getFile.mock.results[0].value);
     expect(sdkMock.checkBulkUpload).toHaveBeenCalledWith({
       assetBulkUploadCheckDto: {
         assets: [{ id: 'IMG_001.jpg', checksum: 'b2953b8e364061cea5600e64ec5049d63f08efbe' }],
@@ -352,15 +361,15 @@ describe('uploadTakeoutItem', () => {
 });
 
 describe('createImportAlbums', () => {
-  let createImportAlbums: typeof import('$lib/utils/google-takeout-uploader').createImportAlbums;
+  let createImportAlbums: typeof import('#lib/utils/google-takeout-uploader.ts').createImportAlbums;
   let createAlbumMock: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.resetAllMocks();
-    const mod = await import('$lib/utils/google-takeout-uploader');
+    const mod = await import('#lib/utils/google-takeout-uploader.ts');
     createImportAlbums = mod.createImportAlbums;
-    const albumUtils = await import('$lib/utils/album-utils');
-    createAlbumMock = vi.mocked(albumUtils.createAlbum);
+    const albumAdd = await import('#lib/gallery/album/album-add.ts');
+    createAlbumMock = vi.mocked(albumAdd.createAlbum);
   });
 
   it('creates albums for selected album names', async () => {

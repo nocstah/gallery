@@ -12,7 +12,7 @@ type SectionProps = ComponentProps<typeof LiveTypedFilterSection>;
 const snippet = (renderSnippet: RenderSnippet) => renderSnippet as unknown as Snippet;
 
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US' });
   await waitLocale('en-US');
 });

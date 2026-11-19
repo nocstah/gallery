@@ -1,5 +1,5 @@
-import type { Suggestion } from '$lib/utils/curator';
-import { formatDuration } from '$lib/utils/duration';
+import type { Suggestion } from '#lib/utils/curator.ts';
+import { formatDuration } from '#lib/utils/duration.ts';
 
 // Local Omarchy layer: a "People in this video" card (Curator's video.people, curator/video_faces.py). Curator looks
 // at several moments of a video, matches the faces to the people the owner named, and proposes the ones it found;

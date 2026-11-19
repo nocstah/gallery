@@ -5,27 +5,18 @@
 </script>
 
 <script lang="ts">
-  import { markRoot } from '$lib/actions/mark-root';
-  // Local Omarchy layer: Room (DESIGN.md, Room), the archive across the room: full screen without the shell, for the
-  // AORUS when the owner sits back and later a TV's browser. It plays the film of a memory (MemoryFilm, dressed for
-  // three metres) one after another: the Memories page's Today cards, each whole, then the albums Curator keeps for the
-  // TV once accepted, and round again; or one album, or one year (room-reels.ts, room-source.ts). Space or a remote's
-  // OK pauses, ← and → step a photo, ↑ and ↓ go to the film before and after, M mutes, Escape or Back leaves; the
-  // screen stays awake while it plays (room-awake.ts). Music and stories are Curator's, for its owner only
-  // (curatorIsMine): a family account's Room is silent. Nothing here changes anything: no hearts, no edits, no Save as
-  // video.
-  import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
-  import MemoryFilm from '$lib/components/memories/film/MemoryFilm.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { privateFilmMedia } from '$lib/components/memories/film/private-film-media';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-  import { Route } from '$lib/route';
-  import { locale } from '$lib/stores/preferences.store';
-  import { memoryLaneTitle } from '$lib/utils';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import { curator, curatorIsMine, type MemoryTrack, type Story } from '$lib/utils/curator';
-  import { formatMemoryTime, memoryFilmWords, type MemoryFilmWords } from '$lib/utils/memory-title';
+  import { markRoot } from '#lib/actions/mark-root.ts';
+  import MemoryFilm from '#lib/components/memories/film/MemoryFilm.svelte';
+  import { privateFilmMedia } from '#lib/components/memories/film/private-film-media.ts';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { memoryFacts } from '#lib/managers/memory-facts.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { memoryLaneTitle } from '#lib/utils.ts';
+  import { curator, curatorIsMine, type MemoryTrack, type Story } from '#lib/utils/curator.ts';
+  import { formatMemoryTime, memoryFilmWords, type MemoryFilmWords } from '#lib/utils/memory-title.ts';
   import {
     AssetTypeEnum,
     getAlbumInfo,
@@ -41,6 +32,15 @@
   import { t } from 'svelte-i18n';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
   import { fade } from 'svelte/transition';
+  // Local Omarchy layer: Room (DESIGN.md, Room), the archive across the room: full screen without the shell, for the
+  // AORUS when the owner sits back and later a TV's browser. It plays the film of a memory (MemoryFilm, dressed for
+  // three metres) one after another: the Memories page's Today cards, each whole, then the albums Curator keeps for the
+  // TV once accepted, and round again; or one album, or one year (room-reels.ts, room-source.ts). Space or a remote's
+  // OK pauses, ← and → step a photo, ↑ and ↓ go to the film before and after, M mutes, Escape or Back leaves; the
+  // screen stays awake while it plays (room-awake.ts). Music and stories are Curator's, for its owner only
+  // (curatorIsMine): a family account's Room is silent. Nothing here changes anything: no hearts, no edits, no Save as
+  // video.
+  import { afterNavigate, beforeNavigate, goto } from '$app/navigation';
   import { ScreenAwake } from './room-awake';
   import { passesGate, roomOpening, wantsCamera } from './room-opening';
   import {

@@ -1,15 +1,15 @@
 /* eslint-disable unicorn/prefer-https -- a library's address is http on this computer's own names, and the checks below
    refuse the other kinds by example */
-import type { MockInstance } from 'vitest';
 import {
+  SECOND_CURATOR_FEATURES,
   libraryContextFile,
   mainLibrary,
-  SECOND_CURATOR_FEATURES,
   secondLibrary,
   secondOffering,
   secondWithCurator,
   serving,
-} from '@test-data/factories/library-context-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
+import type { MockInstance } from 'vitest';
 import {
   curatorOffers,
   currentLibrary,
@@ -26,8 +26,8 @@ import {
 import {
   CURATOR_FEATURES,
   LIBRARY_CONTEXT_URL,
-  libraryAddress,
   MalformedLibraryContext,
+  libraryAddress,
   parseLibraryContext,
 } from './library-file';
 

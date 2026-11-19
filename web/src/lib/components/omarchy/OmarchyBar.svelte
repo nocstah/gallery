@@ -5,30 +5,30 @@
   // (the recent actions that can be taken back), the view menu, upload, notifications and the account. One 56px row,
   // so the photos start right under it. On a phone upload waits for a wider screen and notifications move into the
   // account menu, so the page's title row has the room.
-  import { page } from '$app/state';
-  import { clickOutside } from '$lib/actions/click-outside';
-  import BarSearch from '$lib/components/omarchy/BarSearch.svelte';
-  import BarUndo from '$lib/components/omarchy/BarUndo.svelte';
-  import BarViewMenu from '$lib/components/omarchy/BarViewMenu.svelte';
-  import Logo from '$lib/components/shared-components/Logo.svelte';
-  import LibraryChip from '$lib/gallery/libraries/LibraryChip.svelte';
-  import AccountInfoPanel from '$lib/components/shared-components/navigation-bar/AccountInfoPanel.svelte';
-  import NotificationPanel from '$lib/components/shared-components/navigation-bar/NotificationPanel.svelte';
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import SkipLink from '$lib/elements/SkipLink.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { barSlot } from '$lib/managers/bar-slot.svelte';
-  import { Route } from '$lib/route';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { notificationManager } from '$lib/stores/notification-manager.svelte';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
-  import { sidebarStore } from '$lib/stores/sidebar.svelte';
-  import { skipToContent } from '$lib/utils/skip-to-content';
-  import { markNavbar } from '$lib/theme/chrome.svelte';
+  import { clickOutside } from '#lib/actions/click-outside.ts';
+  import BarSearch from '#lib/components/omarchy/BarSearch.svelte';
+  import BarUndo from '#lib/components/omarchy/BarUndo.svelte';
+  import BarViewMenu from '#lib/components/omarchy/BarViewMenu.svelte';
+  import Logo from '#lib/components/shared-components/Logo.svelte';
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import AccountInfoPanel from '#lib/components/shared-components/navigation-bar/AccountInfoPanel.svelte';
+  import NotificationPanel from '#lib/components/shared-components/navigation-bar/NotificationPanel.svelte';
+  import SkipLink from '#lib/elements/SkipLink.svelte';
+  import LibraryChip from '#lib/gallery/libraries/LibraryChip.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { barSlot } from '#lib/managers/bar-slot.svelte.ts';
+  import { getNotificationsQuery } from '#lib/queries/notification.query.ts';
+  import { Route } from '#lib/route.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
+  import { sidebarStore } from '#lib/stores/sidebar.svelte.ts';
+  import { markNavbar } from '#lib/theme/chrome.svelte.ts';
+  import { skipToContent } from '#lib/utils/skip-to-content.ts';
   import { Icon } from '@immich/ui';
   import { mdiBellBadgeOutline, mdiBellOutline, mdiMenu, mdiTrayArrowUp } from '@mdi/js';
-  import { onMount } from 'svelte';
+  import { createQuery } from '@tanstack/svelte-query';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   type Props = {
     onUploadClick?: () => void;
@@ -44,7 +44,9 @@
 
   let showAccount = $state(false);
   let showNotifications = $state(false);
-  const unread = $derived(notificationManager.notifications.length);
+  // what is unread (queries/notification.query: loaded with the bar, kept current by the websocket)
+  const notificationsQuery = createQuery(getNotificationsQuery);
+  const unread = $derived(notificationsQuery.data?.length ?? 0);
   // on a phone the bell lives in the account menu: a row there with what is unread, and a dot on the avatar while
   // something is; the panel opens from the account in its place
   const bellInAccount = $derived(mediaQueryManager.isPhone);
@@ -70,14 +72,6 @@
       ? `${authManager.user.name}, ${$t('notifications_unread_count', { values: { count: unread } })}`
       : authManager.user.name,
   );
-
-  onMount(async () => {
-    try {
-      await notificationManager.refresh();
-    } catch (error) {
-      console.error('Failed to load notifications on mount', error);
-    }
-  });
 
   // the menu button and the first column, exactly as NavigationBar sizes them, so the middle starts where the
   // content panel starts below

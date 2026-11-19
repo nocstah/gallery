@@ -1,23 +1,23 @@
 <script lang="ts">
-  import { shortcut } from '$lib/actions/shortcut';
-  import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
-  import { type PickerCandidate } from '$lib/components/faces-page/PersonPickerGrid.svelte';
-  import PersonPickerPanel from '$lib/components/faces-page/PersonPickerPanel.svelte';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { handleError } from '$lib/utils/handle-error';
-  import { bestMatchFirst, sortInPeopleOrder } from '$lib/utils/people-order';
-  import { appendUniqueById, orderPickerCandidates, zoomImageToBase64 } from '$lib/utils/people-utils';
-  import { getSpacePersonThumbnailUrl } from '$lib/utils/global-person-route';
-  import { normalizeSearchString } from '$lib/utils/string-utils';
+  import { shortcut } from '#lib/actions/shortcut.ts';
+  import ImageThumbnail from '#lib/components/assets/thumbnail/ImageThumbnail.svelte';
+  import { type PickerCandidate } from '#lib/components/faces-page/PersonPickerGrid.svelte';
+  import PersonPickerPanel from '#lib/components/faces-page/PersonPickerPanel.svelte';
+  import LoadingSpinner from '#lib/components/shared-components/LoadingSpinner.svelte';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { getSpacePersonThumbnailUrl } from '#lib/utils/global-person-route.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { bestMatchFirst, sortInPeopleOrder } from '#lib/utils/people-order.ts';
+  import { appendUniqueById, orderPickerCandidates, zoomImageToBase64 } from '#lib/utils/people-utils.ts';
+  import { normalizeSearchString } from '#lib/utils/string-utils.ts';
   import {
+    AssetTypeEnum,
     attachSpacePersonFace,
     createSpacePerson,
     deleteSpaceAssetFace,
     detachSpacePersonFace,
     getSpaceAssetFaces,
     getSpacePeople,
-    type AssetTypeEnum,
     type SharedSpacePersonResponseDto,
     type SpaceAssetFaceResponseDto,
   } from '@immich/sdk';
@@ -29,12 +29,12 @@
   import { fly } from 'svelte/transition';
 
   /**
-   * The space-flavoured sibling of `PersonSidePanel.svelte` (Slice 8, Task 2). Same job -- name an
-   * unrecognised face, correct a wrong one -- routed to the shared-space endpoints (spec §6.1-6.4)
-   * instead of the owner-only person/face endpoints. Unlike the owner panel, every action here is
-   * immediate (PUT/DELETE), not a batched "Done" -- the space endpoints are already transactional
-   * per action, so there is nothing to defer.
-   */
+  The space-flavoured sibling of `PersonSidePanel.svelte` (Slice 8, Task 2). Same job -- name an
+  unrecognised face, correct a wrong one -- routed to the shared-space endpoints (spec §6.1-6.4)
+  instead of the owner-only person/face endpoints. Unlike the owner panel, every action here is
+  immediate (PUT/DELETE), not a batched "Done" -- the space endpoints are already transactional
+  per action, so there is nothing to defer.
+  */
   interface Props {
     spaceId: string;
     assetId: string;
@@ -53,16 +53,16 @@
   let candidatesLoaded = $state(false);
   let isLoadingCandidates = $state(false);
   /**
-   * One field, two jobs: it filters the candidate list below AND names the person the create
-   * button makes. The picker used to offer only the create half, so typing a name that already
-   * existed matched nothing and the only way to reach that person was to scroll the whole space
-   * -- reported on #992 as "assigning to an existing person is broken". Its two siblings both
-   * search too (the owner's `AssignFaceSidePanel` against the server, `SpaceFaceEditor` over its
-   * own loaded candidates), and the panel is too narrow to carry two text inputs.
-   *
-   * The field itself belongs to `PersonPickerPanel`, which is why this is bound rather than local:
-   * the owner's picker needs the same field, and the create half is what only this one does with it.
-   */
+  One field, two jobs: it filters the candidate list below AND names the person the create
+  button makes. The picker used to offer only the create half, so typing a name that already
+  existed matched nothing and the only way to reach that person was to scroll the whole space
+  -- reported on #992 as "assigning to an existing person is broken". Its two siblings both
+  search too (the owner's `AssignFaceSidePanel` against the server, space-mode `FaceEditor` over its
+  own loaded candidates), and the panel is too narrow to carry two text inputs.
+  
+  The field itself belongs to `PersonPickerPanel`, which is why this is bound rather than local:
+  the owner's picker needs the same field, and the create half is what only this one does with it.
+  */
   let personQuery = $state('');
   let isSavingNewPerson = $state(false);
   let isAttaching = $state(false);
@@ -199,7 +199,7 @@
 
   // Filtered here rather than through the endpoint's own `name` parameter: `loadCandidatesOnce`
   // already holds every candidate the space has, so a round trip per keystroke would buy nothing
-  // and cost a request on each one. Same matcher as `SpaceFaceEditor`, so "angela" finds
+  // and cost a request on each one. Same matcher as the space-mode `FaceEditor`, so "angela" finds
   // "Ángela".
   let visibleCandidates: PickerCandidate[] = $derived.by(() => {
     const query = normalizeSearchString(personQuery.trim());
@@ -245,7 +245,7 @@
     {:else}
       <div class="mt-4 flex flex-wrap gap-2">
         {#each faces as face (face.id)}
-          {@const personName = face.spacePersonName ?? $t('face_unassigned')}
+          {const personName = $derived(face.spacePersonName ?? $t('face_unassigned'))}
           <div class="relative h-29 w-24">
             <div class="relative">
               {#await zoomImageToBase64(face, assetId, assetType, assetViewerManager.imgRef)}
@@ -320,7 +320,7 @@
 </section>
 
 {#if pickerFaceId && faces}
-  {@const activeFace = faces.find((f) => f.id === pickerFaceId)}
+  {const activeFace = $derived(faces.find((f) => f.id === pickerFaceId))}
   {#if activeFace}
     <PersonPickerPanel
       candidates={visibleCandidates}
@@ -329,6 +329,7 @@
       onSelect={(candidate) => attachToPerson(activeFace, candidate)}
       onClose={closePicker}
       bind:query={personQuery}
+      videoFace={assetType === AssetTypeEnum.Video ? { id: activeFace.id, canEdit: false } : undefined}
     >
       {#snippet searchActions()}
         <Button

@@ -1,9 +1,10 @@
+import { UUID_REGEX } from '#lib/constants.ts';
+import type { MemoryCard } from '#lib/utils/memory-cards.ts';
+import { joinNames } from '#lib/utils/memory-title.ts';
+import { fromISODateTimeUTC } from '#lib/utils/timeline-util.ts';
 import { type AlbumResponseDto, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
 import { DateTime } from 'luxon';
-import { UUID_REGEX } from '$lib/constants';
-import type { MemoryCard } from '$lib/utils/memory-cards';
-import { joinNames } from '$lib/utils/memory-title';
-import { fromISODateTimeUTC } from '$lib/utils/timeline-util';
+import type { ReadonlyURLSearchParams } from '$app/state';
 
 // Local Omarchy layer: what Room plays (DESIGN.md, Room), worked out from what Gallery lists, as plain functions. Plain
 // /room is a chain of films: the Memories page's Today cards, each whole (memories that read the same, one place and
@@ -22,7 +23,7 @@ export type RoomReel =
   | { kind: 'album'; key: string; album: AlbumResponseDto }
   | { kind: 'year'; key: string; year: number };
 
-export const roomRequest = (params: URLSearchParams): RoomRequest => {
+export const roomRequest = (params: ReadonlyURLSearchParams): RoomRequest => {
   const album = params.get('album');
   if (album && UUID_REGEX.test(album)) {
     return { kind: 'album', albumId: album };
@@ -63,10 +64,10 @@ const MONTHS = [
 ];
 
 /**
- * The living albums in the order Room plays them: the one the owner named On the TV, this month across the years, the
- * best of each year from the newest, growing up, then the other months across the years from this one on. Empty
- * albums are left out.
- */
+The living albums in the order Room plays them: the one the owner named On the TV, this month across the years, the
+best of each year from the newest, growing up, then the other months across the years from this one on. Empty
+albums are left out.
+*/
 export const livingAlbums = (albums: AlbumResponseDto[], month: number): AlbumResponseDto[] => {
   const rank = ({ albumName: name }: AlbumResponseDto): [number, number] => {
     if (name === 'On the TV') {
@@ -96,13 +97,13 @@ export const livingAlbums = (albums: AlbumResponseDto[], month: number): AlbumRe
 };
 
 /**
- * Plain Room's chain: the Memories page's Today cards, in the one order every surface shows them in
- * (utils/memory-cards: a birthday, a trip or a memory of several days, then the rest, each by the photos it holds, and
- * last a film that would open dim); a card of several memories (a trip and its days, today's and the earlier days'
- * that read the same) plays as one film, all their photos in the order taken, under the lead memory, whose story and
- * songs it has, as the Memories page's film of it plays them. Then the living albums. The Earlier and Upcoming cards
- * stay out.
- */
+Plain Room's chain: the Memories page's Today cards, in the one order every surface shows them in
+(utils/memory-cards: a birthday, a trip or a memory of several days, then the rest, each by the photos it holds, and
+last a film that would open dim); a card of several memories (a trip and its days, today's and the earlier days'
+that read the same) plays as one film, all their photos in the order taken, under the lead memory, whose story and
+songs it has, as the Memories page's film of it plays them. Then the living albums. The Earlier and Upcoming cards
+stay out.
+*/
 export const todayReels = (cards: MemoryCard[], albums: AlbumResponseDto[], month: number): RoomReel[] => [
   ...cards
     .filter((card) => card.section === 'today' && card.assets.length > 0)
@@ -113,12 +114,12 @@ export const todayReels = (cards: MemoryCard[], albums: AlbumResponseDto[], mont
 ];
 
 /**
- * The evening's chain with every film whose opening fails the gate before the TV (room-opening) moved to its end, in
- * the order they had, so the evening opens on one that passes (2026-10-23, the owner's "Room's front door"). Only while
- * another film passes it or may: a film not known to fail (an album or a year, read when it comes up; a memory whose
- * opening is not in yet) stays where it is, and a chain whose every film fails is left as it is. Each film keeps its
- * photos' order and opens on its best picture when its turn comes.
- */
+The evening's chain with every film whose opening fails the gate before the TV (room-opening) moved to its end, in
+the order they had, so the evening opens on one that passes (2026-10-23, the owner's "Room's front door"). Only while
+another film passes it or may: a film not known to fail (an album or a year, read when it comes up; a memory whose
+opening is not in yet) stays where it is, and a chain whose every film fails is left as it is. Each film keeps its
+photos' order and opens on its best picture when its turn comes.
+*/
 export const dimFilmsLast = <T>(films: T[], fails: (film: T) => boolean): T[] => {
   const failing = films.filter((film) => fails(film));
   return failing.length === 0 || failing.length === films.length
@@ -135,9 +136,9 @@ export const YEAR_FILM = { most: 48, few: 12 } as const;
 export const monthOf = (asset: Pick<AssetResponseDto, 'localDateTime'>) => asset.localDateTime.slice(0, 7);
 
 /**
- * `size` shared out over months that hold `counts`: one each in turn, the busiest months first, while they have more,
- * so every month is in it and the months where more happened give a little more.
- */
+`size` shared out over months that hold `counts`: one each in turn, the busiest months first, while they have more,
+so every month is in it and the months where more happened give a little more.
+*/
 export const shareOut = (counts: Map<string, number>, size: number): Map<string, number> => {
   const quotas = new Map([...counts.keys()].map((key) => [key, 0]));
   const order = [...counts]
@@ -205,7 +206,7 @@ export type YearFilm = { assets: AssetResponseDto[]; favorites: number; total: n
 const MOST_NAMES = 3;
 
 /** A sentence as the caption reads it: its words, lowercased, letters and digits only, an ordinal's ending dropped
- * ("18th" is "18"), so a name, a place or a day is found in it whatever its punctuation. */
+("18th" is "18"), so a name, a place or a day is found in it whatever its punctuation. */
 type Said = { text: string; words: string[] };
 
 const wordsOf = (text: string) =>
@@ -236,7 +237,7 @@ const says = (said: Said, phrase: string) => {
 };
 
 /** The words a sentence may name a month by: English (Curator writes in English) and the reader's language, long and
- * short, as they stand in a date ("октября", not the "октябрь" of a calendar's heading). */
+short, as they stand in a date ("октября", not the "октябрь" of a calendar's heading). */
 const monthWords = (month: number, locale: string | undefined) => {
   const date = new Date(Date.UTC(2001, month - 1, 15));
   const names = new Set<string>();
@@ -262,7 +263,7 @@ const monthWords = (month: number, locale: string | undefined) => {
 // ---- a span of days that holds the photo's day names it: "16 to 18 October 2025" over a photo of the 17th ----
 
 /** The words that join two days into a span: a dash, "to", "bis", "au", "al", "tot", "do", "по", "至" and their like,
- * in Curator's English and the maintained languages ("t" and "m" are Dutch "t/m"). */
+in Curator's English and the maintained languages ("t" and "m" are Dutch "t/m"). */
 const SPAN_JOINS = new Set([
   '-',
   '–',
@@ -328,8 +329,8 @@ const DATE_FILLERS = new Set([
 const ORDINAL_ENDINGS = new Set(['st', 'nd', 'rd', 'th', 'er', 're', 'e', 'ème', 'º', 'ª']);
 
 /** A sentence's words for reading its dates: digits and letters apart, each character of a script written without
- * spaces a word of its own ("10月16日至18日" is 10, 月, 16, 日, 至, 18, 日), a dash a word of its own (it joins a span),
- * an ordinal's ending on its number dropped. */
+spaces a word of its own ("10月16日至18日" is 10, 月, 16, 日, 至, 18, 日), a dash a word of its own (it joins a span),
+an ordinal's ending on its number dropped. */
 const DATE_WORD =
   /\p{N}+|[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]|(?:(?![\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])\p{L})+|[-–—~〜]/gu;
 
@@ -369,11 +370,11 @@ const monthIndex = (locale: string | undefined) => {
 };
 
 /**
- * Whether the sentence names a span of days that holds the photo's day, with its year anywhere in it: two days joined
- * by a dash or a word for "to" (or "between … and …"), a month named with one of them or each ("16 to 18 October
- * 2025", "October 16–18, 2025", "30 September to 2 October 2025", "du 16 au 18 octobre 2025", "16.–18. Oktober 2025",
- * "с 16 по 18 октября 2025 года", "2025年10月16日至18日"). The span may run over a New Year.
- */
+Whether the sentence names a span of days that holds the photo's day, with its year anywhere in it: two days joined
+by a dash or a word for "to" (or "between … and …"), a month named with one of them or each ("16 to 18 October
+2025", "October 16–18, 2025", "30 September to 2 October 2025", "du 16 au 18 octobre 2025", "16.–18. Oktober 2025",
+"с 16 по 18 октября 2025 года", "2025年10月16日至18日"). The span may run over a New Year.
+*/
 const spansDay = (text: string, day: DateTime, locale: string | undefined) => {
   const words = dateWords(text);
   if (!words.includes(String(day.year))) {
@@ -430,9 +431,9 @@ const spansDay = (text: string, day: DateTime, locale: string | undefined) => {
 };
 
 /** Whether the sentence names the photo's day: its day and month side by side ("18 October", "October 18th", "the
- * 18th of October", "18. Okt."), with its year anywhere in it; the date in numbers (2025-10-18); the date just as the
- * caption writes it; or a span of days that holds it ("16 to 18 October 2025"). A month, or a span that leaves the
- * day out, leaves the day to the caption. */
+18th of October", "18. Okt."), with its year anywhere in it; the date in numbers (2025-10-18); the date just as the
+caption writes it; or a span of days that holds it ("16 to 18 October 2025"). A month, or a span that leaves the
+day out, leaves the day to the caption. */
 const saysDay = (said: Said, day: DateTime, written: string, locale: string | undefined) => {
   if (written && said.text.includes(written)) {
     return true;
@@ -461,12 +462,12 @@ const saysDay = (said: Said, day: DateTime, written: string, locale: string | un
 };
 
 /**
- * The photo on screen in words, for Room's caption: who is in it (its named people, three at most and how many more),
- * where (its city and country) and when (its day, in the reader's language). `line` is what the story's line above it
- * says: a part it already names is left out (DESIGN.md, Room), so the caption never says a thing twice: the people
- * when it names every one of them, the place when it names the city (the country alone leaves the city), the day when
- * it names the day with its month and year. A line that says it all leaves no caption.
- */
+The photo on screen in words, for Room's caption: who is in it (its named people, three at most and how many more),
+where (its city and country) and when (its day, in the reader's language). `line` is what the story's line above it
+says: a part it already names is left out (DESIGN.md, Room), so the caption never says a thing twice: the people
+when it names every one of them, the place when it names the city (the country alone leaves the city), the day when
+it names the day with its month and year. A line that says it all leaves no caption.
+*/
 export const roomCaption = (
   asset: Pick<AssetResponseDto, 'people' | 'exifInfo' | 'localDateTime'>,
   locale: string | undefined,

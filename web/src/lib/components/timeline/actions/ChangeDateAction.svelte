@@ -1,8 +1,8 @@
 <script lang="ts">
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import AssetSelectionChangeDateModal from '$lib/modals/AssetSelectionChangeDateModal.svelte';
-  import { fromTimelinePlainDateTime } from '$lib/utils/timeline-util';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import AssetSelectionChangeDateModal from '#lib/modals/AssetSelectionChangeDateModal.svelte';
+  import { fromTimelinePlainDateTime } from '#lib/utils/timeline-util.ts';
   import { modalManager } from '@immich/ui';
   import { mdiCalendarEditOutline } from '@mdi/js';
   import { DateTime } from 'luxon';
@@ -11,10 +11,10 @@
   type Props = {
     menuItem?: boolean;
     /**
-     * #734: which of the current selection the caller may edit — send only these. Omitted on
-     * surfaces that don't resolve it (every render site outside `SelectionToolbar.svelte`),
-     * where it falls back to the pre-#734 ownership-only filter.
-     */
+    #734: which of the current selection the caller may edit — send only these. Omitted on
+    surfaces that don't resolve it (every render site outside `SelectionToolbar.svelte`),
+    where it falls back to the pre-#734 ownership-only filter.
+    */
     editableSelectedAssetIds?: string[];
   };
 

@@ -1,3 +1,12 @@
+import { defaultLang, locales } from '#lib/constants.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { memoryFacts } from '#lib/managers/memory-facts.svelte.ts';
+import { alwaysLoadOriginalFile, lang, locale } from '#lib/stores/preferences.store.ts';
+import { isWebCompatibleImage } from '#lib/utils/asset-utils.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { convertBCP47, langs } from '#lib/utils/i18n.ts';
+import { getMemoryTitle } from '#lib/utils/memory-card.ts';
+import { memoryTitle } from '#lib/utils/memory-title.ts';
 import {
   AssetMediaSize,
   AssetTypeEnum,
@@ -21,15 +30,6 @@ import {
 import { toastManager, type ActionItem, type IfLike } from '@immich/ui';
 import { init, register, t } from 'svelte-i18n';
 import { derived, get } from 'svelte/store';
-import { defaultLang, locales } from '$lib/constants';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-import { alwaysLoadOriginalFile, lang, locale } from '$lib/stores/preferences.store';
-import { isWebCompatibleImage } from '$lib/utils/asset-utils';
-import { handleError } from '$lib/utils/handle-error';
-import { convertBCP47, langs } from '$lib/utils/i18n';
-import { getMemoryTitle } from '$lib/utils/memory-card';
-import { memoryTitle } from '$lib/utils/memory-title';
 
 interface DownloadRequestOptions<T = unknown> {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -133,7 +133,7 @@ export const downloadRequest = <TBody = unknown>(options: DownloadRequestOptions
     options = { url: options };
   }
 
-  const { signal, method, url, data: body, onDownloadProgress: onProgress } = options;
+  const { signal, method = 'GET', url, data: body, onDownloadProgress: onProgress } = options;
 
   return new Promise<{ data: Blob; status: number }>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -156,7 +156,7 @@ export const downloadRequest = <TBody = unknown>(options: DownloadRequestOptions
       signal.addEventListener('abort', () => xhr.abort());
     }
 
-    xhr.open(method || 'GET', url);
+    xhr.open(method, url);
     xhr.responseType = 'blob';
 
     if (body) {
@@ -404,7 +404,7 @@ export const handlePromiseError = <T>(promise: Promise<T>): void => {
   promise.catch((error) => console.error(`[utils.ts]:handlePromiseError ${error}`, error));
 };
 
-export { getMemoryCardSubtitle, getMemorySubtitle, getMemoryTitle } from '$lib/utils/memory-card';
+export { getMemoryCardSubtitle, getMemorySubtitle, getMemoryTitle } from '#lib/utils/memory-card.ts';
 
 // Local Omarchy layer: a memory is titled by its facts, place and time ("Siem Reap · October 2025",
 // utils/memory-title), from Curator's facts once they are in (memoryFacts) and else from the memory itself; the old
@@ -479,4 +479,21 @@ export const transformToTitleCase = (text: string) => {
     result += word.charAt(0).toUpperCase() + word.slice(1) + ' ';
   }
   return result.trim();
+};
+
+export const truncateMiddle = (text: string, maxLength = 50): string => {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  const lastSlash = text.lastIndexOf('/');
+  const tail = lastSlash === -1 ? text : text.slice(lastSlash);
+
+  if (tail.length >= maxLength - 3) {
+    const half = Math.floor((maxLength - 3) / 2);
+    return text.slice(0, half) + '...' + text.slice(-half);
+  }
+
+  const headLength = maxLength - 3 - tail.length;
+  return text.slice(0, headLength) + '...' + tail;
 };

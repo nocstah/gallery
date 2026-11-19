@@ -1,4 +1,4 @@
-import { formatDuration } from '$lib/utils/duration';
+import { formatDuration } from '#lib/utils/duration.ts';
 
 describe('formatDuration', () => {
   it('writes m:ss under an hour, whatever the minutes', () => {

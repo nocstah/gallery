@@ -1,31 +1,29 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { getUniqueOriginalPathsQuery } from '#lib/queries/view.query.ts';
+import { TreeNode } from '#lib/utils/tree-utils.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 import { AssetTypeEnum } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import type { Component } from 'svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { TreeNode } from '$lib/utils/tree-utils';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 import FoldersPage from './+page.svelte';
 
 // Local Omarchy layer: in a folder's gallery of photos (GalleryViewer), a right-click on a photo opens Kioku's menu
 // (gallery/photo-menu) with the folder bar's actions, not the browser's.
 
-const { mockFoldersStore } = vi.hoisted(() => ({
-  mockFoldersStore: { folders: undefined as unknown, refreshAssetsByPath: vi.fn() },
-}));
-
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({ featureFlagsManager: { value: { trash: true } } }));
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({ featureFlagsManager: { value: { trash: true } } }));
 
 vi.mock('$app/navigation', () => ({
   afterNavigate: vi.fn(),
   beforeNavigate: vi.fn(),
   goto: vi.fn(),
-  invalidateAll: vi.fn(),
+  refreshAll: vi.fn(),
 }));
 
 vi.mock('$app/state', () => ({ page: { url: new URL('https://gallery.test/folders?path=Trips') } }));
@@ -36,22 +34,20 @@ vi.mock('@immich/ui', async (importOriginal) => ({
   toastManager: { primary: vi.fn(), success: vi.fn(), warning: vi.fn(), danger: vi.fn() },
 }));
 
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: MockComponent, headerId: 'mock-header' };
 });
 
-vi.mock('$lib/components/OnEvents.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/OnEvents.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/tile-gallery-viewer.stub.svelte');
+vi.mock('#lib/components/shared-components/gallery-viewer/GalleryViewer.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/tile-gallery-viewer.stub.svelte');
   return { default: MockComponent };
 });
-
-vi.mock('$lib/stores/folders.svelte', () => ({ foldersStore: mockFoldersStore }));
 
 const folderPhoto = (id: string) =>
   assetFactory.build({ id, ownerId: 'current-user-id', type: AssetTypeEnum.Image, livePhotoVideoId: null });
@@ -60,9 +56,11 @@ const pathAssets = [folderPhoto('folder-photo-1'), folderPhoto('folder-photo-2')
 const renderPage = () => {
   authManager.setUser(userAdminFactory.build({ id: 'current-user-id' }));
   authManager.setPreferences(preferencesFactory.build({ tags: { enabled: true, sidebarWeb: false } }));
-  const root = TreeNode.fromPaths(['Trips']);
-  mockFoldersStore.folders = root;
-  const props = { data: { meta: { title: 'Trips' }, tree: root.traverse('Trips'), pathAssets } };
+  // the folder tree the page reads (queries/view.query), as the route's load leaves it
+  queryClient.setQueryData(getUniqueOriginalPathsQuery().queryKey, ['Trips']);
+  const props = {
+    data: { meta: { title: 'Trips' }, tree: TreeNode.fromPaths(['Trips']).traverse('Trips'), pathAssets },
+  };
   return render(TestWrapper as Component<{ component: typeof FoldersPage; componentProps: typeof props }>, {
     component: FoldersPage,
     componentProps: props,

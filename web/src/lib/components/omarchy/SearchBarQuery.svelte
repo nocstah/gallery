@@ -5,8 +5,8 @@
   // follows in data type while the bar has room for it (`roomy`; the page shows it under the bar otherwise), and what
   // acts on the count right after it (the page's Add all). On a phone the field keeps the bar: the back arrow goes, and
   // the mode shows as its icon. The page's h1 is here too, unseen: what the results are for.
-  import SearchModeControl from '$lib/components/global-search/search-mode-control.svelte';
-  import { isTextSearchMode, textSearchModes, type TextSearchMode } from '$lib/utils/search-mode-terms';
+  import SearchModeControl from '#lib/components/global-search/search-mode-control.svelte';
+  import { isTextSearchMode, textSearchModes, type TextSearchMode } from '#lib/utils/search-mode-terms.ts';
   import { Icon } from '@immich/ui';
   import { mdiArrowLeft, mdiClose, mdiMagnify } from '@mdi/js';
   import { onMount, type Snippet } from 'svelte';

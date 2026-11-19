@@ -28,12 +28,12 @@ export enum FaceKind {
   /** a photo with a camera's data, on the timeline */
   Photo = 'photo',
   /** an image on the timeline without a camera's data (sent through a chat app, scanned, or a screenshot): a photo
-   * unless its text says it is a page of words */
+  unless its text says it is a page of words */
   Plain = 'plain',
   /** a video on the timeline, not a recording of a screen */
   Video = 'video',
   /** not a photo: kept out of Photos (the special albums, Gallery's Documents), a document or a screenshot. A face only
-   * when the folder has nothing else */
+  when the folder has nothing else */
   Not = 'not',
   /** a bank slip or a receipt (QR's, Gallery's Receipts), or the Locked Folder's: never on a face */
   Never = 'never',
@@ -80,10 +80,10 @@ export const isTextHeavy = (boxes: AssetOcrResponseDto[]) =>
   boxes.length >= TEXT_LINES || boxes.reduce((share, box) => share + boxArea(box), 0) >= TEXT_SHARE;
 
 /**
- * What a picture is as a folder's face, from what Gallery knows of it (no text recognition: see FaceKind.Plain).
- * `camera` says whether it has a camera's data where its EXIF was not asked for (a search that finds only pictures with
- * a camera make: managers/period-faces); left out, its EXIF says.
- */
+What a picture is as a folder's face, from what Gallery knows of it (no text recognition: see FaceKind.Plain).
+`camera` says whether it has a camera's data where its EXIF was not asked for (a search that finds only pictures with
+a camera make: managers/period-faces); left out, its EXIF says.
+*/
 export const faceKind = (
   picture: FacePicture,
   camera = !!(picture.exifInfo?.make || picture.exifInfo?.model),
@@ -132,15 +132,15 @@ enum Rank {
 type Found = { id: string; rank: Rank; order: number };
 
 /**
- * The photos a folder can show, best first: one from each album, at most FACES and SPARE more. `albums` are the
- * folder's albums with a cover, newest first (FolderSummary.albums). The favourites of the newest FAVOURITE_ALBUMS come
- * first, then the covers of the newest COVER_ALBUMS that are photos, each kind newest album first; a favourite photo as
- * an album's cover ranks as a favourite. A picture without a camera's data counts only when its text says it is no page
- * of words. Videos show only where there is no photo; the covers that are no photo (documents, screenshots, what is
- * archived) only where there is nothing else, and never a slip or a receipt. Each step asks about AT_ONCE albums at a
- * time and stops once it has FACES and SPARE of its best kind; the covers, once the collage is full, only as many at a
- * time as spares are still wanted.
- */
+The photos a folder can show, best first: one from each album, at most FACES and SPARE more. `albums` are the
+folder's albums with a cover, newest first (FolderSummary.albums). The favourites of the newest FAVOURITE_ALBUMS come
+first, then the covers of the newest COVER_ALBUMS that are photos, each kind newest album first; a favourite photo as
+an album's cover ranks as a favourite. A picture without a camera's data counts only when its text says it is no page
+of words. Videos show only where there is no photo; the covers that are no photo (documents, screenshots, what is
+archived) only where there is nothing else, and never a slip or a receipt. Each step asks about AT_ONCE albums at a
+time and stops once it has FACES and SPARE of its best kind; the covers, once the collage is full, only as many at a
+time as spares are still wanted.
+*/
 export const chooseFaces = async (albums: FaceAlbum[], sources: FaceSources): Promise<FaceChoice> => {
   const candidates = albums.filter((album) => album.albumThumbnailAssetId).slice(0, COVER_ALBUMS);
   const found: Found[] = [];
@@ -246,10 +246,10 @@ export const chooseFaces = async (albums: FaceAlbum[], sources: FaceSources): Pr
 };
 
 /**
- * The photos each folder of a level shows (`chosen`: chooseFaces' for each, in the order the level shows them): its first
- * FACES that no folder before it shows, so one photo (in albums of two folders) does not front both; one already shown
- * fills in only where the folder would otherwise show fewer than it can.
- */
+The photos each folder of a level shows (`chosen`: chooseFaces' for each, in the order the level shows them): its first
+FACES that no folder before it shows, so one photo (in albums of two folders) does not front both; one already shown
+fills in only where the folder would otherwise show fewer than it can.
+*/
 export const spreadFaces = (chosen: string[][]): string[][] => {
   const shown = new Set<string>();
   return chosen.map((ids) => {

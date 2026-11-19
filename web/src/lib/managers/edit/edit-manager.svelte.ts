@@ -1,3 +1,12 @@
+import TransformTool from '#lib/components/asset-viewer/editor/transform-tool/TransformTool.svelte';
+import TrimTool from '#lib/components/asset-viewer/editor/trim-tool/trim-tool.svelte';
+import { withImageAdjust } from '#lib/gallery/edit/image-adjust-manager.svelte.ts';
+import { transformManager } from '#lib/managers/edit/transform-manager.svelte.ts';
+import { trimManager } from '#lib/managers/edit/trim-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { waitForWebsocketEvent } from '#lib/stores/websocket.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { editsDone, editsOf } from '#lib/utils/undoable.ts';
 import {
   AssetTypeEnum,
   editAsset,
@@ -9,15 +18,6 @@ import {
 import { ConfirmModal, modalManager, toastManager } from '@immich/ui';
 import { mdiContentCut, mdiCropRotate } from '@mdi/js';
 import type { Component } from 'svelte';
-import TransformTool from '$lib/components/asset-viewer/editor/transform-tool/TransformTool.svelte';
-import TrimTool from '$lib/components/asset-viewer/editor/trim-tool/trim-tool.svelte';
-import { withImageAdjust } from '$lib/gallery/edit/image-adjust-manager.svelte';
-import { transformManager } from '$lib/managers/edit/transform-manager.svelte';
-import { trimManager } from '$lib/managers/edit/trim-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { waitForWebsocketEvent } from '$lib/stores/websocket';
-import { getFormatter } from '$lib/utils/i18n';
-import { editsDone, editsOf } from '$lib/utils/undoable';
 
 export type EditAction = AssetEditsCreateDto['edits'][number];
 export type EditActions = EditAction[];

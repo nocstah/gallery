@@ -1,10 +1,11 @@
-import type { FilterState } from '$lib/components/filter-panel/filter-panel';
+import type { FilterState } from '#lib/components/filter-panel/filter-panel.ts';
 import {
   clearFilterParams,
   decodeFilterParams,
   encodeFilterParams,
   type DecodedFilterState,
-} from '$lib/utils/filter-url';
+} from '#lib/utils/filter-url.ts';
+import type { ReadonlyURL } from '$app/state';
 
 export type SearchablePageSortOrder = 'relevance' | 'asc' | 'desc';
 
@@ -65,14 +66,14 @@ export function getSearchablePageBasePath(pathname: string): string | null {
 }
 
 /**
- * Shared tail of the two album detail routes — `/albums/<id>` and `/spaces/<sid>/albums/<id>` —
- * which differ only in their prefix. `idIndex` is where the album id sits in `parts`.
- *
- * Mirrors the space timeline's shape above: the bare route and its `/photos` variant both resolve,
- * and an open asset (`…/photos/<assetId>`) resolves to the `/photos` base so a search or filter
- * change closes the viewer rather than trying to keep a now-filtered-out asset open. The album
- * LIST pages (`/albums`, `/spaces/<sid>/albums`) have no album id and stay non-searchable.
- */
+Shared tail of the two album detail routes — `/albums/<id>` and `/spaces/<sid>/albums/<id>` —
+which differ only in their prefix. `idIndex` is where the album id sits in `parts`.
+
+Mirrors the space timeline's shape above: the bare route and its `/photos` variant both resolve,
+and an open asset (`…/photos/<assetId>`) resolves to the `/photos` base so a search or filter
+change closes the viewer rather than trying to keep a now-filtered-out asset open. The album
+LIST pages (`/albums`, `/spaces/<sid>/albums`) have no album id and stay non-searchable.
+*/
 function albumBasePath(parts: string[], prefix: string, idIndex: number): string | null {
   const albumId = parts[idIndex];
   if (albumId === undefined) {
@@ -90,7 +91,7 @@ function albumBasePath(parts: string[], prefix: string, idIndex: number): string
   return null;
 }
 
-export function getSearchablePageState(url: URL): SearchablePageState {
+export function getSearchablePageState(url: ReadonlyURL): SearchablePageState {
   const basePath = getSearchablePageBasePath(url.pathname);
   if (!basePath) {
     return {
@@ -114,7 +115,7 @@ export function getSearchablePageState(url: URL): SearchablePageState {
 }
 
 export function buildSearchablePageUrl(
-  url: URL,
+  url: ReadonlyURL,
   query: string,
   sortOrder: SearchablePageSortOrder = 'relevance',
   filters?: FilterState,
@@ -126,7 +127,7 @@ export function buildSearchablePageUrl(
 
   const trimmedQuery = query.trim();
 
-  const params = new URLSearchParams(url.searchParams);
+  const params = new URLSearchParams(url.search);
 
   // `at` is a one-shot grid scroll target left over from closing the asset viewer. It must not
   // survive a search/filter change: the layout re-seeds `gridScrollTarget` from it on every
@@ -164,6 +165,6 @@ export function clearSearchablePageFilterParams(params: URLSearchParams) {
   clearFilterParams(params);
 }
 
-export function getSearchablePageFilterState(url: URL): SearchablePageFilterState {
+export function getSearchablePageFilterState(url: ReadonlyURL): SearchablePageFilterState {
   return decodeFilterParams(url);
 }

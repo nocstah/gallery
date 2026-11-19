@@ -1,3 +1,5 @@
+import { memoryFacts } from '#lib/managers/memory-facts.svelte.ts';
+import { cardsByFacts, roomMemoriesSearch, wallClockAsUtc } from '#lib/utils/memory-cards.ts';
 import {
   AssetOrder,
   AssetTypeEnum,
@@ -11,15 +13,13 @@ import {
   type MetadataSearchDto,
 } from '@immich/sdk';
 import type { DateTime } from 'luxon';
-import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-import { cardsByFacts, roomMemoriesSearch, wallClockAsUtc } from '$lib/utils/memory-cards';
 import {
+  YEAR_FILM,
   inTimeOrder,
   monthOf,
   shareOut,
   spreadByMonth,
   todayReels,
-  YEAR_FILM,
   type RoomReel,
   type YearFilm,
 } from './room-reels';
@@ -32,12 +32,12 @@ import {
 const FACTS_PATIENCE_MS = 2000;
 
 /**
- * Today's films: the Today cards of every memory (when the person keeps memories on), each whole, then Curator's living
- * albums. Room asks for every memory that has come due, whatever the Memories page's settings in this browser say
- * (utils/memory-cards' roomMemoriesSearch: it always plays everything), and makes the Memories page's cards of them
- * (cardsByFacts), so a trip whose anniversary or earlier days are still kept plays as the Memories page's film of its
- * card: all their photos, under the lead memory. It fails only when Gallery answered neither.
- */
+Today's films: the Today cards of every memory (when the person keeps memories on), each whole, then Curator's living
+albums. Room asks for every memory that has come due, whatever the Memories page's settings in this browser say
+(utils/memory-cards' roomMemoriesSearch: it always plays everything), and makes the Memories page's cards of them
+(cardsByFacts), so a trip whose anniversary or earlier days are still kept plays as the Memories page's film of its
+card: all their photos, under the lead memory. It fails only when Gallery answered neither.
+*/
 export const loadToday = async ({ memories, today }: { memories: boolean; today: DateTime }): Promise<RoomReel[]> => {
   const [found, albums] = await Promise.allSettled([
     memories ? searchMemories(roomMemoriesSearch()) : Promise.resolve([]),
@@ -60,17 +60,20 @@ export const loadToday = async ({ memories, today }: { memories: boolean; today:
   return todayReels(cards, albums.status === 'fulfilled' ? albums.value : [], today.month);
 };
 
-/** Every photo a search finds, a thousand at a time, `most` at most. */
-const searchAll = async (dto: MetadataSearchDto, most = 5000): Promise<AssetResponseDto[]> => {
+/** The most photos a search for a film brings. */
+const SEARCH_MOST = 5000;
+
+/** Every photo a search finds, a thousand at a time, `SEARCH_MOST` at most. */
+const searchAll = async (dto: MetadataSearchDto): Promise<AssetResponseDto[]> => {
   const assets: AssetResponseDto[] = [];
-  for (let page = 1; assets.length < most; page++) {
+  for (let page = 1; assets.length < SEARCH_MOST; page++) {
     const { assets: found } = await searchAssets({ metadataSearchDto: { ...dto, page, size: 1000 } });
     assets.push(...found.items);
     if (!found.nextPage || found.items.length === 0) {
       break;
     }
   }
-  return assets.slice(0, most);
+  return assets.slice(0, SEARCH_MOST);
 };
 
 /** An album's photos for its film, in the order they were taken. */
@@ -86,10 +89,10 @@ const nextMonthStart = (month: string) => {
 };
 
 /**
- * A year's film: its favourites spread through its months, `YEAR_FILM.most` at most; with fewer than `YEAR_FILM.few`
- * favourites, a sample of the year spread by month, the favourites in it. The year's photos are counted as the Years
- * overview counts them (the timeline's months), for the title card to say how many the film was taken from.
- */
+A year's film: its favourites spread through its months, `YEAR_FILM.most` at most; with fewer than `YEAR_FILM.few`
+favourites, a sample of the year spread by month, the favourites in it. The year's photos are counted as the Years
+overview counts them (the timeline's months), for the title card to say how many the film was taken from.
+*/
 export const loadYear = async (year: number, userId: string): Promise<YearFilm> => {
   const after = `${year}-01-01T00:00:00.000Z`;
   const before = `${year + 1}-01-01T00:00:00.000Z`;

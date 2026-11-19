@@ -1,17 +1,17 @@
+import AssetViewerNavBar from '#lib/components/asset-viewer/AssetViewerNavBar.svelte';
+import { viewerTaken } from '#lib/components/asset-viewer/viewer-taken.ts';
+import { saveFrame } from '#lib/components/curator/save-frame.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { setSharedLink } from '#lib/utils.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
+import { getResizeObserverMock } from '#test/kioku/mocks/resize-observer.mock.ts';
 import { AssetTypeEnum, AssetVisibility, type AssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, screen, within } from '@testing-library/svelte';
-import { getResizeObserverMock } from '$lib/__mocks__/resize-observer.mock';
-import AssetViewerNavBar from '$lib/components/asset-viewer/AssetViewerNavBar.svelte';
-import { viewerTaken } from '$lib/components/asset-viewer/viewer-taken';
-import { saveFrame } from '$lib/components/curator/save-frame.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { setSharedLink } from '$lib/utils';
-import { renderWithTooltips } from '$tests/helpers';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 
 // Local Omarchy layer: where the viewer's actions sit. A desktop or a tablet keeps the one row at the top; a phone
 // (below 768px, mediaQueryManager.maxMd) splits it as a phone's photo app does: back, when the photo was taken and the
@@ -25,20 +25,20 @@ const { media, kinds, health, trash } = vi.hoisted(() => ({
   trash: vi.fn(),
 }));
 
-vi.mock('$lib/stores/media-query-manager.svelte', () => ({ mediaQueryManager: media }));
+vi.mock('#lib/stores/media-query-manager.svelte.ts', () => ({ mediaQueryManager: media }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/utils/curator')>();
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/utils/curator.ts')>();
   return { ...actual, curator: { ...actual.curator, kinds, health } };
 });
 
 // Delete's own key, without trashing anything
-vi.mock('$lib/utils/actions', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/actions')>()),
+vi.mock('#lib/utils/actions.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/actions.ts')>()),
   deleteAssets: trash,
 }));
 
-vi.mock(import('$lib/managers/feature-flags-manager.svelte'), function () {
+vi.mock(import('#lib/managers/feature-flags-manager.svelte.ts'), function () {
   return {
     featureFlagsManager: {
       init: vi.fn(),

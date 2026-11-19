@@ -1,6 +1,4 @@
-import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
-import PeoplePickerModal from '$lib/modals/PeoplePickerModal.svelte';
+import PeoplePickerModal from '#lib/modals/PeoplePickerModal.svelte';
 import {
   albumSource,
   comingDays,
@@ -8,7 +6,9 @@ import {
   dayFromToday,
   seriesCard,
   skippedMemory,
-} from '@test-data/factories/series-factory';
+} from '#test/kioku/factories/series-factory.ts';
+import '@testing-library/jest-dom';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import SeriesPage from './SeriesPage.svelte';
 import SeriesSongSheet from './SeriesSongSheet.svelte';
 import SeriesSwapSheet from './SeriesSwapSheet.svelte';
@@ -36,12 +36,12 @@ const mocks = vi.hoisted(() => ({
   getAssetInfo: vi.fn(),
   getPerson: vi.fn(),
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: stub } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: stub } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: stub };
 });
-vi.mock('$lib/components/memories/film/MemoryFilm.svelte', async () => {
+vi.mock('#lib/components/memories/film/MemoryFilm.svelte', async () => {
   const { default: stub } = await import('./memory-film.test-wrapper.svelte');
   return { default: stub };
 });

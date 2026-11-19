@@ -1,12 +1,12 @@
+import AlbumStory from '#lib/components/curator/AlbumStory.svelte';
+import StoryText from '#lib/components/curator/StoryText.svelte';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { curator, type Story } from '#lib/utils/curator.ts';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '#test/kioku/factories/library-context-factory.ts';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
-import StoryText from '$lib/components/curator/StoryText.svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { curator, type Story } from '$lib/utils/curator';
-import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
 
-vi.mock('$lib/utils/curator', () => ({ curator: { story: vi.fn() } }));
+vi.mock('#lib/utils/curator.ts', () => ({ curator: { story: vi.fn() } }));
 
 const story: Story = {
   text: 'A tall ship docked at a pier in Rawai on 13 January 2013.',
@@ -15,7 +15,7 @@ const story: Story = {
 };
 
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
   await waitLocale('en-US');
 });

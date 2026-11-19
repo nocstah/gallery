@@ -1,18 +1,19 @@
-import { flyingTile, viewerStandsOver } from '$lib/utils/viewer-handover';
+import { flyingTile, viewerStandsOver } from '#lib/utils/viewer-handover.ts';
 
 describe('flyingTile', () => {
   afterEach(() => document.body.replaceChildren());
 
-  const tile = (assetId: string) => {
+  // the tile of photo a1
+  const tile = () => {
     const element = document.createElement('div');
     element.dataset.thumbnailFocusContainer = '';
-    element.dataset.asset = assetId;
+    element.dataset.asset = 'a1';
     document.body.append(element);
     return element;
   };
 
   it('finds the tile of the photo flying out of it', () => {
-    const element = tile('a1');
+    const element = tile();
     const flyer = document.createElement('div');
     flyer.dataset.motionFlyer = '';
     document.body.append(flyer);
@@ -20,7 +21,7 @@ describe('flyingTile', () => {
   });
 
   it('finds none when no photo is flying, or none was named', () => {
-    tile('a1');
+    tile();
     expect(flyingTile('a1')).toBeUndefined();
     expect(flyingTile(undefined)).toBeUndefined();
   });

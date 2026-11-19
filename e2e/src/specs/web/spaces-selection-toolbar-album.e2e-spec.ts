@@ -1,7 +1,7 @@
 import { AlbumUserRole, LoginResponseDto, SharedSpaceRole, addAssetsToAlbum, addUsersToAlbum } from '@immich/sdk';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { createUserDto } from 'src/fixtures.js';
-import { thumbnailUtils } from 'src/ui/specs/timeline/utils.js';
+import { thumbnailUtils } from 'src/gallery-timeline.js';
 import { asBearerAuth, utils } from 'src/utils.js';
 
 // Web E2E: Slice 6 of specs/2026-07-24-selection-toolbar-consistency-design.md —
@@ -39,8 +39,8 @@ async function selectAsset(page: Page, assetId: string): Promise<Locator> {
   const checkbox = thumbnailUtils.selectButton(page, assetId);
   await expect(checkbox).toBeVisible();
   await checkbox.click();
-  await expect(page.locator('#control-bar')).toBeVisible();
-  return page.locator('#control-bar');
+  await expect(page.locator('[data-testid="control-bar"]')).toBeVisible();
+  return page.locator('[data-testid="control-bar"]');
 }
 
 // Opens the toolbar's "⋯" overflow menu (Download, Remove-from-album, Set-cover, Delete, and the

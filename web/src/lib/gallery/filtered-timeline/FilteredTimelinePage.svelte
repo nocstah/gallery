@@ -1,5 +1,5 @@
 <script lang="ts">
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
   import type { ComponentProps } from 'svelte';
   import FilteredTimeline from './FilteredTimeline.svelte';
 
@@ -11,7 +11,6 @@
     title,
     description,
     scrollbar,
-    use,
     actions,
     leading,
     descriptionTrailing,
@@ -27,7 +26,6 @@
   {title}
   {description}
   {scrollbar}
-  {use}
   {actions}
   {leading}
   {descriptionTrailing}

@@ -1,15 +1,15 @@
+import SmartAlbumModal from '#lib/components/curator/SmartAlbumModal.svelte';
+import { curator, type SmartAlbum, type SmartRule } from '#lib/utils/curator.ts';
 import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { init, register, waitLocale } from 'svelte-i18n';
-import SmartAlbumModal from '$lib/components/curator/SmartAlbumModal.svelte';
-import { curator, type SmartAlbum, type SmartRule } from '$lib/utils/curator';
 
 // Local Omarchy layer: the Save as smart album dialog (Curator, curator/smart.py). With two or more people in the
 // search it asks how many of them each photo holds, from any of them to all of them together, the default; the count
 // follows the choice, saving sends it, and changing a smart album starts from the one it was saved with.
 
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: { smartPreview: vi.fn(), smartCreate: vi.fn(), smartUpdate: vi.fn() },
 }));
 
@@ -46,7 +46,7 @@ const choices = () =>
 const lastPreview = () => vi.mocked(curator.smartPreview).mock.lastCall?.[0];
 
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
   await waitLocale('en-US');
 });

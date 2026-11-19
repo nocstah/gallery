@@ -1,47 +1,47 @@
 <script lang="ts">
-  import MemoryShareModal from '$lib/modals/MemoryShareModal.svelte';
-  import { goto } from '$app/navigation';
-  import { scrollMemoryClearer } from '$lib/actions/scroll-memory';
-  import { shortcuts } from '$lib/actions/shortcut';
-  import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
-  import BirthdayConfetti from '$lib/components/memories/BirthdayConfetti.svelte';
-  import MemoryFilm from '$lib/components/memories/film/MemoryFilm.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { privateFilmMedia } from '$lib/components/memories/film/private-film-media';
-  import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import GalleryViewer from '$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte';
-  import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
-  import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
-  import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
-  import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
-  import DeleteAssets from '$lib/components/timeline/actions/DeleteAssetsAction.svelte';
-  import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
-  import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
-  import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { filmVideos } from '$lib/managers/film-video-manager.svelte';
-  import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-  import { memoryManager } from '$lib/managers/memory-manager.svelte';
-  import type { Viewport } from '$lib/managers/timeline-manager/types';
-  import { Route } from '$lib/route';
-  import { getAssetBulkActions } from '$lib/services/asset.service';
-  import { locale } from '$lib/stores/preferences.store';
-  import { handlePromiseError, memoryLaneTitle } from '$lib/utils';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import GalleryPhotoMenu from '$lib/gallery/photo-menu/GalleryPhotoMenu.svelte';
-  import { curator, curatorIsMine, type MemoryTrack, type Story } from '$lib/utils/curator';
-  import { memoryFilmWords } from '$lib/utils/memory-title';
-  import { fromISODateTimeUTC, toTimelineAsset } from '$lib/utils/timeline-util';
+  import { scrollMemoryClearer } from '#lib/actions/scroll-memory.svelte.ts';
+  import { shortcuts } from '#lib/actions/shortcut.ts';
+  import ActionMenuItem from '#lib/components/ActionMenuItem.svelte';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import BirthdayConfetti from '#lib/components/memories/BirthdayConfetti.svelte';
+  import MemoryFilm from '#lib/components/memories/film/MemoryFilm.svelte';
+  import { privateFilmMedia } from '#lib/components/memories/film/private-film-media.ts';
+  import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import GalleryViewer from '#lib/components/shared-components/gallery-viewer/GalleryViewer.svelte';
+  import AssetSelectControlBar from '#lib/components/timeline/AssetSelectControlBar.svelte';
+  import ChangeDate from '#lib/components/timeline/actions/ChangeDateAction.svelte';
+  import ChangeDescription from '#lib/components/timeline/actions/ChangeDescriptionAction.svelte';
+  import ChangeLocation from '#lib/components/timeline/actions/ChangeLocationAction.svelte';
+  import DeleteAssets from '#lib/components/timeline/actions/DeleteAssetsAction.svelte';
+  import DownloadAction from '#lib/components/timeline/actions/DownloadAction.svelte';
+  import FavoriteAction from '#lib/components/timeline/actions/FavoriteAction.svelte';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import GalleryPhotoMenu from '#lib/gallery/photo-menu/GalleryPhotoMenu.svelte';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { filmVideos } from '#lib/managers/film-video-manager.svelte.ts';
+  import { memoryFacts } from '#lib/managers/memory-facts.svelte.ts';
+  import { memoryManager } from '#lib/managers/memory-manager.svelte.ts';
+  import type { Viewport } from '#lib/managers/timeline-manager/types.ts';
+  import MemoryShareModal from '#lib/modals/MemoryShareModal.svelte';
+  import { Route } from '#lib/route.ts';
+  import { getAssetBulkActions } from '#lib/services/asset.service.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { handlePromiseError, memoryLaneTitle } from '#lib/utils.ts';
+  import { curator, curatorIsMine, type MemoryTrack, type Story } from '#lib/utils/curator.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { memoryFilmWords } from '#lib/utils/memory-title.ts';
+  import { fromISODateTimeUTC, toTimelineAsset } from '#lib/utils/timeline-util.ts';
   import {
-    addMemoryAssets,
     AssetTypeEnum,
     BulkIdErrorReason,
-    type AssetResponseDto,
-    getAssetInfo,
     MemoryType,
+    addMemoryAssets,
+    getAssetInfo,
+    type AssetResponseDto,
   } from '@immich/sdk';
   import {
     ActionButton,
@@ -51,7 +51,6 @@
     modalManager,
     toastManager,
   } from '@immich/ui';
-  import { handleError } from '$lib/utils/handle-error';
   import {
     mdiCardsOutline,
     mdiClose,
@@ -59,17 +58,18 @@
     mdiHeart,
     mdiHeartOutline,
     mdiImageMinusOutline,
+    mdiImageMultipleOutline,
     mdiImageSearch,
     mdiMovieOpenOutline,
-    mdiImageMultipleOutline,
-    mdiShareVariant,
     mdiPlay,
     mdiSelectAll,
+    mdiShareVariant,
     mdiTextBoxOutline,
     mdiTextBoxRemoveOutline,
   } from '@mdi/js';
   import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
 
   // Local Omarchy layer: a memory's page is its film (MemoryFilm, DESIGN.md, Memories), full screen over the shell
   // as the photo viewer is, and All photos, its photos as a grid under a slim bar, from which a photo opens in the
@@ -263,14 +263,14 @@
   const syncTo = async (assetId: string | undefined) => {
     const href = assetId && current && current.asset.id !== assetId ? current.getAssetHref(assetId) : undefined;
     if (href) {
-      await goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+      await goto(href, { replace: true, reset: false });
     }
   };
 
   // Local Omarchy layer: both removals can be taken back (the toast's Undo, the bar's history, Ctrl+Z; managers/memory-
   // manager), and they are offered only for the account's own memories, the only ones Gallery lets it change
-  const removable = $derived(current ? memoryManager.removable(current.card) : false);
-  const photoRemovable = $derived(current && filmAsset ? memoryManager.removable(current.card, filmAsset) : false);
+  const removable = $derived(!!current && memoryManager.removable(current.card));
+  const photoRemovable = $derived(!!current && !!filmAsset && memoryManager.removable(current.card, filmAsset));
 
   const removePhoto = async () => {
     await syncTo(filmAsset);
@@ -359,7 +359,7 @@
       return;
     }
 
-    handlePromiseError(goto(memoryManager.memoriesHref, { replaceState: true, noScroll: true }));
+    handlePromiseError(goto(memoryManager.memoriesHref, { replace: true, reset: false }));
   });
 </script>
 
@@ -370,11 +370,13 @@
     : []}
 />
 
+<OnEvents onAssetsArchive={handleHideAssets} />
+
 <section
-  id="memory-viewer"
-  data-sveltekit-noscroll
+  data-testid="memory-viewer"
+  data-sveltekit-reset={false}
   class="dark w-full"
-  use:scrollMemoryClearer={{ routeStartsWith: Route.memories() }}
+  {@attach scrollMemoryClearer({ routeStartsWith: Route.memories() })}
 >
   {#if current}
     {#key current.memory.id}
@@ -510,7 +512,7 @@
         {#if assetMultiSelectManager.selectionActive}
           <div class="dark sticky top-0 z-1">
             <AssetSelectControlBar>
-              {@const Actions = getAssetBulkActions($t)}
+              {const Actions = $derived(getAssetBulkActions($t))}
               <CommandPaletteDefaultProvider name={$t('assets')} actions={Object.values(Actions)} />
 
               <ActionButton action={Actions.CreateSharedLink} />
@@ -535,11 +537,7 @@
                 <ChangeDate menuItem />
                 <ChangeDescription menuItem />
                 <ChangeLocation menuItem />
-                <ArchiveAction
-                  menuItem
-                  unarchive={assetMultiSelectManager.isAllArchived}
-                  onArchive={handleHideAssets}
-                />
+                <ActionMenuItem action={Actions.Archive} />
                 <ActionMenuItem action={Actions.Tag} />
                 <DeleteAssets menuItem onAssetDelete={handleHideAssets} />
               </ButtonContextMenu>

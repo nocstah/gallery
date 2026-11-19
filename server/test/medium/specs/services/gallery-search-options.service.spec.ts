@@ -1,13 +1,13 @@
 /**
- * `POST /search/options` (specs/2026-10-23-mobile-search-redesign-design.md, Slice 1): the counting, narrowing and
- * scope SQL against a real database. The core invariant is that every total equals what the results call returns for
- * the same request, so most tests compare against the real `SearchService.searchMetadata` / `searchSmart` and
- * `TimelineService.getTimeBuckets` on the same seeded data.
- */
+`POST /search/options` (specs/2026-10-23-mobile-search-redesign-design.md, Slice 1): the counting, narrowing and
+scope SQL against a real database. The core invariant is that every total equals what the results call returns for
+the same request, so most tests compare against the real `SearchService.searchMetadata` / `searchSmart` and
+`TimelineService.getTimeBuckets` on the same seeded data.
+*/
 import { Kysely, sql } from 'kysely';
 import { SmartSearchDto } from 'src/dtos/search.dto.js';
 import { TimeBucketDto } from 'src/dtos/time-bucket.dto.js';
-import { AssetType, AssetVisibility, SharedSpaceRole } from 'src/enum.js';
+import { AssetType, AssetVisibility, LibraryView, SharedSpaceRole } from 'src/enum.js';
 import {
   SearchOptionsRequestDto,
   SearchOptionsResponseDto,
@@ -39,6 +39,7 @@ import { SearchService } from 'src/services/search.service.js';
 import { TimelineService } from 'src/services/timeline.service.js';
 import { clearConfigCache } from 'src/utils/config.js';
 import { MediumTestContext, newMediumService } from 'test/medium.factory.js';
+import { seedLibraryView } from 'test/medium/fixtures/library-view.js';
 import { factory } from 'test/small.factory.js';
 import { getKyselyDB } from 'test/utils.js';
 
@@ -832,26 +833,24 @@ describe('POST /search/options (GallerySearchService.getSearchOptions)', () => {
 
       const refused: SearchOptionsRequestDto[] = [
         { withSharedSpaces: true },
-        { withPartners: true },
-        { withSharedSpaces: true, withPartners: true, isFavorite: false },
+        // A partner browse with visibility unset is no longer refused, alone or with shared spaces: like the timeline
+        // (immich-32565) it defaults to timeline visibility.
         { withSharedSpaces: true, isFavorite: true, visibility: AssetVisibility.Archive },
         { withPartners: true, isFavorite: true, visibility: AssetVisibility.Archive },
       ];
       for (const dto of refused) {
         await expect(timeline.getTimeBuckets(auth(me.id), toTimelineDto(dto)), JSON.stringify(dto)).rejects.toThrow(
-          /only supported for non-archived/,
+          /non-archived/i,
         );
         await expect(
           timeline.getTimeBucket(auth(me.id), { ...toTimelineDto(dto), timeBucket: '2024-06-01' }),
           JSON.stringify(dto),
-        ).rejects.toThrow(/only supported for non-archived/);
-        await expect(optionsFor(sut, me.id, dto), JSON.stringify(dto)).rejects.toThrow(
-          /only supported for non-archived/,
-        );
+        ).rejects.toThrow(/non-archived/i);
+        await expect(optionsFor(sut, me.id, dto), JSON.stringify(dto)).rejects.toThrow(/non-archived/i);
       }
       await expect(
         timeline.getTimeBuckets(auth(me.id), { isFavorite: true, withSharedSpaces: true, isTrashed: true }),
-      ).rejects.toThrow(/only supported for non-archived/);
+      ).rejects.toThrow(/non-archived/i);
     });
   });
 
@@ -1317,5 +1316,43 @@ describe('POST /search/options (GallerySearchService.getSearchOptions)', () => {
       expect(await total(user.id, { visibility: AssetVisibility.Archive })).toBe(0);
       expect(compute).toHaveBeenCalledTimes(5);
     });
+  });
+});
+
+describe('POST /search/options with a library view (#1038)', () => {
+  it('counts what /timeline/buckets shows under each view, each view cached on its own', async () => {
+    const { sut, ctx, timeline } = setup();
+    const { me, name } = await seedLibraryView(ctx);
+    const photosScope = { withSharedSpaces: true, withPartners: true, visibility: AssetVisibility.Timeline } as const;
+
+    // Unfiltered requests are served from the cache, so asking each view in turn also checks that the view is part of
+    // the cache key.
+    for (const [libraryView, expected] of [
+      [undefined, ['mine', 'mineInAlbum', 'mineInLibrary', 'mineInSpace', 'partner', 'peerInSpace']],
+      [LibraryView.Personal, ['mine']],
+      [LibraryView.Spaces, ['mineInAlbum', 'mineInLibrary', 'mineInSpace', 'peerInSpace']],
+      [undefined, ['mine', 'mineInAlbum', 'mineInLibrary', 'mineInSpace', 'partner', 'peerInSpace']],
+    ] as const) {
+      const dto = { ...photosScope, libraryView };
+      const results = name(await resultIds(timeline, me.id, dto));
+      const { total } = await optionsFor(sut, me.id, dto);
+      expect({ libraryView, results, total }).toEqual({ libraryView, results: expected, total: expected.length });
+    }
+  });
+
+  it('narrows a filtered request too', async () => {
+    const { sut, ctx } = setup();
+    const { me } = await seedLibraryView(ctx);
+    const dto = {
+      withSharedSpaces: true,
+      withPartners: true,
+      visibility: AssetVisibility.Timeline,
+      libraryView: LibraryView.Spaces,
+      isNotInAlbum: true,
+    } as const;
+
+    // mineInSpace, mineInLibrary and peerInSpace are in no album; mineInAlbum is.
+    const { total } = await optionsFor(sut, me.id, dto);
+    expect(total).toBe(3);
   });
 });

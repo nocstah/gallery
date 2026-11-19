@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { shownAmongPhotos } from '$lib/utils/slips';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { shownAmongPhotos } from '#lib/utils/slips.ts';
   import {
     AssetMediaSize,
     AssetVisibility,

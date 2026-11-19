@@ -1,44 +1,45 @@
 <script lang="ts">
-  import { lazyComponent } from '$lib/utils/lazy-component.svelte';
-  import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
-  import PersonIndicator from '$lib/components/faces-page/PersonIndicator.svelte';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
-  import PlaceTile from '$lib/components/places/PlaceTile.svelte';
-  import SingleGridRow from '$lib/components/shared-components/SingleGridRow.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { memoryManager } from '$lib/managers/memory-manager.svelte';
-  import { placeStats } from '$lib/managers/place-stats.svelte';
-  import { Route } from '$lib/route';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { locale, peopleViewSettings } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl, memoryLaneTitle } from '$lib/utils';
-  import { getGlobalPersonHref, getGlobalPersonThumbnailUrl } from '$lib/utils/global-person-route';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import ImageThumbnail from '#lib/components/assets/thumbnail/ImageThumbnail.svelte';
+  import PersonIndicator from '#lib/components/faces-page/PersonIndicator.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import MemoryCard from '#lib/components/memories/MemoryCard.svelte';
+  import EmptyState from '#lib/components/omarchy/EmptyState.svelte';
+  import PlaceTile from '#lib/components/places/PlaceTile.svelte';
+  import SingleGridRow from '#lib/components/shared-components/SingleGridRow.svelte';
+  import Portal from '#lib/elements/Portal.svelte';
+  import { peopleViewSettings } from '#lib/gallery/stores/preferences.store.ts';
+  import { workspaceGap } from '#lib/managers/VirtualScrollManager/VirtualScrollManager.svelte.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { memoryFacts } from '#lib/managers/memory-facts.svelte.ts';
+  import { memoryManager } from '#lib/managers/memory-manager.svelte.ts';
+  import { placeStats } from '#lib/managers/place-stats.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl, memoryLaneTitle } from '#lib/utils.ts';
+  import { getGlobalPersonHref, getGlobalPersonThumbnailUrl } from '#lib/utils/global-person-route.ts';
+  import { lazyComponent } from '#lib/utils/lazy-component.svelte.ts';
+  import { memoryCardLine, type MemoryCard as MemoryCardModel } from '#lib/utils/memory-cards.ts';
+  import { memoryCover } from '#lib/utils/memory-title.ts';
+  import { sortPeople } from '#lib/utils/people-utils.ts';
+  import { rankPlaces, type PlaceKey } from '#lib/utils/place-stats.ts';
+  import { pxOf } from '#lib/utils/review-grid.ts';
+  import { getAltText } from '#lib/utils/thumbnail-util.ts';
+  import { tileRowColumns } from '#lib/utils/tile-row.ts';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
+  import { weekGaps, weekSpread, weekYearDays } from '#lib/utils/week-across-years.ts';
   import {
-    getAssetInfo,
     AssetMediaSize,
+    getAssetInfo,
     type AssetResponseDto,
     type PersonResponseDto,
     type SearchExploreResponseDto,
   } from '@immich/sdk';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import MemoryCard from '$lib/components/memories/MemoryCard.svelte';
-  import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-  import { memoryCardLine, type MemoryCard as MemoryCardModel } from '$lib/utils/memory-cards';
-  import { memoryCover } from '$lib/utils/memory-title';
-  import { sortPeople } from '$lib/utils/people-utils';
-  import { rankPlaces, type PlaceKey } from '$lib/utils/place-stats';
-  import { workspaceGap } from '$lib/managers/VirtualScrollManager/VirtualScrollManager.svelte';
-  import { pxOf } from '$lib/utils/review-grid';
-  import { tileRowColumns } from '$lib/utils/tile-row';
-  import { weekGaps, weekSpread, weekYearDays } from '$lib/utils/week-across-years';
   import { onMount, tick } from 'svelte';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
-  import { getAltText } from '$lib/utils/thumbnail-util';
-  import Portal from '$lib/elements/Portal.svelte';
 
   interface Props {
     data: PageData;
@@ -206,7 +207,7 @@
 
   // Mounting the viewer through `{#await}` leaves it permanently unreactive on reopen.
   // See lazyComponent().
-  const LazyAssetViewer = lazyComponent(() => import('$lib/components/asset-viewer/AssetViewer.svelte'));
+  const LazyAssetViewer = lazyComponent(() => import('#lib/components/asset-viewer/AssetViewer.svelte'));
 </script>
 
 <OnEvents {onPersonThumbnailReady} />
@@ -235,7 +236,7 @@
         <div id="explore-week-years">
           <SingleGridRow bind:itemCount={weekSlots} class="grid grid-cols-5 gap-(--ws-gap) md:grid-auto-fill-48">
             {#each weekShown as year (year.year)}
-              {@const gap = weekGapOf.get(year.year)}
+              {const gap = $derived(weekGapOf.get(year.year))}
               <a
                 class="ws-explore-tile ws-week-year"
                 href={Route.photos({ at: year.assetId })}
@@ -344,7 +345,7 @@
              width as there, so a title and its line keep to a line each (upstream's carousel set them in portrait,
              four lines a title, its arrow on the third card) -->
         {#snippet memoryCard(card: MemoryCardModel)}
-          {@const cover = memoryCover(card.lead, memoryFacts.get(card.lead.id))}
+          {const cover = $derived(memoryCover(card.lead, memoryFacts.get(card.lead.id)))}
           <MemoryCard
             class="size-full"
             item={{
@@ -417,7 +418,7 @@
 
 {#if assetViewerManager.isViewing}
   {#if LazyAssetViewer.current}
-    {@const AssetViewer = LazyAssetViewer.current}
+    {const AssetViewer = $derived(LazyAssetViewer.current)}
     <Portal target="body">
       <AssetViewer
         cursor={assetCursor}

@@ -6,17 +6,17 @@ import { libraryById } from './move-gates';
 import type { MoveSide, MoveStatus, QuietHours } from './mover';
 
 /**
- * The mover's quiet hours by default (KIOKU_MOVER_QUIET), host time: Main's nightly backup window, in which a move into
- * Main starts no upload (the owner, 30 October). A move into any other library keeps none.
- */
+The mover's quiet hours by default (KIOKU_MOVER_QUIET), host time: Main's nightly backup window, in which a move into
+Main starts no upload (the owner, 30 October). A move into any other library keeps none.
+*/
 export const QUIET_FROM = '01:45';
 export const QUIET_TO = '03:30';
 
 /**
- * The quiet hours a move keeps: the ones its status reports (none when it reports null), or, from a receiver that does
- * not say, the default, which holds only a move into Main. `intoMain` is whether its destination is Main, where the page
- * knows it (the destination's own page does: this library is the destination).
- */
+The quiet hours a move keeps: the ones its status reports (none when it reports null), or, from a receiver that does
+not say, the default, which holds only a move into Main. `intoMain` is whether its destination is Main, where the page
+knows it (the destination's own page does: this library is the destination).
+*/
 export const quietHours = (status: Pick<MoveStatus, 'quiet'>, intoMain: boolean): QuietHours | undefined => {
   if (status.quiet !== undefined) {
     return status.quiet ?? undefined;

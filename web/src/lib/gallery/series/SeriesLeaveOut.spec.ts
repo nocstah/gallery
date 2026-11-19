@@ -1,7 +1,7 @@
+import PeoplePickerModal from '#lib/modals/PeoplePickerModal.svelte';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { addMessages } from 'svelte-i18n';
-import PeoplePickerModal from '$lib/modals/PeoplePickerModal.svelte';
 import SeriesLeaveOut from './SeriesLeaveOut.svelte';
 
 // Local Omarchy layer: who a series leaves out (gallery/series): Curator keeps only person ids, Gallery names them with

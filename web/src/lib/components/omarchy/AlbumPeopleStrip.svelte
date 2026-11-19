@@ -6,11 +6,11 @@
   // (the owner's choice, 2026-10-18: thirteen chips had wrapped into five rows above the photos), each face named for a
   // screen reader and its name shown over it while it holds the keyboard's focus or a finger rests on it. More people
   // than the row holds end it with +N, which opens the filters, where People lists them all.
-  import { portal } from '$lib/elements/Portal.svelte';
-  import { peopleRanking } from '$lib/managers/people-ranking.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
-  import { buildAlbumDetailFilterConfig } from '$lib/utils/album-filter-config';
+  import { portal } from '#lib/elements/Portal.svelte';
+  import { peopleRanking } from '#lib/managers/people-ranking.svelte.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { buildAlbumDetailFilterConfig } from '#lib/utils/album-filter-config.ts';
   import { t } from 'svelte-i18n';
 
   type Person = { id: string; name: string; thumbnailUrl?: string };
@@ -254,7 +254,7 @@
         </button>
       {/each}
       {#if more > 0}
-        {@const moreLabel = $t('album_people_more', { values: { count: more } })}
+        {const moreLabel = $derived($t('album_people_more', { values: { count: more } }))}
         {#if onMore}
           <button
             type="button"

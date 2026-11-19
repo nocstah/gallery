@@ -4,8 +4,8 @@
   // days (the day and time in its tooltip, kept on one line, the danger role once it has ended), then what it lets a
   // visitor do beyond looking. The Shared links page's rows, a link in the Shared feed and the Share sheets' link draw
   // it, so a link reads the same wherever it is told (the owner's "one word for one thing", 2026-10-23).
-  import { locale } from '$lib/stores/preferences.store';
-  import { linkFacts } from '$lib/utils/shared-link-words';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { linkFacts } from '#lib/utils/shared-link-words.ts';
   import type { SharedLinkResponseDto } from '@immich/sdk';
   import { DateTime } from 'luxon';
   import type { Snippet } from 'svelte';

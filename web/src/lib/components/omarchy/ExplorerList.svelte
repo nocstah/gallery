@@ -2,7 +2,7 @@
   // Local Omarchy layer: what a level of Tags or Folders holds, as a calm list on the page's gutter instead of
   // upstream's grid of 64px icons on a grey slab: a row per tag or folder, its name in the UI face, what it holds in
   // data type at the row's end, a hairline under each row; wide windows set the rows in columns.
-  import type { TreeNode } from '$lib/utils/tree-utils';
+  import type { TreeNode } from '#lib/utils/tree-utils.ts';
   import { Icon } from '@immich/ui';
 
   interface Props {
@@ -27,7 +27,7 @@
 {#if children.length > 0}
   <ul class="ws-explorer-list" aria-label={label} data-testid="explorer-list">
     {#each children as child (child.path)}
-      {@const holds = count?.(child)}
+      {const holds = $derived(count?.(child))}
       <li>
         <a class="ws-explorer-row" href={getLink(child.path)} title={child.value}>
           <Icon {icon} size="18" class="ws-explorer-icon" color={child.color} aria-hidden={true} />

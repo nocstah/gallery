@@ -3,8 +3,8 @@
   // since 2026-10-15). An editor renames it in place: a click makes it a field, Enter or leaving it saves, Escape keeps
   // the old name. The name is the page's h1 (DESIGN.md, One heading), whichever of the three it is: the heading holds
   // it and draws nothing of its own.
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { handleError } from '$lib/utils/handle-error';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
   import { updateAlbumInfo, type AlbumResponseDto } from '@immich/sdk';
   import { tick } from 'svelte';
   import { t } from 'svelte-i18n';

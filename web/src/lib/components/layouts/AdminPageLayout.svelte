@@ -1,17 +1,19 @@
 <script lang="ts">
-  import { vaultEdition } from '$lib/gallery/edition';
-  import BreadcrumbActionPage from '$lib/components/BreadcrumbActionPage.svelte';
-  import NavigationBar from '$lib/components/shared-components/navigation-bar/NavigationBar.svelte';
-  import BottomInfo from '$lib/components/shared-components/side-bar/BottomInfo.svelte';
-  import { Route } from '$lib/route';
-  import { sidebarStore } from '$lib/stores/sidebar.svelte';
-  import type { HeaderButtonActionItem } from '$lib/types';
+  import BreadcrumbActionPage from '#lib/components/BreadcrumbActionPage.svelte';
+  import NavigationBar from '#lib/components/shared-components/navigation-bar/NavigationBar.svelte';
+  import BottomInfo from '#lib/components/shared-components/side-bar/BottomInfo.svelte';
+  import { vaultEdition } from '#lib/gallery/edition.ts';
+  import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { sidebarStore } from '#lib/stores/sidebar.svelte.ts';
+  import type { HeaderButtonActionItem } from '#lib/types.ts';
+  import { ImmichBackupsAdminNavButton } from '@futo-org/backups-orchestrator-ui';
   import { AppShell, AppShellHeader, AppShellSidebar, MenuItemType, NavbarItem, type BreadcrumbItem } from '@immich/ui';
   import {
     mdiAccountMultipleOutline,
     mdiBookshelf,
-    mdiCog,
     mdiCloudSyncOutline,
+    mdiCog,
     mdiFaceRecognition,
     mdiServer,
     mdiTrayFull,
@@ -41,6 +43,10 @@
     class="flex h-full flex-col justify-between gap-2 border-none shadow-none"
   >
     <div class="flex flex-col gap-1 pe-4 pt-8">
+      {#if featureFlagsManager.value.backups}
+        <ImmichBackupsAdminNavButton href={Route.backups()} />
+      {/if}
+
       <!-- Local Omarchy layer: a vault's Gallery has one account and keeps its photos inside the encryption -->
       {#if !vaultEdition()}
         <NavbarItem title={$t('users')} href={Route.users()} icon={mdiAccountMultipleOutline} />

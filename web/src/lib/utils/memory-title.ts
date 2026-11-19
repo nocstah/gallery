@@ -1,5 +1,5 @@
+import type { MemoryFacts } from '#lib/utils/curator.ts';
 import { AssetTypeEnum, MemoryType, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
-import type { MemoryFacts } from '$lib/utils/curator';
 
 // Local Omarchy layer: a memory's title from facts, place and time (2026-10-16, the owner's choice for "Memories worth
 // opening"): "Siem Reap · October 2025", "Anna and Ben · 2021". The places worth naming come first, else the named
@@ -66,10 +66,10 @@ const formatRange = (format: Intl.DateTimeFormat, from: Date, to: Date) =>
     : `${format.format(from)} – ${format.format(to)}`;
 
 /**
- * When a memory's photos were taken, as precise as a title wants it: one month ("October 2025"), a range of months
- * within a year ("March – May 2021"; a whole year reads as the year), months over a New Year when they are close
- * ("December 2024 – January 2025"), else the years ("2019–2021"). Days are left to the photos themselves.
- */
+When a memory's photos were taken, as precise as a title wants it: one month ("October 2025"), a range of months
+within a year ("March – May 2021"; a whole year reads as the year), months over a New Year when they are close
+("December 2024 – January 2025"), else the years ("2019–2021"). Days are left to the photos themselves.
+*/
 export const formatMemoryTime = (start: string, end: string, locale?: string): string => {
   let first = parseDay(start);
   let last = parseDay(end);
@@ -157,9 +157,9 @@ const isBirthday = (memory: MemoryResponseDto) =>
   (memory.type === MemoryType.Rule && (memory.data as Record<string, unknown> | undefined)?.ruleId === 'birthday');
 
 /**
- * What the memory says of itself: its rule's place (the city, else the place label: a country) and people, its
- * month or year, else the dates of its photos. Undefined for a memory with nothing to go on.
- */
+What the memory says of itself: its rule's place (the city, else the place label: a country) and people, its
+month or year, else the dates of its photos. Undefined for a memory with nothing to go on.
+*/
 export const memoryOwnFacts = (memory: MemoryResponseDto): MemoryTitleFacts | undefined => {
   const data = (memory.data ?? {}) as Record<string, unknown>;
   const context: RuleContext =
@@ -200,10 +200,10 @@ export const memoryOwnFacts = (memory: MemoryResponseDto): MemoryTitleFacts | un
 };
 
 /**
- * A memory's title: Curator's facts where it has them (its places, else people, and its span), filled in from what
- * the memory says of itself. Undefined for a birthday, which keeps its own title, and for a memory with neither facts
- * nor dates; the caller titles those as before.
- */
+A memory's title: Curator's facts where it has them (its places, else people, and its span), filled in from what
+the memory says of itself. Undefined for a birthday, which keeps its own title, and for a memory with neither facts
+nor dates; the caller titles those as before.
+*/
 export const memoryTitle = (
   memory: MemoryResponseDto,
   facts: MemoryFacts | null | undefined,
@@ -232,9 +232,9 @@ export const memoryTitle = (
 };
 
 /**
- * The photo a memory's card and title card show: Curator's pick of its best (`cover`) when there is one, else its
- * first photo. `asset` is the memory's own photo when the cover is one of them (for its alt text and cache key).
- */
+The photo a memory's card and title card show: Curator's pick of its best (`cover`) when there is one, else its
+first photo. `asset` is the memory's own photo when the cover is one of them (for its alt text and cache key).
+*/
 export const memoryCover = (memory: MemoryResponseDto, facts: MemoryFacts | null | undefined) => {
   const cover = typeof facts?.cover === 'string' && facts.cover ? facts.cover : undefined;
   const asset = (cover && memory.assets.find(({ id }) => id === cover)) || (cover ? undefined : memory.assets[0]);
@@ -242,10 +242,10 @@ export const memoryCover = (memory: MemoryResponseDto, facts: MemoryFacts | null
 };
 
 /**
- * How many photos a memory stands for: Curator's count (a trip's whole count), else the count its rule kept (a trip's
- * photos, a month's favourites), else the photos it holds. It weighs which memory of one kind leads a card
- * (utils/memory-cards); no surface says it, since the film shows only the photos the memory holds.
- */
+How many photos a memory stands for: Curator's count (a trip's whole count), else the count its rule kept (a trip's
+photos, a month's favourites), else the photos it holds. It weighs which memory of one kind leads a card
+(utils/memory-cards); no surface says it, since the film shows only the photos the memory holds.
+*/
 export const memoryCount = (memory: MemoryResponseDto, facts: MemoryFacts | null | undefined) => {
   if (facts && Number.isFinite(facts.count) && facts.count > 0) {
     return facts.count;
@@ -257,16 +257,16 @@ export const memoryCount = (memory: MemoryResponseDto, facts: MemoryFacts | null
 };
 
 /** How many photos a memory's film plays: each once, exact copies once, as the film's plan skips them and Curator
- * leaves them out of a shared film (curator/memory_sharing.py). */
+leaves them out of a shared film (curator/memory_sharing.py). A photo with an empty checksum counts by its id. */
 export const filmPhotoCount = (assets: Pick<AssetResponseDto, 'id' | 'checksum'>[]) =>
-  new Set(assets.map(({ id, checksum }) => checksum || id)).size;
+  new Set(assets.map((asset) => asset.checksum || asset.id)).size;
 
 /** What a memory's film says (the memory's page and Room alike): the card's title for its top bar, the title card's
- * name (the places or people, else the time) and the line under it ("October 2025 · 76 photos": the time when the
- * name is not it, then how many photos the film plays, a card of several memories all of theirs). `count` words the
- * count; `fallbackTitle` titles a memory with nothing to go on, as its card does. The count is what the film shows
- * (2026-10-23, the owner's "counts that match what's shown"): it had said what the memory stands for, a trip's whole
- * ("192 photos" over a film of 76, its position "4/76", its Share sheet "this memory's 76 photos"). */
+name (the places or people, else the time) and the line under it ("October 2025 · 76 photos": the time when the
+name is not it, then how many photos the film plays, a card of several memories all of theirs). `count` words the
+count; `fallbackTitle` titles a memory with nothing to go on, as its card does. The count is what the film shows
+(2026-10-23, the owner's "counts that match what's shown"): it had said what the memory stands for, a trip's whole
+("192 photos" over a film of 76, its position "4/76", its Share sheet "this memory's 76 photos"). */
 export type MemoryFilmWords = { title: string; name: string; line: string; count: string };
 
 export const memoryFilmWords = (

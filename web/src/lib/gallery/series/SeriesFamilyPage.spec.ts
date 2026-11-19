@@ -1,7 +1,7 @@
+import type { FilmMedia } from '#lib/components/memories/film/film-media.ts';
+import { dayFromToday } from '#test/kioku/factories/series-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
-import type { FilmMedia } from '$lib/components/memories/film/film-media';
-import { dayFromToday } from '@test-data/factories/series-factory';
 import SeriesFamilyPage from '../../../../memory-player/src/series/SeriesFamilyPage.svelte';
 import type { FamilyListDay, SeriesDay, SeriesIndex } from '../../../../memory-player/src/series/series-family';
 import { seen } from './memory-film.test-seen';
@@ -14,7 +14,7 @@ import { seriesDate, seriesLongDate } from './series-days';
 // its sound; before day 1; the password; an ended page; a list that would not load. A stand-in film keeps what it was
 // given. Every word of the page's own is an i18n key ('dev' locale). Synthetic titles, places and ids only.
 
-vi.mock('$lib/components/memories/film/MemoryFilm.svelte', async () => {
+vi.mock('#lib/components/memories/film/MemoryFilm.svelte', async () => {
   const { default: stub } = await import('./memory-film.test-wrapper.svelte');
   return { default: stub };
 });

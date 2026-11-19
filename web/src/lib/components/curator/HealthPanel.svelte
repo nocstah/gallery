@@ -3,8 +3,8 @@
   // with its number and where to deal with it; then the big face groups still without a name, how the library grew
   // month by month, and the local models Curator can use. While Curator answers, a quiet line says what is coming; if
   // it cannot, the line says so with Retry (PanelStatus).
-  import PanelStatus from '$lib/components/curator/PanelStatus.svelte';
-  import { curator, type LibraryHealth } from '$lib/utils/curator';
+  import PanelStatus from '#lib/components/curator/PanelStatus.svelte';
+  import { curator, type LibraryHealth } from '#lib/utils/curator.ts';
   import { onMount } from 'svelte';
   import { locale, t } from 'svelte-i18n';
 

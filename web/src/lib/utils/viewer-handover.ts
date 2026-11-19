@@ -20,9 +20,9 @@ export const flyingTile = (assetId: string | undefined): HTMLElement | undefined
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
 /**
- * Resolves once the viewer is in the page and done fading in, so it covers the page; or after `timeoutMs`, so a viewer
- * that never comes does not leave the page up behind it.
- */
+Resolves once the viewer is in the page and done fading in, so it covers the page; or after `timeoutMs`, so a viewer
+that never comes does not leave the page up behind it.
+*/
 export const viewerStandsOver = async (timeoutMs = 2500): Promise<void> => {
   const until = performance.now() + timeoutMs;
   while (performance.now() < until) {

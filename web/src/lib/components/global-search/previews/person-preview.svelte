@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { getGlobalPersonHref, getGlobalPersonThumbnailUrl } from '$lib/utils/global-person-route';
-  import { shownAmongPhotos } from '$lib/utils/slips';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { getGlobalPersonHref, getGlobalPersonThumbnailUrl } from '#lib/utils/global-person-route.ts';
+  import { shownAmongPhotos } from '#lib/utils/slips.ts';
   import {
     AssetMediaSize,
     AssetVisibility,
@@ -12,6 +11,7 @@
   } from '@immich/sdk';
   import { Button } from '@immich/ui';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
 
   interface Props {
     person: PersonResponseDto & { numberOfAssets?: number };

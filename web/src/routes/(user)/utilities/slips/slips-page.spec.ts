@@ -1,13 +1,13 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { slipsRule, type SlipsRule } from '#lib/stores/preferences.store.ts';
+import type { Slip } from '#lib/utils/curator.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import type { Component } from 'svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { slipsRule, type SlipsRule } from '$lib/stores/preferences.store';
-import type { Slip } from '$lib/utils/curator';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 import SlipsPage from './+page.svelte';
 
 const { curatorMock, curatorPort, moveMock, sdkMock, showDialog } = vi.hoisted(() => ({
@@ -19,8 +19,8 @@ const { curatorMock, curatorPort, moveMock, sdkMock, showDialog } = vi.hoisted((
   showDialog: vi.fn(),
 }));
 
-vi.mock('$lib/utils/curator', () => ({ curator: curatorMock, curatorPort, waitForJob: vi.fn() }));
-vi.mock('$lib/managers/special-albums.svelte', () => ({ qrManager: { move: moveMock, route: '/qr' } }));
+vi.mock('#lib/utils/curator.ts', () => ({ curator: curatorMock, curatorPort, waitForJob: vi.fn() }));
+vi.mock('#lib/managers/special-albums.svelte.ts', () => ({ qrManager: { move: moveMock, route: '/qr' } }));
 vi.mock('@immich/sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/sdk')>()),
   ...sdkMock,
@@ -29,8 +29,8 @@ vi.mock('@immich/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@immich/ui')>();
   return { ...actual, modalManager: { ...actual.modalManager, showDialog } };
 });
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
@@ -80,7 +80,7 @@ const trashedIds = () => sdkMock.deleteAssets.mock.calls[0][0].assetBulkDeleteDt
 
 describe('Bank slips page', () => {
   beforeAll(async () => {
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US' });
     await waitLocale('en-US');
     authManager.setUser(userAdminFactory.build({ id: 'user-1' }));

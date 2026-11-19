@@ -7,10 +7,10 @@
 //
 // The peek covers the page, so nothing under it answers the pointer meanwhile, and the tile stands empty: the photo has
 // left its place (data-ws-peeking, omarchy-world.css), as it does for the viewer.
+import { duration, ease, prefersReducedMotion, spring } from '#lib/gallery/motion/tokens.ts';
+import { flyFrom, transformBetween } from '#lib/gallery/motion/viewer-zoom.ts';
+import { viewerStandsOver } from '#lib/utils/viewer-handover.ts';
 import { isModalOpen } from '@immich/ui';
-import { duration, ease, prefersReducedMotion, spring } from '$lib/gallery/motion/tokens';
-import { flyFrom, transformBetween } from '$lib/gallery/motion/viewer-zoom';
-import { viewerStandsOver } from '$lib/utils/viewer-handover';
 
 /** On the tile whose photo is peeked: its own photo steps out of sight. */
 export const PEEKING_ATTR = 'data-ws-peeking';

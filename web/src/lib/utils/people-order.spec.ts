@@ -1,4 +1,4 @@
-import { PeopleSortBy } from '$lib/stores/preferences.store';
+import { PeopleSortBy } from '#lib/gallery/stores/preferences.store.ts';
 import {
   comparePeopleMatches,
   inPeopleOrder,
@@ -6,7 +6,7 @@ import {
   peoplePositions,
   peopleSortBy,
   sortInPeopleOrder,
-} from '$lib/utils/people-order';
+} from '#lib/utils/people-order.ts';
 
 const person = (id: string, name: string, numberOfAssets = 0, extra: Record<string, unknown> = {}) => ({
   id,

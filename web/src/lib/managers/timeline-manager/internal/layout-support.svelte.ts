@@ -1,16 +1,7 @@
 import { TimelineManager } from '../timeline-manager.svelte';
 import type { TimelineMonth } from '../timeline-month.svelte';
 import type { MonthStart, UpdateGeometryOptions } from '../types';
-import {
-  cutRows,
-  fitsOneLine,
-  HAND_ON_COST,
-  justifiedRow,
-  MAX_SCALE,
-  MIN_SCALE,
-  type CutOptions,
-  type RowPart,
-} from './row-cuts';
+import { HAND_ON_COST, MAX_SCALE, MIN_SCALE, cutRows, fitsOneLine, justifiedRow, type CutOptions } from './row-cuts';
 
 export function updateGeometry(timelineManager: TimelineManager, month: TimelineMonth, options: UpdateGeometryOptions) {
   const { invalidateHeight, noDefer = false } = options;
@@ -78,9 +69,9 @@ const sameCarry = (a: Carry | undefined, b: Carry | undefined) =>
     ));
 
 /**
- * Lays out a loaded month and what its change reaches: the month before it decides afresh whether its short last row
- * waits for this one, and each month after is laid out again while what it is handed changes.
- */
+Lays out a loaded month and what its change reaches: the month before it decides afresh whether its short last row
+waits for this one, and each month after is laid out again while what it is handed changes.
+*/
 function layoutTimelineMonths(timelineManager: TimelineManager, month: TimelineMonth, noDefer: boolean) {
   const months = timelineManager.months;
   const requested = months.indexOf(month);
@@ -152,11 +143,11 @@ function markMonthStart(timelineManager: TimelineManager, month: TimelineMonth) 
 }
 
 /**
- * Lays tiles out left to right from `x` (a fractional position on the row) at one height, each `ratio * height *
- * stretch` wide, and rounds every tile's edges to whole pixels relative to `origin`, so a line that fills ends exactly
- * at the edge (flooring the height lost up to a pixel per photo and left most rows a few pixels short). Returns where
- * the last tile ends.
- */
+Lays tiles out left to right from `x` (a fractional position on the row) at one height, each `ratio * height *
+stretch` wide, and rounds every tile's edges to whole pixels relative to `origin`, so a line that fills ends exactly
+at the edge (flooring the height lost up to a pixel per photo and left most rows a few pixels short). Returns where
+the last tile ends.
+*/
 const placeTiles = (
   viewerAssets: TimelineMonth['timelineDays'][number]['viewerAssets'],
   ratios: number[],
@@ -233,13 +224,14 @@ export function layoutTimelineMonth(timelineManager: TimelineManager, month: Tim
     : nextRatios && fitsOneLine(nextRatios, cutOptions)
       ? nextRatios
       : undefined;
-  const wholeDaysOf = (row: RowPart[]) => row.map((part) => run[part.day]);
   let rows = cutRows(run, beside ? { ...cutOptions, handOn: HAND_ON_COST } : cutOptions);
   let handOn: DayLine[] | undefined;
   const last = rows.at(-1);
-  if (nextFirst && beside && last?.[0].from === 0 && fillHeight(wholeDaysOf(last)) > rowHeight * MAX_SCALE) {
-    if (fillHeight([...wholeDaysOf(last), { day: nextFirst, ratios: beside }]) >= rowHeight * MIN_SCALE) {
-      handOn = wholeDaysOf(last);
+  // the last row's days, whole
+  const lastDays = last?.map((part) => run[part.day]);
+  if (nextFirst && beside && lastDays && last?.[0].from === 0 && fillHeight(lastDays) > rowHeight * MAX_SCALE) {
+    if (fillHeight([...lastDays, { day: nextFirst, ratios: beside }]) >= rowHeight * MIN_SCALE) {
+      handOn = lastDays;
       rows = rows.slice(0, -1);
     } else {
       rows = cutRows(run, cutOptions);

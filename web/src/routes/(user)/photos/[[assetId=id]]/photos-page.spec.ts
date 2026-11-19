@@ -1,17 +1,17 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import type { FilterState } from '#lib/components/filter-panel/filter-panel.ts';
+import { reactivePageMock as mockPage } from '#lib/gallery/__mocks__/reactive-page.mock.svelte.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { lang } from '#lib/stores/preferences.store.ts';
+import { buildPhotosTimelineOptions } from '#lib/utils/photos-filter-options.ts';
+import { storeTypedSearchNames } from '#lib/utils/typed-search/typed-search-name-cache.ts';
 import { AssetTypeEnum } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick, type Component } from 'svelte';
 import { SvelteURL } from 'svelte/reactivity';
 import { goto } from '$app/navigation';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import type { FilterState } from '$lib/components/filter-panel/filter-panel';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { lang } from '$lib/stores/preferences.store';
-import { buildPhotosTimelineOptions } from '$lib/utils/photos-filter-options';
-import { storeTypedSearchNames } from '$lib/utils/typed-search/typed-search-name-cache';
-import { reactivePageMock as mockPage } from '@test-data/mocks/reactive-page.mock.svelte';
 import { resetTimelineMountSeq } from '../../albums/[albumId=id]/[[photos=photos]]/[[assetId=id]]/mock-timeline-mount';
 import PhotosPage from './+page.svelte';
 
@@ -62,164 +62,168 @@ vi.mock('$app/navigation', () => ({ goto: vi.fn().mockResolvedValue(undefined) }
 // after render (back/forward, or the `?at=` write from closing the asset viewer) would assert
 // against a page that never re-hydrated, and would pass whether or not the bug is present.
 vi.mock('$app/state', async () => {
-  const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
+  const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
   return { page: reactivePageMock };
 });
 
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/ActionMenuItem.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/ActionMenuItem.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/filter-panel/active-filters-bar.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/active-filters-bar-actions.stub.svelte');
+vi.mock('#lib/components/filter-panel/active-filters-bar.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/active-filters-bar-actions.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/filter-panel/filter-panel.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/bindable-filter-panel.stub.svelte');
+vi.mock('#lib/components/filter-panel/filter-panel.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/bindable-filter-panel.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/search/smart-search-results.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/smart-search-results.stub.svelte');
+vi.mock('#lib/components/search/smart-search-results.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/smart-search-results.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/context-menu/ButtonContextMenu.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/context-menu/ButtonContextMenu.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/Timeline.svelte', async () => {
+vi.mock('#lib/components/timeline/Timeline.svelte', async () => {
   const { default: MockComponent } =
     await import('../../albums/[albumId=id]/[[photos=photos]]/[[assetId=id]]/mock-timeline.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/AssetSelectControlBar.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/AssetSelectControlBar.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ArchiveAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/gallery/actions/ArchiveAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ChangeDateAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/ChangeDateAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ChangeDescriptionAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/ChangeDescriptionAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ChangeLocationAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/ChangeLocationAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/CreateSharedLinkAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/DeleteAssetsAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/DeleteAssetsAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/DownloadAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/DownloadAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/FavoriteAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/FavoriteAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/LinkLivePhotoAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/LinkLivePhotoAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/RotateAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/RotateAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/SelectAllAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/SelectAllAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/SetVisibilityAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/SetVisibilityAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/gallery/space-remove/RemoveFromSpaceButton.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/StackAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/gallery/library-view/LibraryViewFilter.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/TagAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
-  return { default: MockComponent };
-});
+// #1248: the library view reads the spaces list; these tests run with no space on the timeline (Both)
+vi.mock('#lib/gallery/library-view/library-view.svelte.ts', () => ({
+  keepSpacesLoaded: vi.fn(),
+  libraryViewChips: vi.fn(() => []),
+  libraryViewOptions: vi.fn(() => ({})),
+  libraryViewShown: vi.fn(() => false),
+  resetLibraryView: vi.fn(),
+}));
 
-vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({
+vi.mock('#lib/managers/asset-multi-select-manager.svelte.ts', () => ({
   assetMultiSelectManager: mockAssetMultiSelectManager,
 }));
 
-vi.mock('$lib/managers/asset-viewer-manager.svelte', () => ({
+vi.mock('#lib/managers/asset-viewer-manager.svelte.ts', () => ({
   assetViewerManager: { isViewing: false },
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: mockAuthManager,
 }));
 
-vi.mock('$lib/managers/command-context-manager.svelte', () => ({
+vi.mock('#lib/managers/command-context-manager.svelte.ts', () => ({
   registerSelectionContext: mockRegisterSelectionContext,
 }));
 
-vi.mock('$lib/managers/global-search-manager.svelte', () => ({
+vi.mock('#lib/managers/global-search-manager.svelte.ts', () => ({
   globalSearchManager: {
     registerSearchablePageFilters: mockRegisterSearchablePageFilters,
     open: mockOpenSearchPalette,
   },
 }));
 
-vi.mock('$lib/managers/memory-manager.svelte', () => ({
+vi.mock('#lib/managers/memory-manager.svelte.ts', () => ({
   memoryManager: mockMemoryManager,
 }));
 
-vi.mock('$lib/services/asset.service', () => ({
+vi.mock('#lib/services/asset.service.ts', () => ({
   getAssetBulkActions: vi.fn(() => ({})),
 }));
 
-vi.mock('$lib/utils', () => ({
+vi.mock('#lib/utils.ts', () => ({
   createUrl: vi.fn(() => ''),
   getAssetMediaUrl: vi.fn(() => ''),
   memoryLaneTitle: readableFn(() => 'memory'),
 }));
 
-vi.mock('$lib/utils/file-uploader', () => ({
+vi.mock('#lib/utils/file-uploader.ts', () => ({
   openFileUploadDialog: vi.fn(),
 }));
 
-vi.mock('$lib/utils/photos-filter-options', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/utils/photos-filter-options')>();
+vi.mock('#lib/utils/photos-filter-options.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/utils/photos-filter-options.ts')>();
   return {
     ...actual,
     // Spied, NOT stubbed: `<Timeline options>` must carry the REAL derived query (takenAfter/…), or
@@ -228,11 +232,11 @@ vi.mock('$lib/utils/photos-filter-options', async (importOriginal) => {
   };
 });
 
-vi.mock('$lib/utils/thumbnail-util', () => ({
+vi.mock('#lib/utils/thumbnail-util.ts', () => ({
   getAltText: readableFn(() => 'alt'),
 }));
 
-vi.mock('$lib/utils/timeline-util', () => ({
+vi.mock('#lib/utils/timeline-util.ts', () => ({
   toTimelineAsset: vi.fn((asset) => asset),
 }));
 
@@ -334,9 +338,8 @@ describe('Photos page search URL state', () => {
     await fireEvent.click(await screen.findByTestId('active-filters-clear-search'));
 
     expect(goto).toHaveBeenCalledWith('/photos?view=timeline&people=person-1&city=Berlin', {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
   });
 
@@ -347,9 +350,8 @@ describe('Photos page search URL state', () => {
     await fireEvent.click(screen.getByTestId('filter-panel-clear-location'));
 
     expect(goto).toHaveBeenCalledWith('/photos', {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
   });
 
@@ -360,9 +362,8 @@ describe('Photos page search URL state', () => {
     await fireEvent.click(await screen.findByTestId('active-filters-clear-all'));
 
     expect(goto).toHaveBeenLastCalledWith('/photos?view=timeline', {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
   });
 
@@ -947,9 +948,8 @@ describe('Photos page search URL state', () => {
     );
     // D2 — the year rides along in the URL now, rather than in a carry-over slot beside it.
     expect(goto).toHaveBeenLastCalledWith('/photos?country=Germany&year=2015', {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
   });
 
@@ -982,9 +982,8 @@ describe('Photos page search URL state', () => {
       MY_USER_ID,
     );
     expect(goto).toHaveBeenLastCalledWith('/photos?people=person-1&from=2024-01-01&to=2024-12-31', {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
   });
 

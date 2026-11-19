@@ -1,28 +1,28 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import BottomInfo from '$lib/components/shared-components/side-bar/BottomInfo.svelte';
-  import RailStorage from '$lib/components/shared-components/side-bar/rail-storage.svelte';
-  import RecentSpaces from '$lib/components/shared-components/side-bar/recent-spaces.svelte';
-  import SharedLinksRow from '$lib/components/shared-components/side-bar/shared-links-row.svelte';
-  import AlbumsTree from '$lib/components/sidebar/albums-tree.svelte';
-  import NewAlbumDrop from '$lib/components/sidebar/new-album-drop.svelte';
-  import PinnedAlbums from '$lib/components/sidebar/pinned-albums.svelte';
-  import SidebarNavGroup from '$lib/components/sidebar/sidebar-nav-group.svelte';
-  import SidebarNavItem from '$lib/components/sidebar/sidebar-nav-item.svelte';
-  import Sidebar from '$lib/components/sidebar/sidebar-shell.svelte';
-  import { vaultEdition } from '$lib/gallery/edition';
-  import LibrariesNav from '$lib/gallery/libraries/LibrariesNav.svelte';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import VaultsNav from '$lib/gallery/vaults/VaultsNav.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { offeredSpecialAlbums, resolveSpecialAlbums, specialAlbums } from '$lib/managers/special-albums.svelte';
-  import { Route } from '$lib/route';
-  import { pinnedAlbums } from '$lib/stores/pinned-albums.svelte';
-  import { recentAlbumsDropdown, recentSpacesDropdown } from '$lib/stores/preferences.store';
-  import { sidebarRowsHidden } from '$lib/stores/sidebar-rows';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
-  import { showSidebarRowMenu } from '$lib/utils/sidebar-row-menu';
+  import RecentSpaces from '#lib/components/shared-components/side-bar/recent-spaces.svelte';
+  import SharedLinksRow from '#lib/components/shared-components/side-bar/shared-links-row.svelte';
+  import AlbumsTree from '#lib/components/sidebar/albums-tree.svelte';
+  import NewAlbumDrop from '#lib/components/sidebar/new-album-drop.svelte';
+  import PinnedAlbums from '#lib/components/sidebar/pinned-albums.svelte';
+  import NavbarGroup from '#lib/components/sidebar/sidebar-nav-group.svelte';
+  import NavbarItem from '#lib/components/sidebar/sidebar-nav-item.svelte';
+  import Sidebar from '#lib/components/sidebar/sidebar-shell.svelte';
+  import { vaultEdition } from '#lib/gallery/edition.ts';
+  import LibrariesNav from '#lib/gallery/libraries/LibrariesNav.svelte';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import BottomInfo from '#lib/gallery/sidebar/SidebarBottomInfo.svelte';
+  import { recentSpacesDropdown } from '#lib/gallery/stores/preferences.store.ts';
+  import VaultsNav from '#lib/gallery/vaults/VaultsNav.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { offeredSpecialAlbums, resolveSpecialAlbums, specialAlbums } from '#lib/managers/special-albums.svelte.ts';
+  import { createPreloadedQuery } from '#lib/queries/client.ts';
+  import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+  import { Route } from '#lib/route.ts';
+  import { pinnedAlbums } from '#lib/stores/pinned-albums.svelte.ts';
+  import { recentAlbumsDropdown } from '#lib/stores/preferences.store.ts';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
+  import { sidebarRowsHidden } from '#lib/stores/sidebar-rows.ts';
+  import { showSidebarRowMenu } from '#lib/utils/sidebar-row-menu.ts';
   import {
     mdiAccount,
     mdiAccountOutline,
@@ -64,6 +64,10 @@
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import { fly } from 'svelte/transition';
+  import { page } from '$app/state';
+
+  const query = createPreloadedQuery(getUserConfigQuery);
+  const config = $derived(query.data);
 
   const collapsed = $derived(sidebarModeStore.layout === 'rail' && !sidebarModeStore.railExpanded);
 
@@ -89,41 +93,34 @@
      alike, and the first six had none. Manage and Hidden and deleted fold away under their heading (remembered per
      browser, open until folded): with every group open, Trash stood below the AORUS's fold -->
 <Sidebar ariaLabel={$t('primary')}>
-  <SidebarNavGroup title={$t('sidebar_browse')} first />
+  <NavbarGroup title={$t('sidebar_browse')} first />
 
-  <SidebarNavItem
-    title={$t('photos')}
-    href={Route.photos()}
-    icon={mdiImageMultipleOutline}
-    activeIcon={mdiImageMultiple}
-  />
+  <NavbarItem title={$t('photos')} href={Route.photos()} icon={mdiImageMultipleOutline} activeIcon={mdiImageMultiple} />
 
-  {#if featureFlagsManager.value.search}
-    <!-- Local Omarchy layer: a compass, since the bar's Search button already uses the magnifier -->
-    <SidebarNavItem title={$t('explore')} href={Route.explore()} icon={mdiCompassOutline} activeIcon={mdiCompass} />
-  {/if}
+  <!-- Local Omarchy layer: a compass, since the bar's Search button already uses the magnifier -->
+  <NavbarItem title={$t('explore')} href={Route.explore()} icon={mdiCompassOutline} activeIcon={mdiCompass} />
 
-  {#if featureFlagsManager.value.map}
-    <SidebarNavItem title={$t('map')} href={Route.map()} icon={mdiMapOutline} activeIcon={mdiMap} />
+  {#if config.map.enabled}
+    <NavbarItem title={$t('map')} href={Route.map()} icon={mdiMapOutline} activeIcon={mdiMap} />
   {/if}
 
   <!-- Local Omarchy layer: Places, the cities with the most photos first (routes/(user)/places), after the Map; only
        Explore's View all had led there -->
-  <SidebarNavItem title={$t('places')} href={Route.places()} icon={mdiMapMarkerOutline} activeIcon={mdiMapMarker} />
+  <NavbarItem title={$t('places')} href={Route.places()} icon={mdiMapMarkerOutline} activeIcon={mdiMapMarker} />
 
   {#if authManager.preferences.memories.enabled && authManager.preferences.memories.sidebarWeb}
-    <SidebarNavItem title={$t('memories')} href={Route.memories()} icon={mdiCardsOutline} activeIcon={mdiCards} />
+    <NavbarItem title={$t('memories')} href={Route.memories()} icon={mdiCardsOutline} activeIcon={mdiCards} />
   {/if}
 
   <!-- Local Omarchy layer: Room, the archive across the room, full screen without the shell (components/room): today's
        memories, then the albums Curator keeps for the TV -->
-  <SidebarNavItem title={$t('room')} href={Route.room()} icon={mdiTelevisionPlay} />
+  <NavbarItem title={$t('room')} href={Route.room()} icon={mdiTelevisionPlay} />
 
   <!-- Local Omarchy layer: People is always in Browse while the People feature is on, unless hidden in this browser
        (its right-click menu, or Settings > Features: stores/sidebar-rows). Upstream showed it only with
        people.sidebarWeb, off by default, so a family on a phone never found it in the drawer -->
   {#if authManager.preferences.people.enabled && !$sidebarRowsHidden.people}
-    <SidebarNavItem
+    <NavbarItem
       title={$t('people')}
       href={Route.people()}
       icon={mdiAccountOutline}
@@ -136,15 +133,15 @@
        Library so a long Albums tree never pushes them out of sight (components/sidebar/pinned-albums) -->
   <PinnedAlbums />
 
-  <SidebarNavGroup title={$t('library')} />
+  <NavbarGroup title={$t('library')} size="tiny" />
 
-  <SidebarNavItem title={$t('favorites')} href={Route.favorites()} icon={mdiHeartOutline} activeIcon={mdiHeart} />
+  <NavbarItem title={$t('favorites')} href={Route.favorites()} icon={mdiHeartOutline} activeIcon={mdiHeart} />
 
   <!-- Local Omarchy layer: the special albums, photos kept out of Photos (To do, Villa: managers/special-albums), with
        how many each holds; the album itself lights its row, not Albums. Photos carried to one move there, as its key
        moves them (managers/sidebar-drop) -->
   {#each offeredSpecialAlbums() as special (special.key)}
-    <SidebarNavItem
+    <NavbarItem
       title={$t(special.words.label)}
       href={special.route}
       isActive={() => page.url.pathname === special.route || special.isAlbumPath(page.url.pathname)}
@@ -158,7 +155,7 @@
   <!-- Local Omarchy layer: Albums opens into the albums' tree (folders and albums, like the Mac's My Albums), whose
        rows light the folder or album on screen; Albums itself is lit at the top of the Albums page, or for any album
        while its tree is closed -->
-  <SidebarNavItem
+  <NavbarItem
     title={$t('albums')}
     href={Route.albums()}
     isActive={() =>
@@ -176,14 +173,14 @@
         <AlbumsTree />
       </span>
     {/snippet}
-  </SidebarNavItem>
+  </NavbarItem>
 
   <!-- Local Omarchy layer (plan A, "Let's go with A"): one Shared section beside Albums, as the Mac keeps Shared Albums
        beside My Albums. It opens the Shared page (shared albums, Spaces, partners) and holds the Spaces (Library
        excepted: it is the Albums tree's engine), each opening into its own folder tree, then the public links. It
        replaces the separate Spaces, Sharing and Shared links rows; the share arrow, as in Ctrl+K. -->
   {#if !vaultEdition()}
-    <SidebarNavItem
+    <NavbarItem
       title={$t('shared')}
       href={Route.sharing()}
       isActive={() => page.url.pathname === Route.sharing() || page.url.pathname === Route.spaces()}
@@ -197,15 +194,15 @@
           <SharedLinksRow />
         </span>
       {/snippet}
-    </SidebarNavItem>
+    </NavbarItem>
   {/if}
 
   {#if authManager.preferences.tags.enabled && authManager.preferences.tags.sidebarWeb}
-    <SidebarNavItem title={$t('tags')} href={Route.tags()} icon={{ icon: mdiTagMultipleOutline, flipped: true }} />
+    <NavbarItem title={$t('tags')} href={Route.tags()} icon={{ icon: mdiTagMultipleOutline, flipped: true }} />
   {/if}
 
   {#if authManager.preferences.recentlyAdded.sidebarWeb}
-    <SidebarNavItem
+    <NavbarItem
       title={$t('recently_added')}
       href={Route.recentlyAdded()}
       icon={{ icon: mdiUploadOutline, flipped: true }}
@@ -213,11 +210,11 @@
   {/if}
 
   {#if authManager.preferences.folders.enabled && authManager.preferences.folders.sidebarWeb}
-    <SidebarNavItem title={$t('folders')} href={Route.folders()} icon={{ icon: mdiFolderOutline, flipped: true }} />
+    <NavbarItem title={$t('folders')} href={Route.folders()} icon={{ icon: mdiFolderOutline, flipped: true }} />
   {/if}
 
   {#if ownerTools}
-    <SidebarNavGroup
+    <NavbarGroup
       title={$t('sidebar_manage')}
       collapse="manage"
       holds={['/command', '/inbox', '/chat', Route.utilities(), Route.import()]}
@@ -226,7 +223,7 @@
            without a Curator of its own, and one whose Curator does not offer what a page is for (gallery/libraries) -->
       {#if !vaultEdition() && curatorOffers('inbox')}
         <!-- Local Omarchy layer: the command center, everything about the library on one screen (routes/(user)/command) -->
-        <SidebarNavItem
+        <NavbarItem
           title={$t('command_title')}
           href="/command"
           icon={mdiViewDashboardOutline}
@@ -234,31 +231,26 @@
         />
 
         <!-- Local Omarchy layer: Curator's suggestions wait here for review (routes/(user)/inbox) -->
-        <SidebarNavItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
+        <NavbarItem title={$t('ai_inbox')} href="/inbox" icon={mdiInboxOutline} activeIcon={mdiInbox} />
       {/if}
 
       {#if !vaultEdition() && curatorOffers('chat')}
         <!-- Local Omarchy layer: a conversation with Curator's local model about the library (routes/(user)/chat) -->
-        <SidebarNavItem title={$t('chat_title')} href="/chat" icon={mdiChatOutline} activeIcon={mdiChat} />
+        <NavbarItem title={$t('chat_title')} href="/chat" icon={mdiChatOutline} activeIcon={mdiChat} />
       {/if}
 
-      <SidebarNavItem
-        title={$t('utilities')}
-        href={Route.utilities()}
-        icon={mdiToolboxOutline}
-        activeIcon={mdiToolbox}
-      />
+      <NavbarItem title={$t('utilities')} href={Route.utilities()} icon={mdiToolboxOutline} activeIcon={mdiToolbox} />
 
-      <SidebarNavItem title={$t('import')} href={Route.import()} icon={mdiDatabaseImportOutline} />
-    </SidebarNavGroup>
+      <NavbarItem title={$t('import')} href={Route.import()} icon={mdiDatabaseImportOutline} />
+    </NavbarGroup>
   {/if}
 
-  <SidebarNavGroup
+  <NavbarGroup
     title={$t('sidebar_hidden_deleted')}
     collapse="hidden-deleted"
     holds={[Route.archive(), Route.locked(), Route.trash()]}
   >
-    <SidebarNavItem
+    <NavbarItem
       title={$t('archive')}
       href={Route.archive()}
       icon={mdiArchiveArrowDownOutline}
@@ -266,32 +258,19 @@
     />
 
     {#if !vaultEdition()}
-      <SidebarNavItem title={$t('locked_folder')} href={Route.locked()} icon={mdiLockOutline} activeIcon={mdiLock} />
+      <NavbarItem title={$t('locked_folder')} href={Route.locked()} icon={mdiLockOutline} activeIcon={mdiLock} />
     {/if}
     <VaultsNav />
 
-    {#if featureFlagsManager.value.trash}
-      <SidebarNavItem title={$t('trash')} href={Route.trash()} icon={mdiTrashCanOutline} activeIcon={mdiTrashCan} />
+    {#if config.trash.enabled}
+      <NavbarItem title={$t('trash')} href={Route.trash()} icon={mdiTrashCanOutline} activeIcon={mdiTrashCan} />
     {/if}
-  </SidebarNavGroup>
+  </NavbarGroup>
 
   <!-- Local Omarchy layer: the Libraries switcher, after the Vaults launcher's group (gallery/libraries) -->
   <LibrariesNav />
 
-  {#if collapsed}
-    <RailStorage />
-  {:else}
-    <!-- BottomInfo's three sections carry a start inset only (StorageSpace `ms-4`, PurchaseInfo
-         `ps-4`, ServerStatus `ps-5`) because upstream let the sidebar's scrollbar gutter stand in
-         for the other side, which reads as lopsided. Supply the matching end inset here rather
-         than in BottomInfo itself, which AdminPageLayout also renders with its own chrome.
-         `mt-auto` moves onto the wrapper - it is the flex child now, so BottomInfo's own `mt-auto`
-         no longer has the panel's free space to absorb - and `gap-1` keeps the row spacing the
-         sections had as direct children of the panel. -->
-    <div class="mt-auto flex flex-col gap-1 pe-4">
-      <BottomInfo />
-    </div>
-  {/if}
+  <BottomInfo />
 
   <!-- Local Omarchy layer: New album, at the sidebar's foot while photos are carried (managers/sidebar-drop) -->
   <NewAlbumDrop />

@@ -25,6 +25,10 @@ ON remote_asset_entity (owner_id, visibility, deleted_at, created_at DESC)
 @TableIndex.sql(
   'CREATE INDEX IF NOT EXISTS idx_remote_asset_library_created ON remote_asset_entity (library_id, created_at DESC)',
 )
+@TableIndex.sql('''
+CREATE INDEX IF NOT EXISTS idx_remote_asset_group
+ON remote_asset_entity (owner_id, visibility, deleted_at, group_date DESC, created_at DESC)
+''')
 @TableIndex.sql('CREATE INDEX IF NOT EXISTS idx_remote_asset_uploaded ON remote_asset_entity (uploaded_at)')
 class RemoteAssetEntity extends Table with DriftDefaultsMixin, AssetEntityMixin {
   const RemoteAssetEntity();
@@ -38,6 +42,8 @@ class RemoteAssetEntity extends Table with DriftDefaultsMixin, AssetEntityMixin 
   TextColumn get ownerId => text().references(UserEntity, #id, onDelete: KeyAction.cascade)();
 
   DateTimeColumn get localDateTime => customType(clampedDateTime).nullable()();
+
+  TextColumn get groupDate => text().nullable()();
 
   TextColumn get thumbHash => text().nullable()();
 

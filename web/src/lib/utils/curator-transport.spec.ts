@@ -1,10 +1,10 @@
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { CURATOR_FEATURES, type CuratorFeature } from '$lib/gallery/libraries/library-file';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { CURATOR_FEATURES, type CuratorFeature } from '#lib/gallery/libraries/library-file.ts';
 import {
+  CuratorError,
   bookFileUrl,
   chatStream,
   curator,
-  CuratorError,
   curatorPort,
   curatorSubject,
   filmFileUrl,
@@ -12,17 +12,17 @@ import {
   reelUrl,
   restoredUrl,
   shareVideoUrl,
-} from '$lib/utils/curator';
+} from '#lib/utils/curator.ts';
 import {
+  SECOND_CURATOR_FEATURES,
   libraryContextFile,
   mainLibrary,
-  SECOND_CURATOR_FEATURES,
   secondLibrary,
   secondOffering,
   secondWithCurator,
   secondWithout,
   serving,
-} from '@test-data/factories/library-context-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
 
 describe('Curator transport', () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -65,7 +65,7 @@ describe('Curator transport', () => {
 // (gallery/libraries); Main, with no file or with a file that names none, keeps port 2290 exactly as before.
 describe("Curator's port, from the library's file", () => {
   /** Every address of Curator's files a page makes: a song, a video made ready for a chat app, a photo book, a film,
-   * a highlight reel and a restored photo. */
+  a highlight reel and a restored photo. */
   const files = () => [
     musicUrl('/api/music/a'),
     shareVideoUrl('asset-1', 'whatsapp'),

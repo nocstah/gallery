@@ -1,8 +1,8 @@
 import { SqlBool } from 'kysely';
 import { Writable } from 'node:stream';
-import type { SyncAck } from 'src/types.js';
 import { SyncAssetV1, SyncAssetV2, SyncItem } from 'src/dtos/sync.dto.js';
 import { SyncEntityType } from 'src/enum.js';
+import type { SyncAck } from 'src/types.js';
 import { hexOrBufferToBase64 } from 'src/utils/bytes.js';
 import { formatSecondsToDuration } from 'src/utils/duration.js';
 import { ClientDisconnectedError, waitForDrain } from 'src/utils/response.js';
@@ -34,9 +34,9 @@ export const serialize = <T extends keyof SyncItem, D extends SyncItem[T]>({
   type,
   data,
   ids,
-  ackType,
+  ackType = type,
 }: SerializeOptions<T, D>) =>
-  mapJsonLine({ type, data, ack: toAck({ type: ackType ?? type, updateId: ids[0], extraId: ids[1] }) });
+  mapJsonLine({ type, data, ack: toAck({ type: ackType, updateId: ids[0], extraId: ids[1] }) });
 
 // Stream helpers shared by SyncService and the fork's GallerySyncStreams (src/gallery/utils/gallery-sync.streams.ts).
 export type CheckpointMap = Partial<Record<SyncEntityType, SyncAck>>;

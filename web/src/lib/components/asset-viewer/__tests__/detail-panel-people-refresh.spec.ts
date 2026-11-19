@@ -1,9 +1,8 @@
+import { renderInViewerSpace } from '#lib/gallery/viewer-space.test-helpers.ts';
+import { factory } from '#test/unit/factories.ts';
 import { AssetTypeEnum } from '@immich/sdk';
-import '@testing-library/jest-dom';
-import { fireEvent, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderWithTooltips } from '$tests/helpers';
-import { assetFactory } from '@test-data/factories/asset-factory';
+import { page } from 'vitest/browser';
 import DetailPanel from '../DetailPanel.svelte';
 
 // Closes the Slice 8 wiring gap: `canEditSpacePeople` made the People-row edit affordances
@@ -59,67 +58,70 @@ vi.mock('@immich/sdk', async (importOriginal) => {
   };
 });
 
-vi.mock('$app/navigation', () => ({ goto: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('$app/navigation', async () => ({
+  ...(await import('#test/unit/mocks/app-navigation.ts')),
+  goto: vi.fn().mockResolvedValue(undefined),
+}));
 
-vi.mock('$lib/utils/people-utils', () => ({ zoomImageToBase64: zoomImageToBase64Mock }));
+vi.mock('#lib/utils/people-utils.js', () => ({ zoomImageToBase64: zoomImageToBase64Mock }));
 
-vi.mock('$lib/stores/face.svelte', () => ({ faceManager: faceManagerMock }));
+vi.mock('#lib/stores/face.svelte.js', () => ({ faceManager: faceManagerMock }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: authManagerMock }));
+vi.mock('#lib/managers/auth-manager.svelte.js', () => ({ authManager: authManagerMock }));
 
-vi.mock('$lib/managers/asset-viewer-manager.svelte', () => ({ assetViewerManager: assetViewerManagerMock }));
+vi.mock('#lib/managers/asset-viewer-manager.svelte.js', () => ({ assetViewerManager: assetViewerManagerMock }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.js', () => ({
   featureFlagsManager: { value: { map: false, smartSearch: false } },
 }));
 
-vi.mock('$lib/components/asset-viewer/DetailPanelDate.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/asset-viewer/DetailPanelDate.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
-vi.mock('$lib/components/asset-viewer/DetailPanelDescription.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/asset-viewer/DetailPanelDescription.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
-vi.mock('$lib/components/asset-viewer/DetailPanelLocation.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/asset-viewer/DetailPanelLocation.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
-vi.mock('$lib/components/asset-viewer/DetailPanelStarRating.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/asset-viewer/DetailPanelStarRating.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
-vi.mock('$lib/components/asset-viewer/DetailPanelTags.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/asset-viewer/DetailPanelTags.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
-vi.mock('$lib/components/OnEvents.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/OnEvents.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
-vi.mock('$lib/components/shared-components/UserAvatar.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/UserAvatar.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
-vi.mock('$lib/components/asset-viewer/AlbumListItemDetails.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/asset-viewer/AlbumListItemDetails.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
-vi.mock('$lib/components/shared-components/LoadingSpinner.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
-  return { default: MockComponent };
-});
-
-vi.mock('$lib/components/faces-page/PersonSidePanel.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/person-side-panel.stub.svelte');
-  return { default: MockComponent };
-});
-vi.mock('$lib/components/asset-viewer/SpacePersonSidePanel.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/space-person-side-panel-refresh.stub.svelte');
+vi.mock('#lib/components/shared-components/LoadingSpinner.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/managers/event-manager.svelte', () => ({ eventManager: eventManagerMock }));
+vi.mock('#lib/components/faces-page/PersonSidePanel.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/person-side-panel.stub.svelte');
+  return { default: MockComponent };
+});
+vi.mock('#lib/components/asset-viewer/SpacePersonSidePanel.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/space-person-side-panel-refresh.stub.svelte');
+  return { default: MockComponent };
+});
+
+vi.mock('#lib/managers/event-manager.svelte.js', () => ({ eventManager: eventManagerMock }));
 
 describe('DetailPanel people refresh propagates to the asset viewer', () => {
   beforeEach(() => {
@@ -136,18 +138,18 @@ describe('DetailPanel people refresh propagates to the asset viewer', () => {
   });
 
   /**
-   * The stale-panel bug: `asset` is a plain prop and AssetViewer derives it from `cursor.current`,
-   * so DetailPanel assigning `asset = await getAssetInfo(...)` only updated its OWN copy. Closing
-   * and reopening the info panel re-read the parent's untouched asset and showed the pre-edit
-   * people again, until a full page reload.
-   *
-   * Emitting `AssetUpdate` is the existing route back to the parent (AssetViewer's `onAssetUpdate`
-   * replaces `cursor.current`). Asserting the emit -- rather than anything rendered inside
-   * DetailPanel -- is the point: a local-only assignment renders identically here and would pass a
-   * DOM assertion while leaving the parent stale.
-   */
+  The stale-panel bug: `asset` is a plain prop and AssetViewer derives it from `cursor.current`,
+  so DetailPanel assigning `asset = await getAssetInfo(...)` only updated its OWN copy. Closing
+  and reopening the info panel re-read the parent's untouched asset and showed the pre-edit
+  people again, until a full page reload.
+  
+  Emitting `AssetUpdate` is the existing route back to the parent (AssetViewer's `onAssetUpdate`
+  replaces `cursor.current`). Asserting the emit -- rather than anything rendered inside
+  DetailPanel -- is the point: a local-only assignment renders identically here and would pass a
+  DOM assertion while leaving the parent stale.
+  */
   it('emits AssetUpdate with the refetched asset after a space face edit', async () => {
-    const asset = assetFactory.build({
+    const asset = factory.asset({
       id: 'asset-1',
       ownerId: 'someone-else',
       canEdit: true,
@@ -156,9 +158,9 @@ describe('DetailPanel people refresh propagates to the asset viewer', () => {
     const refreshed = { ...asset, people: [] };
     getAssetInfoMock.mockResolvedValue(refreshed);
 
-    renderWithTooltips(DetailPanel, { asset, currentAlbum: null, spaceId: 'space-1' });
+    await renderInViewerSpace(DetailPanel, { asset, currentAlbum: null }, { spaceId: 'space-1' });
 
-    await fireEvent.click(screen.getByTestId('trigger-refresh'));
+    await page.getByTestId('trigger-refresh').click();
 
     expect(getAssetInfoMock).toHaveBeenCalledWith({ id: 'asset-1', spaceId: 'space-1' });
     expect(eventManagerMock.emit).toHaveBeenCalledWith('AssetUpdate', refreshed);
@@ -167,7 +169,7 @@ describe('DetailPanel people refresh propagates to the asset viewer', () => {
   // The space panel applies each action as it happens, so the refresh after one action must leave
   // it open for the next. Closing it here meant reopening the panel once per face named.
   it('keeps the space panel open after a face edit refreshes the people row', async () => {
-    const asset = assetFactory.build({
+    const asset = factory.asset({
       id: 'asset-1',
       ownerId: 'someone-else',
       canEdit: true,
@@ -175,9 +177,9 @@ describe('DetailPanel people refresh propagates to the asset viewer', () => {
     });
     getAssetInfoMock.mockResolvedValue({ ...asset, people: [] });
 
-    renderWithTooltips(DetailPanel, { asset, currentAlbum: null, spaceId: 'space-1' });
+    await renderInViewerSpace(DetailPanel, { asset, currentAlbum: null }, { spaceId: 'space-1' });
 
-    await fireEvent.click(screen.getByTestId('trigger-refresh'));
+    await page.getByTestId('trigger-refresh').click();
 
     await vi.waitFor(() => expect(eventManagerMock.emit).toHaveBeenCalledWith('AssetUpdate', expect.anything()));
     expect(assetViewerManagerMock.closeEditFacesPanel).not.toHaveBeenCalled();

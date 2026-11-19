@@ -1,7 +1,7 @@
 <script lang="ts">
-  import AlbumCover from '$lib/components/album-page/AlbumCover.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { getShortDateRange } from '$lib/utils/date-time';
+  import AlbumCover from '#lib/components/album-page/AlbumCover.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { getShortDateRange } from '#lib/utils/date-time.ts';
   import { type AlbumResponseDto } from '@immich/sdk';
   import { ContextMenuButton, Icon, type MenuItems } from '@immich/ui';
   import { mdiEyeOffOutline } from '@mdi/js';
@@ -15,10 +15,10 @@
     preload?: boolean;
     contextMenuItems?: MenuItems;
     /**
-     * Local Omarchy layer: hidden from my timeline (managers/album-folders). The cover turns grey and carries a "Not in
-     * Photos" chip, so such an album can be told apart across the grid at a glance ("have a better visual indicator for
-     * albums that are excluded from photos").
-     */
+    Local Omarchy layer: hidden from my timeline (managers/album-folders). The cover turns grey and carries a "Not in
+    Photos" chip, so such an album can be told apart across the grid at a glance ("have a better visual indicator for
+    albums that are excluded from photos").
+    */
     hiddenFromTimeline?: boolean;
   };
 
@@ -31,6 +31,8 @@
     contextMenuItems,
     hiddenFromTimeline = false,
   }: Props = $props();
+
+  const owner = $derived(album.albumUsers[0].user);
 </script>
 
 <div
@@ -94,7 +96,6 @@
       {/if}
 
       {#if showOwner}
-        {@const owner = album.albumUsers[0].user}
         {#if owner.id === authManager.user.id}
           <p>{$t('owned')}</p>
         {:else}

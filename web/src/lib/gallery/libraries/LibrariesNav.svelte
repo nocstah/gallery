@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import SidebarNavGroup from '$lib/components/sidebar/sidebar-nav-group.svelte';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
+  import SidebarNavGroup from '#lib/components/sidebar/sidebar-nav-group.svelte';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
   import { Icon } from '@immich/ui';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
   import { canSwitchLibraries, switcherRows } from './switcher';
 
   // Local Omarchy layer: the Libraries switcher, a group of its own after the one that holds the Vaults launcher: every

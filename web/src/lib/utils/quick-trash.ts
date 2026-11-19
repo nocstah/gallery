@@ -3,16 +3,16 @@
 // asset, drop it and put it back, so the tile leaves at once instead of when the server's trash event reaches the page.
 // Inside an album the gesture takes the photo out of that album only, as Delete does in a Mac Photos album (the owner
 // chose it: "remove from this album"); the album page says which album is on screen.
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { handlePromiseError } from '#lib/utils.ts';
+import { deleteAssets, type OnDelete, type OnUndoDelete } from '#lib/utils/actions.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { removedFromAlbumDone } from '#lib/utils/undoable.ts';
 import { removeAssetFromAlbum } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { handlePromiseError } from '$lib/utils';
-import { deleteAssets, type OnDelete, type OnUndoDelete } from '$lib/utils/actions';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
-import { removedFromAlbumDone } from '$lib/utils/undoable';
 
 type TakeOut = (asset: TimelineAsset) => Promise<unknown>;
 
@@ -20,9 +20,9 @@ type TakeOut = (asset: TimelineAsset) => Promise<unknown>;
 let albumHere: { takeOut?: TakeOut } | undefined;
 
 /**
- * The album page says its own photos are on screen (its grid, or a search inside it): there the gesture takes a photo
- * out with `takeOut` and never trashes it, or does nothing without one. Returns the cleanup.
- */
+The album page says its own photos are on screen (its grid, or a search inside it): there the gesture takes a photo
+out with `takeOut` and never trashes it, or does nothing without one. Returns the cleanup.
+*/
 export const quickTrashInAlbum = (takeOut: TakeOut | undefined) => {
   const here = { takeOut };
   albumHere = here;
@@ -74,10 +74,10 @@ export const holdQuickTrash = (event: MouseEvent) => {
 };
 
 /**
- * On auxclick: trash the tile's asset when `find` knows it, or inside an album take it out of the album
- * (quickTrashInAlbum). Never deletes for good: with the trash turned off, or for an asset already in the trash, the
- * gesture does nothing (the Delete key asks first there; a click must not).
- */
+On auxclick: trash the tile's asset when `find` knows it, or inside an album take it out of the album
+(quickTrashInAlbum). Never deletes for good: with the trash turned off, or for an asset already in the trash, the
+gesture does nothing (the Delete key asks first there; a click must not).
+*/
 export const quickTrash = (
   event: MouseEvent,
   find: (id: string) => TimelineAsset | undefined,

@@ -1,7 +1,7 @@
+import { TreeNode } from '#lib/utils/tree-utils.ts';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
-import { TreeNode } from '$lib/utils/tree-utils';
 import ExplorerList from './ExplorerList.svelte';
 
 // Local Omarchy layer: what a level of Tags or Folders holds, as a calm list (components/omarchy/ExplorerList)

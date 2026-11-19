@@ -1,4 +1,4 @@
-import type { CuratorError } from '$lib/utils/curator';
+import type { CuratorError } from '#lib/utils/curator.ts';
 import { asCuratorError, seriesApi, type SeriesCard } from './series-api';
 
 // Local Omarchy layer: the owner's series in "From the beginning" while the list is open (gallery/series): each as

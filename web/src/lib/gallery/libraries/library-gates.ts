@@ -1,5 +1,5 @@
+import { Route } from '#lib/route.ts';
 import { redirect } from '@sveltejs/kit';
-import { Route } from '$lib/route';
 import { curatorOffers, libraryHas, loadLibraryContext, whenLibraryKnown } from './library-context.svelte';
 import type { CuratorFeature, LibraryFeature } from './library-file';
 
@@ -40,9 +40,9 @@ export const pageInThisLibrary = (route: string): boolean => {
 };
 
 /**
- * In the root layout's load, beside notInVaults: waits for this library's context (read once, by hooks.client's init),
- * then sends a page this library does not offer to Photos.
- */
+In the root layout's load, beside notInVaults: waits for this library's context (read once, by hooks.client's init),
+then sends a page this library does not offer to Photos.
+*/
 export const notInThisLibrary = async (url: URL, fetchFn?: typeof fetch) => {
   await loadLibraryContext(fetchFn);
   if (!pageInThisLibrary(url.pathname)) {

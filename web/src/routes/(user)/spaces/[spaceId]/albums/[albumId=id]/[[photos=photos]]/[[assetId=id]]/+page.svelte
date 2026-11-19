@@ -1,18 +1,10 @@
 <script lang="ts">
-  import { goto, invalidateAll, onNavigate } from '$app/navigation';
-  import { page } from '$app/state';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
-  import AlbumTitle from '$lib/components/album-page/AlbumTitle.svelte';
-  import AlbumDescriptionField from '$lib/components/omarchy/AlbumDescriptionField.svelte';
-  import BarFilterButton from '$lib/components/omarchy/BarFilterButton.svelte';
-  import { barSlot } from '$lib/managers/bar-slot.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import AlbumStory from '$lib/components/curator/AlbumStory.svelte';
-  import { curatorIsMine } from '$lib/utils/curator';
-  import AlbumSummary from '$lib/components/album-page/AlbumSummary.svelte';
-  import { Route } from '$lib/route';
-  import { isSpaceAlbumRoute } from '$lib/utils/navigation';
+  import HeaderActionButton from '#lib/components/HeaderActionButton.svelte';
+  import AlbumSummary from '#lib/components/album-page/AlbumSummary.svelte';
+  import AlbumTitle from '#lib/components/album-page/AlbumTitle.svelte';
+  import AlbumStory from '#lib/components/curator/AlbumStory.svelte';
+  import ActiveFiltersBar from '#lib/components/filter-panel/active-filters-bar.svelte';
+  import FilterPanel from '#lib/components/filter-panel/filter-panel.svelte';
   import {
     clearFilters,
     createFilterState,
@@ -20,74 +12,96 @@
     loadFilterCollapsed,
     type FilterPanelConfig,
     type FilterState,
-  } from '$lib/components/filter-panel/filter-panel';
-  import FilterPanel from '$lib/components/filter-panel/filter-panel.svelte';
-  import FilterToggleButton from '$lib/components/filter-panel/filter-toggle-button.svelte';
-  import ActiveFiltersBar from '$lib/components/filter-panel/active-filters-bar.svelte';
-  import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
-  import SelectionToolbar from '$lib/components/timeline/SelectionToolbar.svelte';
-  import SpacePhotoMenu from '$lib/gallery/photo-menu/SpacePhotoMenu.svelte';
-  import Timeline from '$lib/components/timeline/Timeline.svelte';
-  import ScopedSearchButton from '$lib/components/search/scoped-search-button.svelte';
-  import TimelineGroupingControl from '$lib/components/timeline/TimelineGroupingControl.svelte';
-  import { assetMultiSelectManager, AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { getTimelineTopVisibleAnchor } from '$lib/managers/timeline-manager/timeline-anchor';
-  import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import type { TimelineAsset, TimelineGrouping, TimelineTemporalAnchor } from '$lib/managers/timeline-manager/types';
-  import { addAssetsToAlbumWithOutcome, getAlbumAssetsActions, handleDeleteAlbum } from '$lib/services/album.service';
+  } from '#lib/components/filter-panel/filter-panel.ts';
+  import FilterToggleButton from '#lib/components/filter-panel/filter-toggle-button.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import AlbumDescriptionField from '#lib/components/omarchy/AlbumDescriptionField.svelte';
+  import BarFilterButton from '#lib/components/omarchy/BarFilterButton.svelte';
+  import EmptyState from '#lib/components/omarchy/EmptyState.svelte';
+  import ScopedSearchButton from '#lib/components/search/scoped-search-button.svelte';
+  import SmartSearchResults from '#lib/components/search/smart-search-results.svelte';
+  import ControlAppBar from '#lib/components/shared-components/ControlAppBar.svelte';
+  import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import SelectionToolbar from '#lib/components/timeline/SelectionToolbar.svelte';
+  import Timeline from '#lib/components/timeline/Timeline.svelte';
+  import TimelineGroupingControl from '#lib/components/timeline/TimelineGroupingControl.svelte';
+  import { addAssetsToAlbumWithOutcome } from '#lib/gallery/album/album-add.ts';
+  import SpacePhotoMenu from '#lib/gallery/photo-menu/SpacePhotoMenu.svelte';
+  import AlbumStackEvents from '#lib/gallery/stack/AlbumStackEvents.svelte';
+  import AlbumStackMenuOptions from '#lib/gallery/stack/AlbumStackMenuOptions.svelte';
+  import { getTimelineTopVisibleAnchor } from '#lib/gallery/timeline/timeline-anchor.ts';
+  import { AssetMultiSelectManager, assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { barSlot } from '#lib/managers/bar-slot.svelte.ts';
+  import { globalSearchManager } from '#lib/managers/global-search-manager.svelte.ts';
+  import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import type {
+    TimelineAsset,
+    TimelineGrouping,
+    TimelineTemporalAnchor,
+  } from '#lib/managers/timeline-manager/types.ts';
+  import SearchAddAllToCollectionModal from '#lib/modals/SearchAddAllToCollectionModal.svelte';
+  import SharedLinkCreateModal from '#lib/modals/SharedLinkCreateModal.svelte';
+  import { getAlbumInfoQuery, invalidateAlbum } from '#lib/queries/album.query.ts';
+  import { queryClient } from '#lib/queries/client.ts';
+  import { Route } from '#lib/route.ts';
+  import { getAlbumAssetsActions, handleDeleteAlbum } from '#lib/services/album.service.ts';
+  import type { SearchTerms } from '#lib/services/search.service.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { lang } from '#lib/stores/preferences.store.ts';
+  import { buildAlbumAssetPickerFilterConfig, buildAlbumDetailFilterConfig } from '#lib/utils/album-filter-config.ts';
   import {
     buildAlbumAssetPickerOptions,
     buildAlbumTimelineOptions,
     buildSpaceAlbumAssetPickerOptions,
-  } from '$lib/utils/album-filter-options';
-  import { buildAlbumAssetPickerFilterConfig, buildAlbumDetailFilterConfig } from '$lib/utils/album-filter-config';
-  import { handlePhotosRemoveFilter } from '$lib/utils/photos-filter-options';
-  import { clearTimelineTemporalFilter } from '$lib/utils/timeline-temporal-filters';
-  import { withNameCapture } from '$lib/utils/filter-name-capture';
-  import { filterStateToSearchTerms } from '$lib/utils/filter-search-terms';
-  import type { SearchTerms } from '$lib/services/search.service';
-  import SmartSearchResults from '$lib/components/search/smart-search-results.svelte';
-  import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-  import { buildFilterStateUrl, isFilterStateUrlUnchanged, withoutAtParam } from '$lib/utils/filter-target';
-  import { decodeFilterParams } from '$lib/utils/filter-url';
-  import { buildSearchablePageUrl, getSearchablePageState } from '$lib/utils/searchable-page-search';
+  } from '#lib/utils/album-filter-options.ts';
+  import { curatorIsMine } from '#lib/utils/curator.ts';
+  import { withNameCapture } from '#lib/utils/filter-name-capture.ts';
+  import { filterStateToSearchTerms } from '#lib/utils/filter-search-terms.ts';
+  import { buildFilterStateUrl, isFilterStateUrlUnchanged, withoutAtParam } from '#lib/utils/filter-target.ts';
+  import { decodeFilterParams } from '#lib/utils/filter-url.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { isSpaceAlbumRoute } from '#lib/utils/navigation.ts';
+  import { handlePhotosRemoveFilter } from '#lib/utils/photos-filter-options.ts';
+  import {
+    removeSearchResults,
+    selectAllSearchResults,
+    updateSearchResults,
+  } from '#lib/utils/search-result-selection.ts';
+  import { buildSearchablePageUrl, getSearchablePageState } from '#lib/utils/searchable-page-search.ts';
   import {
     buildSmartSearchFacetKey,
     buildSmartSearchFacetsParams,
     mapSmartSearchFacetsToFilterSuggestions,
-  } from '$lib/utils/space-search';
-  import { consumeTypedSearchNamesInto } from '$lib/utils/typed-search/typed-search-name-cache';
-  import { removeSearchResults, selectAllSearchResults, updateSearchResults } from '$lib/utils/search-result-selection';
-  import { untrack } from 'svelte';
-  import SearchAddAllToCollectionModal from '$lib/modals/SearchAddAllToCollectionModal.svelte';
-  import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
-  import { lang } from '$lib/stores/preferences.store';
-  import { SvelteMap } from 'svelte/reactivity';
+  } from '#lib/utils/space-search.ts';
+  import { clearTimelineTemporalFilter } from '#lib/utils/timeline-temporal-filters.ts';
   import {
-    type ActivatableTimelineBucket,
     getTimelineBucketZoomTarget,
     getTimelineManagerTimeBuckets,
-  } from '$lib/utils/timeline-zoom-navigation';
+    type ActivatableTimelineBucket,
+  } from '#lib/utils/timeline-zoom-navigation.ts';
+  import { consumeTypedSearchNamesInto } from '#lib/utils/typed-search/typed-search-name-cache.ts';
   import {
     AlbumUserRole,
     AssetOrder,
-    type AssetVisibility,
-    getAlbumInfo,
-    searchSmartFacets,
     SharedSpaceRole,
+    searchSmartFacets,
     updateAlbumInfo,
     type AlbumResponseDto,
     type AssetResponseDto,
+    type AssetVisibility,
     type SharedSpaceMemberResponseDto,
     type SharedSpaceResponseDto,
     type SmartSearchFacetsResponseDto,
   } from '@immich/sdk';
-  import HeaderActionButton from '$lib/components/HeaderActionButton.svelte';
   import { IconButton, modalManager, toastManager } from '@immich/ui';
-  import { handleError } from '$lib/utils/handle-error';
-  import { mdiArrowLeft, mdiImagePlusOutline, mdiLink } from '@mdi/js';
+  import { mdiArrowLeft, mdiDotsVertical, mdiImagePlusOutline, mdiLink } from '@mdi/js';
+  import { createQuery } from '@tanstack/svelte-query';
+  import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { SvelteMap } from 'svelte/reactivity';
+  import { goto, invalidateAll, onNavigate } from '$app/navigation';
+  import { page, type ReadonlyURL } from '$app/state';
   import type { PageData } from './$types';
 
   interface Props {
@@ -107,7 +121,33 @@
   });
   const space: SharedSpaceResponseDto = $derived(current.space);
   const members: SharedSpaceMemberResponseDto[] = $derived(current.members);
-  let album = $state<AlbumResponseDto>(data.album);
+  // $state.raw: the album is only ever replaced, never mutated, and the query sync below compares
+  // object identity.
+  let album = $state.raw<AlbumResponseDto>(data.album);
+
+  // The route load fetches the album fresh: make that the query's current value, so a copy cached on
+  // an earlier visit never replaces it (the query client outlives the page).
+  queryClient.setQueryData(getAlbumInfoQuery(data.album.id).queryKey, data.album);
+  $effect.pre(() => {
+    // no album: this page is being left for another one (see `current` above)
+    if (data.album) {
+      queryClient.setQueryData(getAlbumInfoQuery(data.album.id).queryKey, data.album);
+    }
+  });
+
+  // AlbumTitle / AlbumDescription save through upstream's updateAlbumInfoMutation, which writes the
+  // saved album into the getAlbumInfoQuery cache (and invalidates it). Mirror that cache entry into
+  // this page's album so a rename or new description shows without a reload.
+  const albumQuery = createQuery(
+    () => ({ ...getAlbumInfoQuery(album.id), initialData: album }),
+    () => queryClient,
+  );
+  $effect(() => {
+    const updated = albumQuery.data;
+    if (updated && updated.id === album.id && updated !== album) {
+      album = updated;
+    }
+  });
 
   // Mode: 'browse' shows the album timeline; 'add' shows the asset picker
   let mode = $state<'browse' | 'add'>('browse');
@@ -122,12 +162,12 @@
   const pickerMultiSelectManager = new AssetMultiSelectManager();
 
   /**
-   * The route already scopes the timeline to this album, and the server's `albumId` is a SCALAR
-   * driving one inner join, so album ∩ album is impossible. A stray `?album=` must be IGNORED:
-   * dropping it here keeps it out of the active-filter count, out of the chip bar, and out of the
-   * next URL write. Mirrors the global album page's `hydrateAlbumFilters`.
-   */
-  const hydrateAlbumFilters = (url: URL): FilterState => ({
+  The route already scopes the timeline to this album, and the server's `albumId` is a SCALAR
+  driving one inner join, so album ∩ album is impossible. A stray `?album=` must be IGNORED:
+  dropping it here keeps it out of the active-filter count, out of the chip bar, and out of the
+  next URL write. Mirrors the global album page's `hydrateAlbumFilters`.
+  */
+  const hydrateAlbumFilters = (url: ReadonlyURL): FilterState => ({
     ...createFilterState(),
     ...decodeFilterParams(url),
     albumId: undefined,
@@ -139,11 +179,11 @@
   let browseFilters = $state(hydrateAlbumFilters(page.url));
   let committedSearchQuery = $state(getSearchablePageState(page.url).query);
   /**
-   * Token guard for the re-hydrate $effect below, so our own goto() cannot loop it. Stripped of
-   * `at` because closing the asset viewer writes `?at=<assetId>`, which is not a filter change —
-   * re-hydrating on it would rebuild an identical FilterState and needlessly re-create the timeline
-   * options object. Mirrors the global album page.
-   */
+  Token guard for the re-hydrate $effect below, so our own goto() cannot loop it. Stripped of
+  `at` because closing the asset viewer writes `?at=<assetId>`, which is not a filter change —
+  re-hydrating on it would rebuild an identical FilterState and needlessly re-create the timeline
+  options object. Mirrors the global album page.
+  */
   let lastHandledSearch = $state(withoutAtParam(page.url.search));
   const showSearchResults = $derived(committedSearchQuery.trim().length > 0);
   // Loaded smart-search results. The browse Timeline (and its TimelineManager) is unmounted while
@@ -201,11 +241,11 @@
   });
 
   /**
-   * Facets for the ACTIVE search, scoped to this album — the source of the result count and of the
-   * temporal picker's buckets while a query is running. Album-scoped, never space-scoped: see
-   * `searchAlbumIds`. Memoised on the request shape so a filter change that cannot alter the facets
-   * (sortOrder) does not refetch.
-   */
+  Facets for the ACTIVE search, scoped to this album — the source of the result count and of the
+  temporal picker's buckets while a query is running. Album-scoped, never space-scoped: see
+  `searchAlbumIds`. Memoised on the request shape so a filter change that cannot alter the facets
+  (sortOrder) does not refetch.
+  */
   async function loadAlbumSmartFacets(nextFilters: FilterState): Promise<SmartSearchFacetsResponseDto | undefined> {
     const query = committedSearchQuery.trim();
     if (!query) {
@@ -308,20 +348,20 @@
   const searchTotal = $derived(showSearchResults ? smartFacets?.total : undefined);
 
   /**
-   * The album scope handed to smart search. Deliberately the album alone, with no `spaceId`: this
-   * page's browse timeline is album-scoped too (`buildAlbumTimelineOptions`), and its filter panel
-   * speaks the personal person tokens that go with that. Sending `spaceId` as well would also be
-   * actively wrong server-side — `albumIds` makes the service resolve `timelineSpaceIds`, and the
-   * `spaceId` predicate is skipped whenever those are set (`database.ts`), so the space scope would
-   * silently widen to every space the caller is in rather than narrowing anything.
-   */
+  The album scope handed to smart search. Deliberately the album alone, with no `spaceId`: this
+  page's browse timeline is album-scoped too (`buildAlbumTimelineOptions`), and its filter panel
+  speaks the personal person tokens that go with that. Sending `spaceId` as well would also be
+  actively wrong server-side — `albumIds` makes the service resolve `timelineSpaceIds`, and the
+  `spaceId` predicate is skipped whenever those are set (`database.ts`), so the space scope would
+  silently widen to every space the caller is in rather than narrowing anything.
+  */
   const searchAlbumIds = $derived([album.id]);
 
   /**
-   * Browse order. An album carries its own `order`, but the navbar sort dropdown is rendered on
-   * every searchable page — browse mode included — so an EXPLICIT `?sort=` has to win, or the
-   * control would visibly do nothing here. Absent that param the album's own order stands.
-   */
+  Browse order. An album carries its own `order`, but the navbar sort dropdown is rendered on
+  every searchable page — browse mode included — so an EXPLICIT `?sort=` has to win, or the
+  control would visibly do nothing here. Absent that param the album's own order stands.
+  */
   const browseOrder = $derived.by(() => {
     if (!getSearchablePageState(page.url).hasExplicitSort) {
       return album.order ?? authManager.preferences.albums.defaultAssetOrder;
@@ -339,9 +379,9 @@
   $effect(() => globalSearchManager.registerSearchablePageFilters(() => browseFilters));
 
   /** Write a filter change back to the URL — the album page's half of the hydrate → write → react
-   *  loop. `buildFilterStateUrl` (not `buildSearchablePageUrl`) because it keeps the CURRENT
-   *  pathname: the panel can be used with the asset viewer open, and targeting the base path would
-   *  close it on every filter tweak. It preserves `q` and `sort` as ordinary non-filter params. */
+  loop. `buildFilterStateUrl` (not `buildSearchablePageUrl`) because it keeps the CURRENT
+  pathname: the panel can be used with the asset viewer open, and targeting the base path would
+  close it on every filter tweak. It preserves `q` and `sort` as ordinary non-filter params. */
   function syncFilterUrl(nextFilters: FilterState) {
     const nextUrl = buildFilterStateUrl(page.url, nextFilters);
     // NOT a string compare: buildFilterStateUrl re-appends the filter params last, so an unchanged
@@ -349,7 +389,7 @@
     if (isFilterStateUrlUnchanged(page.url, nextUrl)) {
       return;
     }
-    void goto(nextUrl, { replaceState: true, keepFocus: true, noScroll: true });
+    void goto(nextUrl, { replace: true, reset: false });
   }
 
   const clearSearch = () => {
@@ -358,7 +398,7 @@
     if (!nextUrl) {
       return;
     }
-    void goto(nextUrl, { replaceState: true, keepFocus: true, noScroll: true });
+    void goto(nextUrl, { replace: true, reset: false });
   };
 
   // Re-hydrate from the URL on every change we did not just make: back/forward, a shared link, a
@@ -443,17 +483,15 @@
     pickerSource = source;
   };
 
-  const refreshAlbum = async () => {
-    album = await getAlbumInfo({ id: album.id });
-  };
+  const refreshAlbum = () => invalidateAlbum(album.id);
 
   // While search results are showing, <Timeline> is unmounted and its manager destroyed — every
   // bulk action has to mutate the results array instead, or it silently no-ops and the asset stays
   // on screen (#908, same split the space timeline makes).
   const handleRemoveAssets = (assetIds: string[]) => {
     // Prune the browse timeline immediately so removed photos don't linger.
-    // RemoveFromAlbumAction already re-fetches the album via bind:album and clears the
-    // selection internally before firing onRemove, so we only need to defensively clear here.
+    // The remove-from-album action clears the selection after firing onRemove, so we only need to
+    // defensively clear here.
     if (showSearchResults) {
       removeSearchResults(searchResults, assetIds);
     } else {
@@ -645,6 +683,7 @@
      timeline below, mirroring the regular album page (which has no page-header title).
      Local Omarchy layer: the album's name is the page's h1 (DESIGN.md, One heading), so the Space's in the bar is text
      (headingInBody) -->
+<AlbumStackEvents albumId={album.id} {timelineManager} />
 <UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} title={space.name} headingInBody>
   {#snippet leading()}
     <IconButton
@@ -685,6 +724,17 @@
         onclick={() => void modalManager.show(SharedLinkCreateModal, { albumId: album.id, spaceId: space.id })}
         icon={mdiLink}
       />
+    {/if}
+    {#if mode === 'browse'}
+      <!-- The album page keeps these in its options menu; this page has no other per-album options. -->
+      <ButtonContextMenu
+        icon={mdiDotsVertical}
+        title={$t('album_options')}
+        color="secondary"
+        offset={{ x: 175, y: 25 }}
+      >
+        <AlbumStackMenuOptions />
+      </ButtonContextMenu>
     {/if}
   {/snippet}
 
@@ -793,6 +843,7 @@
             onTimelineBucketActivate={handleTimelineBucketActivate}
             {temporalAnchor}
             onTemporalAnchorResolved={() => (temporalAnchor = undefined)}
+            withStacked
           >
             <!-- Editable album header (Timeline leading content — always rendered, incl. for an empty
                  album so it can be named). Album-editor-gated (owner or album editor), mirroring the regular
@@ -802,12 +853,7 @@
               <!-- Local Omarchy layer: the page's h1, as a role: the editable name is a field in a box of its own, which
                    an h1 element may not hold -->
               <div role="heading" aria-level={1} data-testid="space-album-heading">
-                <AlbumTitle
-                  id={album.id}
-                  albumName={album.albumName}
-                  isEditor={isAlbumEditor}
-                  onUpdate={(albumName) => (album = { ...album, albumName })}
-                />
+                <AlbumTitle id={album.id} albumName={album.albumName} isEditor={isAlbumEditor} />
               </div>
               {#if album.assetCount > 0}
                 <AlbumSummary {album} />

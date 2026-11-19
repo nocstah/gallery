@@ -10,16 +10,16 @@
   // failing or stuck (Curator's health says which; a week's failures of jobs that have run fine since are said
   // calmly), a backup that failed or is old. An off-site copy not set up yet is a fact, not trouble. What is
   // fine in the library reads as two short lists, its photos and the work, not one run-on line.
-  import { goto } from '$app/navigation';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-  import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-  import { memoryManager } from '$lib/managers/memory-manager.svelte';
-  import { Route } from '$lib/route';
-  import { locale } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl, memoryLaneTitle } from '$lib/utils';
-  import { backupCopy, backupWhen, databaseBackup, type BackupFacts } from '$lib/utils/command-words';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import { globalSearchManager } from '#lib/managers/global-search-manager.svelte.ts';
+  import { memoryFacts } from '#lib/managers/memory-facts.svelte.ts';
+  import { memoryManager } from '#lib/managers/memory-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl, memoryLaneTitle } from '#lib/utils.ts';
+  import { backupCopy, backupWhen, databaseBackup, type BackupFacts } from '#lib/utils/command-words.ts';
+  import { kindQuery, kindsOf } from '#lib/utils/curator-inbox.ts';
   import {
     curator,
     type CuratorOverview,
@@ -28,10 +28,9 @@
     type JobKind,
     type JobRow,
     type LibraryHealth,
-  } from '$lib/utils/curator';
-  import { kindQuery, kindsOf } from '$lib/utils/curator-inbox';
-  import { memoryCardLine } from '$lib/utils/memory-cards';
-  import { memoryCover } from '$lib/utils/memory-title';
+  } from '#lib/utils/curator.ts';
+  import { memoryCardLine } from '#lib/utils/memory-cards.ts';
+  import { memoryCover } from '#lib/utils/memory-title.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { Icon, modalManager, toastManager } from '@immich/ui';
   import {
@@ -46,6 +45,7 @@
   import { DateTime } from 'luxon';
   import { onDestroy, onMount } from 'svelte';
   import { t, type Translations } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
   import type { PageData } from './$types';
 
   interface Props {
@@ -139,7 +139,7 @@
   // and whether that is fine ("Last night's backup to the My Book: fine, 02:10"), where the page showed the
   // database dump's file name and "OK, Oct 23, 02:30 AM". The copies' names are the owner's disk and service.
   const COPY_NAMES = { mybook: 'My Book', b2: 'B2' };
-  const backupWords = (key: Translations, facts: BackupFacts, target?: string) =>
+  const backupWords = (key: Translations, facts: BackupFacts, target = '') =>
     $t(key, {
       values: {
         state: facts.state,
@@ -147,7 +147,7 @@
         last: facts.at ? 'yes' : 'no',
         date: facts.at?.toLocaleString({ day: 'numeric', month: 'short' }) ?? '',
         time: facts.at?.toFormat('HH:mm') ?? '',
-        target: target ?? '',
+        target,
       },
     });
   const backups = $derived.by(() => {

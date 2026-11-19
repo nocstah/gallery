@@ -1,4 +1,4 @@
-import { errorCode, errorPageKind, isMissingKind } from '$lib/utils/error-page';
+import { errorCode, errorPageKind, isMissingKind } from '#lib/utils/error-page.ts';
 
 const ALBUM_ROUTE = '/(user)/albums/[albumId=id]/[[photos=photos]]/[[assetId=id]]';
 const PERSON_ROUTE = '/(user)/people/[personId]/[[photos=photos]]/[[assetId=id]]';

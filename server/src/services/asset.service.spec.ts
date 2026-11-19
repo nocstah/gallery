@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, UnauthorizedException } from '
 import { DateTime } from 'luxon';
 import path from 'node:path';
 import { Readable } from 'node:stream';
-import { type AssetResponseDto, mapAsset } from 'src/dtos/asset-response.dto.js';
+import { mapAsset, type AssetResponseDto } from 'src/dtos/asset-response.dto.js';
 import { AssetJobName, AssetStatsResponseDto } from 'src/dtos/asset.dto.js';
 import { AssetEditAction, AssetEditsCreateDto } from 'src/dtos/editing.dto.js';
 import {
@@ -130,12 +130,16 @@ describe(AssetService.name, () => {
     });
 
     it('should allow shared link access', async () => {
-      const asset = AssetFactory.create();
+      const asset = AssetFactory.from()
+        .owner()
+        .face({}, (face) => face.person())
+        .build();
       mocks.access.asset.checkSharedLinkAccess.mockResolvedValue(new Set([asset.id]));
       mocks.asset.getById.mockResolvedValue(getForAsset(asset));
 
-      await sut.get(authStub.adminSharedLink, asset.id);
+      const result = await sut.get(authStub.adminSharedLink, asset.id);
 
+      expect(result).toMatchObject({ id: asset.id, hasMetadata: true, people: [], owner: undefined });
       expect(mocks.access.asset.checkSharedLinkAccess).toHaveBeenCalledWith(
         authStub.adminSharedLink.sharedLink?.id,
         new Set([asset.id]),
@@ -181,7 +185,7 @@ describe(AssetService.name, () => {
         asset.id,
       );
 
-      expect(result).not.toHaveProperty('owner');
+      expect(result).toMatchObject({ owner: undefined });
     });
 
     it('should clear people for non-owner access', async () => {
@@ -792,7 +796,11 @@ describe(AssetService.name, () => {
       const auth = AuthFactory.create();
       const motionAsset = AssetFactory.from().owner(auth.user).build();
       const asset = AssetFactory.create();
-      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([asset.id]));
+      // AssetUpdate on the asset, the fork's owner-only linkage check (rbac-3), then AssetUpdate on the motion video
+      mocks.access.asset.checkOwnerAccess
+        .mockResolvedValueOnce(new Set([asset.id]))
+        .mockResolvedValueOnce(new Set([asset.id]))
+        .mockResolvedValueOnce(new Set([motionAsset.id]));
       mocks.sharedSpace.findSpaceForAssetAndUser.mockResolvedValue(void 0 as any);
       mocks.asset.getById.mockResolvedValue(getForAsset(asset));
 
@@ -847,7 +855,12 @@ describe(AssetService.name, () => {
     it('should link a live video', async () => {
       const motionAsset = AssetFactory.create({ type: AssetType.Video, visibility: AssetVisibility.Timeline });
       const stillAsset = AssetFactory.create();
-      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([stillAsset.id]));
+      // AssetUpdate on the asset, the fork's owner-only linkage check (rbac-3), then AssetUpdate on the motion video
+      mocks.access.asset.checkOwnerAccess
+        .mockResolvedValueOnce(new Set([stillAsset.id]))
+        .mockResolvedValueOnce(new Set([stillAsset.id]))
+        .mockResolvedValueOnce(new Set([motionAsset.id]))
+        .mockResolvedValue(new Set([stillAsset.id]));
       mocks.sharedSpace.findSpaceForAssetAndUser.mockResolvedValue(void 0 as any);
       mocks.asset.getById.mockResolvedValueOnce(getForAsset(motionAsset));
       mocks.asset.getById.mockResolvedValueOnce(getForAsset(stillAsset));
@@ -1194,24 +1207,24 @@ describe(AssetService.name, () => {
     it("rejects joining another owner's duplicate group", async () => {
       const auth = AuthFactory.create();
       mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set(['asset-1']));
-      mocks.duplicateRepository.hasOtherOwner.mockResolvedValue(true);
+      mocks.galleryDuplicate.hasOtherOwner.mockResolvedValue(true);
 
       await expect(sut.updateAll(auth, { ids: ['asset-1'], duplicateId: 'group-1' })).rejects.toBeInstanceOf(
         ForbiddenException,
       );
 
-      expect(mocks.duplicateRepository.hasOtherOwner).toHaveBeenCalledWith('group-1', auth.user.id);
+      expect(mocks.galleryDuplicate.hasOtherOwner).toHaveBeenCalledWith('group-1', auth.user.id);
       expect(mocks.asset.updateAll).not.toHaveBeenCalled();
     });
 
     it('joins a duplicate group that holds only assets the caller owns', async () => {
       const auth = AuthFactory.create();
       mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set(['asset-1']));
-      mocks.duplicateRepository.hasOtherOwner.mockResolvedValue(false);
+      mocks.galleryDuplicate.hasOtherOwner.mockResolvedValue(false);
 
       await sut.updateAll(auth, { ids: ['asset-1'], duplicateId: 'group-1' });
 
-      expect(mocks.duplicateRepository.hasOtherOwner).toHaveBeenCalledWith('group-1', auth.user.id);
+      expect(mocks.galleryDuplicate.hasOtherOwner).toHaveBeenCalledWith('group-1', auth.user.id);
       expect(mocks.asset.updateAll).toHaveBeenCalledWith(['asset-1'], { duplicateId: 'group-1' });
     });
 
@@ -1723,7 +1736,7 @@ describe(AssetService.name, () => {
       ]);
     });
 
-    it('should set deleteOnDisk to false for offline assets', async () => {
+    it('should queue offline assets like any other (handleAssetDeletion keeps their files)', async () => {
       const asset = AssetFactory.create({ isOffline: true });
 
       mocks.assetJob.streamForDeletedJob.mockReturnValue(makeStream([asset]));
@@ -1732,7 +1745,7 @@ describe(AssetService.name, () => {
       await expect(sut.handleAssetDeletionCheck()).resolves.toBe(JobStatus.Success);
 
       expect(mocks.job.queueAll).toHaveBeenCalledWith([
-        { name: JobName.AssetDelete, data: { id: asset.id, deleteOnDisk: false } },
+        { name: JobName.AssetDelete, data: { id: asset.id, deleteOnDisk: true } },
       ]);
     });
 
@@ -1875,20 +1888,22 @@ describe(AssetService.name, () => {
       expect(mocks.stack.update).not.toHaveBeenCalled();
     });
 
-    it('should delete a live photo', async () => {
+    it.each([
+      { isOffline: false, deleteOnDisk: true },
+      { isOffline: true, deleteOnDisk: false },
+    ])('should delete a live photo (isOffline: $isOffline)', async ({ isOffline, deleteOnDisk }) => {
       const motionAsset = AssetFactory.from({ type: AssetType.Video, visibility: AssetVisibility.Hidden }).build();
-      const asset = AssetFactory.create({ livePhotoVideoId: motionAsset.id });
+      const asset = AssetFactory.from({ livePhotoVideoId: motionAsset.id, isOffline })
+        .file({ type: AssetFileType.Sidecar })
+        .build();
       mocks.assetJob.getForAssetDeletion.mockResolvedValue(getForAssetDeletion(asset));
       mocks.asset.getLivePhotoCount.mockResolvedValue(0);
 
-      await sut.handleAssetDeletion({
-        id: asset.id,
-        deleteOnDisk: true,
-      });
+      await sut.handleAssetDeletion({ id: asset.id, deleteOnDisk: true });
 
       expect(mocks.job.queue.mock.calls).toEqual([
-        [{ name: JobName.AssetDelete, data: { id: motionAsset.id, deleteOnDisk: true } }],
-        [{ name: JobName.FileDelete, data: { files: [asset.originalPath] } }],
+        [{ name: JobName.AssetDelete, data: { id: motionAsset.id, deleteOnDisk } }],
+        [{ name: JobName.FileDelete, data: { files: deleteOnDisk ? [asset.files[0].path, asset.originalPath] : [] } }],
       ]);
     });
 

@@ -1,7 +1,7 @@
+import { CuratorError, type JobRow, type Suggestion } from '#lib/utils/curator.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { CuratorError, type JobRow, type Suggestion } from '$lib/utils/curator';
-import { assetFactory } from '@test-data/factories/asset-factory';
 import RemoveObjects from './RemoveObjects.svelte';
 
 // Local Omarchy layer: the object-removal brush against a stand-in Curator: painting enables Remove, the mask goes to
@@ -19,8 +19,8 @@ const { curatorMock, sdkMock, toastMock } = vi.hoisted(() => ({
   toastMock: { primary: vi.fn() },
 }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: curatorMock,
 }));
 vi.mock('@immich/sdk', async (importOriginal) => ({

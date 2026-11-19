@@ -11,7 +11,7 @@ const { auth } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: auth }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: auth }));
 
 beforeEach(() => {
   auth.authenticated = false;

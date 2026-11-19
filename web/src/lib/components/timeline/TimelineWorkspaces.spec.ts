@@ -1,13 +1,13 @@
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 import TimelineWorkspaces from './TimelineWorkspaces.svelte';
 
 // Local Omarchy layer: the bar's year strip (DESIGN.md, Time Strip)
 describe('TimelineWorkspaces', () => {
   beforeAll(async () => {
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
     await waitLocale('en-US');
   });

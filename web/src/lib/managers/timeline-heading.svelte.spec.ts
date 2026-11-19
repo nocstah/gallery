@@ -1,6 +1,6 @@
+import { monthInView, timelineHeading, type TimelineHeadingSource } from '#lib/managers/timeline-heading.svelte.ts';
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
 import { flushSync } from 'svelte';
-import { monthInView, timelineHeading, type TimelineHeadingSource } from '$lib/managers/timeline-heading.svelte';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
 
 const manager = {
   scrubberMonths: [

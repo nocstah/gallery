@@ -1,8 +1,8 @@
 // collection-selection-utils.ts
+import { normalizeSearchString } from '#lib/utils/string-utils.ts';
 import { SharedSpaceRole, type AlbumResponseDto, type SharedSpaceResponseDto } from '@immich/sdk';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { normalizeSearchString } from '$lib/utils/string-utils';
 
 export type PickerCollection =
   | { kind: 'album'; id: string; name: string; album: AlbumResponseDto }
@@ -33,14 +33,14 @@ export const isWritableSpace = (space: SharedSpaceResponseDto, currentUserId: st
 };
 
 /**
- * #1041: has the caller hidden this space from their OWN timeline? Read from the caller's own
- * `shared_space_member` row, which `getAllSpaces` already embeds in `members` — the same lookup
- * {@link isWritableSpace} does for `role`, so this costs no extra request.
- *
- * Used to decide whether adding a photo to this space should drop it from the caller's timeline
- * view. Defaults to `false` (shown) when the member row is absent: an unknown membership must never
- * make photos disappear, and the next timeline load corrects it either way.
- */
+#1041: has the caller hidden this space from their OWN timeline? Read from the caller's own
+`shared_space_member` row, which `getAllSpaces` already embeds in `members` — the same lookup
+{@link isWritableSpace} does for `role`, so this costs no extra request.
+
+Used to decide whether adding a photo to this space should drop it from the caller's timeline
+view. Defaults to `false` (shown) when the member row is absent: an unknown membership must never
+make photos disappear, and the next timeline load corrects it either way.
+*/
 export const isHiddenFromMyTimeline = (space: SharedSpaceResponseDto, currentUserId: string | null): boolean =>
   space.members?.find((member) => member.userId === currentUserId)?.showInTimeline === false;
 
@@ -59,10 +59,10 @@ export const sortByNameAsc = (collections: PickerCollection[]): PickerCollection
   [...collections].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
 
 /**
- * The picker's Recent rows: the most recently changed collections first. Local Omarchy layer: the album photos went
- * into last (`firstAlbumId`, utils/last-album) leads them however long ago it changed, so the picker can make it the
- * caret's row and Enter adds to it again; an id that is no longer among the collections changes nothing.
- */
+The picker's Recent rows: the most recently changed collections first. Local Omarchy layer: the album photos went
+into last (`firstAlbumId`, utils/last-album) leads them however long ago it changed, so the picker can make it the
+caret's row and Enter adds to it again; an id that is no longer among the collections changes nothing.
+*/
 export const pickRecent = (collections: PickerCollection[], limit = 3, firstAlbumId?: string): PickerCollection[] => {
   const first = firstAlbumId ? collections.find((c) => c.kind === 'album' && c.id === firstAlbumId) : undefined;
   const rest = collections.filter((c) => c !== first).sort((a, b) => recencyOf(b) - recencyOf(a));
@@ -118,9 +118,9 @@ export const isSelectableRowType = (type: CollectionModalRowType): boolean =>
   ].includes(type);
 
 /**
- * The caret index of the first row that matches, or -1. The caret (the picker's `selectedRowIndex`) counts only the
- * selectable rows: section headings and messages are skipped.
- */
+The caret index of the first row that matches, or -1. The caret (the picker's `selectedRowIndex`) counts only the
+selectable rows: section headings and messages are skipped.
+*/
 export const selectableIndexOf = (rows: CollectionModalRow[], match: (row: CollectionModalRow) => boolean): number => {
   let index = -1;
   for (const row of rows) {
@@ -136,12 +136,12 @@ export const selectableIndexOf = (rows: CollectionModalRow[], match: (row: Colle
 };
 
 /**
- * Whether a space row can expand into linked-album children.
- *
- * `albumCount` comes back on every `GET /shared-spaces` row, so this needs no extra request —
- * that is the whole point of the accordion: a space's albums are fetched only once the user
- * asks for them. An absent count (older server) reads as "nothing to expand into".
- */
+Whether a space row can expand into linked-album children.
+
+`albumCount` comes back on every `GET /shared-spaces` row, so this needs no extra request —
+that is the whole point of the accordion: a space's albums are fetched only once the user
+asks for them. An absent count (older server) reads as "nothing to expand into".
+*/
 const isExpandableSpace = (collection: PickerCollection): boolean =>
   collection.kind === 'space' && (collection.space.albumCount ?? 0) > 0;
 
@@ -160,9 +160,9 @@ export class CollectionModalRowConverter {
       /** The one space currently expanded into its linked albums, if any (#965). */
       expandedSpaceId?: string | null;
       /**
-       * The expanded space's linked albums. `undefined` means the request is still in flight —
-       * distinct from `[]`, which means the space genuinely has none.
-       */
+      The expanded space's linked albums. `undefined` means the request is still in flight —
+      distinct from `[]`, which means the space genuinely has none.
+      */
       expandedSpaceAlbums?: PickerCollection[];
     },
   ): CollectionModalRow[] {

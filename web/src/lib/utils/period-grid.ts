@@ -15,7 +15,7 @@ export const periodSlot = (kind: PeriodKind, date: { year: number; month?: numbe
 /** A row's unit (the decade's index, or the year) and the slots it holds. */
 const PER_ROW: Record<PeriodKind, number> = { year: 10, month: 12 };
 /** How many of a row's slots a line holds, widest first: a decade, then its halves; a year, then halves, thirds and
- * quarters. The first whose tiles are at least the smallest tile wins; the last is taken whatever its tiles. */
+quarters. The first whose tiles are at least the smallest tile wins; the last is taken whatever its tiles. */
 const PER_LINE: Record<PeriodKind, number[]> = { year: [10, 5], month: [12, 6, 4, 3] };
 
 export type PeriodGridOptions = {
@@ -46,7 +46,7 @@ export type PeriodGridOptions = {
 export type PeriodCell = { slot: number; tile: boolean; left: number; top: number; width: number; height: number };
 
 /** A line of a row without photos, folded into one slim line naming its span (its first and last slot in the span):
- * the row's other lines keep their fixed places. */
+the row's other lines keep their fixed places. */
 export type PeriodFold = { first: number; last: number; left: number; top: number; height: number };
 
 export type PeriodRow =
@@ -95,9 +95,9 @@ type Line = { slots: number[]; folded?: boolean };
 type Unit = { unit: number; lines: Line[] } | { empty: true; first: number; last: number };
 
 /**
- * The grid for `periods` (a slot each, see `periodSlot`, with its photo count): the rows in reading order (the newest
- * first unless the timeline runs oldest first), each row's slots oldest first along it, every tile and gap at its place.
- */
+The grid for `periods` (a slot each, see `periodSlot`, with its photo count): the rows in reading order (the newest
+first unless the timeline runs oldest first), each row's slots oldest first along it, every tile and gap at its place.
+*/
 export const layoutPeriodGrid = (
   periods: { slot: number; count: number }[],
   options: PeriodGridOptions,

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import SpaceCollage from '$lib/components/spaces/space-collage.svelte';
+  import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import SpaceCollage from '#lib/components/spaces/space-collage.svelte';
   import {
     canDrop,
     getActiveDragPayload,
@@ -10,7 +10,7 @@
     setDragLabel,
     writeDragPayload,
     type DragPayload,
-  } from '$lib/utils/space-album-folder-dnd';
+  } from '#lib/utils/space-album-folder-dnd.ts';
   import type { SharedSpaceAlbumFolderDto, SharedSpaceLinkedAlbumDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiDotsVertical, mdiFolder, mdiFolderOutline } from '@mdi/js';
@@ -21,9 +21,9 @@
     albumCount: number;
     previewAssetIds: string[];
     /**
-     * Local Omarchy layer: the folder's photos are still being chosen (the Albums page's managers/folder-faces). The
-     * cover is the quiet ground alone meanwhile, never the covers as they came, which can be bank slips.
-     */
+    Local Omarchy layer: the folder's photos are still being chosen (the Albums page's managers/folder-faces). The
+    cover is the quiet ground alone meanwhile, never the covers as they came, which can be bank slips.
+    */
     looking?: boolean;
     canManage: boolean;
     /** Needed to run the client-side canDrop check while this card is a drop target. */

@@ -1,15 +1,13 @@
+import { getTabbable } from '#lib/utils/focus-util.ts';
 import { tick } from 'svelte';
-import { getTabbable } from '$lib/utils/focus-util';
 
 interface Options {
-  /**
-   * Set whether the trap is active or not.
-   */
+  /** Set whether the trap is active or not. */
   active?: boolean;
   /**
-   * Local Omarchy layer: where the focus lands when the trap starts, in place of its first control (the photo
-   * viewer's own start, so a photo opens with no focus ring or tooltip over it). Tab then goes on from there.
-   */
+  Local Omarchy layer: where the focus lands when the trap starts, in place of its first control (the photo
+  viewer's own start, so a photo opens with no focus ring or tooltip over it). Tab then goes on from there.
+  */
   initialFocus?: () => HTMLElement | null | undefined;
 }
 

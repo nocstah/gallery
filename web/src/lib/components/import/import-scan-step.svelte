@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ScanProgress } from '$lib/utils/google-takeout-scanner';
+  import type { ScanProgress } from '#lib/utils/google-takeout-scanner.ts';
   import { Icon } from '@immich/ui';
   import { mdiClose } from '@mdi/js';
   import { t } from 'svelte-i18n';

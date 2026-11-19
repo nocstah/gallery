@@ -1,8 +1,13 @@
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import {
+  libraryContextFile,
+  mainLibrary,
+  secondLibrary,
+  serving,
+} from '#test/kioku/factories/library-context-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 import MoveHeldModal from './MoveHeldModal.svelte';
 import MoveProgress from './MoveProgress.svelte';
 import { ACTIVE_VISIBLE_MS, moveManager } from './move-manager.svelte';
@@ -23,8 +28,10 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('$app/state', () => ({ page: mocks.page }));
 vi.mock('$app/navigation', () => ({ invalidateAll: mocks.invalidateAll, goto: vi.fn() }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
-vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({ assetMultiSelectManager: { clear: mocks.clear } }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/managers/asset-multi-select-manager.svelte.ts', () => ({
+  assetMultiSelectManager: { clear: mocks.clear },
+}));
 vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),
   modalManager: { show: mocks.show },

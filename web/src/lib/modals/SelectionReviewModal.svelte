@@ -6,25 +6,25 @@
   // reviewActions: Share, New album, Add to album or space) sit at the foot beside Done, with their keys (L, N); Escape
   // and a click beside the sheet close it too, and focus goes back to the count. Only the rows in view are drawn
   // (utils/review-grid), so a selection of thousands opens as fast as one of ten.
-  import { matchesShortcut, type Shortcut } from '$lib/actions/shortcut';
+  import { matchesShortcut, type Shortcut } from '#lib/actions/shortcut.ts';
   import {
     assetMultiSelectManager,
     type AssetMultiSelectManager,
-  } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { getAssetMediaUrl, isEnabled } from '$lib/utils';
-  import { moveCaret, pxOf, reviewGrid, tilePosition, visibleRange } from '$lib/utils/review-grid';
-  import { getAltText } from '$lib/utils/thumbnail-util';
+  } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { getAssetMediaUrl, isEnabled } from '#lib/utils.ts';
+  import { moveCaret, pxOf, reviewGrid, tilePosition, visibleRange } from '#lib/utils/review-grid.ts';
+  import { getAltText } from '#lib/utils/thumbnail-util.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { Icon, Modal, ModalBody, ModalFooter, type ActionEvent, type ActionItem } from '@immich/ui';
-  import { mdiCheckboxBlankCircleOutline, mdiCheckCircle, mdiPlayCircleOutline } from '@mdi/js';
+  import { mdiCheckCircle, mdiCheckboxBlankCircleOutline, mdiPlayCircleOutline } from '@mdi/js';
   import { tick } from 'svelte';
   import { t } from 'svelte-i18n';
 
   interface Props {
     /**
-     * With the action chosen at its foot, for the caller to run once the sheet is gone (a modal the action opens must
-     * not share the screen with this one); without, when it was simply closed.
-     */
+    With the action chosen at its foot, for the caller to run once the sheet is gone (a modal the action opens must
+    not share the screen with this one); without, when it was simply closed.
+    */
     onClose: (chosen?: ActionEvent) => void;
     /** the selection's main actions on the page, made from the selection as it is when asked */
     actions?: () => ActionItem[];
@@ -177,9 +177,9 @@
         onkeydown={onGridKeydown}
       >
         {#each drawn as index (items[index].id)}
-          {@const asset = items[index]}
-          {@const kept = selection.hasSelectedAsset(asset.id)}
-          {@const at = tilePosition(grid, index)}
+          {const asset = $derived(items[index])}
+          {const kept = $derived(selection.hasSelectedAsset(asset.id))}
+          {const at = $derived(tilePosition(grid, index))}
           <!-- the listbox takes the keys (Space, Enter, the arrows) for the option that has the focus -->
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <div

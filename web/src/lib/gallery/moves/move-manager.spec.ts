@@ -1,5 +1,10 @@
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import {
+  libraryContextFile,
+  mainLibrary,
+  secondLibrary,
+  serving,
+} from '#test/kioku/factories/library-context-factory.ts';
 import { movePageUrl } from './move-gates';
 import { MOVE_KEY_NAME, SOURCE_PERMISSIONS } from './move-keys';
 import { ACTIVE_HIDDEN_MS, ACTIVE_VISIBLE_MS, beginMove, moveManager } from './move-manager.svelte';
@@ -17,7 +22,9 @@ const mocks = vi.hoisted(() => ({
   getApiKeys: vi.fn(),
 }));
 vi.mock('$app/navigation', () => ({ invalidateAll: mocks.invalidateAll, goto: vi.fn() }));
-vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({ assetMultiSelectManager: { clear: mocks.clear } }));
+vi.mock('#lib/managers/asset-multi-select-manager.svelte.ts', () => ({
+  assetMultiSelectManager: { clear: mocks.clear },
+}));
 vi.mock('@immich/sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/sdk')>()),
   createApiKey: mocks.createApiKey,

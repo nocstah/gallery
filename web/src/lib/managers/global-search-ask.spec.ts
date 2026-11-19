@@ -1,16 +1,16 @@
-import { goto } from '$app/navigation';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { curator } from '$lib/utils/curator';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { curator } from '#lib/utils/curator.ts';
 import {
+  SECOND_CURATOR_FEATURES,
   libraryContextFile,
   mainLibrary,
-  SECOND_CURATOR_FEATURES,
   secondOffering,
   serving,
-} from '@test-data/factories/library-context-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
+import { goto } from '$app/navigation';
 import { GlobalSearchManager } from './global-search-manager.svelte';
 
 // Local Omarchy layer: the palette's Ask puts the question to Curator's local models (gallery/libraries: chat). A library
@@ -19,8 +19,8 @@ import { GlobalSearchManager } from './global-search-manager.svelte';
 // Each library's context edits Ctrl+K's lists once it is known, so these live in a file of their own.
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: { ask: vi.fn(), warmAsk: vi.fn(() => Promise.resolve({ warming: true })) },
 }));
 

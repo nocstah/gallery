@@ -4,10 +4,10 @@
 // browser (an album shown there, photos added to it); else the oldest Space offered, which is the family's own as a
 // rule, since it is made first and stays. Only Spaces I can add to are offered (owner or editor), never Library, the
 // album folders' engine (managers/album-folders), and the rest follow the lead quietly, oldest first.
+import { isWritableSpace } from '#lib/components/shared-components/collection-selection/collection-selection-utils.ts';
+import { isLibrarySpace } from '#lib/managers/album-folders.svelte.ts';
 import type { SharedSpaceResponseDto } from '@immich/sdk';
 import type { MessageFormatter, Translations } from 'svelte-i18n';
-import { isWritableSpace } from '$lib/components/shared-components/collection-selection/collection-selection-utils';
-import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
 
 const KEY = 'gallery.lastShareSpace';
 
@@ -46,11 +46,11 @@ export const lastShareSpaceId = (): string | undefined => {
 const NAMED = 3;
 
 /**
- * Who sees what goes into the Space, in one line: the other members by name ("Anna and Ben see it too"), or, while I am
- * its only member, that the family sees it once they have accounts. `alone` and `audience` are the sheet's own keys
- * (an album is "it"; photos are "it" or "them" by their `count`, passed in `values`); `audience` also takes the names
- * and how many people they are (`people`), for the verb's agreement.
- */
+Who sees what goes into the Space, in one line: the other members by name ("Anna and Ben see it too"), or, while I am
+its only member, that the family sees it once they have accounts. `alone` and `audience` are the sheet's own keys
+(an album is "it"; photos are "it" or "them" by their `count`, passed in `values`); `audience` also takes the names
+and how many people they are (`people`), for the verb's agreement.
+*/
 export const spaceAudience = (
   $t: MessageFormatter,
   lang: string,

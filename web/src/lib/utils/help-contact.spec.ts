@@ -1,4 +1,4 @@
-import { contactPerson, helpContact } from '$lib/utils/help-contact';
+import { contactPerson, helpContact } from '#lib/utils/help-contact.ts';
 
 describe('helpContact', () => {
   it('reads an email address, without its subject', () => {

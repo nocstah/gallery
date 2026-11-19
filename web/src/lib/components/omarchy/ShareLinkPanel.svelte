@@ -6,10 +6,11 @@
   // external domain is set it can only be the address on this network, and the panel says so. The code is drawn black
   // on a white quiet zone whatever the theme, the one fixed colour pair outside a photo's caption: a camera needs the
   // contrast, and a dark theme would otherwise run into the code's edge.
-  import SharedLinkFacts from '$lib/components/omarchy/SharedLinkFacts.svelte';
-  import SharedLinkEditModal from '$lib/modals/SharedLinkEditModal.svelte';
-  import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
-  import { asUrl, getSharedLinkActions, handleUpdateSharedLink } from '$lib/services/shared-link.service';
+  import SharedLinkFacts from '#lib/components/omarchy/SharedLinkFacts.svelte';
+  import SharedLinkEditModal from '#lib/modals/SharedLinkEditModal.svelte';
+  import { createPreloadedQuery } from '#lib/queries/client.ts';
+  import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+  import { asUrl, getSharedLinkActions, handleUpdateSharedLink } from '#lib/services/shared-link.service.ts';
   import type { SharedLinkResponseDto } from '@immich/sdk';
   import { Icon, modalManager } from '@immich/ui';
   import { mdiContentCopy, mdiLinkOff, mdiPencilOutline, mdiTrashCanOutline } from '@mdi/js';
@@ -33,7 +34,9 @@
       (svg) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
     ),
   );
-  const homeOnly = $derived(!serverConfigManager.value.externalDomain);
+  // the address a link is given out with (shared-link.service asUrl): the external domain when the server has one
+  const userConfig = createPreloadedQuery(getUserConfigQuery);
+  const homeOnly = $derived(!userConfig.data.server.externalDomain);
 
   // what the link allows, in the Shared links page's words (SharedLinkFacts): who can open it, when it ends in calendar
   // days ("Ends Nov 22", "Never ends"), then whether a visitor can download, add photos or see where they were taken.

@@ -1,54 +1,53 @@
 <script lang="ts">
-  import { markRoot } from '$lib/actions/mark-root';
-  import { browser } from '$app/environment';
-  import { focusTrap } from '$lib/actions/focus-trap';
-  import { shortcuts } from '$lib/actions/shortcut';
-  import type { Action, OnAction, PreAction } from '$lib/components/asset-viewer/actions/action';
-  import NextAssetAction from '$lib/components/asset-viewer/actions/NextAssetAction.svelte';
-  import PreviousAssetAction from '$lib/components/asset-viewer/actions/PreviousAssetAction.svelte';
-  import AssetViewerNavBar from '$lib/components/asset-viewer/AssetViewerNavBar.svelte';
-  import { preloadManager } from '$lib/components/asset-viewer/PreloadManager.svelte';
-  import { removeObjects } from '$lib/components/curator/remove-objects.svelte';
-  import AdjustPhoto from '$lib/components/curator/AdjustPhoto.svelte';
-  import { adjustPhoto } from '$lib/components/curator/adjust-photo.svelte';
-  import LiveEffects from '$lib/components/curator/LiveEffects.svelte';
-  import { liveEffects } from '$lib/components/curator/live-effects.svelte';
-  import LookUpCard from '$lib/components/curator/LookUpCard.svelte';
-  import { lookUp } from '$lib/components/curator/look-up.svelte';
-  import StackPick from '$lib/components/curator/StackPick.svelte';
-  import { stackPick } from '$lib/components/curator/stack-pick.svelte';
-  import RemoveObjects from '$lib/components/curator/RemoveObjects.svelte';
-  import { useViewerZoom } from '$lib/gallery/motion/viewer-zoom';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import type { CuratorFeature } from '$lib/gallery/libraries/library-file';
-  import { curatorIsMine } from '$lib/utils/curator';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import { AssetAction, ProjectionType } from '$lib/constants';
-  import { activityManager } from '$lib/managers/activity-manager.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { editManager, EditToolType } from '$lib/managers/edit/edit-manager.svelte';
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import { getAssetActions } from '$lib/services/asset.service';
-  import { faceManager } from '$lib/stores/face.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { ocrManager } from '$lib/stores/ocr.svelte';
-  import { alwaysLoadOriginalVideo } from '$lib/stores/preferences.store';
-  import { SlideshowNavigation, SlideshowState, slideshowStore } from '$lib/stores/slideshow.store';
-  import { getAssetMediaUrl, getSharedLink, handlePromiseError } from '$lib/utils';
-  import type { OnUndoDelete } from '$lib/utils/actions';
-  import { navigateToAsset } from '$lib/utils/asset-utils';
-  import { handleError } from '$lib/utils/handle-error';
-  import { navigate } from '$lib/utils/navigation';
-  import {
-    canEditSpacePeople as resolveCanEditSpacePeople,
-    resolveEffectiveSpaceId,
-  } from '$lib/utils/asset-editability';
-  import { InvocationTracker } from '$lib/utils/invocationTracker';
-  import { SlideshowHistory } from '$lib/utils/slideshow-history';
-  import { getAltText } from '$lib/utils/thumbnail-util';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
+  import { focusTrap } from '#lib/actions/focus-trap.ts';
+  import { markRoot } from '#lib/actions/mark-root.ts';
+  import { shortcuts } from '#lib/actions/shortcut.ts';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import AssetViewerNavBar from '#lib/components/asset-viewer/AssetViewerNavBar.svelte';
+  import { preloadManager } from '#lib/components/asset-viewer/PreloadManager.svelte.ts';
+  import NextAssetAction from '#lib/components/asset-viewer/actions/NextAssetAction.svelte';
+  import PreviousAssetAction from '#lib/components/asset-viewer/actions/PreviousAssetAction.svelte';
+  import type { Action, OnAction, PreAction } from '#lib/components/asset-viewer/actions/action.ts';
+  import AdjustPhoto from '#lib/components/curator/AdjustPhoto.svelte';
+  import LiveEffects from '#lib/components/curator/LiveEffects.svelte';
+  import LookUpCard from '#lib/components/curator/LookUpCard.svelte';
+  import RemoveObjects from '#lib/components/curator/RemoveObjects.svelte';
+  import StackPick from '#lib/components/curator/StackPick.svelte';
+  import { adjustPhoto } from '#lib/components/curator/adjust-photo.svelte.ts';
+  import { liveEffects } from '#lib/components/curator/live-effects.svelte.ts';
+  import { lookUp } from '#lib/components/curator/look-up.svelte.ts';
+  import { removeObjects } from '#lib/components/curator/remove-objects.svelte.ts';
+  import { stackPick } from '#lib/components/curator/stack-pick.svelte.ts';
+  import { AssetAction, ProjectionType } from '#lib/constants.ts';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import type { CuratorFeature } from '#lib/gallery/libraries/library-file.ts';
+  import { useViewerZoom } from '#lib/gallery/motion/viewer-zoom.ts';
+  import SpatialSceneViewer from '#lib/gallery/spatial/SpatialSceneViewer.svelte';
+  import { spatialSceneState } from '#lib/gallery/spatial/spatial-scene.svelte.ts';
+  import { loadAlbumStackStripIds, stackStrip, viewerAlbumId } from '#lib/gallery/stack/album-stack-strip.ts';
+  import { getViewerSpace } from '#lib/gallery/viewer-space.ts';
+  import { activityManager } from '#lib/managers/activity-manager.svelte.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { EditToolType, editManager } from '#lib/managers/edit/edit-manager.svelte.ts';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import { getAssetActions } from '#lib/services/asset.service.ts';
+  import { faceManager } from '#lib/stores/face.svelte.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { ocrManager } from '#lib/stores/ocr.svelte.ts';
+  import { alwaysLoadOriginalVideo } from '#lib/stores/preferences.store.ts';
+  import { SlideshowNavigation, SlideshowState, slideshowStore } from '#lib/stores/slideshow.store.ts';
+  import { getAssetMediaUrl, getSharedLink, handlePromiseError } from '#lib/utils.ts';
+  import type { OnUndoDelete } from '#lib/utils/actions.ts';
+  import { navigateToAsset } from '#lib/utils/asset-utils.ts';
+  import { curatorIsMine } from '#lib/utils/curator.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { InvocationTracker } from '#lib/utils/invocationTracker.ts';
+  import { navigate } from '#lib/utils/navigation.ts';
+  import { SlideshowHistory } from '#lib/utils/slideshow-history.ts';
+  import { getAltText } from '#lib/utils/thumbnail-util.ts';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
   import {
     AssetMediaSize,
     AssetTypeEnum,
@@ -66,21 +65,20 @@
   import { t } from 'svelte-i18n';
   import { cubicOut } from 'svelte/easing';
   import { fade, fly } from 'svelte/transition';
+  import { browser } from '$app/env';
   import Thumbnail from '../assets/thumbnail/Thumbnail.svelte';
   import ActivityStatus from './ActivityStatus.svelte';
   import ActivityViewer from './ActivityViewer.svelte';
   import DetailPanel from './DetailPanel.svelte';
-  import EditorPanel from './editor/EditorPanel.svelte';
-  import TrimArea from './editor/trim-tool/trim-area.svelte';
-  import CropArea from './editor/transform-tool/CropArea.svelte';
   import ImagePanoramaViewer from './ImagePanoramaViewer.svelte';
-  import SpatialSceneViewer from '$lib/gallery/spatial/SpatialSceneViewer.svelte';
-  import { spatialSceneState } from '$lib/gallery/spatial/spatial-scene.svelte';
   import OcrButton from './OcrButton.svelte';
   import PhotoViewer from './PhotoViewer.svelte';
   import SlideshowBar from './SlideshowBar.svelte';
   import SlideshowMetadataOverlay from './SlideshowMetadataOverlay.svelte';
   import VideoViewer from './VideoWrapperViewer.svelte';
+  import EditorPanel from './editor/EditorPanel.svelte';
+  import CropArea from './editor/transform-tool/CropArea.svelte';
+  import TrimArea from './editor/trim-tool/trim-area.svelte';
 
   export type AssetCursor = {
     current: AssetResponseDto;
@@ -101,9 +99,6 @@
     onUndoDelete?: OnUndoDelete;
     onClose?: (assetId: string) => void;
     onRandom?: () => Promise<{ id: string } | undefined>;
-    spaceId?: string;
-    /** Shared-space surface + the caller's write capability on it — see `Timeline` (#889). */
-    space?: { id: string; canWrite: boolean };
   }
 
   let {
@@ -119,8 +114,6 @@
     onUndoDelete,
     onClose,
     onRandom,
-    spaceId,
-    space,
   }: Props = $props();
 
   const {
@@ -136,6 +129,8 @@
 
   let previewStackedAsset: AssetResponseDto | undefined = $state();
   let stack: StackResponseDto | undefined = $state();
+  let stackStripIds: Set<string> | undefined = $state();
+  const strip = $derived(stackStrip(stack, stackStripIds));
   const asset = $derived(previewStackedAsset ?? cursor.current);
   useViewerZoom(() => asset.id);
   // Local Omarchy layer: Curator's tools and cards open only for Curator's owner (utils/curator's curatorIsMine), each
@@ -159,14 +154,7 @@
   const ownStack = $derived(authManager.authenticated && asset.ownerId === authManager.user.id);
   const nextAsset = $derived(cursor.nextAsset);
   const previousAsset = $derived(cursor.previousAsset);
-  // Slice 8 gap closure: the SAME rule DetailPanel.svelte's People row uses for `asset` — see
-  // `resolveCanEditSpacePeople`'s doc. Threaded into PhotoViewer/VideoViewer's `FaceEditorPanel`
-  // so the face-draw affordance opens the matching endpoint family, never the owner's when a
-  // non-owner space editor triggered it.
-  const canEditSpacePeople = $derived(
-    resolveCanEditSpacePeople(asset, { userId: authManager.authenticated ? authManager.user.id : undefined, spaceId }),
-  );
-  const effectiveSpaceId = $derived(resolveEffectiveSpaceId(asset, spaceId));
+  const { spaceId } = $derived.by(getViewerSpace());
   let sharedLink = getSharedLink();
   let fullscreenElement = $state<Element>();
 
@@ -184,6 +172,7 @@
 
     if (asset.stack) {
       stack = await getStack({ id: asset.stack.id });
+      stackStripIds = await loadAlbumStackStripIds(asset.stack.id, viewerAlbumId(album));
     }
 
     if (!stack?.assets.some(({ id }) => id === asset.id)) {
@@ -365,24 +354,21 @@
   };
 
   const navigateStack = (direction: 'previous' | 'next') => {
-    if (!stack || !withStacked || assetViewerManager.isShowEditor || inCuratorTool) {
+    if (!strip || !withStacked || assetViewerManager.isShowEditor || inCuratorTool) {
       return;
     }
-    const assets = stack.assets;
-    const currentIndex = assets.findIndex(({ id }) => id === asset.id);
+    const currentIndex = strip.assets.findIndex(({ id }) => id === asset.id);
     if (currentIndex === -1) {
       return;
     }
     const nextIndex = direction === 'previous' ? currentIndex - 1 : currentIndex + 1;
-    if (nextIndex < 0 || nextIndex >= assets.length) {
+    if (nextIndex < 0 || nextIndex >= strip.assets.length) {
       return;
     }
-    cursor.current = assets[nextIndex];
+    cursor.current = strip.assets[nextIndex];
   };
 
-  /**
-   * Slide show mode
-   */
+  /** Slide show mode */
 
   let assetViewerHtmlElement = $state<HTMLElement>();
   // Local Omarchy layer: the focus lands on the viewer's own start (the photo named, out of sight, before the controls)
@@ -436,11 +422,11 @@
   // stack's last photo still leaves as before. The timeline drops the photo once it is gone (TimelineAssetViewer's
   // handleAction) and the stack's StackUpdate (utils/stack-covers) brings the strip and its cover up to date.
   const stayInStack = (action: Action) => {
-    if ((action.type !== AssetAction.TRASH && action.type !== AssetAction.DELETE) || !stack || !withStacked) {
+    if ((action.type !== AssetAction.TRASH && action.type !== AssetAction.DELETE) || !stack || !strip || !withStacked) {
       return false;
     }
-    const index = stack.assets.findIndex(({ id }) => id === action.asset.id);
-    const next = index === -1 ? undefined : (stack.assets[index + 1] ?? stack.assets[index - 1]);
+    const index = strip.assets.findIndex(({ id }) => id === action.asset.id);
+    const next = index === -1 ? undefined : (strip.assets[index + 1] ?? strip.assets[index - 1]);
     if (!next) {
       return false;
     }
@@ -451,7 +437,7 @@
     // does once the photo is gone), so it and the address move on to the next photo too, the trashed one's address
     // replaced in the history
     assetViewerManager.setAsset(next);
-    void navigate({ targetRoute: 'current', assetId: next.id }, { replaceState: true });
+    void navigate({ targetRoute: 'current', assetId: next.id }, { replace: true });
     return true;
   };
 
@@ -562,6 +548,7 @@
     if (assetViewerManager.isPlayingMotionPhoto && asset.livePhotoVideoId) {
       return 'LiveVideoViewer';
     }
+
     if (
       asset.exifInfo?.projectionType === ProjectionType.EQUIRECTANGULAR ||
       (asset.originalPath && asset.originalPath.toLowerCase().endsWith('.insp'))
@@ -583,7 +570,6 @@
       ((album && album.isActivityEnabled) || activityManager.commentCount > 0) &&
       !activityManager.isLoading,
   );
-
   const showOcrButton = $derived(
     $slideshowState === SlideshowState.None &&
       asset.type === AssetTypeEnum.Image &&
@@ -591,7 +577,6 @@
       !inCuratorTool &&
       ocrManager.hasOcrData,
   );
-
   const { Tag, TagPeople } = $derived(getAssetActions($t, asset));
   const showDetailPanel = $derived(
     asset.hasMetadata &&
@@ -649,7 +634,7 @@
     { shortcut: { key: 'ArrowUp' }, onShortcut: () => navigateStack('previous') },
     { shortcut: { key: 'ArrowDown' }, onShortcut: () => navigateStack('next') },
   ]}
-/>
+></svelte:document>
 
 <section
   id="immich-asset-viewer"
@@ -691,7 +676,6 @@
         onClose={onClose ? () => onClose(stack?.primaryAssetId ?? asset.id) : undefined}
         {isPlayingOriginalVideo}
         {setPlayOriginalVideo}
-        {space}
       />
     </div>
   {/if}
@@ -716,7 +700,11 @@
   {/if}
 
   <!-- Asset Viewer -->
-  <div data-viewer-content class="relative z-[-1] col-span-4 col-start-1 row-span-full row-start-1">
+  <div
+    data-viewer-content
+    data-testid="viewer-content"
+    class="relative z-[-1] col-span-4 col-start-1 row-span-full row-start-1"
+  >
     {#if viewerKind === 'StackVideoViewer'}
       <VideoViewer
         asset={previewStackedAsset!}
@@ -729,8 +717,6 @@
         onVideoEnded={() => navigateAsset()}
         onVideoStarted={handleVideoStarted}
         playOriginalVideo={isPlayingOriginalVideo}
-        spaceId={effectiveSpaceId}
-        {canEditSpacePeople}
       />
     {:else if viewerKind === 'LiveVideoViewer'}
       <VideoViewer
@@ -743,8 +729,6 @@
         onNextAsset={() => navigateAsset('next')}
         onVideoEnded={() => (assetViewerManager.isPlayingMotionPhoto = false)}
         playOriginalVideo={isPlayingOriginalVideo}
-        spaceId={effectiveSpaceId}
-        {canEditSpacePeople}
       />
     {:else if viewerKind === 'RemoveObjects'}
       <RemoveObjects {asset} onClose={() => removeObjects.close()} />
@@ -761,13 +745,7 @@
     {:else if viewerKind === 'SpatialSceneViewer'}
       <SpatialSceneViewer {asset} />
     {:else if viewerKind === 'PhotoViewer'}
-      <PhotoViewer
-        cursor={{ ...cursor, current: asset }}
-        {sharedLink}
-        {onSwipe}
-        spaceId={effectiveSpaceId}
-        {canEditSpacePeople}
-      />
+      <PhotoViewer cursor={{ ...cursor, current: asset }} {sharedLink} {onSwipe} />
     {:else if viewerKind === 'VideoViewer'}
       <VideoViewer
         {asset}
@@ -781,8 +759,6 @@
         onVideoEnded={() => navigateAsset()}
         onVideoStarted={handleVideoStarted}
         playOriginalVideo={isPlayingOriginalVideo}
-        spaceId={effectiveSpaceId}
-        {canEditSpacePeople}
       />
     {/if}
 
@@ -800,7 +776,7 @@
 
     <!-- Local Omarchy layer: Curator's "Pick the best" for the stack in view -->
     {#if curatorTool('picks') && stack && stackPick.stackId === stack.id && !inCuratorTool && $slideshowState === SlideshowState.None}
-      {@const pickedStack = stack}
+      {const pickedStack = $derived(stack)}
       <StackPick
         stackId={pickedStack.id}
         onClose={() => stackPick.close()}
@@ -837,6 +813,7 @@
     <div
       transition:fly={panelFly}
       id="detail-panel"
+      data-testid="detail-panel"
       class={[
         'row-span-4 row-start-1 overflow-y-auto bg-light transition-all dark:border-l dark:border-s-immich-dark-gray',
         showDetailPanel ? 'w-90' : 'w-100',
@@ -844,16 +821,20 @@
       translate="yes"
     >
       {#if showDetailPanel}
-        <DetailPanel {asset} currentAlbum={album} {spaceId} />
+        <DetailPanel {asset} currentAlbum={album} />
       {:else if assetViewerManager.isShowEditor}
         <EditorPanel {asset} onClose={closeEditor} />
       {/if}
     </div>
   {/if}
 
-  {#if stack && withStacked && !assetViewerManager.isShowEditor && !inCuratorTool && $slideshowState === SlideshowState.None}
-    {@const stackedAssets = stack.assets}
-    <div id="stack-slideshow" class="absolute bottom-0 col-span-4 col-start-1 w-fit max-w-full" data-viewer-chrome>
+  {#if strip && withStacked && !assetViewerManager.isShowEditor && !inCuratorTool && $slideshowState === SlideshowState.None}
+    <div
+      id="stack-slideshow"
+      data-testid="stack-slideshow"
+      class="absolute bottom-0 col-span-4 col-start-1 w-fit max-w-full"
+      data-viewer-chrome
+    >
       <div class="no-wrap horizontal-scrollbar relative flex flex-row overflow-x-auto overflow-y-hidden">
         <!-- Local Omarchy layer: ask Curator for the stack's best photo -->
         {#if ownStack && lookUp.answers('picks')}
@@ -869,7 +850,7 @@
             </button>
           </div>
         {/if}
-        {#each stackedAssets as stackedAsset (stackedAsset.id)}
+        {#each strip.assets as stackedAsset (stackedAsset.id)}
           <div
             class={['relative inline-block px-1 pb-2 transition-all']}
             style:bottom={stackedAsset.id === asset.id ? '0' : '-10px'}

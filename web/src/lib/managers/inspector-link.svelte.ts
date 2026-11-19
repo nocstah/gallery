@@ -1,6 +1,6 @@
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
 import { AssetTypeEnum, type AssetResponseDto } from '@immich/sdk';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
 
 // Local Omarchy layer: the inspector, a second window (on the owner's portrait Dell, beside the AORUS that holds the
 // grid) that shows the photo the main window points at, large, with its details (routes/inspector). The two windows
@@ -14,13 +14,13 @@ export const INSPECTOR_CHANNEL = 'gallery-inspector';
 /** The inspector's window name for window.open: opening it again finds the same window. */
 export const INSPECTOR_WINDOW = 'gallery-inspector';
 /** Where the inspector's document title starts. The owner's Hyprland rule sends a window whose title starts with this
- * to the Dell, so it is a name, never translated. */
+to the Dell, so it is a name, never translated. */
 export const INSPECTOR_TITLE = 'Gallery inspector';
 /** The popup's size where nothing places it (the Hyprland rule maximizes it on the Dell): portrait, like the Dell. */
 export const INSPECTOR_FEATURES = 'popup,width=820,height=1180';
 
 /** Whether this window is somewhere an inspector can go beside it: not a phone, nor a touch-first device (a coarse
- * pointer: a tablet), which have no second screen to put one on. There the View menu and ⇧I offer none. */
+pointer: a tablet), which have no second screen to put one on. There the View menu and ⇧I offer none. */
 export const inspectorFits = () => !mediaQueryManager.isPhone && !mediaQueryManager.pointerCoarse;
 
 export const INSPECTOR_TIMING = {
@@ -46,7 +46,7 @@ export type InspectorSubject = {
 };
 
 /** What a main window points at: the photo open in its viewer, else the last of its selection, else the last photo
- * pointed at, which stays while the pointer is on nothing. */
+pointed at, which stays while the pointer is on nothing. */
 export type InspectorPick =
   | { kind: 'none' }
   | { kind: 'pointer' | 'viewer'; subject: InspectorSubject }
@@ -103,10 +103,10 @@ export type InspectorFeedOptions = {
 };
 
 /**
- * The main window's side: it tells the inspectors what it points at. The photo under the pointer is said once the
- * pointer has rested on it (`settleMs`), a change of the viewer or the selection after the same rest, and an inspector
- * that says hello for the first time hears the pick at once.
- */
+The main window's side: it tells the inspectors what it points at. The photo under the pointer is said once the
+pointer has rested on it (`settleMs`), a change of the viewer or the selection after the same rest, and an inspector
+that says hello for the first time hears the pick at once.
+*/
 export class InspectorFeed {
   /** an inspector has been heard from lately: only then does this window say anything */
   listening = $state(false);
@@ -200,7 +200,7 @@ export class InspectorFeed {
   }
 
   /** Shift+I and the View menu: a closed inspector opens, an open one closes (it lives on another screen, so taking
-   * the focus away from the grid would only get in the way of the keys). */
+  the focus away from the grid would only get in the way of the keys). */
   toggle() {
     if (this.isInspectorOpen()) {
       this.close();
@@ -320,12 +320,12 @@ export type InspectorFollowerOptions = {
 };
 
 /**
- * The inspector's side: it says hello (and keeps saying it, as a heartbeat), keeps the most recent pick any main window
- * said, and asks the main window to go to a page.
- */
+The inspector's side: it says hello (and keeps saying it, as a heartbeat), keeps the most recent pick any main window
+said, and asks the main window to go to a page.
+*/
 export class InspectorFollower {
   /** what a main window points at, the most recently changed one winning; never 'none', so a window pointing at
-   * nothing leaves the last photo where it is */
+  nothing leaves the last photo where it is */
   latest = $state.raw<{ source: string; at: number; pick: InspectorShownPick }>();
   readonly id = newId();
 

@@ -1,10 +1,9 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { resetTileGrid } from '#lib/gallery/__mocks__/tile-grid.ts';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
 import { AlbumUserRole, type AlbumResponseDto } from '@immich/sdk';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { timelineAssetFactory } from '@test-data/factories/asset-factory';
-import { resetTileGrid } from '@test-data/mocks/tile-grid';
 import SpacePage from './SpacePhotoMenu.test-wrapper.svelte';
 
 // Local Omarchy layer: on a Space's photos the right-click menu offers what the Space's selection bar offers for the
@@ -19,10 +18,10 @@ const mocks = vi.hoisted(() => ({
     params: {},
   },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({ featureFlagsManager: { value: { trash: true } } }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({ featureFlagsManager: { value: { trash: true } } }));
 
-const photo = (id: string, ownerId: string, overrides: Partial<TimelineAsset> = {}) =>
+const photo = (id: string, ownerId: string) =>
   timelineAssetFactory.build({
     id,
     ownerId,
@@ -32,7 +31,6 @@ const photo = (id: string, ownerId: string, overrides: Partial<TimelineAsset> = 
     livePhotoVideoId: null,
     city: null,
     country: null,
-    ...overrides,
   });
 
 /** the right-click menu's rows by name (a row's key hint is for the eye only) */

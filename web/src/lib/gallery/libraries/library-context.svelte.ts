@@ -1,4 +1,4 @@
-import { vaultEdition } from '$lib/gallery/edition';
+import { vaultEdition } from '#lib/gallery/edition.ts';
 import {
   LIBRARY_CONTEXT_URL,
   MalformedLibraryContext,
@@ -57,9 +57,9 @@ const read = async (fetchFn: typeof fetch): Promise<LibraryContext | undefined> 
 };
 
 /**
- * Reads this library's context, once: every later call (each navigation's root load) waits for the same read. It never
- * fails; anything that goes wrong leaves Kioku one library with every feature.
- */
+Reads this library's context, once: every later call (each navigation's root load) waits for the same read. It never
+fails; anything that goes wrong leaves Kioku one library with every feature.
+*/
 export const loadLibraryContext = (fetchFn: typeof fetch = fetch): Promise<void> => {
   loading ??= (vaultEdition() ? Promise.resolve(undefined) : read(fetchFn)).then((found) => {
     context = found;
@@ -103,16 +103,16 @@ export const isMainLibrary = (): boolean => context?.main ?? true;
 export const libraryHas = (feature: LibraryFeature): boolean => context?.features[feature] ?? true;
 
 /**
- * The port this library's own Curator listens on, when its context names one (without, utils/curator's curatorPort is
- * Main's 2290). It counts only where the library has a Curator (libraryHas), which utils/curator asks first.
- */
+The port this library's own Curator listens on, when its context names one (without, utils/curator's curatorPort is
+Main's 2290). It counts only where the library has a Curator (libraryHas), which utils/curator asks first.
+*/
 export const libraryCuratorPort = (): number | undefined => context?.curatorPort;
 
 /**
- * Whether this library's Curator offers a feature (library-file's CuratorFeature): none without a Curator of its own,
- * every one where its context lists none (Main, and without a context), else the ones it lists. Every page, row,
- * command and tool that asks Curator for one asks this first, as utils/curator does before any request.
- */
+Whether this library's Curator offers a feature (library-file's CuratorFeature): none without a Curator of its own,
+every one where its context lists none (Main, and without a context), else the ones it lists. Every page, row,
+command and tool that asks Curator for one asks this first, as utils/curator does before any request.
+*/
 export const curatorOffers = (feature: CuratorFeature): boolean =>
   libraryHas('curator') && (context?.curatorFeatures?.includes(feature) ?? true);
 

@@ -1,7 +1,7 @@
+import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { curator, curatorIsMine, type MemoryFacts } from '#lib/utils/curator.ts';
 import { SvelteMap } from 'svelte/reactivity';
-import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { curator, curatorIsMine, type MemoryFacts } from '$lib/utils/curator';
 
 // Local Omarchy layer: what Curator knows of each memory (its places, people, span, count, cover and faces), for the
 // titles of the Memories cards and of a memory's film (utils/memory-title) and for the film's cover and drift. Asked
@@ -39,7 +39,7 @@ class MemoryFactsManager {
   }
 
   /** Whether Curator has answered for all of these memories: the Memories page lays out its cards once it has, since
-   * the facts tell which memories read the same (utils/memory-cards). */
+  the facts tell which memories read the same (utils/memory-cards). */
   settledAll(memoryIds: Iterable<string>): boolean {
     if (!told()) {
       return true;
@@ -53,7 +53,7 @@ class MemoryFactsManager {
   }
 
   /** Ask for these memories' facts and wait until Curator has answered for all of them, or its patience is up (a
-   * memory's page waits so before it checks which card the photo in its address belongs to). */
+  memory's page waits so before it checks which card the photo in its address belongs to). */
   async settle(memoryIds: string[]): Promise<void> {
     while (!this.settledAll(memoryIds)) {
       const answered = new Promise<void>((resolve) => this.#waiters.add(resolve));

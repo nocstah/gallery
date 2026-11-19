@@ -8,39 +8,38 @@
   // The menu leads with what a person does most (the page's own: Favorite, Add to album, New album, Share, the special
   // albums), then where to go (Show in Photos, a stack's items), the downloads and copies in one group, and the page's
   // edits and ways out last; it had opened on Download for WhatsApp, Download for Telegram and Copy subject.
-  import { contextMenuNavigation } from '$lib/actions/context-menu-navigation';
-  import ContextMenu from '$lib/components/shared-components/context-menu/ContextMenu.svelte';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { stackExpandManager } from '$lib/managers/stack-expand-manager.svelte';
-  import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import { optionClickCallbackStore, selectedIdStore } from '$lib/stores/context-menu.store';
-  import { generateId } from '$lib/utils/generate-id';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { fromTimelinePlainDateTime } from '$lib/utils/timeline-util';
+  import { contextMenuNavigation } from '#lib/actions/context-menu-navigation.ts';
+  import { stackPick } from '#lib/components/curator/stack-pick.svelte.ts';
+  import ContextMenu from '#lib/components/shared-components/context-menu/ContextMenu.svelte';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import type { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { shareVideos } from '#lib/managers/share-video-manager.svelte.ts';
+  import { stackExpandManager } from '#lib/managers/stack-expand-manager.svelte.ts';
+  import { thumbnailZoomManager } from '#lib/managers/thumbnail-zoom-manager.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import { optionClickCallbackStore, selectedIdStore } from '#lib/stores/context-menu.store.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { copySubject } from '#lib/utils/copy-subject.ts';
+  import { curatorIsMine } from '#lib/utils/curator.ts';
+  import { revealInPhotos } from '#lib/utils/reveal.ts';
+  import { canShareVideo } from '#lib/utils/share-video.ts';
+  import { fromTimelinePlainDateTime } from '#lib/utils/timeline-util.ts';
   import { AssetMediaSize, AssetVisibility, getAssetInfo } from '@immich/sdk';
-  import { revealInPhotos } from '$lib/utils/reveal';
-  import { goto } from '$app/navigation';
-  import { stackPick } from '$lib/components/curator/stack-pick.svelte';
-  import { copySubject } from '$lib/utils/copy-subject';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import { curatorIsMine } from '$lib/utils/curator';
-  import { canShareVideo } from '$lib/utils/share-video';
-  import { shareVideos } from '$lib/managers/share-video-manager.svelte';
   import {
     mdiArrowCollapseHorizontal,
     mdiArrowExpandHorizontal,
     mdiContentCut,
-    mdiImageSearch,
     mdiImageCheckOutline,
+    mdiImageSearch,
     mdiSendOutline,
     mdiStarFourPointsOutline,
     mdiWhatsapp,
   } from '@mdi/js';
   import type { Snippet } from 'svelte';
   import { locale, t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
 
   interface Props {
     /** the photo grid the menu serves, as a selector */
@@ -73,7 +72,8 @@
   let isOpen = $state(false);
   let position = $state({ x: 0, y: 0 });
   let menuContainer: HTMLUListElement | undefined = $state();
-  const menuId = `tile-context-menu-${generateId()}`;
+  const uid = $props.id();
+  const menuId = `tile-context-menu-${uid}`;
 
   type StackMenu = { stackId: string; assetId: string; isCover: boolean };
   let stackMenu = $state<StackMenu | undefined>();
@@ -205,12 +205,15 @@
   });
   // MenuOption closes the menu before calling us, which clears `picked` and `shareable`. Capture the clips when
   // rendering the item, not after that close, so right-click downloads actually start.
-  const shareClips = (clips: TimelineAsset[], app: 'whatsapp' | 'telegram') => () =>
-    onStackAction(() => {
-      for (const clip of clips) {
-        shareVideos.start(clip.id, app, day(clip));
-      }
-    });
+  const shareClips = (app: 'whatsapp' | 'telegram') => {
+    const clips = shareable;
+    return () =>
+      onStackAction(() => {
+        for (const clip of clips) {
+          shareVideos.start(clip.id, app, day(clip));
+        }
+      });
+  };
 
   const close = () => {
     // also drops an open that is still waiting on the server
@@ -317,7 +320,7 @@
       {@render children()}
       <hr />
       {#if revealAsset}
-        {@const shown = revealAsset}
+        {const shown = $derived(revealAsset)}
         <!-- Local Omarchy layer: the photo in Photos (or Archive), selected there and ready to act on (utils/reveal) -->
         <MenuOption
           icon={mdiImageSearch}
@@ -326,7 +329,7 @@
         />
       {/if}
       {#if stackMenu}
-        {@const menu = stackMenu}
+        {const menu = $derived(stackMenu)}
         <!-- Local Omarchy layer: Curator picks the stack's best photo, for Curator's owner only (curatorIsMine), where
            this library's Curator picks (gallery/libraries); the viewer opens on the stack with the card -->
         {#if curatorIsMine() && curatorOffers('picks')}
@@ -341,7 +344,7 @@
           />
         {/if}
         {#if menu.isCover}
-          {@const expanded = stackExpandManager.isExpanded(menu.stackId)}
+          {const expanded = $derived(stackExpandManager.isExpanded(menu.stackId))}
           <MenuOption
             icon={expanded ? mdiArrowCollapseHorizontal : mdiArrowExpandHorizontal}
             text={expanded ? $t('collapse_stack') : $t('expand_stack')}
@@ -370,16 +373,16 @@
         <MenuOption
           icon={mdiWhatsapp}
           text={$t('download_for_app', { values: { app: 'WhatsApp' } })}
-          onClick={shareClips(shareable, 'whatsapp')}
+          onClick={shareClips('whatsapp')}
         />
         <MenuOption
           icon={mdiSendOutline}
           text={$t('download_for_app', { values: { app: 'Telegram' } })}
-          onClick={shareClips(shareable, 'telegram')}
+          onClick={shareClips('telegram')}
         />
       {/if}
       {#if liftAsset}
-        {@const lifted = liftAsset}
+        {const lifted = $derived(liftAsset)}
         <MenuOption
           icon={mdiContentCut}
           text={$t('copy_subject')}

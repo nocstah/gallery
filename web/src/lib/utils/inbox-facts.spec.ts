@@ -1,18 +1,18 @@
-import { AssetTypeEnum, AssetVisibility, type AssetResponseDto } from '@immich/sdk';
-import { init, register, t, waitLocale, type MessageFormatter } from 'svelte-i18n';
-import { get } from 'svelte/store';
-import type { Suggestion } from '$lib/utils/curator';
+import type { Suggestion } from '#lib/utils/curator.ts';
 import {
+  FACTS_AT_ONCE,
+  InboxFactsLoader,
   cardWords,
   clipLength,
-  FACTS_AT_ONCE,
   factsOf,
-  InboxFactsLoader,
   namesFile,
   photoSubject,
   type InboxFacts,
-} from '$lib/utils/inbox-facts';
-import { assetFactory } from '@test-data/factories/asset-factory';
+} from '#lib/utils/inbox-facts.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { AssetTypeEnum, AssetVisibility, type AssetResponseDto } from '@immich/sdk';
+import { init, register, t, waitLocale, type MessageFormatter } from 'svelte-i18n';
+import { get } from 'svelte/store';
 
 // Local Omarchy layer: an AI inbox card about one photo or clip, by when and where (the owner's "Inbox cards by when
 // and where"). Places and names are stand-ins.
@@ -20,7 +20,7 @@ import { assetFactory } from '@test-data/factories/asset-factory';
 let $t: MessageFormatter;
 
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
   await waitLocale('en-US');
   $t = get(t);

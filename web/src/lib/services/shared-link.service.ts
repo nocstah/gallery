@@ -1,24 +1,29 @@
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import QrCodeModal from '#lib/modals/QrCodeModal.svelte';
+import { invalidateAlbum, invalidateAlbums } from '#lib/queries/album.query.ts';
+import { executeMutation, queryClient, readPreloadedQuery } from '#lib/queries/client.ts';
+import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+import {
+  getAllSharedLinksQuery,
+  removeSharedLinkMutation,
+  updateSharedLinkMutation,
+} from '#lib/queries/shared-link.query.ts';
+import { Route } from '#lib/route.ts';
+import { copyToClipboard } from '#lib/utils.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
 import {
   createSharedLink,
   getSharedLinkById,
-  removeSharedLink,
-  removeSharedLinkAssets,
   updateSharedLink,
   type SharedLinkCreateDto,
   type SharedLinkEditDto,
   type SharedLinkResponseDto,
 } from '@immich/sdk';
-import { modalManager, toastManager, type ActionItem } from '@immich/ui';
+import { modalManager, type ActionItem } from '@immich/ui';
 import { mdiContentCopy, mdiLink, mdiPencilOutline, mdiQrcode, mdiTrashCanOutline } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
 import { goto } from '$app/navigation';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
-import QrCodeModal from '$lib/modals/QrCodeModal.svelte';
-import { Route } from '$lib/route';
-import { copyToClipboard } from '$lib/utils';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
 
 export const getSharedLinksActions = ($t: MessageFormatter) => {
   const ViewAll: ActionItem = {
@@ -53,7 +58,7 @@ export const getSharedLinkActions = ($t: MessageFormatter, sharedLink: SharedLin
   const ViewQrCode: ActionItem = {
     title: $t('view_qr_code'),
     icon: mdiQrcode,
-    onAction: () => handleShowSharedLinkQrCode(sharedLink),
+    onAction: () => showSharedLinkQrCode(sharedLink),
   };
 
   return { Edit, Delete, Copy, ViewQrCode };
@@ -61,24 +66,24 @@ export const getSharedLinkActions = ($t: MessageFormatter, sharedLink: SharedLin
 
 export const asUrl = (sharedLink: SharedLinkResponseDto) => {
   const path = Route.viewSharedLink(sharedLink);
-  return new URL(path, serverConfigManager.value.externalDomain || location.origin).href;
+  return new URL(path, readPreloadedQuery(getUserConfigQuery()).server.externalDomain || location.origin).href;
 };
 
 /**
- * Local Omarchy layer: how long a link the Share sheet makes in one press stays open (the owner, 2026-10-16: "30 days",
- * as iCloud's links do, so a forwarded link doesn't live forever); the link's panel removes the expiry in one press
- * (components/omarchy/ShareLinkPanel), and its options set any other.
- */
+Local Omarchy layer: how long a link the Share sheet makes in one press stays open (the owner, 2026-10-16: "30 days",
+as iCloud's links do, so a forwarded link doesn't live forever); the link's panel removes the expiry in one press
+(components/omarchy/ShareLinkPanel), and its options set any other.
+*/
 export const SHARE_LINK_DAYS = 30;
 export const shareLinkExpiry = (now = Date.now()) =>
   new Date(now + SHARE_LINK_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
 /**
- * Local Omarchy layer: makes the link and hands it back, for the Share sheet (components/share/ShareLinkPanel), which
- * shows it with its QR in place; `handleCreateSharedLink` shows the QR in a dialog of its own instead. With `rethrow`
- * a failure comes back to the caller instead of a toast, for a sheet that says in place what failed (the memory Share
- * sheet).
- */
+Local Omarchy layer: makes the link and hands it back, for the Share sheet (components/share/ShareLinkPanel), which
+shows it with its QR in place; `handleCreateSharedLink` shows the QR in a dialog of its own instead. With `rethrow`
+a failure comes back to the caller instead of a toast, for a sheet that says in place what failed (the memory Share
+sheet).
+*/
 export const makeSharedLink = async (
   dto: SharedLinkCreateDto,
   { rethrow = false }: { rethrow?: boolean } = {},
@@ -97,6 +102,13 @@ export const makeSharedLink = async (
       sharedLink = await getSharedLinkById({ id: sharedLink.id });
     }
 
+    // what upstream's createSharedLinkMutation does once a link is made: the lists of links, and the album's
+    // sharing, are read again (queries/shared-link.query)
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getAllSharedLinksQuery().queryKey, exact: true }),
+      invalidateAlbums(),
+      dto.albumId ? invalidateAlbum(dto.albumId) : undefined,
+    ]);
     eventManager.emit('SharedLinkCreate', sharedLink);
 
     return sharedLink;
@@ -115,25 +127,25 @@ export const handleCreateSharedLink = async (dto: SharedLinkCreateDto) => {
   }
 
   // prevent nested modal
-  void handleShowSharedLinkQrCode(sharedLink);
+  void showSharedLinkQrCode(sharedLink);
 
   return true;
 };
 
+/** Local Omarchy layer: saves through upstream's mutation (its toasts), and tells Kioku's share sheets. */
 export const handleUpdateSharedLink = async (sharedLink: SharedLinkResponseDto, dto: SharedLinkEditDto) => {
-  const $t = await getFormatter();
-
-  try {
-    const response = await updateSharedLink({ id: sharedLink.id, sharedLinkEditDto: dto });
-
-    eventManager.emit('SharedLinkUpdate', { album: sharedLink.album, ...response });
-    toastManager.primary($t('saved'));
-
-    return true;
-  } catch (error) {
-    handleError(error, $t('errors.failed_to_edit_shared_link'));
+  const response = await executeMutation(updateSharedLinkMutation, [{ id: sharedLink.id, sharedLinkEditDto: dto }]);
+  if (!response) {
     return false;
   }
+
+  eventManager.emit('SharedLinkUpdate', { album: sharedLink.album, ...response });
+  return true;
+};
+
+export const showSharedLinkQrCode = async (sharedLink: SharedLinkResponseDto) => {
+  const $t = await getFormatter();
+  await modalManager.show(QrCodeModal, { title: $t('view_link'), value: asUrl(sharedLink) });
 };
 
 const handleDeleteSharedLink = async (sharedLink: SharedLinkResponseDto) => {
@@ -147,50 +159,8 @@ const handleDeleteSharedLink = async (sharedLink: SharedLinkResponseDto) => {
     return;
   }
 
-  try {
-    await removeSharedLink({ id: sharedLink.id });
-    eventManager.emit('SharedLinkDelete', sharedLink);
-    toastManager.primary($t('deleted_shared_link'));
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_delete_shared_link'));
-  }
-};
-
-export const handleRemoveSharedLinkAssets = async (sharedLink: SharedLinkResponseDto, assetIds: string[]) => {
-  const $t = await getFormatter();
-  const success = await modalManager.showDialog({
-    title: $t('remove_assets_title'),
-    prompt: $t('remove_assets_shared_link_confirmation', { values: { count: assetIds.length } }),
-    confirmText: $t('remove'),
+  await executeMutation(removeSharedLinkMutation, [{ id: sharedLink.id }], {
+    // Local Omarchy layer: Kioku's share sheets take the link off their own lists
+    onSuccess: () => eventManager.emit('SharedLinkDelete', sharedLink),
   });
-  if (!success) {
-    return false;
-  }
-
-  try {
-    const results = await removeSharedLinkAssets({
-      id: sharedLink.id,
-      assetIdsDto: { assetIds },
-    });
-
-    for (const result of results) {
-      if (!result.success) {
-        continue;
-      }
-
-      sharedLink.assets = sharedLink.assets.filter((asset) => asset.id !== result.assetId);
-    }
-
-    const count = results.filter((item) => item.success).length;
-    toastManager.primary($t('assets_removed_count', { values: { count } }));
-    return true;
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_remove_assets_from_shared_link'));
-    return false;
-  }
-};
-
-const handleShowSharedLinkQrCode = async (sharedLink: SharedLinkResponseDto) => {
-  const $t = await getFormatter();
-  await modalManager.show(QrCodeModal, { title: $t('view_link'), value: asUrl(sharedLink) });
 };

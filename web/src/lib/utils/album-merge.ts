@@ -4,9 +4,20 @@
 // description, date, cover, order, photos and its place on the Albums page (folder, hidden from my timeline), as a new
 // album under a new link, and takes out of the other album the photos the merge put there. A link or people it was
 // shared with cannot come back; the confirmation says so.
+import { albumFolders } from '#lib/managers/album-folders.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { specialAlbumOf } from '#lib/managers/special-albums.svelte.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import AlbumPickerModal from '#lib/modals/AlbumPickerModal.svelte';
+import { Route } from '#lib/route.ts';
+import { isAlbumEditor } from '#lib/utils/album-utils.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { toastUndoable } from '#lib/utils/undoable.ts';
 import {
-  addAssetsToAlbum,
   BulkIdErrorReason,
+  addAssetsToAlbum,
   createAlbum,
   deleteAlbum,
   getTimeBucket,
@@ -19,17 +30,6 @@ import {
 import { modalManager, toastManager } from '@immich/ui';
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
-import { albumFolders } from '$lib/managers/album-folders.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { specialAlbumOf } from '$lib/managers/special-albums.svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import AlbumPickerModal from '$lib/modals/AlbumPickerModal.svelte';
-import { Route } from '$lib/route';
-import { isAlbumEditor } from '$lib/utils/album-utils';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
-import { toastUndoable } from '$lib/utils/undoable';
 
 /** Every photo of an album, month by month as its page loads them (the album itself does not list them). */
 export const albumAssetIds = async (albumId: string) => {
@@ -112,9 +112,9 @@ export const mergeAlbum = async (source: AlbumResponseDto, target: AlbumResponse
 };
 
 /**
- * Merge into…: the album to merge into (never the album itself, To do, Villa, QR, or one I can't add to), then the
- * merge once confirmed. Resolves with whether it merged.
- */
+Merge into…: the album to merge into (never the album itself, To do, Villa, QR, or one I can't add to), then the
+merge once confirmed. Resolves with whether it merged.
+*/
 export const pickAndMerge = async (source: AlbumResponseDto) => {
   const $t = await getFormatter();
   const me = authManager.user.id;

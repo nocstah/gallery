@@ -8,7 +8,6 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { diff } from 'semver';
 import z from 'zod';
-import type { ExtensionVersion, VectorExtension } from 'src/types.js';
 import {
   EXTENSION_NAMES,
   POSTGRES_VERSION_RANGE,
@@ -27,8 +26,10 @@ import { immich_uuid_v7 } from 'src/schema/functions.js';
 import { migrateGalleryToLatest, revertLastGalleryMigration } from 'src/schema/gallery-migration-ledger.js';
 // eslint-disable-next-line import-x/no-duplicates
 import 'src/schema/index.js'; // make sure all schema definitions are imported for schemaFromCode
+
 // eslint-disable-next-line import-x/no-duplicates
 import { DB } from 'src/schema/index.js';
+import type { ExtensionVersion, VectorExtension } from 'src/types.js';
 import { vectorIndexQuery } from 'src/utils/database.js';
 
 export let cachedVectorExtension: VectorExtension | undefined;
@@ -253,7 +254,8 @@ export class DatabaseRepository {
       await sql`
         ALTER TABLE ${sql.raw(table)}
         ALTER COLUMN embedding
-        SET DATA TYPE vector(${sql.raw(String(dimSize))})`.execute(tx);
+        SET DATA TYPE vector(${sql.raw(String(dimSize))})
+      `.execute(tx);
       await sql.raw(vectorIndexQuery({ vectorExtension, table, indexName, lists })).execute(tx);
     });
     this.logger.log(`Reindexed ${indexName}`);
@@ -311,6 +313,7 @@ export class DatabaseRepository {
       functions: { ignoreExtra: false },
       parameters: { ignoreExtra: true },
       extensions: { ignoreExtra: true },
+      ignorePrefixes: ['futo_backups_'],
     });
 
     return drift;

@@ -1,17 +1,17 @@
 <script lang="ts" generics="T extends SortablePerson">
-  import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
-  import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
-  import SearchBar from '$lib/elements/SearchBar.svelte';
-  import { handleError } from '$lib/utils/handle-error';
-  import { bestMatchFirst, sortInPeopleOrder } from '$lib/utils/people-order';
-  import type { SortablePerson } from '$lib/utils/people-utils';
+  import ImageThumbnail from '#lib/components/assets/thumbnail/ImageThumbnail.svelte';
+  import ControlAppBar from '#lib/components/shared-components/ControlAppBar.svelte';
+  import SearchBar from '#lib/elements/SearchBar.svelte';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { bestMatchFirst, sortInPeopleOrder } from '#lib/utils/people-order.ts';
+  import type { SortablePerson } from '#lib/utils/people-utils.ts';
   import { Button, Icon, IconButton, modalManager, toastManager } from '@immich/ui';
   import { mdiCallMerge, mdiMerge, mdiSwapHorizontal, mdiSwapVertical } from '@mdi/js';
   import { onMount } from 'svelte';
+  import { t } from 'svelte-i18n';
   import { flip } from 'svelte/animate';
   import { quintOut } from 'svelte/easing';
   import { fly } from 'svelte/transition';
-  import { t } from 'svelte-i18n';
 
   interface Props {
     person: T;

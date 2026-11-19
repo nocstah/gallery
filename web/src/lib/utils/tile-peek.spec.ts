@@ -1,12 +1,12 @@
 import {
-  closePeek,
-  installTilePeek,
+  PEEKING_ATTR,
   PEEK_CAPTION_PX,
   PEEK_HOLD_MS,
   PEEK_MARGIN_PX,
-  PEEKING_ATTR,
+  closePeek,
+  installTilePeek,
   peekBox,
-} from '$lib/utils/tile-peek';
+} from '#lib/utils/tile-peek.ts';
 
 describe('peekBox', () => {
   it('fills the window as far as the photo’s shape allows, the margin and the caption line kept', () => {
@@ -34,8 +34,8 @@ describe('installTilePeek', () => {
     on.dispatchEvent(event);
     return event;
   };
-  const release = (key: string) =>
-    document.body.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }));
+  const releaseSpace = () =>
+    document.body.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true, cancelable: true }));
   const tile = () => {
     const frame = document.createElement('div');
     frame.dataset.thumbnailFocusContainer = '';
@@ -77,7 +77,7 @@ describe('installTilePeek', () => {
     expect(root()?.querySelector('.ws-peek-caption')?.textContent).toBe('18 Nov 2026 · Somewhere');
     const sources = [...(root()?.querySelectorAll('img') ?? [])].map((layer) => layer.getAttribute('src'));
     expect(sources.some((source) => source?.includes('size=preview'))).toBe(true);
-    release(' ');
+    releaseSpace();
     expect(root()).not.toBeNull();
     press(' ');
     await vi.runAllTimersAsync();
@@ -121,7 +121,7 @@ describe('installTilePeek', () => {
     press(' ');
     vi.advanceTimersByTime(PEEK_HOLD_MS + 50);
     vi.spyOn(performance, 'now').mockReturnValue(performance.now() + PEEK_HOLD_MS + 50);
-    release(' ');
+    releaseSpace();
     await vi.runAllTimersAsync();
     expect(root()).toBeNull();
   });

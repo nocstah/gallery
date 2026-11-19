@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ChildProcess } from 'node:child_process';
 import { join } from 'node:path';
-import type { ArgOf } from 'src/repositories/event.repository.js';
-import type { VideoInterfaces } from 'src/types.js';
 import {
   HLS_BACKPRESSURE_PAUSE_SEGMENTS,
   HLS_BACKPRESSURE_RESUME_SEGMENTS,
@@ -17,7 +15,9 @@ import {
 import { StorageCore } from 'src/cores/storage.core.js';
 import { OnEvent, OnJob } from 'src/decorators.js';
 import { DatabaseLock, ImmichWorker, JobName, QueueName, TranscodeTarget } from 'src/enum.js';
+import type { ArgOf } from 'src/repositories/event.repository.js';
 import { BaseService } from 'src/services/base.service.js';
+import type { VideoInterfaces } from 'src/types.js';
 import { isVideoStreamSessionPkConstraint } from 'src/utils/database.js';
 import { BaseConfig } from 'src/utils/media.js';
 
@@ -119,10 +119,10 @@ export class TranscodingService extends BaseService {
   }
 
   /**
-   * Release the session's materialized local input file. Null-safe (a session that never
-   * transcoded has nothing to clean), idempotent (nulls the handle so repeat teardown
-   * paths are no-ops), and rejection-safe (a failed download left no temp file to remove).
-   */
+  Release the session's materialized local input file. Null-safe (a session that never
+  transcoded has nothing to clean), idempotent (nulls the handle so repeat teardown
+  paths are no-ops), and rejection-safe (a failed download left no temp file to remove).
+  */
   private async cleanupSessionInput(session: Session) {
     const input = session.input;
     session.input = null;

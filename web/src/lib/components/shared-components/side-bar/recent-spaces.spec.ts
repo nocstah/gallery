@@ -1,15 +1,20 @@
+import RecentSpaces from '#lib/components/shared-components/side-bar/recent-spaces.svelte';
+import { spacesQueryKey } from '#lib/gallery/spaces/space.query.ts';
+import { recentSpaceAlbumsExpanded } from '#lib/gallery/stores/preferences.store.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { albumTreeOpen } from '#lib/stores/preferences.store.ts';
+import { pinnedSpaceIds } from '#lib/stores/space-view.store.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { sharedSpaceFactory } from '#test/kioku/factories/shared-space-factory.ts';
+import { sharedSpaceLinkedAlbumFactory } from '#test/kioku/factories/shared-space-linked-album-factory.ts';
 import { UserAvatarColor } from '@immich/sdk';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import RecentSpaces from '$lib/components/shared-components/side-bar/recent-spaces.svelte';
-import { albumTreeOpen, recentSpaceAlbumsExpanded } from '$lib/stores/preferences.store';
-import { pinnedSpaceIds } from '$lib/stores/space-view.store';
-import { userInteraction } from '$lib/stores/user.svelte';
-import { handleError } from '$lib/utils/handle-error';
-import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
-import { sharedSpaceLinkedAlbumFactory } from '@test-data/factories/shared-space-linked-album-factory';
+
+// The SDK mock registers itself when its module loads; loaded here (hoisted), it comes before the code under test
+// imports @immich/sdk, which the import order above would otherwise load first
+const { sdkMock } = await vi.hoisted(() => import('#lib/gallery/__mocks__/sdk.mock.ts'));
 
 const mockPage = vi.hoisted(() => ({ url: new URL('https://gallery.test/photos') }));
 vi.mock('$app/state', () => ({ page: mockPage }));
@@ -21,31 +26,32 @@ const sidebarMocks = vi.hoisted(() => ({
     railExpanded: false,
   },
 }));
-vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: sidebarMocks.sidebarModeStore }));
+vi.mock('#lib/stores/sidebar-mode.svelte.ts', () => ({ sidebarModeStore: sidebarMocks.sidebarModeStore }));
 
-vi.mock('$lib/utils/handle-error', () => ({
+vi.mock('#lib/utils/handle-error.ts', () => ({
   handleError: vi.fn(),
 }));
 
-vi.mock('$lib/utils', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils')>()),
+vi.mock('#lib/utils.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils.ts')>()),
   getAssetMediaUrl: vi.fn(({ id }: { id: string }) => `/api/assets/${id}/thumbnail?edited=true`),
 }));
 
 describe('RecentSpaces component', () => {
   beforeAll(async () => {
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US' });
     await waitLocale('en-US');
   });
 
   beforeEach(() => {
     vi.resetAllMocks();
-    userInteraction.recentSpaces = undefined;
+    // the spaces list, each space's albums and their folders (gallery/spaces/space.query)
+    queryClient.removeQueries({ queryKey: spacesQueryKey });
+    // a space without folders unless a test gives it some
+    sdkMock.getSharedSpaceAlbumFolders.mockResolvedValue([]);
     pinnedSpaceIds.set([]);
     recentSpaceAlbumsExpanded.set({});
-    userInteraction.spaceAlbums = undefined;
-    userInteraction.spaceFolders = undefined;
     albumTreeOpen.set({});
     mockPage.url = new URL('https://gallery.test/photos');
     sidebarMocks.sidebarModeStore.layout = 'expanded';
@@ -53,10 +59,14 @@ describe('RecentSpaces component', () => {
     sidebarMocks.sidebarModeStore.railExpanded = false;
   });
 
+  // The spaces, then each expanded space's albums and folders, arrive through queries, whose results TanStack
+  // hands over on a timer: let a few rounds of both pass
   const renderAndFlush = async () => {
     render(RecentSpaces);
-    await tick();
-    await tick();
+    for (let round = 0; round < 8; round++) {
+      await tick();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
   };
 
   describe('core behavior', () => {
@@ -67,7 +77,7 @@ describe('RecentSpaces component', () => {
     });
 
     it('does not call getAllSpaces when cache is populated', async () => {
-      userInteraction.recentSpaces = [sharedSpaceFactory.build()];
+      queryClient.setQueryData(spacesQueryKey, [sharedSpaceFactory.build()]);
       await renderAndFlush();
       expect(sdkMock.getAllSpaces).not.toHaveBeenCalled();
     });
@@ -406,8 +416,8 @@ describe('RecentSpaces component', () => {
       await tick();
       await tick();
       expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledTimes(1);
-      expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledWith({ id: 'space-a' });
-      expect(sdkMock.getSharedSpaceAlbumFolders).toHaveBeenCalledWith({ id: 'space-a' });
+      expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledWith({ id: 'space-a' }, expect.anything());
+      expect(sdkMock.getSharedSpaceAlbumFolders).toHaveBeenCalledWith({ id: 'space-a' }, expect.anything());
 
       // collapse then expand again — served from cache, no second call
       await fireEvent.click(screen.getByTestId('sidebar-space-chevron-space-a'));
@@ -446,7 +456,7 @@ describe('RecentSpaces component', () => {
     });
 
     it('leaves Library out: it holds the Albums tree', async () => {
-      const { albumFolders } = await import('$lib/managers/album-folders.svelte');
+      const { albumFolders } = await import('#lib/managers/album-folders.svelte.ts');
       albumFolders.spaceId = 'library';
       sdkMock.getAllSpaces.mockResolvedValueOnce([
         sharedSpaceFactory.build({ id: 'library', name: 'Library' }),
@@ -505,7 +515,7 @@ describe('RecentSpaces component', () => {
       await tick();
 
       expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledTimes(1);
-      expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledWith({ id: 'space-a' });
+      expect(sdkMock.getSharedSpaceAlbums).toHaveBeenCalledWith({ id: 'space-a' }, expect.anything());
       expect(albumRows()).toHaveLength(2);
     });
 

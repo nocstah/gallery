@@ -23,6 +23,7 @@ type ReferenceOrSchemaObject = Extract<ApiBodyOptions, { schema: unknown }>['sch
 type ReferenceObject = Extract<ReferenceOrSchemaObject, { $ref: unknown }>;
 type SchemaObject = Exclude<ReferenceOrSchemaObject, ReferenceObject>;
 
+export * from 'src/gallery/utils/misc.js';
 export class ImmichStartupError extends Error {}
 export const isStartUpError = (error: unknown): error is ImmichStartupError => error instanceof ImmichStartupError;
 
@@ -52,9 +53,7 @@ export const getMethodNames = (instance: any) => {
 export const getExternalDomain = (server: SystemConfig['server'], defaultDomain = 'https://my.immich.app') =>
   server.externalDomain || defaultDomain;
 
-/**
- * @returns a list of strings representing the keys of the object in dot notation
- */
+/** @returns a list of strings representing the keys of the object in dot notation */
 export const getKeysDeep = (target: unknown, path: string[] = [], options: { emptyObjectsAsLeaves?: boolean } = {}) => {
   if (!target || typeof target !== 'object') {
     return [];
@@ -101,36 +100,13 @@ export const unsetDeep = (object: unknown, key: string) => {
   return isEmpty(object) ? undefined : object;
 };
 
-const isMachineLearningEnabled = (machineLearning: SystemConfig['machineLearning']) => machineLearning.enabled;
+export const isMachineLearningEnabled = (machineLearning: SystemConfig['machineLearning']) => machineLearning.enabled;
 export const isSmartSearchEnabled = (machineLearning: SystemConfig['machineLearning']) =>
   isMachineLearningEnabled(machineLearning) && machineLearning.clip.enabled;
 export const isOcrEnabled = (machineLearning: SystemConfig['machineLearning']) =>
   isMachineLearningEnabled(machineLearning) && machineLearning.ocr.enabled;
-export const isPetDetectionEnabled = (machineLearning: SystemConfig['machineLearning']) =>
-  isMachineLearningEnabled(machineLearning) && machineLearning.petDetection.enabled;
-export const isPetRecognitionEnabled = (machineLearning: SystemConfig['machineLearning']) =>
-  isMachineLearningEnabled(machineLearning) && machineLearning.petRecognition.enabled;
-/**
- * Species eligible for individual pet recognition. The re-ID model is a DINOv2 backbone trained on
- * dog and cat identities only, so it has no notion of what distinguishes one bird or one horse from
- * another — embedding those produces arbitrary neighbours and arbitrary clusters. The detector is
- * RF-DETR, a general COCO model narrowed to six animal classes (bird, cat, dog, horse, sheep, cow),
- * so everything outside this set must stay on the species-bucket path it used before individual
- * recognition existed.
- */
-export const RECOGNIZABLE_PET_SPECIES: ReadonlySet<string> = new Set(['dog', 'cat']);
-export const isRecognizablePetSpecies = (species: string) => RECOGNIZABLE_PET_SPECIES.has(species.toLowerCase());
 export const isFacialRecognitionEnabled = (machineLearning: SystemConfig['machineLearning']) =>
   isMachineLearningEnabled(machineLearning) && machineLearning.facialRecognition.enabled;
-// Deliberately gated on `facialRecognition.enabled` rather than `isFacialRecognitionEnabled`: face
-// suggestions are a pure vector query over embeddings that already exist and never call the machine
-// learning service, so the ML master switch must not disable them. Turning that switch off to reclaim
-// resources after a library is scanned is a supported configuration (the e2e stack runs that way),
-// and it previously left suggestions working.
-export const isFaceSuggestionEnabled = (machineLearning: SystemConfig['machineLearning']) =>
-  machineLearning.facialRecognition.enabled &&
-  machineLearning.facialRecognition.suggestions.enabled &&
-  machineLearning.facialRecognition.suggestions.maxDistance > machineLearning.facialRecognition.maxDistance;
 export const isDuplicateDetectionEnabled = (machineLearning: SystemConfig['machineLearning']) =>
   isSmartSearchEnabled(machineLearning) && machineLearning.duplicateDetection.enabled;
 export const isFaceImportEnabled = (metadata: SystemConfig['metadata']) => metadata.faces.import;
@@ -405,10 +381,17 @@ export const useSwagger = (app: INestApplication, { write }: { write: boolean })
   writeFileSync(outputPath, JSON.stringify(patchOpenAPI(openApiDoc), null, 2), { encoding: 'utf8' });
 };
 
-// Compiles a glob to the equivalent Postgres regex (Postgres's Advanced Regular Expression
-// dialect is a superset of what picomatch emits, so the two stay in sync with `picomatch.isMatch`,
-// including which paths a lone `*` may cross vs `/`).
-export const globToPostgresRegex = (glob: string) => picomatch.makeRe(glob).source;
+// Offline detection and the re-online check must share one matcher, or an asset flips state on every scan
+export const createLibraryMatcher = ({
+  importPaths,
+  exclusionPatterns,
+}: {
+  importPaths: string[];
+  exclusionPatterns: string[];
+}) => {
+  const isExcluded = picomatch(exclusionPatterns, { nocase: true });
+  return (path: string) => importPaths.some((importPath) => path.startsWith(importPath)) && !isExcluded(path);
+};
 
 export function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));

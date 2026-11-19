@@ -1,12 +1,12 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { timeToLoadTheMap } from '#lib/constants.ts';
+import { reactivePageMock as mockPage } from '#lib/gallery/__mocks__/reactive-page.mock.svelte.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { SEARCH_FILTER_DEBOUNCE_MS } from '#lib/utils/space-search.ts';
 import { mdiFilterOutline } from '@mdi/js';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick, type Component } from 'svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { timeToLoadTheMap } from '$lib/constants';
-import { SEARCH_FILTER_DEBOUNCE_MS } from '$lib/utils/space-search';
-import { reactivePageMock as mockPage } from '@test-data/mocks/reactive-page.mock.svelte';
 import MapPage from './+page.svelte';
 
 const { featureFlagsMock, gotoMock, mockAssetViewerManager } = vi.hoisted(() => ({
@@ -26,49 +26,49 @@ vi.mock('$app/navigation', () => ({ goto: gotoMock }));
 // `$effect` reading `page.url.search` (I5) — this reactive mock is the faithful stand-in for the
 // real `page` from $app/state.
 vi.mock('$app/state', async () => {
-  const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
+  const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
   return { page: reactivePageMock };
 });
 
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/OnEvents.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/OnEvents.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/filter-panel/filter-panel.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/bindable-filter-panel.stub.svelte');
+vi.mock('#lib/components/filter-panel/filter-panel.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/bindable-filter-panel.stub.svelte');
   return { default: MockComponent };
 });
 
 vi.mock('./MapTimelinePanel.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/map-timeline-panel-grouping.stub.svelte');
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/map-timeline-panel-grouping.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/elements/Portal.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/portal-passthrough.stub.svelte');
+vi.mock('#lib/elements/Portal.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/portal-passthrough.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/map/Map.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/map-component.stub.svelte');
+vi.mock('#lib/components/shared-components/map/Map.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/map-component.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/managers/asset-viewer-manager.svelte', () => ({
+vi.mock('#lib/managers/asset-viewer-manager.svelte.ts', () => ({
   assetViewerManager: mockAssetViewerManager,
 }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: featureFlagsMock,
 }));
 
-vi.mock('$lib/utils/navigation', () => ({ navigate: () => Promise.resolve() }));
+vi.mock('#lib/utils/navigation.ts', () => ({ navigate: () => Promise.resolve() }));
 
 function renderPage() {
   const props = {
@@ -238,9 +238,8 @@ describe('Map page query intersection', () => {
     await fireEvent.click(screen.getByTestId('search-chip-close'));
 
     expect(gotoMock).toHaveBeenCalledWith('/map#12/48.8566/2.3522', {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true,
+      replace: true,
+      reset: false,
     });
   });
 

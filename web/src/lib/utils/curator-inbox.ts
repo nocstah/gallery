@@ -1,5 +1,5 @@
+import { curator, type InboxGroup, type Suggestion } from '#lib/utils/curator.ts';
 import type { Translations } from 'svelte-i18n';
-import { curator, type InboxGroup, type Suggestion } from '$lib/utils/curator';
 
 // Local Omarchy layer: the AI inbox by kind. Curator keys a batch by what it holds and the day its run made it
 // (restore.publish:prints:2026-10-18); the key without the day is the batch's series, its kind. Curator adds a night's
@@ -39,7 +39,7 @@ const localDay = (iso: string) => {
 };
 
 /** The days of a batch's runs: Curator's (the days its waiting proposals were made), else the day in its key, else the
- * day it was made (a Curator from before it said). */
+day it was made (a Curator from before it said). */
 export const runsOf = (batch: { key: string; created_at?: string; runs?: string[] | null }): string[] => {
   if (batch.runs && batch.runs.length > 0) {
     return batch.runs;
@@ -91,10 +91,10 @@ export const kindsOf = (groups: InboxGroup[]): InboxKind[] => {
 export const kindQuery = (keys: string[]) => new URLSearchParams(keys.map((key) => ['group', key])).toString();
 
 /**
- * The days of a kind's runs, short, in the reader's language: the month once for days in the same month ("Oct 15 · 16 ·
- * 18", "Sep 30 · Oct 2"), the year where it is not this one, and past four days the first and the last two around an
- * ellipsis.
- */
+The days of a kind's runs, short, in the reader's language: the month once for days in the same month ("Oct 15 · 16 ·
+18", "Sep 30 · Oct 2"), the year where it is not this one, and past four days the first and the last two around an
+ellipsis.
+*/
 export const runDays = (runs: string[], locale?: string, today = new Date()): string => {
   const days = runs.map((run) => {
     const [year, month, day] = run.split('-').map(Number);
@@ -310,9 +310,9 @@ export const kindActionKeys = (): Translations[] => [
 const percentOf = (confidence: number | null) => (confidence === null ? null : Math.round(confidence * 100));
 
 /**
- * Whether Curator is as sure of every card as of the next ("80% sure" on all 42 of a kind): said on each, it tells one
- * card from another nothing, so the cards leave it out. Goes by the percentage the card would show.
- */
+Whether Curator is as sure of every card as of the next ("80% sure" on all 42 of a kind): said on each, it tells one
+card from another nothing, so the cards leave it out. Goes by the percentage the card would show.
+*/
 export const sharedConfidence = (items: Pick<Suggestion, 'confidence'>[]): boolean =>
   items.length > 1 && new Set(items.map(({ confidence }) => percentOf(confidence))).size === 1;
 
@@ -327,13 +327,13 @@ export type ConfidenceMarks = {
 };
 
 /**
- * Local Omarchy layer (2026-10-18, the owner's "Divider + Delete set apart"): how the cards of a kind, in queue order,
- * say Curator's confidence. A run of cards at one percentage (queue order is most confident first, so a percentage is
- * one run) is headed once, by one quiet line where the run starts ("65% sure  25"), where "80% sure" and "65% sure"
- * had stood on each of a kind's 42 cards; a card whose percentage is its own says it as before. Nothing says it where
- * every card would say the same (sharedConfidence), and a queue that mixes cards with and without a confidence keeps
- * it on the cards, so a heading never seems to hold the ones without.
- */
+Local Omarchy layer (2026-10-18, the owner's "Divider + Delete set apart"): how the cards of a kind, in queue order,
+say Curator's confidence. A run of cards at one percentage (queue order is most confident first, so a percentage is
+one run) is headed once, by one quiet line where the run starts ("65% sure  25"), where "80% sure" and "65% sure"
+had stood on each of a kind's 42 cards; a card whose percentage is its own says it as before. Nothing says it where
+every card would say the same (sharedConfidence), and a queue that mixes cards with and without a confidence keeps
+it on the cards, so a heading never seems to hold the ones without.
+*/
 export const confidenceMarks = (items: Pick<Suggestion, 'id' | 'confidence'>[]): ConfidenceMarks => {
   const marks: ConfidenceMarks = { levels: new Map(), runOf: new Map(), own: new Set() };
   if (sharedConfidence(items)) {
@@ -368,11 +368,11 @@ export const confidenceMarks = (items: Pick<Suggestion, 'id' | 'confidence'>[]):
 };
 
 /**
- * Whether a picture shows nothing: every part of it black, as a tile from its pixels at 8x8 (RGBA) has it. A video
- * whose first frame is black has such a thumbnail (in "Mac albums you're missing", a 404 s clip that opens on black),
- * and so does a frame that came out black; the inbox shows a quiet placeholder for it instead of a black hole in a
- * strip of photos.
- */
+Whether a picture shows nothing: every part of it black, as a tile from its pixels at 8x8 (RGBA) has it. A video
+whose first frame is black has such a thumbnail (in "Mac albums you're missing", a 404 s clip that opens on black),
+and so does a frame that came out black; the inbox shows a quiet placeholder for it instead of a black hole in a
+strip of photos.
+*/
 export const isBlankPixels = (data: ArrayLike<number>, darkest = 10): boolean => {
   for (let index = 0; index < data.length; index += 4) {
     if (data[index + 3] > 0 && (data[index] > darkest || data[index + 1] > darkest || data[index + 2] > darkest)) {

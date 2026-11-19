@@ -1,7 +1,7 @@
 import {
   daysFromToday,
-  isoDay,
   isTomorrow,
+  isoDay,
   nearDayKey,
   seriesDate,
   seriesLongDate,

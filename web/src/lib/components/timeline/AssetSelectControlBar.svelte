@@ -1,8 +1,8 @@
 <script lang="ts">
-  import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import SelectionReviewModal from '$lib/modals/SelectionReviewModal.svelte';
-  import { getAssetBulkActions } from '$lib/services/asset.service';
+  import ControlAppBar from '#lib/components/shared-components/ControlAppBar.svelte';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import SelectionReviewModal from '#lib/modals/SelectionReviewModal.svelte';
+  import { getAssetBulkActions } from '#lib/services/asset.service.ts';
   import { Icon, modalManager, type ActionItem } from '@immich/ui';
   import { mdiChevronDown, mdiClose } from '@mdi/js';
   import type { Snippet } from 'svelte';
@@ -12,10 +12,10 @@
   type Props = {
     children?: Snippet;
     /**
-     * Local Omarchy layer: the selection's main actions on this page, offered again at the foot of Show selected
-     * (modals/SelectionReviewModal), made from the selection as it is when they run. By default the bulk Share, New
-     * album and Add to album or space; a page whose bar offers other actions passes its own, or none.
-     */
+    Local Omarchy layer: the selection's main actions on this page, offered again at the foot of Show selected
+    (modals/SelectionReviewModal), made from the selection as it is when they run. By default the bulk Share, New
+    album and Add to album or space; a page whose bar offers other actions passes its own, or none.
+    */
     reviewActions?: () => ActionItem[];
   };
 

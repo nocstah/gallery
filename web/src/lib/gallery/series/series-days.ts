@@ -1,5 +1,5 @@
+import { dayLabel, tileDateLabel } from '#lib/utils/timeline-dates.ts';
 import type { Translations } from 'svelte-i18n';
-import { dayLabel, tileDateLabel } from '$lib/utils/timeline-dates';
 
 // Local Omarchy layer: the days of a series as Coming up says them (gallery/series): "Tomorrow" for tomorrow, else the
 // weekday and the date as a photo's tile says them, in the reader's language, with the year when it is not this year's.
@@ -26,7 +26,7 @@ export const isTomorrow = (day: string, now = new Date()): boolean =>
   day === isoDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
 
 /** How many days `day` is from today on this computer's calendar: 0 today, 1 tomorrow, -1 yesterday; NaN for a day it
- * cannot read. */
+cannot read. */
 export const daysFromToday = (day: string, now = new Date()): number => {
   const date = parts(day);
   if (!date) {
@@ -62,7 +62,7 @@ const readable = (locale?: string) => {
 };
 
 /** A month and its year ("March 2004"), from Curator's 'YYYY-MM', in the reader's language; one it cannot read, as it
- * is. */
+is. */
 export const seriesMonth = (month: string, locale?: string): string => {
   const match = /^(\d{4})-(\d{2})$/.exec(month);
   if (!match) {
@@ -73,7 +73,7 @@ export const seriesMonth = (month: string, locale?: string): string => {
 };
 
 /** The weekday and the date in full ("Sunday, November 1"), with the year when it is not this year's: a day said in a
- * sentence of its own. */
+sentence of its own. */
 export const seriesLongDate = (day: string, locale?: string, now = new Date()): string => {
   const date = parts(day);
   if (!date) {

@@ -1,5 +1,3 @@
-import { AssetTypeEnum, MemorySearchOrder, MemoryType, type MemoryResponseDto } from '@immich/sdk';
-import type { MessageFormatter } from 'svelte-i18n';
 import {
   cardOfMemory,
   cardsByFacts,
@@ -8,9 +6,11 @@ import {
   memoryCards,
   memorySection,
   wallClockAsUtc,
-} from '$lib/utils/memory-cards';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { BRIGHT, DIM } from '@test-data/thumbhash';
+} from '#lib/utils/memory-cards.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { BRIGHT, DIM } from '#test/kioku/thumbhash.ts';
+import { AssetTypeEnum, MemorySearchOrder, MemoryType, type MemoryResponseDto } from '@immich/sdk';
+import type { MessageFormatter } from 'svelte-i18n';
 
 // the reader's Saturday 18 October 2026, mid-morning, as the server reads the wall clock
 const NOW = Date.UTC(2026, 9, 18, 10, 0, 0);

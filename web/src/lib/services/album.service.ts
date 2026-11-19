@@ -1,66 +1,52 @@
+import { addAssetsToAlbums } from '#lib/gallery/album/album-add.ts';
+import { vaultEdition } from '#lib/gallery/edition.ts';
+import { albumSeriesAction } from '#lib/gallery/series/series-album.svelte.ts';
+import { albumFolders } from '#lib/managers/album-folders.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { photoBooks } from '#lib/managers/photo-book-manager.svelte.ts';
+import { specialAlbumOf } from '#lib/managers/special-albums.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import AddUsersModal from '#lib/modals/AddUsersModal.svelte';
+import AlbumEditModal from '#lib/modals/AlbumEditModal.svelte';
+import AlbumOptionsModal from '#lib/modals/AlbumOptionsModal.svelte';
+import AlbumShareModal from '#lib/modals/AlbumShareModal.svelte';
 import {
-  addAssetsToAlbum as addToAlbum,
-  addAssetsToAlbums as addToAlbums,
-  addUsersToAlbum,
-  AlbumUserRole,
-  BulkIdErrorReason,
-  deleteAlbum,
-  linkAlbum,
-  removeUserFromAlbum,
-  updateAlbumInfo,
-  updateAlbumUser,
-  type AlbumResponseDto,
-  type AlbumsAddAssetsResponseDto,
-  type AssetResponseDto,
-  type BulkIdResponseDto,
-  type SharedSpaceResponseDto,
-  type UpdateAlbumDto,
-  type UserResponseDto,
-} from '@immich/sdk';
-import { modalManager, toastManager, type ActionItem } from '@immich/ui';
+  addUsersToAlbumMutation,
+  deleteAlbumMutation,
+  removeUserFromAlbumMutation,
+  updateAlbumInfoMutation,
+  updateAlbumUserMutation,
+} from '#lib/queries/album.query.ts';
+import { executeMutation } from '#lib/queries/client.ts';
+import { Route } from '#lib/route.ts';
+import { pickAndMerge } from '#lib/utils/album-merge.ts';
+import { createAlbumAndRedirect } from '#lib/utils/album-utils.ts';
+import { downloadArchive } from '#lib/utils/asset-utils.ts';
+import { openFileUploadDialog } from '#lib/utils/file-uploader.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { getPinAction } from '#lib/utils/pin-menu.ts';
+import { AlbumUserRole, type AlbumResponseDto, type UserResponseDto } from '@immich/sdk';
+import { modalManager, type ActionItem } from '@immich/ui';
 import {
+  mdiBookOpenPageVariantOutline,
+  mdiCallMerge,
+  mdiCogOutline,
   mdiDownload,
+  mdiExitToApp,
+  mdiEyeOffOutline,
+  mdiEyeOutline,
+  mdiFolderMoveOutline,
   mdiImageOutline,
   mdiPlus,
   mdiPlusBoxOutline,
   mdiRenameOutline,
   mdiShareVariantOutline,
   mdiTrashCanOutline,
-  mdiExitToApp,
   mdiUpload,
-  mdiCogOutline,
-  mdiEyeOffOutline,
-  mdiEyeOutline,
-  mdiFolderMoveOutline,
-  mdiCallMerge,
-  mdiBookOpenPageVariantOutline,
 } from '@mdi/js';
 import { type MessageFormatter } from 'svelte-i18n';
 import { goto } from '$app/navigation';
-import { vaultEdition } from '$lib/gallery/edition';
-import { albumSeriesAction } from '$lib/gallery/series/series-album.svelte';
-import { albumFolders } from '$lib/managers/album-folders.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { photoBooks } from '$lib/managers/photo-book-manager.svelte';
-import { specialAlbumOf, specialAlbums } from '$lib/managers/special-albums.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import AddUsersModal from '$lib/modals/AddUsersModal.svelte';
-import AlbumEditModal from '$lib/modals/AlbumEditModal.svelte';
-import AlbumOptionsModal from '$lib/modals/AlbumOptionsModal.svelte';
-import AlbumShareModal from '$lib/modals/AlbumShareModal.svelte';
-import SpacePickerModal from '$lib/modals/SpacePickerModal.svelte';
-import { Route } from '$lib/route';
-import { userInteraction } from '$lib/stores/user.svelte';
-import { pickAndMerge } from '$lib/utils/album-merge';
-import { createAlbumAndRedirect } from '$lib/utils/album-utils';
-import { downloadArchive } from '$lib/utils/asset-utils';
-import { openFileUploadDialog } from '$lib/utils/file-uploader';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
-import { rememberLastAlbum } from '$lib/utils/last-album';
-import { getPinAction } from '$lib/utils/pin-menu';
-import { addedToAlbumDone } from '$lib/utils/undoable';
+import { page } from '$app/state';
 
 export const isAlbumOwner = (album: AlbumResponseDto) => album.albumUsers[0].user.id === authManager.user.id;
 export const isAlbumEditor = (album: AlbumResponseDto) =>
@@ -91,7 +77,8 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
       modalManager.show(AddUsersModal, {
         excludedUserIds: album.albumUsers.map(({ user: { id } }) => id),
         // TODO that explicit UserResponseDto[] shouldn't be necessary, but svelte's types seem to be messed up right now and AlbumAddUsersModal has a bad type
-        onAddUsers: (users: UserResponseDto[]) => handleAddUsersToAlbum(album, users),
+        // Local Omarchy layer: the modal closes on true; the mutation resolves to the album when the people were added
+        onAddUsers: async (users: UserResponseDto[]) => !!(await handleAddUsersToAlbum(album, users)),
       }),
   };
 
@@ -211,7 +198,7 @@ export const getAlbumActions = ($t: MessageFormatter, album: AlbumResponseDto) =
   };
 };
 
-export const getAlbumAssetActions = ($t: MessageFormatter, album: AlbumResponseDto, asset: AssetResponseDto) => {
+export const getAlbumAssetActions = ($t: MessageFormatter, album: AlbumResponseDto, asset: { id: string }) => {
   const SetCover: ActionItem = {
     title: $t('set_as_album_cover'),
     icon: mdiImageOutline,
@@ -228,6 +215,8 @@ export const getAlbumAssetsActions = ($t: MessageFormatter, album: AlbumResponse
     icon: mdiPlusBoxOutline,
     $if: () => assets.length > 0,
     onAction: () =>
+      // Local Omarchy layer: through the fork's add (gallery/album/album-add), which takes To do and Villa's own way,
+      // names the album in its notice and leaves an undo
       addAssetsToAlbums(
         [album.id],
         assets.map(({ id }) => id),
@@ -245,192 +234,14 @@ export const getAlbumAssetsActions = ($t: MessageFormatter, album: AlbumResponse
   return { AddAssets, Upload };
 };
 
-/**
- * Single-album add that reports WHICH assets the server accepted.
- *
- * `POST /albums/:id/assets` answers HTTP 200 with per-asset outcomes, so "the call did not throw"
- * is not "every photo landed" — an asset can come back `success:false, error:no_permission`. A
- * caller that paints the whole selection into the album on a non-throwing call shows photos that
- * disappear on the next reload. Cross-owner adds make that routine, because an asset visible
- * through a space is not necessarily one the #764 contribution path will accept.
- */
-export const addAssetsToAlbumWithOutcome = async (
-  albumId: string,
-  assetIds: string[],
-  // Local Omarchy layer: the album's name, where the caller has it (the picker, a sidebar drop, the album's own page),
-  // for a notice and an undo that say where the photos went
-  { notify, albumName }: { notify: boolean; albumName?: string },
-): Promise<{ ok: boolean; addedIds: string[]; deniedIds: string[] }> => {
-  const $t = await getFormatter();
-
-  // Local Omarchy layer: a special album (To do, Villa) takes photos its own way, tagged and out of Photos too
-  // (managers/special-albums); an upload into it (no notice) goes quietly
-  await Promise.all(specialAlbums.map((album) => album.ready()));
-  const special = specialAlbumOf(albumId);
-  if (special) {
-    const moved = await special.move(
-      assetIds.map((id) => ({ id })),
-      { quiet: !notify },
-    );
-    return moved ? { ok: true, addedIds: moved.added, deniedIds: [] } : { ok: false, addedIds: [], deniedIds: [] };
-  }
-
-  try {
-    const results = await addToAlbum({ ...authManager.params, id: albumId, bulkIdsDto: { ids: assetIds } });
-    if (notify) {
-      notifyAddToAlbum($t, albumId, assetIds, results, albumName);
-    }
-    eventManager.emit('AlbumAddAssets', { assetIds, albumIds: [albumId] });
-    const addedIds = results.filter(({ success }) => success).map(({ id }) => id);
-    // Local Omarchy layer: the photos this added (not those already there) can be taken out again from the bar's undo
-    addedToAlbumDone(albumId, addedIds, albumName);
-    // and a person's add (not an upload's) makes this the album the Add to album picker offers first
-    if (notify) {
-      rememberLastAlbum(albumId);
-    }
-    return {
-      ok: true,
-      addedIds,
-      // An asset already in the album comes back `success:false, error:duplicate`. That is not a
-      // refusal — the photo is already where the caller wanted it and there is nothing to retry —
-      // so it must not be lumped in with a genuine permission denial.
-      deniedIds: results
-        .filter(({ success, error }) => !success && error !== BulkIdErrorReason.Duplicate)
-        .map(({ id }) => id),
-    };
-  } catch (error) {
-    handleError(error, $t('errors.error_adding_assets_to_album'));
-    return { ok: false, addedIds: [], deniedIds: [] };
+// Local Omarchy layer: back to the folder the album sat in (managers/album-folders), the top of Albums when none
+const leaveAlbumPage = (album: AlbumResponseDto) => {
+  if (page.params.albumId === album.id) {
+    void goto(Route.albums({ folder: albumFolders.folderOf(album.id) }));
   }
 };
 
-export const addAssetsToAlbums = async (
-  albumIds: string[],
-  assetIds: string[],
-  { notify, albumName }: { notify: boolean; albumName?: string },
-): Promise<boolean> => {
-  const $t = await getFormatter();
-
-  // Delegate the single-album case so both paths share one implementation (and one event emit).
-  if (albumIds.length === 1) {
-    const { ok } = await addAssetsToAlbumWithOutcome(albumIds[0], assetIds, { notify, albumName });
-    return ok;
-  }
-
-  // Local Omarchy layer: a special album among several still takes its photos its own way
-  const special = albumIds.find((id) => specialAlbumOf(id));
-  if (special) {
-    const [moved, rest] = await Promise.all([
-      addAssetsToAlbumWithOutcome(special, assetIds, { notify }),
-      addAssetsToAlbums(
-        albumIds.filter((id) => id !== special),
-        assetIds,
-        { notify },
-      ),
-    ]);
-    return moved.ok && rest;
-  }
-
-  try {
-    if (albumIds.length > 1) {
-      const results = await addToAlbums({ ...authManager.params, albumsAddAssetsDto: { albumIds, assetIds } });
-      if (notify) {
-        notifyAddToAlbums($t, albumIds, assetIds, results);
-      }
-    }
-
-    eventManager.emit('AlbumAddAssets', { assetIds, albumIds });
-    return true;
-  } catch (error) {
-    handleError(error, $t('errors.error_adding_assets_to_album'));
-    return false;
-  }
-};
-
-/**
- * Toast the outcome of an add-to-album call truthfully (#764). The server returns HTTP 200 with
- * per-asset failures, so severity must follow the result counts — a green "Successful" heading is
- * reserved for the all-succeeded case; nothing-added is a warning; partial / already-present is info.
- * Exported for unit testing.
- */
-export const notifyAddToAlbum = (
-  $t: MessageFormatter,
-  albumId: string,
-  assetIds: string[],
-  results: BulkIdResponseDto[],
-  albumName?: string,
-) => {
-  const successCount = results.filter(({ success }) => success).length;
-  const duplicateCount = results.filter(({ error }) => error === 'duplicate').length;
-  const total = assetIds.length;
-  const viewButton = { label: $t('view_album'), onclick: () => goto(Route.viewAlbum({ id: albumId })) };
-  const options = { timeout: 5000 };
-  // Local Omarchy layer: photos, in the album the caller named ("Added 3 photos to “Vietnam”"); upstream's "assets"
-  // and "the album" only where no name came with the call
-
-  if (successCount === total) {
-    toastManager.primary(
-      {
-        description: albumName
-          ? $t('album_add_photos_added', { values: { count: successCount, album: albumName } })
-          : $t('assets_added_to_album_count', { values: { count: successCount } }),
-        button: viewButton,
-      },
-      options,
-    );
-  } else if (duplicateCount === total) {
-    toastManager.info(
-      {
-        description: albumName
-          ? $t('album_add_photos_already_in', { values: { count: duplicateCount, album: albumName } })
-          : $t('assets_were_part_of_album_count', { values: { count: duplicateCount } }),
-        button: viewButton,
-      },
-      options,
-    );
-  } else if (successCount > 0) {
-    toastManager.info(
-      {
-        description: albumName
-          ? $t('album_add_photos_partial', { values: { count: successCount, total, album: albumName } })
-          : $t('assets_added_to_album_partial_count', { values: { successCount, totalCount: total } }),
-        button: viewButton,
-      },
-      options,
-    );
-  } else {
-    // Nothing was added (no_permission and/or a mix that netted zero) — never render as success.
-    toastManager.warning(
-      {
-        description: albumName
-          ? $t('album_add_photos_refused', { values: { count: total, album: albumName } })
-          : $t('assets_cannot_be_added_to_album_count', { values: { count: total } }),
-      },
-      options,
-    );
-  }
-};
-
-const notifyAddToAlbums = (
-  $t: MessageFormatter,
-  albumIds: string[],
-  assetIds: string[],
-  results: AlbumsAddAssetsResponseDto,
-) => {
-  if (results.error === BulkIdErrorReason.Duplicate) {
-    toastManager.info($t('assets_were_part_of_albums_count', { values: { count: assetIds.length } }));
-  } else if (results.error) {
-    toastManager.warning($t('assets_cannot_be_added_to_albums', { values: { count: assetIds.length } }));
-  } else {
-    toastManager.primary(
-      $t('assets_added_to_albums_count', {
-        values: { albumTotal: albumIds.length, assetTotal: assetIds.length },
-      }),
-    );
-  }
-};
-
-export const handleUpdateUserAlbumRole = async ({
+export const handleUpdateUserAlbumRole = ({
   albumId,
   userId,
   role,
@@ -438,28 +249,14 @@ export const handleUpdateUserAlbumRole = async ({
   albumId: string;
   userId: string;
   role: AlbumUserRole;
-}) => {
-  const $t = await getFormatter();
+}) => executeMutation(updateAlbumUserMutation, [{ id: albumId, userId, updateAlbumUserDto: { role } }]);
 
-  try {
-    await updateAlbumUser({ id: albumId, userId, updateAlbumUserDto: { role } });
-    eventManager.emit('AlbumUserUpdate', { albumId, userId, role });
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_change_album_user_role'));
-  }
-};
-
-export const handleAddUsersToAlbum = async (album: AlbumResponseDto, users: UserResponseDto[]) => {
-  const $t = await getFormatter();
-
-  try {
-    await addUsersToAlbum({ id: album.id, addUsersDto: { albumUsers: users.map(({ id }) => ({ userId: id })) } });
-    eventManager.emit('AlbumShare');
-    return true;
-  } catch (error) {
-    handleError(error, $t('errors.error_adding_users_to_album'));
-  }
-};
+export const handleAddUsersToAlbum = (album: AlbumResponseDto, users: UserResponseDto[], onSuccess?: () => void) =>
+  executeMutation(
+    addUsersToAlbumMutation,
+    [{ id: album.id, addUsersDto: { albumUsers: users.map(({ id }) => ({ userId: id })) } }],
+    { onSuccess },
+  );
 
 export const handleRemoveUserFromAlbum = async (album: AlbumResponseDto, albumUser: UserResponseDto) => {
   const $t = await getFormatter();
@@ -474,12 +271,7 @@ export const handleRemoveUserFromAlbum = async (album: AlbumResponseDto, albumUs
     return;
   }
 
-  try {
-    await removeUserFromAlbum({ id: album.id, userId: albumUser.id });
-    eventManager.emit('AlbumUserDelete', { albumId: album.id, userId: albumUser.id });
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_remove_album_users'));
-  }
+  await executeMutation(removeUserFromAlbumMutation, [{ id: album.id, userId: albumUser.id }]);
 };
 
 export const handleLeaveAlbum = async (album: AlbumResponseDto) => {
@@ -495,49 +287,20 @@ export const handleLeaveAlbum = async (album: AlbumResponseDto) => {
     return;
   }
 
-  try {
-    await removeUserFromAlbum({ id: album.id, userId: 'me' });
-    userInteraction.recentAlbums = undefined;
-    eventManager.emit('AlbumDelete', album);
-    return true;
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_remove_album_users'));
-  }
+  await executeMutation(removeUserFromAlbumMutation, [{ id: album.id, userId: 'me' }], {
+    onSuccess: () => leaveAlbumPage(album),
+  });
 };
 
-const handleUpdateThumbnail = async (album: AlbumResponseDto, assetId: string) => {
-  const $t = await getFormatter();
-
-  try {
-    const response = await updateAlbumInfo({
-      id: album.id,
-      updateAlbumDto: {
-        albumThumbnailAssetId: assetId,
-      },
-    });
-    eventManager.emit('AlbumUpdate', response);
-    toastManager.primary($t('album_cover_updated'));
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_update_album_cover'));
-  }
-};
-
-export const handleUpdateAlbum = async ({ id }: { id: string }, dto: UpdateAlbumDto) => {
-  const $t = await getFormatter();
-
-  try {
-    const response = await updateAlbumInfo({ id, updateAlbumDto: dto });
-    eventManager.emit('AlbumUpdate', response);
-    toastManager.primary({
-      description: $t('album_info_updated'),
-      button: { label: $t('view_album'), onclick: () => goto(Route.viewAlbum({ id })) },
-    });
-
-    return true;
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_update_album_info'));
-  }
-};
+const handleUpdateThumbnail = (album: AlbumResponseDto, assetId: string) =>
+  executeMutation(
+    () =>
+      updateAlbumInfoMutation({
+        success: { toast: 'album_cover_updated' },
+        error: { toast: 'errors.unable_to_update_album_cover' },
+      }),
+    [{ id: album.id, updateAlbumDto: { albumThumbnailAssetId: assetId } }],
+  );
 
 export const handleDeleteAlbum = async (album: AlbumResponseDto, options?: { prompt?: boolean; notify?: boolean }) => {
   const $t = await getFormatter();
@@ -551,45 +314,20 @@ export const handleDeleteAlbum = async (album: AlbumResponseDto, options?: { pro
     const description = $t('album_delete_confirmation_description');
     const success = await modalManager.showDialog({ prompt: `${confirmation} ${description}` });
     if (!success) {
-      return false;
+      return;
     }
   }
 
-  try {
-    await deleteAlbum({ id: album.id });
-    eventManager.emit('AlbumDelete', album);
-    if (notify) {
-      toastManager.primary();
-    }
-    return true;
-  } catch (error) {
-    handleError(error, $t('errors.unable_to_delete_album'), { notify });
-    return false;
-  }
+  await executeMutation(
+    () =>
+      deleteAlbumMutation(
+        notify ? { success: { toast: true }, error: { toast: 'errors.unable_to_delete_album' } } : {},
+      ),
+    [{ id: album.id }],
+    { onSuccess: () => leaveAlbumPage(album) },
+  );
 };
 
 export const handleDownloadAlbum = async (album: AlbumResponseDto) => {
   await downloadArchive(album.albumName, { albumId: album.id });
-};
-
-// L15: "Link to space" entry point from the album itself (mirrors the existing "link an album"
-// flow already available from inside a space — see SpaceLinkAlbumModal / the space albums page).
-// Reuses the existing SpacePickerModal (built for cmdk selection, never wired up) and the existing
-// `linkAlbum` PUT /shared-spaces/{id}/albums/{albumId} SDK call — no new backend, no new modal.
-export const handleLinkAlbumToSpace = async (album: AlbumResponseDto) => {
-  const $t = await getFormatter();
-
-  const space = await modalManager.show<{ onClose: (space?: SharedSpaceResponseDto) => void }>(SpacePickerModal, {});
-  if (!space) {
-    return false;
-  }
-
-  try {
-    await linkAlbum({ id: space.id, albumId: album.id });
-    toastManager.primary($t('album_linked_to_space', { values: { space: space.name } }));
-    return true;
-  } catch (error) {
-    handleError(error, $t('spaces_linked_albums_error_link'));
-    return false;
-  }
 };

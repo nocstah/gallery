@@ -1,5 +1,5 @@
+import type { TimelineDate, TimelineDateTime, TimelineYearMonth } from '#lib/utils/timeline-util.ts';
 import type { AssetStackResponseDto, AssetVisibility } from '@immich/sdk';
-import type { TimelineDate, TimelineDateTime, TimelineYearMonth } from '$lib/utils/timeline-util';
 
 export type ViewportTopMonth = TimelineYearMonth | undefined | 'lead-in' | 'lead-out';
 
@@ -96,10 +96,10 @@ export interface UpdateGeometryOptions {
 }
 
 /**
- * Local Omarchy layer: where a month starts in the grid, worked out once per layout (internal/layout-support), for its
- * month mark and the hairline in the gap before it (components/timeline/Month.svelte). Only on the plain grid, where no
- * day labels date the days already.
- */
+Local Omarchy layer: where a month starts in the grid, worked out once per layout (internal/layout-support), for its
+month mark and the hairline in the gap before it (components/timeline/Month.svelte). Only on the plain grid, where no
+day labels date the days already.
+*/
 export type MonthStart = {
   /** the month's first photo in grid order, which carries the mark */
   assetId: string;

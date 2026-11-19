@@ -16,18 +16,18 @@ const PERSON_SUGGESTION_EMBEDDING_SAMPLE = 20;
 const PERSON_SUGGESTION_NUM_RESULTS = 100;
 
 /**
- * Slice 13 (fork isolation): the fork's face-suggestion engine, extracted out of `person.service.ts`
- * — the same isolation `face-repair.service.ts`, `classification.service.ts` and
- * `shared-space.service.ts` already get. This code never interleaves with upstream `PersonService`
- * logic, so keeping it here means an upstream rebase touching `person.service.ts` never conflicts
- * with it. Mechanical move only: every route path, DTO and job name is unchanged, and the OpenAPI
- * output is byte-identical to before the move (verified by the zero-diff gate in the slice 13 commit).
- *
- * `person.service.ts` keeps only the in-place hook this engine needs from upstream code it cannot
- * own outright: the re-scan queue in `update()`. The backfill-completion queue
- * (`handleFaceIdentityBackfill`) and the bootstrap sweep (`queueInitialFaceSuggestionSweep`,
- * `onConfigValidate`, `onConfigUpdate`) live in `src/gallery/services/face-identity-maintenance.service.ts`.
- */
+Slice 13 (fork isolation): the fork's face-suggestion engine, extracted out of `person.service.ts`
+— the same isolation `face-repair.service.ts`, `classification.service.ts` and
+`shared-space.service.ts` already get. This code never interleaves with upstream `PersonService`
+logic, so keeping it here means an upstream rebase touching `person.service.ts` never conflicts
+with it. Mechanical move only: every route path, DTO and job name is unchanged, and the OpenAPI
+output is byte-identical to before the move (verified by the zero-diff gate in the slice 13 commit).
+
+`person.service.ts` keeps only the in-place hook this engine needs from upstream code it cannot
+own outright: the re-scan queue in `update()`. The backfill-completion queue
+(`handleFaceIdentityBackfill`) and the bootstrap sweep (`queueInitialFaceSuggestionSweep`,
+`onConfigValidate`, `onConfigUpdate`) live in `src/gallery/services/face-identity-maintenance.service.ts`.
+*/
 @Injectable()
 export class FaceSuggestionService extends BaseService {
   private async findOrFail(id: string) {
@@ -232,7 +232,10 @@ export class FaceSuggestionService extends BaseService {
       return JobStatus.Skipped;
     }
 
-    const embeddings = await this.personRepository.getAssignedFaceEmbeddings(id, PERSON_SUGGESTION_EMBEDDING_SAMPLE);
+    const embeddings = await this.galleryPersonRepository.getAssignedFaceEmbeddings(
+      id,
+      PERSON_SUGGESTION_EMBEDDING_SAMPLE,
+    );
     if (embeddings.length === 0) {
       return JobStatus.Skipped;
     }
@@ -306,7 +309,7 @@ export class FaceSuggestionService extends BaseService {
     }
 
     let jobs: { name: JobName.PersonSuggestionScan; data: { id: string } }[] = [];
-    for await (const person of this.personRepository.getScannablePeopleWithUnassignedFaces()) {
+    for await (const person of this.galleryPersonRepository.getScannablePeopleWithUnassignedFaces()) {
       jobs.push({ name: JobName.PersonSuggestionScan, data: { id: person.personGroupId } });
       if (jobs.length !== JOBS_ASSET_PAGINATION_SIZE) {
         continue;

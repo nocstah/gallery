@@ -1,5 +1,6 @@
-import mockfs from 'mock-fs';
-import fs, { mkdir, rm, writeFile } from 'node:fs/promises';
+import mockfs, { symlink } from 'mock-fs';
+import { R_OK } from 'node:constants';
+import { mkdtempDisposable, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
@@ -218,7 +219,25 @@ describe(StorageRepository.name, () => {
   afterEach(() => {
     // eslint-disable-next-line import-x/no-named-as-default-member
     mockfs.restore();
-    vi.restoreAllMocks();
+  });
+
+  it.each(['crawl', 'walk'] as const)('%s should skip symbolic links to files and directories', async (method) => {
+    mockfs({
+      '/photos/image.jpg': '',
+      '/photos/subfolder/image.jpg': '',
+      '/outside/secret.txt': 'secret',
+      '/outside/album/image.jpg': '',
+      '/photos/file-link.jpg': symlink({ path: '/outside/secret.txt' }),
+      '/photos/directory-link': symlink({ path: '/outside/album' }),
+      '/photos/internal-file-link.jpg': symlink({ path: '/photos/image.jpg' }),
+      '/photos/internal-directory-link': symlink({ path: '/photos/subfolder' }),
+      '/photos/broken-link.jpg': symlink({ path: '/outside/missing.jpg' }),
+    });
+
+    const options = { pathsToCrawl: ['/photos'], take: 1 };
+    const batches = method === 'crawl' ? [await sut.crawl(options)] : await Array.fromAsync(sut.walk(options));
+
+    expect(batches.flat().toSorted()).toEqual(['/photos/image.jpg', '/photos/subfolder/image.jpg']);
   });
 
   describe('crawl', () => {
@@ -236,6 +255,52 @@ describe(StorageRepository.name, () => {
     }
   });
 
+  describe('walk', () => {
+    it.each([
+      { exclusionPatterns: [] },
+      { exclusionPatterns: ['**/*.xmp'] },
+      { exclusionPatterns: ['**/excluded/**'] },
+    ])('should only return assets and respect exclusions: $exclusionPatterns', async ({ exclusionPatterns }) => {
+      mockfs({
+        '/photos/photo.jpg': '',
+        '/photos/photo.nef': '',
+        '/photos/photo.jpg.xmp': '',
+        '/photos/photo.xmp': '',
+        '/photos/excluded/photo.jpg': '',
+        '/photos/excluded/photo.xmp': '',
+      });
+
+      const batches = await Array.fromAsync(sut.walk({ pathsToCrawl: ['/photos'], exclusionPatterns, take: 1 }));
+
+      expect(batches.every((batch) => batch.length === 1)).toBe(true);
+      expect(batches.flat().toSorted()).toEqual(
+        [
+          '/photos/photo.jpg',
+          '/photos/photo.nef',
+          ...(exclusionPatterns.includes('**/excluded/**') ? [] : ['/photos/excluded/photo.jpg']),
+        ].toSorted(),
+      );
+    });
+  });
+
+  describe('checkFileExists', () => {
+    it.for(['PHOTO.xmp', 'photo.XMP'])(
+      'should not match %s with different case on a case-sensitive filesystem',
+      async (filename, { skip }) => {
+        await using tempDir = await mkdtempDisposable(join(tmpdir(), 'immich-storage-sidecar-'));
+        await writeFile(join(tempDir.path, 'case-probe'), 'test');
+        if (await sut.checkFileExists(join(tempDir.path, 'CASE-PROBE'), R_OK)) {
+          skip();
+        }
+        const candidate = join(tempDir.path, filename);
+        await writeFile(candidate, 'test');
+
+        await expect(sut.checkFileExists(candidate, R_OK)).resolves.toBe(true);
+        await expect(sut.checkFileExists(join(tempDir.path, 'photo.xmp'), R_OK)).resolves.toBe(false);
+      },
+    );
+  });
+
   describe('watch', () => {
     it('should register event handlers and close the watcher', async () => {
       const onReady = vitest.fn();
@@ -245,7 +310,10 @@ describe(StorageRepository.name, () => {
       const onError = vitest.fn();
       const close = sut.watch(['/photos'], {}, { onAdd, onChange, onError, onReady, onUnlink });
 
-      expect(mocks.watch).toHaveBeenCalledWith(['/photos'], expect.objectContaining({ ignored: expect.any(Function) }));
+      expect(mocks.watch).toHaveBeenCalledWith(
+        ['/photos'],
+        expect.objectContaining({ followSymlinks: false, ignored: expect.any(Function) }),
+      );
 
       const error = new Error('watch error');
       getHandler('ready')();
@@ -284,66 +352,6 @@ describe(StorageRepository.name, () => {
         getHandler('unlink')('/photos/unlink.jpg');
         getHandler('error')(new Error('watch error'));
       }).not.toThrow();
-    });
-  });
-
-  describe('getFolderSize', () => {
-    it('sums nested file sizes recursively', async () => {
-      // eslint-disable-next-line import-x/no-named-as-default-member
-      mockfs.restore();
-      const testDir = join(tmpdir(), `immich-storage-repo-${Date.now()}`);
-      try {
-        await mkdir(join(testDir, 'aa'), { recursive: true });
-        await writeFile(join(testDir, 'aa/one.jpg'), 'one');
-        await mkdir(join(testDir, 'bb'), { recursive: true });
-        await writeFile(join(testDir, 'bb/two.jpg'), 'two!!');
-        await mkdir(join(testDir, 'empty'), { recursive: true });
-
-        await expect(sut.getFolderSize(testDir)).resolves.toBe(8);
-      } finally {
-        await rm(testDir, { recursive: true, force: true });
-      }
-    });
-
-    it('returns zero when the folder does not exist', async () => {
-      mockfs({});
-
-      await expect(sut.getFolderSize('/data/upload/missing')).resolves.toBe(0);
-    });
-
-    it('skips files rejected by the filter', async () => {
-      // eslint-disable-next-line import-x/no-named-as-default-member
-      mockfs.restore();
-      const testDir = join(tmpdir(), `immich-storage-filter-${Date.now()}`);
-      try {
-        await mkdir(join(testDir, 'aa'), { recursive: true });
-        await writeFile(join(testDir, 'aa/keep.jpg'), 'one');
-        await writeFile(join(testDir, 'aa/skip.jpg'), 'two!!');
-
-        await expect(sut.getFolderSize(testDir, (filename) => filename !== 'skip.jpg')).resolves.toBe(3);
-      } finally {
-        await rm(testDir, { recursive: true, force: true });
-      }
-    });
-
-    it('ignores files deleted between listing and stat', async () => {
-      // Regression for the nightly scan walking a live tree that delete jobs write to: a file
-      // can vanish between `opendir` and `stat`. Uses a real temp dir (not mock-fs) because
-      // mock-fs does not intercept `fs.promises.opendir`'s async iterator, so a mock-fs-only
-      // version of this test would never reach the `stat` call it's meant to exercise.
-      // eslint-disable-next-line import-x/no-named-as-default-member
-      mockfs.restore();
-      const testDir = join(tmpdir(), `immich-storage-enoent-${Date.now()}`);
-      try {
-        await mkdir(join(testDir, 'aa'), { recursive: true });
-        await writeFile(join(testDir, 'aa/one.webp'), 'one');
-        const error = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
-        vi.spyOn(fs, 'stat').mockRejectedValueOnce(error as never);
-
-        await expect(sut.getFolderSize(testDir)).resolves.toBe(0);
-      } finally {
-        await rm(testDir, { recursive: true, force: true });
-      }
     });
   });
 

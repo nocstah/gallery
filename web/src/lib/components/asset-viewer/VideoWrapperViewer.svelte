@@ -1,8 +1,8 @@
 <script lang="ts">
-  import VideoNativeViewer from '$lib/components/asset-viewer/VideoNativeViewer.svelte';
-  import VideoContextMenu from '$lib/components/asset-viewer/VideoContextMenu.svelte';
-  import VideoPanoramaViewer from '$lib/components/asset-viewer/VideoPanoramaViewer.svelte';
-  import { ProjectionType } from '$lib/constants';
+  import VideoContextMenu from '#lib/components/asset-viewer/VideoContextMenu.svelte';
+  import VideoNativeViewer from '#lib/components/asset-viewer/VideoNativeViewer.svelte';
+  import VideoPanoramaViewer from '#lib/components/asset-viewer/VideoPanoramaViewer.svelte';
+  import { ProjectionType } from '#lib/constants.ts';
   import type { AssetResponseDto } from '@immich/sdk';
 
   interface Props {
@@ -18,9 +18,6 @@
     onNextAsset?: () => void;
     onVideoEnded?: () => void;
     onVideoStarted?: () => void;
-    /** Slice 8 gap closure — threaded through to VideoNativeViewer's FaceEditorPanel. */
-    spaceId?: string;
-    canEditSpacePeople?: boolean;
   }
 
   let {
@@ -36,8 +33,6 @@
     onNextAsset,
     onVideoEnded,
     onVideoStarted,
-    spaceId,
-    canEditSpacePeople,
   }: Props = $props();
 
   const effectiveAssetId = $derived(assetId ?? asset.id);
@@ -59,8 +54,6 @@
       {onVideoEnded}
       {onVideoStarted}
       {onClose}
-      {spaceId}
-      {canEditSpacePeople}
     />
   {/if}
 </VideoContextMenu>

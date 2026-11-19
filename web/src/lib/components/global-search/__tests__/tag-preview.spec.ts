@@ -12,10 +12,10 @@ vi.mock('@immich/sdk', async () => {
 });
 
 // Local Omarchy layer: the owner, who has QR, and one of QR's bank slips as the palette reads them (managers/slip-covers)
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: { authenticated: true, user: { id: 'owner', isAdmin: true } },
 }));
-vi.mock('$lib/managers/slip-covers.svelte', () => ({
+vi.mock('#lib/managers/slip-covers.svelte.ts', () => ({
   slipCovers: { isSlip: (assetId: string | null | undefined) => assetId === 'a-slip', known: true },
 }));
 

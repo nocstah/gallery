@@ -1,20 +1,20 @@
-import { AssetVisibility } from '@immich/sdk';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { canLaunchVaultChooser } from '$lib/gallery/vaults/launcher';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { offeredSpecialAlbums, qrManager, todoManager, villaManager } from '$lib/managers/special-albums.svelte';
-import { bookFileUrl, curator, CuratorError, curatorIsMine, filmFileUrl, musicUrl } from '$lib/utils/curator';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { canLaunchVaultChooser } from '#lib/gallery/vaults/launcher.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { offeredSpecialAlbums, qrManager, todoManager, villaManager } from '#lib/managers/special-albums.svelte.ts';
+import { CuratorError, bookFileUrl, curator, curatorIsMine, filmFileUrl, musicUrl } from '#lib/utils/curator.ts';
 import {
+  SECOND_CURATOR_FEATURES,
   libraryContextFile,
   mainLibrary,
-  SECOND_CURATOR_FEATURES,
   secondLibrary,
   secondOffering,
   secondWithout,
   serving,
-} from '@test-data/factories/library-context-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
+import { AssetVisibility } from '@immich/sdk';
 import { loadLibraryContext, resetLibraryContext } from './library-context.svelte';
 import { CURATOR_FEATURES, type CuratorFeature } from './library-file';
 import { leaveOutOfThisLibrary, notInThisLibrary, pageInThisLibrary } from './library-gates';
@@ -217,8 +217,8 @@ describe("Ctrl+K's lists, built after the context as the app builds them", () =>
     vi.resetModules();
     const fresh = await import('./library-context.svelte');
     await fresh.loadLibraryContext(serving(libraryContextFile(secondLibrary)));
-    const { NAVIGATION_ITEMS } = await import('$lib/managers/navigation-items');
-    const { COMMAND_ITEMS } = await import('$lib/managers/command-items');
+    const { NAVIGATION_ITEMS } = await import('#lib/managers/navigation-items.ts');
+    const { COMMAND_ITEMS } = await import('#lib/managers/command-items.ts');
 
     const routes = NAVIGATION_ITEMS.map(({ route }) => route);
     for (const left of ['/command', '/inbox', '/inbox?tab=jobs', '/inbox?tab=history', '/inbox?tab=health', '/chat']) {
@@ -237,8 +237,8 @@ describe("Ctrl+K's lists, built after the context as the app builds them", () =>
     vi.resetModules();
     const fresh = await import('./library-context.svelte');
     await fresh.loadLibraryContext(serving(libraryContextFile(mainLibrary)));
-    const { NAVIGATION_ITEMS } = await import('$lib/managers/navigation-items');
-    const { COMMAND_ITEMS } = await import('$lib/managers/command-items');
+    const { NAVIGATION_ITEMS } = await import('#lib/managers/navigation-items.ts');
+    const { COMMAND_ITEMS } = await import('#lib/managers/command-items.ts');
 
     const routes = NAVIGATION_ITEMS.map(({ route }) => route);
     for (const kept of ['/command', '/inbox', '/chat', '/todo', '/villa', '/qr']) {
@@ -341,7 +341,7 @@ describe("Ctrl+K's lists, in a library whose Curator offers only some of what Ma
     vi.resetModules();
     const fresh = await import('./library-context.svelte');
     await fresh.loadLibraryContext(serving(file));
-    const { NAVIGATION_ITEMS } = await import('$lib/managers/navigation-items');
+    const { NAVIGATION_ITEMS } = await import('#lib/managers/navigation-items.ts');
     return NAVIGATION_ITEMS.map(({ route }) => route);
   };
   const inboxPages = ['/command', '/inbox', '/inbox?tab=jobs', '/inbox?tab=history', '/inbox?tab=health'];

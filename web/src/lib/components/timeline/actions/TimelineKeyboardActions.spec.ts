@@ -1,8 +1,8 @@
+import type { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+import type { TimelineAsset, TimelineGrouping } from '#lib/managers/timeline-manager/types.ts';
 import type { AlbumResponseDto } from '@immich/sdk';
 import { fireEvent, render } from '@testing-library/svelte';
-import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import type { TimelineAsset, TimelineGrouping } from '$lib/managers/timeline-manager/types';
 import TimelineKeyboardActions from './TimelineKeyboardActions.svelte';
 
 // Local Omarchy layer: a special album's key (B To do, V Villa) acts on the selection, or with nothing selected on the
@@ -26,8 +26,8 @@ const { authManagerMock, todo, villa } = vi.hoisted(() => {
   };
 });
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: authManagerMock }));
-vi.mock('$lib/managers/special-albums.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: authManagerMock }));
+vi.mock('#lib/managers/special-albums.svelte.ts', () => ({
   specialAlbums: [todo, villa],
   offeredSpecialAlbums: () => [todo, villa],
   specialAlbumOf: (id?: string | null) => [todo, villa].find((album) => album.isAlbum(id)),
@@ -112,21 +112,13 @@ describe('TimelineKeyboardActions: special album keys', () => {
 describe('TimelineKeyboardActions: rows, Home and End', () => {
   const asset = (id: string) => ({ id, ownerId: 'me', visibility: 'timeline' }) as TimelineAsset;
 
-  const setup = ({
-    earlier,
-    later,
-    all = [],
-  }: {
-    earlier?: TimelineAsset;
-    later?: TimelineAsset;
-    all?: TimelineAsset[];
-  }) => {
+  const setup = ({ earlier, all = [] }: { earlier?: TimelineAsset; all?: TimelineAsset[] }) => {
     const timelineManager = {
       isInitialized: true,
       months: [{}],
       getTimelineMonthByAssetId: () => ({ findAssetById: () => undefined }),
       getEarlierAsset: vi.fn(() => Promise.resolve(earlier)),
-      getLaterAsset: vi.fn(() => Promise.resolve(later)),
+      getLaterAsset: vi.fn(() => Promise.resolve()),
       assetsIterator: vi.fn(({ direction }: { direction: 'earlier' | 'later' }) => {
         const order = direction === 'earlier' ? all : [...all].reverse();
         return (async function* () {
@@ -155,12 +147,11 @@ describe('TimelineKeyboardActions: rows, Home and End', () => {
     d: [110, 0, 300],
     e: [110, 310, 600],
   };
-  const drawGrid = (ids = Object.keys(layout)) => {
+  const drawGrid = () => {
     const grid = document.createElement('section');
     grid.id = 'asset-grid';
     grid.getBoundingClientRect = () => ({ top: 0, bottom: 800, left: 0, right: 600, height: 800 }) as DOMRect;
-    for (const id of ids) {
-      const [top, left, right] = layout[id];
+    for (const [id, [top, left, right]] of Object.entries(layout)) {
       const tile = document.createElement('div');
       tile.dataset.asset = id;
       tile.dataset.thumbnailFocusContainer = '';

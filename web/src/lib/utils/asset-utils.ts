@@ -1,3 +1,18 @@
+import type { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { downloadManager } from '#lib/managers/download-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { pageKey, undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { locale } from '#lib/stores/preferences.store.ts';
+import { downloadUrlPost, withError } from '#lib/utils.ts';
+import { refreshAssets } from '#lib/utils/asset-refresh.ts';
+import { getByteUnitString } from '#lib/utils/byte-units.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { navigate } from '#lib/utils/navigation.ts';
+import { asQueryString } from '#lib/utils/shared-links.ts';
+import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
 import {
   AssetVisibility,
   getBaseUrl,
@@ -6,7 +21,6 @@ import {
   updateAsset,
   updateAssets,
   type AssetResponseDto,
-  type AssetTypeEnum,
   type DownloadInfoDto,
   type ExifResponseDto,
   type UserResponseDto,
@@ -15,22 +29,6 @@ import { toastManager } from '@immich/ui';
 import { DateTime } from 'luxon';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { animateRemoval } from '$lib/gallery/motion';
-import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { downloadManager } from '$lib/managers/download-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { pageKey, undoManager } from '$lib/managers/undo-manager.svelte';
-import { locale } from '$lib/stores/preferences.store';
-import { downloadUrlPost, withError } from '$lib/utils';
-import { refreshAssets } from '$lib/utils/asset-refresh';
-import { getByteUnitString } from '$lib/utils/byte-units';
-import { getFormatter } from '$lib/utils/i18n';
-import { navigate } from '$lib/utils/navigation';
-import { asQueryString } from '$lib/utils/shared-links';
-import { toTimelineAsset } from '$lib/utils/timeline-util';
 import { handleError } from './handle-error';
 
 export const removeTag = async ({
@@ -104,18 +102,16 @@ export const downloadArchive = async (fileName: string, options: Omit<DownloadIn
 };
 
 /**
- * Returns the lowercase filename extension without a dot (.) and
- * an empty string when not found.
- */
+Returns the lowercase filename extension without a dot (.) and
+an empty string when not found.
+*/
 export function getFilenameExtension(filename: string): string {
   const lastIndex = Math.max(0, filename.lastIndexOf('.'));
   const startIndex = (lastIndex || Infinity) + 1;
   return filename.slice(startIndex).toLowerCase();
 }
 
-/**
- * Returns the filename of an asset including file extension
- */
+/** Returns the filename of an asset including file extension */
 export function getAssetFilename(asset: AssetResponseDto): string {
   const fileExtension = getFilenameExtension(asset.originalPath);
   return `${asset.originalFileName}.${fileExtension}`;
@@ -129,7 +125,7 @@ function isRotated270CW(orientation: number) {
   return [7, 8, -90].includes(orientation);
 }
 
-export function isFlipped(orientation?: string | null) {
+function isFlipped(orientation?: string | null) {
   const value = Number(orientation);
   return value && (isRotated270CW(value) || isRotated90CW(value));
 }
@@ -153,12 +149,10 @@ export function getAssetResolution(asset: AssetResponseDto): string {
     return 'Invalid Data';
   }
 
-  return `${asset.width} x ${asset.height}`;
+  return `${asset.width} × ${asset.height}`;
 }
 
-/**
- * Returns aspect ratio for the asset
- */
+/** Returns aspect ratio for the asset */
 export function getAssetRatio(asset: AssetResponseDto) {
   return asset.width && asset.height ? asset.width / asset.height : null;
 }
@@ -226,9 +220,7 @@ async function addSupportedMimeTypes(): Promise<void> {
 // eslint-disable-next-line unicorn/no-top-level-side-effects
 void addSupportedMimeTypes();
 
-/**
- * Returns true if the asset is an image supported by web browsers, false otherwise
- */
+/** Returns true if the asset is an image supported by web browsers, false otherwise */
 export function isWebCompatibleImage(asset: AssetResponseDto): boolean {
   if (!asset.originalMimeType) {
     return false;
@@ -237,20 +229,6 @@ export function isWebCompatibleImage(asset: AssetResponseDto): boolean {
   return supportedImageMimeTypes.has(asset.originalMimeType);
 }
 
-export const getAssetType = (type: AssetTypeEnum) => {
-  switch (type) {
-    case 'IMAGE': {
-      return 'Photo';
-    }
-    case 'VIDEO': {
-      return 'Video';
-    }
-    default: {
-      return 'Asset';
-    }
-  }
-};
-
 export const getOwnedAssetsWithWarning = (assets: TimelineAsset[], user: UserResponseDto | null): string[] => {
   const ids = [...assets].filter((a) => user && a.ownerId === user.id).map((a) => a.id);
 
@@ -258,24 +236,6 @@ export const getOwnedAssetsWithWarning = (assets: TimelineAsset[], user: UserRes
   if (numberOfIssues > 0) {
     const $t = get(t);
     toastManager.warning($t('errors.cant_change_metadata_assets_count', { values: { count: numberOfIssues } }));
-  }
-  return ids;
-};
-
-/**
- * The #734 space-editor counterpart to `getOwnedAssetsWithWarning`: filters `assets` down to
- * `editableAssetIds` (resolved via `resolveEditableAssetIds`/`POST /assets/editable`) instead
- * of ownership, so a space Owner/Editor can bulk-edit a member's assets too. Same shape —
- * narrows the ids to send, and surfaces the skipped count so partial application stays visible.
- */
-export const getEditableAssetsWithWarning = (assets: TimelineAsset[], editableAssetIds: string[]): string[] => {
-  const editableIds = new Set(editableAssetIds);
-  const ids = [...assets].filter((a) => editableIds.has(a.id)).map((a) => a.id);
-
-  const numberOfSkipped = assets.length - ids.length;
-  if (numberOfSkipped > 0) {
-    const $t = get(t);
-    toastManager.warning($t('assets_skipped_not_editable', { values: { count: numberOfSkipped } }));
   }
   return ids;
 };
@@ -391,39 +351,6 @@ const undoArchiveAssets = async (prior: PriorVisibility[], assets: TimelineAsset
   return unarchived.length > 0
     ? $t('unarchived_count', { values: { count: unarchived.length } })
     : $t('archived_count', { values: { count: prior.length } });
-};
-
-export const archiveAssets = async (assets: TimelineAsset[], visibility: AssetVisibility) => {
-  const ids = assets.map(({ id }) => id);
-  const prior = assets.map((asset) => ({ id: asset.id, visibility: asset.visibility }));
-  const $t = get(t);
-
-  try {
-    if (ids.length > 0) {
-      await updateAssets({
-        assetBulkUpdateDto: { ids, visibility },
-      });
-      const archived = visibility === AssetVisibility.Archive;
-      if (archived) {
-        animateRemoval(ids, 'archive');
-      }
-      showUndoArchiveToast(
-        archived
-          ? $t('archived_count', { values: { count: ids.length } })
-          : $t('unarchived_count', { values: { count: ids.length } }),
-        prior,
-        assets,
-        archived,
-      );
-    }
-  } catch (error) {
-    handleError(
-      error,
-      $t('errors.unable_to_archive_unarchive', { values: { archived: visibility === AssetVisibility.Archive } }),
-    );
-  }
-
-  return ids;
 };
 
 export const delay = async (ms: number) => {

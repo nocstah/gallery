@@ -1,6 +1,6 @@
-import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-import type { CuratorFeature } from '$lib/gallery/libraries/library-file';
-import { curator, curatorIsMine } from '$lib/utils/curator';
+import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+import type { CuratorFeature } from '#lib/gallery/libraries/library-file.ts';
+import { curator, curatorIsMine } from '#lib/utils/curator.ts';
 
 // Local Omarchy layer: whether the photo viewer shows Curator's Look Up card. Once turned on it stays on from photo to
 // photo until closed, like the info panel. Offered only when Curator answers and has the lookup endpoint (asked once),

@@ -6,33 +6,39 @@
   // album or Space, Move to <library>, Archive, the Locked Folder, Delete). The page passes how its view follows each
   // action, the handlers its bar gets. TimelinePhotoMenu, GalleryPhotoMenu and SpacePhotoMenu say where the grid is,
   // find its photos and bring the page's offer.
-  import ActionMenuItem from '$lib/components/ActionMenuItem.svelte';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import ArchiveAction from '$lib/components/timeline/actions/ArchiveAction.svelte';
-  import ChangeDate from '$lib/components/timeline/actions/ChangeDateAction.svelte';
-  import ChangeDescription from '$lib/components/timeline/actions/ChangeDescriptionAction.svelte';
-  import ChangeLocation from '$lib/components/timeline/actions/ChangeLocationAction.svelte';
-  import DeleteAssets from '$lib/components/timeline/actions/DeleteAssetsAction.svelte';
-  import DownloadAction from '$lib/components/timeline/actions/DownloadAction.svelte';
-  import FavoriteAction from '$lib/components/timeline/actions/FavoriteAction.svelte';
-  import RemoveFromAlbum from '$lib/components/timeline/actions/RemoveFromAlbumAction.svelte';
-  import RemoveFromSpaceAction from '$lib/components/timeline/actions/RemoveFromSpaceAction.svelte';
-  import RotateAction from '$lib/components/timeline/actions/RotateAction.svelte';
-  import SetVisibilityAction from '$lib/components/timeline/actions/SetVisibilityAction.svelte';
-  import SpecialAlbumAction from '$lib/components/timeline/actions/SpecialAlbumAction.svelte';
-  import TileContextMenu from '$lib/components/timeline/TileContextMenu.svelte';
-  import MoveToActions from '$lib/gallery/moves/MoveToActions.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import { getAssetBulkActions } from '$lib/services/asset.service';
-  import { getStackBulkActions } from '$lib/services/stack.service';
-  import type { OnArchive, OnDelete, OnFavorite, OnRestore, OnSetVisibility, OnUndoDelete } from '$lib/utils/actions';
+  import ActionMenuItem from '#lib/components/ActionMenuItem.svelte';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import TileContextMenu from '#lib/components/timeline/TileContextMenu.svelte';
+  import ChangeDate from '#lib/components/timeline/actions/ChangeDateAction.svelte';
+  import ChangeDescription from '#lib/components/timeline/actions/ChangeDescriptionAction.svelte';
+  import ChangeLocation from '#lib/components/timeline/actions/ChangeLocationAction.svelte';
+  import DeleteAssets from '#lib/components/timeline/actions/DeleteAssetsAction.svelte';
+  import DownloadAction from '#lib/components/timeline/actions/DownloadAction.svelte';
+  import FavoriteAction from '#lib/components/timeline/actions/FavoriteAction.svelte';
+  import RemoveFromSpaceAction from '#lib/components/timeline/actions/RemoveFromSpaceAction.svelte';
+  import RotateAction from '#lib/components/timeline/actions/RotateAction.svelte';
+  import SetVisibilityAction from '#lib/components/timeline/actions/SetVisibilityAction.svelte';
+  import SpecialAlbumAction from '#lib/components/timeline/actions/SpecialAlbumAction.svelte';
+  import ArchiveAction from '#lib/gallery/actions/ArchiveAction.svelte';
+  import MoveToActions from '#lib/gallery/moves/MoveToActions.svelte';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { offeredSpecialAlbums } from '#lib/managers/special-albums.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import { getAssetBulkActions } from '#lib/services/asset.service.ts';
+  import { getStackBulkActions } from '#lib/services/stack.service.ts';
+  import type {
+    OnArchive,
+    OnDelete,
+    OnFavorite,
+    OnRestore,
+    OnSetVisibility,
+    OnUndoDelete,
+  } from '#lib/utils/actions.ts';
   import type { AlbumResponseDto, PersonResponseDto } from '@immich/sdk';
   import { mdiAccountMultipleCheckOutline, mdiImageOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
-  import { offeredActions, type PhotoMenuAction, type PhotoMenuOffer } from './photo-menu';
   import RestoreMenuItem from './RestoreMenuItem.svelte';
+  import { offeredActions, type PhotoMenuAction, type PhotoMenuOffer } from './photo-menu';
 
   type Props = {
     /** the photo grid the menu serves, as a selector */
@@ -95,13 +101,17 @@
   const offered = $derived(offeredActions(offer, assetMultiSelectManager.isAllUserOwned));
   const has = (action: PhotoMenuAction) => offered.has(action);
 
-  // RemoveFromAlbum takes its album bindable (it reads the album again after a removal), as SelectionToolbar keeps it
-  const EMPTY_ALBUM = {} as AlbumResponseDto;
-  let boundAlbum = $derived(album ?? EMPTY_ALBUM);
+  // the bulk items: Remove from album goes through the menu's own album (the menu's offer already decided who may)
+  const bulkOptions = $derived({
+    editableSelectedAssetIds,
+    shareSpaceId,
+    fromSpaceId: spaceId,
+    removeFromAlbum: album ? { album, onRemove } : undefined,
+  });
 </script>
 
 <TileContextMenu {grid} {findAsset} withStackItems={false} {reveal} assetInteraction={assetMultiSelectManager}>
-  {@const Actions = getAssetBulkActions($t, { editableSelectedAssetIds, shareSpaceId, fromSpaceId: spaceId })}
+  {const Actions = $derived(getAssetBulkActions($t, undefined, bulkOptions))}
   {#if has('restore')}
     <RestoreMenuItem {onRestore} />
   {/if}
@@ -131,8 +141,8 @@
     {/if}
   {/snippet}
   {#snippet more()}
-    {@const Edits = getAssetBulkActions($t, { editableSelectedAssetIds, shareSpaceId, fromSpaceId: spaceId })}
-    {@const Stacks = getStackBulkActions($t)}
+    {const Edits = $derived(getAssetBulkActions($t, undefined, bulkOptions))}
+    {const Stacks = $derived(getStackBulkActions($t))}
     {#if has('setCover') && onSetCover && assetMultiSelectManager.assets.length === 1}
       {#if album}
         <MenuOption text={$t('set_as_album_cover')} icon={mdiImageOutline} onClick={onSetCover} />
@@ -164,7 +174,7 @@
       <MenuOption icon={mdiAccountMultipleCheckOutline} text={$t('fix_incorrect_match')} onClick={onFixMatch} />
     {/if}
     {#if has('removeFromAlbum') && album}
-      <RemoveFromAlbum menuItem bind:album={boundAlbum} {onRemove} />
+      <ActionMenuItem action={Edits.RemoveFromAlbum} />
     {/if}
     {#if has('removeFromSpace') && spaceId}
       <RemoveFromSpaceAction menuItem {spaceId} {onRemove} />

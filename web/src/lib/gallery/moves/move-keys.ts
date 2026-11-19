@@ -4,7 +4,7 @@
 // address. After a 202 the mover owns the key and deletes it with the key itself when the move ends. Before that the
 // page deletes it: at once on any other answer, and on no answer at all unless the mover reports that it holds it.
 // Keys a crash or a power cut left behind are deleted too, but only with the mover's answer in hand.
-import { createApiKey, deleteApiKey, getApiKeys, Permission } from '@immich/sdk';
+import { Permission, createApiKey, deleteApiKey, getApiKeys } from '@immich/sdk';
 import { moveStatus, unanswered, type MoveKey, type MoveSide, type MoveStatus } from './mover';
 
 /** Every move key has this name, which the leftover clean-up looks for. */
@@ -21,9 +21,9 @@ export const SOURCE_PERMISSIONS: readonly Permission[] = [
 ];
 
 /**
- * The destination's key: upload, set the details, read back, edit, stack and watch the queues. It queues no job and
- * reads no stack, and neither key has a person or face permission.
- */
+The destination's key: upload, set the details, read back, edit, stack and watch the queues. It queues no job and
+reads no stack, and neither key has a person or face permission.
+*/
 export const DESTINATION_PERMISSIONS: readonly Permission[] = [
   Permission.AssetUpload,
   Permission.AssetRead,
@@ -47,9 +47,9 @@ export const keysInUse = (moves: readonly MoveStatus[]) =>
   moves.map(({ key }) => key).filter((key): key is string => !!key);
 
 /**
- * Deletes this library's leftover move keys: named as move keys, older than 10 minutes, and not one the mover holds.
- * `inUse` comes from the mover's own answer; without one, nothing is deleted. Returns how many went.
- */
+Deletes this library's leftover move keys: named as move keys, older than 10 minutes, and not one the mover holds.
+`inUse` comes from the mover's own answer; without one, nothing is deleted. Returns how many went.
+*/
 export const deleteLeftoverMoveKeys = async (inUse: readonly string[], now = Date.now()): Promise<number> => {
   const keys = await getApiKeys();
   const leftovers = keys.filter(
@@ -77,10 +77,10 @@ const moverHolds = async (move: string, keyId: string) => {
 };
 
 /**
- * Makes this side's key for `move` and hands it over with `send`, which posts it to the mover. The key's secret lives
- * only inside this call. A 202 leaves the key with the mover; any other answer deletes it at once; no answer at all
- * deletes it unless the mover then reports that it holds it. The answer, or the error, goes back to the caller.
- */
+Makes this side's key for `move` and hands it over with `send`, which posts it to the mover. The key's secret lives
+only inside this call. A 202 leaves the key with the mover; any other answer deletes it at once; no answer at all
+deletes it unless the mover then reports that it holds it. The answer, or the error, goes back to the caller.
+*/
 export const handOverMoveKey = async <T>(
   side: MoveSide,
   move: string,

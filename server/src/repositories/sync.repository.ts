@@ -1,19 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { type Kysely, sql } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import { InjectKysely } from 'nestjs-kysely';
-import type { SyncAck } from 'src/types.js';
 import { columns } from 'src/database.js';
 import { DummyValue, GenerateSql } from 'src/decorators.js';
 import { MemoryType } from 'src/enum.js';
 import { personIsPet } from 'src/gallery/utils/person-sidecar.js';
 import { DB } from 'src/schema/index.js';
+import type { SyncAck } from 'src/types.js';
 import { petFacePredicate } from 'src/utils/database.js';
-import { favoriteExistsFor } from 'src/utils/favorite.js';
+import { syncFavoriteFor } from 'src/utils/favorite.js';
 
 export type SyncBackfillOptions = {
   nowId: string;
   afterUpdateId?: string;
   beforeUpdateId: string;
+  /** Gallery: `GallerySyncStreams.isForkAwareClient` for the request, see `syncFavoriteFor`. */
+  forkAwareClient?: boolean;
 };
 
 const dummyBackfillOptions = {
@@ -38,6 +40,8 @@ export type SyncQueryOptions = {
   nowId: string;
   userId: string;
   ack?: SyncAck;
+  /** Gallery: `GallerySyncStreams.isForkAwareClient` for the request, see `syncFavoriteFor`. */
+  forkAwareClient?: boolean;
 };
 
 const dummyQueryOptions = {
@@ -206,7 +210,7 @@ class AlbumAssetSync extends BaseSync {
     return this.backfillQuery('album_asset', options)
       .innerJoin('asset', 'asset.id', 'album_asset.assetId')
       .select(columns.syncAlbumAsset)
-      .select((eb) => favoriteExistsFor(eb, userId).as('isFavorite'))
+      .select((eb) => syncFavoriteFor(eb, userId, options.forkAwareClient).as('isFavorite'))
       .select('album_asset.updateId')
       .where('album_asset.albumId', '=', albumId)
       .stream();
@@ -218,7 +222,7 @@ class AlbumAssetSync extends BaseSync {
     return this.upsertQuery('asset', options)
       .innerJoin('album_asset', 'album_asset.assetId', 'asset.id')
       .select(columns.syncAlbumAsset)
-      .select((eb) => favoriteExistsFor(eb, userId).as('isFavorite'))
+      .select((eb) => syncFavoriteFor(eb, userId, options.forkAwareClient).as('isFavorite'))
       .select('asset.updateId')
       .where('album_asset.updateId', '<=', albumToAssetAck.updateId) // Ensure we only send updates for assets that the client already knows about
       .innerJoin('album_user', 'album_user.albumId', 'album_asset.albumId')
@@ -233,7 +237,7 @@ class AlbumAssetSync extends BaseSync {
       .select('album_asset.updateId')
       .innerJoin('asset', 'asset.id', 'album_asset.assetId')
       .select(columns.syncAlbumAsset)
-      .select((eb) => favoriteExistsFor(eb, userId).as('isFavorite'))
+      .select((eb) => syncFavoriteFor(eb, userId, options.forkAwareClient).as('isFavorite'))
       .innerJoin('album_user', 'album_user.albumId', 'album_asset.albumId')
       .where('album_user.userId', '=', userId)
       .stream();
@@ -414,7 +418,7 @@ class PersonSync extends BaseSync {
   }
 
   @GenerateSql({ params: [dummyQueryOptions], stream: true })
-  getUpserts(options: SyncQueryOptions, withPets = true) {
+  getUpserts(options: SyncQueryOptions) {
     return this.upsertQuery('person', options)
       .select([
         'personGroupId as id',
@@ -430,7 +434,7 @@ class PersonSync extends BaseSync {
         'faceAssetId',
       ])
       .where('ownerId', '=', options.userId)
-      .$if(!withPets, (qb) => qb.where((eb) => eb.not(personIsPet())))
+      .$if(options.forkAwareClient === false, (qb) => qb.where((eb) => eb.not(personIsPet())))
       .stream();
   }
 }
@@ -470,18 +474,18 @@ class AssetFaceSync extends BaseSync {
 
   // TODO(v5) drop when AssetFacesV2 is removed
   @GenerateSql({ params: [dummyQueryOptions], stream: true })
-  getUpsertsV2(options: SyncQueryOptions, withPets = true) {
+  getUpsertsV2(options: SyncQueryOptions) {
     return this.upsertQuery('asset_face', options)
       .select(columns.syncAssetFace)
       .select('asset_face.updateId')
       .leftJoin('asset', 'asset.id', 'asset_face.assetId')
       .where('asset.ownerId', '=', options.userId)
-      .$if(!withPets, (qb) => qb.where((eb) => eb.not(petFacePredicate(eb))))
+      .$if(options.forkAwareClient === false, (qb) => qb.where((eb) => eb.not(petFacePredicate(eb))))
       .stream();
   }
 
   @GenerateSql({ params: [dummyQueryOptions], stream: true })
-  getUpsertsV3(options: SyncQueryOptions, withPets = true) {
+  getUpsertsV3(options: SyncQueryOptions) {
     return this.upsertQuery('asset_face', options)
       .select(columns.syncAssetFace)
       .select('asset_face.updateId')
@@ -490,7 +494,7 @@ class AssetFaceSync extends BaseSync {
       .where('owner.clusterGroupId', '=', ({ selectFrom }) =>
         selectFrom('user').select('user.clusterGroupId').where('user.id', '=', options.userId),
       )
-      .$if(!withPets, (qb) => qb.where((eb) => eb.not(petFacePredicate(eb))))
+      .$if(options.forkAwareClient === false, (qb) => qb.where((eb) => eb.not(petFacePredicate(eb))))
       .stream();
   }
 }
@@ -604,10 +608,10 @@ class MemoryToAssetSync extends BaseSync {
   }
 
   /**
-   * Gallery: the links of exactly the memory types a client is sent (SyncService's
-   * `syncedMemoryTypes`). Upstream's getUpsertsV1 hard-codes on_this_day, which would strip the
-   * photos from every rule memory an installed Gallery app receives.
-   */
+  Gallery: the links of exactly the memory types a client is sent (SyncService's
+  `syncedMemoryTypes`). Upstream's getUpsertsV1 hard-codes on_this_day, which would strip the
+  photos from every rule memory an installed Gallery app receives.
+  */
   @GenerateSql({ params: [dummyQueryOptions, [MemoryType.OnThisDay, MemoryType.Rule]], stream: true })
   getUpsertsForTypes(options: SyncQueryOptions, types: MemoryType[]) {
     return this.upsertQuery('memory_asset', options)
@@ -668,7 +672,7 @@ class PartnerAssetsSync extends BaseSync {
   getBackfill(options: SyncBackfillOptions, partnerId: string, userId: string) {
     return this.backfillQuery('asset', options)
       .select(columns.syncPartnerAsset)
-      .select((eb) => favoriteExistsFor(eb, userId).as('isFavorite'))
+      .select((eb) => syncFavoriteFor(eb, userId, options.forkAwareClient).as('isFavorite'))
       .select('asset.updateId')
       .where('ownerId', '=', partnerId)
       .stream();
@@ -690,7 +694,7 @@ class PartnerAssetsSync extends BaseSync {
     const userId = options.userId;
     return this.upsertQuery('asset', options)
       .select(columns.syncPartnerAsset)
-      .select((eb) => favoriteExistsFor(eb, userId).as('isFavorite'))
+      .select((eb) => syncFavoriteFor(eb, userId, options.forkAwareClient).as('isFavorite'))
       .select('asset.updateId')
       .where('ownerId', 'in', (eb) =>
         eb.selectFrom('partner').select(['sharedById']).where('sharedWithId', '=', userId),

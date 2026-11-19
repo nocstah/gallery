@@ -17,35 +17,35 @@ import { coverWindow, type FilmCamera, type FilmShot } from './film-plan';
 export type FrameBox = { left: number; top: number; right: number; bottom: number };
 
 /**
- * Words on the photo, as the shade needs them: where they lie in the frame, the opacity of their white (`ink`), the
- * ratio they must hold (`ratio`: 4.5, or 3 for large text) and the black the scrim already lays where it is thinnest
- * under them (`scrim`).
- */
+Words on the photo, as the shade needs them: where they lie in the frame, the opacity of their white (`ink`), the
+ratio they must hold (`ratio`: 4.5, or 3 for large text) and the black the scrim already lays where it is thinnest
+under them (`scrim`).
+*/
 export type FilmWords = { box: FrameBox; ink: number; ratio: number; scrim: number };
 
 /** The shade never goes past this: the photo stays a photo under its words. */
 export const SHADE_MOST = 0.72;
 
 /**
- * The margin for what a thumbhash smooths away (a white shirt's pattern, sun through leaves): the brightest it finds
- * under the words is taken this many times brighter, in sRGB (150 as 255), so a dark photo stays dark. Measured on 234
- * of the memories' photos (2026-10-18): where the story stands, the photo's own brightest twentieth came out under the
- * thumbhash's brightest so raised for 97 photos in 100 (its brightest tenth for all); under the top bar, 94 (99).
- */
+The margin for what a thumbhash smooths away (a white shirt's pattern, sun through leaves): the brightest it finds
+under the words is taken this many times brighter, in sRGB (150 as 255), so a dark photo stays dark. Measured on 234
+of the memories' photos (2026-10-18): where the story stands, the photo's own brightest twentieth came out under the
+thumbhash's brightest so raised for 97 photos in 100 (its brightest tenth for all); under the top bar, 94 (99).
+*/
 export const SHADE_GAIN = 1.7;
 
 /**
- * The photo itself, once decoded, is read at this many pixels on its longer side, and the light under the words is its
- * brightest fiftieth there, or for words of the normal size its brightest two-hundredth. Measured on the same 234
- * photos, the brightest fiftieth at 128 pixels already stood above the full-size photo's brightest twentieth under the
- * story for every one; a single line of small type over fine detail (gravel, a print) needed the finer read and the
- * brighter share (2026-10-18: the title card's line had come out at 4.3:1 there).
- */
+The photo itself, once decoded, is read at this many pixels on its longer side, and the light under the words is its
+brightest fiftieth there, or for words of the normal size its brightest two-hundredth. Measured on the same 234
+photos, the brightest fiftieth at 128 pixels already stood above the full-size photo's brightest twentieth under the
+story for every one; a single line of small type over fine detail (gravel, a print) needed the finer read and the
+brighter share (2026-10-18: the title card's line had come out at 4.3:1 there).
+*/
 export const PICTURE_SIDE = 512;
 const LARGE_SHARE = 0.98;
 const SMALL_SHARE = 0.995;
 /** The shade aims this much past the ratio the words need: room for the frames between the drift's two ends and for
- * what a 512px read still misses (a title card's line had come out at 4.45:1 against its 4.5). */
+what a 512px read still misses (a title card's line had come out at 4.45:1 against its 4.5). */
 export const HEADROOM = 1.04;
 
 /** Where nothing is known (no thumbhash): a photo as bright as a light grey wall. */
@@ -54,7 +54,7 @@ const UNKNOWN_LIGHT = 0.45;
 type Pixels = { w: number; h: number; rgba: Uint8Array };
 
 /** What a shot shows, as the shade reads it: the photo's pixels (its thumbhash's, or its own at a small size, `exact`)
- * and its backdrop's when it is shown whole (the thumbhash's, richer and dimmed, as film-backdrop.ts draws it). */
+and its backdrop's when it is shown whole (the thumbhash's, richer and dimmed, as film-backdrop.ts draws it). */
 export type FilmPicture = { photo: Pixels; backdrop: Pixels; ratio: number; exact: boolean };
 
 const linear = (channel: number) => {
@@ -82,9 +82,9 @@ const ratioOn = (grey: number, ink: number) => {
 };
 
 /**
- * The black (its opacity, 0 to 1) that a ground of this luminance needs laid over it so that white words at `ink`
- * opacity hold `ratio` on it: 0 for a ground dark enough already.
- */
+The black (its opacity, 0 to 1) that a ground of this luminance needs laid over it so that white words at `ink`
+opacity hold `ratio` on it: 0 for a ground dark enough already.
+*/
 export const darknessFor = (light: number, ink: number, ratio: number) => {
   const grey = greyOf(light);
   if (ratioOn(grey, ink) >= ratio) {
@@ -160,12 +160,13 @@ export const imagePicture = (image: HTMLImageElement, thumbhash: string | null |
   }
 };
 
-const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
+// value kept between 0 and high
+const clamp = (value: number, high: number) => Math.min(high, Math.max(0, value));
 
 /** The colour at a point (shares of the picture), between its pixels' centres. */
 const sample = ({ w, h, rgba }: Pixels, x: number, y: number): [number, number, number] => {
-  const fx = clamp(x * w - 0.5, 0, w - 1);
-  const fy = clamp(y * h - 0.5, 0, h - 1);
+  const fx = clamp(x * w - 0.5, w - 1);
+  const fy = clamp(y * h - 0.5, h - 1);
   const x0 = Math.floor(fx);
   const y0 = Math.floor(fy);
   const x1 = Math.min(w - 1, x0 + 1);
@@ -188,7 +189,7 @@ const vignetteAt = (u: number, v: number) => {
 type Shot = Pick<FilmShot, 'fit' | 'ratio' | 'from' | 'to'>;
 
 /** What lies at a point of the frame (shares of it) with the camera there: the photo, or, beside a photo shown whole,
- * its backdrop under the vignette. `lift` raises a whole photo (a share of the frame's height). */
+its backdrop under the vignette. `lift` raises a whole photo (a share of the frame's height). */
 const groundAt = (
   picture: FilmPicture,
   shot: Shot,
@@ -228,11 +229,11 @@ export const withMargin = (light: number) => {
 };
 
 /**
- * How bright a shot is under a part of the frame, for words on it (relative luminance, 0 to 1), at the drift's start
- * and end, the camera's two ends being where it is furthest apart: the photo's own brightest share there (`share`: a
- * fiftieth, or a two-hundredth for small type), read across the part; or the brightest its thumbhash shows there,
- * raised by the margin for what it smooths away.
- */
+How bright a shot is under a part of the frame, for words on it (relative luminance, 0 to 1), at the drift's start
+and end, the camera's two ends being where it is furthest apart: the photo's own brightest share there (`share`: a
+fiftieth, or a two-hundredth for small type), read across the part; or the brightest its thumbhash shows there,
+raised by the margin for what it smooths away.
+*/
 export const shotLight = (
   picture: FilmPicture | null,
   shot: Shot,
@@ -266,32 +267,32 @@ export const shotLight = (
 };
 
 /**
- * The shade a shot lays under its words (an opacity of black, 0 to SHADE_MOST): the most any of them needs, each over
- * how bright the photo is under it, less what the scrim already gives there.
- */
+The shade a shot lays under its words (an opacity of black, 0 to SHADE_MOST): the most any of them needs, each over
+how bright the photo is under it, less what the scrim already gives there.
+*/
 export const shotShade = (picture: FilmPicture | null, shot: Shot, aspect: number, words: FilmWords[], lift = 0) => {
   let shade = 0;
   for (const { box, ink, ratio, scrim } of words) {
     // small type is read against the brighter share: one bright pebble under a 12px line is a letter lost
     const light = shotLight(picture, shot, aspect, box, lift, ratio > 3 ? SMALL_SHARE : LARGE_SHARE);
     const dark = darknessFor(light, ink, ratio * HEADROOM);
-    shade = Math.max(shade, 1 - (1 - dark) / (1 - clamp(scrim, 0, 0.99)));
+    shade = Math.max(shade, 1 - (1 - dark) / (1 - clamp(scrim, 0.99)));
   }
-  return Math.round(clamp(shade, 0, SHADE_MOST) * 1000) / 1000;
+  return Math.round(clamp(shade, SHADE_MOST) * 1000) / 1000;
 };
 
 /**
- * How far a photo shown whole is raised (a share of the frame's height) so its lower edge clears the words: only a
- * photo wider than the frame's shape has room above and below it (a landscape photo on a phone held upright), and it
- * goes no higher than `top` from the frame's top. `reach` is how far up the words come, `gap` the air under the photo.
- */
+How far a photo shown whole is raised (a share of the frame's height) so its lower edge clears the words: only a
+photo wider than the frame's shape has room above and below it (a landscape photo on a phone held upright), and it
+goes no higher than `top` from the frame's top. `reach` is how far up the words come, `gap` the air under the photo.
+*/
 export const wholeLift = (ratio: number | null, aspect: number, reach: number, gap: number, top = 0) => {
   if (!ratio || ratio <= 0 || aspect <= 0 || ratio <= aspect) {
     return 0;
   }
   const spare = (1 - aspect / ratio) / 2;
   const wanted = reach + gap - spare;
-  return Math.round(clamp(wanted, 0, Math.max(0, spare - top)) * 10_000) / 10_000;
+  return Math.round(clamp(wanted, Math.max(0, spare - top)) * 10_000) / 10_000;
 };
 
 /** A scrim's gradient (to top) as stops: [a share of its height from its foot, the black there]. */
@@ -319,7 +320,7 @@ export const CARD_SCRIM: ScrimStops = [
 
 /** A scrim's black at a height over its foot (a share of the scrim's own height). */
 export const scrimAt = (height: number, stops: ScrimStops) => {
-  const at = clamp(height, 0, 1);
+  const at = clamp(height, 1);
   for (let index = 1; index < stops.length; index++) {
     const [x1, y1] = stops[index];
     if (at <= x1) {
@@ -331,7 +332,7 @@ export const scrimAt = (height: number, stops: ScrimStops) => {
 };
 
 /** The top bar's scrim (`.film-scrim-head`): 0.42 of black at the frame's top, none at its foot. */
-export const headScrimAt = (depth: number) => 0.42 * (1 - clamp(depth, 0, 1));
+export const headScrimAt = (depth: number) => 0.42 * (1 - clamp(depth, 1));
 
 // ---- words as they stand in the page ----
 
@@ -350,9 +351,9 @@ export const textBox = (element: Element | null | undefined) => {
 export const pixels = (value: string) => Number(value.replace(/px$/, '')) || 0;
 
 /**
- * Words as the shade needs them: their box (`rect`) as shares of the frame they stand in, the opacity of their white,
- * the ratio WCAG AA asks of them (3:1 for large text, 24px, or 18.66px at 700; else 4.5:1), and the scrim under them.
- */
+Words as the shade needs them: their box (`rect`) as shares of the frame they stand in, the opacity of their white,
+the ratio WCAG AA asks of them (3:1 for large text, 24px, or 18.66px at 700; else 4.5:1), and the scrim under them.
+*/
 export const wordsIn = (
   element: Element,
   rect: DOMRect,

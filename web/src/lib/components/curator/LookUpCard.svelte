@@ -3,7 +3,7 @@
   // has a name, a plant, a breed, a landmark, a painting, a dish, with a sentence about each and a link to read more.
   // A small local model says it, so anything it is not sure of reads as a guess. It follows the viewer from photo to
   // photo until closed; a photo seen before answers at once.
-  import { curator, type LookUpAnswer, type LookUpSubject } from '$lib/utils/curator';
+  import { curator, type LookUpAnswer, type LookUpSubject } from '#lib/utils/curator.ts';
   import { Icon } from '@immich/ui';
   import {
     mdiClose,
@@ -42,7 +42,7 @@
     other: mdiShapeOutline,
   };
 
-  const ask = async (id: string, again = false) => {
+  const ask = async (again = false) => {
     controller?.abort();
     controller = new AbortController();
     const mine = controller;
@@ -52,7 +52,7 @@
       answer = undefined;
     }
     try {
-      const found = await curator.lookUp(id, again, mine.signal);
+      const found = await curator.lookUp(assetId, again, mine.signal);
       if (!mine.signal.aborted) {
         answer = found;
       }
@@ -67,8 +67,9 @@
     }
   };
 
+  // ask reads assetId before its first await, so this reruns when the viewer moves to another photo.
   $effect(() => {
-    void ask(assetId);
+    void ask();
     return () => controller?.abort();
   });
 
@@ -84,7 +85,7 @@
       disabled={loading}
       aria-label={$t('look_up_again')}
       title={$t('look_up_again')}
-      onclick={() => ask(assetId, true)}
+      onclick={() => ask(true)}
     >
       <Icon icon={mdiRefresh} size="16" />
     </button>

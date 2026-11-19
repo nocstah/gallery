@@ -1,3 +1,4 @@
+import AlbumHideFromMyTimelineConfirmModal from '#lib/modals/AlbumHideFromMyTimelineConfirmModal.svelte';
 import {
   getAlbumTimelineHidePreview,
   getAllSpaces,
@@ -12,11 +13,10 @@ import {
   type SharedSpaceResponseDto,
 } from '@immich/sdk';
 import { modalManager } from '@immich/ui';
-import AlbumHideFromMyTimelineConfirmModal from '$lib/modals/AlbumHideFromMyTimelineConfirmModal.svelte';
-import { albumFolders, FOLDER_SPACE } from './album-folders.svelte';
+import { FOLDER_SPACE, albumFolders } from './album-folders.svelte';
 
 // Local Omarchy layer: the Albums page's folders are the personal Space "Library"'s (managers/album-folders)
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: { authenticated: true, user: { id: 'me' } } }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: { authenticated: true, user: { id: 'me' } } }));
 vi.mock('@immich/sdk', async () => ({
   ...(await vi.importActual<typeof import('@immich/sdk')>('@immich/sdk')),
   createSpace: vi.fn(),

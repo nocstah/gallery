@@ -7,10 +7,10 @@ export type LyricLine = { at: number; text: string };
 const LINE_MOST = 9;
 
 /** Shared timings often stamp a song's first line in its intro, with a blank where the singing really begins: the line
- * then waits for that blank's time. */
+then waits for that blank's time. */
 export const settledLyrics = (lines: LyricLine[]) => {
   const first = lines.findIndex((line) => line.text);
-  if (first === -1 || lines[first + 1]?.text !== '' || !lines[first + 2]) {
+  if (first === -1 || lines[first + 1]?.text !== '' || !lines.at(first + 2)) {
     return lines;
   }
   const settled = lines.filter((_, index) => index !== first + 1);

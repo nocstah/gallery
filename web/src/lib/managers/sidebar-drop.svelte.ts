@@ -11,15 +11,15 @@
 // row takes the photos and lights it (`data-drop-target`); what a drop then does lives in services/sidebar-drop,
 // loaded on first use. Touch keeps Immich's long-press, and a sidebar that is hidden (a phone, the drawer, put away by
 // hand) offers nothing.
+import { MAX_SPACE_ASSETS_PER_REQUEST } from '#lib/constants.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import type { SpecialAlbumManager } from '#lib/managers/special-albums.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { locale } from '#lib/stores/preferences.store.ts';
+import { suggestAlbumName } from '#lib/utils/album-naming.ts';
 import type { SharedSpaceResponseDto } from '@immich/sdk';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import type { SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { locale } from '$lib/stores/preferences.store';
-import { suggestAlbumName } from '$lib/utils/album-naming';
 
 /** What a row takes photos into. `writable`: whether I may add to it (an editor of the album, of the Space). */
 export type DropTarget =
@@ -187,10 +187,10 @@ class SidebarDrop {
   }
 
   /**
-   * The pointer moved: the elements under it, topmost first (elementsFromPoint). Lights the row that would take the
-   * photos and aims the spring at the folder row under it. Null when the pointer is not over the sidebar; else what
-   * the carried photo should say (nothing over a row that takes no photos).
-   */
+  The pointer moved: the elements under it, topmost first (elementsFromPoint). Lights the row that would take the
+  photos and aims the spring at the folder row under it. Null when the pointer is not over the sidebar; else what
+  the carried photo should say (nothing over a row that takes no photos).
+  */
   hover(stack: Element[]): Offer | null {
     const carry = this.carrying;
     const top = stack[0];
@@ -242,9 +242,9 @@ class SidebarDrop {
   }
 
   /**
-   * The drag is over. Without a drop on the sidebar every folder it opened closes again; with one, the folders on
-   * the way to the row that took the photos stay open, so the eye can follow them there.
-   */
+  The drag is over. Without a drop on the sidebar every folder it opened closes again; with one, the folders on
+  the way to the row that took the photos stay open, so the eye can follow them there.
+  */
   end(dropped = false) {
     clearTimeout(this.#springTimer);
     clearTimeout(this.#leaveTimer);

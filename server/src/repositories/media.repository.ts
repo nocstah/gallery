@@ -5,21 +5,8 @@ import { camelCase, upperFirst } from 'lodash-es';
 import { Duration } from 'luxon';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import { Writable } from 'node:stream';
 import sharp, { Sharp } from 'sharp';
-import type {
-  Bitmap,
-  DecodeToBufferOptions,
-  GenerateThumbhashOptions,
-  GenerateThumbnailOptions,
-  ImageDimensions,
-  ProbeOptions,
-  TranscodeCommand,
-  TransformOptions,
-  VideoInfo,
-  VideoPacketInfo,
-} from 'src/types.js';
 import { ORIENTATION_TO_SHARP_ROTATION } from 'src/constants.js';
 import { Exif } from 'src/database.js';
 import { AssetEditActionItem } from 'src/dtos/editing.dto.js';
@@ -39,6 +26,18 @@ import {
 } from 'src/enum.js';
 import { applyImageAdjust } from 'src/gallery/utils/image-adjust.js';
 import { LoggingRepository } from 'src/repositories/logging.repository.js';
+import type {
+  Bitmap,
+  DecodeToBufferOptions,
+  GenerateThumbhashOptions,
+  GenerateThumbnailOptions,
+  ImageDimensions,
+  ProbeOptions,
+  TranscodeCommand,
+  TransformOptions,
+  VideoInfo,
+  VideoPacketInfo,
+} from 'src/types.js';
 import { handlePromiseError } from 'src/utils/misc.js';
 import { createAffineMatrix } from 'src/utils/transform.js';
 
@@ -75,10 +74,10 @@ export class MediaRepository {
   }
 
   /**
-   *
-   * @param input file path to the input image
-   * @returns ExtractResult if succeeded, or null if failed
-   */
+  
+  @param input file path to the input image
+  @returns ExtractResult if succeeded, or null if failed
+  */
   async extract(input: string): Promise<ExtractResult | null> {
     for (const { tag, format } of [
       { tag: 'JpgFromRaw2', format: RawExtractedFormat.Jpeg },
@@ -188,6 +187,7 @@ export class MediaRepository {
         // this is default in libvips (except the threshold is 90), but we need to set it manually in sharp
         chromaSubsampling: options.quality >= 80 ? '4:4:4' : '4:2:0',
         progressive: options.progressive,
+        decodingTier: options.decodingTier,
       })
       .toFile(output);
   }
@@ -312,9 +312,9 @@ export class MediaRepository {
   }
 
   /**
-   * Needed for accurate segments, especially when remuxing, seeking and/or VFR is involved.
-   * Scanning packets for keyframes in JS is much faster than -skip_frame nokey since it avoids decoding the video.
-   */
+  Needed for accurate segments, especially when remuxing, seeking and/or VFR is involved.
+  Scanning packets for keyframes in JS is much faster than -skip_frame nokey since it avoids decoding the video.
+  */
   probePackets(input: string, streamIndex: number): Promise<VideoPacketInfo | null> {
     const ffprobe = spawn(
       'ffprobe',
@@ -402,33 +402,6 @@ export class MediaRepository {
     });
   }
 
-  async extractVideoFrames(input: string, timestamps: number[], outputDir: string): Promise<string[]> {
-    const results: string[] = [];
-    for (const timestamp of timestamps) {
-      const output = path.join(outputDir, `frame-${timestamp.toFixed(3)}.jpg`);
-      try {
-        await new Promise<void>((resolve, reject) => {
-          ffmpeg(input)
-            .inputOptions([`-ss ${timestamp}`])
-            .outputOptions(['-frames:v 1', '-q:v 2'])
-            .output(output)
-            .on('error', reject)
-            .on('end', () => resolve())
-            .run();
-        });
-        results.push(output);
-      } catch (error) {
-        this.logger.warn(`Failed to extract frame at ${timestamp}s from ${input}: ${error}`);
-      }
-    }
-
-    if (results.length === 0) {
-      throw new Error(`Failed to extract any frames from ${input}`);
-    }
-
-    return results;
-  }
-
   transcode(input: string, output: string | Writable, options: TranscodeCommand): Promise<void> {
     if (!options.twoPass) {
       return new Promise((resolve, reject) => {
@@ -463,39 +436,6 @@ export class MediaRepository {
             .on('end', () => resolve())
             .run();
         })
-        .run();
-    });
-  }
-
-  trim(input: string, output: string, startTime: number, duration: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      ffmpeg(input, { niceness: 10 })
-        .inputOptions(['-ss', String(startTime)])
-        .outputOptions(['-t', String(duration), '-c', 'copy', '-avoid_negative_ts', 'make_zero'])
-        .output(output)
-        .on('start', (command: string) => this.logger.debug(command))
-        .on('error', (error, _, stderr) => {
-          this.logger.error(stderr || error);
-          reject(error);
-        })
-        .on('end', () => resolve())
-        .run();
-    });
-  }
-
-  extractFrame(input: string, output: string, timeSeconds: number, streamIndex?: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const outputOptions = streamIndex === undefined ? [] : ['-map', `0:${streamIndex}`];
-      ffmpeg(input, { niceness: 10 })
-        .inputOptions(['-ss', String(timeSeconds)])
-        .outputOptions([...outputOptions, '-frames:v', '1', '-q:v', '2'])
-        .output(output)
-        .on('start', (command: string) => this.logger.debug(command))
-        .on('error', (error, _, stderr) => {
-          this.logger.error(stderr || error);
-          reject(error);
-        })
-        .on('end', () => resolve())
         .run();
     });
   }

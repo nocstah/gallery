@@ -3,26 +3,8 @@
 // album folders' bookkeeping, managers/album-folders), the comments and hearts on shared albums, the photos new in
 // them since this browser last looked, and the links I made. A Space with more activity than its first page is asked
 // for the next one only as the feed is read down to it.
-import {
-  AssetOrder,
-  AssetVisibility,
-  getActivities,
-  getAllAlbums,
-  getAllSharedLinks,
-  getAllSpaces,
-  getPartners,
-  getSpaceActivities,
-  PartnerDirection,
-  searchAssets,
-  type AlbumResponseDto,
-  type PartnerResponseDto,
-  type SharedLinkResponseDto,
-  type SharedSpaceActivityResponseDto,
-  type SharedSpaceResponseDto,
-} from '@immich/sdk';
-import { SvelteSet } from 'svelte/reactivity';
-import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
-import { appendUniqueById } from '$lib/utils/people-utils';
+import { isLibrarySpace } from '#lib/managers/album-folders.svelte.ts';
+import { appendUniqueById } from '#lib/utils/people-utils.ts';
 import {
   freshItems,
   isoOf,
@@ -34,7 +16,25 @@ import {
   withoutPhotos,
   type FeedItem,
   type FeedPerson,
-} from '$lib/utils/shared-feed';
+} from '#lib/utils/shared-feed.ts';
+import {
+  AssetOrder,
+  AssetVisibility,
+  PartnerDirection,
+  getActivities,
+  getAllAlbums,
+  getAllSharedLinks,
+  getAllSpaces,
+  getPartners,
+  getSpaceActivities,
+  searchAssets,
+  type AlbumResponseDto,
+  type PartnerResponseDto,
+  type SharedLinkResponseDto,
+  type SharedSpaceActivityResponseDto,
+  type SharedSpaceResponseDto,
+} from '@immich/sdk';
+import { SvelteSet } from 'svelte/reactivity';
 
 /** the Spaces whose activity is read (the most recently active first) */
 export const SPACES_MAX = 12;
@@ -62,8 +62,8 @@ type SpaceFeed = {
   failed: boolean;
 };
 
-/** Each item through `run`, at most `limit` at a time, every outcome kept (one failing request fails nothing else). */
-const settleLimited = async <T, R>(items: T[], limit: number, run: (item: T) => Promise<R>) => {
+/** Each item through `run`, at most `PARALLEL` at a time, every outcome kept (one failing request fails nothing else). */
+const settleLimited = async <T, R>(items: T[], run: (item: T) => Promise<R>) => {
   const results: PromiseSettledResult<R>[] = Array.from({ length: items.length });
   let next = 0;
   const worker = async () => {
@@ -76,7 +76,7 @@ const settleLimited = async <T, R>(items: T[], limit: number, run: (item: T) => 
       }
     }
   };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, items.length) }, worker));
   return results;
 };
 
@@ -119,7 +119,7 @@ export class SharedFeed {
     ),
   );
   /** Space activity comes a page at a time: nothing older than the last row read from a Space with more to read shows
-   * yet, or that Space's next page could slip in above it */
+  yet, or that Space's next page could slip in above it */
   #horizon = $derived(
     Math.max(
       -Infinity,
@@ -189,7 +189,7 @@ export class SharedFeed {
   }
 
   /** The item a photo in the viewer belongs to, for the viewer to step through its photos: the one it was opened from
-   * while that still holds it, else the first that does (a photo opened from a link). */
+  while that still holds it, else the first that does (a photo opened from a link). */
   itemWith(assetId: string, key?: string) {
     const holds = ({ photoIds }: FeedItem) => photoIds.includes(assetId);
     return this.#all.find((item) => item.key === key && holds(item)) ?? this.#all.find((item) => holds(item));
@@ -204,7 +204,7 @@ export class SharedFeed {
     }
     this.spaces = all.filter((space) => !isLibrarySpace(space));
     const asked = [...this.spaces].sort((a, b) => time(b.lastActivityAt) - time(a.lastActivityAt)).slice(0, SPACES_MAX);
-    const results = await settleLimited(asked, PARALLEL, (space) =>
+    const results = await settleLimited(asked, (space) =>
       getSpaceActivities({ id: space.id, limit: SPACE_PAGE, offset: 0 }),
     );
     this.#feeds = asked.map((space, index) => {
@@ -223,7 +223,7 @@ export class SharedFeed {
   }
 
   async #readMore(feeds: SpaceFeed[]) {
-    const results = await settleLimited(feeds, PARALLEL, ({ space, offset }) =>
+    const results = await settleLimited(feeds, ({ space, offset }) =>
       getSpaceActivities({ id: space.id, limit: SPACE_PAGE, offset }),
     );
     this.#feeds = this.#feeds.map((feed) => {
@@ -266,8 +266,8 @@ export class SharedFeed {
       .slice(0, FRESH_ALBUMS_MAX);
     const createdAfter = isoOf(this.since);
     const [reactions, news] = await Promise.all([
-      settleLimited(reacting, PARALLEL, (album) => getActivities({ albumId: album.id })),
-      settleLimited(fresh, PARALLEL, (album) =>
+      settleLimited(reacting, (album) => getActivities({ albumId: album.id })),
+      settleLimited(fresh, (album) =>
         searchAssets({
           metadataSearchDto: { albumIds: [album.id], createdAfter, size: FRESH_PHOTOS_MAX, order: AssetOrder.Desc },
         }),

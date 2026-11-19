@@ -1,13 +1,13 @@
-import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/svelte';
-import { tick } from 'svelte';
 import {
   libraryContextFile,
   mainLibrary,
   secondLibrary,
   serving,
   type TestLibrary,
-} from '@test-data/factories/library-context-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
+import '@testing-library/jest-dom';
+import { render, screen } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import LibrariesNav from './LibrariesNav.svelte';
 import { loadLibraryContext, resetLibraryContext } from './library-context.svelte';
 
@@ -19,9 +19,9 @@ const mocks = vi.hoisted(() => ({
   sidebarModeStore: { layout: 'expanded' as 'overlay' | 'rail' | 'expanded', railExpanded: false },
 }));
 vi.mock('$app/state', () => ({ page: mocks.page }));
-vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
-vi.mock('$lib/components/sidebar/sidebar-nav-group.svelte', async () => {
-  const module = await import('@test-data/mocks/sidebar-nav-group.stub.svelte');
+vi.mock('#lib/stores/sidebar-mode.svelte.ts', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
+vi.mock('#lib/components/sidebar/sidebar-nav-group.svelte', async () => {
+  const module = await import('#lib/gallery/__mocks__/sidebar-nav-group.stub.svelte');
   return { default: module.default };
 });
 

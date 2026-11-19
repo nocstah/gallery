@@ -132,10 +132,10 @@ export const formatMonthJump = ({ year, month }: MonthJump, locale = 'en') => {
 };
 
 /**
- * The month of the timeline to land on: the month itself when it has photos, else the nearest one (the newer of two
- * as near). A whole year lands on its newest month, as the year strip does; a year without photos on the month
- * nearest its middle.
- */
+The month of the timeline to land on: the month itself when it has photos, else the nearest one (the newer of two
+as near). A whole year lands on its newest month, as the year strip does; a year without photos on the month
+nearest its middle.
+*/
 export function nearestMonth(months: readonly YearMonth[], jump: MonthJump): YearMonth | undefined {
   const index = ({ year, month }: YearMonth) => year * 12 + month - 1;
   if (jump.month === undefined) {

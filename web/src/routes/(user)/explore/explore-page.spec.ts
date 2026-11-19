@@ -1,20 +1,20 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { personFactory } from '#test/kioku/factories/person-factory.ts';
 import { Type, type AssetResponseDto, type PersonResponseDto, type SearchExploreResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { personFactory } from '@test-data/factories/person-factory';
 import ExplorePage from './+page.svelte';
 
 // Local Omarchy layer: the places row ranks every place by its photos (managers/place-stats); here nothing is counted,
 // so the places keep the order they came in
-vi.mock('$lib/managers/place-stats.svelte', () => ({
+vi.mock('#lib/managers/place-stats.svelte.ts', () => ({
   placeStats: { settle: () => Promise.resolve(), get: () => undefined },
 }));
 
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: MockComponent };
 });
 

@@ -1,4 +1,4 @@
-import { estimateTarget, installViewerZoom, transformBetween } from '$lib/gallery/motion/viewer-zoom';
+import { estimateTarget, installViewerZoom, transformBetween } from '#lib/gallery/motion/viewer-zoom.ts';
 
 describe('estimateTarget', () => {
   const viewport = { width: 1000, height: 800 };
@@ -39,12 +39,18 @@ describe('installViewerZoom', () => {
   };
   const flyers = () => document.querySelectorAll('[data-motion-flyer]').length;
 
+  // A real browser follows the thumbnail's <a href>, which would navigate the test page away; the viewer is
+  // opened by the app's router, not by the link's default action.
+  const keepPage = (event: MouseEvent) => event.preventDefault();
+
   beforeEach(() => {
     Element.prototype.animate ??= vi.fn() as unknown as Element['animate'];
     uninstall = installViewerZoom();
+    addEventListener('click', keepPage);
   });
 
   afterEach(() => {
+    removeEventListener('click', keepPage);
     uninstall();
     document.body.replaceChildren();
   });
@@ -61,6 +67,16 @@ describe('installViewerZoom', () => {
 
   it('puts no copy up when the select circle is clicked, which never opens the viewer', () => {
     thumbnail().querySelector<HTMLElement>('[data-icon-select]')!.click();
+    expect(flyers()).toBe(0);
+  });
+
+  it('puts no copy up while photos are being selected, when a click selects instead of opening', () => {
+    const photo = thumbnail().querySelector('img')!;
+    // The selection bar (ControlAppBar) is on screen whenever a selection is active.
+    const bar = document.createElement('div');
+    bar.dataset.testid = 'control-bar';
+    document.body.append(bar);
+    photo.click();
     expect(flyers()).toBe(0);
   });
 });

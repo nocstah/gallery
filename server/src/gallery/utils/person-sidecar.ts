@@ -16,6 +16,21 @@ export const personIdentityId = (alias = 'person') =>
 export const personIsPet = (alias = 'person') =>
   sql<boolean>`EXISTS (SELECT FROM "person_pet" WHERE "person_pet"."personGroupId" = ${groupRef(alias)})`;
 
+/**
+A person is listed unless it is a per-species pet bucket, which the detector alone produces and whose
+faces never carry an embedding. A pet that pet recognition identified has pet_search rows; a human
+cluster its owner reclassified as a pet keeps its face_search rows.
+*/
+export const personIsListed = (alias = 'person') =>
+  sql<boolean>`(NOT ${personIsPet(alias)} OR EXISTS (
+    SELECT FROM "asset_face" "pet_face"
+    WHERE "pet_face"."personGroupId" = ${groupRef(alias)}
+      AND (
+        EXISTS (SELECT FROM "pet_search" WHERE "pet_search"."faceId" = "pet_face"."id")
+        OR EXISTS (SELECT FROM "face_search" WHERE "face_search"."faceId" = "pet_face"."id")
+      )
+  ))`;
+
 export const personType = (alias = 'person') =>
   sql<string>`(CASE WHEN ${personIsPet(alias)} THEN 'pet' ELSE 'person' END)`;
 
@@ -35,10 +50,10 @@ export const personSidecarColumns = (alias = 'person') => [
 ];
 
 /**
- * A person deleted ahead of its group leaves its person_identity row behind until the group is
- * swept. Readers never see it because they join through person, but it still holds the
- * (ownerId, identityId) unique key, so writers clear it first.
- */
+A person deleted ahead of its group leaves its person_identity row behind until the group is
+swept. Readers never see it because they join through person, but it still holds the
+(ownerId, identityId) unique key, so writers clear it first.
+*/
 export const clearOrphanPersonIdentity = (db: Kysely<DB> | Transaction<DB>, ownerId: string, identityId: string) =>
   db
     .deleteFrom('person_identity')
@@ -88,9 +103,9 @@ export const setPersonIdentity = async (
 };
 
 /**
- * Writes the given sidecar fields for the person in group `personGroupId`. `type: 'pet'` adds the
- * person_pet row and any other type removes it; `species` alone only updates an existing pet.
- */
+Writes the given sidecar fields for the person in group `personGroupId`. `type: 'pet'` adds the
+person_pet row and any other type removes it; `species` alone only updates an existing pet.
+*/
 export const writePersonSidecars = async (
   db: Kysely<DB> | Transaction<DB>,
   personGroupId: string,

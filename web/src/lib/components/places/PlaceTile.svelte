@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { placeFaces } from '$lib/managers/place-faces.svelte';
-  import { Route } from '$lib/route';
-  import { locale } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { placeLine, placeYears, type PlaceStats } from '$lib/utils/place-stats';
+  import { placeFaces } from '#lib/managers/place-faces.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { placeLine, placeYears, type PlaceStats } from '#lib/utils/place-stats.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { t } from 'svelte-i18n';
 
@@ -15,7 +15,7 @@
 
   interface Props {
     /** the place's photo as Gallery lists it (GET /search/cities: one per city), shown where no photo of the place
-     * qualifies as its face */
+    qualifies as its face */
     assetId: string;
     city: string;
     country?: string | null;

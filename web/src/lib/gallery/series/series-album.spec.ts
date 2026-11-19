@@ -1,11 +1,11 @@
+import SmartAlbumBadge from '#lib/components/curator/SmartAlbumBadge.svelte';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { getAlbumActions } from '#lib/services/album.service.ts';
+import { secondWithout, serving } from '#test/kioku/factories/library-context-factory.ts';
+import { seriesCard, smartAlbum } from '#test/kioku/factories/series-factory.ts';
 import { AlbumUserRole, type AlbumResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import SmartAlbumBadge from '$lib/components/curator/SmartAlbumBadge.svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { getAlbumActions } from '$lib/services/album.service';
-import { secondWithout, serving } from '@test-data/factories/library-context-factory';
-import { seriesCard, smartAlbum } from '@test-data/factories/series-factory';
 import { albumSeriesAction, forgetSmartAlbums, smartAlbumStopped } from './series-album.svelte';
 
 // Local Omarchy layer: A memory a day from this album (gallery/series), on a smart album's page: in the album's ⋮
@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
   goto: vi.fn(),
   danger: vi.fn(),
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
 vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),

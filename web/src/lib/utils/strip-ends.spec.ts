@@ -1,5 +1,5 @@
+import { cutAtEnds } from '#lib/utils/strip-ends.ts';
 import { describe, expect, it } from 'vitest';
-import { cutAtEnds } from '$lib/utils/strip-ends';
 
 // Local Omarchy layer: the bar's year strip ends on whole years ("2015 20›" on the Dell): a year its ends would cut,
 // the fade and the chevron at an end that has more, waits until it comes in whole

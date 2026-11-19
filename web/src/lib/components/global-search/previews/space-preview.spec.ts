@@ -10,7 +10,7 @@ vi.mock('@immich/ui', async (orig) => ({
 
 // Local Omarchy layer: one of QR's bank slips, as the palette reads them (managers/slip-covers)
 const { slips } = vi.hoisted(() => ({ slips: { known: true } }));
-vi.mock('$lib/managers/slip-covers.svelte', () => ({
+vi.mock('#lib/managers/slip-covers.svelte.ts', () => ({
   slipCovers: {
     isSlip: (assetId: string | null | undefined) => assetId === 'a-slip',
     get known() {
@@ -22,7 +22,7 @@ vi.mock('$lib/managers/slip-covers.svelte', () => ({
 beforeAll(async () => {
   // Load the real en bundle so `$t('cmdk_preview_photo_count')` and
   // `$t('cmdk_preview_member_count')` resolve to English ICU output rather than raw keys.
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US' });
   await waitLocale('en-US');
 });

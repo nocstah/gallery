@@ -7,7 +7,7 @@
 // the theme's own colours whenever they change (the face, a theme chosen here) and set as --ws-glass-density on the
 // root; until it is, the stylesheet's fallback holds. One density for every theme would have to be the densest
 // theme's, about 91% where most need 82%.
-import { contrast } from '$lib/theme/derive';
+import { contrast } from '#lib/theme/derive.ts';
 
 type Rgb = [number, number, number];
 
@@ -30,9 +30,9 @@ const glassOver = (surface: Rgb, density: number, level: number) =>
   toHex(surface.map((value) => (density / 100) * value + (1 - density / 100) * level) as Rgb);
 
 /**
- * The least density, a percentage from GLASS_DENSITY_FLOOR to GLASS_DENSITY_CEILING, at which `words` keep 4.6:1 on the
- * glass of `surface` over a white photo and over a black one; the ceiling when even that cannot.
- */
+The least density, a percentage from GLASS_DENSITY_FLOOR to GLASS_DENSITY_CEILING, at which `words` keep 4.6:1 on the
+glass of `surface` over a white photo and over a black one; the ceiling when even that cannot.
+*/
 export const glassDensity = (surface: Rgb, words: Rgb): number => {
   const text = toHex(words);
   for (let density = GLASS_DENSITY_FLOOR; density < GLASS_DENSITY_CEILING; density++) {

@@ -1,4 +1,4 @@
-import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
+import { keyboardManager } from '#lib/stores/keyboard-manager.svelte.ts';
 
 describe('keyboardManager', () => {
   afterEach(() => {

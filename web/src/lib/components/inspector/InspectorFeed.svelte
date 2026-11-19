@@ -5,18 +5,18 @@
   // goes where an inspector asks, and Shift+I opens the inspector or closes it (it opens one only where there is a
   // second screen to put it on, inspectorFits: not on a phone or a touch-first tablet). While no inspector listens,
   // the viewer and the selection are not even watched.
-  import { goto } from '$app/navigation';
-  import { shortcut } from '$lib/actions/shortcut';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { shortcut } from '#lib/actions/shortcut.ts';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
   import {
     inspectorFeed,
     inspectorFits,
     subjectOfAsset,
     subjectOfTimelineAsset,
-  } from '$lib/managers/inspector-link.svelte';
+  } from '#lib/managers/inspector-link.svelte.ts';
   import { untrack } from 'svelte';
+  import { goto } from '$app/navigation';
 
   const offered = $derived(authManager.authenticated && !authManager.isSharedLink);
 

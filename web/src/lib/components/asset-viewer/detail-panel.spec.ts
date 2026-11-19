@@ -1,3 +1,7 @@
+import { renderInViewerSpace } from '#lib/gallery/viewer-space.test-helpers.ts';
+import { getAppleMapsUrl, getGoogleMapsUrl, getOpenStreetMapUrl } from '#lib/utils/exif-utils.ts';
+import { factory } from '#test/unit/factories.ts';
+import { renderWithTooltips } from '#test/unit/helpers.ts';
 import {
   AssetTypeEnum,
   AssetVisibility,
@@ -5,11 +9,8 @@ import {
   type AssetResponseDto,
   type PersonResponseDto,
 } from '@immich/sdk';
-import '@testing-library/jest-dom';
-import { screen, waitFor, within } from '@testing-library/svelte';
-import { getAppleMapsUrl, getGoogleMapsUrl, getOpenStreetMapUrl } from '$lib/utils/exif-utils';
-import { renderWithTooltips } from '$tests/helpers';
-import { assetFactory } from '@test-data/factories/asset-factory';
+import { expect } from 'vitest';
+import { page } from 'vitest/browser';
 import DetailPanel from './DetailPanel.svelte';
 
 const { authManagerMock, faceManagerMock, getAllAlbumsMock, getAssetInfoMock, zoomImageToBase64Mock } = vi.hoisted(
@@ -44,19 +45,23 @@ vi.mock('@immich/sdk', async (importOriginal) => {
   };
 });
 
-vi.mock('$app/navigation', () => ({ goto: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('$app/navigation', async () => ({
+  ...(await import('#test/unit/mocks/app-navigation.ts')),
+  goto: vi.fn().mockResolvedValue(undefined),
+}));
 
-vi.mock('$lib/utils/people-utils', () => ({
+vi.mock('#lib/utils/people-utils.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/people-utils.ts')>()),
   zoomImageToBase64: zoomImageToBase64Mock,
 }));
 
-vi.mock('$lib/stores/face.svelte', () => ({
+vi.mock('#lib/stores/face.svelte.js', () => ({
   faceManager: faceManagerMock,
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: authManagerMock }));
+vi.mock('#lib/managers/auth-manager.svelte.js', () => ({ authManager: authManagerMock }));
 
-vi.mock('$lib/managers/asset-viewer-manager.svelte', () => ({
+vi.mock('#lib/managers/asset-viewer-manager.svelte.js', () => ({
   assetViewerManager: {
     closeDetailPanel: vi.fn(),
     closeEditFacesPanel: vi.fn(),
@@ -71,7 +76,7 @@ vi.mock('$lib/managers/asset-viewer-manager.svelte', () => ({
   },
 }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.js', () => ({
   featureFlagsManager: {
     value: {
       map: true,
@@ -80,61 +85,61 @@ vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
   },
 }));
 
-vi.mock('$lib/components/shared-components/map/Map.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/map-component.stub.svelte');
+vi.mock('#lib/components/shared-components/map/Map.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/map-component.stub.svelte');
   return { default: MockComponent };
 });
 
 // #734: these five stand in for the row-probe stub (echoes `isOwner`/`canEdit` as data
 // attributes) rather than the plain noop, so the editability-propagation tests below can assert
 // on what DetailPanel actually threaded down to each row.
-vi.mock('$lib/components/asset-viewer/DetailPanelDate.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/detail-panel-row-probe.stub.svelte');
+vi.mock('#lib/components/asset-viewer/DetailPanelDate.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/detail-panel-row-probe.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/asset-viewer/DetailPanelDescription.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/detail-panel-row-probe.stub.svelte');
+vi.mock('#lib/components/asset-viewer/DetailPanelDescription.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/detail-panel-row-probe.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/asset-viewer/DetailPanelLocation.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/detail-panel-row-probe.stub.svelte');
+vi.mock('#lib/components/asset-viewer/DetailPanelLocation.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/detail-panel-row-probe.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/asset-viewer/DetailPanelStarRating.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/detail-panel-row-probe.stub.svelte');
+vi.mock('#lib/components/asset-viewer/DetailPanelStarRating.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/detail-panel-row-probe.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/asset-viewer/DetailPanelTags.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/detail-panel-row-probe.stub.svelte');
+vi.mock('#lib/components/asset-viewer/DetailPanelTags.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/detail-panel-row-probe.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/faces-page/person-side-panel.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/faces-page/person-side-panel.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/OnEvents.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/OnEvents.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/UserAvatar.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/UserAvatar.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/asset-viewer/AlbumListItemDetails.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/asset-viewer/AlbumListItemDetails.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/LoadingSpinner.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/LoadingSpinner.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
@@ -218,16 +223,13 @@ describe('DetailPanel', () => {
       people: [person],
     };
 
-    const { container } = renderWithTooltips(DetailPanel, {
-      asset,
-      currentAlbum: null,
-      spaceId: 'space-1',
+    const { container } = await renderInViewerSpace(DetailPanel, { asset, currentAlbum: null }, { spaceId: 'space-1' });
+
+    await vi.waitFor(() => expect(zoomImageToBase64Mock).toHaveBeenCalledWith(face, asset.id, asset.type, undefined), {
+      timeout: 5000,
     });
 
-    await waitFor(() => expect(zoomImageToBase64Mock).toHaveBeenCalledWith(face, asset.id, asset.type, undefined));
-
-    const croppedFace = container.querySelector('img[src="data:image/jpeg;base64,current-face"]');
-    expect(croppedFace).toBeTruthy();
+    await expect.poll(() => container.querySelector('img[src="data:image/jpeg;base64,current-face"]')).toBeTruthy();
     expect(container.querySelector('img[src*="/shared-spaces/space-1/people/space-person-1/thumbnail"]')).toBeNull();
   });
 
@@ -309,16 +311,12 @@ describe('DetailPanel', () => {
       people: [alice, bob],
     };
 
-    const { container } = renderWithTooltips(DetailPanel, {
-      asset,
-      currentAlbum: null,
-      spaceId: 'space-1',
-    });
+    const { container } = await renderInViewerSpace(DetailPanel, { asset, currentAlbum: null }, { spaceId: 'space-1' });
 
-    await waitFor(() => expect(zoomImageToBase64Mock).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(zoomImageToBase64Mock).toHaveBeenCalledTimes(2), { timeout: 5000 });
 
-    expect(container.querySelector('img[src="data:image/jpeg;base64,first-face"]')).toBeTruthy();
-    expect(container.querySelector('img[src="data:image/jpeg;base64,second-face"]')).toBeTruthy();
+    await expect.poll(() => container.querySelector('img[src="data:image/jpeg;base64,first-face"]')).toBeTruthy();
+    await expect.poll(() => container.querySelector('img[src="data:image/jpeg;base64,second-face"]')).toBeTruthy();
     expect(
       container.querySelectorAll('img[src*="/shared-spaces/space-1/people/space-person-1/thumbnail"]'),
     ).toHaveLength(0);
@@ -351,15 +349,15 @@ describe('DetailPanel', () => {
     faceManagerMock.people = [person];
     faceManagerMock.facesByPersonId = new Map([[person.id, [face]]]);
 
-    const asset = assetFactory.build({
+    const asset = factory.asset({
       ownerId: 'owner-1',
       localDateTime: '2026-01-01T00:00:00.000Z',
       people: [],
     });
 
-    const { container } = renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
+    const { container } = await renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
 
-    await waitFor(() => expect(screen.getByText('Karolin')).toBeInTheDocument());
+    await expect.element(page.getByText('Karolin')).toBeInTheDocument();
     expect(container.querySelector('p[title="February 14, 2014"]')).toBeTruthy();
   });
 
@@ -386,15 +384,15 @@ describe('DetailPanel', () => {
     faceManagerMock.people = [person];
     faceManagerMock.facesByPersonId = new Map([[person.id, [face]]]);
 
-    const asset = assetFactory.build({
+    const asset = factory.asset({
       ownerId: 'owner-1',
       localDateTime: '2026-01-01T00:00:00.000Z',
       people: [],
     });
 
-    const { container } = renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
+    const { container } = await renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
 
-    await waitFor(() => expect(screen.getByText('Karolin')).toBeInTheDocument());
+    await expect.element(page.getByText('Karolin')).toBeInTheDocument();
     expect(container.querySelector('p[title*="2014"]')).toBeNull();
   });
 
@@ -421,15 +419,15 @@ describe('DetailPanel', () => {
     faceManagerMock.people = [person];
     faceManagerMock.facesByPersonId = new Map([[person.id, [face]]]);
 
-    const asset = assetFactory.build({
+    const asset = factory.asset({
       ownerId: 'owner-1',
       localDateTime: '2026-01-01T00:00:00.000Z',
       people: [],
     });
 
-    const { container } = renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
+    const { container } = await renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
 
-    await waitFor(() => expect(screen.getByText('Karolin')).toBeInTheDocument());
+    await expect.element(page.getByText('Karolin')).toBeInTheDocument();
     expect(container.querySelector('p[title*="2027"]')).toBeNull();
   });
 
@@ -441,7 +439,7 @@ describe('DetailPanel', () => {
   it('renders Google, Apple, and OpenStreetMap links in the image info panel map popup', async () => {
     const lat = 48.85341;
     const lon = 2.3488;
-    const asset = assetFactory.build({
+    const asset = factory.asset({
       id: 'asset-with-location',
       ownerId: 'owner-1',
       exifInfo: {
@@ -452,13 +450,13 @@ describe('DetailPanel', () => {
       },
     });
 
-    renderWithTooltips(DetailPanel, { asset });
+    await renderWithTooltips(DetailPanel, { asset });
 
-    await waitFor(() => expect(screen.getByTestId('map-popup')).toBeInTheDocument());
+    await expect.element(page.getByTestId('map-popup')).toBeInTheDocument();
 
-    const googleLink = screen.getByRole('link', { name: 'open_in_google_maps' });
-    const appleLink = screen.getByRole('link', { name: 'open_in_apple_maps' });
-    const openStreetMapLink = screen.getByRole('link', { name: 'open_in_openstreetmap' });
+    const googleLink = page.getByRole('link', { name: 'open_in_google_maps' });
+    const appleLink = page.getByRole('link', { name: 'open_in_apple_maps' });
+    const openStreetMapLink = page.getByRole('link', { name: 'open_in_openstreetmap' });
 
     expect(googleLink).toHaveAttribute('href', getGoogleMapsUrl(lat, lon));
     expect(appleLink).toHaveAttribute('href', getAppleMapsUrl(lat, lon));
@@ -481,32 +479,34 @@ describe('DetailPanel', () => {
   describe('editability propagation to child rows (#734)', () => {
     it('widens description/rating/date/location and tags-add to a non-owner space editor when canEdit is true', async () => {
       authManagerMock.preferences.tags.enabled = true;
-      const asset = assetFactory.build({ ownerId: 'someone-else', canEdit: true, tags: [] });
+      const asset = factory.asset({ ownerId: 'someone-else', canEdit: true, tags: [] });
 
-      renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
+      await renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
 
-      await waitFor(() => expect(screen.getAllByTestId('detail-panel-row-probe')).toHaveLength(5));
-      const [descriptionProbe, ratingProbe, dateProbe, locationProbe, tagsProbe] =
-        screen.getAllByTestId('detail-panel-row-probe');
+      await expect.poll(() => page.getByTestId('detail-panel-row-probe').elements()).toHaveLength(5);
+      const [descriptionProbe, ratingProbe, dateProbe, locationProbe, tagsProbe] = page
+        .getByTestId('detail-panel-row-probe')
+        .elements() as HTMLElement[];
 
       for (const probe of [descriptionProbe, ratingProbe, dateProbe, locationProbe]) {
-        expect(probe).toHaveAttribute('data-is-owner', 'true');
+        expect(probe.dataset.isOwner).toBe('true');
       }
       // Tags is the one row fed BOTH values: real ownership stays false (per-tag remove must
       // stay gated on it — fix #1), while the add-tag affordance widens via `canEdit`.
-      expect(tagsProbe).toHaveAttribute('data-is-owner', 'false');
-      expect(tagsProbe).toHaveAttribute('data-can-edit', 'true');
+      expect(tagsProbe.dataset.isOwner).toBe('false');
+      expect(tagsProbe.dataset.canEdit).toBe('true');
     });
 
     it('keeps the rows real-owner-gated for a non-owner when canEdit is false', async () => {
       authManagerMock.preferences.tags.enabled = true;
-      const asset = assetFactory.build({ ownerId: 'someone-else', canEdit: false, tags: [] });
+      const asset = factory.asset({ ownerId: 'someone-else', canEdit: false, tags: [] });
 
-      renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
+      await renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
 
-      await waitFor(() => expect(screen.getAllByTestId('detail-panel-row-probe')).toHaveLength(5));
-      const [descriptionProbe, ratingProbe, dateProbe, locationProbe, tagsProbe] =
-        screen.getAllByTestId('detail-panel-row-probe');
+      await expect.poll(() => page.getByTestId('detail-panel-row-probe').elements()).toHaveLength(5);
+      const [descriptionProbe, ratingProbe, dateProbe, locationProbe, tagsProbe] = page
+        .getByTestId('detail-panel-row-probe')
+        .elements() as HTMLElement[];
 
       // Only Tags receives an explicit `canEdit` prop (DetailPanel.svelte:546); Description,
       // Rating, Date and Location receive `isOwner={canEdit}` with no separate `canEdit` prop, so
@@ -514,10 +514,10 @@ describe('DetailPanel', () => {
       // of state — asserting it there would pass either way (fix #7). Assert it only where the
       // prop is actually threaded.
       for (const probe of [descriptionProbe, ratingProbe, dateProbe, locationProbe]) {
-        expect(probe).toHaveAttribute('data-is-owner', 'false');
+        expect(probe.dataset.isOwner).toBe('false');
       }
-      expect(tagsProbe).toHaveAttribute('data-is-owner', 'false');
-      expect(tagsProbe).toHaveAttribute('data-can-edit', 'false');
+      expect(tagsProbe.dataset.isOwner).toBe('false');
+      expect(tagsProbe.dataset.canEdit).toBe('false');
     });
 
     // W-18, the hard rule of this task: `canEdit` must never reach the people row. It keeps the
@@ -538,13 +538,13 @@ describe('DetailPanel', () => {
       };
       faceManagerMock.people = [person];
 
-      const asset = assetFactory.build({ ownerId: 'someone-else', canEdit: true });
+      const asset = factory.asset({ ownerId: 'someone-else', canEdit: true });
 
-      renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
+      await renderWithTooltips(DetailPanel, { asset, currentAlbum: null });
 
-      const peopleSection = await screen.findByTestId('detail-panel-people');
-      expect(within(peopleSection).getByText('Nora')).toBeInTheDocument();
-      expect(within(peopleSection).queryByLabelText('tag_people')).toBeNull();
+      const peopleSection = page.getByTestId('detail-panel-people');
+      await expect.element(peopleSection.getByText('Nora')).toBeInTheDocument();
+      expect(peopleSection.getByLabelText('tag_people').query()).toBeNull();
     });
   });
 });

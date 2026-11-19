@@ -1,4 +1,4 @@
-import { placeKey, placeLine, placeStatsOf, placeYears, rankPlaces, type PlaceStats } from '$lib/utils/place-stats';
+import { placeKey, placeLine, placeStatsOf, placeYears, rankPlaces, type PlaceStats } from '#lib/utils/place-stats.ts';
 
 describe(placeStatsOf.name, () => {
   it("adds up a place's photos and reads the years they span", () => {

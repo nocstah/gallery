@@ -1,14 +1,14 @@
+import { libraryNamed } from '#lib/gallery/libraries/library-words.ts';
+import { animateRemoval } from '#lib/gallery/motion/index.ts';
+import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { pageKey, undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { refreshAssets } from '#lib/utils/asset-refresh.ts';
+import { announceCovers, handOverCovers, restoreCovers, type CoverChange } from '#lib/utils/stack-covers.ts';
 import { AssetVisibility, deleteAssets as deleteBulk, restoreAssets, type StackResponseDto } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { libraryNamed } from '$lib/gallery/libraries/library-words';
-import { animateRemoval } from '$lib/gallery/motion';
-import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { pageKey, undoManager } from '$lib/managers/undo-manager.svelte';
-import { refreshAssets } from '$lib/utils/asset-refresh';
-import { announceCovers, handOverCovers, restoreCovers, type CoverChange } from '$lib/utils/stack-covers';
 import { handleError } from './handle-error';
 
 export type OnDelete = (assetIds: string[]) => void;
@@ -67,7 +67,7 @@ export const deleteAssets = async (
 };
 
 /** Restores trashed assets, puts back the stack covers they had, and shows them again wherever the page is now (the
- * page they were trashed on also gets its own callback, which may reopen the photo, while it is still open). */
+page they were trashed on also gets its own callback, which may reopen the photo, while it is still open). */
 export const undoDeleteAssets = async (
   onUndoDelete: OnUndoDelete | undefined,
   assets: TimelineAsset[],
@@ -86,10 +86,10 @@ export const undoDeleteAssets = async (
 };
 
 /**
- * Update the asset stack state in the asset store based on the provided stack response.
- * This function updates the stack information so that the icon is shown for the primary asset
- * and removes the non-primary assets from the timeline.
- */
+Update the asset stack state in the asset store based on the provided stack response.
+This function updates the stack information so that the icon is shown for the primary asset
+and removes the non-primary assets from the timeline.
+*/
 export function updateStackedAssetInTimeline(timelineManager: TimelineManager, stack: StackResponseDto) {
   timelineManager.update([stack.primaryAssetId], (asset) => {
     asset.stack = {

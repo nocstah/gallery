@@ -32,6 +32,7 @@ import 'package:immich_mobile/extensions/string_extensions.dart';
 import 'package:immich_mobile/infrastructure/repositories/gallery_sync_stream.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/sync_stream.repository.drift.dart';
 import 'package:immich_mobile/infrastructure/utils/exif.converter.dart';
+import 'package:immich_mobile/utils/datetime_helpers.dart';
 import 'package:logging/logging.dart';
 import 'package:openapi/api.dart' as api show AlbumUserRole, AssetEditAction, AssetVisibility, UserMetadataKey;
 import 'package:openapi/api.dart' hide AlbumUserRole, AssetEditAction, AssetVisibility, UserMetadataKey;
@@ -40,14 +41,12 @@ import 'package:openapi/api.dart' hide AlbumUserRole, AssetEditAction, AssetVisi
 class SyncStreamRepository extends DatabaseAccessor<Drift> with $SyncStreamRepositoryMixin {
   final Logger _logger = Logger('SyncStreamRepository');
 
-  // memory -> asset link rows whose memory or asset has not been streamed yet, held until
-  // SyncCompleteV1. Bounded by the links delivered in a single sync pass and cleared on every
-  // flush, so it never accumulates across syncs. See updateMemoryAssetsV1.
-  final Set<(String memoryId, String assetId)> _deferredMemoryAssets = {};
-
   SyncStreamRepository(super.attachedDatabase);
 
   Drift get _db => attachedDatabase;
+
+  /// gallery-fork: fork sync state for this database; the sync service is handed this same instance.
+  late final GallerySyncStreamRepository gallery = GallerySyncStreamRepository(_db);
 
   Future<void> reset() async {
     _logger.fine("SyncResetV1 received. Resetting remote entities");
@@ -82,9 +81,9 @@ class SyncStreamRepository extends DatabaseAccessor<Drift> with $SyncStreamRepos
             await _db.assetOcrEntity.deleteAll();
 
             // gallery-fork: fork-only remote tables (spaces, libraries).
-            await GallerySyncStreamRepository(_db).resetTables();
+            await gallery.resetTables();
           });
-          _deferredMemoryAssets.clear();
+          gallery.clearDeferredMemoryAssets();
         } finally {
           // re-enable FK even if the transaction throws, otherwise the connection
           // would be left with foreign_keys = OFF, silently disabling cascades.
@@ -243,6 +242,7 @@ class SyncStreamRepository extends DatabaseAccessor<Drift> with $SyncStreamRepos
     try {
       await _db.batch((batch) {
         for (final asset in data) {
+          final groupDate = asset.localDateTime ?? asset.fileCreatedAt?.toLocal();
           final companion = RemoteAssetEntityCompanion(
             name: Value(asset.originalFileName),
             type: Value(asset.type.toAssetType()),
@@ -254,6 +254,7 @@ class SyncStreamRepository extends DatabaseAccessor<Drift> with $SyncStreamRepos
             isFavorite: Value(asset.isFavorite),
             ownerId: Value(asset.ownerId),
             localDateTime: Value(asset.localDateTime),
+            groupDate: groupDate == null ? const Value.absent() : Value(timelineGroupDate(groupDate)),
             thumbHash: Value(asset.thumbhash),
             deletedAt: Value(asset.deletedAt),
             visibility: Value(asset.visibility.toAssetVisibility()),
@@ -265,16 +266,23 @@ class SyncStreamRepository extends DatabaseAccessor<Drift> with $SyncStreamRepos
             isEdited: Value(asset.isEdited),
           );
 
-          batch.insert(
+          // no server dates, so the day follows created_at, which defaults to now on insert
+          final insert = companion.copyWith(id: Value(asset.id)).toColumns(true);
+          final update = companion.toColumns(true);
+          if (groupDate == null) {
+            insert['group_date'] = currentDateAndTime.modify(const DateTimeModifier.localTime()).date;
+            update['group_date'] = _db.remoteAssetEntity.createdAt.modify(const DateTimeModifier.localTime()).date;
+          }
+          batch.insert<$RemoteAssetEntityTable, RemoteAssetEntityData>(
             _db.remoteAssetEntity,
-            companion.copyWith(id: Value(asset.id)),
+            RawValuesInsertable(insert),
             mode: InsertMode.insertOrReplace,
-            onConflict: DoUpdate((_) => companion),
+            onConflict: DoUpdate((_) => RawValuesInsertable(update)),
           );
         }
       });
 
-      await _hideReferencedLivePhotoMotionAssets();
+      await gallery.hideReferencedLivePhotoMotionAssets();
     } catch (error, stack) {
       _logger.severe('Error: updateAssetsV1 - $debugLabel', error, stack);
       rethrow;
@@ -285,6 +293,7 @@ class SyncStreamRepository extends DatabaseAccessor<Drift> with $SyncStreamRepos
     try {
       await _db.batch((batch) {
         for (final asset in data) {
+          final groupDate = asset.localDateTime ?? asset.fileCreatedAt?.toLocal();
           final companion = RemoteAssetEntityCompanion(
             name: Value(asset.originalFileName),
             type: Value(asset.type.toAssetType()),
@@ -296,6 +305,7 @@ class SyncStreamRepository extends DatabaseAccessor<Drift> with $SyncStreamRepos
             isFavorite: Value(asset.isFavorite),
             ownerId: Value(asset.ownerId),
             localDateTime: Value(asset.localDateTime),
+            groupDate: groupDate == null ? const Value.absent() : Value(timelineGroupDate(groupDate)),
             thumbHash: Value(asset.thumbhash),
             deletedAt: Value(asset.deletedAt),
             visibility: Value(asset.visibility.toAssetVisibility()),
@@ -307,38 +317,26 @@ class SyncStreamRepository extends DatabaseAccessor<Drift> with $SyncStreamRepos
             isEdited: Value(asset.isEdited),
           );
 
-          batch.insert(
+          final insert = companion.copyWith(id: Value(asset.id)).toColumns(true);
+          final update = companion.toColumns(true);
+          if (groupDate == null) {
+            insert['group_date'] = currentDateAndTime.modify(const DateTimeModifier.localTime()).date;
+            update['group_date'] = _db.remoteAssetEntity.createdAt.modify(const DateTimeModifier.localTime()).date;
+          }
+          batch.insert<$RemoteAssetEntityTable, RemoteAssetEntityData>(
             _db.remoteAssetEntity,
-            companion.copyWith(id: Value(asset.id)),
+            RawValuesInsertable(insert),
             mode: InsertMode.insertOrReplace,
-            onConflict: DoUpdate((_) => companion),
+            onConflict: DoUpdate((_) => RawValuesInsertable(update)),
           );
         }
       });
 
-      await _hideReferencedLivePhotoMotionAssets();
+      await gallery.hideReferencedLivePhotoMotionAssets();
     } catch (error, stack) {
       _logger.severe('Error: updateAssetsV2 - $debugLabel', error, stack);
       rethrow;
     }
-  }
-
-  Future<void> _hideReferencedLivePhotoMotionAssets() {
-    return _db.customUpdate(
-      '''
-      UPDATE remote_asset_entity
-      SET visibility = ?
-      WHERE id IN (
-        SELECT live_photo_video_id
-        FROM remote_asset_entity
-        WHERE live_photo_video_id IS NOT NULL
-      )
-      AND visibility != ?
-      ''',
-      variables: [Variable.withInt(AssetVisibility.hidden.index), Variable.withInt(AssetVisibility.hidden.index)],
-      updates: {_db.remoteAssetEntity},
-      updateKind: UpdateKind.update,
-    );
   }
 
   Future<void> updateAssetsExifV1(Iterable<SyncAssetExifV1> data, {String debugLabel = 'user'}) async {
@@ -697,130 +695,20 @@ class SyncStreamRepository extends DatabaseAccessor<Drift> with $SyncStreamRepos
     }
   }
 
-  // memory_asset_entity carries real foreign keys on BOTH ids, and Drift sends the batch as a
-  // single statement — so one link row whose memory or asset has not been streamed yet fails the
-  // WHOLE batch with SQLITE_CONSTRAINT_FOREIGNKEY (787). That aborts /sync/stream mid-flight and,
-  // because a failed batch is never acked, the next sync replays the same checkpoint and dies the
-  // same way: a permanently wedged client, with people, faces, spaces and libraries (all streamed
-  // later) never arriving. `onConflict: DoNothing()` does not help — it only covers PK conflicts.
-  //
-  // The server streams memories after every asset-bearing type (SYNC_TYPES_ORDER), so ordinarily
-  // both parents are present. This client must also survive an OLDER fork server that still
-  // streams them early — mobile and server release independently — so park what cannot be written
-  // yet and replay it at SyncCompleteV1 rather than dropping it or letting the constraint fire.
   Future<void> updateMemoryAssetsV1(Iterable<SyncMemoryAssetV1> data) async {
     try {
-      final deferred = await _insertMemoryAssetLinks([for (final link in data) (link.memoryId, link.assetId)]);
-      if (deferred.isNotEmpty) {
-        _deferredMemoryAssets.addAll(deferred);
-        _logger.fine('Deferred ${deferred.length} memory asset link(s) until their memory/asset arrives');
-      }
+      await gallery.insertOrDeferMemoryAssetsV1(data);
     } catch (error, stack) {
       _logger.severe('Error: updateMemoryAssetsV1', error, stack);
       rethrow;
     }
   }
 
-  // Replays the links parked by updateMemoryAssetsV1. Called on SyncCompleteV1, by which point
-  // every stream that can deliver an asset has run, so anything still unresolvable is a link this
-  // device genuinely cannot represent (e.g. a memory pointing at an asset outside its sync scope).
-  // Those are dropped with a warning instead of being carried into the next sync pass.
-  Future<void> flushDeferredMemoryAssetsV1() async {
-    if (_deferredMemoryAssets.isEmpty) {
-      return;
-    }
-
-    final pending = Set.of(_deferredMemoryAssets);
-    try {
-      final unresolved = await _insertMemoryAssetLinks(pending);
-      // Only forget the parked links once they have actually been dealt with — on failure they
-      // stay put for the next flush.
-      _deferredMemoryAssets.clear();
-
-      final replayed = pending.length - unresolved.length;
-      if (replayed > 0) {
-        _logger.info('Replayed $replayed deferred memory asset link(s)');
-      }
-      if (unresolved.isNotEmpty) {
-        final sample = unresolved.take(10).map((link) => '${link.$1}/${link.$2}').join(', ');
-        _logger.warning(
-          'Dropping ${unresolved.length} memory asset link(s) whose memory or asset never arrived: $sample',
-        );
-      }
-    } catch (error, stack) {
-      // Never rethrow: the sync itself has completed and every other batch is already acked.
-      // Failing here would abort the stream and lose the parked links for nothing.
-      _logger.severe('Error: flushDeferredMemoryAssetsV1', error, stack);
-    }
-  }
-
-  // Writes the links whose memory AND asset already exist locally, and returns the rest instead of
-  // letting the foreign keys abort the batch.
-  //
-  // Chunked because the parent lookups bind one variable per id: a single stream batch already
-  // carries up to kSyncEventBatchSize (5000) links, and a flush replays everything parked over a
-  // whole sync pass, which can be larger still. 500 keeps the `IN (...)` clauses far below any
-  // SQLITE_MAX_VARIABLE_NUMBER a bundled sqlite3 might have.
-  static const _memoryAssetLinkChunkSize = 500;
-
-  Future<Set<(String, String)>> _insertMemoryAssetLinks(Iterable<(String, String)> links) async {
-    final pending = links.toList(growable: false);
-    if (pending.isEmpty) {
-      return const {};
-    }
-
-    final deferred = <(String, String)>{};
-    for (var start = 0; start < pending.length; start += _memoryAssetLinkChunkSize) {
-      final end = start + _memoryAssetLinkChunkSize;
-      deferred.addAll(
-        await _insertMemoryAssetLinkChunk(pending.sublist(start, end > pending.length ? pending.length : end)),
-      );
-    }
-    return deferred;
-  }
-
-  Future<Set<(String, String)>> _insertMemoryAssetLinkChunk(List<(String, String)> pending) async {
-    final memoryQuery = _db.memoryEntity.selectOnly()
-      ..addColumns([_db.memoryEntity.id])
-      ..where(_db.memoryEntity.id.isIn(pending.map((link) => link.$1).toSet()));
-    final knownMemories = (await memoryQuery.map((row) => row.read(_db.memoryEntity.id)).get()).nonNulls.toSet();
-
-    final assetQuery = _db.remoteAssetEntity.selectOnly()
-      ..addColumns([_db.remoteAssetEntity.id])
-      ..where(_db.remoteAssetEntity.id.isIn(pending.map((link) => link.$2).toSet()));
-    final knownAssets = (await assetQuery.map((row) => row.read(_db.remoteAssetEntity.id)).get()).nonNulls.toSet();
-
-    final insertable = <(String, String)>[];
-    final deferred = <(String, String)>{};
-    for (final link in pending) {
-      if (knownMemories.contains(link.$1) && knownAssets.contains(link.$2)) {
-        insertable.add(link);
-      } else {
-        deferred.add(link);
-      }
-    }
-
-    if (insertable.isNotEmpty) {
-      await _db.batch((batch) {
-        for (final link in insertable) {
-          batch.insert(
-            _db.memoryAssetEntity,
-            MemoryAssetEntityCompanion(memoryId: Value(link.$1), assetId: Value(link.$2)),
-            onConflict: DoNothing(),
-          );
-        }
-      });
-    }
-
-    return deferred;
-  }
-
   Future<void> deleteMemoryAssetsV1(Iterable<SyncMemoryAssetDeleteV1> data) async {
     try {
+      gallery.forgetDeferredMemoryAssets(data);
       await _db.batch((batch) {
         for (final asset in data) {
-          // A link deleted before it could be replayed must not be resurrected by the flush.
-          _deferredMemoryAssets.remove((asset.memoryId, asset.assetId));
           batch.delete(
             _db.memoryAssetEntity,
             MemoryAssetEntityCompanion(memoryId: Value(asset.memoryId), assetId: Value(asset.assetId)),
@@ -1060,7 +948,7 @@ class SyncStreamRepository extends DatabaseAccessor<Drift> with $SyncStreamRepos
     try {
       await _db.batch((batch) {
         for (final assetOcr in data) {
-          batch.deleteWhere(_db.assetOcrEntity, (row) => row.id.equals(assetOcr.id));
+          batch.deleteWhere(_db.assetOcrEntity, (row) => row.assetId.equals(assetOcr.assetId));
         }
       });
     } catch (error, stack) {

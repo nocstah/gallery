@@ -1,7 +1,7 @@
+import type { BookItem } from '#lib/managers/photo-book-manager.svelte.ts';
+import type { BookResult } from '#lib/utils/curator.ts';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import type { BookItem } from '$lib/managers/photo-book-manager.svelte';
-import type { BookResult } from '$lib/utils/curator';
 import PhotoBookPanel from './PhotoBookPanel.svelte';
 
 // Local Omarchy layer: the photo books panel shows a book's stage while it is made, then its three files to open in a
@@ -17,8 +17,8 @@ const { books, auth } = vi.hoisted(() => ({
   auth: { authenticated: true, isSharedLink: false },
 }));
 
-vi.mock('$lib/managers/photo-book-manager.svelte', () => ({ photoBooks: books }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: auth }));
+vi.mock('#lib/managers/photo-book-manager.svelte.ts', () => ({ photoBooks: books }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: auth }));
 
 const result: BookResult = {
   title: 'Exploring temples',

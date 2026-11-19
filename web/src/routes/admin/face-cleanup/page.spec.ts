@@ -1,9 +1,9 @@
+import { Route } from '#lib/route.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 import { UserAvatarColor, type UserAdminResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { render, screen, within } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import { Route } from '$lib/route';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 import type { PageData } from './$types';
 import Page from './+page.svelte';
 
@@ -15,7 +15,7 @@ import Page from './+page.svelte';
 
 vi.mock('@immich/ui', async (original) => {
   const mod = await original<typeof import('@immich/ui')>();
-  const noop = await import('@test-data/mocks/noop-component.svelte');
+  const noop = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return {
     ...mod,
     // Stub Icon to a no-op to avoid undefined-path errors in happy-dom (matches the sibling face-cleanup specs).
@@ -65,8 +65,8 @@ vi.mock('$app/stores', () => ({
   },
 }));
 
-vi.mock('$lib/components/layouts/AdminPageLayout.svelte', async () => {
-  const { default: stub } = await import('@test-data/mocks/admin-page-layout.stub.svelte');
+vi.mock('#lib/components/layouts/AdminPageLayout.svelte', async () => {
+  const { default: stub } = await import('#lib/gallery/__mocks__/admin-page-layout.stub.svelte');
   return { default: stub };
 });
 

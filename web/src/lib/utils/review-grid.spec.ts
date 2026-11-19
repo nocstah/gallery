@@ -1,4 +1,4 @@
-import { moveCaret, pxOf, reviewGrid, tilePosition, visibleRange } from '$lib/utils/review-grid';
+import { moveCaret, pxOf, reviewGrid, tilePosition, visibleRange } from '#lib/utils/review-grid.ts';
 
 describe('reviewGrid', () => {
   it('fits as many square tiles to a row as the width holds and shares out what is left', () => {

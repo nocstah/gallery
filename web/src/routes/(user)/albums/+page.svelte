@@ -1,49 +1,56 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import { scrollMemory } from '$lib/actions/scroll-memory';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import AlbumsControls from './AlbumsControls.svelte';
-  import Albums from '$lib/components/album-page/AlbumsList.svelte';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
-  import SpaceAlbumFolderBreadcrumb from '$lib/components/spaces/space-album-folder-breadcrumb.svelte';
-  import SpaceAlbumFolderCard from '$lib/components/spaces/space-album-folder-card.svelte';
-  import GroupTab from '$lib/elements/GroupTab.svelte';
-  import SearchBar from '$lib/elements/SearchBar.svelte';
-  import { albumFolders } from '$lib/managers/album-folders.svelte';
-  import { folderFaces } from '$lib/managers/folder-faces.svelte';
-  import { specialAlbumOf } from '$lib/managers/special-albums.svelte';
-  import SpaceAlbumFolderNameModal from '$lib/modals/SpaceAlbumFolderNameModal.svelte';
-  import SpaceAlbumFolderPickerModal from '$lib/modals/SpaceAlbumFolderPickerModal.svelte';
-  import { Route } from '$lib/route';
-  import { AlbumFilter, albumViewSettings } from '$lib/stores/preferences.store';
-  import { createAlbumAndRedirect } from '$lib/utils/album-utils';
+  import { scrollMemory } from '#lib/actions/scroll-memory.svelte.ts';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import Albums from '#lib/components/album-page/AlbumsList.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import EmptyState from '#lib/components/omarchy/EmptyState.svelte';
+  import SpaceAlbumFolderBreadcrumb from '#lib/components/spaces/space-album-folder-breadcrumb.svelte';
+  import SpaceAlbumFolderCard from '#lib/components/spaces/space-album-folder-card.svelte';
+  import GroupTab from '#lib/elements/GroupTab.svelte';
+  import SearchBar from '#lib/elements/SearchBar.svelte';
+  import { albumFolders } from '#lib/managers/album-folders.svelte.ts';
+  import { folderFaces } from '#lib/managers/folder-faces.svelte.ts';
+  import { specialAlbumOf } from '#lib/managers/special-albums.svelte.ts';
+  import SpaceAlbumFolderNameModal from '#lib/modals/SpaceAlbumFolderNameModal.svelte';
+  import SpaceAlbumFolderPickerModal from '#lib/modals/SpaceAlbumFolderPickerModal.svelte';
+  import { getAllAlbumsQuery } from '#lib/queries/album.query.ts';
+  import { createPreloadedQuery } from '#lib/queries/client.ts';
+  import { Route } from '#lib/route.ts';
+  import { AlbumFilter, albumViewSettings } from '#lib/stores/preferences.store.ts';
+  import { createAlbumAndRedirect } from '#lib/utils/album-utils.ts';
+  import { spreadFaces } from '#lib/utils/folder-faces.ts';
   import {
     canDrop,
     setActiveDragPayload,
     setDragLabel,
     writeDragPayload,
     type DragPayload,
-  } from '$lib/utils/space-album-folder-dnd';
-  import { spreadFaces } from '$lib/utils/folder-faces';
+  } from '#lib/utils/space-album-folder-dnd.ts';
   import {
-    buildFolderSummaries,
     EMPTY_FOLDER_SUMMARY,
+    buildFolderSummaries,
     getFolderContents,
     getFolderPath,
-  } from '$lib/utils/space-album-folders';
+  } from '#lib/utils/space-album-folders.ts';
   import type { AlbumResponseDto, SharedSpaceAlbumFolderDto, SharedSpaceLinkedAlbumDto } from '@immich/sdk';
   import { Button, modalManager } from '@immich/ui';
   import { mdiFolderPlusOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import type { PageData } from './$types';
+  import AlbumsControls from './AlbumsControls.svelte';
 
   interface Props {
     data: PageData;
   }
 
   let { data }: Props = $props();
+
+  const queries = {
+    ownedAlbums: createPreloadedQuery(() => getAllAlbumsQuery({ isOwned: true })),
+    sharedAlbums: createPreloadedQuery(() => getAllAlbumsQuery({ isShared: true })),
+  };
 
   let searchQuery = $state('');
   let albumGroups: string[] = $state([]);
@@ -60,8 +67,8 @@
   // search still finds them
   const inLevel = (album: AlbumResponseDto) =>
     !browsing || (albumFolders.folderOf(album.id) === folderId && !specialAlbumOf(album.id));
-  const ownedHere = $derived(data.albums.filter((album) => inLevel(album)));
-  const sharedHere = $derived(data.sharedAlbums.filter((album) => inLevel(album)));
+  const ownedHere = $derived(queries.ownedAlbums.data.filter((album) => inLevel(album)));
+  const sharedHere = $derived(queries.sharedAlbums.data.filter((album) => inLevel(album)));
   const summaries = $derived(buildFolderSummaries(albumFolders.folders, albumFolders.linked));
   const isEmpty = (folder: SharedSpaceAlbumFolderDto) => (summaries.get(folder.id)?.albumCount ?? 0) === 0;
   // folders by name, the way a person numbers them ("2" before "10", years in order); one with no albums yet waits
@@ -104,7 +111,7 @@
   // what a drop is checked against: the Space's albums where they are, and every other album of mine at the top
   const droppable = $derived.by(() => {
     const linked = new Set(albumFolders.linked.map(({ id }) => id));
-    const outside = data.albums
+    const outside = queries.ownedAlbums.data
       .filter(({ id }) => !linked.has(id))
       .map(({ id }) => ({ id, folderId: null }) as SharedSpaceLinkedAlbumDto);
     return [...albumFolders.linked, ...outside];
@@ -162,7 +169,7 @@
   // an album card is a link to the album: dragging one carries the album, for a folder or a crumb to take
   const dragAlbum = (event: DragEvent) => {
     const href = (event.target as Element | null)?.closest?.('a[href]')?.getAttribute('href');
-    const album = href ? data.albums.find(({ id }) => href === Route.viewAlbum({ id })) : undefined;
+    const album = href ? queries.ownedAlbums.data.find(({ id }) => href === Route.viewAlbum({ id })) : undefined;
     if (!album || !event.dataTransfer) {
       return;
     }
@@ -186,7 +193,7 @@
   }}
 />
 
-<UserPageLayout title={data.meta.title} use={[[scrollMemory, { routeStartsWith: Route.albums() }]]}>
+<UserPageLayout title={data.meta.title} {@attach scrollMemory({ routeStartsWith: Route.albums() })}>
   {#snippet buttons()}
     <div class="flex place-items-center gap-2">
       <AlbumsControls {albumGroups} bind:searchQuery />
@@ -225,8 +232,8 @@
     <!-- Local Omarchy layer: the folders and the albums below them share one grid (.ws-album-grid) -->
     <div class="ws-album-grid mt-4" role="list" data-testid="album-folders">
       {#each subfolders as folder, index (folder.id)}
-        {@const summary = summaries.get(folder.id) ?? EMPTY_FOLDER_SUMMARY}
-        {@const faces = levelFaces[index]}
+        {const summary = $derived(summaries.get(folder.id) ?? EMPTY_FOLDER_SUMMARY)}
+        {const faces = $derived(levelFaces[index])}
         <SpaceAlbumFolderCard
           {folder}
           albumCount={summary.albumCount}

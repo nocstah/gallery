@@ -1,11 +1,11 @@
+import { sharedSpaceFactory } from '#test/kioku/factories/shared-space-factory.ts';
 import { SharedSpaceRole, type SharedSpaceMemberResponseDto } from '@immich/sdk';
 import type { MessageFormatter } from 'svelte-i18n';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
 import { lastShareSpaceId, leadSpace, rememberShareSpace, shareableSpaces, spaceAudience } from './share-space';
 
 // Library is the album folders' engine; the manager knows it by its id once the folders are in
-vi.mock('$lib/managers/album-folders.svelte', () => ({
+vi.mock('#lib/managers/album-folders.svelte.ts', () => ({
   isLibrarySpace: (space: { name?: string }) => space.name === 'Library',
 }));
 

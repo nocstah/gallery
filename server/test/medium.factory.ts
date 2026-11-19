@@ -5,7 +5,6 @@ import { Stats } from 'node:fs';
 import { resolve } from 'node:path';
 import { Writable } from 'node:stream';
 import { Mocked } from 'vitest';
-import type { ClassConstructor, ClassConstructorsToInstances, UploadFile } from 'src/types.js';
 import { AssetFace } from 'src/database.js';
 import { AuthDto, LoginResponseDto } from 'src/dtos/auth.dto.js';
 import { SystemConfig } from 'src/dtos/config.dto.js';
@@ -22,18 +21,11 @@ import {
   SyncEntityType,
   SyncRequestType,
 } from 'src/enum.js';
-import { CleanupRepository } from 'src/gallery/repositories/cleanup.repository.js';
-import { FaceSearchRepository } from 'src/gallery/repositories/face-search.repository.js';
-import { FilterSuggestionRepository } from 'src/gallery/repositories/filter-suggestion.repository.js';
+import { GalleryMachineLearningRepository } from 'src/gallery/repositories/gallery-machine-learning.repository.js';
+import { GalleryPersonRepository } from 'src/gallery/repositories/gallery-person.repository.js';
 import { GallerySyncRepository } from 'src/gallery/repositories/gallery-sync.repository.js';
 import { ImageAdjustRepository } from 'src/gallery/repositories/image-adjust.repository.js';
-import { MemoryRuleAssetRepository } from 'src/gallery/repositories/memory-rule-asset.repository.js';
-import { PetFaceRepository } from 'src/gallery/repositories/pet-face.repository.js';
-import { QueueMaintenanceRepository } from 'src/gallery/repositories/queue-maintenance.repository.js';
-import { SmartFacetRepository } from 'src/gallery/repositories/smart-facet.repository.js';
-import { SpaceAlbumRepository } from 'src/gallery/repositories/space-album.repository.js';
-import { SpatialSceneRepository } from 'src/gallery/repositories/spatial-scene.repository.js';
-import { VideoTrimRepository } from 'src/gallery/repositories/video-trim.repository.js';
+import { GALLERY_REPOSITORY_DEPENDENCIES } from 'src/gallery/repositories/index.js';
 import { PersonSidecarFields, writePersonSidecars } from 'src/gallery/utils/person-sidecar.js';
 import { AccessRepository } from 'src/repositories/access.repository.js';
 import { ActivityRepository } from 'src/repositories/activity.repository.js';
@@ -41,11 +33,10 @@ import { AlbumUserRepository } from 'src/repositories/album-user.repository.js';
 import { AlbumRepository } from 'src/repositories/album.repository.js';
 import { ApiKeyRepository } from 'src/repositories/api-key.repository.js';
 import { AssetEditRepository } from 'src/repositories/asset-edit.repository.js';
-import { AssetFavoriteRepository } from 'src/repositories/asset-favorite.repository.js';
 import { AssetFileRepository } from 'src/repositories/asset-file.repository.js';
 import { AssetJobRepository } from 'src/repositories/asset-job.repository.js';
 import { AssetRepository } from 'src/repositories/asset.repository.js';
-import { ClassificationRepository } from 'src/repositories/classification.repository.js';
+import { AuthChallengeRepository } from 'src/repositories/auth-challenge.repository.js';
 import { ClusterGroupRepository } from 'src/repositories/cluster-group.repository.js';
 import { ConfigRepository } from 'src/repositories/config.repository.js';
 import { CronRepository } from 'src/repositories/cron.repository.js';
@@ -55,11 +46,6 @@ import { DownloadRepository } from 'src/repositories/download.repository.js';
 import { DuplicateRepository } from 'src/repositories/duplicate.repository.js';
 import { EmailRepository } from 'src/repositories/email.repository.js';
 import { EventRepository } from 'src/repositories/event.repository.js';
-import { FaceIdentityRepository } from 'src/repositories/face-identity.repository.js';
-import { FacePersonVerdictRepository } from 'src/repositories/face-person-verdict.repository.js';
-import { FaceRepairDeclineRepository } from 'src/repositories/face-repair-decline.repository.js';
-import { FaceRepairScanRepository } from 'src/repositories/face-repair-scan.repository.js';
-import { FaceRepairRepository } from 'src/repositories/face-repair.repository.js';
 import { IntegrityRepository } from 'src/repositories/integrity.repository.js';
 import { JobRepository } from 'src/repositories/job.repository.js';
 import { LibraryRepository } from 'src/repositories/library.repository.js';
@@ -72,6 +58,7 @@ import { MetadataRepository } from 'src/repositories/metadata.repository.js';
 import { NotificationRepository } from 'src/repositories/notification.repository.js';
 import { OcrRepository } from 'src/repositories/ocr.repository.js';
 import { PartnerRepository } from 'src/repositories/partner.repository.js';
+import { PasskeyRepository } from 'src/repositories/passkey.repository.js';
 import { PersonUserRepository } from 'src/repositories/person-user.repository.js';
 import { PersonRepository } from 'src/repositories/person.repository.js';
 import { PluginRepository } from 'src/repositories/plugin.repository.js';
@@ -79,7 +66,6 @@ import { SearchRepository } from 'src/repositories/search.repository.js';
 import { SessionRepository } from 'src/repositories/session.repository.js';
 import { SharedLinkAssetRepository } from 'src/repositories/shared-link-asset.repository.js';
 import { SharedLinkRepository } from 'src/repositories/shared-link.repository.js';
-import { SharedSpaceRepository } from 'src/repositories/shared-space.repository.js';
 import { StackRepository } from 'src/repositories/stack.repository.js';
 import { StorageRepository } from 'src/repositories/storage.repository.js';
 import { SyncCheckpointRepository } from 'src/repositories/sync-checkpoint.repository.js';
@@ -90,6 +76,7 @@ import { TelemetryRepository } from 'src/repositories/telemetry.repository.js';
 import { UserRepository } from 'src/repositories/user.repository.js';
 import { VersionHistoryRepository } from 'src/repositories/version-history.repository.js';
 import { ViewRepository } from 'src/repositories/view-repository.js';
+import { WebAuthnRepository } from 'src/repositories/webauthn.repository.js';
 import { WebsocketRepository } from 'src/repositories/websocket.repository.js';
 import { WorkflowRepository } from 'src/repositories/workflow.repository.js';
 import { DB } from 'src/schema/index.js';
@@ -98,9 +85,11 @@ import { AssetExifTable } from 'src/schema/tables/asset-exif.table.js';
 import { AssetFileTable } from 'src/schema/tables/asset-file.table.js';
 import { AssetJobStatusTable } from 'src/schema/tables/asset-job-status.table.js';
 import { AssetMetadataTable } from 'src/schema/tables/asset-metadata.table.js';
+import { AssetOcrTable } from 'src/schema/tables/asset-ocr.table.js';
 import { AssetTable } from 'src/schema/tables/asset.table.js';
 import { FaceSearchTable } from 'src/schema/tables/face-search.table.js';
 import { MemoryTable } from 'src/schema/tables/memory.table.js';
+import { PasskeyTable } from 'src/schema/tables/passkey.table.js';
 import { PersonUserTable } from 'src/schema/tables/person-user.table.js';
 import { PersonTable } from 'src/schema/tables/person.table.js';
 import { SessionTable } from 'src/schema/tables/session.table.js';
@@ -111,7 +100,14 @@ import { UserTable } from 'src/schema/tables/user.table.js';
 import { BASE_SERVICE_DEPENDENCIES, BaseService } from 'src/services/base.service.js';
 import { MetadataService } from 'src/services/metadata.service.js';
 import { SyncService } from 'src/services/sync.service.js';
+import type { ClassConstructor, ClassConstructorsToInstances, UploadFile } from 'src/types.js';
 import { getConfig, updateConfig } from 'src/utils/config.js';
+import {
+  Dep,
+  newGalleryMockRepository,
+  newGalleryRealRepository,
+  withGalleryRepositories,
+} from 'test/gallery/medium.factory.js';
 import { mockEnvData } from 'test/repositories/config.repository.mock.js';
 import { newTelemetryRepositoryMock } from 'test/repositories/telemetry.repository.mock.js';
 import { factory, newDate, newEmbedding, newUuid } from 'test/small.factory.js';
@@ -120,8 +116,8 @@ import { automock, wait } from 'test/utils.js';
 export const testAssetsDir = resolve(import.meta.dirname, '../../e2e/test-assets');
 
 type MediumTestOptions = {
-  mock: Array<(typeof BASE_SERVICE_DEPENDENCIES)[number]>;
-  real: Array<(typeof BASE_SERVICE_DEPENDENCIES)[number]>;
+  mock: Array<Dep>;
+  real: Array<Dep>;
   database: Kysely<DB>;
 };
 
@@ -137,6 +133,7 @@ export const newMediumService = <S extends ClassConstructor<typeof BaseService>>
 
 export class MediumTestContext<S extends ClassConstructor<typeof BaseService> = ClassConstructor<typeof BaseService>> {
   private repoCache: Record<string, any> = {};
+  private instances = new Map<Dep, unknown>();
   private sutDeps: ClassConstructorsToInstances<BaseServiceDeps>;
 
   sut: InstanceType<S>;
@@ -167,7 +164,15 @@ export class MediumTestContext<S extends ClassConstructor<typeof BaseService> = 
   }
 
   private makeDeps(options: MediumTestOptions) {
-    const deps = BASE_SERVICE_DEPENDENCIES;
+    const deps = [...BASE_SERVICE_DEPENDENCIES, ...GALLERY_REPOSITORY_DEPENDENCIES];
+    // GalleryPersonRepository holds the fork methods moved out of PersonRepository, so it follows PersonRepository.
+    const withGalleryPerson = (list: MediumTestOptions['real']) =>
+      list.includes(PersonRepository) ? [...list, GalleryPersonRepository] : list;
+    this.options = options = {
+      ...options,
+      real: withGalleryPerson(options.real),
+      mock: withGalleryPerson(options.mock),
+    };
 
     for (const dep of options.mock) {
       if (!deps.includes(dep)) {
@@ -180,7 +185,7 @@ export class MediumTestContext<S extends ClassConstructor<typeof BaseService> = 
         throw new Error(`Real repository ${dep.name} is not a valid dependency`);
       }
     }
-    return deps.map((dep) => {
+    const instances = deps.map((dep) => {
       if (options.real.includes(dep)) {
         return this.get(dep);
       }
@@ -188,10 +193,15 @@ export class MediumTestContext<S extends ClassConstructor<typeof BaseService> = 
       if (options.mock.includes(dep)) {
         return newMockRepository(dep);
       }
-    }) as unknown as ClassConstructorsToInstances<BaseServiceDeps>;
+    });
+
+    this.instances = withGalleryRepositories(deps, instances);
+    return BASE_SERVICE_DEPENDENCIES.map((dep) =>
+      this.instances.get(dep),
+    ) as unknown as ClassConstructorsToInstances<BaseServiceDeps>;
   }
 
-  get<T extends BaseServiceDeps[number]>(key: T): InstanceType<T> {
+  get<T extends Dep>(key: T): InstanceType<T> {
     if (!Object.hasOwn(this.repoCache, key.name)) {
       const real = newRealRepository(key, this.options.database);
       this.repoCache[key.name] = real;
@@ -200,13 +210,12 @@ export class MediumTestContext<S extends ClassConstructor<typeof BaseService> = 
     return this.repoCache[key.name];
   }
 
-  getMock<T extends BaseServiceDeps[number], R = Mocked<InstanceType<T>>>(key: T): R {
-    const index = BASE_SERVICE_DEPENDENCIES.indexOf(key);
-    if (index === -1 || !this.options.mock.includes(key)) {
+  getMock<T extends Dep, R = Mocked<InstanceType<T>>>(key: T): R {
+    if (!this.options.mock.includes(key)) {
       throw new Error(`getMock called with a key that is not a mock: ${key.name}`);
     }
 
-    return this.sutDeps[index] as R;
+    return this.instances.get(key) as R;
   }
 
   async newUser(dto: Partial<Insertable<UserTable>> = {}) {
@@ -214,6 +223,12 @@ export class MediumTestContext<S extends ClassConstructor<typeof BaseService> = 
     const user = mediumFactory.userInsert({ ...dto, clusterGroupId: dto.clusterGroupId ?? clusterGroup!.id });
     const result = await this.get(UserRepository).create(user);
     return { user, result };
+  }
+
+  async newPasskey(dto: Partial<Insertable<PasskeyTable>> & { userId: string }) {
+    const passkey = mediumFactory.passkeyInsert(dto);
+    const result = await this.get(PasskeyRepository).create(passkey);
+    return { passkey, result };
   }
 
   async newPartner(dto: { sharedById: string; sharedWithId: string; inTimeline?: boolean }) {
@@ -259,6 +274,28 @@ export class MediumTestContext<S extends ClassConstructor<typeof BaseService> = 
       await this.database.insertInto('asset_face_creator').values({ assetFaceId: result, userId: createdBy }).execute();
     }
     return { assetFace, result };
+  }
+
+  async newAssetOcr(
+    dto: (Partial<Insertable<AssetOcrTable>> & { assetId: string; text: string; textScore: number })[],
+  ) {
+    const result = await this.get(OcrRepository).upsert(
+      dto[0].assetId,
+      dto.map((item) => ({
+        ...item,
+        x1: 0,
+        y1: 0,
+        x2: 1,
+        y2: 1,
+        x3: 2,
+        y3: 2,
+        x4: 3,
+        y4: 3,
+        boxScore: item.textScore,
+      })),
+      '',
+    );
+    return { ocr: dto, result };
   }
 
   async newMemory(dto: Partial<Insertable<MemoryTable>> = {}) {
@@ -650,7 +687,7 @@ export class ExifTestContext extends MediumTestContext<typeof MetadataService> {
   }
 }
 
-const newRealRepository = <T extends BaseServiceDeps[number]>(key: T, db: Kysely<DB>): InstanceType<T> => {
+const newRealRepository = <T extends Dep>(key: T, db: Kysely<DB>): InstanceType<T> => {
   switch (key) {
     case AccessRepository:
     case AlbumRepository:
@@ -659,42 +696,28 @@ const newRealRepository = <T extends BaseServiceDeps[number]>(key: T, db: Kysely
     case ApiKeyRepository:
     case AssetRepository:
     case AssetEditRepository:
-    case AssetFavoriteRepository:
     case AssetFileRepository:
     case AssetJobRepository:
     case ClusterGroupRepository:
     case DownloadRepository:
     case DuplicateRepository:
-    case FaceIdentityRepository:
-    case FaceRepairDeclineRepository:
-    case FilterSuggestionRepository:
-    case MemoryRuleAssetRepository:
-    case SmartFacetRepository:
-    case SpaceAlbumRepository:
-    case PetFaceRepository:
-    case FaceSearchRepository:
-    case FaceRepairRepository:
-    case FaceRepairScanRepository:
-    case FacePersonVerdictRepository:
     case IntegrityRepository:
     case MemoryRepository:
     case LibraryRepository:
     case NotificationRepository:
     case OcrRepository:
+    case AuthChallengeRepository:
     case PartnerRepository:
+    case PasskeyRepository:
     case PersonRepository:
     case PersonUserRepository:
     case SearchRepository:
     case SessionRepository:
     case SharedLinkRepository:
     case SharedLinkAssetRepository:
-    case SharedSpaceRepository:
     case StackRepository:
     case SyncRepository:
-    case GallerySyncRepository:
-    case VideoTrimRepository:
     case ImageAdjustRepository:
-    case SpatialSceneRepository:
     case SyncCheckpointRepository:
     case SystemMetadataRepository:
     case UserRepository:
@@ -705,7 +728,8 @@ const newRealRepository = <T extends BaseServiceDeps[number]>(key: T, db: Kysely
     }
 
     case ConfigRepository:
-    case CryptoRepository: {
+    case CryptoRepository:
+    case WebAuthnRepository: {
       return new key() as InstanceType<T>;
     }
 
@@ -730,8 +754,6 @@ const newRealRepository = <T extends BaseServiceDeps[number]>(key: T, db: Kysely
       return new key(LoggingRepository.create()) as InstanceType<T>;
     }
 
-    case ClassificationRepository:
-    case CleanupRepository:
     case TagRepository: {
       return new key(db, LoggingRepository.create()) as InstanceType<T>;
     }
@@ -754,7 +776,7 @@ const newRealRepository = <T extends BaseServiceDeps[number]>(key: T, db: Kysely
     }
 
     default: {
-      throw new Error(`Unable to create repository instance for key: ${key?.name || key}`);
+      return newGalleryRealRepository(key, db);
     }
   }
 };
@@ -765,31 +787,20 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
     case AlbumRepository:
     case AssetRepository:
     case AssetJobRepository:
-    case ClassificationRepository:
-    case CleanupRepository:
+    case AuthChallengeRepository:
     case ConfigRepository:
     case CryptoRepository:
-    case FaceIdentityRepository:
-    case FacePersonVerdictRepository:
-    case FilterSuggestionRepository:
-    case MemoryRuleAssetRepository:
-    case SmartFacetRepository:
-    case SpaceAlbumRepository:
-    case PetFaceRepository:
-    case FaceSearchRepository:
     case LibraryRepository:
     case MemoryRepository:
     case IntegrityRepository:
     case NotificationRepository:
     case OcrRepository:
     case PartnerRepository:
+    case PasskeyRepository:
     case PersonRepository:
     case SessionRepository:
     case SyncRepository:
-    case GallerySyncRepository:
-    case VideoTrimRepository:
     case ImageAdjustRepository:
-    case SpatialSceneRepository:
     case SyncCheckpointRepository:
     case SystemMetadataRepository:
     case UserRepository:
@@ -844,17 +855,13 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
       return jobRepository;
     }
 
-    case QueueMaintenanceRepository: {
-      return automock(QueueMaintenanceRepository, { args: [undefined, { setContext: () => {} }] });
-    }
-
     case LoggingRepository as unknown as ClassConstructor<T>: {
       const configMock = { getEnv: () => ({ noColor: false }) };
       return automock(LoggingRepository, { args: [undefined, configMock], strict: false });
     }
 
     case MachineLearningRepository: {
-      return automock(MachineLearningRepository, { args: [{ setContext: () => {} }] });
+      return automock(GalleryMachineLearningRepository, { args: [{ setContext: () => {} }] });
     }
 
     case MediaRepository: {
@@ -873,7 +880,7 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
     }
 
     default: {
-      throw new Error(`Invalid repository key: ${key}`);
+      return newGalleryMockRepository(key);
     }
   }
 };
@@ -966,15 +973,15 @@ const assetJobStatusInsert = (
 };
 
 /**
- * Option M: `person.personGroupId` is a NOT NULL foreign key to `person_group`, which itself keys on
- * the owner's cluster group. Specs that insert into `person` directly — rather than through
- * `ctx.newPerson`, which does this for them — must mint the group first or every insert fails its
- * foreign key.
- */
+Option M: `person.personGroupId` is a NOT NULL foreign key to `person_group`, which itself keys on
+the owner's cluster group. Specs that insert into `person` directly — rather than through
+`ctx.newPerson`, which does this for them — must mint the group first or every insert fails its
+foreign key.
+*/
 /**
- * Option M: `user.clusterGroupId` is a NOT NULL foreign key. `ctx.newUser` mints the group through
- * ClusterGroupRepository; specs that build a user row by hand need the same.
- */
+Option M: `user.clusterGroupId` is a NOT NULL foreign key. `ctx.newUser` mints the group through
+ClusterGroupRepository; specs that build a user row by hand need the same.
+*/
 /** Updates a person row together with its fork sidecar fields (person_identity, person_pet). */
 export const updatePersonForTest = async (
   db: Kysely<DB>,
@@ -1053,6 +1060,30 @@ const sessionInsert = ({
   return {
     ...defaults,
     ...session,
+    id,
+  };
+};
+
+const passkeyInsert = ({
+  id = newUuid(),
+  userId,
+  ...passkey
+}: Partial<Insertable<PasskeyTable>> & { userId: string }) => {
+  const defaults: Insertable<PasskeyTable> = {
+    id,
+    userId,
+    name: 'Passkey',
+    credentialId: `credential-${id}`,
+    publicKey: Buffer.from('public-key'),
+    counter: 0,
+    transports: ['internal'],
+    backedUp: false,
+    deviceType: 'singleDevice',
+  };
+
+  return {
+    ...defaults,
+    ...passkey,
     id,
   };
 };
@@ -1199,6 +1230,7 @@ export const mediumFactory = {
   faceInsert,
   personInsert,
   personUserInsert,
+  passkeyInsert,
   sessionInsert,
   syncStream,
   userInsert,

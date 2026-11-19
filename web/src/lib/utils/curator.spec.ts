@@ -1,7 +1,7 @@
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { curator, CuratorError, curatorIsMine, forgetLinkFilm, waitForJob, type JobRow } from '$lib/utils/curator';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { CuratorError, curator, curatorIsMine, forgetLinkFilm, waitForJob, type JobRow } from '#lib/utils/curator.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 
 // Local Omarchy layer: the one gate in front of Curator's tools. Curator acts for its owner only, the owner of its API
 // key, who is this server's admin; any other account (a family member's) is offered none of them.

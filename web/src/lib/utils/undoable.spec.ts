@@ -1,20 +1,20 @@
 // Local Omarchy layer: the undo history (managers/undo-manager) and the undos that need more than setting a value
 // back: tags (only the ones an action added come off), edits (each photo gets its own edits from before) and people
 // shown and hidden in bulk (only those that changed go back).
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { visibilitiesDone } from '#lib/services/person.service.ts';
+import { waitForWebsocketEvent } from '#lib/stores/websocket.ts';
+import { refreshAssets } from '#lib/utils/asset-refresh.ts';
+import { beforeChange, editsDone, taggedDone, untaggedDone } from '#lib/utils/undoable.ts';
+import { personFactory } from '#test/kioku/factories/person-factory.ts';
 import { AssetEditAction, type AssetResponseDto } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
 import type { MessageFormatter } from 'svelte-i18n';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import { visibilitiesDone } from '$lib/services/person.service';
-import { waitForWebsocketEvent } from '$lib/stores/websocket';
-import { refreshAssets } from '$lib/utils/asset-refresh';
-import { beforeChange, editsDone, taggedDone, untaggedDone } from '$lib/utils/undoable';
-import { personFactory } from '@test-data/factories/person-factory';
 
-vi.mock('$lib/stores/websocket');
-vi.mock('$lib/utils/asset-refresh', () => ({ refreshAssets: vi.fn() }));
+vi.mock('#lib/stores/websocket.ts');
+vi.mock('#lib/utils/asset-refresh.ts', () => ({ refreshAssets: vi.fn() }));
 vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),
   toastManager: { primary: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn(), danger: vi.fn() },

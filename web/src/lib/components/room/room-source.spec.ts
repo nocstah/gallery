@@ -1,10 +1,12 @@
+import { userPreferencesManager } from '#lib/managers/user-preferences-manager.svelte.ts';
+import { memoriesPageSearch } from '#lib/utils/memory-cards.ts';
 import {
   AssetTypeEnum,
   AssetVisibility,
-  getAllAlbums,
-  getTimeBuckets,
   MemorySearchOrder,
   MemoryType,
+  getAllAlbums,
+  getTimeBuckets,
   searchAssets,
   searchMemories,
   searchRandom,
@@ -14,8 +16,6 @@ import {
   type SearchResponseDto,
 } from '@immich/sdk';
 import { DateTime } from 'luxon';
-import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
-import { memoriesPageSearch } from '$lib/utils/memory-cards';
 import { YEAR_FILM } from './room-reels';
 import { loadAlbumAssets, loadToday, loadYear } from './room-source';
 
@@ -28,8 +28,8 @@ vi.mock('@immich/sdk', async (original) => ({
   searchRandom: vi.fn(),
 }));
 
-const asset = (id: string, day: string, type = AssetTypeEnum.Image) =>
-  ({ id, localDateTime: `${day}T10:00:00.000Z`, type }) as AssetResponseDto;
+const asset = (id: string, day: string) =>
+  ({ id, localDateTime: `${day}T10:00:00.000Z`, type: AssetTypeEnum.Image }) as AssetResponseDto;
 
 const page = (items: AssetResponseDto[], nextPage: string | null = null) =>
   ({

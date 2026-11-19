@@ -2,15 +2,15 @@
 // photos into the timeline beside its cover (they sort in by capture time); clicking again takes them
 // back out. Nothing is changed on the server: the stack stays a stack. Any expanded photo can be made
 // the cover (right-click > Make stack cover), which folds the stack back up around it.
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { updateGeometry } from '#lib/managers/timeline-manager/internal/layout-support.svelte.ts';
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
+import { coverDone } from '#lib/utils/undoable.ts';
 import { AssetOrder, getAssetInfo, getStack, updateStack } from '@immich/sdk';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { updateGeometry } from '$lib/managers/timeline-manager/internal/layout-support.svelte';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
-import { toTimelineAsset } from '$lib/utils/timeline-util';
-import { coverDone } from '$lib/utils/undoable';
 
 class StackExpandManager {
   /** stack id -> ids of the photos inserted for it (everything but the cover) */
@@ -147,8 +147,8 @@ class StackExpandManager {
   }
 
   /** Photos went to the trash (here, the viewer, another tab): the stacks they were in count again, so a cover whose
-   * stack is down to itself loses its badge at once rather than at the next reload. Stacks that are expanded here are
-   * known; for a handful of other photos the server says which stack each was in (a big bulk delete skips those). */
+  stack is down to itself loses its badge at once rather than at the next reload. Stacks that are expanded here are
+  known; for a handful of other photos the server says which stack each was in (a big bulk delete skips those). */
   async #recount(ids: string[]) {
     const manager = this.timelineManager;
     if (!manager || ids.length === 0) {

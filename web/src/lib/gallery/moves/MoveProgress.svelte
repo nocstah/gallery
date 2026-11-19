@@ -5,14 +5,14 @@
   // it ended, with the photos that stayed. It mounts, polls and cleans up leftover keys only where the page conditions
   // hold (move-gates), so a page opened from another device or in a vault's Gallery never asks 127.0.0.1:2297
   // anything. The move page shows its own move, so the panel steps aside there and leaves the asking to it.
-  import { page } from '$app/state';
-  import { currentLibrary } from '$lib/gallery/libraries/library-context.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { Route } from '$lib/route';
+  import { currentLibrary } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
   import { Icon, modalManager } from '@immich/ui';
   import { mdiClose } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
   import MoveHeldModal from './MoveHeldModal.svelte';
   import { libraryById, movePageUrl, moverPageAllowed, openMovePage } from './move-gates';
   import { moveManager } from './move-manager.svelte';
@@ -86,11 +86,11 @@
 {#if shown.length > 0}
   <div class="ws-moves-corner fixed inset-e-3 bottom-3 z-60 flex flex-col items-end gap-3">
     {#each shown as move (move.move)}
-      {@const side = sideOf(move, here)}
-      {@const names = moveNames(move)}
-      {@const ended = isEnded(move.state)}
-      {@const destination = libraryById(move.destination)}
-      {@const source = libraryById(move.source)}
+      {const side = $derived(sideOf(move, here))}
+      {const names = $derived(moveNames(move))}
+      {const ended = $derived(isEnded(move.state))}
+      {const destination = $derived(libraryById(move.destination))}
+      {const source = $derived(libraryById(move.source))}
       <section class="ws-moves" data-testid="move-progress" data-state={move.state}>
         <header class="ws-moves-head">
           {#if ended}
@@ -119,7 +119,7 @@
               <p class="ws-moves-muted">{$t('moves_needs_key', { values: { library: names.source } })}</p>
             {/if}
           {:else if move.state === 'running'}
-            {@const phase = phaseWords($t, move)}
+            {const phase = $derived(phaseWords($t, move))}
             {#if phase}
               <p class="ws-moves-muted">{phase}</p>
             {/if}

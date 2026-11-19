@@ -1,6 +1,6 @@
 import { Mocked, vitest } from 'vitest';
-import type { RepositoryInterface } from 'src/types.js';
 import { AccessRepository } from 'src/repositories/access.repository.js';
+import type { RepositoryInterface } from 'src/types.js';
 
 type IAccessRepository = { [K in keyof AccessRepository]: RepositoryInterface<AccessRepository[K]> };
 
@@ -68,6 +68,10 @@ export const newAccessRepositoryMock = (): IAccessRepositoryMock => {
       checkUpdateAccess: vitest.fn().mockResolvedValue(new Set()),
     },
 
+    passkey: {
+      checkOwnerAccess: vitest.fn().mockResolvedValue(new Set()),
+    },
+
     session: {
       checkOwnerAccess: vitest.fn().mockResolvedValue(new Set()),
     },
@@ -109,6 +113,7 @@ export const newAccessRepositoryMock = (): IAccessRepositoryMock => {
 
     sharedSpace: {
       checkMemberAccess: vitest.fn().mockResolvedValue(new Set()),
+      checkTagAccess: vitest.fn().mockResolvedValue(new Set()),
     },
   };
 };

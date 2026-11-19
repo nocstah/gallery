@@ -1,11 +1,11 @@
-import type { CommandItem } from '$lib/managers/command-items';
+import type { CommandItem } from '#lib/managers/command-items.ts';
 import {
   cleanupLibrary,
   libraryContextFile,
   mainLibrary,
   secondLibrary,
   serving,
-} from '@test-data/factories/library-context-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
 import { loadLibraryContext, resetLibraryContext } from './library-context.svelte';
 import { addLibraryCommands, canSwitchLibraries, libraryCommands, switcherRows } from './switcher';
 
@@ -16,8 +16,7 @@ import { addLibraryCommands, canSwitchLibraries, libraryCommands, switcherRows }
 const desktop = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0.0.0';
 const here = new URL('/photos', secondLibrary.url);
 
-const load = (libraries: unknown[], current = secondLibrary) =>
-  loadLibraryContext(serving(libraryContextFile(current, libraries)));
+const load = (libraries: unknown[]) => loadLibraryContext(serving(libraryContextFile(secondLibrary, libraries)));
 
 beforeEach(() => {
   resetLibraryContext();

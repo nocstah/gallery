@@ -1,8 +1,8 @@
+import { TreeNode } from '#lib/utils/tree-utils.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
-import { TreeNode } from '$lib/utils/tree-utils';
 import ExplorerTree from './explorer-tree.svelte';
 
 // Local Omarchy layer: the tree Tags and Folders keep in their own sidebar, drawn like the albums' tree
@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   page: { url: new URL('https://gallery.test/tags') },
 }));
 
-vi.mock('$lib/stores/sidebar-mode.svelte', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
+vi.mock('#lib/stores/sidebar-mode.svelte.ts', () => ({ sidebarModeStore: mocks.sidebarModeStore }));
 vi.mock('$app/state', () => ({ page: mocks.page }));
 
 const tree = TreeNode.fromPaths([

@@ -19,8 +19,8 @@ import { TagRepository } from 'src/repositories/tag.repository.js';
 import { DB } from 'src/schema/index.js';
 import { SearchService } from 'src/services/search.service.js';
 import { upsertTags } from 'src/utils/tag.js';
-import { createTwoOwnerSpace } from 'test/medium/fixtures/two-owner-space.js';
 import { newMediumService } from 'test/medium.factory.js';
+import { createTwoOwnerSpace } from 'test/medium/fixtures/two-owner-space.js';
 import { factory } from 'test/small.factory.js';
 import { getKyselyDB } from 'test/utils.js';
 
@@ -28,6 +28,7 @@ let defaultDatabase: Kysely<DB>;
 
 const unitVector = (index: number) => JSON.stringify(Array.from({ length: 512 }, (_, i) => (i === index ? 1 : 0)));
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 const setup = (db?: Kysely<DB>) => {
   return newMediumService(SearchService, {
     database: db || defaultDatabase,
@@ -317,6 +318,31 @@ describe(SearchService.name, () => {
       const result = await sut.searchStatistics(auth, { visibility: AssetVisibility.Locked });
 
       expect(result).toEqual({ total: 0 });
+    });
+
+    it('should not return locked assets of partner in elevated session without a visibility filter', async () => {
+      const { sut, ctx } = setup();
+      const { user } = await ctx.newUser();
+      const { user: partner } = await ctx.newUser();
+
+      await ctx.newPartner({ sharedById: partner.id, sharedWithId: user.id });
+
+      await ctx.newAsset({ ownerId: user.id, visibility: AssetVisibility.Locked });
+      await ctx.newAsset({ ownerId: partner.id, visibility: AssetVisibility.Locked });
+      await ctx.newAsset({ ownerId: partner.id });
+
+      const auth = factory.auth({ user: { id: user.id }, session: { hasElevatedPermission: true } });
+
+      await expect(sut.searchStatistics(auth, {})).resolves.toEqual({ total: 2 });
+
+      const response = await sut.searchMetadata(auth, { size: 250, withStacked: false });
+      expect(response.assets.items.map(({ ownerId, visibility }) => ({ ownerId, visibility }))).toEqual(
+        expect.arrayContaining([
+          { ownerId: user.id, visibility: AssetVisibility.Locked },
+          { ownerId: partner.id, visibility: AssetVisibility.Timeline },
+        ]),
+      );
+      expect(response.assets.items).toHaveLength(2);
     });
   });
 
@@ -1944,26 +1970,26 @@ describe(SearchService.name, () => {
   });
 
   /**
-   * The `ownerId` (contributor) filter on the SEARCH/MAP query builder.
-   *
-   * `ownerId` lives on BaseSearchSchema (search.dto.ts), so metadata/random/smart/statistics all
-   * inherit it, and `GET /gallery/map/markers` forwards it too — five endpoints whose ONLY
-   * implementation of the filter is a single clause in searchAssetBuilder (database.ts):
-   *
-   *     .$if(options.ownerId !== undefined, (qb) => qb.where('asset.ownerId', '=', asUuid(options.ownerId!)))
-   *
-   * That is a DIFFERENT builder from the timeline's withTimeBucketAssetFilters (asset.repository.ts),
-   * whose equivalent contract is pinned by E20/E21/E21b/E21c in timeline.service.spec.ts. Until these
-   * tests existed, the whole 4,799-test unit suite stayed green with the clause above mutated to
-   * `.$if(false, …)`, and the only guards against merging ownerId into the `userIds` SCOPING
-   * predicate — a cross-owner widening leak — were service-level MOCK assertions, which a
-   * repository-level change bypasses entirely.
-   *
-   * Two mutations must break something here:
-   *   1. drop the AND  → a stranger's ownerId returns the caller's whole visible scope, not [].
-   *   2. anyUuid([...userIds, ownerId]) → the stranger's OWN assets come back. A real leak.
-   * Every assertion below is paired with a NON-EMPTY BASELINE, or "returns []" would prove nothing.
-   */
+  The `ownerId` (contributor) filter on the SEARCH/MAP query builder.
+  
+  `ownerId` lives on BaseSearchSchema (search.dto.ts), so metadata/random/smart/statistics all
+  inherit it, and `GET /gallery/map/markers` forwards it too — five endpoints whose ONLY
+  implementation of the filter is a single clause in searchAssetBuilder (database.ts):
+  
+      .$if(options.ownerId !== undefined, (qb) => qb.where('asset.ownerId', '=', asUuid(options.ownerId!)))
+  
+  That is a DIFFERENT builder from the timeline's withTimeBucketAssetFilters (asset.repository.ts),
+  whose equivalent contract is pinned by E20/E21/E21b/E21c in timeline.service.spec.ts. Until these
+  tests existed, the whole 4,799-test unit suite stayed green with the clause above mutated to
+  `.$if(false, …)`, and the only guards against merging ownerId into the `userIds` SCOPING
+  predicate — a cross-owner widening leak — were service-level MOCK assertions, which a
+  repository-level change bypasses entirely.
+  
+  Two mutations must break something here:
+    1. drop the AND  → a stranger's ownerId returns the caller's whole visible scope, not [].
+    2. anyUuid([...userIds, ownerId]) → the stranger's OWN assets come back. A real leak.
+  Every assertion below is paired with a NON-EMPTY BASELINE, or "returns []" would prove nothing.
+  */
   describe('contextual filters — ownerId (searchAssetBuilder)', () => {
     it('narrows a Space search to one contributor', async () => {
       const { sut, ctx } = setup();
@@ -2039,12 +2065,12 @@ describe(SearchService.name, () => {
     });
 
     /**
-     * THE OTHER WIDENING VECTOR. The userIds clause that ANDs on the personal path
-     * (`!!options.userIds && !options.spaceId && !options.timelineSpaceIds`) is switched OFF once
-     * `withSharedSpaces` populates timelineSpaceIds — a different OR-group takes over. An
-     * implementer who merged ownerId into userIds inside THAT group would still pass every test
-     * above. These two are the E21b/E21c twins for the search path. Do not delete them.
-     */
+    THE OTHER WIDENING VECTOR. The userIds clause that ANDs on the personal path
+    (`!!options.userIds && !options.spaceId && !options.timelineSpaceIds`) is switched OFF once
+    `withSharedSpaces` populates timelineSpaceIds — a different OR-group takes over. An
+    implementer who merged ownerId into userIds inside THAT group would still pass every test
+    above. These two are the E21b/E21c twins for the search path. Do not delete them.
+    */
     it('E21b twin: ownerId of a stranger under withSharedSpaces returns EMPTY (the real leak vector)', async () => {
       const { sut, ctx } = setup();
       const { viewer, annaAsset, benAsset } = await createTwoOwnerSpace(ctx);

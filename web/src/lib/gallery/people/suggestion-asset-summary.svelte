@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { dateFormats } from '$lib/constants';
-  import ShortcutKeycap from '$lib/gallery/components/shortcut-keycap.svelte';
-  import { faceSuggestionContextExpanded as expanded } from '$lib/gallery/people/face-suggestion-context.store';
-  import { getSuggestionAssetHref } from '$lib/gallery/people/suggestion-asset-href';
+  import { dateFormats } from '#lib/constants.ts';
+  import ShortcutKeycap from '#lib/gallery/components/shortcut-keycap.svelte';
+  import { faceSuggestionContextExpanded as expanded } from '#lib/gallery/people/face-suggestion-context.store.ts';
+  import { getSuggestionAssetHref } from '#lib/gallery/people/suggestion-asset-href.ts';
   import { DateTime } from 'luxon';
   import { locale, t } from 'svelte-i18n';
 
@@ -12,10 +12,10 @@
     /** Straight off the suggestion payload — no request needed to show the date. */
     fileCreatedAt?: string;
     /**
-     * Set only when the review is running inside a Space. Not derived in here: the caller knows which
-     * surface it is on, and a space viewer's link target is not a variation of the personal one — it is a
-     * different route with different access (see `getSuggestionAssetHref`).
-     */
+    Set only when the review is running inside a Space. Not derived in here: the caller knows which
+    surface it is on, and a space viewer's link target is not a variation of the personal one — it is a
+    different route with different access (see `getSuggestionAssetHref`).
+    */
     spaceId?: string;
   }
 

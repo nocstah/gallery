@@ -99,6 +99,7 @@ describe('/server', () => {
         configFile: false,
         duplicateDetection: false,
         facialRecognition: false,
+        backups: false,
         map: true,
         reverseGeocoding: true,
         importFaces: false,
@@ -117,6 +118,8 @@ describe('/server', () => {
         s3Storage: false,
         // off on the e2e stack: Spatial Scene ships disabled
         spatialScene: false,
+        // off on the e2e stack: Data Saver video ships disabled
+        dataSaverVideo: false,
         // The full list mirrors the SyncRequestType enum; pin the fork's space-album types,
         // which mobile's sync gate opens on (capability signalling).
         syncRequestTypes: expect.arrayContaining([
@@ -157,7 +160,6 @@ describe('/server', () => {
         minFaces: 3,
         availableMemoryTypes: [
           'on_this_day',
-          'birthday',
           'recent_trip',
           'month_recap',
           'favorites_throwback',

@@ -5,18 +5,18 @@
   // one light/dark control, which Settings › Theme points to) and All themes, the way to Settings › Theme, rounded
   // corners, the inspector window and Cast (when a cast target is around). Shift+wheel, Ctrl+wheel and + - 0 resize
   // the thumbnails directly.
-  import { page } from '$app/state';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { globalSearchManager } from '$lib/managers/global-search-manager.svelte';
-  import { inspectorFeed, inspectorFits } from '$lib/managers/inspector-link.svelte';
-  import { thumbnailZoomManager, ZOOM_MAX, ZOOM_MIN } from '$lib/managers/thumbnail-zoom-manager.svelte';
-  import { getGlobalActions } from '$lib/services/app.service';
-  import { corners } from '$lib/theme/corners.svelte';
-  import { FOLLOW_OMARCHY, galleryThemes } from '$lib/theme/theme-manager.svelte';
-  import { getSearchablePageState } from '$lib/utils/searchable-page-search';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { globalSearchManager } from '#lib/managers/global-search-manager.svelte.ts';
+  import { inspectorFeed, inspectorFits } from '#lib/managers/inspector-link.svelte.ts';
+  import { ZOOM_MAX, ZOOM_MIN, thumbnailZoomManager } from '#lib/managers/thumbnail-zoom-manager.svelte.ts';
+  import { getGlobalActions } from '#lib/services/app.service.ts';
+  import { corners } from '#lib/theme/corners.svelte.ts';
+  import { FOLLOW_OMARCHY, galleryThemes } from '#lib/theme/theme-manager.svelte.ts';
+  import { getSearchablePageState } from '#lib/utils/searchable-page-search.ts';
   import { Icon, ThemePreference, themeManager } from '@immich/ui';
   import { mdiCast, mdiChevronRight, mdiEyeSettingsOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   let open = $state(false);
   let box = $state<HTMLElement>();

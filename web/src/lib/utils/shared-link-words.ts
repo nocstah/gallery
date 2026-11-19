@@ -16,11 +16,11 @@ type KindFacts = Pick<
 >;
 
 /**
- * What a link shows. Gallery keeps no mark of a memory's link, so it is known by how the memory Share sheet
- * (modals/MemoryShareModal) makes one: an Individual link named by the memory (its description), either the film's
- * photos with downloads, uploads and the photos' details off, or a film saved as one video with downloads and its
- * details on. Any other Individual link shows photos, or videos when that is all it holds.
- */
+What a link shows. Gallery keeps no mark of a memory's link, so it is known by how the memory Share sheet
+(modals/MemoryShareModal) makes one: an Individual link named by the memory (its description), either the film's
+photos with downloads, uploads and the photos' details off, or a film saved as one video with downloads and its
+details on. Any other Individual link shows photos, or videos when that is all it holds.
+*/
 export const linkKind = (link: KindFacts): LinkKind => {
   if (link.type === SharedLinkType.Album) {
     return 'album';
@@ -37,9 +37,9 @@ export const linkKind = (link: KindFacts): LinkKind => {
 };
 
 /**
- * A link's name and what it is: an album or a memory by its own name ("Album", "Memory"), photos by the words the
- * link was given or, without any, by how many they are (the count is then the name, so it is not said twice).
- */
+A link's name and what it is: an album or a memory by its own name ("Album", "Memory"), photos by the words the
+link was given or, without any, by how many they are (the count is then the name, so it is not said twice).
+*/
 export const linkName = (
   $t: MessageFormatter,
   link: KindFacts & Pick<SharedLinkResponseDto, 'album'>,
@@ -61,7 +61,7 @@ export const linkName = (
 };
 
 /** When a link ends, in the reader's calendar days (as utils/relative-time counts them): never; ended (today,
- * yesterday, or on a date); or ends today, tomorrow, within the week ("in 5 days") or on a date further off. */
+yesterday, or on a date); or ends today, tomorrow, within the week ("in 5 days") or on a date further off. */
 export type LinkEnd =
   | { state: 'never' }
   | { state: 'ended'; when: 'today' | 'yesterday' | 'date'; date: DateTime }
@@ -95,7 +95,7 @@ export const linkEndDay = (date: DateTime, locale: string, now: DateTime = DateT
   });
 
 /** When a link ends, in words ("Ends in 5 days", "Ends Nov 22", "Never ends", "Ended yesterday"), with the day and
- * time it ends for a tooltip. */
+time it ends for a tooltip. */
 export const linkEndWords = (
   $t: MessageFormatter,
   end: LinkEnd,
@@ -121,10 +121,10 @@ type LinkFacts = Pick<
 >;
 
 /**
- * A link's line: what it is, where its name does not say (`what`: "Album", "Memory", "12 photos"), who can open it,
- * when it ends, then what it lets a visitor do beyond looking. `download` adds whether a visitor can download, for the
- * Share sheets, where the link has just been made with downloads on or off; the lists leave it to Edit.
- */
+A link's line: what it is, where its name does not say (`what`: "Album", "Memory", "12 photos"), who can open it,
+when it ends, then what it lets a visitor do beyond looking. `download` adds whether a visitor can download, for the
+Share sheets, where the link has just been made with downloads on or off; the lists leave it to Edit.
+*/
 export const linkFacts = (
   $t: MessageFormatter,
   link: LinkFacts,

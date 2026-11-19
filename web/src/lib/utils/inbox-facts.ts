@@ -1,10 +1,10 @@
+import type { Suggestion } from '#lib/utils/curator.ts';
+import { formatDuration } from '#lib/utils/duration.ts';
+import { dayLabel } from '#lib/utils/timeline-dates.ts';
+import type { TimelineDate } from '#lib/utils/timeline-util.ts';
 import { AssetTypeEnum, AssetVisibility, getAssetInfo, type AssetResponseDto } from '@immich/sdk';
 import type { MessageFormatter } from 'svelte-i18n';
 import { SvelteMap } from 'svelte/reactivity';
-import type { Suggestion } from '$lib/utils/curator';
-import { formatDuration } from '$lib/utils/duration';
-import { dayLabel } from '$lib/utils/timeline-dates';
-import type { TimelineDate } from '$lib/utils/timeline-util';
 
 // Local Omarchy layer: an AI inbox card about one photo or clip, by when and where (DESIGN.md, AI inbox; the owner's
 // "Inbox cards by when and where", 2026-10-23). Curator heads such a card with the file's name ("IMG_5398.MOV",
@@ -35,11 +35,11 @@ export type InboxFacts = {
 };
 
 /**
- * The one photo or clip a card is about, where it is about one: a change to a photo (Curator's asset.* kinds, filing a
- * slip in QR, the people found in a clip) or a new version of one (restore.publish: a restored copy, an animation of
- * its burst, a Live Photo effect), never a collage of an event's photos. A card about people, albums, tags or many
- * photos has none.
- */
+The one photo or clip a card is about, where it is about one: a change to a photo (Curator's asset.* kinds, filing a
+slip in QR, the people found in a clip) or a new version of one (restore.publish: a restored copy, an animation of
+its burst, a Live Photo effect), never a collage of an event's photos. A card about people, albums, tags or many
+photos has none.
+*/
 export const photoSubject = ({
   kind,
   asset_ids,
@@ -83,10 +83,10 @@ const EXTENSION = /\.[A-Za-z0-9]{2,5}$/;
 const WORD = /[\p{L}\p{N}_]/u;
 
 /**
- * Whether a card's title is its file's name: the name or its stem, then nothing or anything but a letter or a digit
- * ("IMG_5398.MOV", "IMG_1253, restored", "2024-03-02 10.15.00.jpg → 2 Mar 2024 10:15"; never "Burst of 4, 2 Mar
- * 2019" or a caption).
- */
+Whether a card's title is its file's name: the name or its stem, then nothing or anything but a letter or a digit
+("IMG_5398.MOV", "IMG_1253, restored", "2024-03-02 10.15.00.jpg → 2 Mar 2024 10:15"; never "Burst of 4, 2 Mar
+2019" or a caption).
+*/
 export const namesFile = (title: string, fileName: string): boolean => {
   const words = title.trim().toLocaleLowerCase();
   return [fileName, fileName.replace(EXTENSION, '')].some((name) => {
@@ -116,9 +116,9 @@ const tenthsFor = (locale: string | undefined) => {
 };
 
 /**
- * How long a clip runs: a clip under two seconds in tenths ("0.1 s", as Curator's "A 0.1 s clip." says it), any
- * other as every duration reads (utils/duration: "0:18", "1:02:03").
- */
+How long a clip runs: a clip under two seconds in tenths ("0.1 s", as Curator's "A 0.1 s clip." says it), any
+other as every duration reads (utils/duration: "0:18", "1:02:03").
+*/
 export const clipLength = (milliseconds: number | null, t: MessageFormatter, locale?: string): string => {
   if (!milliseconds || milliseconds <= 0) {
     return '';
@@ -140,10 +140,10 @@ export type CardWords = {
 };
 
 /**
- * A card's words: by when and where, "Oct 11, 2019 · Riverton · 0.1 s" over "IMG_5398.MOV · In a stack of 3", where
- * Curator titled it by its file; Curator's title over when and where, where its title says something of its own; the
- * title alone until the facts are in, or where they could not be had.
- */
+A card's words: by when and where, "Oct 11, 2019 · Riverton · 0.1 s" over "IMG_5398.MOV · In a stack of 3", where
+Curator titled it by its file; Curator's title over when and where, where its title says something of its own; the
+title alone until the facts are in, or where they could not be had.
+*/
 export const cardWords = (
   title: string,
   facts: InboxFacts | null | undefined,
@@ -184,9 +184,9 @@ type FetchAsset = (id: string, signal: AbortSignal) => Promise<AssetResponseDto>
 const gallery: FetchAsset = (id, signal) => getAssetInfo({ id }, { signal });
 
 /**
- * The facts of the cards' photos, for one page: each photo asked once, a few at a time in the order the cards came
- * near the screen, kept until the page goes (`close`, which also cancels what is still on its way).
- */
+The facts of the cards' photos, for one page: each photo asked once, a few at a time in the order the cards came
+near the screen, kept until the page goes (`close`, which also cancels what is still on its way).
+*/
 export class InboxFactsLoader {
   // null: Gallery could not say (the photo is gone, or the question failed)
   #facts = new SvelteMap<string, InboxFacts | null>();
@@ -270,10 +270,10 @@ const scrollBoxOf = (node: HTMLElement) => {
 };
 
 /**
- * Calls `near` for each element given to `watch` once it comes within a screen of the view, then forgets it; with no
- * IntersectionObserver, at once. One observer for the whole list, made with the first element (whose scrolling box it
- * measures from).
- */
+Calls `near` for each element given to `watch` once it comes within a screen of the view, then forgets it; with no
+IntersectionObserver, at once. One observer for the whole list, made with the first element (whose scrolling box it
+measures from).
+*/
 export const nearScreen = () => {
   let observer: IntersectionObserver | undefined;
   const waiting = new Map<Element, () => void>();

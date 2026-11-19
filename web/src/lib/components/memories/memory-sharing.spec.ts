@@ -1,7 +1,7 @@
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
 import { AssetTypeEnum, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
-import { liveMemoryLinks, MEMORY_LINK_DAYS, memoryLinkDuration, memoryLinkExpiry } from './memory-sharing';
+import { MEMORY_LINK_DAYS, liveMemoryLinks, memoryLinkDuration, memoryLinkExpiry } from './memory-sharing';
 
 const NOW = Date.parse('2026-10-21T12:00:00.000Z');
 const memory = { title: 'Riverton · October 2023', assetIds: ['a', 'b'] };

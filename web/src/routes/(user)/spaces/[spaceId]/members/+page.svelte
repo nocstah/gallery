@@ -1,24 +1,24 @@
 <script lang="ts">
-  import { invalidateAll } from '$app/navigation';
-  import SpaceMemberPermissionSettings from '$lib/gallery/components/spaces/space-member-permission-settings.svelte';
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import SpaceAddMemberModal from '$lib/modals/SpaceAddMemberModal.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { handleError } from '$lib/utils/handle-error';
-  import { spaceRoleLabelKey } from '$lib/utils/space-utils';
-  import { relativeTime } from '$lib/utils/relative-time';
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import SpaceMemberPermissionSettings from '#lib/gallery/components/spaces/space-member-permission-settings.svelte';
+  import { showAddSpaceMembersModal } from '#lib/gallery/spaces/add-space-members.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { relativeTime } from '#lib/utils/relative-time.ts';
+  import { spaceRoleLabelKey } from '#lib/utils/space-utils.ts';
   import {
-    removeMember,
     SharedSpaceRole,
+    UserAvatarColor,
+    removeMember,
     updateMember,
     updateSpace,
-    UserAvatarColor,
     type SharedSpaceMemberResponseDto,
     type SharedSpaceUpdateDto,
   } from '@immich/sdk';
-  import { Field, modalManager, Select, type SelectOption } from '@immich/ui';
+  import { Field, Select, modalManager, type SelectOption } from '@immich/ui';
   import { locale, t } from 'svelte-i18n';
+  import { invalidateAll } from '$app/navigation';
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
@@ -50,11 +50,11 @@
   });
 
   async function handleAddMember() {
-    const result = await modalManager.show(SpaceAddMemberModal, {
-      spaceId: space.id,
-      existingMemberIds: members.map((m) => m.userId),
-    });
-    if (result) {
+    const added = await showAddSpaceMembersModal(
+      space.id,
+      members.map((m) => m.userId),
+    );
+    if (added.length > 0) {
       await invalidateAll();
     }
   }

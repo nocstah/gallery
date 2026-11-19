@@ -1,4 +1,4 @@
-import { YearSlide, type YearSlideMoves } from '$lib/utils/year-slide';
+import { YearSlide, type YearSlideMoves } from '#lib/utils/year-slide.ts';
 
 // a move that waits until the test lets it finish
 const deferred = () => {

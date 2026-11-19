@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
-  import { handleError } from '$lib/utils/handle-error';
+  import { isLibrarySpace } from '#lib/managers/album-folders.svelte.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
   import { unlinkAlbum, type AlbumResponseDto } from '@immich/sdk';
   import { IconButton, modalManager } from '@immich/ui';
   import { mdiLinkVariantOff } from '@mdi/js';

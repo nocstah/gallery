@@ -1,6 +1,9 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { defaults } from 'src/dtos/config.dto.js';
+import * as forkConfig from 'src/gallery/dtos/config.dto.js';
+import { galleryDataSaverVideoDefaults } from 'src/gallery/dtos/data-saver-video.dto.js';
 import { personGroupRejoinStatements } from 'src/gallery/utils/person-group-split.js';
 
 // Note: co-located under src/schema/ (not server/test/) so it runs under the server:unit vitest
@@ -82,6 +85,37 @@ const deleteBlockStart = sql.indexOf('DELETE FROM "kysely_migrations"');
 const deleteBlockEnd = sql.indexOf(');', deleteBlockStart) + 2;
 const deleteBlock = sql.slice(deleteBlockStart, deleteBlockEnd);
 
+// Fork paths inside the system-config row, found from src/gallery/dtos/config.dto.ts: a fork default
+// object sits in `defaults` by reference, and the extension keys spread into upstream sections.
+const forkDefaultObjects = new Set<unknown>([
+  ...Object.values(forkConfig.galleryJobDefaults),
+  ...Object.values(forkConfig.galleryTopLevelDefaults),
+  ...Object.values(forkConfig.galleryBackupDatabaseDefaults),
+  ...Object.values(forkConfig.galleryMachineLearningDefaults).filter((value) => typeof value === 'object'),
+  // Fork sections whose defaults live in their own leaf module rather than src/gallery/dtos/config.dto.ts.
+  galleryDataSaverVideoDefaults,
+]);
+const forkConfigPaths: string[] = [
+  ...Object.keys(forkConfig.galleryServerDefaults).map((key) => `server.${key}`),
+  ...Object.keys(forkConfig.GalleryClipExtension).map((key) => `machineLearning.clip.${key}`),
+  // Inline in the upstream DTO rather than the fork module.
+  'nightlyTasks.clusterNewPets',
+  // Pre-rename key that foldLegacyFaceSuggestionConfig folds into facialRecognition.suggestions.
+  'machineLearning.facialRecognition.suggestionMaxDistance',
+];
+let forkObjectsFound = 0;
+const collectForkPaths = (node: object, path: string[]) => {
+  for (const [key, value] of Object.entries(node)) {
+    if (forkDefaultObjects.has(value)) {
+      forkConfigPaths.push([...path, key].join('.'));
+      forkObjectsFound++;
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      collectForkPaths(value, [...path, key]);
+    }
+  }
+};
+collectForkPaths(defaults, []);
+
 describe('revert-to-immich.sql', () => {
   it('drops every fork table with CASCADE', () => {
     const missing = forkTables.filter((t) => !sql.includes(`DROP TABLE IF EXISTS "${t}" CASCADE`));
@@ -149,6 +183,19 @@ describe('revert-to-immich.sql', () => {
     expect(guard).toBeLessThan(firstWrite);
   });
 
+  it('runs the opt-in space conversion (0a) after the S3 guard and before 0b', () => {
+    const guard = sql.indexOf('Storage Migration to disk');
+    const convert = sql.indexOf(`current_setting('gallery.convert_spaces', true)`);
+    const favorites = sql.indexOf(`current_setting('gallery.convert_favorites', true) = 'on'`);
+    const hygiene = sql.indexOf('-- 0b. ');
+    expect(guard).toBeGreaterThan(-1);
+    expect(convert).toBeGreaterThan(guard);
+    expect(favorites).toBeGreaterThan(convert);
+    expect(hygiene).toBeGreaterThan(favorites);
+    // A per-viewer nickname, never a name for the person.
+    expect(sql.slice(convert, hygiene)).not.toContain('shared_space_person_alias');
+  });
+
   it('drops the fork migration ledger and its lock table', () => {
     expect(sql).toContain('DROP TABLE IF EXISTS "gallery_migrations";');
     expect(sql).toContain('DROP TABLE IF EXISTS "gallery_migrations_lock";');
@@ -201,5 +248,36 @@ describe('revert-to-immich.sql', () => {
       previous = at;
     }
     expect(previous).toBeLessThan(section2);
+  });
+  it('finds every fork config default in the system config defaults', () => {
+    expect(forkObjectsFound).toBe(forkDefaultObjects.size);
+  });
+
+  it('strips every fork path out of the system-config row', () => {
+    const strip = sql.slice(sql.indexOf('UPDATE "system_metadata"'));
+    const missing = forkConfigPaths.filter((path) => !strip.includes(`#- '{${path.replaceAll('.', ',')}}'`));
+    expect(missing).toEqual([]);
+  });
+
+  // The same list lets PUT /system-config accept an upstream-shaped body (upstream-config-body.interceptor.ts).
+  it('lists every fork config path in galleryConfigPaths', () => {
+    const legacy = 'machineLearning.facialRecognition.suggestionMaxDistance';
+    expect(forkConfigPaths.filter((path) => path !== legacy && !forkConfig.galleryConfigPaths.includes(path))).toEqual(
+      [],
+    );
+  });
+
+  it('strips the fork memory type map out of user preferences', () => {
+    expect(sql).toMatch(/UPDATE "user_metadata"\s+SET "value" = "value" #- '\{memories,types\}'/);
+  });
+
+  it('moves jit=off off the database, and off the role when the database could not hold it', () => {
+    expect(sql).toMatch(
+      /EXECUTE format\('ALTER DATABASE %I RESET jit', current_database\(\)\);\s+EXCEPTION WHEN insufficient_privilege THEN/,
+    );
+    expect(sql).toMatch(
+      /'1799800000000-ScopeJitOffToDatabase', '1799400000000-ScopeJitOffToDatabase'\)\)\$q\$ INTO scoped;/,
+    );
+    expect(sql).toMatch(/IF NOT database_reset OR NOT scoped THEN\s+EXECUTE 'ALTER ROLE CURRENT_USER RESET jit'/);
   });
 });

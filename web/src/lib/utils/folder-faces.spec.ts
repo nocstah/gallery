@@ -1,19 +1,19 @@
-import { AssetTypeEnum, AssetVisibility, type AssetOcrResponseDto, type TagResponseDto } from '@immich/sdk';
 import {
-  chooseFaces,
   COVER_ALBUMS,
-  FaceKind,
-  faceKey,
-  faceKind,
   FACES,
   FAVOURITE_ALBUMS,
-  isTextHeavy,
+  FaceKind,
   SPARE,
+  chooseFaces,
+  faceKey,
+  faceKind,
+  isTextHeavy,
   spreadFaces,
   type FaceAlbum,
   type FacePicture,
   type FaceSources,
-} from '$lib/utils/folder-faces';
+} from '#lib/utils/folder-faces.ts';
+import { AssetTypeEnum, AssetVisibility, type AssetOcrResponseDto, type TagResponseDto } from '@immich/sdk';
 
 // Local Omarchy layer: the Albums page's folder faces, photos only and best first (the owner, 2026-10-18)
 

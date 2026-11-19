@@ -4,11 +4,11 @@
   // through this library's API under the owner's session, as the People page shows them: a face and a name. A row
   // the mover proposes for a merge or a name links to Kioku's own views, where the owner decides; this page never
   // merges, renames or hides anyone.
+  import { Route } from '#lib/route.ts';
+  import { getGlobalPersonThumbnailUrl } from '#lib/utils/global-person-route.ts';
   import { getPerson, type PersonResponseDto } from '@immich/sdk';
   import { untrack } from 'svelte';
   import { locale, t } from 'svelte-i18n';
-  import { Route } from '$lib/route';
-  import { getGlobalPersonThumbnailUrl } from '$lib/utils/global-person-route';
   import type { MoveFacesProposal, MoveFacesReport } from './mover';
 
   type Props = { report: MoveFacesReport; names: { source: string; library: string } };
@@ -57,8 +57,8 @@
     <p>{$t('moves_faces_people', { values: names })}</p>
     <ul>
       {#each report.people as row (row.id)}
-        {@const person = people[row.id]}
-        {@const proposal = proposalFor(row.id)}
+        {const person = $derived(people[row.id])}
+        {const proposal = $derived(proposalFor(row.id))}
         <li data-testid="move-faces-person">
           {#if person}
             <img class="ws-move-face" src={getGlobalPersonThumbnailUrl(person)} alt="" loading="lazy" />

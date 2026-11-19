@@ -1,10 +1,10 @@
 <script lang="ts">
-  import SpaceActivityFeed from '$lib/components/spaces/space-activity-feed.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { spaceUiManager } from '$lib/managers/space-ui-manager.svelte';
-  import { handleError } from '$lib/utils/handle-error';
-  import { appendUniqueById } from '$lib/utils/people-utils';
-  import { getSpaceActivities, SharedSpaceRole } from '@immich/sdk';
+  import SpaceActivityFeed from '#lib/components/spaces/space-activity-feed.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { spaceUiManager } from '#lib/managers/space-ui-manager.svelte.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { appendUniqueById } from '#lib/utils/people-utils.ts';
+  import { SharedSpaceRole, getSpaceActivities } from '@immich/sdk';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
 

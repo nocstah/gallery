@@ -1,16 +1,16 @@
-import { SETTLING_ATTR } from '$lib/gallery/motion/thumbnail-lift';
+import { SETTLING_ATTR } from '#lib/gallery/motion/thumbnail-lift.ts';
 import {
-  installTileLift,
   LIFT_FULL_BELOW_PX,
   LIFT_GALLERY_FROM_PX,
   LIFT_MARGIN_PX,
   LIFT_MAX,
   LIFT_MIN,
   LIFT_TARGET_PX,
+  installTileLift,
   liftBox,
   liftOffset,
   liftScale,
-} from '$lib/utils/tile-lift';
+} from '#lib/utils/tile-lift.ts';
 
 const area = { left: 0, top: 0, right: 1000, bottom: 800, width: 1000, height: 800 };
 const at = (left: number, top: number, width: number, height: number) => ({

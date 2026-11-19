@@ -1,11 +1,11 @@
 <script lang="ts">
-  import Logo from '$lib/components/shared-components/Logo.svelte';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import { CURATOR_FEATURES } from '$lib/gallery/libraries/library-file';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { inspectorFits } from '$lib/managers/inspector-link.svelte';
-  import { curatorIsMine } from '$lib/utils/curator';
-  import { shortcutSections, type KeyCombo, type ShortcutSection } from '$lib/utils/shortcut-sheet';
+  import Logo from '#lib/components/shared-components/Logo.svelte';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import { CURATOR_FEATURES } from '#lib/gallery/libraries/library-file.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { inspectorFits } from '#lib/managers/inspector-link.svelte.ts';
+  import { curatorIsMine } from '#lib/utils/curator.ts';
+  import { shortcutSections, type KeyCombo, type ShortcutSection } from '#lib/utils/shortcut-sheet.ts';
   import { CardTitle, CloseButton, Modal, ModalBody, ModalHeader } from '@immich/ui';
   import { t } from 'svelte-i18n';
 

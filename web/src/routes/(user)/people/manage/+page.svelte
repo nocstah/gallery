@@ -1,13 +1,17 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import PeopleVisibilityModal from '$lib/components/people/people-visibility-modal.svelte';
-  import type { VisibilityChange, VisibilityPerson, VisibilitySaveResult } from '$lib/components/people/people-types';
-  import { visibilitiesDone } from '$lib/services/person.service';
-  import { getPeopleThumbnailUrl } from '$lib/utils';
-  import { handleError } from '$lib/utils/handle-error';
-  import { sortInPeopleOrder } from '$lib/utils/people-order';
+  import type {
+    VisibilityChange,
+    VisibilityPerson,
+    VisibilitySaveResult,
+  } from '#lib/components/people/people-types.ts';
+  import PeopleVisibilityModal from '#lib/components/people/people-visibility-modal.svelte';
+  import { visibilitiesDone } from '#lib/services/person.service.ts';
+  import { getPeopleThumbnailUrl } from '#lib/utils.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { sortInPeopleOrder } from '#lib/utils/people-order.ts';
   import { getAllPeople, updatePeople, type PersonResponseDto } from '@immich/sdk';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
   import type { PageData } from './$types';
 
   interface Props {

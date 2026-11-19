@@ -1,17 +1,12 @@
 <script lang="ts">
-  import { vaultEdition } from '$lib/gallery/edition';
-  import { page } from '$app/stores';
-  import GroupSettings from '$lib/components/user-settings-page/group-settings.svelte';
-  import ChangePinCodeSettings from './PinCodeSettings.svelte';
-  import DownloadSettings from './DownloadSettings.svelte';
-  import FeatureSettings from './FeatureSettings.svelte';
-  import NotificationsSettings from './NotificationsSettings.svelte';
-  import UserUsageStatistic from './UserUsageStatistic.svelte';
-  import { OpenQueryParam, QueryParameter } from '$lib/constants';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { oauth } from '$lib/utils';
-  import { type ApiKeyResponseDto, type SessionResponseDto } from '@immich/sdk';
+  import SettingAccordion from '#lib/components/shared-components/settings/SettingAccordion.svelte';
+  import GroupSettings from '#lib/components/user-settings-page/group-settings.svelte';
+  import { OpenQueryParam, QueryParameter } from '#lib/constants.ts';
+  import { vaultEdition } from '#lib/gallery/edition.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { createPreloadedQuery } from '#lib/queries/client.ts';
+  import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+  import { oauth } from '#lib/utils.ts';
   import {
     mdiAccountGroupOutline,
     mdiAccountMultipleOutline,
@@ -26,28 +21,30 @@
     mdiLockSmart,
     mdiPaletteOutline,
     mdiServerOutline,
+    mdiShieldKeyOutline,
     mdiTwoFactorAuthentication,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
-  import SettingAccordion from '$lib/components/shared-components/settings/SettingAccordion.svelte';
+  import { page } from '$app/state';
   import AppSettings from './AppSettings.svelte';
-  import ThemePicker from './ThemePicker.svelte';
   import ChangePasswordSettings from './ChangePasswordSettings.svelte';
   import DeviceList from './DeviceList.svelte';
-  import OauthSettings from './OauthSettings.svelte';
+  import DownloadSettings from './DownloadSettings.svelte';
+  import FeatureSettings from './FeatureSettings.svelte';
+  import NotificationsSettings from './NotificationsSettings.svelte';
+  import OAuthSettings from './OAuthSettings.svelte';
+  import ChangePinCodeSettings from './PinCodeSettings.svelte';
   import SharingSettings from './SharingSettings.svelte';
+  import ThemePicker from './ThemePicker.svelte';
   import UserApiKeyList from './UserApiKeyList.svelte';
+  import UserPasskeyList from './UserPasskeyList.svelte';
   import UserProfileSettings from './UserProfileSettings.svelte';
+  import UserUsageStatistic from './UserUsageStatistic.svelte';
 
-  interface Props {
-    keys?: ApiKeyResponseDto[];
-    sessions?: SessionResponseDto[];
-  }
-
-  let { keys = $bindable([]), sessions = $bindable([]) }: Props = $props();
-
+  const query = createPreloadedQuery(getUserConfigQuery);
+  const config = $derived(query.data);
   let oauthOpen =
-    oauth.isCallback(location) || $page.url.searchParams.get(QueryParameter.OPEN_SETTING) === OpenQueryParam.OAUTH;
+    oauth.isCallback(location) || page.url.searchParams.get(QueryParameter.OPEN_SETTING) === OpenQueryParam.OAUTH;
 </script>
 
 <!-- Local Omarchy layer: each row says what its section changes, in the family's words (user_settings_*_description),
@@ -89,7 +86,7 @@
   title={$t('api_keys')}
   subtitle={$t('user_settings_api_keys_description')}
 >
-  <UserApiKeyList bind:keys />
+  <UserApiKeyList />
 </SettingAccordion>
 
 <SettingAccordion
@@ -98,7 +95,7 @@
   title={$t('authorized_devices')}
   subtitle={$t('user_settings_devices_description')}
 >
-  <DeviceList bind:devices={sessions} />
+  <DeviceList />
 </SettingAccordion>
 
 <SettingAccordion
@@ -131,7 +128,7 @@
   </SettingAccordion>
 {/if}
 
-{#if featureFlagsManager.value.oauth}
+{#if config.oauth.enabled}
   <SettingAccordion
     icon={mdiTwoFactorAuthentication}
     key={OpenQueryParam.OAUTH}
@@ -139,7 +136,18 @@
     subtitle={$t('user_settings_oauth_description')}
     isOpen={oauthOpen || undefined}
   >
-    <OauthSettings />
+    <OAuthSettings />
+  </SettingAccordion>
+{/if}
+
+{#if config.passkey.enabled}
+  <SettingAccordion
+    icon={mdiShieldKeyOutline}
+    key="passkeys"
+    title={$t('passkeys', { values: { count: 5 } })}
+    subtitle={$t('manage_your_passkeys')}
+  >
+    <UserPasskeyList />
   </SettingAccordion>
 {/if}
 

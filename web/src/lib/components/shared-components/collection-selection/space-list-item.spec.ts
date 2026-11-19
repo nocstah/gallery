@@ -23,7 +23,7 @@ const props = (over = {}) => ({
 describe('SpaceListItem', () => {
   // the real English bundle, so the counts read as words ("3 members")
   beforeAll(async () => {
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US' });
     await waitLocale('en-US');
   });

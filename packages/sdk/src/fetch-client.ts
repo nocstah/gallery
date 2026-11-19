@@ -1,6 +1,6 @@
 /**
  * Immich
- * 3.3.5
+ * 3.4.1
  * DO NOT MODIFY - This file has been generated using oazapfts.
  * See https://www.npmjs.com/package/oazapfts
  */
@@ -68,6 +68,8 @@ export type AdminConfigDatabaseBackupDto = {
     s3: AdminConfigDatabaseBackupS3Dto;
 };
 export type AdminConfigBackupsDto = {
+    /** Whether the backups feature is enabled */
+    beta?: boolean;
     database: AdminConfigDatabaseBackupDto;
 };
 export type AdminConfigClassificationCategoryDto = {
@@ -88,6 +90,14 @@ export type AdminConfigClassificationDto = {
     categories: AdminConfigClassificationCategoryDto[];
     /** Enable classification globally */
     enabled?: boolean;
+};
+export type AdminConfigFFmpegDataSaverDto = {
+    /** Store a small extra copy of each video for the mobile app on mobile data */
+    enabled?: boolean;
+    /** Bitrate cap of the Data Saver copy, in ffmpeg notation (for example 1500k) */
+    maxBitrate: string;
+    targetResolution: DataSaverVideoResolution;
+    targetVideoCodec: DataSaverVideoCodec;
 };
 export type AdminConfigFFmpegRealtimeDto = {
     /** Enable real-time HLS transcoding (alpha) */
@@ -112,6 +122,7 @@ export type AdminConfigFFmpegDto = {
     cqMode: CQMode;
     /** CRF */
     crf: number;
+    dataSaver: AdminConfigFFmpegDataSaverDto;
     /** GOP size */
     gopSize: number;
     /** Max bitrate */
@@ -254,6 +265,28 @@ export type AdminConfigFaceSuggestionDto = {
     /** Maximum embedding distance for a face to be surfaced as a suggestion on a named person */
     maxDistance: number;
 };
+export type AdminConfigVideoFacesDto = {
+    /** Let video faces start new people. When off, a video face only joins a person already found elsewhere. */
+    createPeople?: boolean;
+    /** Detect video faces in frames sampled across the whole video */
+    enabled?: boolean;
+    /** Largest embedding distance at which two views of a face in one video count as the same person. Separate from recognition, so recognition can stay strict without splitting people inside a video. */
+    maxDistance: number;
+    /** Frame budget per video. Past it the interval is stretched, so the whole video is still covered. */
+    maxFrames: number;
+    /** A person whose largest face in the video is narrower than this, in pixels of the sampled frame, is not kept */
+    minFaceSize: number;
+    /** A video face whose best detection score in the video is below this neither joins nor starts a person, and stays unassigned for naming by hand. 0 turns the check off. */
+    minRecognitionScore: number;
+    /** Sampled frames a person must be seen in to be kept */
+    minSightings: number;
+    /** Seconds between sampled frames */
+    sampleInterval: number;
+    /** Also sample a frame just after every scene cut */
+    sceneDetection?: boolean;
+    /** Also search each high-resolution frame as four overlapping quarters, to find small faces such as a crowd. Costs about five times the detection work. */
+    tiledDetection?: boolean;
+};
 export type AdminConfigFacialRecognitionDto = {
     /** Whether the task is enabled */
     enabled: boolean;
@@ -266,6 +299,7 @@ export type AdminConfigFacialRecognitionDto = {
     /** Name of the model to use */
     modelName: string;
     suggestions: AdminConfigFaceSuggestionDto;
+    video: AdminConfigVideoFacesDto;
 };
 export type AdminConfigOcrDto = {
     /** Whether the task is enabled */
@@ -279,6 +313,20 @@ export type AdminConfigOcrDto = {
     /** Name of the model to use */
     modelName: string;
 };
+export type AdminConfigVideoPetsDto = {
+    /** Detect pets in frames sampled across the whole video */
+    enabled?: boolean;
+    /** Largest pet embedding distance at which two views of a pet in one video count as the same pet */
+    maxDistance: number;
+    /** Frame budget per video. Past it the interval is stretched, so the whole video is still covered. */
+    maxFrames: number;
+    /** Sampled frames a pet must be seen in to be kept */
+    minSightings: number;
+    /** Seconds between sampled frames */
+    sampleInterval: number;
+    /** Also sample a frame just after every scene cut */
+    sceneDetection?: boolean;
+};
 export type AdminConfigPetDetectionDto = {
     /** Whether the task is enabled */
     enabled: boolean;
@@ -286,6 +334,7 @@ export type AdminConfigPetDetectionDto = {
     minScore: number;
     /** Name of the model to use */
     modelName: string;
+    video: AdminConfigVideoPetsDto;
 };
 export type AdminConfigPetRecognitionDto = {
     /** Whether the task is enabled */
@@ -451,6 +500,14 @@ export type AdminConfigOAuthDto = {
     timeout: number;
     tokenEndpointAuthMethod: OAuthTokenEndpointAuthMethod;
 };
+export type AdminConfigPasskeyDto = {
+    /** Additional domains */
+    additionalDomains: string[];
+    /** Passkey domain */
+    domain: string | null;
+    /** Enabled */
+    enabled: boolean;
+};
 export type AdminConfigPasswordLoginDto = {
     /** Enabled */
     enabled: boolean;
@@ -527,6 +584,7 @@ export type AdminConfigDto = {
     nightlyTasks: AdminConfigNightlyTasksDto;
     notifications: AdminConfigNotificationsDto;
     oauth: AdminConfigOAuthDto;
+    passkey: AdminConfigPasskeyDto;
     passwordLogin: AdminConfigPasswordLoginDto;
     reverseGeocoding: AdminConfigReverseGeocodingDto;
     server: AdminConfigServerDto;
@@ -830,6 +888,10 @@ export type SetMaintenanceModeDto = {
     action: MaintenanceAction;
     /** Restore backup filename */
     restoreBackupFilename?: string;
+    /** Rollback repository ID */
+    rollbackRepositoryId?: string;
+    /** Rollback snapshot ID */
+    rollbackSnapshotId?: string;
 };
 export type MaintenanceDetectInstallStorageFolderDto = {
     /** Number of files in the folder */
@@ -855,6 +917,8 @@ export type MaintenanceStatusResponseDto = {
     action: MaintenanceAction;
     active: boolean;
     error?: string;
+    /** FUTO Backups job ID */
+    futoBackupsJobId?: string;
     progress?: number;
     task?: string;
 };
@@ -1413,6 +1477,209 @@ export type MapMarkerResponseDto = {
     /** State/Province name */
     state: string | null;
 };
+export type ExifResponseDto = {
+    /** City name */
+    city?: string | null;
+    /** Country name */
+    country?: string | null;
+    /** Original date/time */
+    dateTimeOriginal?: string | null;
+    /** Image description */
+    description?: string | null;
+    /** Image height in pixels */
+    exifImageHeight?: number | null;
+    /** Image width in pixels */
+    exifImageWidth?: number | null;
+    /** Exposure time */
+    exposureTime?: string | null;
+    /** F-number (aperture) */
+    fNumber?: number | null;
+    /** File size in bytes */
+    fileSizeInByte?: number | null;
+    /** Focal length in mm */
+    focalLength?: number | null;
+    /** ISO sensitivity */
+    iso?: number | null;
+    /** GPS latitude */
+    latitude?: number | null;
+    /** Lens model */
+    lensModel?: string | null;
+    /** GPS longitude */
+    longitude?: number | null;
+    /** Camera make */
+    make?: string | null;
+    /** Camera model */
+    model?: string | null;
+    /** Modification date/time */
+    modifyDate?: string | null;
+    /** Image orientation */
+    orientation?: string | null;
+    /** Projection type */
+    projectionType?: string | null;
+    /** Rating */
+    rating?: number | null;
+    /** State/province name */
+    state?: string | null;
+    /** Time zone */
+    timeZone?: string | null;
+};
+export type PersonOtherResponseDto = {
+    birthDate: string | null;
+    name: string;
+    role: PersonUserRole;
+    sharedById: string;
+};
+export type ScopedPrimaryProfile = {
+    id: string;
+    spaceId?: string;
+    "type": Type;
+};
+export type PeopleUserResponseDto = {
+    avatarColor: UserAvatarColor;
+    /** User email */
+    email: string;
+    /** User ID */
+    id: string;
+    /** User name */
+    name: string;
+    /** Profile change date */
+    profileChangedAt: string;
+    /** Profile image path */
+    profileImagePath: string;
+    /** Access role */
+    role: PersonUserRole;
+};
+export type PersonResponseDto = {
+    /** Person date of birth */
+    birthDate: string | null;
+    /** Person color (hex) */
+    color?: string;
+    /** Scoped identity filter token */
+    filterId?: string;
+    /** Person ID */
+    id: string;
+    /** Is favorite */
+    isFavorite?: boolean;
+    /** Is hidden */
+    isHidden: boolean;
+    /** Person name */
+    name: string;
+    /** Accessible asset count for this grouped person */
+    numberOfAssets?: number;
+    otherPeople: PersonOtherResponseDto[];
+    /** Accessible profile used for navigation */
+    primaryProfile?: ScopedPrimaryProfile;
+    /** Users that gave the current user access to this person */
+    sharedBy: PeopleUserResponseDto[];
+    /** Users the current user gave access to this person */
+    sharedWith: PeopleUserResponseDto[];
+    /** Space person ID when viewed through a shared space */
+    spacePersonId?: string;
+    /** Pet species (e.g. dog, cat) */
+    species?: string | null;
+    /** Thumbnail path */
+    thumbnailPath: string;
+    /** Entity type (person or pet) */
+    "type"?: string;
+    /** Last update date */
+    updatedAt?: string;
+};
+export type AssetStackResponseDto = {
+    /** Number of assets in stack */
+    assetCount: number;
+    /** Stack ID */
+    id: string;
+    /** Primary asset ID */
+    primaryAssetId: string;
+};
+export type TagResponseDto = {
+    /** Tag color (hex) */
+    color?: string;
+    /** Creation date */
+    createdAt: string;
+    /** Tag ID */
+    id: string;
+    /** Tag name */
+    name: string;
+    /** Parent tag ID */
+    parentId?: string;
+    /** Last update date */
+    updatedAt: string;
+    /** Tag value (full path) */
+    value: string;
+};
+export type AssetResponseDto = {
+    /** Whether the caller may edit this asset (owner, or Owner/Editor of a space whose member owns it). Present only on single-asset reads; absent from list responses, where resolving it per asset would be an N+1 access check. */
+    canEdit?: boolean;
+    /** Base64 encoded SHA1 hash */
+    checksum: string;
+    /** The UTC timestamp when the asset was originally uploaded to Immich. */
+    createdAt: string;
+    /** Duplicate group ID */
+    duplicateId?: string | null;
+    /** Video/gif duration in milliseconds (null for static images) */
+    duration: number | null;
+    exifInfo?: ExifResponseDto;
+    /** The actual UTC timestamp when the file was created/captured, preserving timezone information. This is the authoritative timestamp for chronological sorting within timeline groups. Combined with timezone data, this can be used to determine the exact moment the photo was taken. */
+    fileCreatedAt: string;
+    /** The UTC timestamp when the file was last modified on the filesystem. This reflects the last time the physical file was changed, which may be different from when the photo was originally taken. */
+    fileModifiedAt: string;
+    /** Whether asset has metadata */
+    hasMetadata: boolean;
+    /** Asset height */
+    height: number | null;
+    /** Asset ID */
+    id: string;
+    /** Is archived */
+    isArchived: boolean;
+    /** Is edited */
+    isEdited: boolean;
+    /** Is favorite */
+    isFavorite: boolean;
+    /** Is offline */
+    isOffline: boolean;
+    /** Is trashed */
+    isTrashed: boolean;
+    /** Library ID */
+    libraryId?: string | null;
+    /** Live photo video ID */
+    livePhotoVideoId?: string | null;
+    /** The local date and time when the photo/video was taken, derived from EXIF metadata. This represents the photographer's local time regardless of timezone, stored as a timezone-agnostic timestamp. Used for timeline grouping by "local" days and months. */
+    localDateTime: string;
+    /** Original file name */
+    originalFileName: string;
+    /** Original MIME type */
+    originalMimeType?: string;
+    /** Original file path */
+    originalPath: string;
+    owner?: UserResponseDto;
+    /** Owner user ID */
+    ownerId: string;
+    people?: PersonResponseDto[];
+    /** Is resized */
+    resized?: boolean;
+    /** Resolved space ID (when server auto-detects space context) */
+    resolvedSpaceId?: string;
+    /** Whether the viewer offers Spatial Scene for this photo: it has a depth map and the admin offers it on every photo, or the photo counts as suitable. Present only on single-asset reads. */
+    spatialScene?: boolean;
+    stack?: (AssetStackResponseDto) | null;
+    tags?: TagResponseDto[];
+    /** Thumbhash for thumbnail generation (base64) also used as the c query param for thumbnail cache busting. */
+    thumbhash: string | null;
+    "type": AssetTypeEnum;
+    /** The UTC timestamp when the asset record was last updated in the database. This is automatically maintained by the database and reflects when any field in the asset was last modified. */
+    updatedAt: string;
+    visibility: AssetVisibility;
+    /** Asset width */
+    width: number | null;
+};
+export type StackResponseDto = {
+    assets: AssetResponseDto[];
+    /** Stack ID */
+    id: string;
+    /** Primary asset ID */
+    primaryAssetId: string;
+};
 export type UpdateAlbumUserDto = {
     role: AlbumUserRole;
 };
@@ -1640,201 +1907,19 @@ export type AssetMetadataBulkResponseDto = {
         [key: string]: any;
     };
 };
-export type ExifResponseDto = {
-    /** City name */
-    city?: string | null;
-    /** Country name */
-    country?: string | null;
-    /** Original date/time */
-    dateTimeOriginal?: string | null;
-    /** Image description */
-    description?: string | null;
-    /** Image height in pixels */
-    exifImageHeight?: number | null;
-    /** Image width in pixels */
-    exifImageWidth?: number | null;
-    /** Exposure time */
-    exposureTime?: string | null;
-    /** F-number (aperture) */
-    fNumber?: number | null;
-    /** File size in bytes */
-    fileSizeInByte?: number | null;
-    /** Focal length in mm */
-    focalLength?: number | null;
-    /** ISO sensitivity */
-    iso?: number | null;
-    /** GPS latitude */
-    latitude?: number | null;
-    /** Lens model */
-    lensModel?: string | null;
-    /** GPS longitude */
-    longitude?: number | null;
-    /** Camera make */
-    make?: string | null;
-    /** Camera model */
-    model?: string | null;
-    /** Modification date/time */
-    modifyDate?: string | null;
-    /** Image orientation */
-    orientation?: string | null;
-    /** Projection type */
-    projectionType?: string | null;
-    /** Rating */
-    rating?: number | null;
-    /** State/province name */
-    state?: string | null;
-    /** Time zone */
-    timeZone?: string | null;
+export type AssetSpacesDto = {
+    /** Asset IDs */
+    assetIds: string[];
 };
-export type PersonOtherResponseDto = {
-    birthDate: string | null;
-    name: string;
-    role: PersonUserRole;
-    sharedById: string;
-};
-export type ScopedPrimaryProfile = {
-    id: string;
-    spaceId?: string;
-    "type": Type;
-};
-export type PeopleUserResponseDto = {
-    avatarColor: UserAvatarColor;
-    /** User email */
-    email: string;
-    /** User ID */
-    id: string;
-    /** User name */
-    name: string;
-    /** Profile change date */
-    profileChangedAt: string;
-    /** Profile image path */
-    profileImagePath: string;
-    /** Access role */
-    role: PersonUserRole;
-};
-export type PersonResponseDto = {
-    /** Person date of birth */
-    birthDate: string | null;
-    /** Person color (hex) */
-    color?: string;
-    /** Scoped identity filter token */
-    filterId?: string;
-    /** Person ID */
-    id: string;
-    /** Is favorite */
-    isFavorite?: boolean;
-    /** Is hidden */
-    isHidden: boolean;
-    /** Person name */
-    name: string;
-    /** Accessible asset count for this grouped person */
-    numberOfAssets?: number;
-    otherPeople: PersonOtherResponseDto[];
-    /** Accessible profile used for navigation */
-    primaryProfile?: ScopedPrimaryProfile;
-    /** Users that gave the current user access to this person */
-    sharedBy: PeopleUserResponseDto[];
-    /** Users the current user gave access to this person */
-    sharedWith: PeopleUserResponseDto[];
-    /** Space person ID when viewed through a shared space */
-    spacePersonId?: string;
-    /** Pet species (e.g. dog, cat) */
-    species?: string | null;
-    /** Thumbnail path */
-    thumbnailPath: string;
-    /** Entity type (person or pet) */
-    "type"?: string;
-    /** Last update date */
-    updatedAt?: string;
-};
-export type AssetStackResponseDto = {
-    /** Number of assets in stack */
-    assetCount: number;
-    /** Stack ID */
-    id: string;
-    /** Primary asset ID */
-    primaryAssetId: string;
-};
-export type TagResponseDto = {
-    /** Tag color (hex) */
-    color?: string;
-    /** Creation date */
-    createdAt: string;
-    /** Tag ID */
-    id: string;
-    /** Tag name */
-    name: string;
-    /** Parent tag ID */
-    parentId?: string;
-    /** Last update date */
-    updatedAt: string;
-    /** Tag value (full path) */
-    value: string;
-};
-export type AssetResponseDto = {
-    /** Whether the caller may edit this asset (owner, or Owner/Editor of a space whose member owns it). Present only on single-asset reads; absent from list responses, where resolving it per asset would be an N+1 access check. */
-    canEdit?: boolean;
-    /** Base64 encoded SHA1 hash */
-    checksum: string;
-    /** The UTC timestamp when the asset was originally uploaded to Immich. */
-    createdAt: string;
-    /** Duplicate group ID */
-    duplicateId?: string | null;
-    /** Video/gif duration in milliseconds (null for static images) */
-    duration: number | null;
-    exifInfo?: ExifResponseDto;
-    /** The actual UTC timestamp when the file was created/captured, preserving timezone information. This is the authoritative timestamp for chronological sorting within timeline groups. Combined with timezone data, this can be used to determine the exact moment the photo was taken. */
-    fileCreatedAt: string;
-    /** The UTC timestamp when the file was last modified on the filesystem. This reflects the last time the physical file was changed, which may be different from when the photo was originally taken. */
-    fileModifiedAt: string;
-    /** Whether asset has metadata */
-    hasMetadata: boolean;
-    /** Asset height */
-    height: number | null;
+export type AssetSpacesItemDto = {
     /** Asset ID */
-    id: string;
-    /** Is archived */
-    isArchived: boolean;
-    /** Is edited */
-    isEdited: boolean;
-    /** Is favorite */
-    isFavorite: boolean;
-    /** Is offline */
-    isOffline: boolean;
-    /** Is trashed */
-    isTrashed: boolean;
-    /** Library ID */
-    libraryId?: string | null;
-    /** Live photo video ID */
-    livePhotoVideoId?: string | null;
-    /** The local date and time when the photo/video was taken, derived from EXIF metadata. This represents the photographer's local time regardless of timezone, stored as a timezone-agnostic timestamp. Used for timeline grouping by "local" days and months. */
-    localDateTime: string;
-    /** Original file name */
-    originalFileName: string;
-    /** Original MIME type */
-    originalMimeType?: string;
-    /** Original file path */
-    originalPath: string;
-    owner?: UserResponseDto;
-    /** Owner user ID */
-    ownerId: string;
-    people?: PersonResponseDto[];
-    /** Is resized */
-    resized?: boolean;
-    /** Resolved space ID (when server auto-detects space context) */
-    resolvedSpaceId?: string;
-    /** Whether the viewer offers Spatial Scene for this photo: it has a depth map and the admin offers it on every photo, or the photo counts as suitable. Present only on single-asset reads. */
-    spatialScene?: boolean;
-    stack?: (AssetStackResponseDto) | null;
-    tags?: TagResponseDto[];
-    /** Thumbhash for thumbnail generation (base64) also used as the c query param for thumbnail cache busting. */
-    thumbhash: string | null;
-    "type": AssetTypeEnum;
-    /** The UTC timestamp when the asset record was last updated in the database. This is automatically maintained by the database and reflects when any field in the asset was last modified. */
-    updatedAt: string;
-    visibility: AssetVisibility;
-    /** Asset width */
-    width: number | null;
+    assetId: string;
+    /** IDs of the caller's spaces that show the asset */
+    spaceIds: string[];
+};
+export type AssetSpacesResponseDto = {
+    /** The requested assets that at least one of the caller's spaces shows */
+    assets: AssetSpacesItemDto[];
 };
 export type UpdateAssetDto = {
     /** Original date and time */
@@ -2196,11 +2281,24 @@ export type UserConfigMapDto = {
     /** Light map style URL */
     lightStyle: string;
 };
+export type UserConfigSmtpDto = {
+    /** Whether SMTP email notifications are enabled */
+    enabled: boolean;
+};
+export type UserConfigNotificationsDto = {
+    smtp: UserConfigSmtpDto;
+};
 export type UserConfigOAuthDto = {
+    /** Account management URL */
+    accountManagementUrl?: string;
     /** Auto launch */
     autoLaunch: boolean;
     /** Button text */
     buttonText: string;
+    /** Enabled */
+    enabled: boolean;
+};
+export type UserConfigPasskeyDto = {
     /** Enabled */
     enabled: boolean;
 };
@@ -2220,10 +2318,6 @@ export type UserConfigServerDto = {
     /** Public users */
     publicUsers: boolean;
 };
-export type UserConfigThemeDto = {
-    /** Custom CSS for theming */
-    customCss: string;
-};
 export type UserConfigTrashDto = {
     /** Days */
     days: number;
@@ -2239,11 +2333,12 @@ export type UserConfigDto = {
     image: UserConfigImageDto;
     machineLearning: UserConfigMachineLearningDto;
     map: UserConfigMapDto;
+    notifications: UserConfigNotificationsDto;
     oauth: UserConfigOAuthDto;
+    passkey: UserConfigPasskeyDto;
     passwordLogin: UserConfigPasswordLoginDto;
     reverseGeocoding: UserConfigReverseGeocodingDto;
     server: UserConfigServerDto;
-    theme: UserConfigThemeDto;
     trash: UserConfigTrashDto;
     user: UserConfigUserDto;
 };
@@ -2336,6 +2431,36 @@ export type AssetFaceCreateDto = {
     /** Face bounding box Y coordinate */
     y: number;
 };
+export type VideoFaceMergeDto = {
+    /** Faces of one video to combine into one; faces not sampled from the video are left as they are */
+    faceIds: string[];
+};
+export type VideoFaceSightingBoxDto = {
+    /** Left edge, as a fraction of the frame width */
+    x1: number;
+    /** Right edge, as a fraction of the frame width */
+    x2: number;
+    /** Top edge, as a fraction of the frame height */
+    y1: number;
+    /** Bottom edge, as a fraction of the frame height */
+    y2: number;
+};
+export type VideoFaceSightingDto = {
+    /** Where the face was in the frame at that moment */
+    box: VideoFaceSightingBoxDto;
+    /** Whether this is the best view, the one the face crop is cut from */
+    isBest: boolean;
+    /** Detector confidence for this sighting */
+    score: number;
+    /** When the face was seen, in seconds on the player's timeline: from the trim start for a trimmed video */
+    time: number;
+};
+export type VideoFaceMergeResponseDto = {
+    /** The face that was kept: the one with the most sightings */
+    faceId: string;
+    /** Its sightings, now including those of the merged faces */
+    sightings: VideoFaceSightingDto[];
+};
 export type AssetFaceDeleteDto = {
     /** Force delete even if person has other faces */
     force: boolean;
@@ -2343,6 +2468,22 @@ export type AssetFaceDeleteDto = {
 export type FaceDto = {
     /** Face ID */
     id: string;
+};
+export type VideoFaceSightingsResponseDto = {
+    /** Every sighting inside the current trim, in time order; empty for a face not sampled from a video */
+    sightings: VideoFaceSightingDto[];
+};
+export type VideoFaceSightingMoveResponseDto = {
+    /** The sightings the face has left; empty when its last one moved and the face was deleted */
+    sightings: VideoFaceSightingDto[];
+    /** The sightings of the face the sighting moved into */
+    targetSightings: VideoFaceSightingDto[];
+};
+export type VideoFaceSightingSplitResponseDto = {
+    /** The new face the sighting moved to: unassigned, made by hand */
+    faceId: string;
+    /** The sightings the original face has left, as GET /faces/{id}/sightings lists them */
+    sightings: VideoFaceSightingDto[];
 };
 export type QueueStatisticsDto = {
     /** Number of active jobs */
@@ -2602,6 +2743,47 @@ export type PartnerUpdateDto = {
     /** Show partner assets in timeline */
     inTimeline: boolean;
 };
+export type PasskeyResponseDto = {
+    /** Creation date */
+    createdAt: string;
+    /** Passkey ID */
+    id: string;
+    /** Passkey name */
+    name: string | null;
+    /** Last update date */
+    updatedAt: string;
+    /** Last used date */
+    usedAt: string | null;
+};
+export type PasskeyAuthenticationFinishDto = {
+    /** Response returned by @simplewebauthn/browser's `startAuthentication()` */
+    response: {
+        /** Credential ID */
+        id: string;
+        response: {
+            /** User handle */
+            userHandle?: string;
+            [key: string]: any;
+        };
+        [key: string]: any;
+    };
+};
+export type PasskeyAuthenticationOptionsDto = {
+    [key: string]: any;
+};
+export type PasskeyRegistrationFinishDto = {
+    /** Passkey name */
+    name?: string;
+    /** Response returned by @simplewebauthn/browser's `startAuthentication()` */
+    response: any;
+};
+export type PasskeyRegistrationOptionsDto = {
+    [key: string]: any;
+};
+export type PasskeyUpdateDto = {
+    /** Passkey name */
+    name: string | null;
+};
 export type PeopleDeleteDto = {
     /** IDs to process */
     ids: string[];
@@ -2643,6 +2825,7 @@ export type PeopleUpdateItem = {
     isHidden?: boolean;
     /** Person name */
     name?: string;
+    "type"?: PersonType;
     /** Restrict the update to the person record of this User ID */
     userId?: string;
 };
@@ -2655,8 +2838,7 @@ export type ScopedPersonProfileRefDto = {
     id: string;
     /** Space ID for Space Person refs */
     spaceId?: string;
-    /** Scoped profile type */
-    "type": Type2;
+    "type": ScopedPersonProfileType;
 };
 export type DetachScopedPersonDto = {
     /** Scoped profile to detach */
@@ -2743,6 +2925,7 @@ export type PersonUpdateDto = {
     isHidden?: boolean;
     /** Person name */
     name?: string;
+    "type"?: PersonType;
     /** Restrict the update to the person record of this User ID */
     userId?: string;
 };
@@ -2886,11 +3069,30 @@ export type PluginTemplateResponseDto = {
     /** Ui hints, for example "smart-album" */
     uiHints: string[];
 };
+export type PublicConfigFFmpegRealtimeDto = {
+    /** Enable real-time HLS transcoding (alpha) */
+    enabled: boolean;
+};
+export type PublicConfigFFmpegDto = {
+    realtime: PublicConfigFFmpegRealtimeDto;
+};
+export type PublicConfigMapDto = {
+    /** Dark map style URL */
+    darkStyle: string;
+    /** Enabled */
+    enabled: boolean;
+    /** Light map style URL */
+    lightStyle: string;
+};
 export type PublicConfigOAuthDto = {
     /** Auto launch */
     autoLaunch: boolean;
     /** Button text */
     buttonText: string;
+    /** Enabled */
+    enabled: boolean;
+};
+export type PublicConfigPasskeyDto = {
     /** Enabled */
     enabled: boolean;
 };
@@ -2902,15 +3104,13 @@ export type PublicConfigServerDto = {
     /** Login page message */
     loginPageMessage: string;
 };
-export type PublicConfigThemeDto = {
-    /** Custom CSS for theming */
-    customCss: string;
-};
 export type PublicConfigDto = {
+    ffmpeg: PublicConfigFFmpegDto;
+    map: PublicConfigMapDto;
     oauth: PublicConfigOAuthDto;
+    passkey: PublicConfigPasskeyDto;
     passwordLogin: PublicConfigPasswordLoginDto;
     server: PublicConfigServerDto;
-    theme: PublicConfigThemeDto;
 };
 export type QueueJobTypeCountsDto = {
     /** Number of sampled active jobs with this name */
@@ -3160,6 +3360,7 @@ export type MetadataSearchDto = {
     lensModel?: string | null;
     /** Library ID to filter by */
     libraryId?: string | null;
+    libraryView?: LibraryView;
     /** Filter by camera make */
     make?: string | null;
     /** Filter by camera model */
@@ -3276,6 +3477,7 @@ export type SearchOptionsRequestDto = {
     language?: string;
     /** Filter by lens model */
     lensModel?: string | null;
+    libraryView?: LibraryView;
     /** Filter by camera make */
     make?: string | null;
     /** Filter by camera model */
@@ -3476,6 +3678,7 @@ export type RandomSearchDto = {
     lensModel?: string | null;
     /** Library ID to filter by */
     libraryId?: string | null;
+    libraryView?: LibraryView;
     /** Filter by camera make */
     make?: string | null;
     /** Filter by camera model */
@@ -3553,6 +3756,7 @@ export type SmartSearchDto = {
     lensModel?: string | null;
     /** Library ID to filter by */
     libraryId?: string | null;
+    libraryView?: LibraryView;
     /** Filter by camera make */
     make?: string | null;
     /** Filter by camera model */
@@ -3719,6 +3923,7 @@ export type StatisticsSearchDto = {
     lensModel?: string | null;
     /** Library ID to filter by */
     libraryId?: string | null;
+    libraryView?: LibraryView;
     /** Filter by camera make */
     make?: string | null;
     /** Filter by camera model */
@@ -3873,8 +4078,12 @@ export type ServerConfigDto = {
     userDeleteDelay: number;
 };
 export type ServerFeaturesDto = {
+    /** Whether the backups feature is enabled */
+    backups: boolean;
     /** Whether config file is available */
     configFile: boolean;
+    /** Whether videos may have a Data Saver copy at /assets/{id}/video/data-saver. Absent on older servers. */
+    dataSaverVideo?: boolean;
     /** Whether duplicate detection is enabled */
     duplicateDetection: boolean;
     /** Whether email notifications are enabled */
@@ -3992,6 +4201,8 @@ export type ServerStorageResponseDto = {
     diskUseRaw: number;
 };
 export type ServerVersionResponseDto = {
+    /** Highest feature level supported by the server, which increments independently of the release version */
+    featureLevel: number;
     /** Major version number */
     major: number;
     /** Minor version number */
@@ -4515,13 +4726,6 @@ export type SharedSpacePersonMergeDto = {
 export type SpaceRepresentativeFaceUpdateDto = {
     /** Asset face ID used as the space representative face */
     assetFaceId: string | null;
-};
-export type StackResponseDto = {
-    assets: AssetResponseDto[];
-    /** Stack ID */
-    id: string;
-    /** Primary asset ID */
-    primaryAssetId: string;
 };
 export type StackCreateDto = {
     /** Asset IDs (first becomes primary, min 2) */
@@ -6534,6 +6738,20 @@ export function getAlbumMapMarkers({ id, key, slug }: {
     }));
 }
 /**
+ * Retrieve a stack as an album holds it
+ */
+export function getAlbumStack({ id, stackId }: {
+    id: string;
+    stackId: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: StackResponseDto;
+    }>(`/albums/${encodeURIComponent(id)}/stacks/${encodeURIComponent(stackId)}`, {
+        ...opts
+    }));
+}
+/**
  * Remove user from album
  */
 export function removeUserFromAlbum({ id, userId }: {
@@ -6871,6 +7089,21 @@ export function updateBulkAssetMetadata({ assetMetadataBulkUpsertDto }: {
     })));
 }
 /**
+ * Resolve which of the caller's spaces show the given assets
+ */
+export function getAssetSpaces({ assetSpacesDto }: {
+    assetSpacesDto: AssetSpacesDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AssetSpacesResponseDto;
+    }>("/assets/spaces", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: assetSpacesDto
+    })));
+}
+/**
  * Get asset statistics
  */
 export function getAssetStatistics({ isFavorite, isTrashed, visibility }: {
@@ -7174,6 +7407,24 @@ export function updateAssetTrim({ id, assetVideoTrimDto }: {
         method: "PUT",
         body: assetVideoTrimDto
     })));
+}
+/**
+ * Play the Data Saver copy of a video
+ */
+export function playAssetVideoDataSaver({ id, key, slug }: {
+    id: string;
+    key?: string;
+    slug?: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchBlob<{
+        status: 200;
+        data: Blob;
+    }>(`/assets/${encodeURIComponent(id)}/video/data-saver${QS.query(QS.explode({
+        key,
+        slug
+    }))}`, {
+        ...opts
+    }));
 }
 /**
  * Play asset video
@@ -7575,6 +7826,19 @@ export function getCleanupTrash(opts?: Oazapfts.RequestOpts) {
     }));
 }
 /**
+ * Retrieve the users of a cluster group
+ */
+export function getClusterGroupUsers({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: UserResponseDto[];
+    }>(`/cluster-groups/${encodeURIComponent(id)}/users`, {
+        ...opts
+    }));
+}
+/**
  * Get the configuration with user visibility
  */
 export function getUserConfig(opts?: Oazapfts.RequestOpts) {
@@ -7713,6 +7977,21 @@ export function createFace({ assetFaceCreateDto }: {
     })));
 }
 /**
+ * Combine video faces
+ */
+export function mergeVideoFaces({ videoFaceMergeDto }: {
+    videoFaceMergeDto: VideoFaceMergeDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: VideoFaceMergeResponseDto;
+    }>("/faces/sightings/merge", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: videoFaceMergeDto
+    })));
+}
+/**
  * Delete a face
  */
 export function deleteFace({ id, assetFaceDeleteDto }: {
@@ -7740,6 +8019,118 @@ export function reassignFacesById({ id, faceDto }: {
         method: "PUT",
         body: faceDto
     })));
+}
+/**
+ * Remove a face sighting
+ */
+export function removeAssetFaceSighting({ id, time }: {
+    id: string;
+    time: number;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: VideoFaceSightingsResponseDto;
+    }>(`/faces/${encodeURIComponent(id)}/sightings${QS.query(QS.explode({
+        time
+    }))}`, {
+        ...opts,
+        method: "DELETE"
+    }));
+}
+/**
+ * Get face sightings
+ */
+export function getAssetFaceSightings({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: VideoFaceSightingsResponseDto;
+    }>(`/faces/${encodeURIComponent(id)}/sightings`, {
+        ...opts
+    }));
+}
+/**
+ * Move a face sighting into another face
+ */
+export function moveAssetFaceSighting({ id, time, toFaceId }: {
+    id: string;
+    time: number;
+    toFaceId: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: VideoFaceSightingMoveResponseDto;
+    }>(`/faces/${encodeURIComponent(id)}/sightings/move${QS.query(QS.explode({
+        time,
+        toFaceId
+    }))}`, {
+        ...opts,
+        method: "POST"
+    }));
+}
+/**
+ * Restore a face sighting
+ */
+export function restoreAssetFaceSighting({ id, time }: {
+    id: string;
+    time: number;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: VideoFaceSightingsResponseDto;
+    }>(`/faces/${encodeURIComponent(id)}/sightings/restore${QS.query(QS.explode({
+        time
+    }))}`, {
+        ...opts,
+        method: "POST"
+    }));
+}
+/**
+ * Move a face sighting to a new face
+ */
+export function splitAssetFaceSighting({ id, time }: {
+    id: string;
+    time: number;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: VideoFaceSightingSplitResponseDto;
+    }>(`/faces/${encodeURIComponent(id)}/sightings/split${QS.query(QS.explode({
+        time
+    }))}`, {
+        ...opts,
+        method: "POST"
+    }));
+}
+/**
+ * Get face sighting thumbnail
+ */
+export function getAssetFaceSightingThumbnail({ id, time }: {
+    id: string;
+    time: number;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchBlob<{
+        status: 200;
+        data: Blob;
+    }>(`/faces/${encodeURIComponent(id)}/sightings/thumbnail${QS.query(QS.explode({
+        time
+    }))}`, {
+        ...opts
+    }));
+}
+/**
+ * Get face thumbnail
+ */
+export function getAssetFaceThumbnail({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchBlob<{
+        status: 200;
+        data: Blob;
+    }>(`/faces/${encodeURIComponent(id)}/thumbnail`, {
+        ...opts
+    }));
 }
 /**
  * Get filtered map markers
@@ -8370,6 +8761,115 @@ export function updatePartner({ id, partnerUpdateDto }: {
     })));
 }
 /**
+ * Search passkeys
+ */
+export function searchPasskeys({ id }: {
+    id?: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: PasskeyResponseDto[];
+    }>(`/passkeys${QS.query(QS.explode({
+        id
+    }))}`, {
+        ...opts
+    }));
+}
+/**
+ * Finish passkey authentication
+ */
+export function finishAuthentication({ passkeyAuthenticationFinishDto }: {
+    passkeyAuthenticationFinishDto: PasskeyAuthenticationFinishDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 201;
+        data: LoginResponseDto;
+    }>("/passkeys/authentication/finish", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: passkeyAuthenticationFinishDto
+    })));
+}
+/**
+ * Start passkey authentication
+ */
+export function startAuthentication(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: PasskeyAuthenticationOptionsDto;
+    }>("/passkeys/authentication/start", {
+        ...opts,
+        method: "POST"
+    }));
+}
+/**
+ * Finish passkey registration
+ */
+export function finishRegistration({ passkeyRegistrationFinishDto }: {
+    passkeyRegistrationFinishDto: PasskeyRegistrationFinishDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 201;
+        data: PasskeyResponseDto;
+    }>("/passkeys/registration/finish", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: passkeyRegistrationFinishDto
+    })));
+}
+/**
+ * Start passkey registration
+ */
+export function startRegistration(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: PasskeyRegistrationOptionsDto;
+    }>("/passkeys/registration/start", {
+        ...opts,
+        method: "POST"
+    }));
+}
+/**
+ * Delete a passkey
+ */
+export function deletePasskey({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/passkeys/${encodeURIComponent(id)}`, {
+        ...opts,
+        method: "DELETE"
+    }));
+}
+/**
+ * Retrieve a passkey
+ */
+export function getPasskey({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: PasskeyResponseDto;
+    }>(`/passkeys/${encodeURIComponent(id)}`, {
+        ...opts
+    }));
+}
+/**
+ * Update a passkey
+ */
+export function updatePasskey({ id, passkeyUpdateDto }: {
+    id: string;
+    passkeyUpdateDto: PasskeyUpdateDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: PasskeyResponseDto;
+    }>(`/passkeys/${encodeURIComponent(id)}`, oazapfts.json({
+        ...opts,
+        method: "PATCH",
+        body: passkeyUpdateDto
+    })));
+}
+/**
  * Delete people
  */
 export function deletePeople({ peopleDeleteDto }: {
@@ -8384,11 +8884,12 @@ export function deletePeople({ peopleDeleteDto }: {
 /**
  * Get all people
  */
-export function getAllPeople({ closestAssetId, closestPersonId, isFavorite, isHidden, page, sharedById, sharedWithId, size, $type, withHidden, withSharedSpaces }: {
+export function getAllPeople({ closestAssetId, closestPersonId, isFavorite, isHidden, name, page, sharedById, sharedWithId, size, $type, withHidden, withSharedSpaces }: {
     closestAssetId?: string;
     closestPersonId?: string;
     isFavorite?: boolean;
     isHidden?: boolean;
+    name?: string;
     page?: number;
     sharedById?: string;
     sharedWithId?: string;
@@ -8405,6 +8906,7 @@ export function getAllPeople({ closestAssetId, closestPersonId, isFavorite, isHi
         closestPersonId,
         isFavorite,
         isHidden,
+        name,
         page,
         sharedById,
         sharedWithId,
@@ -8461,11 +8963,12 @@ export function detachScopedPerson({ detachScopedPersonDto }: {
 /**
  * Get people face statistics
  */
-export function getPeopleFaceStatistics({ closestAssetId, closestPersonId, isFavorite, isHidden, page, sharedById, sharedWithId, size, $type, withHidden, withSharedSpaces }: {
+export function getPeopleFaceStatistics({ closestAssetId, closestPersonId, isFavorite, isHidden, name, page, sharedById, sharedWithId, size, $type, withHidden, withSharedSpaces }: {
     closestAssetId?: string;
     closestPersonId?: string;
     isFavorite?: boolean;
     isHidden?: boolean;
+    name?: string;
     page?: number;
     sharedById?: string;
     sharedWithId?: string;
@@ -8482,6 +8985,7 @@ export function getPeopleFaceStatistics({ closestAssetId, closestPersonId, isFav
         closestPersonId,
         isFavorite,
         isHidden,
+        name,
         page,
         sharedById,
         sharedWithId,
@@ -8523,11 +9027,12 @@ export function mergeScopedPeople({ mergeScopedPeopleDto }: {
 /**
  * Get people statistics
  */
-export function getPeopleStatistics({ closestAssetId, closestPersonId, isFavorite, isHidden, page, sharedById, sharedWithId, size, $type, withHidden, withSharedSpaces }: {
+export function getPeopleStatistics({ closestAssetId, closestPersonId, isFavorite, isHidden, name, page, sharedById, sharedWithId, size, $type, withHidden, withSharedSpaces }: {
     closestAssetId?: string;
     closestPersonId?: string;
     isFavorite?: boolean;
     isHidden?: boolean;
+    name?: string;
     page?: number;
     sharedById?: string;
     sharedWithId?: string;
@@ -8544,6 +9049,7 @@ export function getPeopleStatistics({ closestAssetId, closestPersonId, isFavorit
         closestPersonId,
         isFavorite,
         isHidden,
+        name,
         page,
         sharedById,
         sharedWithId,
@@ -9024,7 +9530,7 @@ export function getExploreData(opts?: Oazapfts.RequestOpts) {
 /**
  * Search large assets
  */
-export function searchLargeAssets({ albumIds, city, country, createdAfter, createdBefore, isEncoded, isFavorite, isInAlbum, isMotion, isNotInAlbum, isOffline, lensModel, libraryId, make, minFileSize, model, ocr, ownerId, personIds, rating, size, spaceId, spacePersonIds, state, tagIds, takenAfter, takenBefore, trashedAfter, trashedBefore, $type, updatedAfter, updatedBefore, visibility, withDeleted, withExif, withSharedSpaces }: {
+export function searchLargeAssets({ albumIds, city, country, createdAfter, createdBefore, isEncoded, isFavorite, isInAlbum, isMotion, isNotInAlbum, isOffline, lensModel, libraryId, libraryView, make, minFileSize, model, ocr, ownerId, personIds, rating, size, spaceId, spacePersonIds, state, tagIds, takenAfter, takenBefore, trashedAfter, trashedBefore, $type, updatedAfter, updatedBefore, visibility, withDeleted, withExif, withSharedSpaces }: {
     albumIds?: string[];
     city?: string | null;
     country?: string | null;
@@ -9038,6 +9544,7 @@ export function searchLargeAssets({ albumIds, city, country, createdAfter, creat
     isOffline?: boolean;
     lensModel?: string | null;
     libraryId?: string | null;
+    libraryView?: LibraryView;
     make?: string | null;
     minFileSize?: number;
     model?: string | null;
@@ -9079,6 +9586,7 @@ export function searchLargeAssets({ albumIds, city, country, createdAfter, creat
         isOffline,
         lensModel,
         libraryId,
+        libraryView,
         make,
         minFileSize,
         model,
@@ -11065,7 +11573,7 @@ export function tagAssets({ id, bulkIdsDto }: {
 /**
  * Get time bucket
  */
-export function getTimeBucket({ albumId, bbox, bucketSize, city, country, description, isFavorite, isInAlbum, isNotInAlbum, isTrashed, key, lensModel, make, model, ocr, order, orderBy, originalFileName, ownerId, personId, personIds, rating, slug, spaceId, spacePersonId, spacePersonIds, state, tagId, tagIds, takenAfter, takenBefore, timeBucket, $type, userId, visibility, withCoordinates, withPartners, withSharedSpaces, withStacked }: {
+export function getTimeBucket({ albumId, bbox, bucketSize, city, country, description, isFavorite, isInAlbum, isNotInAlbum, isTrashed, key, lensModel, libraryView, make, model, ocr, order, orderBy, originalFileName, ownerId, personId, personIds, rating, slug, spaceId, spacePersonId, spacePersonIds, stackCountInAlbum, state, tagId, tagIds, takenAfter, takenBefore, timeBucket, $type, userId, visibility, withCoordinates, withPartners, withSharedSpaces, withStacked }: {
     albumId?: string;
     bbox?: string;
     bucketSize?: TimeBucketSize;
@@ -11078,6 +11586,7 @@ export function getTimeBucket({ albumId, bbox, bucketSize, city, country, descri
     isTrashed?: boolean;
     key?: string;
     lensModel?: string;
+    libraryView?: LibraryView;
     make?: string;
     model?: string;
     ocr?: string;
@@ -11092,6 +11601,7 @@ export function getTimeBucket({ albumId, bbox, bucketSize, city, country, descri
     spaceId?: string;
     spacePersonId?: string;
     spacePersonIds?: string[];
+    stackCountInAlbum?: boolean;
     state?: string;
     tagId?: string;
     tagIds?: string[];
@@ -11122,6 +11632,7 @@ export function getTimeBucket({ albumId, bbox, bucketSize, city, country, descri
         isTrashed,
         key,
         lensModel,
+        libraryView,
         make,
         model,
         ocr,
@@ -11136,6 +11647,7 @@ export function getTimeBucket({ albumId, bbox, bucketSize, city, country, descri
         spaceId,
         spacePersonId,
         spacePersonIds,
+        stackCountInAlbum,
         state,
         tagId,
         tagIds,
@@ -11156,7 +11668,7 @@ export function getTimeBucket({ albumId, bbox, bucketSize, city, country, descri
 /**
  * Get time bucket covers
  */
-export function getTimeBucketCovers({ albumId, bbox, bucketSize, city, country, description, isFavorite, isInAlbum, isNotInAlbum, isTrashed, key, lensModel, make, model, ocr, order, orderBy, originalFileName, ownerId, personId, personIds, rating, slug, spaceId, spacePersonId, spacePersonIds, state, tagId, tagIds, takenAfter, takenBefore, timeBuckets, $type, userId, visibility, withCoordinates, withPartners, withSharedSpaces, withStacked }: {
+export function getTimeBucketCovers({ albumId, bbox, bucketSize, city, country, description, isFavorite, isInAlbum, isNotInAlbum, isTrashed, key, lensModel, libraryView, make, model, ocr, order, orderBy, originalFileName, ownerId, personId, personIds, rating, slug, spaceId, spacePersonId, spacePersonIds, stackCountInAlbum, state, tagId, tagIds, takenAfter, takenBefore, timeBuckets, $type, userId, visibility, withCoordinates, withPartners, withSharedSpaces, withStacked }: {
     albumId?: string;
     bbox?: string;
     bucketSize?: TimeBucketSize;
@@ -11169,6 +11681,7 @@ export function getTimeBucketCovers({ albumId, bbox, bucketSize, city, country, 
     isTrashed?: boolean;
     key?: string;
     lensModel?: string;
+    libraryView?: LibraryView;
     make?: string;
     model?: string;
     ocr?: string;
@@ -11183,6 +11696,7 @@ export function getTimeBucketCovers({ albumId, bbox, bucketSize, city, country, 
     spaceId?: string;
     spacePersonId?: string;
     spacePersonIds?: string[];
+    stackCountInAlbum?: boolean;
     state?: string;
     tagId?: string;
     tagIds?: string[];
@@ -11213,6 +11727,7 @@ export function getTimeBucketCovers({ albumId, bbox, bucketSize, city, country, 
         isTrashed,
         key,
         lensModel,
+        libraryView,
         make,
         model,
         ocr,
@@ -11227,6 +11742,7 @@ export function getTimeBucketCovers({ albumId, bbox, bucketSize, city, country, 
         spaceId,
         spacePersonId,
         spacePersonIds,
+        stackCountInAlbum,
         state,
         tagId,
         tagIds,
@@ -11247,7 +11763,7 @@ export function getTimeBucketCovers({ albumId, bbox, bucketSize, city, country, 
 /**
  * Get time buckets
  */
-export function getTimeBuckets({ albumId, bbox, bucketSize, city, country, description, isFavorite, isInAlbum, isNotInAlbum, isTrashed, key, lensModel, make, model, ocr, order, orderBy, originalFileName, ownerId, personId, personIds, rating, slug, spaceId, spacePersonId, spacePersonIds, state, tagId, tagIds, takenAfter, takenBefore, $type, userId, visibility, withCoordinates, withPartners, withSharedSpaces, withStacked }: {
+export function getTimeBuckets({ albumId, bbox, bucketSize, city, country, description, isFavorite, isInAlbum, isNotInAlbum, isTrashed, key, lensModel, libraryView, make, model, ocr, order, orderBy, originalFileName, ownerId, personId, personIds, rating, slug, spaceId, spacePersonId, spacePersonIds, stackCountInAlbum, state, tagId, tagIds, takenAfter, takenBefore, $type, userId, visibility, withCoordinates, withPartners, withSharedSpaces, withStacked }: {
     albumId?: string;
     bbox?: string;
     bucketSize?: TimeBucketSize;
@@ -11260,6 +11776,7 @@ export function getTimeBuckets({ albumId, bbox, bucketSize, city, country, descr
     isTrashed?: boolean;
     key?: string;
     lensModel?: string;
+    libraryView?: LibraryView;
     make?: string;
     model?: string;
     ocr?: string;
@@ -11274,6 +11791,7 @@ export function getTimeBuckets({ albumId, bbox, bucketSize, city, country, descr
     spaceId?: string;
     spacePersonId?: string;
     spacePersonIds?: string[];
+    stackCountInAlbum?: boolean;
     state?: string;
     tagId?: string;
     tagIds?: string[];
@@ -11303,6 +11821,7 @@ export function getTimeBuckets({ albumId, bbox, bucketSize, city, country, descr
         isTrashed,
         key,
         lensModel,
+        libraryView,
         make,
         model,
         ocr,
@@ -11317,6 +11836,7 @@ export function getTimeBuckets({ albumId, bbox, bucketSize, city, country, descr
         spaceId,
         spacePersonId,
         spacePersonIds,
+        stackCountInAlbum,
         state,
         tagId,
         tagIds,
@@ -11866,6 +12386,16 @@ export enum CQMode {
     Cqp = "cqp",
     Icq = "icq"
 }
+export enum DataSaverVideoResolution {
+    $480 = "480",
+    $720 = "720",
+    $1080 = "1080"
+}
+export enum DataSaverVideoCodec {
+    H264 = "h264",
+    Hevc = "hevc",
+    Av1 = "av1"
+}
 export enum HlsVideoResolution {
     $480 = 480,
     $720 = 720,
@@ -11892,6 +12422,7 @@ export enum Colorspace {
 }
 export enum ImageFormat {
     Jpeg = "jpeg",
+    Jxl = "jxl",
     Webp = "webp"
 }
 export enum LogLevel {
@@ -11933,7 +12464,8 @@ export enum MaintenanceAction {
     Start = "start",
     End = "end",
     SelectDatabaseRestore = "select_database_restore",
-    RestoreDatabase = "restore_database"
+    RestoreDatabase = "restore_database",
+    Rollback = "rollback"
 }
 export enum StorageFolder {
     EncodedVideo = "encoded-video",
@@ -12003,6 +12535,15 @@ export enum BulkIdErrorReason {
     Unknown = "unknown",
     Validation = "validation"
 }
+export enum PersonUserRole {
+    Read = "read",
+    Write = "write",
+    Admin = "admin"
+}
+export enum Type {
+    UserPerson = "user-person",
+    SpacePerson = "space-person"
+}
 export enum Permission {
     All = "all",
     ActivityCreate = "activity.create",
@@ -12052,6 +12593,7 @@ export enum Permission {
     BackupDelete = "backup.delete",
     ClusterGroupRead = "clusterGroup.read",
     ClusterGroupLeave = "clusterGroup.leave",
+    ClusterGroupAdmin = "clusterGroup.admin",
     ClusterGroupRequestCreate = "clusterGroupRequest.create",
     ClusterGroupRequestRead = "clusterGroupRequest.read",
     ClusterGroupRequestDelete = "clusterGroupRequest.delete",
@@ -12094,6 +12636,9 @@ export enum Permission {
     PartnerRead = "partner.read",
     PartnerUpdate = "partner.update",
     PartnerDelete = "partner.delete",
+    PasskeyRead = "passkey.read",
+    PasskeyUpdate = "passkey.update",
+    PasskeyDelete = "passkey.delete",
     PersonCreate = "person.create",
     PersonRead = "person.read",
     PersonUpdate = "person.update",
@@ -12221,15 +12766,6 @@ export enum AssetJobName {
     RefreshMetadata = "refresh-metadata",
     RegenerateThumbnail = "regenerate-thumbnail",
     TranscodeVideo = "transcode-video"
-}
-export enum PersonUserRole {
-    Read = "read",
-    Write = "write",
-    Admin = "admin"
-}
-export enum Type {
-    UserPerson = "user-person",
-    SpacePerson = "space-person"
 }
 export enum AssetEditAction {
     Crop = "crop",
@@ -12369,7 +12905,11 @@ export enum PartnerDirection {
     SharedBy = "shared-by",
     SharedWith = "shared-with"
 }
-export enum Type2 {
+export enum PersonType {
+    Person = "person",
+    Pet = "pet"
+}
+export enum ScopedPersonProfileType {
     Person = "person",
     SpacePerson = "space-person"
 }
@@ -12386,6 +12926,7 @@ export enum WorkflowType {
 export enum WorkflowTrigger {
     AssetCreate = "AssetCreate",
     AssetMetadataExtraction = "AssetMetadataExtraction",
+    AssetOcrExtraction = "AssetOcrExtraction",
     AssetTagged = "AssetTagged"
 }
 export enum JobName {
@@ -12405,6 +12946,7 @@ export enum JobName {
     AssetGenerateThumbnailsQueueAll = "AssetGenerateThumbnailsQueueAll",
     AssetGenerateThumbnails = "AssetGenerateThumbnails",
     AuditTableCleanup = "AuditTableCleanup",
+    AuthChallengeCleanup = "AuthChallengeCleanup",
     DatabaseBackup = "DatabaseBackup",
     FacialRecognitionQueueAll = "FacialRecognitionQueueAll",
     FacialRecognition = "FacialRecognition",
@@ -12458,6 +13000,8 @@ export enum JobName {
     PetRecognition = "PetRecognition",
     SpatialSceneQueueAll = "SpatialSceneQueueAll",
     SpatialScene = "SpatialScene",
+    AssetEncodeDataSaverVideoQueueAll = "AssetEncodeDataSaverVideoQueueAll",
+    AssetEncodeDataSaverVideo = "AssetEncodeDataSaverVideo",
     WorkflowAssetTrigger = "WorkflowAssetTrigger",
     IntegrityUntrackedFilesQueueAll = "IntegrityUntrackedFilesQueueAll",
     IntegrityUntrackedFiles = "IntegrityUntrackedFiles",
@@ -12487,7 +13031,9 @@ export enum JobName {
     AssetClassifyQueueAll = "AssetClassifyQueueAll",
     AssetClassify = "AssetClassify",
     AssetAnalyzeQualityQueueAll = "AssetAnalyzeQualityQueueAll",
-    AssetAnalyzeQuality = "AssetAnalyzeQuality"
+    AssetAnalyzeQuality = "AssetAnalyzeQuality",
+    MemoryRuleGenerate = "MemoryRuleGenerate",
+    AssetVideoTrimGenerate = "AssetVideoTrimGenerate"
 }
 export enum QueueJobStatus {
     Active = "active",
@@ -12496,6 +13042,10 @@ export enum QueueJobStatus {
     Delayed = "delayed",
     Waiting = "waiting",
     Paused = "paused"
+}
+export enum LibraryView {
+    Personal = "personal",
+    Spaces = "spaces"
 }
 export enum SearchOrderField {
     FileCreatedAt = "fileCreatedAt",
@@ -12738,6 +13288,10 @@ export enum ReleaseType {
     Patch = "patch",
     Prepatch = "prepatch",
     Prerelease = "prerelease"
+}
+export enum ServerFeatureLevel {
+    FeatureLevel = 1,
+    Passkeys = 2
 }
 export enum UserMetadataKey {
     Preferences = "preferences",

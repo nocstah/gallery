@@ -1,7 +1,7 @@
 <script lang="ts">
-  import TimelineBucketCard from '$lib/components/timeline/TimelineBucketCard.svelte';
-  import type { TimelineGrouping } from '$lib/managers/timeline-manager/types';
-  import { revealDelta, rowNeighbour } from '$lib/utils/grid-rows';
+  import TimelineBucketCard from '#lib/components/timeline/TimelineBucketCard.svelte';
+  import type { TimelineGrouping } from '#lib/managers/timeline-manager/types.ts';
+  import { revealDelta, rowNeighbour } from '#lib/utils/grid-rows.ts';
   import {
     periodDensity,
     periodSlot,
@@ -9,11 +9,11 @@
     type PeriodFold,
     type PeriodGrid,
     type PeriodRow,
-  } from '$lib/utils/period-grid';
-  import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
+  } from '#lib/utils/period-grid.ts';
+  import type { ActivatableTimelineBucket } from '#lib/utils/timeline-zoom-navigation.ts';
   import type { Snippet } from 'svelte';
-  import { on } from 'svelte/events';
   import { t } from 'svelte-i18n';
+  import { on } from 'svelte/events';
 
   const OVERSCAN_PX = 900;
 
@@ -49,7 +49,7 @@
     /** Local Omarchy layer: a page's own action on a period's card, beside it (Photos: a year in Room) */
     bucketAction?: Snippet<[RepresentativeTimelineBucket]>;
     /** Local Omarchy layer: the Years and Months overviews as the archive's shape (utils/period-grid): a row per decade
-     * or year, the periods at their places in it, the gaps and the rows' names */
+    or year, the periods at their places in it, the gaps and the rows' names */
     grid?: PeriodGrid;
     /** the height of what stands above the periods (the timeline's top section), which the grid sits under */
     topOffset?: number;
@@ -215,7 +215,7 @@
     {@attach arrowKeys}
   >
     {#if grid}
-      {@const kind = grid.kind}
+      {const kind = $derived(grid.kind)}
       {#each visibleRows as row (row.kind === 'period' ? `row-${row.unit}` : `run-${row.first}`)}
         {#if row.kind === 'empty'}
           <!-- a run of decades or years without photos: one slim line naming it -->
@@ -239,8 +239,8 @@
                 >
               </div>
             {:else}
-              {@const cell = item.cell}
-              {@const bucket = cell.tile ? bySlot.get(cell.slot) : undefined}
+              {const cell = $derived(item.cell)}
+              {const bucket = $derived(cell.tile ? bySlot.get(cell.slot) : undefined)}
               {#if bucket}
                 <div style={at(cell)} data-testid={`timeline-bucket-shell-${bucket.timeBucket}`} class="ws-period-tile">
                   <TimelineBucketCard

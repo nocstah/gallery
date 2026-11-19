@@ -1,6 +1,6 @@
+import { vaultFeatures } from '#lib/gallery/edition.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
 import { getServerFeatures, type ServerFeaturesDto } from '@immich/sdk';
-import { vaultFeatures } from '$lib/gallery/edition';
-import { eventManager } from '$lib/managers/event-manager.svelte';
 
 class FeatureFlagsManager {
   #value?: ServerFeaturesDto = $state();
@@ -24,10 +24,10 @@ class FeatureFlagsManager {
   }
 
   /**
-   * Safe read that returns undefined instead of throwing when the manager has not been
-   * initialized. Use this at call sites that might run before `init()` completes — e.g.
-   * global keyboard shortcuts that fire during the initial SSR→hydration window.
-   */
+  Safe read that returns undefined instead of throwing when the manager has not been
+  initialized. Use this at call sites that might run before `init()` completes — e.g.
+  global keyboard shortcuts that fire during the initial SSR→hydration window.
+  */
   get valueOrUndefined(): ServerFeaturesDto | undefined {
     return this.#value;
   }

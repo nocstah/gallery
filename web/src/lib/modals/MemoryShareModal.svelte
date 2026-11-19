@@ -11,11 +11,10 @@
   // link, its music said from the films Curator keeps. A failure names its step: the video, keeping it to share,
   // Gallery's link, Curator's film for the link, turning it off. Turned off, the link's film goes too: Curator forgets
   // it, or its nightly sweep does when Curator cannot now, which a quiet line says.
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import ShareLinkPanel from '$lib/components/omarchy/ShareLinkPanel.svelte';
+  import OnEvents from '#lib/components/OnEvents.svelte';
   import {
-    liveMemoryLinks,
     MEMORY_LINK_DAYS,
+    liveMemoryLinks,
     memoryLinkDuration,
     memoryLinkExpiry,
     memoryVideoAspect,
@@ -23,27 +22,28 @@
     type MemoryLinkKind,
     type MemoryPresentation,
     type MemoryShareMode,
-  } from '$lib/components/memories/memory-sharing';
-  import GroupTab from '$lib/elements/GroupTab.svelte';
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { filmVideos } from '$lib/managers/film-video-manager.svelte';
-  import { Route } from '$lib/route';
-  import { asUrl, makeSharedLink, SHARE_LINK_DAYS } from '$lib/services/shared-link.service';
-  import { locale } from '$lib/stores/preferences.store';
-  import { copyToClipboard } from '$lib/utils';
-  import { curator, curatorIsMine, FILM_MOST_SECONDS, type FilmRequest } from '$lib/utils/curator';
-  import { serverDetail } from '$lib/utils/handle-error';
-  import { filmPhotoCount } from '$lib/utils/memory-title';
-  import { linkEnd, linkEndDay } from '$lib/utils/shared-link-words';
+  } from '#lib/components/memories/memory-sharing.ts';
+  import ShareLinkPanel from '#lib/components/omarchy/ShareLinkPanel.svelte';
+  import GroupTab from '#lib/elements/GroupTab.svelte';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import { filmVideos } from '#lib/managers/film-video-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { SHARE_LINK_DAYS, asUrl, makeSharedLink } from '#lib/services/shared-link.service.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { copyToClipboard } from '#lib/utils.ts';
+  import { FILM_MOST_SECONDS, curator, curatorIsMine, type FilmRequest } from '#lib/utils/curator.ts';
+  import { serverDetail } from '#lib/utils/handle-error.ts';
+  import { filmPhotoCount } from '#lib/utils/memory-title.ts';
+  import { linkEnd, linkEndDay } from '#lib/utils/shared-link-words.ts';
   import {
+    SharedLinkType,
     getAllSharedLinks,
     getSharedLinkById,
     isHttpError,
     removeSharedLink,
-    SharedLinkType,
     type SharedLinkResponseDto,
   } from '@immich/sdk';
-  import { Field, Icon, Modal, ModalBody, ModalFooter, modalManager, PasswordInput, Switch } from '@immich/ui';
+  import { Field, Icon, Modal, ModalBody, ModalFooter, PasswordInput, Switch, modalManager } from '@immich/ui';
   import { mdiCellphone, mdiMonitor, mdiOpenInNew, mdiPlayCircleOutline, mdiShareVariant } from '@mdi/js';
   import { onDestroy, onMount, tick } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -113,8 +113,8 @@
   );
 
   /** when the link ends, as a sentence in the Shared links page's words: by calendar days ("today", "tomorrow", "in 5
-   * days"), then the day ("Nov 22"), or never. A day written with an abbreviation's full stop ("am 22. Nov.") ends the
-   * sentence with it, not with a second one. */
+  days"), then the day ("Nov 22"), or never. A day written with an abbreviation's full stop ("am 22. Nov.") ends the
+  sentence with it, not with a second one. */
   const endSentence = (expiresAt: string | null) => {
     const end = linkEnd(expiresAt);
     const when = end.state === 'ends' ? end.when : end.state;

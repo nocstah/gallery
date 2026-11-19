@@ -77,6 +77,7 @@ const setup = (db?: Kysely<DB>) => {
   return { sut, ctx };
 };
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 const setupFaceDetection = (db?: Kysely<DB>) => {
   clearConfigCache();
 
@@ -125,10 +126,10 @@ const seedPersonAcrossVisibilities = async (ctx: ReturnType<typeof setup>['ctx']
 };
 
 /**
- * #869 follow-up: seed a person whose representative face (`person.faceAssetId`, which points at an
- * ASSET_FACE row) sits on an asset of the given visibility, so the thumbnail source is reachable as
- * person -> asset_face -> asset.
- */
+#869 follow-up: seed a person whose representative face (`person.faceAssetId`, which points at an
+ASSET_FACE row) sits on an asset of the given visibility, so the thumbnail source is reachable as
+person -> asset_face -> asset.
+*/
 const seedPersonWithRepresentativeFace = async (
   ctx: ReturnType<typeof setup>['ctx'],
   ownerId: string,
@@ -144,10 +145,10 @@ const seedPersonWithRepresentativeFace = async (
 
 // Slice 1 (S1.14 pin): a setup with SearchRepository real, so handleRecognizeFaces's KNN passes run
 // against a real DB rather than a mock.
-const setupRecognition = (db?: Kysely<DB>) => {
+const setupRecognition = () => {
   clearConfigCache();
   const { sut, ctx } = newMediumService(PersonService, {
-    database: db || defaultDatabase,
+    database: defaultDatabase,
     real: [
       AccessRepository,
       ConfigRepository,
@@ -169,12 +170,12 @@ const setupRecognition = (db?: Kysely<DB>) => {
 };
 
 /**
- * #808: reproduces the reported shape against a real database — `person.birthDate` is NULL and the
- * birthday only ever existed on a `shared_space_person` profile reached through the shared
- * `identityId`. This is the payload the asset viewer Info panel renders for the owner, so the age
- * has to survive the trip. The small tests stub the resolver; these prove the real
- * `hydrateAccessiblePeople` query actually returns the space birthday for this shape.
- */
+#808: reproduces the reported shape against a real database — `person.birthDate` is NULL and the
+birthday only ever existed on a `shared_space_person` profile reached through the shared
+`identityId`. This is the payload the asset viewer Info panel renders for the owner, so the age
+has to survive the trip. The small tests stub the resolver; these prove the real
+`hydrateAccessiblePeople` query actually returns the space birthday for this shape.
+*/
 const seedSpaceOnlyBirthday = async (birthDateSource: 'manual' | 'inherited') => {
   const { sut, ctx } = setup();
   const faceIdentityRepository = ctx.get(FaceIdentityRepository);
@@ -238,7 +239,6 @@ const setupFaceRecognition = (db?: Kysely<DB>) => {
     active: 1,
     waiting: 0,
     delayed: 0,
-    paused: 0,
     completed: 0,
     failed: 0,
   });
@@ -1210,7 +1210,7 @@ describe(PersonService.name, () => {
       const jobRepo = ctx.getMock(JobRepository);
       ctx.getMock(StorageRepository).unlink.mockResolvedValue();
       jobRepo.waitForQueueCompletion.mockResolvedValue();
-      jobRepo.getJobCounts.mockResolvedValue({ active: 0, waiting: 0, completed: 0, delayed: 0, failed: 0, paused: 0 });
+      jobRepo.getJobCounts.mockResolvedValue({ active: 0, waiting: 0, completed: 0, delayed: 0, failed: 0 });
       jobRepo.queueAll.mockResolvedValue();
       // removeAllPersonGroups queues a FileDelete job per chunk of deleted people; this test doesn't
       // assert on it, so it only needs a resolved value the way setupFaceRecognition() does above.
@@ -1252,7 +1252,7 @@ describe(PersonService.name, () => {
       const jobRepo = ctx.getMock(JobRepository);
       ctx.getMock(StorageRepository).unlink.mockResolvedValue();
       jobRepo.waitForQueueCompletion.mockResolvedValue();
-      jobRepo.getJobCounts.mockResolvedValue({ active: 0, waiting: 0, completed: 0, delayed: 0, failed: 0, paused: 0 });
+      jobRepo.getJobCounts.mockResolvedValue({ active: 0, waiting: 0, completed: 0, delayed: 0, failed: 0 });
       jobRepo.queueAll.mockResolvedValue();
       // removeAllPersonGroups queues a FileDelete job per chunk of deleted people; this test doesn't
       // assert on it, so it only needs a resolved value the way setupFaceRecognition() does above.
@@ -2366,6 +2366,43 @@ describe(PersonService.name, () => {
         .where('id', '=', queryFace.id)
         .executeTakeFirstOrThrow();
       expect(row.personGroupId).toBe(person.personGroupId);
+    });
+  });
+
+  describe('handleRecognizeFaces soft-deleted faces', () => {
+    it('never assigns a face to a person through a soft-deleted face', async () => {
+      const { sut, ctx } = setupRecognition();
+      const { user } = await ctx.newUser();
+      const { person } = await ctx.newPerson({ ownerId: user.id, name: 'Deleted' });
+      const embedding = newEmbedding();
+
+      // The person's only face was deleted (asset_face.deletedAt set, personGroupId and face_search row kept).
+      const { asset: deletedAsset } = await ctx.newAsset({ ownerId: user.id });
+      const { assetFace: deletedFace } = await ctx.newAssetFace({
+        assetId: deletedAsset.id,
+        personGroupId: person.personGroupId,
+        sourceType: SourceType.MachineLearning,
+        deletedAt: new Date(),
+      });
+      await ctx.database.insertInto('face_search').values({ faceId: deletedFace.id, embedding }).execute();
+
+      const { asset: queryAsset } = await ctx.newAsset({ ownerId: user.id, visibility: AssetVisibility.Timeline });
+      const { assetFace: queryFace } = await ctx.newAssetFace({
+        assetId: queryAsset.id,
+        personGroupId: null,
+        sourceType: SourceType.MachineLearning,
+      });
+      await ctx.database.insertInto('face_search').values({ faceId: queryFace.id, embedding }).execute();
+
+      await sut.handleRecognizeFaces({ id: queryFace.id, deferred: true });
+
+      const row = await ctx.database
+        .selectFrom('asset_face')
+        .select('personGroupId')
+        .where('id', '=', queryFace.id)
+        .executeTakeFirstOrThrow();
+      expect(row.personGroupId).not.toBeNull();
+      expect(row.personGroupId).not.toBe(person.personGroupId);
     });
   });
 });

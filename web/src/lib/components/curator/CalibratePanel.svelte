@@ -2,8 +2,8 @@
   // Local Omarchy layer: the hand-labelled test sets. A Curator judge may only act on its own once it agrees with
   // these: 50 bursts where you pick the best frame (then the runner-up), and 200 photos marked junk or keep.
   // Sets resume where you stopped; keys: 1-9 pick a frame, Enter saves, J/K mark junk/keep, S skips.
-  import { curator, type LabelBatch, type LabelItem } from '$lib/utils/curator';
-  import { getAssetMediaUrl } from '$lib/utils';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { curator, type LabelBatch, type LabelItem } from '#lib/utils/curator.ts';
   import { AssetMediaSize, getAssetInfo, type AssetResponseDto } from '@immich/sdk';
   import { onMount } from 'svelte';
   import { t, type Translations } from 'svelte-i18n';
@@ -115,7 +115,7 @@
 {#if !active}
   <ul class="ws-inbox-rows">
     {#each SETS as name (name)}
-      {@const done = progress(name)}
+      {const done = $derived(progress(name))}
       <li>
         <div class="ws-inbox-row task-row">
           <div class="task-text">
@@ -134,7 +134,7 @@
     {/each}
   </ul>
 {:else}
-  {@const done = progress(active)}
+  {const done = $derived(progress(active))}
   <div class="task-head">
     <button type="button" class="ws-inbox-link" onclick={() => (active = undefined)}
       >{$t('ai_inbox_tab_calibrate')}</button
@@ -150,7 +150,7 @@
     <p class="ws-inbox-row-body task-hint">{$t('ai_inbox_burst_hint')}</p>
     <div class="burst">
       {#each item.asset_ids as id, index (id)}
-        {@const rank = ranks.indexOf(id)}
+        {const rank = $derived(ranks.indexOf(id))}
         <button type="button" class="ws-pick" aria-pressed={rank >= 0} onclick={() => pick(id)}>
           <img src={media(id, AssetMediaSize.Preview)} alt="" draggable="false" />
           <span class="ws-inbox-meta burst-key">{index + 1}</span>

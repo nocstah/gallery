@@ -4,19 +4,19 @@
 // as the browser plays them), this follows the job and has the browser save "<title>.mp4" once it is ready.
 // components/omarchy/FilmVideoPanel.svelte shows how far it has got in the bottom-left corner, as the videos for chat
 // apps and the photo books do, and it lives as long as the page.
-import { modalManager } from '@immich/ui';
-import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-import SharedLinkCreateModal from '$lib/modals/SharedLinkCreateModal.svelte';
+import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+import SharedLinkCreateModal from '#lib/modals/SharedLinkCreateModal.svelte';
 import {
-  curator,
   CuratorError,
-  curatorIsMine,
   FILM_MOST_SECONDS,
+  curator,
+  curatorIsMine,
   filmFileUrl,
   type FilmJob,
   type FilmRequest,
   type FilmResult,
-} from '$lib/utils/curator';
+} from '#lib/utils/curator.ts';
+import { modalManager } from '@immich/ui';
 
 export type FilmItem = {
   /** the memory's id: one film of a memory at a time */
@@ -64,13 +64,13 @@ class FilmVideoManager {
   #checked = false;
 
   /** Curator answers, saves films and works for whoever is signed in (curatorIsMine), where this library's Curator has
-   * its memories (gallery/libraries): until then the ⋮ leaves it out */
+  its memories (gallery/libraries): until then the ⋮ leaves it out */
   get available() {
     return this.#available && curatorIsMine() && curatorOffers('memories');
   }
 
   /** Asked once a page load, by the panel once Curator's owner is signed in; never where this library's Curator has no
-   * memories. */
+  memories. */
   check() {
     if (this.#checked || !curatorIsMine() || !curatorOffers('memories')) {
       return;

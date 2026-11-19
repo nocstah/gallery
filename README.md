@@ -29,7 +29,7 @@
 </p>
 
 > [!NOTE]
-> This is a community fork of [Immich](https://github.com/immich-app/immich) with extra features on top. It is currently based on Immich v3.3.5, and we rebase onto new upstream releases as they land. See [What's Different](#whats-different-from-upstream-immich) below.
+> This is a community fork of [Immich](https://github.com/immich-app/immich) with extra features on top. It is currently based on Immich v3.4.1, and we rebase onto new upstream releases as they land. See [What's Different](#whats-different-from-upstream-immich) below.
 
 > [!TIP]
 > **Already running Immich?** Switching to Gallery is a three-line config change: two image names in your `docker-compose.yml` and `IMMICH_VERSION=v5` in your `.env`. Your library and database are fully compatible. See the [install guide](https://opennoodle.de/install/#migrate-from-immich).
@@ -83,7 +83,8 @@ Immich's AI covers faces and basic CLIP search. Pets go undetected, memories sho
 
 Trimming a video means exporting it to another tool. Moving off Google Photos needs CLI scripts. Storage is local disk or external libraries, with no native S3 backend, and a large existing library can't be linked into a shared collection.
 
-- [Image Editing](https://opennoodle.de/features/image-editing) rotates and crops from the asset viewer, and rotates in batches. Nothing is destructive: originals are always preserved. ([Docs](https://docs.opennoodle.de/features/editing))
+- [Image Editing](https://opennoodle.de/features/image-editing) adds batch rotation of a timeline selection to Immich's own non-destructive editor, which rotates, crops and mirrors in the asset viewer. ([Docs](https://docs.opennoodle.de/features/editing))
+- Stacks in Albums collapse each stack in an album to one photo with a count badge, as on the timeline, picking a photo the album actually holds. ([Docs](https://docs.opennoodle.de/features/album-stacks))
 - [Video Trimming](https://opennoodle.de/features/video-trimming) cuts clips in the browser. FFmpeg stream copy makes it instant and lossless, and you can restore the original at any time. ([Docs](https://docs.opennoodle.de/features/editing))
 - [Connected Libraries](https://opennoodle.de/features/connected-libraries) link external photo libraries into Shared Spaces, with no file duplication and originals left untouched. ([Docs](https://docs.opennoodle.de/features/libraries))
 - [Google Photos Import](https://opennoodle.de/features/google-photos-import) is a guided in-browser wizard for Takeout archives. It keeps dates, GPS, descriptions and album structure, and needs no CLI. ([Docs](https://docs.opennoodle.de/features/google-photos-import))
@@ -95,10 +96,6 @@ Filtering the timeline in the Immich mobile app means switching to a separate ta
 
 - [Photos Filtering on Mobile](https://opennoodle.de/features/mobile-photos-filtering) filters the timeline from a bottom sheet by people, places, tags, dates, rating and media type, without leaving the grid.
 - [iPhone](https://opennoodle.de/features/ios-app) and [Android](https://opennoodle.de/features/android-app) apps are on the [App Store](https://apps.apple.com/us/app/noodle-gallery/id6761776289) and [Google Play](https://play.google.com/store/apps/details?id=de.opennoodle.gallery), with background camera backup, on-device CLIP search, the map and Shared Spaces. They talk straight to your own server. ([Docs](https://docs.opennoodle.de/features/mobile-app))
-
-### Operations
-
-- Structured JSON logging: opt-in JSON log output (`IMMICH_LOG_FORMAT=json`) that feeds log aggregators like Grafana Loki, the ELK Stack, Datadog or Splunk.
 
 ---
 
@@ -170,6 +167,7 @@ That's it. To switch back to upstream Immich later, flip the two image names bac
   <a href="readme_i18n/README_uk_UA.md">Українська</a>
   <a href="readme_i18n/README_ru_RU.md">Русский</a>
   <a href="readme_i18n/README_bg_BG.md">Български</a>
+  <a href="readme_i18n/README_pl_PL.md">Polski</a>
   <a href="readme_i18n/README_pt_BR.md">Português Brasileiro</a>
   <a href="readme_i18n/README_sv_SE.md">Svenska</a>
   <a href="readme_i18n/README_ar_JO.md">العربية</a>
@@ -236,7 +234,7 @@ That's it. To switch back to upstream Immich later, flip the two image names bac
 | **Pet Detection**                            | Yes    | Yes |
 | **Spatial Scene**                            | No     | Yes |
 | **Google Photos Import**                     | No     | Yes |
-| **Image Editing & Video Trimming**           | No     | Yes |
+| Image Editing & **Video Trimming**           | No     | Yes |
 | **S3-Compatible Storage**                    | Yes    | Yes |
 
 ## Translations

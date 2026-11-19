@@ -5,7 +5,7 @@
   // the end of the overview's title row, where the overview showing inverts as the strip's year in view does and All
   // leads back to the photos, as the Years / Months / All control does on every other page. A phone keeps that control
   // floating over the photos (Timeline), so this waits for a wider screen.
-  import type { TimelineGrouping } from '$lib/managers/timeline-manager/types';
+  import type { TimelineGrouping } from '#lib/managers/timeline-manager/types.ts';
   import { t } from 'svelte-i18n';
 
   interface Props {

@@ -5,11 +5,11 @@
   // touches, the kind waiting longest first. The rest of what a kind does is said once, inside it; opening a row
   // reviews the whole kind as one queue. While Curator answers, a quiet line says what is coming; if it cannot, the
   // line says so with Retry (PanelStatus).
-  import InboxTile from '$lib/components/curator/InboxTile.svelte';
-  import PanelStatus from '$lib/components/curator/PanelStatus.svelte';
-  import { curator } from '$lib/utils/curator';
-  import { kindAction, kindQuery, kindsOf, runDays, type InboxKind } from '$lib/utils/curator-inbox';
-  import { getAssetMediaUrl } from '$lib/utils';
+  import InboxTile from '#lib/components/curator/InboxTile.svelte';
+  import PanelStatus from '#lib/components/curator/PanelStatus.svelte';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { kindAction, kindQuery, kindsOf, runDays, type InboxKind } from '#lib/utils/curator-inbox.ts';
+  import { curator } from '#lib/utils/curator.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { onMount } from 'svelte';
   import { locale, t } from 'svelte-i18n';

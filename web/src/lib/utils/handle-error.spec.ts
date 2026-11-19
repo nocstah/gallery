@@ -1,4 +1,4 @@
-import { handleError, serverDetail } from '$lib/utils/handle-error';
+import { handleError, serverDetail } from '#lib/utils/handle-error.ts';
 
 // Local Omarchy layer: a failed request's toast leads with the page's own translated words and gives the server's reason
 // as the line under it only when that adds something; it never names Immich (upstream: the raw server message cut at 75

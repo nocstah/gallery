@@ -41,9 +41,9 @@ export const visibleRange = (grid: ReviewGrid, count: number, scrollTop: number,
 };
 
 /**
- * Where the keyboard's caret goes for a key, or undefined when the key does not move it. Down from a row whose
- * neighbour below is short of tiles lands on the last tile; Page Up and Page Down move a screenful of rows.
- */
+Where the keyboard's caret goes for a key, or undefined when the key does not move it. Down from a row whose
+neighbour below is short of tiles lands on the last tile; Page Up and Page Down move a screenful of rows.
+*/
 export const moveCaret = (
   index: number,
   key: string,

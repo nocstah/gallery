@@ -3,7 +3,7 @@
   // suggestions for it; typing searches the owner's whole music library instead. Each song can be listened to here. Use
   // this song asks Curator, which keeps the song with the memory and answers with it; the sheet closes with it, and the
   // row shows it. Nothing changes on Cancel.
-  import { musicUrl } from '$lib/utils/curator';
+  import { musicUrl } from '#lib/utils/curator.ts';
   import { Button, HStack, Icon, Input, Modal, ModalBody, ModalFooter } from '@immich/ui';
   import { mdiMusicNote, mdiPause, mdiPlay } from '@mdi/js';
   import { onDestroy, onMount, untrack } from 'svelte';
@@ -123,7 +123,7 @@
       {#if shown.length > 0}
         <ul class="series-song-list" data-testid="series-song-list">
           {#each shown as song (song.id)}
-            {@const name = song.artist ? `${song.title} · ${song.artist}` : song.title}
+            {const name = $derived(song.artist ? `${song.title} · ${song.artist}` : song.title)}
             <li class="series-song-row">
               <button
                 type="button"

@@ -1,13 +1,13 @@
 import {
-  installThumbnailLift,
-  liftOrigin,
   ORIGIN_VAR,
   SETTLE_MS,
   SETTLING_ATTR,
   TITLE_LIFT_ATTR,
   TITLE_LIFT_VAR,
+  installThumbnailLift,
+  liftOrigin,
   topEdgeRise,
-} from '$lib/gallery/motion/thumbnail-lift';
+} from '#lib/gallery/motion/thumbnail-lift.ts';
 
 const box = (left: number, top: number, width: number, height: number) => ({
   left,

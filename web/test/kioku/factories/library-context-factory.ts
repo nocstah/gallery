@@ -1,0 +1,51 @@
+import { CURATOR_FEATURES, type CuratorFeature, type LibraryFeature } from '#lib/gallery/libraries/library-file.ts';
+
+// Local Omarchy layer: the libraries a kioku-library.json lists, for the specs of lib/gallery/libraries. Every library's
+// address is http on one of this computer's *.localhost names, which unicorn/prefer-https takes for a public host.
+const local = (name: string, port: number) => `http://${name}.localhost:${port}`;
+
+export const mainLibrary = { id: 'main', name: 'Main', url: local('kioku', 2283), colour: '#bf5b74' };
+export const secondLibrary = { id: 'second', name: 'Second', url: local('second', 2286), colour: '#3d7fa6' };
+export const cleanupLibrary = { id: 'my-cleanup', name: 'Cleanup', url: local('cleanup', 2287), colour: '#4f8a5b' };
+export type TestLibrary = typeof mainLibrary;
+
+/** A library's kioku-library.json: Main with every feature, any other library with none, unless told otherwise. */
+export const libraryContextFile = (
+  current: TestLibrary,
+  libraries: unknown[] = [mainLibrary, secondLibrary],
+  features: Partial<Record<LibraryFeature, boolean>> = {},
+) => {
+  const main = current.id === mainLibrary.id;
+  return {
+    version: 1,
+    id: current.id,
+    name: current.name,
+    colour: current.colour,
+    main,
+    features: { curator: main, specialAlbums: main, vaults: main, ...features },
+    libraries,
+  };
+};
+
+/** The second library's file once it has a Curator of its own, which listens on `curatorPort` when that is given and
+offers `curatorFeatures` when they are given (without, everything Main's does). */
+export const secondWithCurator = (curatorPort?: unknown, curatorFeatures?: unknown) => ({
+  ...libraryContextFile(secondLibrary, undefined, { curator: true }),
+  ...(curatorPort !== undefined && { curatorPort }),
+  ...(curatorFeatures !== undefined && { curatorFeatures }),
+});
+
+/** What the second library's Curator offers, as its file lists it: it runs only clean-up jobs, which propose in the AI
+inbox, and picks a stack's best photo (gallery/libraries). */
+export const SECOND_CURATOR_FEATURES: readonly CuratorFeature[] = ['inbox', 'picks'];
+
+/** The second library's file with a Curator of its own on port 2291 that offers these, and only these. */
+export const secondOffering = (curatorFeatures: readonly unknown[]) => secondWithCurator(2291, curatorFeatures);
+
+/** The second library's file with a Curator of its own on port 2291 that offers everything Main's does but `left`. */
+export const secondWithout = (left: CuratorFeature) =>
+  secondOffering(CURATOR_FEATURES.filter((feature) => feature !== left));
+
+/** A fetch that answers every request with this file. */
+export const serving = (data: unknown) =>
+  vi.fn<typeof fetch>().mockImplementation(() => Promise.resolve(Response.json(data)));

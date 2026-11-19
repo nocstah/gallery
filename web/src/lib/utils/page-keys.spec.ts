@@ -1,4 +1,4 @@
-import { onPageKey, pageStep } from '$lib/utils/page-keys';
+import { onPageKey, pageStep } from '#lib/utils/page-keys.ts';
 
 // Local Omarchy layer: Page Up / Page Down page the main view wherever the focus is
 describe('page keys', () => {

@@ -4,21 +4,21 @@
 // out what is not the person's to add (someone else's photo seen through a Space): the toast says how many went in, and
 // when none could, no empty album is left behind. The toast opens the album; its Undo, kept in the bar's undo history
 // too (managers/undo-manager), deletes the album again, which never touches the photos themselves.
+import UndoToast from '#lib/components/omarchy/UndoToast.svelte';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { Route } from '#lib/route.ts';
+import { locale } from '#lib/stores/preferences.store.ts';
+import { suggestAlbumName } from '#lib/utils/album-naming.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { rememberLastAlbum } from '#lib/utils/last-album.ts';
+import { undone } from '#lib/utils/undoable.ts';
 import { createAlbum, deleteAlbum, type AlbumResponseDto } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
 import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
-import UndoToast from '$lib/components/omarchy/UndoToast.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import { Route } from '$lib/route';
-import { locale } from '$lib/stores/preferences.store';
-import { suggestAlbumName } from '$lib/utils/album-naming';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
-import { rememberLastAlbum } from '$lib/utils/last-album';
-import { undone } from '$lib/utils/undoable';
 
 // as long as the other toasts that offer an Undo (utils/undoable)
 const TOAST_MS = 8000;

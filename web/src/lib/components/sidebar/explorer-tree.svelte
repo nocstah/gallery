@@ -3,8 +3,8 @@
   // albums' tree under Albums (sidebar/album-tree.svelte): the page itself is the first row, as Albums is in the main
   // sidebar, lit at the top level; below it the tree, a level one rem further in, each row with a chevron when it holds
   // more, the row on screen inverted and the rows above it open. Names are read in the UI face, not upstream's mono.
-  import SidebarNavItem from '$lib/components/sidebar/sidebar-nav-item.svelte';
-  import type { TreeNode } from '$lib/utils/tree-utils';
+  import SidebarNavItem from '#lib/components/sidebar/sidebar-nav-item.svelte';
+  import type { TreeNode } from '#lib/utils/tree-utils.ts';
   import { Icon, type IconLike, type IconProps } from '@immich/ui';
   import { mdiChevronDown, mdiChevronRight } from '@mdi/js';
   import { tick, untrack } from 'svelte';
@@ -75,9 +75,9 @@
 
 {#snippet level(parent: TreeNode, depth: number)}
   {#each childrenOf(parent) as node (node.path)}
-    {@const filled = node.size > 0}
-    {@const isOpen = filled && open.has(node.path)}
-    {@const current = node.path === active}
+    {const filled = $derived(node.size > 0)}
+    {const isOpen = $derived(filled && open.has(node.path))}
+    {const current = $derived(node.path === active)}
     <li>
       <div class="ws-tree-row" style:--depth={depth} data-active={current}>
         {#if filled}

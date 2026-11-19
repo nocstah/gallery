@@ -4,7 +4,7 @@ import {
   nearestMonth,
   parseMonthJump,
   parseMonthJumpParam,
-} from '$lib/managers/month-jump';
+} from '#lib/managers/month-jump.ts';
 
 describe('parseMonthJump', () => {
   it.each([

@@ -3,7 +3,14 @@
 // H.264 and AAC in an MP4 the app plays in the chat, sized for its limits), this follows the job and has the browser
 // save the file once it is ready. A video asked for again within a week comes straight from Curator's copy.
 // components/omarchy/ShareVideoPanel.svelte lists them while they are made.
-import { curator, CuratorError, shareVideoUrl, waitForJob, type ShareApp, type ShareResult } from '$lib/utils/curator';
+import {
+  CuratorError,
+  curator,
+  shareVideoUrl,
+  waitForJob,
+  type ShareApp,
+  type ShareResult,
+} from '#lib/utils/curator.ts';
 
 /** the apps as they call themselves (brand names, the same in every language) */
 export const SHARE_APPS: Record<ShareApp, string> = { whatsapp: 'WhatsApp', telegram: 'Telegram' };

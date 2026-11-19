@@ -1,12 +1,14 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Next, Param, Post, Put, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Next, Param, Post, Put, Req, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { type NextFunction, type Response } from 'express';
-import type { AuthDto } from 'src/dtos/auth.dto.js';
+import { type NextFunction, type Request, type Response } from 'express';
 import { Endpoint, HistoryBuilder } from 'src/decorators.js';
 import { AssetEditableDto, AssetEditableResponseDto, AssetFavoriteUpdateDto } from 'src/dtos/asset.dto.js';
+import type { AuthDto } from 'src/dtos/auth.dto.js';
 import { ApiTag, Permission, RouteKey } from 'src/enum.js';
+import { AssetSpacesDto, AssetSpacesResponseDto } from 'src/gallery/dtos/asset-spaces.dto.js';
 import { AssetImageAdjustDto, AssetImageAdjustResponseDto } from 'src/gallery/dtos/image-adjust.dto.js';
 import { AssetVideoTrimDto, AssetVideoTrimResponseDto } from 'src/gallery/dtos/video-trim.dto.js';
+import { DataSaverVideoService } from 'src/gallery/services/data-saver-video.service.js';
 import { GalleryAssetService } from 'src/gallery/services/gallery-asset.service.js';
 import { SpatialSceneService } from 'src/gallery/services/spatial-scene.service.js';
 import { Auth, Authenticated, FileResponse } from 'src/middleware/auth.guard.js';
@@ -22,6 +24,7 @@ export class GalleryAssetController {
   constructor(
     private service: GalleryAssetService,
     private spatialScene: SpatialSceneService,
+    private dataSaverVideo: DataSaverVideoService,
     private logger: LoggingRepository,
   ) {}
 
@@ -43,6 +46,31 @@ export class GalleryAssetController {
     await sendFile(res, next, () => this.spatialScene.getDepthMap(auth, id), this.logger);
   }
 
+  @Get(':id/video/data-saver')
+  @FileResponse()
+  @Authenticated({ permission: Permission.AssetView, sharedLink: true })
+  @Endpoint({
+    summary: 'Play the Data Saver copy of a video',
+    description:
+      'Streams the small Data Saver copy of a video, made for playback on mobile data. Without one, streams what /assets/{id}/video/playback does. Supports byte range requests.',
+    history: new HistoryBuilder().added('v1').beta('v1'),
+  })
+  async playAssetVideoDataSaver(
+    @Auth() auth: AuthDto,
+    @Param() { id }: UUIDParamDto,
+    @Req() req: Request,
+    @Res() res: Response,
+    @Next() next: NextFunction,
+  ) {
+    // see AssetMediaController.playAssetVideo: @Headers() would leak a required `range` param into the OpenAPI spec
+    await sendFile(
+      res,
+      next,
+      () => this.dataSaverVideo.playbackDataSaverVideo(auth, id, req.headers.range),
+      this.logger,
+    );
+  }
+
   @Post('editable')
   @Authenticated({ permission: Permission.AssetRead })
   @HttpCode(HttpStatus.OK)
@@ -54,6 +82,21 @@ export class GalleryAssetController {
   })
   getEditableAssets(@Auth() auth: AuthDto, @Body() dto: AssetEditableDto): Promise<AssetEditableResponseDto> {
     return this.service.getEditable(auth, dto);
+  }
+
+  @Post('spaces')
+  @Authenticated({ permission: Permission.AssetRead })
+  @HttpCode(HttpStatus.OK)
+  @Endpoint({
+    summary: "Resolve which of the caller's spaces show the given assets",
+    description:
+      "For each given asset the caller can read, the IDs of the caller's spaces that show it by any path: added " +
+      'to the space, in an album linked to it, or in a library linked to it, hidden from the timeline or not. ' +
+      'Assets in none of them are left out, and hidden, locked and trashed assets are in none.',
+    history: new HistoryBuilder().added('v1').beta('v1'),
+  })
+  getAssetSpaces(@Auth() auth: AuthDto, @Body() dto: AssetSpacesDto): Promise<AssetSpacesResponseDto> {
+    return this.service.getSpaces(auth, dto);
   }
 
   @Put('favorites')

@@ -1,12 +1,12 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { specialAlbums } from '#lib/managers/special-albums.svelte.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import type { JobRow } from '#lib/utils/curator.ts';
+import { navigate } from '#lib/utils/navigation.ts';
 import type { AssetResponseDto } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { specialAlbums } from '$lib/managers/special-albums.svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import type { JobRow } from '$lib/utils/curator';
-import { navigate } from '$lib/utils/navigation';
 import SavedFrameToast from './SavedFrameToast.svelte';
 import { saveFrame } from './save-frame.svelte';
 
@@ -23,13 +23,13 @@ const { curatorMock, waitForJobMock, gotoMock, mine } = vi.hoisted(() => ({
   mine: { current: true },
 }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: curatorMock,
   curatorIsMine: () => mine.current,
   waitForJob: waitForJobMock,
 }));
-vi.mock('$lib/utils/navigation', () => ({ navigate: vi.fn() }));
+vi.mock('#lib/utils/navigation.ts', () => ({ navigate: vi.fn() }));
 vi.mock('$app/navigation', () => ({ goto: gotoMock }));
 vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),

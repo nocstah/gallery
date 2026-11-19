@@ -16,20 +16,20 @@ export type LibraryFeature = 'curator' | 'specialAlbums' | 'vaults';
 const FEATURES: readonly LibraryFeature[] = ['curator', 'specialAlbums', 'vaults'];
 
 /**
- * What a library's Curator can offer, each one the pages, rows, commands and tools that ask Curator for it
- * (utils/curator's FEATURE_OF names the endpoints of each):
- * - inbox: the AI inbox (its jobs, history, health and calibration) and the command center;
- * - chat: the chat, Ask and Look Up, which Curator's local text and vision models answer;
- * - memories: what Curator adds to memories and trips: their titles and covers, songs, films saved as video, memory
- *   links, more photos of a visit, and the stories told of memories, trips and events;
- * - books: photo books;
- * - restore: Remove objects (the restorer);
- * - live: the photo viewer's Live effects, Adjust, Save frame as photo and Copy subject;
- * - share: a video made ready for WhatsApp or Telegram;
- * - picks: Pick the best of a stack;
- * - smart: smart albums, saved searches Curator keeps filled;
- * - slips: Utilities › Bank slips.
- */
+What a library's Curator can offer, each one the pages, rows, commands and tools that ask Curator for it
+(utils/curator's FEATURE_OF names the endpoints of each):
+- inbox: the AI inbox (its jobs, history, health and calibration) and the command center;
+- chat: the chat, Ask and Look Up, which Curator's local text and vision models answer;
+- memories: what Curator adds to memories and trips: their titles and covers, songs, films saved as video, memory
+  links, more photos of a visit, and the stories told of memories, trips and events;
+- books: photo books;
+- restore: Remove objects (the restorer);
+- live: the photo viewer's Live effects, Adjust, Save frame as photo and Copy subject;
+- share: a video made ready for WhatsApp or Telegram;
+- picks: Pick the best of a stack;
+- smart: smart albums, saved searches Curator keeps filled;
+- slips: Utilities › Bank slips.
+*/
 export const CURATOR_FEATURES = [
   'inbox',
   'chat',
@@ -56,7 +56,7 @@ export type LibraryContext = LibraryIdentity & {
   /** the port this library's own Curator listens on, when the file names one; it counts only with features.curator */
   curatorPort?: number;
   /** what this library's Curator offers, when the file lists it (without, everything); it counts only with
-   * features.curator */
+  features.curator */
   curatorFeatures?: readonly CuratorFeature[];
   /** every library, this one included, in the deploy's order; an entry that fails its checks is left out */
   libraries: readonly Library[];
@@ -96,10 +96,10 @@ const asPort = (value: unknown) =>
     : undefined;
 
 /**
- * A library's address, when it is one Kioku may send the browser to: http or https, on this computer (a loopback
- * address or a *.localhost name), with no credentials in it. Its origin alone, so nothing rides along with a switch;
- * anything else is no address at all, so nothing can ever navigate to an arbitrary host.
- */
+A library's address, when it is one Kioku may send the browser to: http or https, on this computer (a loopback
+address or a *.localhost name), with no credentials in it. Its origin alone, so nothing rides along with a switch;
+anything else is no address at all, so nothing can ever navigate to an arbitrary host.
+*/
 export const libraryAddress = (value: unknown): string | undefined => {
   if (typeof value !== 'string') {
     return;
@@ -118,10 +118,10 @@ export const libraryAddress = (value: unknown): string | undefined => {
 };
 
 /**
- * What a library's Curator offers, when its file lists it: names, each once. A name Kioku does not know (a newer
- * deploy's, say) is left out, with a warning; anything else (no list, an entry that is no name, a name twice) is
- * malformed.
- */
+What a library's Curator offers, when its file lists it: names, each once. A name Kioku does not know (a newer
+deploy's, say) is left out, with a warning; anything else (no list, an entry that is no name, a name twice) is
+malformed.
+*/
 const asCuratorFeatures = (value: unknown, warn: (message: string) => void): CuratorFeature[] => {
   if (!Array.isArray(value)) {
     malformed('curatorFeatures');
@@ -156,10 +156,10 @@ const asLibrary = (value: unknown): Library | undefined => {
 };
 
 /**
- * The context a file holds (version 1), checked strictly: anything missing or of the wrong kind throws, naming it. A
- * listed library whose id, name, colour or address fails is left out of the list (with a warning), so the switcher
- * never offers it; so is a second entry with an id already listed.
- */
+The context a file holds (version 1), checked strictly: anything missing or of the wrong kind throws, naming it. A
+listed library whose id, name, colour or address fails is left out of the list (with a warning), so the switcher
+never offers it; so is a second entry with an id already listed.
+*/
 export const parseLibraryContext = (data: unknown, warn: (message: string) => void = console.warn): LibraryContext => {
   if (!isRecord(data)) {
     malformed('not an object');

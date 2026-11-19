@@ -6,22 +6,22 @@
   // (Permission.AssetShare, as a drop on the sidebar does) and so does a link (#853), except on a Space whose page
   // scopes the link to itself (#1018, the selection bar's shareSpaceId): the link then takes the whole selection, and
   // the sheet says before it is made that other members' photos become public.
-  import ShareLinkPanel from '$lib/components/omarchy/ShareLinkPanel.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import { spaceToCollection } from '$lib/components/shared-components/collection-selection/collection-selection-utils';
-  import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { addAssetsToCollections } from '$lib/services/collection.service';
-  import { makeSharedLink, shareLinkExpiry } from '$lib/services/shared-link.service';
-  import { lang } from '$lib/stores/preferences.store';
-  import { handleError } from '$lib/utils/handle-error';
-  import { leadSpace, rememberShareSpace, shareableSpaces, spaceAudience } from '$lib/utils/share-space';
-  import { getAllSpaces, SharedLinkType, type SharedLinkResponseDto, type SharedSpaceResponseDto } from '@immich/sdk';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import ShareLinkPanel from '#lib/components/omarchy/ShareLinkPanel.svelte';
+  import { spaceToCollection } from '#lib/components/shared-components/collection-selection/collection-selection-utils.ts';
+  import { MAX_SPACE_ASSETS_PER_REQUEST } from '#lib/constants.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { addAssetsToCollections } from '#lib/services/collection.service.ts';
+  import { makeSharedLink, shareLinkExpiry } from '#lib/services/shared-link.service.ts';
+  import { lang } from '#lib/stores/preferences.store.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { leadSpace, rememberShareSpace, shareableSpaces, spaceAudience } from '#lib/utils/share-space.ts';
+  import { SharedLinkType, getAllSpaces, type SharedLinkResponseDto, type SharedSpaceResponseDto } from '@immich/sdk';
   import { Icon, Modal, ModalBody } from '@immich/ui';
   import { mdiAlertOutline, mdiCheck, mdiLinkVariantPlus, mdiPlus } from '@mdi/js';
   import { onMount } from 'svelte';
-  import { SvelteSet } from 'svelte/reactivity';
   import { t } from 'svelte-i18n';
+  import { SvelteSet } from 'svelte/reactivity';
 
   type Props = {
     onClose: () => void;

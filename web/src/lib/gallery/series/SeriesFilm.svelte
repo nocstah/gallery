@@ -3,13 +3,13 @@
   // plays (MemoryFilm) full screen over the shell, with the owner's own media: Gallery's previews with the session, and
   // Curator's songs. Its title card and its words are the memory's title and line; Curator has its cover and the faces,
   // so nothing is waited for.
+  import MemoryFilm from '#lib/components/memories/film/MemoryFilm.svelte';
+  import { privateFilmMedia } from '#lib/components/memories/film/private-film-media.ts';
+  import Portal from '#lib/elements/Portal.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
   import type { AssetResponseDto } from '@immich/sdk';
-  import MemoryFilm from '$lib/components/memories/film/MemoryFilm.svelte';
-  import { privateFilmMedia } from '$lib/components/memories/film/private-film-media';
-  import Portal from '$lib/elements/Portal.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
   import type { ComingMemory } from './series-api';
 
   type Props = {

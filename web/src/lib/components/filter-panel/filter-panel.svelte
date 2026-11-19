@@ -1,46 +1,44 @@
 <script lang="ts">
+  import { clickOutside } from '#lib/actions/click-outside.ts';
+  import { focusTrap } from '#lib/actions/focus-trap.ts';
+  import { portal } from '#lib/elements/Portal.svelte';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { cubicBezier } from '#lib/utils/desktop-motion.ts';
   import { Icon } from '@immich/ui';
-  import { browser } from '$app/environment';
-  import { clickOutside } from '$lib/actions/click-outside';
-  import { focusTrap } from '$lib/actions/focus-trap';
-  import { portal } from '$lib/elements/Portal.svelte';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { cubicBezier } from '$lib/utils/desktop-motion';
+  import { mdiClose, mdiFilterOutline } from '@mdi/js';
+  import { tick, untrack, type Snippet } from 'svelte';
+  import { t } from 'svelte-i18n';
   import { SvelteSet } from 'svelte/reactivity';
   import { fade, fly } from 'svelte/transition';
-  import { t } from 'svelte-i18n';
-  import { mdiClose, mdiFilterOutline } from '@mdi/js';
-  import { tick, untrack } from 'svelte';
-  import { PANEL_DURATION_MS } from './motion';
-  import type {
-    FilterPanelConfig,
-    FilterSection as FilterSectionType,
-    FilterState,
-    FilterSuggestionsResponse,
-    PersonOption,
-    TagOption,
-  } from './filter-panel';
+  import { browser } from '$app/env';
+  import AlbumsFilter from './albums-filter.svelte';
+  import CameraFilter from './camera-filter.svelte';
+  import FavoritesFilter from './favorites-filter.svelte';
+  import { getSectionAvailability, type SectionAvailability } from './filter-availability';
   import {
     ALL_FILTER_SECTIONS,
+    PRE_LEDGER_FILTER_SECTIONS,
     buildFilterContext,
     createFilterState,
     getActiveFilterCount,
     loadFilterCollapsed,
-    PRE_LEDGER_FILTER_SECTIONS,
     saveFilterCollapsed,
+    type FilterPanelConfig,
+    type FilterSection as FilterSectionType,
+    type FilterState,
+    type FilterSuggestionsResponse,
+    type PersonOption,
+    type TagOption,
   } from './filter-panel';
-  import { getSectionAvailability, type SectionAvailability } from './filter-availability';
-  import FilterSection from './filter-section.svelte';
   import FilterSectionMenu from './filter-section-menu.svelte';
-  import TemporalPicker from './temporal-picker.svelte';
-  import PeopleFilter from './people-filter.svelte';
+  import FilterSection from './filter-section.svelte';
   import LocationFilter from './location-filter.svelte';
-  import CameraFilter from './camera-filter.svelte';
-  import TagsFilter from './tags-filter.svelte';
-  import RatingFilter from './rating-filter.svelte';
   import MediaTypeFilter from './media-type-filter.svelte';
-  import FavoritesFilter from './favorites-filter.svelte';
-  import AlbumsFilter from './albums-filter.svelte';
+  import { PANEL_DURATION_MS } from './motion';
+  import PeopleFilter from './people-filter.svelte';
+  import RatingFilter from './rating-filter.svelte';
+  import TagsFilter from './tags-filter.svelte';
+  import TemporalPicker from './temporal-picker.svelte';
   import TextFilter from './text-filter.svelte';
 
   interface Props {
@@ -59,6 +57,8 @@
     // reclaims the horizontal space (used on timeline pages). When false, the built-in collapsed
     // button is shown (default; used e.g. by the map's filter drawer).
     externalToggle?: boolean;
+    /** A surface's own block above the sections (the Photos library view, #1038); not one of the sections. */
+    top?: Snippet;
   }
 
   let {
@@ -73,11 +73,12 @@
     persistCollapsed = true,
     collapsed = $bindable(),
     externalToggle = false,
+    top,
   }: Props = $props();
 
   // Respect persistCollapsed for the initial value when the parent doesn't control `collapsed`.
   if (collapsed === undefined) {
-    collapsed = persistCollapsed ? loadFilterCollapsed() : false;
+    collapsed = persistCollapsed && loadFilterCollapsed();
   }
 
   // Local Omarchy layer: below 768px a page's filters open as a sheet over its photos, under the bar and from the edge
@@ -448,12 +449,12 @@
   type StoredSectionSet = string[] | { selected?: string[]; known?: string[] };
 
   /**
-   * The stored record behind a section set. It is scoped to the browser, not to the surface:
-   * album detail and the album asset picker share a storage key but offer different section
-   * lists, so entries this surface does not render are carried through untouched rather than
-   * intersected away — otherwise the shorter surface forgets them and the longer one keeps
-   * treating them as brand new (#797).
-   */
+  The stored record behind a section set. It is scoped to the browser, not to the surface:
+  album detail and the album asset picker share a storage key but offer different section
+  lists, so entries this surface does not render are carried through untouched rather than
+  intersected away — otherwise the shorter surface forgets them and the longer one keeps
+  treating them as brand new (#797).
+  */
   interface SectionLedger {
     selected: FilterSectionType[];
     known: FilterSectionType[];
@@ -813,6 +814,7 @@
     </div>
 
     <div class="pt-4">
+      {@render top?.()}
       {#each renderableSections as section (section)}
         {#if visibleSections.has(section)}
           <!-- The "(0)" / disable gate answers "has a CROSS-SECTION filter narrowed the panel?",
@@ -921,8 +923,8 @@
                 onChange={(value) => {
                   updateFilters({
                     ...filters,
-                    isInAlbum: value === 'has' ? true : undefined,
-                    isNotInAlbum: value === 'none' ? true : undefined,
+                    isInAlbum: value === 'has' || undefined,
+                    isNotInAlbum: value === 'none' || undefined,
                   });
                 }}
               />

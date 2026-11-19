@@ -1,10 +1,10 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { markRevealed, revealInPhotos, takeReveal, takeRevealClick } from '#lib/utils/reveal.ts';
 import { AssetVisibility, type AssetResponseDto } from '@immich/sdk';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { markRevealed, revealInPhotos, takeReveal, takeRevealClick } from '$lib/utils/reveal';
 
 const mocks = vi.hoisted(() => ({ goto: vi.fn() }));
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: { params: {} } }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: { params: {} } }));
 
 const asset = (overrides: Partial<AssetResponseDto> = {}) =>
   ({ id: 'photo', visibility: AssetVisibility.Timeline, stack: null, ...overrides }) as AssetResponseDto;

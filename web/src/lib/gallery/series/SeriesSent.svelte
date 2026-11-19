@@ -3,7 +3,7 @@
   // row each on the ground as the family has it: the day it went out, the title and the line, the cover (Gallery's
   // thumbnail with the owner's session). Take off the page takes one off the page and out of its link at once, which
   // the page asks about first; one taken off says so, with Put back. Each button is described by the memory's title.
-  import { getAssetMediaUrl } from '$lib/utils';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { t } from 'svelte-i18n';
   import type { SentMemory } from './series-api';
@@ -32,7 +32,7 @@
   </h2>
   <ul class="series-sent">
     {#each memories as memory, index (memory.key)}
-      {@const off = memory.state === 'withdrawn'}
+      {const off = $derived(memory.state === 'withdrawn')}
       <li
         class="series-sent-memory"
         data-testid="series-sent-memory"

@@ -1,12 +1,12 @@
-import type { OnNavigate } from '@sveltejs/kit';
-import { prefersReducedMotion } from '$lib/gallery/motion/tokens';
+import { prefersReducedMotion } from '#lib/gallery/motion/tokens.ts';
+import type { OnNavigate } from '$app/navigation';
 
 /**
- * Section changes (Photos → Albums → Spaces) crossfade through the View Transitions API, with the
- * sidebar and top bar held still (motion.css names them). Only between different pages: a filter or
- * query change on the same page, and anything opening or closing the asset viewer, swaps instantly,
- * because the viewer has its own motion and a snapshot of the timeline would stall it.
- */
+Section changes (Photos → Albums → Spaces) crossfade through the View Transitions API, with the
+sidebar and top bar held still (motion.css names them). Only between different pages: a filter or
+query change on the same page, and anything opening or closing the asset viewer, swaps instantly,
+because the viewer has its own motion and a snapshot of the timeline would stall it.
+*/
 
 /** The parts of a SvelteKit navigation end the decision reads. */
 interface NavigationEnd {
@@ -31,10 +31,10 @@ export const shouldCrossfade = (navigation: {
 const TRANSITION_CLASS = 'gallery-page-transition';
 
 /**
- * Elements that morph from one page to the next opt in with `data-shared-element="<name>"`: a hub photo
- * collage becoming the rewind header's photo stack, say. They are named only while a transition runs, since a
- * `view-transition-name` makes its element a stacking context (rule 6 in the motion design).
- */
+Elements that morph from one page to the next opt in with `data-shared-element="<name>"`: a hub photo
+collage becoming the rewind header's photo stack, say. They are named only while a transition runs, since a
+`view-transition-name` makes its element a stacking context (rule 6 in the motion design).
+*/
 export const SHARED_ELEMENT_ATTR = 'data-shared-element';
 
 /** Names every opted-in element under `root` after its attribute; returns a function that clears them. */
@@ -53,7 +53,7 @@ export const nameSharedElements = (root: ParentNode): (() => void) => {
 /** `onNavigate` callback: SvelteKit waits for the returned promise before swapping the page. */
 export const crossfadeNavigation = (navigation: OnNavigate): Promise<void> | void => {
   // Older browsers without View Transitions just swap pages.
-  // eslint-disable-next-line tscompat/tscompat
+
   if (typeof document === 'undefined' || !document.startViewTransition || prefersReducedMotion()) {
     return;
   }
@@ -67,7 +67,6 @@ export const crossfadeNavigation = (navigation: OnNavigate): Promise<void> | voi
   const clearOld = nameSharedElements(document);
   let clearNew = () => {};
   return new Promise((resolve) => {
-    // eslint-disable-next-line tscompat/tscompat
     const transition = document.startViewTransition(async () => {
       resolve();
       await navigation.complete;

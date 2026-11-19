@@ -1,8 +1,8 @@
 <script lang="ts">
-  import PlaceTile from '$lib/components/places/PlaceTile.svelte';
-  import { placeStats } from '$lib/managers/place-stats.svelte';
-  import { placesViewSettings } from '$lib/stores/preferences.store';
-  import { type PlacesGroup, isPlacesGroupCollapsed, togglePlacesGroupCollapsing } from '$lib/utils/places-utils';
+  import PlaceTile from '#lib/components/places/PlaceTile.svelte';
+  import { placeStats } from '#lib/managers/place-stats.svelte.ts';
+  import { placesViewSettings } from '#lib/stores/preferences.store.ts';
+  import { isPlacesGroupCollapsed, togglePlacesGroupCollapsing, type PlacesGroup } from '#lib/utils/places-utils.ts';
   import { type AssetResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiChevronRight } from '@mdi/js';
@@ -43,8 +43,8 @@
          its count and years (PlaceTile), where upstream dimmed the photo under a centred name -->
     <div class="grid grid-auto-fill-36 gap-(--ws-gap)" data-testid="places-grid">
       {#each places as item (item.id)}
-        {@const city = item.exifInfo?.city ?? ''}
-        {@const country = item.exifInfo?.country}
+        {const city = item.exifInfo?.city ?? ''}
+        {const country = item.exifInfo?.country}
         <PlaceTile assetId={item.id} {city} {country} stats={placeStats.get({ city, country })} />
       {/each}
     </div>

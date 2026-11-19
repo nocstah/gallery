@@ -112,7 +112,7 @@ export const keyOf = (pathname: string): string => {
 };
 
 /** A clip's length as the film reads it, in milliseconds, from Gallery's "H:MM:SS.ffffff" or a count of milliseconds;
- * null when there is none. */
+null when there is none. */
 export const durationMs = (duration: string | number | null | undefined): number | null => {
   if (typeof duration === 'number') {
     return Number.isFinite(duration) && duration > 0 ? duration : null;
@@ -131,7 +131,7 @@ export const durationMs = (duration: string | number | null | undefined): number
 };
 
 /** A day's photos and clips as the film takes them: the projection's own fields and nothing more (no checksum, so the
- * film's copies check goes by id). */
+film's copies check goes by id). */
 export const filmAssets = (day: SeriesDay): AssetResponseDto[] =>
   day.assets.map(
     (asset) =>
@@ -147,7 +147,7 @@ export const filmAssets = (day: SeriesDay): AssetResponseDto[] =>
   );
 
 /** The i18n key of a day's own word on the family's calendar: today (or later, where the reader is behind the house's
- * clock), yesterday; none for an earlier day, which the date says. */
+clock), yesterday; none for an earlier day, which the date says. */
 export const familyDayKey = (day: string, now = new Date()): Translations | undefined => {
   const from = daysFromToday(day, now);
   if (from >= 0) {
@@ -157,7 +157,7 @@ export const familyDayKey = (day: string, now = new Date()): Translations | unde
 };
 
 /** All of the screen for the film, where the browser allows it: this must run in the press. An iPhone only allows it
- * for a video, so there the page offers its Home Screen instead. */
+for a video, so there the page offers its Home Screen instead. */
 export const enterFullscreen = () => {
   const root = document.documentElement;
   if (!document.fullscreenElement && typeof root.requestFullscreen === 'function') {

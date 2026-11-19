@@ -1,13 +1,13 @@
+import { qrManager, todoManager } from '#lib/managers/special-albums.svelte.ts';
+import { iconCoverOf, shownAmongPhotos } from '#lib/utils/slips.ts';
 import { AssetVisibility, type TagResponseDto } from '@immich/sdk';
-import { qrManager, todoManager } from '$lib/managers/special-albums.svelte';
-import { iconCoverOf, shownAmongPhotos } from '$lib/utils/slips';
 
 // Local Omarchy layer: where QR's bank slips never show (utils/slips): an album's cover, and the photos Ctrl+K offers
 const { auth } = vi.hoisted(() => ({
   auth: { authenticated: true, user: { id: 'owner', isAdmin: true } },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: auth }));
-vi.mock('$lib/managers/slip-covers.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: auth }));
+vi.mock('#lib/managers/slip-covers.svelte.ts', () => ({
   slipCovers: { isSlip: (assetId: string | null | undefined) => assetId === 'a-slip' },
 }));
 

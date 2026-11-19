@@ -7,9 +7,13 @@ import numpy as np
 import orjson
 from numpy.typing import NDArray
 from PIL import Image
+from pillow_jxl import JpegXLImagePlugin
 
 _PIL_RESAMPLING_METHODS = {resampling.name.lower(): resampling for resampling in Image.Resampling}
 _PUNCTUATION_TRANS = str.maketrans("", "", string.punctuation)
+
+# Requests are already decoded in parallel, so don't start a thread per core for each one
+JpegXLImagePlugin.DECODE_THREADS = 0
 
 
 def resize_pil(img: Image.Image, size: int, resample: Image.Resampling = Image.Resampling.BICUBIC) -> Image.Image:
@@ -87,6 +91,8 @@ def letterbox(image: NDArray[np.uint8] | Image.Image, size: int) -> tuple[NDArra
         new_height, new_width = size, int(size * width / height)
     else:
         new_width, new_height = size, int(size * height / width)
+    # Gallery (#1278): past size:1 the short side truncates to 0 and cv2.resize raises; keep it 1 pixel.
+    new_width, new_height = max(1, new_width), max(1, new_height)
 
     canvas = np.zeros((size, size, 3), dtype=np.uint8)
     cv2.resize(image, (new_width, new_height), dst=canvas[:new_height, :new_width])

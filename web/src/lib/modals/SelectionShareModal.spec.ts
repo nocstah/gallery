@@ -1,13 +1,16 @@
+import '#lib/gallery/__mocks__/sdk.mock.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
+import { sharedSpaceFactory } from '#test/kioku/factories/shared-space-factory.ts';
+import { getAnimateMock } from '#test/kioku/mocks/animate.mock.ts';
+import { defaultUserConfig } from '#test/unit/gallery-config-defaults.ts';
 import { SharedLinkType, SharedSpaceRole, type SharedSpaceMemberResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { init, register, waitLocale } from 'svelte-i18n';
-import { getAnimateMock } from '$lib/__mocks__/animate.mock';
-import '$lib/__mocks__/sdk.mock';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
-import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
 import SelectionShareModal from './SelectionShareModal.svelte';
 
 const { makeSharedLink, handleUpdateSharedLink, addAssetsToCollections } = vi.hoisted(() => ({
@@ -16,19 +19,23 @@ const { makeSharedLink, handleUpdateSharedLink, addAssetsToCollections } = vi.ho
   addAssetsToCollections: vi.fn(),
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: { authenticated: true, user: { id: 'me', isAdmin: false } },
 }));
 // Library is the album folders' engine; the manager knows it by its id once the folders are in
-vi.mock('$lib/managers/album-folders.svelte', () => ({
+vi.mock('#lib/managers/album-folders.svelte.ts', () => ({
   isLibrarySpace: (space: { name?: string }) => space.name === 'Library',
 }));
-vi.mock('$lib/managers/server-config-manager.svelte', () => ({
-  serverConfigManager: { value: { externalDomain: 'https://photos.example' } },
-}));
+// the external domain links are given out with (user config); gallery-setup clears the query cache before each test
+beforeEach(() =>
+  queryClient.setQueryData(getUserConfigQuery().queryKey, {
+    ...defaultUserConfig,
+    server: { ...defaultUserConfig.server, externalDomain: 'https://photos.example' },
+  }),
+);
 // the Add to album or space picker's own dispatch
-vi.mock('$lib/services/collection.service', () => ({ addAssetsToCollections }));
-vi.mock('$lib/services/shared-link.service', () => ({
+vi.mock('#lib/services/collection.service.ts', () => ({ addAssetsToCollections }));
+vi.mock('#lib/services/shared-link.service.ts', () => ({
   makeSharedLink,
   handleUpdateSharedLink,
   shareLinkExpiry: () => '2026-11-15T00:00:00.000Z',
@@ -48,8 +55,14 @@ const member = (userId: string, name: string, role = SharedSpaceRole.Viewer) =>
     joinedAt: '',
     showInTimeline: true,
   }) as SharedSpaceMemberResponseDto;
-const space = (id: string, name: string, createdAt: string, members = [member('me', 'Me', SharedSpaceRole.Owner)]) =>
-  sharedSpaceFactory.build({ id, name, createdAt, createdById: 'me', members });
+const space = (id: string, name: string, createdAt: string) =>
+  sharedSpaceFactory.build({
+    id,
+    name,
+    createdAt,
+    createdById: 'me',
+    members: [member('me', 'Me', SharedSpaceRole.Owner)],
+  });
 
 const library = space('library', 'Library', '2026-10-10T00:00:00.000Z');
 const family = space('family', 'Family', '2026-10-11T00:00:00.000Z');
@@ -71,7 +84,7 @@ const open = async (props: Props) => {
 
 beforeAll(async () => {
   await init({ fallbackLocale: 'en-US' });
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await waitLocale('en-US');
 });
 

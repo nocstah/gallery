@@ -1,15 +1,18 @@
+import '#lib/gallery/__mocks__/sdk.mock.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+import { albumFactory } from '#test/kioku/factories/album-factory.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
+import { sharedSpaceFactory } from '#test/kioku/factories/shared-space-factory.ts';
+import { userFactory } from '#test/kioku/factories/user-factory.ts';
+import { getAnimateMock } from '#test/kioku/mocks/animate.mock.ts';
+import { defaultUserConfig } from '#test/unit/gallery-config-defaults.ts';
 import { AlbumUserRole, SharedLinkType, SharedSpaceRole, type SharedSpaceMemberResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { init, register, waitLocale } from 'svelte-i18n';
-import { getAnimateMock } from '$lib/__mocks__/animate.mock';
-import '$lib/__mocks__/sdk.mock';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { albumFactory } from '@test-data/factories/album-factory';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
-import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
-import { userFactory } from '@test-data/factories/user-factory';
 import AlbumShareModal from './AlbumShareModal.svelte';
 
 const { makeSharedLink, handleUpdateSharedLink, addUsers } = vi.hoisted(() => ({
@@ -18,22 +21,26 @@ const { makeSharedLink, handleUpdateSharedLink, addUsers } = vi.hoisted(() => ({
   addUsers: vi.fn(),
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: { authenticated: true, user: { id: 'me', isAdmin: false } },
 }));
 // Library is the album folders' engine; the manager knows it by its id once the folders are in
-vi.mock('$lib/managers/album-folders.svelte', () => ({
+vi.mock('#lib/managers/album-folders.svelte.ts', () => ({
   isLibrarySpace: (space: { name?: string }) => space.name === 'Library',
 }));
-vi.mock('$lib/managers/server-config-manager.svelte', () => ({
-  serverConfigManager: { value: { externalDomain: 'https://photos.example' } },
-}));
-vi.mock('$lib/services/album.service', () => ({
+// the external domain links are given out with (user config); gallery-setup clears the query cache before each test
+beforeEach(() =>
+  queryClient.setQueryData(getUserConfigQuery().queryKey, {
+    ...defaultUserConfig,
+    server: { ...defaultUserConfig.server, externalDomain: 'https://photos.example' },
+  }),
+);
+vi.mock('#lib/services/album.service.ts', () => ({
   getAlbumActions: () => ({ AddUsers: { title: 'Add people', onAction: addUsers } }),
   handleRemoveUserFromAlbum: vi.fn(),
   handleUpdateUserAlbumRole: vi.fn(),
 }));
-vi.mock('$lib/services/shared-link.service', () => ({
+vi.mock('#lib/services/shared-link.service.ts', () => ({
   makeSharedLink,
   handleUpdateSharedLink,
   shareLinkExpiry: () => '2026-11-15T00:00:00.000Z',
@@ -85,7 +92,7 @@ const open = async (album = makeAlbum()) => {
 
 beforeAll(async () => {
   await init({ fallbackLocale: 'en-US' });
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await waitLocale('en-US');
 });
 

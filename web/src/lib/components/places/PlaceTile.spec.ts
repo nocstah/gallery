@@ -1,13 +1,13 @@
+import PlaceTile from '#lib/components/places/PlaceTile.svelte';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
-import PlaceTile from '$lib/components/places/PlaceTile.svelte';
 
 // Local Omarchy layer: a place tile shows its face once chosen (managers/place-faces), the quiet ground before, and
 // the server's photo where none qualifies
 const { faces } = vi.hoisted(() => ({
   faces: { current: undefined as string | null | undefined, requests: [] as unknown[] },
 }));
-vi.mock('$lib/managers/place-faces.svelte', () => ({
+vi.mock('#lib/managers/place-faces.svelte.ts', () => ({
   placeFaces: {
     get: () => faces.current,
     request: (places: unknown[]) => {

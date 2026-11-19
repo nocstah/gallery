@@ -4,26 +4,26 @@
 // (the panel, which mounts only where the page conditions hold): every 2 s while a move involves this library and the
 // tab is visible, every 30 s while it is hidden, and not at all once the moves have ended, until the tab is shown
 // again. When a move out of this library ends, the page clears its selection and reloads its data.
+import { currentLibrary } from '#lib/gallery/libraries/library-context.svelte.ts';
+import type { Library } from '#lib/gallery/libraries/library-file.ts';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
 import { invalidateAll } from '$app/navigation';
-import { currentLibrary } from '$lib/gallery/libraries/library-context.svelte';
-import type { Library } from '$lib/gallery/libraries/library-file';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
 import { openMovePage } from './move-gates';
 import { deleteLeftoverMoveKeys, handOverMoveKey, keysInUse } from './move-keys';
 import {
+  MoverError,
   cancelMove,
   confirmMove,
   giveKey,
   isEnded,
   listMoves,
-  MoverError,
   newMoveId,
   startMove,
   type MoveKey,
   type MovePerson,
   type MoveSide,
-  type MoverErrorCode,
   type MoveStatus,
+  type MoverErrorCode,
 } from './mover';
 
 export const ACTIVE_VISIBLE_MS = 2000;
@@ -34,9 +34,9 @@ const DISMISSED_KEY = 'kioku-moves-dismissed';
 const DISMISSED_MOST = 50;
 
 /**
- * What a page asks to move: a selection (from a person's page, with that person), or a person's photos alone, their
- * timeline, and with `archived` their archived photos too.
- */
+What a page asks to move: a selection (from a person's page, with that person), or a person's photos alone, their
+timeline, and with `archived` their archived photos too.
+*/
 export type MoveRequest =
   | { kind: 'selection'; ids: string[]; notOwned: number; person?: MovePerson }
   | { kind: 'person'; person: MovePerson; archived?: boolean };
@@ -44,7 +44,7 @@ export type MoveRequest =
 /** The person as the hand-off names them: the id, the name when there is one, and whether the archived ones go. */
 const handOffPerson = (person: MovePerson, archived: boolean) => ({
   id: person.id,
-  ...(!!person.name && { name: person.name }),
+  ...(person.name && { name: person.name }),
   ...(archived && { archived: true as const }),
 });
 
@@ -54,9 +54,9 @@ export type HandOffOutcome = { kind: 'accepted' } | { kind: 'busy' } | { kind: '
 const codeOf = (error: unknown): MoverErrorCode => (error instanceof MoverError ? error.code : 'failed');
 
 /**
- * Makes this side's key and sends it: first the mover's list (it must answer, or no key is made), which says the keys
- * it holds, so the leftovers can go; then the key, handed over under the rule in move-keys.
- */
+Makes this side's key and sends it: first the mover's list (it must answer, or no key is made), which says the keys
+it holds, so the leftovers can go; then the key, handed over under the rule in move-keys.
+*/
 export const withFreshKey = async <T>(side: MoveSide, move: string, send: (key: MoveKey) => Promise<T>) => {
   const moves = await listMoves();
   await deleteLeftoverMoveKeys(keysInUse(moves)).catch(() => 0);
@@ -212,10 +212,10 @@ class MoveManager {
   }
 
   /**
-   * S3, after the click has opened the destination's move page: makes the source key and hands the move over. A
-   * selection sends its ids (and, from a person's page, the person); a person's own ⋮ sends only the person, saying
-   * whether their archived photos go too.
-   */
+  S3, after the click has opened the destination's move page: makes the source key and hands the move over. A
+  selection sends its ids (and, from a person's page, the person); a person's own ⋮ sends only the person, saying
+  whether their archived photos go too.
+  */
   async handOff(move: string, request: MoveRequest, destination: Library): Promise<HandOffOutcome> {
     const here = currentLibrary();
     if (!here) {

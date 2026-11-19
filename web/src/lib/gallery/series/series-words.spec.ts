@@ -1,6 +1,6 @@
+import { FORK_LOCALES } from '#lib/i18n/fork-locales.ts';
 import fs from 'node:fs';
 import path from 'node:path';
-import { FORK_LOCALES } from '$lib/i18n/fork-locales';
 
 // Local Omarchy layer: the words of "From the beginning" (gallery/series, and its family page in the public player,
 // memory-player/src/series) all come from i18n keys: no component of either writes a word of its own, in its markup or

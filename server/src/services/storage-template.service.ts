@@ -3,9 +3,6 @@ import handlebar from 'handlebars';
 import { DateTime } from 'luxon';
 import path from 'node:path';
 import sanitize from 'sanitize-filename';
-import type { ArgOf } from 'src/repositories/event.repository.js';
-import type { JobOf, StorageAsset } from 'src/types.js';
-import { isDiskPath } from 'src/backends/disk-storage.backend.js';
 import { StorageCore } from 'src/cores/storage.core.js';
 import { OnEvent, OnJob } from 'src/decorators.js';
 import { ConfigTemplateStorageOptionDto } from 'src/dtos/config.dto.js';
@@ -19,7 +16,14 @@ import {
   QueueName,
   StorageFolder,
 } from 'src/enum.js';
+import {
+  getTemplateLibraryRoot,
+  isManualOnlyTemplateMove,
+  isTemplateDestinationTaken,
+} from 'src/gallery/utils/storage-template-s3.js';
+import type { ArgOf } from 'src/repositories/event.repository.js';
 import { BaseService } from 'src/services/base.service.js';
+import type { JobOf, StorageAsset } from 'src/types.js';
 import { getAssetFile } from 'src/utils/asset.util.js';
 import { getFilenameExtension, getLivePhotoMotionFilename } from 'src/utils/file.js';
 
@@ -154,6 +158,10 @@ export class StorageTemplateService extends BaseService {
       return JobStatus.Failed;
     }
 
+    if (await isManualOnlyTemplateMove(asset, this.systemMetadataRepository)) {
+      return JobStatus.Skipped;
+    }
+
     const user = await this.userRepository.get(asset.ownerId, {});
     const storageLabel = user?.storageLabel || null;
     const filename = asset.originalFileName || asset.id;
@@ -168,7 +176,9 @@ export class StorageTemplateService extends BaseService {
         return JobStatus.Failed;
       }
       const motionFilename = getLivePhotoMotionFilename(filename, livePhotoVideo.originalPath);
-      await this.moveAsset(livePhotoVideo, { storageLabel, filename: motionFilename }, asset);
+      if (!(await isManualOnlyTemplateMove(livePhotoVideo, this.systemMetadataRepository))) {
+        await this.moveAsset(livePhotoVideo, { storageLabel, filename: motionFilename }, asset);
+      }
     }
     return JobStatus.Success;
   }
@@ -234,12 +244,6 @@ export class StorageTemplateService extends BaseService {
       return;
     }
 
-    // moveFile would not move a backend key either; this skips rendering its template path (album lookups, a lock)
-    if (!isDiskPath(asset.originalPath)) {
-      this.logger.debug(`Skipping storage template migration for S3 asset ${asset.id}`);
-      return;
-    }
-
     return this.databaseRepository.withLock(DatabaseLock.StorageTemplateMigration, async () => {
       const { id, originalPath, checksum, fileSizeInByte } = asset;
       const oldPath = originalPath;
@@ -277,7 +281,7 @@ export class StorageTemplateService extends BaseService {
   private async getTemplatePath(
     asset: StorageAsset,
     metadata: MoveAssetMetadata,
-    stillPhoto?: StorageAsset,
+    stillPhoto: StorageAsset = asset,
   ): Promise<string> {
     const { storageLabel, filename } = metadata;
 
@@ -288,7 +292,7 @@ export class StorageTemplateService extends BaseService {
       let extension = getFilenameExtension(source).split('.').pop() as string;
       const sanitized = sanitize(path.basename(filenameWithoutExtension, `.${extension}`));
       extension = extension?.toLowerCase();
-      const rootPath = StorageCore.getLibraryFolder({ id: asset.ownerId, storageLabel });
+      const rootPath = getTemplateLibraryRoot(source, { id: asset.ownerId, storageLabel });
 
       switch (extension) {
         case 'jpeg':
@@ -319,7 +323,7 @@ export class StorageTemplateService extends BaseService {
       let albumName = null;
       let albumStartDate = null;
       let albumEndDate = null;
-      const assetForMetadata = stillPhoto || asset;
+      const assetForMetadata = stillPhoto;
 
       if (this.template.needsAlbum) {
         // For motion videos, use the still photo's album information since motion videos
@@ -353,8 +357,14 @@ export class StorageTemplateService extends BaseService {
       const fullPath = path.normalize(path.join(rootPath, storagePath));
       let destination = `${fullPath}.${extension}`;
 
-      if (!fullPath.startsWith(rootPath)) {
-        this.logger.warn(`Skipped attempt to access an invalid path: ${fullPath}. Path should start with ${rootPath}`);
+      const relativePath = path.relative(rootPath, fullPath);
+      if (
+        !relativePath ||
+        relativePath === '..' ||
+        relativePath.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relativePath)
+      ) {
+        this.logger.warn(`Skipped attempt to access an invalid path: ${fullPath}. Path should be inside ${rootPath}`);
         return source;
       }
 
@@ -363,19 +373,19 @@ export class StorageTemplateService extends BaseService {
       }
 
       /**
-       * In case of migrating duplicate filename to a new path, we need to check if it is already migrated
-       * Due to the mechanism of appending +1, +2, +3, etc to the filename
-       *
-       * Example:
-       * Source = upload/abc/def/FullSizeRender+7.heic
-       * Expected Destination = upload/abc/def/FullSizeRender.heic
-       *
-       * The file is already at the correct location, but since there are other FullSizeRender.heic files in the
-       * destination, it was renamed to FullSizeRender+7.heic.
-       *
-       * The lines below will be used to check if the differences between the source and destination is only the
-       * +7 suffix, and if so, it will be considered as already migrated.
-       */
+      In case of migrating duplicate filename to a new path, we need to check if it is already migrated
+      Due to the mechanism of appending +1, +2, +3, etc to the filename
+
+      Example:
+      Source = upload/abc/def/FullSizeRender+7.heic
+      Expected Destination = upload/abc/def/FullSizeRender.heic
+
+      The file is already at the correct location, but since there are other FullSizeRender.heic files in the
+      destination, it was renamed to FullSizeRender+7.heic.
+
+      The lines below will be used to check if the differences between the source and destination is only the
+      +7 suffix, and if so, it will be considered as already migrated.
+      */
       if (source.startsWith(fullPath) && source.endsWith(`.${extension}`)) {
         const diff = source.replace(fullPath, '').replace(`.${extension}`, '');
         const hasDuplicationAnnotation = /^\+\d+$/.test(diff);
@@ -387,7 +397,7 @@ export class StorageTemplateService extends BaseService {
       let duplicateCount = 0;
 
       while (true) {
-        const isExists = await this.storageRepository.checkFileExists(destination);
+        const isExists = await isTemplateDestinationTaken(destination, this.storageRepository, this.logger);
         if (!isExists) {
           break;
         }
@@ -423,9 +433,9 @@ export class StorageTemplateService extends BaseService {
       assetIdShort: asset.id.slice(-12),
       //just throw into the root if it doesn't belong to an album
       album: (albumName && sanitize(albumName.replaceAll(/\.+/g, ''))) || '',
-      make: make ?? '',
-      model: model ?? '',
-      lensModel: lensModel ?? '',
+      make: sanitize(make ?? ''),
+      model: sanitize(model ?? ''),
+      lensModel: sanitize(lensModel ?? ''),
     };
 
     const dt = DateTime.fromJSDate(asset.fileCreatedAt);

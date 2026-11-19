@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { peopleRanking } from '$lib/managers/people-ranking.svelte';
-  import { bestMatchFirst } from '$lib/utils/people-order';
+  import { peopleRanking } from '#lib/managers/people-ranking.svelte.ts';
+  import { bestMatchFirst } from '#lib/utils/people-order.ts';
   import { Icon } from '@immich/ui';
   import { mdiMagnify } from '@mdi/js';
   import { onMount } from 'svelte';
-  import { SvelteMap } from 'svelte/reactivity';
   import { t } from 'svelte-i18n';
+  import { SvelteMap } from 'svelte/reactivity';
   import type { PersonOption } from './filter-panel';
 
   interface Props {
@@ -164,7 +164,7 @@
 
     <!-- People list -->
     {#each visiblePeople as person (person.id)}
-      {@const isActive = selectedIds.includes(person.id)}
+      {const isActive = $derived(selectedIds.includes(person.id))}
       <button
         type="button"
         class="-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-subtle {isActive

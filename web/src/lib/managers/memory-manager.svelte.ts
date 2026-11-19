@@ -1,18 +1,31 @@
+import { QueryParameter } from '#lib/constants.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { memoryFacts } from '#lib/managers/memory-facts.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { userPreferencesManager } from '#lib/managers/user-preferences-manager.svelte.ts';
+import { Route } from '#lib/route.ts';
+import { memoryLaneTitle } from '#lib/utils.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { cardOfMemory, cardsByFacts, memoriesPageSearch, type MemoryCard } from '#lib/utils/memory-cards.ts';
+import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
+import { UNDO_TOAST_MS, toastUndoable, undone } from '#lib/utils/undoable.ts';
 import {
-  type AssetResponseDto,
   BulkIdErrorReason,
   MemorySearchOrder,
   MemoryType,
   addMemoryAssets,
   createMemory,
   deleteMemory,
-  type BulkIdResponseDto,
-  type MemoryResponseDto,
   getMemory,
+  memoriesStatistics,
   removeMemoryAssets,
   searchMemories,
   updateMemory,
-  memoriesStatistics,
+  type AssetResponseDto,
+  type BulkIdResponseDto,
+  type MemoryResponseDto,
 } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
 import { isEqual, omitBy } from 'lodash-es';
@@ -22,19 +35,6 @@ import { SvelteMap } from 'svelte/reactivity';
 import { fromStore, get } from 'svelte/store';
 import { goto } from '$app/navigation';
 import { page } from '$app/state';
-import { QueryParameter } from '$lib/constants';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
-import { Route } from '$lib/route';
-import { memoryLaneTitle } from '$lib/utils';
-import { handleError } from '$lib/utils/handle-error';
-import { cardOfMemory, cardsByFacts, memoriesPageSearch, type MemoryCard } from '$lib/utils/memory-cards';
-import { toTimelineAsset } from '$lib/utils/timeline-util';
-import { toastUndoable, UNDO_TOAST_MS, undone } from '$lib/utils/undoable';
 
 type MemoriesSearchDto = Parameters<typeof searchMemories>[0];
 
@@ -42,11 +42,11 @@ type MemoriesSearchDto = Parameters<typeof searchMemories>[0];
 type Kept = { memory: MemoryResponseDto; before?: string };
 
 /**
- * Local Omarchy layer: what Remove memory took off the page, or Remove photo emptied (DESIGN.md, Memories: the film's
- * ⋮). Gallery deletes it only once its toast has had its time, or at once when the page goes away, so the toast's
- * Undo puts each memory back exactly as it was (its id, and with it Curator's story and songs, which go by the id);
- * an Undo after that makes each again from what it held (a new id).
- */
+Local Omarchy layer: what Remove memory took off the page, or Remove photo emptied (DESIGN.md, Memories: the film's
+⋮). Gallery deletes it only once its toast has had its time, or at once when the page goes away, so the toast's
+Undo puts each memory back exactly as it was (its id, and with it Curator's story and songs, which go by the id);
+an Undo after that makes each again from what it held (a new id).
+*/
 type Removal = {
   kept: Kept[];
   timer?: ReturnType<typeof setTimeout>;
@@ -78,7 +78,7 @@ type AdjacentMemory = {
 /** Everything the memory viewer renders, for the position currently in the url. */
 export type MemoryState = {
   /** Local Omarchy layer: the url's memory, holding the photos of every memory on its card (utils/memory-cards) when
-   * several read the same, so the film plays them as one */
+  several read the same, so the film plays them as one */
   memory: MemoryResponseDto;
   /** Local Omarchy layer: the card the url's memory is shown on, with the memories it holds */
   card: MemoryCard;
@@ -328,7 +328,7 @@ class MemoryManager {
   }
 
   /** Local Omarchy layer: whether the account may remove the card's memories (with `assetId`, that photo from them):
-   * Gallery lets only a memory's owner change it, and the lane also shows memories others share with them. */
+  Gallery lets only a memory's owner change it, and the lane also shows memories others share with them. */
   removable(card: MemoryCard, assetId?: string) {
     return card.members.some(
       (memory) => this.#mine(memory) && (assetId === undefined || memory.assets.some(({ id }) => id === assetId)),
@@ -470,7 +470,7 @@ class MemoryManager {
   }
 
   #goto(href: string) {
-    return goto(href, { replaceState: true, noScroll: true, keepFocus: true });
+    return goto(href, { replace: true, reset: false });
   }
 
   // ---- Local Omarchy layer: removals held from Gallery while their toast offers Undo (Removal) ----
@@ -558,10 +558,10 @@ class MemoryManager {
   }
 
   /**
-   * Puts a removal's memories back: as they were while Gallery still holds them; once deleted, each is made again from
-   * what it held (its kind, its rule's data, its dates, its heart and its photos, under a new id). Resolves with how
-   * many photos Gallery did not take back in.
-   */
+  Puts a removal's memories back: as they were while Gallery still holds them; once deleted, each is made again from
+  what it held (its kind, its rule's data, its dates, its heart and its photos, under a new id). Resolves with how
+  many photos Gallery did not take back in.
+  */
   async #undoRemoval(removal: Removal): Promise<number> {
     if (!removal.deletion) {
       clearTimeout(removal.timer);

@@ -1,10 +1,10 @@
+import TimelineRepresentativeBuckets from '#lib/components/timeline/TimelineRepresentativeBuckets.svelte';
+import type { TimelineGrouping } from '#lib/managers/timeline-manager/types.ts';
+import { layoutPeriodGrid } from '#lib/utils/period-grid.ts';
+import type { ActivatableTimelineBucket } from '#lib/utils/timeline-zoom-navigation.ts';
 import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { createRawSnippet, tick } from 'svelte';
-import TimelineRepresentativeBuckets from '$lib/components/timeline/TimelineRepresentativeBuckets.svelte';
-import type { TimelineGrouping } from '$lib/managers/timeline-manager/types';
-import { layoutPeriodGrid } from '$lib/utils/period-grid';
-import type { ActivatableTimelineBucket } from '$lib/utils/timeline-zoom-navigation';
 
 type RepresentativeTimelineBucket = ActivatableTimelineBucket & {
   viewId: string;
@@ -37,12 +37,7 @@ const bucket = (
   ...overrides,
 });
 
-const monthBucket = (
-  year: number,
-  month: number,
-  top: number,
-  overrides: Partial<RepresentativeTimelineBucket> = {},
-): RepresentativeTimelineBucket => ({
+const monthBucket = (year: number, month: number, top: number): RepresentativeTimelineBucket => ({
   grouping: 'month',
   viewId: `month:${year}-${String(month).padStart(2, '0')}-01`,
   timeBucket: `${year}-${String(month).padStart(2, '0')}-01`,
@@ -54,7 +49,6 @@ const monthBucket = (
   representativeAssetId: `asset-${year}-${month}`,
   representativeThumbhash: `thumbhash-${year}-${month}`,
   representativeRatio: 1.5,
-  ...overrides,
 });
 
 describe('TimelineRepresentativeBuckets', () => {

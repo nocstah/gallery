@@ -1,13 +1,13 @@
 <script lang="ts">
-  import MemoryFilm from '../../src/lib/components/memories/film/MemoryFilm.svelte';
-  import type { FilmMedia } from '../../src/lib/components/memories/film/film-media';
-  import type { MemoryPresentation } from '../../src/lib/components/memories/memory-sharing';
-  import type { MemoryTrack } from '../../src/lib/utils/curator';
   import type { AssetResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiArrowLeft, mdiPlay, mdiRefresh } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import MemoryFilm from '../../src/lib/components/memories/film/MemoryFilm.svelte';
+  import type { FilmMedia } from '../../src/lib/components/memories/film/film-media';
+  import type { MemoryPresentation } from '../../src/lib/components/memories/memory-sharing';
+  import type { MemoryTrack } from '../../src/lib/utils/curator';
 
   type SharedMemory = Omit<MemoryPresentation, 'assetIds' | 'trackIds'> & {
     memoryId: string;

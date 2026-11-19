@@ -1,7 +1,7 @@
+import { timeBeforeShowLoadingSpinner } from '#lib/constants.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { createPeopleSearch } from '#lib/gallery/people/people-search.ts';
 import type { PersonResponseDto } from '@immich/sdk';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { timeBeforeShowLoadingSpinner } from '$lib/constants';
-import { createPeopleSearch } from '$lib/gallery/people/people-search';
 
 const person = (name: string): PersonResponseDto =>
   ({ id: name, name, isHidden: false, birthDate: null, thumbnailPath: '' }) as PersonResponseDto;

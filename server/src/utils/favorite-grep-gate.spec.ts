@@ -1,5 +1,5 @@
 // Static guard for asset."isFavorite" (#763). The column is the OWNER's favorite, kept in step with the
-// `asset_favorite` overlay by the triggers in src/schema/functions.ts. Gallery code never writes the column;
+// `asset_favorite` overlay by the triggers in src/schema/gallery-functions.ts. Gallery code never writes the column;
 // upstream's owner-only write paths do (listed below), and the reverse trigger mirrors them into the owner's
 // overlay row. Raw reads are allowed only where the query is pinned to the owner it projects for (listed
 // below). Everything else resolves the caller's own favorite with favoriteExistsFor. A bare `isFavorite` string is not matched: it is indistinguishable from the many
@@ -37,11 +37,16 @@ const OWNER_SCOPED_READS: Record<string, { count: number; reason: string }> = {
     reason:
       'getStatistics, upstream text: filters ownerId = the caller, so the owner projection is the caller favorite',
   },
-  'src/schema/functions.ts': { count: 2, reason: 'the forward projection trigger bodies' },
+  'src/schema/gallery-functions.ts': { count: 2, reason: 'the forward projection trigger bodies' },
   'src/utils/database.ts': {
     count: 1,
     reason:
       "search V3's upstream default when AssetSearchScope.favoriteUserId is unset; Gallery always sets it for users and rejects a favourite filter from a shared link",
+  },
+  'src/utils/favorite.ts': {
+    count: 1,
+    reason:
+      "syncFavoriteFor, upstream's CASE for stock sync clients: the column only when asset.ownerId = the syncing user, false otherwise",
   },
 };
 
@@ -64,7 +69,7 @@ const collectTsFiles = (dir: string): string[] =>
     if (entry.isDirectory()) {
       return collectTsFiles(full);
     }
-    return entry.isFile() && entry.name.endsWith('.ts') ? [full] : [];
+    return entry.isFile() && entry.name.endsWith('.ts') ? full : [];
   });
 
 // Specs may seed the column like a stock server would; migrations keep their historical bodies.
@@ -91,10 +96,10 @@ const keyName = (name: ts.PropertyName) => {
 };
 
 /**
- * `isFavorite` keys inside an asset write: an AssetRepository write or a Kysely asset INSERT/UPDATE (including an
- * INSERT's `onConflict` update), and Kysely's `.set('isFavorite', value)`. A pre-built object passed by reference
- * is not followed.
- */
+`isFavorite` keys inside an asset write: an AssetRepository write or a Kysely asset INSERT/UPDATE (including an
+INSERT's `onConflict` update), and Kysely's `.set('isFavorite', value)`. A pre-built object passed by reference
+is not followed.
+*/
 const findColumnWrites = (path: string, content: string) => {
   const file = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true);
   const offenders: string[] = [];
@@ -147,7 +152,7 @@ const rawOverlayWrites = (content: string) =>
     .split(';')
     .filter((statement) => /\b(?:insert\s+into|delete\s+from|update)\s+"?asset_favorite(?:"|\s|\()/i.test(statement));
 
-describe('asset.isFavorite gate (#763)', () => {
+describe('asset.isFavorite gate (#763)', { timeout: 30_000 }, () => {
   it('reads the raw column (table-qualified, or as a bare where key) only in the owner-scoped places listed here', () => {
     const counts: Record<string, number> = {};
     for (const { path, content } of sources) {
@@ -168,7 +173,7 @@ describe('asset.isFavorite gate (#763)', () => {
     const rawWriters = sources.filter(({ content }) =>
       rawAssetWrites(content).some((statement) => statement.includes('"isFavorite"')),
     );
-    expect(rawWriters.map(({ path }) => path)).toEqual(['src/schema/functions.ts']);
+    expect(rawWriters.map(({ path }) => path)).toEqual(['src/schema/gallery-functions.ts']);
     const assigners = sources.filter(({ content }) => IS_FAVORITE_ASSIGNMENT.test(withoutComments(content)));
     expect(assigners.map(({ path }) => path)).toEqual(UPSTREAM_OWNER_ASSIGNMENTS);
   });
@@ -176,7 +181,7 @@ describe('asset.isFavorite gate (#763)', () => {
   it('writes asset_favorite from trigger bodies only in the reverse projection trigger', () => {
     // The forward triggers fire at depth 0 only, so an overlay write from any other trigger would leave
     // asset."isFavorite" stale.
-    const functions = sources.find(({ path }) => path === 'src/schema/functions.ts')!.content;
+    const functions = sources.find(({ path }) => path === 'src/schema/gallery-functions.ts')!.content;
     const reverseBody = /name: 'asset_is_favorite_after_write'[\s\S]*?END`/.exec(functions)![0];
     expect(rawOverlayWrites(functions.replace(reverseBody, ''))).toEqual([]);
     expect(rawOverlayWrites(reverseBody)).toHaveLength(2);

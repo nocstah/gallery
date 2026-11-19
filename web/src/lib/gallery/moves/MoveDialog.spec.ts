@@ -1,7 +1,15 @@
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { getServerConfigQuery } from '#lib/queries/server-info.query.ts';
+import {
+  libraryContextFile,
+  mainLibrary,
+  secondLibrary,
+  serving,
+} from '#test/kioku/factories/library-context-factory.ts';
+import { defaultServerConfig } from '#test/unit/gallery-config-defaults.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 import MoveDialog from './MoveDialog.svelte';
 import { moveManager, type MoveRequest } from './move-manager.svelte';
 import { MOVE_ID } from './mover';
@@ -18,8 +26,9 @@ const mocks = vi.hoisted(() => ({
   getApiKeys: vi.fn(),
 }));
 vi.mock('$app/navigation', () => ({ invalidateAll: vi.fn(), goto: vi.fn() }));
-vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({ assetMultiSelectManager: { clear: vi.fn() } }));
-vi.mock('$lib/managers/server-config-manager.svelte', () => ({ serverConfigManager: { value: { trashDays: 30 } } }));
+vi.mock('#lib/managers/asset-multi-select-manager.svelte.ts', () => ({ assetMultiSelectManager: { clear: vi.fn() } }));
+// the server config these tests read; gallery-setup clears the query cache before each test
+beforeEach(() => queryClient.setQueryData(getServerConfigQuery().queryKey, { ...defaultServerConfig, trashDays: 30 }));
 vi.mock('@immich/sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/sdk')>()),
   ...mocks,

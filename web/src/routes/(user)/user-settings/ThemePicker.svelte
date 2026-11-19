@@ -4,9 +4,9 @@
   // installed from a .json file or a URL (checked field by field: colours, numbers and names only) and downloaded
   // to share. Light or dark is not chosen here: a theme brings its own, and the View menu (Display options, in the bar)
   // holds one or follows the desktop, the one light/dark control (the owner's, 2026-10-23), which a line here names.
-  import { CHROME_MODES, chrome } from '$lib/theme/chrome.svelte';
-  import { swatches, type GalleryTheme } from '$lib/theme/derive';
-  import { FOLLOW_OMARCHY, galleryThemes } from '$lib/theme/theme-manager.svelte';
+  import { CHROME_MODES, chrome } from '#lib/theme/chrome.svelte.ts';
+  import { swatches, type GalleryTheme } from '#lib/theme/derive.ts';
+  import { FOLLOW_OMARCHY, galleryThemes } from '#lib/theme/theme-manager.svelte.ts';
   import { Icon, toastManager } from '@immich/ui';
   import { mdiCheck, mdiDownload, mdiMonitorShimmer, mdiTrashCanOutline, mdiUpload } from '@mdi/js';
   import { onMount } from 'svelte';
@@ -128,7 +128,7 @@
     {/if}
 
     {#each shown as { theme, builtIn } (theme.id)}
-      {@const colours = swatches(theme)}
+      {const colours = $derived(swatches(theme))}
       <div class="theme-card" aria-pressed={galleryThemes.current === theme.id}>
         <button type="button" class="theme-pick" onclick={() => choose(theme.id)} aria-label={theme.name}>
           <span class="theme-preview" style:background={colours.surface}>

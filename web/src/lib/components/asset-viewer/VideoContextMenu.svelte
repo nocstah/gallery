@@ -1,10 +1,10 @@
 <script lang="ts">
-  import ContextMenu from '$lib/components/shared-components/context-menu/ContextMenu.svelte';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import { shareVideos } from '$lib/managers/share-video-manager.svelte';
-  import { optionClickCallbackStore, selectedIdStore } from '$lib/stores/context-menu.store';
-  import { canShareVideo } from '$lib/utils/share-video';
-  import type { ShareApp } from '$lib/utils/curator';
+  import ContextMenu from '#lib/components/shared-components/context-menu/ContextMenu.svelte';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import { shareVideos } from '#lib/managers/share-video-manager.svelte.ts';
+  import { optionClickCallbackStore, selectedIdStore } from '#lib/stores/context-menu.store.ts';
+  import type { ShareApp } from '#lib/utils/curator.ts';
+  import { canShareVideo } from '#lib/utils/share-video.ts';
   import type { AssetResponseDto } from '@immich/sdk';
   import { mdiSendOutline, mdiWhatsapp } from '@mdi/js';
   import { tick, untrack, type Snippet } from 'svelte';

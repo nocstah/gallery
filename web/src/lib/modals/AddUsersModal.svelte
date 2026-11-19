@@ -1,14 +1,13 @@
 <script lang="ts">
-  import { initInput } from '$lib/actions/focus';
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import { normalizeSearchString } from '$lib/utils/string-utils';
+  import { initInput } from '#lib/actions/focus.ts';
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import { normalizeSearchString } from '#lib/utils/string-utils.ts';
   import { getAllGroups, searchUsers, type UserGroupResponseDto, type UserResponseDto } from '@immich/sdk';
-  import { FormModal, ListButton, Stack, Text } from '@immich/ui';
+  import { FormModal, ListButton, LoadingSpinner, Stack, Text } from '@immich/ui';
   import { sortBy } from 'lodash-es';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import { SvelteMap, SvelteSet } from 'svelte/reactivity';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
 
   type Props = {
     excludedUserIds: string[];
@@ -130,7 +129,7 @@
     {#if filteredGroups.length > 0}
       <div class="mb-3 flex flex-wrap gap-2">
         {#each filteredGroups as group (group.id)}
-          {@const eligibleCount = group.members.filter((m) => !excludedUserIds.includes(m.userId)).length}
+          {const eligibleCount = $derived(group.members.filter((m) => !excludedUserIds.includes(m.userId)).length)}
           <button
             type="button"
             class="rounded-full border px-3 py-1 text-xs font-medium transition-all {activeGroupIds.has(group.id)

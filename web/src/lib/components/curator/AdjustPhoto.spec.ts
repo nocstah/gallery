@@ -1,8 +1,8 @@
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import type { JobRow } from '#lib/utils/curator.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import type { JobRow } from '$lib/utils/curator';
-import { assetFactory } from '@test-data/factories/asset-factory';
 import AdjustPhoto from './AdjustPhoto.svelte';
 
 // Local Omarchy layer: the photo viewer's Adjust panel against a stand-in Curator. happy-dom has no WebGL, so the panel
@@ -23,8 +23,8 @@ const { curatorMock, sdkMock, toastMock, dialogMock } = vi.hoisted(() => ({
   dialogMock: vi.fn(),
 }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: curatorMock,
 }));
 vi.mock('@immich/sdk', async (importOriginal) => ({

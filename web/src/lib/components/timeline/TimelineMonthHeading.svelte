@@ -5,10 +5,10 @@
   // It keeps the width of its longest month name (all twelve laid invisibly in its cell), so nothing beside it moves as
   // the months change; a new month comes in from the side it lies on. The month name opens the Months overview, the
   // year the Years overview.
-  import type { TimelineGrouping } from '$lib/managers/timeline-manager/types';
-  import { mediaQueryManager } from '$lib/stores/media-query-manager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
-  import type { TimelineYearMonth } from '$lib/utils/timeline-util';
+  import type { TimelineGrouping } from '#lib/managers/timeline-manager/types.ts';
+  import { mediaQueryManager } from '#lib/stores/media-query-manager.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import type { TimelineYearMonth } from '#lib/utils/timeline-util.ts';
   import { t } from 'svelte-i18n';
   import { cubicOut } from 'svelte/easing';
   import { fly } from 'svelte/transition';

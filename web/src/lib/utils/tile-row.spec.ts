@@ -1,4 +1,4 @@
-import { tileRowColumns } from '$lib/utils/tile-row';
+import { tileRowColumns } from '#lib/utils/tile-row.ts';
 
 describe(tileRowColumns.name, () => {
   const tiles = { min: 144, gap: 10 };

@@ -1,6 +1,6 @@
+import { FILL_KEEPS, keptShare } from '#lib/components/memories/film/film-plan.ts';
+import { DIM_BELOW, thumbhashLight } from '#lib/utils/thumbhash-light.ts';
 import { AssetTypeEnum, type AssetResponseDto } from '@immich/sdk';
-import { FILL_KEEPS, keptShare } from '$lib/components/memories/film/film-plan';
-import { thumbhashLight, DIM_BELOW } from '$lib/utils/thumbhash-light';
 
 // Local Omarchy layer: the picture each of Room's films opens on, the one under its title card (DESIGN.md, Room). A
 // film opened on Curator's cover, else on its first photo, whatever they were: the evening of the critique opened on a
@@ -46,7 +46,7 @@ const passesLight = (picture: OpeningPicture) => {
 };
 
 /** Whether a picture may open a film at all: an image a camera took or the person kept, not a screenshot. A Live Photo
- * is a camera's. */
+is a camera's. */
 export const mayOpen = (picture: OpeningPicture, camera: ReadonlySet<string>) =>
   picture.type === AssetTypeEnum.Image &&
   !isScreen(picture) &&
@@ -65,11 +65,11 @@ export const passesGate = (picture: OpeningPicture, camera: ReadonlySet<string>)
   mayOpen(picture, camera) && passesLight(picture);
 
 /**
- * Whether a film can open in the light: one of its pictures is an image, not a screenshot, that passes the gate's
- * floors of light and pixels. A camera's data is asked for only in Room, one search a film, so this takes every image
- * for a camera's: a film it says no to never passes the gate, and every surface that shows today's memories ranks it
- * last (utils/memory-cards, the owner's "Room's front door", 2026-10-23).
- */
+Whether a film can open in the light: one of its pictures is an image, not a screenshot, that passes the gate's
+floors of light and pixels. A camera's data is asked for only in Room, one search a film, so this takes every image
+for a camera's: a film it says no to never passes the gate, and every surface that shows today's memories ranks it
+last (utils/memory-cards, the owner's "Room's front door", 2026-10-23).
+*/
 export const opensLit = (pictures: OpeningPicture[]) =>
   pictures.some((picture) => picture.type === AssetTypeEnum.Image && !isScreen(picture) && passesLight(picture));
 

@@ -1,33 +1,26 @@
+import { queryClient } from '#lib/queries/client.ts';
+import { getServerConfigQuery } from '#lib/queries/server-info.query.ts';
+import { sidebarRowsHidden } from '#lib/stores/sidebar-rows.ts';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { sidebarRowsHidden } from '$lib/stores/sidebar-rows';
 import FeatureSettings from './FeatureSettings.svelte';
 
 const mocks = vi.hoisted(() => ({
   open: ['memories'],
   preferences: {} as Record<string, unknown>,
-  serverConfig: {} as Record<string, unknown>,
   setPreferences: vi.fn(),
   updateMyPreferences: vi.fn(),
 }));
 
-vi.mock(import('$lib/managers/auth-manager.svelte'), () => ({
+vi.mock(import('#lib/managers/auth-manager.svelte.ts'), () => ({
   authManager: {
     get preferences() {
       return mocks.preferences;
     },
     setPreferences: mocks.setPreferences,
-  } as never,
-}));
-
-vi.mock(import('$lib/managers/server-config-manager.svelte'), () => ({
-  serverConfigManager: {
-    get value() {
-      return mocks.serverConfig;
-    },
   } as never,
 }));
 
@@ -38,7 +31,7 @@ vi.mock(import('@immich/sdk'), async (importOriginal) => {
 
 // SettingAccordion drives open/close through accordionManager (which navigates via goto);
 // stub it to keep the memories section open and avoid SvelteKit navigation in tests.
-vi.mock(import('$lib/managers/accordion-manager.svelte'), () => ({
+vi.mock(import('#lib/managers/accordion-manager.svelte.ts'), () => ({
   accordionManager: {
     isOpen: (key: string) => mocks.open.includes(key),
     open: vi.fn(),
@@ -46,6 +39,8 @@ vi.mock(import('$lib/managers/accordion-manager.svelte'), () => ({
   } as never,
 }));
 
+// FeatureSettings reads the server config through createPreloadedQuery; the user config comes from gallery-setup's
+// defaults
 describe('FeatureSettings memory types', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,7 +48,9 @@ describe('FeatureSettings memory types', () => {
     mocks.preferences = {
       memories: { enabled: true, duration: 5, types: { on_this_day: true, birthday: false, recent_trip: true } },
     };
-    mocks.serverConfig = { availableMemoryTypes: ['on_this_day', 'birthday', 'recent_trip'] };
+    queryClient.setQueryData(getServerConfigQuery().queryKey, {
+      availableMemoryTypes: ['on_this_day', 'birthday', 'recent_trip'],
+    } as never);
     mocks.updateMyPreferences.mockResolvedValue(mocks.preferences);
   });
 
@@ -85,7 +82,9 @@ describe('FeatureSettings memory types', () => {
   });
 
   it('does not render a toggle for an unavailable memory type', () => {
-    mocks.serverConfig = { availableMemoryTypes: ['on_this_day', 'birthday'] };
+    queryClient.setQueryData(getServerConfigQuery().queryKey, {
+      availableMemoryTypes: ['on_this_day', 'birthday'],
+    } as never);
     render(FeatureSettings);
 
     expect(screen.getByRole('switch', { name: 'memory_type_on_this_day' })).toBeInTheDocument();
@@ -105,7 +104,9 @@ describe('memories preference payload', () => {
     mocks.preferences = {
       memories: { enabled: true, duration: 5, types: { on_this_day: true, birthday: false } },
     };
-    mocks.serverConfig = { availableMemoryTypes: ['on_this_day', 'birthday'] };
+    queryClient.setQueryData(getServerConfigQuery().queryKey, {
+      availableMemoryTypes: ['on_this_day', 'birthday'],
+    } as never);
     mocks.updateMyPreferences.mockResolvedValue(mocks.preferences);
 
     const user = userEvent.setup();
@@ -131,7 +132,7 @@ describe("People's sidebar switch", () => {
     vi.clearAllMocks();
     mocks.open = ['people'];
     mocks.preferences = { people: { enabled: true, sidebarWeb: false, minimumFaces: 3 } };
-    mocks.serverConfig = { availableMemoryTypes: [], minFaces: 3 };
+    queryClient.setQueryData(getServerConfigQuery().queryKey, { availableMemoryTypes: [], minFaces: 3 } as never);
     mocks.updateMyPreferences.mockResolvedValue(mocks.preferences);
     sidebarRowsHidden.set({});
   });

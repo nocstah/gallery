@@ -3,8 +3,8 @@
   // (Make album, as the AI inbox says it: kindAction) and Reject. It is an ordinary suggestion in the AI inbox's "Asked
   // in chat" batch, so its state comes from Curator: decided here or in the inbox, it reads the same in both places,
   // also when the conversation is opened again later.
-  import { curator, CuratorError, type ChatProposal, type SuggestionStatus } from '$lib/utils/curator';
-  import { kindAction } from '$lib/utils/curator-inbox';
+  import { kindAction } from '#lib/utils/curator-inbox.ts';
+  import { CuratorError, curator, type ChatProposal, type SuggestionStatus } from '#lib/utils/curator.ts';
   import { t, type Translations } from 'svelte-i18n';
 
   interface Props {

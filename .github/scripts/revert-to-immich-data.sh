@@ -12,6 +12,8 @@
 #   revert-to-immich-data.sh gallery-assert  Gallery running again on the same database
 #   revert-to-immich-data.sh s3-guard        no server running; the script must refuse an S3 path
 #   revert-to-immich-data.sh assert          stock Immich server running on :2283, after the revert
+#   revert-to-immich-data.sh convert-seed    no server running; DB_DATABASE_NAME names a copy of the Gallery database
+#   revert-to-immich-data.sh convert-assert  stock Immich running on that copy, after the revert converted its spaces
 #
 # Expects containers named `server`, `database` and `redis`. SYNC_TYPES (seed, assert) is a JSON array of the
 # request types a stock mobile app sends: the newest version of each stock SyncRequestType (a
@@ -132,6 +134,15 @@ poll() {
   fail "timed out waiting for [$2] to match /$3/, last value '$value'"
 }
 
+# seed_category TOKEN: a Gallery-only setting, as an admin would save it on Gallery.
+seed_category() {
+  local config
+  config=$(api GET /system-config "$1" | jq -c '.classification.categories = [{
+    "name": "Revert Category", "prompts": ["a dog"], "similarity": 0.3, "action": "tag", "enabled": false,
+    "faceExclusion": "off"}]')
+  api PUT /system-config "$1" "$config" >/dev/null
+}
+
 seed() {
   api POST /auth/admin-sign-up '' '{"email":"owner@example.com","password":"password","name":"Owner"}' >/dev/null
   local owner member owner_id member_id
@@ -148,7 +159,7 @@ seed() {
   # Media is generated with the server image's own ffmpeg; distinct sizes keep checksums distinct.
   local media=$STATE_DIR/media
   mkdir -p "$media"
-  for size in 64x48 80x60 96x72 112x84 128x96 144x108; do
+  for size in 64x48 80x60 96x72 112x84 128x96 144x108 160x120; do
     docker exec server ffmpeg -loglevel error -y -f lavfi -i "testsrc=size=$size" -frames:v 1 "/tmp/$size.jpg"
     docker cp "server:/tmp/$size.jpg" "$media/$size.jpg"
   done
@@ -268,10 +279,24 @@ seed() {
     VALUES ('$photo_a', '/data/thumbs/${photo_a}_depth.png', 518, 686, 0.05, 0.03, 0.4, 0.6, 'depth-anything-v2-small');
   " >/dev/null
 
+  # A video face sampled across the whole video: the revert drops its best-frame row and keeps the face, which a
+  # stock server crops from the video's poster.
+  psql_q "
+    WITH f AS (INSERT INTO asset_face (\"assetId\", \"imageWidth\", \"imageHeight\", \"boundingBoxX1\", \"boundingBoxY1\",
+                                       \"boundingBoxX2\", \"boundingBoxY2\")
+               VALUES ('$video', 160, 120, 41, 31, 81, 71) RETURNING id)
+    INSERT INTO asset_face_video_frame (\"faceId\", path, \"timeSeconds\", quality, version)
+    SELECT id, '/data/thumbs/${video}_faces/' || id || '.jpeg', 2.5, 0.4, 2 FROM f;
+    INSERT INTO asset_job_status_gallery (\"assetId\", \"videoFacesSampledAt\") VALUES ('$video', now())
+    ON CONFLICT (\"assetId\") DO UPDATE SET \"videoFacesSampledAt\" = now();
+  " >/dev/null
+
   # A workflow with a Gallery plugin step, which the stock round trip must keep.
   api POST /workflows "$owner" \
     "{\"trigger\":\"AssetCreate\",\"name\":\"Round trip\",\"steps\":[{\"method\":\"gallery-core#addToSpace\",\"config\":{\"spaceIds\":[\"$space\"]}}]}" \
     >/dev/null
+
+  seed_category "$owner"
 
   # The same stock request against Gallery itself: the gating, not the revert, keeps these out.
   failed=0
@@ -292,6 +317,8 @@ MEMBER_ALBUM_LINK=$member_album_link
 OWNER_ALBUM_LINK=$owner_album_link
 EDITOR_ALBUM_LINK=$editor_album_link
 VIEWER_ALBUM_LINK=$viewer_album_link
+MEMBER_ALBUM=$member_album
+VIEWER_ALBUM=$viewer_album
 PARTNER_PHOTO=$partner_photo
 PARTNER_ARCHIVED=$partner_archived
 PARTNER_LINK=$partner_link
@@ -300,12 +327,10 @@ EOF
   echo "::notice::seed: Gallery data written"
 }
 
-# What the switch-back guide asks before a trial boot of stock Immich: no Gallery jobs left in Redis
-# and Gallery's own workflow plugin disabled (stock cannot load it). Disabled, not deleted: deleting it
-# cascades to every workflow step that uses it.
+# What the switch-back guide asks before a trial boot of stock Immich: no Gallery jobs left in Redis.
+# Gallery's workflow plugin stays enabled: its WASM imports only upstream's host functions.
 stock_prepare() {
   docker exec redis valkey-cli FLUSHALL >/dev/null
-  psql_q "UPDATE plugin SET enabled = false WHERE name = 'gallery-core'" >/dev/null
   psql_q "SELECT id FROM plugin WHERE name = 'gallery-core'" >"$STATE_DIR/plugin-id"
 }
 
@@ -326,6 +351,11 @@ stock_assert() {
   failed=0
   local owner
   owner=$(login owner@example.com)
+
+  # Never `grep -q` on `docker logs`: it exits at the first match, docker logs dies of SIGPIPE, and
+  # pipefail turns the match into a failure.
+  check stock "stock loads Gallery's enabled workflow plugin" \
+    "$(docker logs server 2>&1 | grep -F 'Loaded plugin: gallery-core@' >/dev/null && echo yes)" yes
 
   # Stock's drift check flags only Gallery's trigger functions and Gallery's migration_overrides rows: extra
   # tables (with their constraints), columns, indexes and triggers are ignored by design. No migration
@@ -373,7 +403,7 @@ stock_assert() {
   bull_add backgroundTask SharedSpaceAlbumGrantReconcileSweep
   bull_add classification AssetClassifyQueueAll
   local deadline=$(($(date +%s) + 60))
-  until docker logs server 2>&1 | grep -qF 'Skipping unknown job: "SharedSpaceAlbumGrantReconcileSweep"'; do
+  until docker logs server 2>&1 | grep -F 'Skipping unknown job: "SharedSpaceAlbumGrantReconcileSweep"' >/dev/null; do
     [ "$(date +%s)" -lt "$deadline" ] || {
       echo "::error::stock: the fork job in a stock queue was not skipped within 60s"
       failed=1
@@ -385,14 +415,40 @@ stock_assert() {
 
   shared_people_split_checks stock
 
+  # What the guide's trial caveats say, so they stay true. A stock mobile app gets the rule memory and
+  # the pet ("stops syncing", "pets show up as people").
+  stock_sync_checks stock "$owner" true
+
+  # Person sharing fails on Gallery's person_personGroupId_key index (stock logs no constraint name, so
+  # a 200 here is what shows the index is gone). Sharing needs both users in one
+  # cluster group, which Gallery cannot set up, so the member joins the owner's for this request only.
+  local member_id member_cluster human_group
+  member_id=$(psql_q "SELECT id FROM \"user\" WHERE email = 'member@example.com'")
+  member_cluster=$(psql_q "SELECT \"clusterGroupId\" FROM \"user\" WHERE id = '$member_id'")
+  human_group=$(psql_q "SELECT \"personGroupId\" FROM person WHERE name = 'Revert Human'")
+  psql_q "UPDATE \"user\" SET \"clusterGroupId\" = (SELECT \"clusterGroupId\" FROM \"user\" WHERE id = '$OWNER_ID')
+    WHERE id = '$member_id'" >/dev/null
+  check stock 'person sharing fails with a server error' "$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$API/people/users" \
+    -H "Authorization: Bearer $owner" -H 'Content-Type: application/json' \
+    --data "{\"personIds\":[\"$human_group\"],\"sharedWithIds\":[\"$member_id\"],\"role\":\"read\"}")" 500
+  check stock 'failed person sharing saved nothing' "$(psql_q "SELECT count(*) FROM person_user WHERE \"sharedById\" = '$OWNER_ID'")" 0
+  psql_q "UPDATE \"user\" SET \"clusterGroupId\" = '$member_cluster' WHERE id = '$member_id'" >/dev/null
+
+  # A settings save keeps only the settings stock knows, so Gallery's classification category goes.
+  # Last here: nothing above depends on the config, and gallery-assert checks the loss.
+  local config
+  config=$(api GET /system-config "$owner")
+  api PUT /system-config "$owner" "$config" >/dev/null
+  check stock 'a settings save drops the Gallery settings' \
+    "$(psql_q "SELECT coalesce(bool_or(value ? 'classification'), false) FROM system_metadata WHERE key = 'system-config'")" f
+
   [ "$failed" = 0 ] || exit 1
   echo "::notice::stock: Immich serves the owner on the Gallery database"
 }
 
-# The guide's steps for going back: flush what stock queued and enable Gallery's plugin again.
+# The guide's steps for going back: flush what stock queued.
 gallery_prepare() {
   docker exec redis valkey-cli FLUSHALL >/dev/null
-  psql_q "UPDATE plugin SET enabled = true WHERE name = 'gallery-core'" >/dev/null
 }
 
 # shellcheck disable=SC2153 # vars come from the sourced $STATE file
@@ -415,11 +471,17 @@ gallery_assert() {
   check gallery 'pet kept' "$(psql_q "SELECT count(*) FROM person WHERE name = 'Revert Pet'")" 1
   check gallery 'pet recognition kept' "$(psql_q "SELECT count(*) FROM pet_search")" 1
   check gallery 'depth map kept' "$(psql_q "SELECT count(*) FROM asset_spatial_scene WHERE \"assetId\" = '$PHOTO_A'")" 1
+  check gallery 'video face frame kept' "$(psql_q "
+    SELECT count(*) FROM asset_face_video_frame v JOIN asset_face f ON f.id = v.\"faceId\" WHERE f.\"assetId\" = '$VIDEO'")" 1
   check gallery 'rule memory kept' "$(psql_q "SELECT count(*) FROM memory WHERE type = 'rule'")" 1
   check gallery 'plugin row kept' "$(psql_q "SELECT id FROM plugin WHERE name = 'gallery-core' AND enabled")" "$(cat "$STATE_DIR/plugin-id")"
   check gallery 'plugin workflow step kept' "$(psql_q "
     SELECT count(*) FROM workflow_step s JOIN plugin_method m ON m.id = s.\"pluginMethodId\"
       JOIN plugin p ON p.id = m.\"pluginId\" WHERE p.name = 'gallery-core'")" 1
+  # The guide's caveat: the stock settings save erased it. Saved again, for the revert to strip.
+  check gallery 'classification category lost to the stock settings save' \
+    "$(api GET /system-config "$owner" | jq '.classification.categories | length')" 0
+  seed_category "$owner"
 
   # The workflow runs again: a new upload lands in the space through the Gallery plugin.
   local uploaded
@@ -454,18 +516,20 @@ check() {
   fi
 }
 
-# stock_sync_checks PHASE TOKEN: what a stock mobile app would receive. The server streams whatever it
-# sends; the stock app is what fails to decode a value its enums lack. So check the rows themselves.
+# stock_sync_checks PHASE TOKEN [LEAKS]: what a stock mobile app would receive. The server streams
+# whatever it sends; the stock app is what fails to decode a value its enums lack. So check the rows
+# themselves. LEAKS is true for stock Immich on the unreverted database, which sends both.
 stock_sync_checks() {
-  local phase=$1 body
+  local phase=$1 leaks=${3:-false} body
   body=$(curl -fsS --max-time 120 -X POST "$API/sync/stream" -H "Authorization: Bearer $2" \
     -H 'Content-Type: application/json' --data "{\"types\":${SYNC_TYPES:?}}") || {
     echo "::error::$phase: stock /sync/stream request failed"
     failed=1
   }
   check "$phase" 'sync stream completes' "$(jq -r .type <<<"$body" | tail -n1)" SyncCompleteV1
-  check "$phase" 'sync sends no rule memory' "$(jq -c 'select((.type | startswith("MemoryV")) and .data.type == "rule")' <<<"$body")" ''
-  check "$phase" 'sync sends no pet' "$(jq -c 'select(.type == "PersonV1" and .data.name == "Revert Pet")' <<<"$body")" ''
+  check "$phase" 'sync sends a rule memory' \
+    "$(jq -s 'any(.[]; (.type | startswith("MemoryV")) and .data.type == "rule")' <<<"$body")" "$leaks"
+  check "$phase" 'sync sends the pet' "$(jq -s 'any(.[]; .type == "PersonV1" and .data.name == "Revert Pet")' <<<"$body")" "$leaks"
   check "$phase" 'sync sends only Immich edit actions' \
     "$(jq -c 'select(.type == "AssetEditV1" and (.data.action | IN("crop", "rotate", "mirror") | not))' <<<"$body")" ''
 }
@@ -501,6 +565,9 @@ assert() {
   check assert 'adjusted files unreferenced' "$(psql_q "SELECT count(*) FROM asset_file WHERE \"assetId\" = '$PHOTO_A' AND \"isEdited\"")" 0
   check assert 'adjusted thumbhash cleared' "$(psql_q "SELECT thumbhash IS NULL FROM asset WHERE id = '$PHOTO_A'")" t
   check assert 'depth maps removed' "$(psql_q "SELECT to_regclass('public.asset_spatial_scene') IS NULL")" t
+  check assert 'video face frames removed' "$(psql_q "SELECT to_regclass('public.asset_face_video_frame') IS NULL")" t
+  check assert 'video face kept' "$(psql_q "
+    SELECT count(*) FROM asset_face WHERE \"assetId\" = '$VIDEO' AND \"boundingBoxX1\" = 41 AND \"deletedAt\" IS NULL")" 1
 
   check assert 'space link keeps own photo' "$(status GET "/assets/$PHOTO_A?key=$MIXED_LINK")" 200
   check assert "space link stops serving the member's photo" "$(status GET "/assets/$MEMBER_PHOTO?key=$MIXED_LINK")" 400
@@ -514,6 +581,10 @@ assert() {
   check assert "space album link to an album the owner edits kept" "$(status GET "/shared-links/me?key=$EDITOR_ALBUM_LINK")" 200
   check assert "space album link to an album the owner only views removed" "$(status GET "/shared-links/me?key=$VIEWER_ALBUM_LINK")" 401
 
+  check assert 'Gallery settings stripped' \
+    "$(psql_q "SELECT coalesce(bool_or(value ? 'classification'), false) FROM system_metadata WHERE key = 'system-config'")" f
+  check assert 'stock finds no unknown config keys' "$(docker logs server 2>&1 | grep -c 'Unknown keys found' || true)" 0
+
   stock_sync_checks assert "$owner"
 
   # shellcheck source=/dev/null
@@ -521,8 +592,76 @@ assert() {
   check assert 'shared people restored as Immich had them' "$(shared_people_digest)" "$SHARED_PEOPLE_DIGEST"
   check assert 'shared people split tables removed' "$(psql_q "SELECT to_regclass('public.person_group_split') IS NULL")" t
 
+  check assert 'no space converted without the setting' \
+    "$(psql_q "SELECT count(*) FROM album WHERE \"albumName\" IN ('Revert test', 'Favorites from shared spaces')")" 0
+
   [ "$failed" = 0 ] || exit 1
   echo "::notice::assert: reverted data checks passed on stock Immich"
+}
+
+# On the copy only, as they would trip the main run's checks: the partner joins the space as a viewer,
+# and the owner's video moves into a library linked to the space. The album must then hold the space's
+# photos (the gallery phase's upload among them) and the video; the linked albums add none of their own.
+# shellcheck disable=SC2153 # vars come from the sourced $STATE file
+convert_seed() {
+  # shellcheck source=/dev/null
+  . "$STATE"
+  psql_q "
+    INSERT INTO shared_space_member (\"spaceId\", \"userId\", role)
+    SELECT '$SPACE', id, 'viewer' FROM \"user\" WHERE email = 'partner@example.com';
+    WITH l AS (INSERT INTO library (\"ownerId\", name, \"importPaths\", \"exclusionPatterns\")
+               VALUES ('$OWNER_ID', 'Revert library', '{}', '{}') RETURNING id),
+         s AS (INSERT INTO shared_space_library (\"spaceId\", \"libraryId\") SELECT '$SPACE', id FROM l)
+    UPDATE asset SET \"libraryId\" = (SELECT id FROM l) WHERE id = '$VIDEO';
+  " >/dev/null
+  psql_q "SELECT \"assetId\" FROM shared_space_asset WHERE \"spaceId\" = '$SPACE' UNION SELECT '$VIDEO'" |
+    jq -R . | jq -sc sort >"$STATE_DIR/convert-photos"
+}
+
+# shellcheck disable=SC2153 # vars come from the sourced $STATE file
+convert_assert() {
+  # shellcheck source=/dev/null
+  . "$STATE"
+  failed=0
+  local owner member partner album photos user
+  owner=$(login owner@example.com)
+  member=$(login member@example.com)
+  partner=$(login partner@example.com)
+
+  check convert 'one album for the space' "$(psql_q "SELECT count(*) FROM album WHERE \"albumName\" = 'Revert test'")" 1
+  album=$(psql_q "SELECT id FROM album WHERE \"albumName\" = 'Revert test' LIMIT 1")
+  check convert 'space members keep their roles' \
+    "$(api GET "/albums/$album" "$owner" | jq -c '[.albumUsers[] | [.user.email, .role]] | sort')" \
+    '[["member@example.com","editor"],["owner@example.com","owner"],["partner@example.com","viewer"]]'
+  photos=$(cat "$STATE_DIR/convert-photos")
+  for user in "$owner" "$member" "$partner"; do
+    check convert 'every member sees the space photos' \
+      "$(api GET "/timeline/bucket?albumId=$album&timeBucket=2024-01-01" "$user" | jq -c '[.id[]] | sort')" "$photos"
+  done
+
+  album_roles() {
+    psql_q "SELECT string_agg(u.email || ':' || au.role, ',' ORDER BY u.email)
+      FROM album_user au JOIN \"user\" u ON u.id = au.\"userId\" WHERE au.\"albumId\" = '$1'"
+  }
+  check convert 'linked album granted to the space members' "$(album_roles "$MEMBER_ALBUM")" \
+    'member@example.com:owner,owner@example.com:editor,partner@example.com:viewer'
+  check convert 'an existing album role is left alone' "$(album_roles "$VIEWER_ALBUM")" \
+    'member@example.com:owner,owner@example.com:viewer,partner@example.com:viewer'
+
+  check convert "the member's favorites of the owner's photos kept" \
+    "$(api GET /albums "$member" | jq -c '[.[] | select(.albumName == "Favorites from shared spaces") | .assetCount]')" '[2]'
+  check convert 'only the member gets a favorites album' \
+    "$(psql_q "SELECT count(*) FROM album WHERE \"albumName\" = 'Favorites from shared spaces'")" 1
+
+  check convert 'Add to space step moved to Add to Album(s)' "$(psql_q "
+    SELECT m.name || ' ' || (s.config -> 'albumIds')::text FROM workflow_step s JOIN plugin_method m ON m.id = s.\"pluginMethodId\"")" \
+    "assetAddToAlbums [\"$album\"]"
+  local uploaded
+  uploaded=$(upload "$owner" "$STATE_DIR/media/160x120.jpg")
+  poll 120 "SELECT count(*) FROM album_asset WHERE \"albumId\" = '$album' AND \"assetId\" = '$uploaded'" '^1$' >/dev/null
+
+  [ "$failed" = 0 ] || exit 1
+  echo "::notice::convert: the space is a shared album on stock Immich"
 }
 
 case ${1:-} in
@@ -534,5 +673,7 @@ case ${1:-} in
   gallery-assert) gallery_assert ;;
   s3-guard) s3_guard "${2:?path to revert-to-immich.sql}" ;;
   assert) assert ;;
-  *) fail "usage: $0 shared-people-seed <revert-to-immich-shared-people.sql> | seed | stock-prepare | stock-assert <drift> <baseline> <revert-to-immich.sql> | gallery-prepare | gallery-assert | s3-guard <revert-to-immich.sql> | assert" ;;
+  convert-seed) convert_seed ;;
+  convert-assert) convert_assert ;;
+  *) fail "usage: $0 shared-people-seed <revert-to-immich-shared-people.sql> | seed | stock-prepare | stock-assert <drift> <baseline> <revert-to-immich.sql> | gallery-prepare | gallery-assert | s3-guard <revert-to-immich.sql> | assert | convert-seed | convert-assert" ;;
 esac

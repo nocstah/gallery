@@ -1,7 +1,7 @@
 <script lang="ts">
-  import FormatMessage from '$lib/elements/FormatMessage.svelte';
-  import { libraryNamed } from '$lib/gallery/libraries/library-words';
-  import { showDeleteModal } from '$lib/stores/preferences.store';
+  import FormatMessage from '#lib/elements/FormatMessage.svelte';
+  import { libraryNamed } from '#lib/gallery/libraries/library-words.ts';
+  import { showDeleteModal } from '#lib/stores/preferences.store.ts';
   import { Checkbox, ConfirmModal, Label } from '@immich/ui';
   import { mdiDeleteForeverOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';

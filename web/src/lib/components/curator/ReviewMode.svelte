@@ -6,13 +6,13 @@
   // acts once (its repeats are ignored). The next suggestion's photos load while this one is on screen. A suggestion
   // about one photo or clip is headed by when and where, as its card in the list is (utils/inbox-facts, the list's
   // facts: the next one's asked for while this one is on screen), and the buttons are described by it.
-  import ReviewStage from '$lib/components/curator/ReviewStage.svelte';
-  import StoryText from '$lib/components/curator/StoryText.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { curator, type Suggestion } from '$lib/utils/curator';
-  import { kindAction, waitingIn, type KindAction } from '$lib/utils/curator-inbox';
-  import { locale as dateLocale } from '$lib/stores/preferences.store';
-  import { cardWords, photoSubject, type InboxFactsLoader } from '$lib/utils/inbox-facts';
+  import ReviewStage from '#lib/components/curator/ReviewStage.svelte';
+  import StoryText from '#lib/components/curator/StoryText.svelte';
+  import { locale as dateLocale } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { kindAction, waitingIn, type KindAction } from '#lib/utils/curator-inbox.ts';
+  import { curator, type Suggestion } from '#lib/utils/curator.ts';
+  import { cardWords, photoSubject, type InboxFactsLoader } from '#lib/utils/inbox-facts.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiClose } from '@mdi/js';

@@ -1,11 +1,11 @@
+import type { GroupPage, JobRow, Suggestion } from '#lib/utils/curator.ts';
+import { FACTS_AT_ONCE } from '#lib/utils/inbox-facts.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
 import { AssetTypeEnum, AssetVisibility, type AssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { init, register, waitLocale } from 'svelte-i18n';
-import type { GroupPage, JobRow, Suggestion } from '$lib/utils/curator';
-import { FACTS_AT_ONCE } from '$lib/utils/inbox-facts';
-import { assetFactory } from '@test-data/factories/asset-factory';
 import InboxGroupView from './InboxGroupView.svelte';
 
 // Local Omarchy layer: one kind of Curator's suggestions against a stand-in Curator. Every word says what accepting
@@ -25,8 +25,8 @@ const { curatorMock, waitForJobMock, getAssetInfoMock } = vi.hoisted(() => ({
   getAssetInfoMock: vi.fn(),
 }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: curatorMock,
   waitForJob: waitForJobMock,
 }));
@@ -69,7 +69,7 @@ class NearObserver {
 }
 
 beforeAll(async () => {
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await init({ fallbackLocale: 'en-US', initialLocale: 'en-US' });
   await waitLocale('en-US');
 });

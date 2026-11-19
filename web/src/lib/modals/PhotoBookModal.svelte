@@ -2,8 +2,8 @@
   // Local Omarchy layer: what a photo book should be (managers/photo-book-manager): its title, starting from the
   // album's name or the year, and about how many photos; for a year's book, which year, the title following it until
   // it is typed over. Curator makes the book once this closes; a cleared title leaves the title to Curator.
-  import type { BookDialog } from '$lib/managers/photo-book-manager.svelte';
-  import { BOOK_PHOTOS } from '$lib/utils/curator';
+  import type { BookDialog } from '#lib/managers/photo-book-manager.svelte.ts';
+  import { BOOK_PHOTOS } from '#lib/utils/curator.ts';
   import { Field, FormModal, Input, NumberInput, Select } from '@immich/ui';
   import { mdiBookOpenPageVariantOutline } from '@mdi/js';
   import { untrack } from 'svelte';

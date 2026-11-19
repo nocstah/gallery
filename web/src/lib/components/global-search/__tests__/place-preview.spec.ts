@@ -9,7 +9,7 @@ vi.mock('@immich/sdk', async () => {
 });
 
 // Local Omarchy layer: one of QR's bank slips, as the palette reads them (managers/slip-covers)
-vi.mock('$lib/managers/slip-covers.svelte', () => ({
+vi.mock('#lib/managers/slip-covers.svelte.ts', () => ({
   slipCovers: { isSlip: (assetId: string | null | undefined) => assetId === 'a-slip', known: true },
 }));
 

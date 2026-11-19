@@ -8,9 +8,9 @@
 // filter row), so the timeline's top section can start below them; it is kept in --ws-tl-head on that column. The rows
 // come and go without a navigation (Years and Months mount their grouping row, filters their bar, search results stand
 // in for the grid), so the column is watched as well as each row's size.
+import { markRoot } from '#lib/actions/mark-root.ts';
+import { startGlassDensity } from '#lib/theme/glass-density.ts';
 import { afterNavigate } from '$app/navigation';
-import { markRoot } from '$lib/actions/mark-root';
-import { startGlassDensity } from '$lib/theme/glass-density';
 
 export type ChromeMode = 'solid' | 'glass' | 'glass-hide';
 export const CHROME_MODES: ChromeMode[] = ['solid', 'glass', 'glass-hide'];
@@ -142,21 +142,21 @@ const onScroll = (event: Event) => {
 };
 
 /**
- * On the page's one bar (`#dashboard-navbar`, OmarchyBar or Gallery's NavigationBar): marks the document while a bar is
- * up (`data-navbar` on the root, actions/mark-root), which the glass rules key off. They asked
- * `body:has(#dashboard-navbar)`, and with a `:has()` on the body Chrome styled the whole page again on every change
- * anywhere in it: 40ms each time the pointer came onto a photo, which made the hover lift stutter (2026-11-18).
- */
+On the page's one bar (`#dashboard-navbar`, OmarchyBar or Gallery's NavigationBar): marks the document while a bar is
+up (`data-navbar` on the root, actions/mark-root), which the glass rules key off. They asked
+`body:has(#dashboard-navbar)`, and with a `:has()` on the body Chrome styled the whole page again on every change
+anywhere in it: 40ms each time the pointer came onto a photo, which made the hover lift stutter (2026-11-18).
+*/
 export const markNavbar = (node: HTMLElement) => markRoot(node, 'navbar');
 
 /**
- * On the timeline's scroll area (`#asset-grid`): marks the column it stands in (`data-ws-timeline-column`, the column's
- * header rows float over the grid in glass), the row that column stands in beside the filter rail
- * (`data-ws-timeline-row`) and the page that holds it (`data-ws-timeline-page`), while it is there. The glass rules
- * asked `div:has(> #asset-grid)`, `div:has(> div > #asset-grid)` and `:not(:has(#asset-grid))` for them, which made
- * Chrome check every div in the page for a timeline below it, and then style the whole page again on any change under
- * one: a tile's hover, a thumbnail loading (2026-11-18).
- */
+On the timeline's scroll area (`#asset-grid`): marks the column it stands in (`data-ws-timeline-column`, the column's
+header rows float over the grid in glass), the row that column stands in beside the filter rail
+(`data-ws-timeline-row`) and the page that holds it (`data-ws-timeline-page`), while it is there. The glass rules
+asked `div:has(> #asset-grid)`, `div:has(> div > #asset-grid)` and `:not(:has(#asset-grid))` for them, which made
+Chrome check every div in the page for a timeline below it, and then style the whole page again on any change under
+one: a tile's hover, a thumbnail loading (2026-11-18).
+*/
 export const markTimelineColumn = (grid: HTMLElement) => {
   const column = grid.parentElement?.tagName === 'DIV' ? grid.parentElement : undefined;
   const row = column?.parentElement?.tagName === 'DIV' ? column.parentElement : undefined;

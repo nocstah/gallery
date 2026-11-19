@@ -10,13 +10,13 @@
   // the clip itself. A picture with nothing to show is a quiet placeholder (InboxTile). Each photo, face and control is described by its card (`describedBy`: the
   // card's heading and line), so a screen reader hears whose preview it opens, and the inspector is titled as the
   // card is headed.
-  import InboxTile from '$lib/components/curator/InboxTile.svelte';
-  import InboxInspector from '$lib/components/curator/InboxInspector.svelte';
-  import { inspectionItems } from '$lib/utils/inbox-inspection';
-  import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
-  import { reelUrl, videoPersonUrl, type Suggestion } from '$lib/utils/curator';
-  import { videoOf, videoPeopleOf, videoPersonCaption } from '$lib/utils/inbox-video-people';
-  import { getAssetMediaUrl } from '$lib/utils';
+  import InboxInspector from '#lib/components/curator/InboxInspector.svelte';
+  import InboxTile from '#lib/components/curator/InboxTile.svelte';
+  import RestoreCompare from '#lib/components/curator/RestoreCompare.svelte';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { reelUrl, videoPersonUrl, type Suggestion } from '#lib/utils/curator.ts';
+  import { inspectionItems } from '#lib/utils/inbox-inspection.ts';
+  import { videoOf, videoPeopleOf, videoPersonCaption } from '#lib/utils/inbox-video-people.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { onDestroy } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -187,7 +187,7 @@
     <!-- each person at their moment in the clip (the frame round their face, read from the video by Curator), then the
          clip; the inspector shows each whole frame with the face boxed -->
     {#each videoPeople as person (person.person_id)}
-      {@const caption = videoPersonCaption(person)}
+      {const caption = $derived(videoPersonCaption(person))}
       <button
         type="button"
         class="visual-tile"

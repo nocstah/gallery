@@ -1,28 +1,28 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import { sidebarGroupsClosed } from '$lib/stores/preferences.store';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
-  import { generateId } from '$lib/utils/generate-id';
+  import { sidebarGroupsClosed } from '#lib/stores/preferences.store.ts';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
   import { Icon, NavbarGroup } from '@immich/ui';
   import { mdiChevronDown, mdiChevronRight } from '@mdi/js';
-  import type { Snippet } from 'svelte';
+  import type { ComponentProps, Snippet } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   interface Props {
     title: string;
+    size?: ComponentProps<typeof NavbarGroup>['size'];
     /** Local Omarchy layer: the sidebar's first heading, which the sidebar's own top padding already sets off */
     first?: boolean;
     /**
-     * Local Omarchy layer: a group the person can fold away under its heading (Manage, Hidden and deleted), by this
-     * name in what the browser remembers; open until folded. Its rows are the children.
-     */
+    Local Omarchy layer: a group the person can fold away under its heading (Manage, Hidden and deleted), by this
+    name in what the browser remembers; open until folded. Its rows are the children.
+    */
     collapse?: string;
     /** the pages the group's rows open: while one is on screen its row shows, the group folded or not */
     holds?: string[];
     children?: Snippet;
   }
 
-  let { title, first = false, collapse, holds = [], children }: Props = $props();
+  let { title, size = 'tiny', first = false, collapse, holds = [], children }: Props = $props();
 
   const padding = $derived(first ? 'pt-0 pb-1.5' : 'pt-5 pb-1.5');
 
@@ -30,7 +30,8 @@
 
   // Local Omarchy layer: folded by hand (remembered), but never over what is on screen: a page of the group shows its
   // rows until it is folded on that page too, like the album tree's folders. Open by default.
-  const rowsId = `sidebar-group-${generateId()}`;
+  const uid = $props.id();
+  const rowsId = `sidebar-group-${uid}`;
   const folded = $derived(!!collapse && !!$sidebarGroupsClosed[collapse]);
   const onPage = $derived(holds.some((path) => page.url.pathname === path || page.url.pathname.startsWith(`${path}/`)));
   let tucked = $state(false);
@@ -69,7 +70,7 @@
       </button>
     </div>
     {#if collapsed}
-      <div class="invisible" aria-hidden="true"><NavbarGroup {title} size="tiny" class={padding} /></div>
+      <div class="invisible" aria-hidden="true"><NavbarGroup {title} {size} class={padding} /></div>
       <hr data-testid="sidebar-group-divider" class="absolute inset-x-0 top-1/2 mx-3 border-subtle" />
     {/if}
   </div>
@@ -87,11 +88,11 @@
        hard-coded height keeps the two in step if @immich/ui restyles NavbarGroup. -->
   <div class="relative">
     <div class="sr-only" role="heading" aria-level={2}>{title}</div>
-    <div class="invisible" aria-hidden="true"><NavbarGroup {title} size="tiny" class={padding} /></div>
+    <div class="invisible" aria-hidden="true"><NavbarGroup {title} {size} class={padding} /></div>
     <hr data-testid="sidebar-group-divider" class="absolute inset-x-0 top-1/2 mx-3 border-subtle" />
   </div>
 {:else}
-  <div role="heading" aria-level={2}><NavbarGroup {title} size="tiny" class={padding} /></div>
+  <div role="heading" aria-level={2}><NavbarGroup {title} {size} class={padding} /></div>
 {/if}
 
 <style>

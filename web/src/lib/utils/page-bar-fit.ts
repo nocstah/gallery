@@ -30,9 +30,9 @@ export const tightensFurther = (fit: number, crowded: boolean) => crowded && fit
 export const FOLD_WIDTH_REM = 3;
 
 /**
- * Whether the page's own buttons go behind the ⋮: at the tightest step, and only where that saves room. `width` is
- * the room they take in the bar at the step before (rem).
- */
+Whether the page's own buttons go behind the ⋮: at the tightest step, and only where that saves room. `width` is
+the room they take in the bar at the step before (rem).
+*/
 export const foldsPageButtons = (fit: number, controls: number, width = 0) =>
   fit >= PAGE_FIT_FOLD && (controls > 1 || (controls === 1 && width > FOLD_WIDTH_REM));
 
@@ -42,10 +42,10 @@ export const POPUP = '[role="menu"], [role="listbox"]';
 export const POPUP_CHOICE = '[role="option"], [role^="menuitem"]';
 
 /**
- * A press in the fold's sheet is a press on one of the page's buttons, so the sheet closes behind it as a menu closes
- * behind its item; it stays for a control that opens something of its own there (a menu, a list, a sheet of the
- * page's: the Albums page's View) and for a field, and for the controls in such a sheet.
- */
+A press in the fold's sheet is a press on one of the page's buttons, so the sheet closes behind it as a menu closes
+behind its item; it stays for a control that opens something of its own there (a menu, a list, a sheet of the
+page's: the Albums page's View) and for a field, and for the controls in such a sheet.
+*/
 export const keepsSheetOpen = (control: Element) => {
   if (control.matches('input, select, textarea, label') || control.closest('.ws-search-field, [data-bar-sheet]')) {
     return true;
@@ -55,9 +55,9 @@ export const keepsSheetOpen = (control: Element) => {
 };
 
 /**
- * Where the sheet starts, from its anchor's left edge: under the ⋮ with its end on the ⋮'s end (its start in a
- * right-to-left page), moved in to stay `margin` inside the window.
- */
+Where the sheet starts, from its anchor's left edge: under the ⋮ with its end on the ⋮'s end (its start in a
+right-to-left page), moved in to stay `margin` inside the window.
+*/
 export const sheetOffset = (
   anchor: { left: number; right: number },
   width: number,

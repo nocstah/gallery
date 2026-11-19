@@ -23,7 +23,7 @@ export const thisWeek = (today: Date): Date[] => {
 };
 
 /** The seven days around `day`, three before it and three after (the inspector's "this day"), in the reader's
- * calendar. */
+calendar. */
 export const weekAround = (day: Date): Date[] =>
   Array.from({ length: 7 }, (_, index) => new Date(day.getFullYear(), day.getMonth(), day.getDate() - 3 + index));
 
@@ -32,10 +32,10 @@ const weekYearsAgo = (week: Date[], yearsAgo: number) =>
   week.map((day) => new Date(day.getFullYear() - yearsAgo, day.getMonth(), day.getDate()));
 
 /**
- * The days to ask covers for: this week in every past year whose months the week falls in hold photos (`months`, the
- * timeline's month buckets), as 'YYYY-MM-DD' keys, with how many years ago each is. `week` is another run of seven
- * days to ask for instead, and `later` asks for the years after `today`'s too (as negative years ago).
- */
+The days to ask covers for: this week in every past year whose months the week falls in hold photos (`months`, the
+timeline's month buckets), as 'YYYY-MM-DD' keys, with how many years ago each is. `week` is another run of seven
+days to ask for instead, and `later` asks for the years after `today`'s too (as negative years ago).
+*/
 export const weekDaysAcrossYears = (
   today: Date,
   months: Pick<TimeBucketsResponseDto, 'timeBucket' | 'count'>[],
@@ -63,10 +63,10 @@ export const weekDaysAcrossYears = (
 };
 
 /**
- * The years of this week, newest first, from the covers Gallery found for those days: each year's photo is the one of
- * its day nearest today's (today's own when it has photos, a later day before an earlier one at the same distance).
- * `anchor` is where today stands in the seven days (its weekday in this week; the middle, 3, in `weekAround`).
- */
+The years of this week, newest first, from the covers Gallery found for those days: each year's photo is the one of
+its day nearest today's (today's own when it has photos, a later day before an earlier one at the same distance).
+`anchor` is where today stands in the seven days (its weekday in this week; the middle, 3, in `weekAround`).
+*/
 export const weekYears = (
   today: Date,
   days: { key: string; yearsAgo: number }[],
@@ -104,10 +104,10 @@ export const weekYears = (
 };
 
 /**
- * The runs of years without photos this week between two years of a row (2005 to 2009 between 2010 and 2004), each by
- * the year it comes before in the row: only where every year between has none (`all`, every year of this week with
- * photos), so a spread's years left out for room, which All N years shows, mark nothing.
- */
+The runs of years without photos this week between two years of a row (2005 to 2009 between 2010 and 2004), each by
+the year it comes before in the row: only where every year between has none (`all`, every year of this week with
+photos), so a spread's years left out for room, which All N years shows, mark nothing.
+*/
 export const weekGaps = (
   shown: Pick<WeekYear, 'year'>[],
   all: Pick<WeekYear, 'year'>[],
@@ -148,11 +148,11 @@ export const weekYearDays = ({ first, last }: Pick<WeekYear, 'first' | 'last'>, 
 const MILESTONES = [5, 10, 20, 15, 30, 25, 40, 50];
 
 /**
- * A spread of `years` (newest first) for a row of `slots`: the newest and the oldest, five, ten and twenty years ago,
- * the anniversaries between, then the middles of the widest gaps left, so a row too short for every year still spans
- * all of them rather than dropping the oldest first. A year missing at a mark gives way to the nearest one, the older
- * when two are as near. All of them when they fit.
- */
+A spread of `years` (newest first) for a row of `slots`: the newest and the oldest, five, ten and twenty years ago,
+the anniversaries between, then the middles of the widest gaps left, so a row too short for every year still spans
+all of them rather than dropping the oldest first. A year missing at a mark gives way to the nearest one, the older
+when two are as near. All of them when they fit.
+*/
 export const weekSpread = <T extends Pick<WeekYear, 'year'>>(years: T[], slots: number, thisYear: number): T[] => {
   if (years.length <= slots) {
     return years;

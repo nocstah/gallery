@@ -1,26 +1,40 @@
 import { Injectable } from '@nestjs/common';
-import type { ArgOf } from 'src/repositories/event.repository.js';
-import type { SharedSpaceFaceMatchBackfillTarget } from 'src/repositories/face-identity.repository.js';
-import type { JobItem, JobOf } from 'src/types.js';
 import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants.js';
 import { OnEvent, OnJob } from 'src/decorators.js';
 import { ImmichWorker, JobName, JobStatus, QueueJobStatus, QueueName, SystemMetadataKey } from 'src/enum.js';
+import type { ArgOf } from 'src/repositories/event.repository.js';
+import type {
+  AccessibleIdentityFaceMatch,
+  SharedSpaceFaceMatchBackfillTarget,
+} from 'src/repositories/face-identity.repository.js';
+import {
+  buildAutomaticReconciliationClaim,
+  chooseAutomaticTargetIdentity,
+} from 'src/services/accessible-identity-reconciliation.js';
 import { BaseService } from 'src/services/base.service.js';
+import type { JobItem, JobOf } from 'src/types.js';
 import { isFaceSuggestionEnabled } from 'src/utils/misc.js';
 
 const FACE_IDENTITY_BACKFILL_CHUNK_SIZE = 1000;
 
 /**
- * Upper bound on full re-scan passes one backfill chain may take when getBackfillWork() keeps
- * reporting identity work. Repair passes are designed to converge in one or two passes; work that
- * is still outstanding at the cap indicates a convergence bug, and re-queueing would otherwise
- * loop full-table scans forever. The next external trigger (bootstrap, post-recognition
- * maintenance, or a manual run) starts a fresh chain.
- */
+Upper bound on full re-scan passes one backfill chain may take when getBackfillWork() keeps
+reporting identity work. Repair passes are designed to converge in one or two passes; work that
+is still outstanding at the cap indicates a convergence bug, and re-queueing would otherwise
+loop full-table scans forever. The next external trigger (bootstrap, post-recognition
+maintenance, or a manual run) starts a fresh chain.
+*/
 export const FACE_IDENTITY_BACKFILL_MAX_CONTINUATIONS = 5;
 
 @Injectable()
 export class FaceIdentityMaintenanceService extends BaseService {
+  /** An instance for `ctx` that logs under ctx's context, as these helpers did inside PersonService. */
+  static createFor(ctx: BaseService) {
+    const service = BaseService.create(FaceIdentityMaintenanceService, ctx);
+    service.logger.setContext(ctx.constructor.name);
+    return service;
+  }
+
   @OnEvent({ name: 'AppBootstrap', workers: [ImmichWorker.Microservices] })
   async onBootstrap(): Promise<void> {
     await this.queueInitialFaceSuggestionSweep();
@@ -30,7 +44,7 @@ export class FaceIdentityMaintenanceService extends BaseService {
     }
 
     const activeBackfills = await this.jobRepository.searchJobs(QueueName.PeopleBackfill, {
-      status: [QueueJobStatus.Active, QueueJobStatus.Delayed, QueueJobStatus.Paused, QueueJobStatus.Waiting],
+      status: [QueueJobStatus.Active, QueueJobStatus.Delayed, QueueJobStatus.Waiting],
     });
     if (activeBackfills.some((job) => job.name === JobName.FaceIdentityBackfill)) {
       return;
@@ -40,31 +54,31 @@ export class FaceIdentityMaintenanceService extends BaseService {
   }
 
   /**
-   * Face suggestions ship enabled (`config.ts` defaults). An instance that upgrades *into* that default
-   * never emits a `ConfigUpdate`, so `onConfigUpdate`'s false -> true transition — the thing that normally
-   * starts the work — cannot fire for it. `FaceSuggestionMaintenance` has no cron either, so without this
-   * the settings page would report the feature on while the queue stayed empty until someone renamed a
-   * person or ran the job by hand: the same "the feature seems to be missing" report the opt-in toggle was
-   * introduced to fix, in a new shape.
-   *
-   * Runs at most once per instance, guarded by a system-metadata marker (same pattern as
-   * SharedSpaceService.onBootstrap). This method only ever QUEUES; the marker is written by the sweep
-   * itself, in `FaceSuggestionService.handleFaceSuggestionMaintenance`'s success path. Two failure modes make that
-   * split load-bearing, and burning the marker here reintroduces both:
-   *
-   *   - feature off at this boot. The old code burnt the marker anyway, reasoning that a later opt-in is
-   *     served by `onConfigUpdate`'s false -> true transition. That is untrue under IMMICH_CONFIG_FILE:
-   *     `updateSystemConfig` throws outright for file-mode instances, and a YAML edit + restart emits only
-   *     `ConfigInit`. Such an admin would get a toggle reading "on" over a queue nothing ever fills. The
-   *     cost of leaving it unset is one config read per boot.
-   *   - the sweep fails. `FaceSuggestionMaintenance` runs with `attempts: 1` and `removeOnFail: true`
-   *     (job.repository.ts), so a marker written at queue time would outlive a job that failed and
-   *     vanished — recorded as swept, never actually run, never retried.
-   *
-   * A fresh install still burns it on the first boot, against an empty library, which costs nothing: the
-   * sweep finds no named people, and `handleFaceIdentityBackfill`'s completion path keeps the queue current
-   * from then on.
-   */
+  Face suggestions ship enabled (`config.ts` defaults). An instance that upgrades *into* that default
+  never emits a `ConfigUpdate`, so `onConfigUpdate`'s false -> true transition — the thing that normally
+  starts the work — cannot fire for it. `FaceSuggestionMaintenance` has no cron either, so without this
+  the settings page would report the feature on while the queue stayed empty until someone renamed a
+  person or ran the job by hand: the same "the feature seems to be missing" report the opt-in toggle was
+  introduced to fix, in a new shape.
+  
+  Runs at most once per instance, guarded by a system-metadata marker (same pattern as
+  SharedSpaceService.onBootstrap). This method only ever QUEUES; the marker is written by the sweep
+  itself, in `FaceSuggestionService.handleFaceSuggestionMaintenance`'s success path. Two failure modes make that
+  split load-bearing, and burning the marker here reintroduces both:
+  
+    - feature off at this boot. The old code burnt the marker anyway, reasoning that a later opt-in is
+      served by `onConfigUpdate`'s false -> true transition. That is untrue under IMMICH_CONFIG_FILE:
+      `updateSystemConfig` throws outright for file-mode instances, and a YAML edit + restart emits only
+      `ConfigInit`. Such an admin would get a toggle reading "on" over a queue nothing ever fills. The
+      cost of leaving it unset is one config read per boot.
+    - the sweep fails. `FaceSuggestionMaintenance` runs with `attempts: 1` and `removeOnFail: true`
+      (job.repository.ts), so a marker written at queue time would outlive a job that failed and
+      vanished — recorded as swept, never actually run, never retried.
+  
+  A fresh install still burns it on the first boot, against an empty library, which costs nothing: the
+  sweep finds no named people, and `handleFaceIdentityBackfill`'s completion path keeps the queue current
+  from then on.
+  */
   private async queueInitialFaceSuggestionSweep(): Promise<void> {
     const state = await this.systemMetadataRepository.get(SystemMetadataKey.FaceSuggestionDefaultOnState);
     if (state?.sweptAt) {
@@ -262,7 +276,7 @@ export class FaceIdentityMaintenanceService extends BaseService {
   ): Promise<JobStatus> {
     const counts = await this.jobRepository.getJobCounts(QueueName.FacialRecognition);
 
-    if (counts.waiting > 0 || counts.delayed > 0 || counts.paused > 0) {
+    if (counts.waiting > 0 || counts.delayed > 0) {
       await this.jobRepository.queue({
         name: JobName.FaceIdentityMaintenanceAfterRecognition,
         data: { delay: 10_000 },
@@ -280,7 +294,7 @@ export class FaceIdentityMaintenanceService extends BaseService {
     }
 
     const activeBackfills = await this.jobRepository.searchJobs(QueueName.PeopleBackfill, {
-      status: [QueueJobStatus.Active, QueueJobStatus.Delayed, QueueJobStatus.Paused, QueueJobStatus.Waiting],
+      status: [QueueJobStatus.Active, QueueJobStatus.Delayed, QueueJobStatus.Waiting],
     });
     if (activeBackfills.some((job) => job.name === JobName.FaceIdentityBackfill)) {
       return JobStatus.Skipped;
@@ -288,5 +302,128 @@ export class FaceIdentityMaintenanceService extends BaseService {
 
     await this.jobRepository.queue({ name: JobName.FaceIdentityBackfill, data: {} });
     return JobStatus.Success;
+  }
+
+  async queueSharedSpaceFaceMatchesForAsset(assetId: string): Promise<void> {
+    const spaceIds = await this.sharedSpaceRepository.getSpaceIdsForAsset(assetId);
+    const queuedSpaceIds = new Set<string>();
+    for (const { spaceId } of spaceIds) {
+      if (queuedSpaceIds.has(spaceId)) {
+        continue;
+      }
+      queuedSpaceIds.add(spaceId);
+      await this.jobRepository.queue({
+        name: JobName.SharedSpaceFaceMatch,
+        data: { spaceId, assetId },
+      });
+    }
+  }
+
+  async replaceFaceIdentity(personId: string, assetFaceId: string, source: 'owner-person' | 'manual'): Promise<string> {
+    const identity = await this.faceIdentityRepository.ensurePersonIdentity(personId);
+    await this.faceIdentityRepository.replaceFaceIdentity({ assetFaceId, identityId: identity.id, source });
+    return identity.id;
+  }
+
+  async mergeWithAccessibleSharedIdentity(input: {
+    userId: string;
+    embedding: string;
+    maxDistance: number;
+    sourceIdentityId: string;
+    match?: AccessibleIdentityFaceMatch;
+  }): Promise<void> {
+    const match =
+      input.match ??
+      (await this.findClosestAccessibleSharedIdentity({
+        userId: input.userId,
+        embedding: input.embedding,
+        maxDistance: input.maxDistance,
+        excludeIdentityId: input.sourceIdentityId,
+      }));
+    if (!match || match.identityId === input.sourceIdentityId) {
+      return;
+    }
+
+    const target = chooseAutomaticTargetIdentity({
+      bridge: 'personal-upload',
+      localIdentityId: input.sourceIdentityId,
+      spaceIdentityId: match.identityId,
+    });
+    const claim = buildAutomaticReconciliationClaim({
+      bridge: 'personal-upload',
+      localIdentityId: input.sourceIdentityId,
+      spaceIdentityId: match.identityId,
+      sourceIdentityId: target.sourceIdentityId,
+      targetIdentityId: target.targetIdentityId,
+      distance: match.distance,
+      hasAccessBridge: true,
+      compatibleType: true,
+      hasEmbedding: true,
+      hiddenOrIgnored: false,
+      alreadySameIdentity: match.identityId === input.sourceIdentityId,
+      sameOwnerConflict: false,
+      sameSpaceConflict: false,
+    });
+    if (!claim) {
+      return;
+    }
+
+    const conflicts = await this.faceIdentityRepository.getMergeConflicts({
+      targetIdentityId: claim.targetIdentityId,
+      sourceIdentityIds: [claim.sourceIdentityId],
+    });
+    if (conflicts.personalProfileConflictCount > 0 || conflicts.spaceProfileConflictCount > 0) {
+      this.logger.warn(
+        `Skipping accessible identity merge due to conflicts: ${conflicts.personalProfileConflictCount} personal, ${conflicts.spaceProfileConflictCount} space`,
+      );
+      return;
+    }
+
+    await this.faceIdentityRepository.mergeIdentities({
+      targetIdentityId: claim.targetIdentityId,
+      sourceIdentityIds: [claim.sourceIdentityId],
+      source: 'shared-space-evidence',
+    });
+
+    await this.queueSpacePersonMetadataBackfill(claim.targetIdentityId);
+  }
+
+  findClosestAccessibleSharedIdentity(input: {
+    userId: string;
+    embedding: string;
+    maxDistance: number;
+    excludeIdentityId?: string | null;
+  }): Promise<AccessibleIdentityFaceMatch | undefined> {
+    return this.faceIdentityRepository.findClosestAccessibleIdentityForFace({
+      userId: input.userId,
+      embedding: input.embedding,
+      maxDistance: input.maxDistance,
+      type: 'person',
+      excludeIdentityId: input.excludeIdentityId ?? null,
+    });
+  }
+
+  async queueSpacePersonMetadataBackfill(identityId?: string | null): Promise<void> {
+    await this.jobRepository.queue({
+      name: JobName.SharedSpacePersonMetadataBackfill,
+      data: identityId ? { identityId } : {},
+    });
+  }
+
+  /** The shared-space half of a forced facial recognition reset (`PersonService.handleQueueRecognizeFaces`). */
+  async resetSharedSpacePeople(): Promise<void> {
+    // Wipe shared-space person state so the new strict clustering algorithm can
+    // rebuild from scratch. Aliases cascade via the FK on personId; named
+    // space-persons are lost by design (Force already clears named native persons).
+    await this.sharedSpaceRepository.deleteAllPersonFaces({ excludePets: true });
+    await this.sharedSpaceRepository.deleteAllPersons({ excludePets: true });
+    await this.faceIdentityRepository.deleteUnreferencedIdentities();
+    // Slice 8 (F16): the reaper for face_person_verdict rows deleteUnreferencedIdentities is what nulls a
+    // row's LAST remaining key (personId/spacePersonId are already NULL by this point, via the person and
+    // space-person wipes above) — a row is only fully orphaned once this line has run, so the reaper must
+    // run strictly after it, not from inside handlePersonCleanup, which the caller runs earlier (BEFORE the
+    // space-person wipe and before this identity GC — see the ordering test in
+    // face-review-cross-flow.spec.ts for the discriminating case).
+    await this.facePersonVerdictRepository.deleteOrphanedVerdicts();
   }
 }

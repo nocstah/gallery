@@ -1,8 +1,11 @@
+import { queryClient } from '#lib/queries/client.ts';
+import { getUserConfigQuery } from '#lib/queries/config-user.query.ts';
+import { comingDays, dayFromToday, seriesCard } from '#test/kioku/factories/series-factory.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
+import { defaultUserConfig } from '#test/unit/gallery-config-defaults.ts';
 import { SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { comingDays, dayFromToday, seriesCard } from '@test-data/factories/series-factory';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 import SeriesPage from './SeriesPage.svelte';
 import type { Coming } from './series-api';
 
@@ -27,13 +30,17 @@ const mocks = vi.hoisted(() => ({
   removeSharedLink: vi.fn(),
   getAllSharedLinks: vi.fn(),
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
-vi.mock('$lib/managers/server-config-manager.svelte', () => ({
-  serverConfigManager: { value: { externalDomain: 'https://photos.example' } },
-}));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
+// the external domain links are given out with (user config); gallery-setup clears the query cache before each test
+beforeEach(() =>
+  queryClient.setQueryData(getUserConfigQuery().queryKey, {
+    ...defaultUserConfig,
+    server: { ...defaultUserConfig.server, externalDomain: 'https://photos.example' },
+  }),
+);
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: stub } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: stub } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: stub };
 });
 vi.mock('@immich/ui', async (importOriginal) => ({

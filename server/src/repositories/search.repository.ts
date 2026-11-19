@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
+  expressionBuilder,
+  sql,
   type Expression,
   type ExpressionBuilder,
   type Kysely,
@@ -7,8 +9,6 @@ import {
   type Selectable,
   type ShallowDehydrateObject,
   type SqlBool,
-  expressionBuilder,
-  sql,
 } from 'kysely';
 import { InjectKysely } from 'nestjs-kysely';
 import z from 'zod';
@@ -17,14 +17,15 @@ import { DummyValue, GenerateSql } from 'src/decorators.js';
 import { MapAsset } from 'src/dtos/asset-response.dto.js';
 import { SearchFilter, SearchOrder } from 'src/dtos/search.dto.js';
 import { AssetStatus, AssetType, AssetVisibility, VectorIndex } from 'src/enum.js';
-import { projectedDuration } from 'src/gallery/utils/projected-duration.js';
+import type { LibraryViewOptions } from 'src/gallery/utils/library-view.js';
+import { buildSearchSmartQueries } from 'src/gallery/utils/smart-search.js';
+import { notOtherFaceOfSameVideo } from 'src/gallery/utils/video-face-search.js';
 import { probes } from 'src/repositories/database.repository.js';
 import { DB } from 'src/schema/index.js';
 import { AssetExifTable } from 'src/schema/tables/asset-exif.table.js';
 import { searchAssetBuilderWithLocalTaken } from 'src/utils/asset-filter.js';
 import {
   anyUuid,
-  asUuid,
   searchAssetBuilder,
   searchMetadataV3Examples,
   searchRandomV3Examples,
@@ -34,8 +35,7 @@ import {
   withSearchOrder,
 } from 'src/utils/database.js';
 import { favoriteExistsFor } from 'src/utils/favorite.js';
-import { without } from 'src/utils/filter-suggestions.js';
-import { type PaginationOptions, paginationHelper } from 'src/utils/pagination.js';
+import { paginationHelper, type PaginationOptions } from 'src/utils/pagination.js';
 import { ownedOrSharedWithViewer } from 'src/utils/shared-space-album-scope.js';
 
 export interface SearchAssetIdOptions {
@@ -47,18 +47,18 @@ export interface SearchUserIdOptions {
   libraryId?: string | null;
   userIds?: string[];
   /**
-   * Contributor filter: a plain AND on asset.ownerId. Deliberately separate from `userIds`, which
-   * is the owner SCOPING predicate (database.ts:677/687/770). Merging a contributor filter into
-   * userIds would widen the result set instead of narrowing it.
-   */
+  Contributor filter: a plain AND on asset.ownerId. Deliberately separate from `userIds`, which
+  is the owner SCOPING predicate (database.ts:677/687/770). Merging a contributor filter into
+  userIds would widen the result set instead of narrowing it.
+  */
   ownerId?: string;
   /**
-   * #763: the caller making the request — NOT `userIds` (the timeline/search *target*, which
-   * differs from the caller on space/album scoped paths — e.g. `getFilteredMapMarkers`'s
-   * `userIds: dto.spaceId ? undefined : [auth.user.id]` leaves `userIds` unset entirely when
-   * browsing a specific space). Required by `searchAssetBuilder` and the smart-facet pipeline
-   * whenever `isFavorite` is set, so they resolve the `asset_favorite` overlay for the right user.
-   */
+  #763: the caller making the request — NOT `userIds` (the timeline/search *target*, which
+  differs from the caller on space/album scoped paths — e.g. `getFilteredMapMarkers`'s
+  `userIds: dto.spaceId ? undefined : [auth.user.id]` leaves `userIds` unset entirely when
+  browsing a specific space). Required by `searchAssetBuilder` and the smart-facet pipeline
+  whenever `isFavorite` is set, so they resolve the `asset_favorite` overlay for the right user.
+  */
   authUserId?: string;
 }
 
@@ -124,16 +124,16 @@ export interface SearchExifOptions {
 export interface SearchEmbeddingOptions {
   embedding: string;
   /**
-   * Owner scoping. Optional — and left unset on purpose under an `albumIds` scope, where the
-   * caller's AlbumRead check is the access boundary and `albumConfinedToViewer` re-gates the rows
-   * (the same shape `searchMetadata` has always used). Matches `SearchUserIdOptions.userIds`.
-   */
+  Owner scoping. Optional — and left unset on purpose under an `albumIds` scope, where the
+  caller's AlbumRead check is the access boundary and `albumConfinedToViewer` re-gates the rows
+  (the same shape `searchMetadata` has always used). Matches `SearchUserIdOptions.userIds`.
+  */
   userIds?: string[];
   /**
-   * The searching user. Deliberately SEPARATE from `userIds`, which is an owner-scoping predicate
-   * and is absent under an album scope: the facets' people list still has to resolve identity
-   * people for the viewer, so it needs the caller even when nothing is owner-scoped.
-   */
+  The searching user. Deliberately SEPARATE from `userIds`, which is an owner-scoping predicate
+  and is absent under an album scope: the facets' people list still has to resolve identity
+  people for the viewer, so it needs the caller even when nothing is owner-scoped.
+  */
   callerId?: string;
   maxDistance?: number;
 }
@@ -157,27 +157,27 @@ export interface SearchTagOptions {
 export interface SearchAlbumOptions {
   albumIds?: string[];
   /**
-   * Opts an `albumIds` query OUT of `albumConfinedToViewer`, for a caller whose
-   * album ACCESS check (e.g. Permission.AlbumRead) is already the access boundary — matching the
-   * album grid and the pre-fork `GET /albums/{id}/map-markers` endpoint (issue #656). Defaults to
-   * false/absent, which preserves the existing shared-space re-gate for album-scoped
-   * SearchService queries (database.ts:600-607) — do not flip this default.
-   */
+  Opts an `albumIds` query OUT of `albumConfinedToViewer`, for a caller whose
+  album ACCESS check (e.g. Permission.AlbumRead) is already the access boundary — matching the
+  album grid and the pre-fork `GET /albums/{id}/map-markers` endpoint (issue #656). Defaults to
+  false/absent, which preserves the existing shared-space re-gate for album-scoped
+  SearchService queries (database.ts:600-607) — do not flip this default.
+  */
   albumAccessIsBoundary?: boolean;
 }
 
-export interface SearchSpaceOptions {
+export interface SearchSpaceOptions extends LibraryViewOptions {
   spaceId?: string;
   spacePersonIds?: string[];
   timelineSpaceIds?: string[];
   /**
-   * #763: the space scope the FAVOURITES probe alone runs under — every space the caller belongs
-   * to, not just the ones they show in their timeline. A favourite is an explicit per-asset act and
-   * stays reachable when its space is hidden (see SharedSpaceRepository.getAllMemberSpaceIds), so
-   * the "is the Favourites section worth offering" answer has to span the same set the favourites
-   * filter itself will. Deliberately separate from `timelineSpaceIds`, which still scopes every
-   * OTHER facet — widening those would leak a hidden space's cities/tags/people back into the panel.
-   */
+  #763: the space scope the FAVOURITES probe alone runs under — every space the caller belongs
+  to, not just the ones they show in their timeline. A favourite is an explicit per-asset act and
+  stays reachable when its space is hidden (see SharedSpaceRepository.getAllMemberSpaceIds), so
+  the "is the Favourites section worth offering" answer has to span the same set the favourites
+  filter itself will. Deliberately separate from `timelineSpaceIds`, which still scopes every
+  OTHER facet — widening those would leak a hidden space's cities/tags/people back into the panel.
+  */
   favoriteSpaceIds?: string[];
 }
 
@@ -204,14 +204,14 @@ type BaseAssetSearchOptions = SearchDateOptions &
   SearchSpaceOptions;
 
 /**
- * Visibility modes `searchAssetBuilder` (src/utils/database.ts) understands:
- * - a concrete `AssetVisibility` — exactly that state
- * - `'not-locked'` — everything except Locked; note this STILL admits Hidden
- * - `'timeline-or-archive'` — Archive | Timeline, what the timeline and the album grid show
- *   (`withDefaultVisibility`). Used only by the album-boundary map query (shared-space.service.ts),
- *   which must match the grid it is reached from.
- * - `undefined` — no visibility clause at all (admits Hidden and Locked)
- */
+Visibility modes `searchAssetBuilder` (src/utils/database.ts) understands:
+- a concrete `AssetVisibility` — exactly that state
+- `'not-locked'` — everything except Locked; note this STILL admits Hidden
+- `'timeline-or-archive'` — Archive | Timeline, what the timeline and the album grid show
+  (`withDefaultVisibility`). Used only by the album-boundary map query (shared-space.service.ts),
+  which must match the grid it is reached from.
+- `undefined` — no visibility clause at all (admits Hidden and Locked)
+*/
 export type AssetSearchVisibility = AssetVisibility | 'not-locked' | 'timeline-or-archive';
 
 export type AssetSearchOptions = Omit<BaseAssetSearchOptions, 'visibility'> &
@@ -265,32 +265,14 @@ export interface FaceEmbeddingSearch extends Omit<SearchEmbeddingOptions, 'userI
   numResults: number;
   maxDistance: number;
   minBirthDate?: Date | null;
+  /** Gallery: a video face's recognition rules (src/gallery/utils/video-face-search.ts). */
+  excludeOtherFacesOfVideo?: string;
 }
 
 export interface FaceSearchResult {
   distance: number;
   id: string;
   personGroupId: string | null;
-}
-
-// Pet equivalent of FaceEmbeddingSearch, scoped to pet_search instead of face_search. Deliberately
-// drops `minBirthDate` — a person's birthdate has no pet analogue, so the filter is meaningless here.
-export interface PetEmbeddingSearch extends SearchEmbeddingOptions {
-  hasPerson?: boolean;
-  numResults: number;
-  maxDistance: number;
-  /**
-   * Required here, unlike the optional base: pet recognition has no album- or space-scoped caller,
-   * so every `searchPets` scan is owner-scoped and the `asset.ownerId` predicate below is
-   * unconditional. (`FaceSearchRepository.searchFaces` can drop it because a space scope replaces it.)
-   */
-  userIds: string[];
-}
-
-export interface PetSearchResult {
-  distance: number;
-  id: string;
-  personId: string | null;
 }
 
 export interface AssetDuplicateResult {
@@ -320,11 +302,6 @@ export interface GetCameraMakesOptions {
 export interface GetCameraLensModelsOptions {
   make?: string;
   model?: string;
-}
-
-/** Skip threshold when disabled (0), undefined, or at max cosine distance (>= 2) since it would filter nothing */
-export function isActiveDistanceThreshold(maxDistance: number | undefined): boolean {
-  return (maxDistance ?? 0) > 0 && (maxDistance ?? 0) < 2;
 }
 
 @Injectable()
@@ -424,17 +401,15 @@ export class SearchRepository {
     ],
   })
   async searchRandom(size: number, options: AssetSearchOptions) {
-    return (
-      searchAssetBuilderWithLocalTaken(this.db, options)
-        .select(columns.searchAsset)
+    return searchAssetBuilderWithLocalTaken(this.db, options)
+      .select(columns.searchAsset)
+      .$if(!!options.authUserId, (qb) =>
         // #763: see searchMetadata above for why this lives per-caller rather than in searchAssetBuilderLegacy.
-        .$if(!!options.authUserId, (qb) =>
-          qb.select((eb) => favoriteExistsFor(eb, options.authUserId!).as('isFavoriteForUser')),
-        )
-        .orderBy(sql`random()`)
-        .limit(size)
-        .execute()
-    );
+        qb.select((eb) => favoriteExistsFor(eb, options.authUserId!).as('isFavoriteForUser')),
+      )
+      .orderBy(sql`random()`)
+      .limit(size)
+      .execute();
   }
 
   // TODO(v4): remove with the deprecated flat-field search API
@@ -453,118 +428,23 @@ export class SearchRepository {
   })
   searchLargeAssets(size: number, options: LargeAssetSearchOptions) {
     const orderDirection = (options.orderDirection?.toLowerCase() || 'desc') as OrderByDirection;
-    return (
-      searchAssetBuilderWithLocalTaken(this.db, options)
-        .select(columns.searchAsset)
+    return searchAssetBuilderWithLocalTaken(this.db, options)
+      .select(columns.searchAsset)
+      .$if(!!options.authUserId, (qb) =>
         // #763: see searchMetadata above for why this lives per-caller rather than in searchAssetBuilderLegacy.
-        .$if(!!options.authUserId, (qb) =>
-          qb.select((eb) => favoriteExistsFor(eb, options.authUserId!).as('isFavoriteForUser')),
-        )
-        .$call(withExifInner)
-        .$if(options.visibility !== AssetVisibility.Hidden, (qb) =>
-          qb.where('asset.visibility', '!=', sql.lit(AssetVisibility.Hidden)),
-        )
-        .where('asset_exif.fileSizeInByte', '>', options.minFileSize || 0)
-        .orderBy('asset_exif.fileSizeInByte', orderDirection)
-        .limit(size)
-        .execute()
-    );
+        qb.select((eb) => favoriteExistsFor(eb, options.authUserId!).as('isFavoriteForUser')),
+      )
+      .$call(withExifInner)
+      .$if(options.visibility !== AssetVisibility.Hidden, (qb) =>
+        qb.where('asset.visibility', '!=', sql.lit(AssetVisibility.Hidden)),
+      )
+      .where('asset_exif.fileSizeInByte', '>', options.minFileSize || 0)
+      .orderBy('asset_exif.fileSizeInByte', orderDirection)
+      .limit(size)
+      .execute();
   }
 
   // TODO(v4): remove with the deprecated flat-field search API
-  private buildSearchSmartQueries(
-    kysely: Kysely<DB>,
-    pagination: SearchPaginationOptions,
-    options: SmartSearchOptions,
-  ) {
-    const hasDistanceThreshold = isActiveDistanceThreshold(options.maxDistance);
-    const personIds = options.personIds?.filter(Boolean) ?? [];
-    const identityIds = options.identityIds?.filter(Boolean) ?? [];
-
-    let baseQuery = searchAssetBuilderWithLocalTaken(kysely, {
-      ...without(options, 'personIds', 'personMatchAny', 'identityIds', 'forceEmptyResult'),
-      ratingIsMinimum: true,
-    })
-      .selectAll('asset')
-      .select(projectedDuration)
-      // #763: project the per-user overlay onto the rows feeding mapAsset via searchSmart's
-      // mapResponse. Flows through both the 'cte' (candidates.selectAll()) and 'simple' outer
-      // query paths below since both select every column baseQuery projects.
-      .$if(!!options.authUserId, (qb) =>
-        qb.select((eb) => favoriteExistsFor(eb, options.authUserId!).as('isFavoriteForUser')),
-      )
-      .innerJoin('smart_search', 'asset.id', 'smart_search.assetId')
-      .$if(!!options.forceEmptyResult, (qb) => qb.where(sql<SqlBool>`false`))
-      .$if(hasDistanceThreshold, (qb) =>
-        qb.where(sql<SqlBool>`(smart_search.embedding <=> ${options.embedding}) <= ${options.maxDistance!}`),
-      )
-      // DO NOT add a secondary ORDER BY key on any column here.
-      // vchord's ordered index scan can only satisfy a single-key ORDER BY on
-      // `smart_search.embedding <=>`. Any additional sort key forces the planner
-      // to Parallel Seq Scan + in-memory sort (~15s on 200k rows vs ~200ms via
-      // vchord). Cross-page duplicates from identical embeddings are caught by
-      // the frontend dedup in web/src/lib/utils/search-dedup.ts.
-      .orderBy(sql`smart_search.embedding <=> ${options.embedding}`);
-
-    if (personIds.length > 0) {
-      // Keep the smart_search ordered scan as the driving path. Materializing the
-      // full matching asset_face set first pushes the planner back to tens of
-      // thousands of smart_search PK lookups on person-filtered queries.
-      baseQuery = baseQuery.where((eb) => {
-        const hasVisiblePersonFace = (personId: string | string[]) =>
-          eb.exists(
-            eb
-              .selectFrom('asset_face')
-              .whereRef('asset_face.assetId', '=', 'asset.id')
-              .where('asset_face.deletedAt', 'is', null)
-              .where('asset_face.isVisible', 'is', true)
-              .where('asset_face.personGroupId', '=', Array.isArray(personId) ? anyUuid(personId) : asUuid(personId)),
-          );
-
-        return options.personMatchAny
-          ? hasVisiblePersonFace(personIds)
-          : eb.and(personIds.map((personId) => hasVisiblePersonFace(personId)));
-      });
-    }
-
-    if (identityIds.length > 0) {
-      baseQuery = baseQuery.where((eb) =>
-        eb.and(
-          identityIds.map((identityId) =>
-            eb.exists(
-              eb
-                .selectFrom('asset_face')
-                .innerJoin('face_identity_face', 'face_identity_face.assetFaceId', 'asset_face.id')
-                .whereRef('asset_face.assetId', '=', 'asset.id')
-                .where('asset_face.deletedAt', 'is', null)
-                .where('asset_face.isVisible', 'is', true)
-                .where('face_identity_face.identityId', '=', asUuid(identityId)),
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (options.orderDirection) {
-      const orderDirection = options.orderDirection.toLowerCase() as OrderByDirection;
-      const candidates = baseQuery.limit(500).as('candidates');
-      const outerQuery = kysely
-        .selectFrom(candidates)
-        .selectAll()
-        // sql.raw is safe here — orderDirection is validated to 'asc'|'desc' by the AssetOrder enum
-        .orderBy(sql`"candidates"."fileCreatedAt" ${sql.raw(orderDirection)} nulls last`)
-        // Stable tiebreaker (same rationale as the base query)
-        .orderBy('candidates.id')
-        .limit(pagination.size + 1)
-        .offset((pagination.page - 1) * pagination.size);
-      return { kind: 'cte' as const, base: baseQuery, outer: outerQuery };
-    }
-
-    const outerQuery = baseQuery.limit(pagination.size + 1).offset((pagination.page - 1) * pagination.size);
-
-    return { kind: 'simple' as const, base: baseQuery, outer: outerQuery };
-  }
-
   @GenerateSql({
     params: [
       { page: 1, size: 200 },
@@ -591,7 +471,7 @@ export class SearchRepository {
     return this.db.transaction().execute(async (trx) => {
       await sql`set local vchordrq.probes = ${sql.lit(probes[VectorIndex.Clip])}`.execute(trx);
 
-      const { kind, outer } = this.buildSearchSmartQueries(trx, pagination, options);
+      const { kind, outer } = buildSearchSmartQueries(trx, pagination, options);
       if (kind === 'cte') {
         const items = (await outer.execute()) as MapAsset[];
         return paginationHelper(items, pagination.size);
@@ -611,7 +491,15 @@ export class SearchRepository {
       },
     ],
   })
-  searchFaces({ clusterGroupId, embedding, numResults, maxDistance, hasPerson, minBirthDate }: FaceEmbeddingSearch) {
+  searchFaces({
+    clusterGroupId,
+    embedding,
+    numResults,
+    maxDistance,
+    hasPerson,
+    minBirthDate,
+    excludeOtherFacesOfVideo,
+  }: FaceEmbeddingSearch) {
     if (!z.int().min(1).max(1000).safeParse(numResults).success) {
       throw new Error(`Invalid value for 'numResults': ${numResults}`);
     }
@@ -633,7 +521,11 @@ export class SearchRepository {
               eb.selectFrom('user').select('user.id').where('user.clusterGroupId', '=', clusterGroupId),
             )
             .where('asset.deletedAt', 'is', null)
+            .where('asset_face.deletedAt', 'is', null) // Gallery: a soft-deleted face keeps its face_search row
             .$if(!!hasPerson, (qb) => qb.where('asset_face.personGroupId', 'is not', null))
+            .$if(!!excludeOtherFacesOfVideo, (qb) =>
+              qb.where((eb) => notOtherFaceOfSameVideo(eb, excludeOtherFacesOfVideo!)),
+            )
             .$if(!!minBirthDate, (qb) =>
               qb.where((eb) =>
                 eb.not(
@@ -647,50 +539,6 @@ export class SearchRepository {
                 ),
               ),
             )
-            .orderBy('distance')
-            .limit(numResults),
-        )
-        .selectFrom('cte')
-        .selectAll()
-        .where('cte.distance', '<=', maxDistance)
-        .execute();
-    });
-  }
-
-  // Copy of FaceSearchRepository.searchFaces scoped to pet_search instead of face_search — see the isolation
-  // decision in PetEmbeddingSearch's comment. No `person` join / `minBirthDate` filter: pets have
-  // no birthdate concept, and hasPerson only needs asset_face.personId, already on the base table.
-  @GenerateSql({
-    params: [
-      {
-        userIds: [DummyValue.UUID],
-        embedding: DummyValue.VECTOR,
-        numResults: 10,
-        maxDistance: 0.6,
-      },
-    ],
-  })
-  searchPets({ userIds, embedding, numResults, maxDistance, hasPerson }: PetEmbeddingSearch) {
-    if (!z.int().min(1).max(1000).safeParse(numResults).success) {
-      throw new Error(`Invalid value for 'numResults': ${numResults}`);
-    }
-
-    return this.db.transaction().execute(async (trx) => {
-      await sql`set local vchordrq.probes = ${sql.lit(probes[VectorIndex.Pet])}`.execute(trx);
-      return await trx
-        .with('cte', (qb) =>
-          qb
-            .selectFrom('asset_face')
-            .select([
-              'asset_face.id',
-              'asset_face.personGroupId',
-              sql<number>`pet_search.embedding <=> ${embedding}`.as('distance'),
-            ])
-            .innerJoin('asset', 'asset.id', 'asset_face.assetId')
-            .innerJoin('pet_search', 'pet_search.faceId', 'asset_face.id')
-            .where('asset.ownerId', '=', anyUuid(userIds))
-            .where('asset.deletedAt', 'is', null)
-            .$if(!!hasPerson, (qb) => qb.where('asset_face.personGroupId', 'is not', null))
             .orderBy('distance')
             .limit(numResults),
         )
@@ -749,52 +597,52 @@ export class SearchRepository {
       );
     };
 
-    return (
-      this.db
-        .withRecursive('cte', (qb) => {
-          const base = qb
-            .selectFrom('asset_exif')
-            .select(['city', 'assetId'])
-            .innerJoin('asset', 'asset.id', 'asset_exif.assetId')
-            .where(viewerScope())
-            .where('asset.visibility', '=', AssetVisibility.Timeline)
-            .where('asset.type', '=', AssetType.Image)
-            .where('asset.deletedAt', 'is', null)
-            .orderBy('city')
-            .limit(1);
+    return this.db
+      .withRecursive('cte', (qb) => {
+        const base = qb
+          .selectFrom('asset_exif')
+          .select(['city', 'assetId'])
+          .innerJoin('asset', 'asset.id', 'asset_exif.assetId')
+          .where(viewerScope())
+          .where('asset.visibility', '=', AssetVisibility.Timeline)
+          .where('asset.type', '=', AssetType.Image)
+          .where('asset.deletedAt', 'is', null)
+          .orderBy('city')
+          .limit(1);
 
-          const recursive = qb
-            .selectFrom('cte')
-            .select(['l.city', 'l.assetId'])
-            .innerJoinLateral(
-              (qb) =>
-                qb
-                  .selectFrom('asset_exif')
-                  .select(['city', 'assetId'])
-                  .innerJoin('asset', 'asset.id', 'asset_exif.assetId')
-                  .where(viewerScope())
-                  .where('asset.visibility', '=', AssetVisibility.Timeline)
-                  .where('asset.type', '=', AssetType.Image)
-                  .where('asset.deletedAt', 'is', null)
-                  .whereRef('asset_exif.city', '>', 'cte.city')
-                  .orderBy('city')
-                  .limit(1)
-                  .as('l'),
-              (join) => join.onTrue(),
-            );
+        const recursive = qb
+          .selectFrom('cte')
+          .select(['l.city', 'l.assetId'])
+          .innerJoinLateral(
+            (qb) =>
+              qb
+                .selectFrom('asset_exif')
+                .select(['city', 'assetId'])
+                .innerJoin('asset', 'asset.id', 'asset_exif.assetId')
+                .where(viewerScope())
+                .where('asset.visibility', '=', AssetVisibility.Timeline)
+                .where('asset.type', '=', AssetType.Image)
+                .where('asset.deletedAt', 'is', null)
+                .whereRef('asset_exif.city', '>', 'cte.city')
+                .orderBy('city')
+                .limit(1)
+                .as('l'),
+            (join) => join.onTrue(),
+          );
 
-          return sql<{ city: string; assetId: string }>`(${base} union all ${recursive})`;
-        })
-        .selectFrom('asset')
-        .innerJoin('asset_exif', 'asset.id', 'asset_exif.assetId')
-        .innerJoin('cte', 'asset.id', 'cte.assetId')
-        .select(columns.searchAsset)
-        .select((eb) =>
-          eb
-            .fn('to_jsonb', [eb.table('asset_exif')])
-            .$castTo<ShallowDehydrateObject<Selectable<AssetExifTable>>>()
-            .as('exifInfo'),
-        )
+        return sql<{ city: string; assetId: string }>`(${base} union all ${recursive})`;
+      })
+      .selectFrom('asset')
+      .innerJoin('asset_exif', 'asset.id', 'asset_exif.assetId')
+      .innerJoin('cte', 'asset.id', 'cte.assetId')
+      .select(columns.searchAsset)
+      .select((eb) =>
+        eb
+          .fn('to_jsonb', [eb.table('asset_exif')])
+          .$castTo<ShallowDehydrateObject<Selectable<AssetExifTable>>>()
+          .as('exifInfo'),
+      )
+      .$if(!!authUserId, (qb) =>
         // #763: project the per-user overlay for the CALLER onto the rows feeding
         // search.service.ts's getAssetsByCity -> mapAsset. The `eb` here is scoped to
         // `DB & { cte: ... }` (the `withRecursive('cte', ...)` above), which Kysely's
@@ -802,14 +650,12 @@ export class SearchRepository {
         // `ExpressionBuilder<DB, keyof DB>` favoriteExistsFor expects, even though the
         // 'asset_favorite' table it queries is unaffected by the extra CTE in scope. Safe cast
         // (same mechanism as asset.repository.ts's getTimeBucket).
-        .$if(!!authUserId, (qb) =>
-          qb.select((eb) =>
-            favoriteExistsFor(eb as unknown as ExpressionBuilder<DB, keyof DB>, authUserId!).as('isFavoriteForUser'),
-          ),
-        )
-        .orderBy('asset_exif.city')
-        .execute()
-    );
+        qb.select((eb) =>
+          favoriteExistsFor(eb as unknown as ExpressionBuilder<DB, keyof DB>, authUserId!).as('isFavoriteForUser'),
+        ),
+      )
+      .orderBy('asset_exif.city')
+      .execute();
   }
 
   async upsert(assetId: string, embedding: string): Promise<void> {

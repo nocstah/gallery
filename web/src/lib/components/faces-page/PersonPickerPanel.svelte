@@ -1,5 +1,6 @@
 <script lang="ts">
-  import PersonPickerGrid, { type PickerCandidate } from '$lib/components/faces-page/PersonPickerGrid.svelte';
+  import PersonPickerGrid, { type PickerCandidate } from '#lib/components/faces-page/PersonPickerGrid.svelte';
+  import VideoFaceSightings from '#lib/gallery/asset-viewer/VideoFaceSightings.svelte';
   import { IconButton, Input } from '@immich/ui';
   import { mdiArrowLeftThin } from '@mdi/js';
   import type { Snippet } from 'svelte';
@@ -8,21 +9,21 @@
   import { fly } from 'svelte/transition';
 
   /**
-   * The "which person is this?" screen, shared by the owner's `AssignFaceSidePanel` and the
-   * space-flavoured `SpacePersonSidePanel`.
-   *
-   * Those two were separate screens until #992's field testing, and which one you got turned on
-   * whether you OWNED the photo — so on one photo in one space the editor saw a short, named,
-   * searchable list while the owner saw upstream's whole-library grid with the search hidden behind
-   * a magnifier. This owns everything the two can agree on: the panel chrome, the search field, the
-   * candidate ordering (`orderPickerCandidates`) and the grid.
-   *
-   * What it deliberately does NOT own is where candidates come from or what a click writes. Those
-   * are two different tables reached through two different endpoints (`person` via
-   * `reassignFacesById`, `shared_space_person` via `PUT …/people/:id/faces/:faceId`), and the owner
-   * must keep their whole library on their own photo. Callers resolve `candidates` and handle
-   * `onSelect`; only the presentation is shared.
-   */
+  The "which person is this?" screen, shared by the owner's `AssignFaceSidePanel` and the
+  space-flavoured `SpacePersonSidePanel`.
+  
+  Those two were separate screens until #992's field testing, and which one you got turned on
+  whether you OWNED the photo — so on one photo in one space the editor saw a short, named,
+  searchable list while the owner saw upstream's whole-library grid with the search hidden behind
+  a magnifier. This owns everything the two can agree on: the panel chrome, the search field, the
+  candidate ordering (`orderPickerCandidates`) and the grid.
+  
+  What it deliberately does NOT own is where candidates come from or what a click writes. Those
+  are two different tables reached through two different endpoints (`person` via
+  `reassignFacesById`, `shared_space_person` via `PUT …/people/:id/faces/:faceId`), and the owner
+  must keep their whole library on their own photo. Callers resolve `candidates` and handle
+  `onSelect`; only the presentation is shared.
+  */
   type Props = {
     candidates: PickerCandidate[];
     isLoading?: boolean;
@@ -30,21 +31,27 @@
     onSelect: (candidate: PickerCandidate) => void;
     onClose: () => void;
     /**
-     * The search text. Bound rather than internal because both callers need it for more than
-     * filtering — the space picker also names the person its "create" button makes.
-     */
+    The search text. Bound rather than internal because both callers need it for more than
+    filtering — the space picker also names the person its "create" button makes.
+    */
     query?: string;
     /**
-     * Fired after every edit to `query`, for callers whose candidate list is not already in hand.
-     * The owner's picker searches the server here: `getAllPeople` serves one page, so filtering the
-     * loaded list would silently stop finding anyone past it. The space picker leaves this unset and
-     * filters its own loaded candidates.
-     */
+    Fired after every edit to `query`, for callers whose candidate list is not already in hand.
+    The owner's picker searches the server here: `getAllPeople` serves one page, so filtering the
+    loaded list would silently stop finding anyone past it. The space picker leaves this unset and
+    filters its own loaded candidates.
+    */
     onQueryChange?: (query: string) => void;
     /** Rendered at the end of the header row (the owner's "create person from this face"). */
     headerActions?: Snippet;
     /** Rendered beside the search field (the space picker's "create person" with the typed name). */
     searchActions?: Snippet;
+    /**
+    The face being named, when it is on a video: the panel then shows every moment that person was seen, each one
+    seeking the player there, to tell people apart who look alike in a single crop. `canEdit` (the asset's owner, who
+    holds face delete) adds a menu to move a moment to another person or take it out of the face.
+    */
+    videoFace?: { id: string; canEdit: boolean };
   };
 
   let {
@@ -57,6 +64,7 @@
     onQueryChange,
     headerActions,
     searchActions,
+    videoFace,
   }: Props = $props();
 </script>
 
@@ -85,6 +93,9 @@
   </div>
 
   <div class="p-4 text-sm">
+    {#if videoFace}
+      <VideoFaceSightings faceIds={[videoFace.id]} canEdit={videoFace.canEdit} />
+    {/if}
     <div class="mb-4 flex gap-2">
       <Input placeholder={$t('search_people')} bind:value={query} oninput={() => onQueryChange?.(query)} size="tiny" />
       {#if searchActions}

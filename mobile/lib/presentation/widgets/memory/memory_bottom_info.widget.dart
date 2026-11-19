@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/memory.model.dart';
+import 'package:immich_mobile/extensions/datetime_extensions.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/presentation/widgets/memory/memory_title.widget.dart';
 import 'package:immich_mobile/providers/asset_viewer/view_in_timeline_destination.dart';
@@ -16,7 +17,7 @@ class MemoryBottomInfo extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final df = DateFormat.yMMMMd();
+    final df = DateFormat.yMMMMd(resolvedDateTimeLocale());
     final fileCreatedDate = asset.createdAt;
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -47,7 +48,7 @@ class MemoryBottomInfo extends ConsumerWidget {
                 read: ref.read,
                 popViewer: () => context.maybePop(),
                 // Activate the existing timeline tab without rebuilding it (a fresh
-                // TabShellRoute would reload the timeline to the top and discard the scroll).
+                // GalleryTabShellRoute would reload the timeline to the top and discard the scroll).
                 goToMainTimeline: () => context.navigateTo(const MainTimelineRoute()),
                 // #1047: a photo the viewer only reaches through a Space is not in their
                 // personal timeline, so open the Space's own timeline instead. Pushed, not

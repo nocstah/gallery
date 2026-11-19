@@ -1,3 +1,12 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { spacesQueryKey } from '#lib/gallery/spaces/space.query.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { queryClient } from '#lib/queries/client.ts';
+import { isSuggestionSnoozed, snoozeSuggestions } from '#lib/utils/face-suggestion-snooze.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { sharedSpaceFactory } from '#test/kioku/factories/shared-space-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 import {
   SharedSpaceRole,
   Type,
@@ -12,14 +21,6 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import type { Component } from 'svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { userInteraction } from '$lib/stores/user.svelte';
-import { isSuggestionSnoozed, snoozeSuggestions } from '$lib/utils/face-suggestion-snooze';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 import PersonDetailPage from './+page.svelte';
 
 const {
@@ -27,7 +28,7 @@ const {
   featureFlagsMock,
   formatMessage,
   gotoMock,
-  invalidateAllMock,
+  refreshAllMock,
   mockAssetMultiSelectManager,
   mockPage,
 } = vi.hoisted(() => {
@@ -61,7 +62,7 @@ const {
     featureFlagsMock: { value: { peopleStatistics: true } },
     formatMessage,
     gotoMock: vi.fn(),
-    invalidateAllMock: vi.fn(),
+    refreshAllMock: vi.fn(),
     mockAssetMultiSelectManager: {
       selectionActive: false,
       assets: [],
@@ -78,30 +79,20 @@ const {
   };
 });
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: featureFlagsMock,
 }));
 
-vi.mock('$app/navigation', () => ({
+// the global fake's other exports stay (a factory mock throws on a name it does not return)
+vi.mock('$app/navigation', async () => ({
+  ...(await import('#test/unit/mocks/app-navigation.ts')),
   afterNavigate: afterNavigateMock,
   goto: gotoMock,
-  invalidateAll: invalidateAllMock,
+  refreshAll: refreshAllMock,
 }));
 
-vi.mock('$app/stores', () => ({
-  page: {
-    subscribe: (run: (value: typeof mockPage) => void) => {
-      run(mockPage);
-      return () => {};
-    },
-  },
-  navigating: {
-    subscribe: (run: (value: null) => void) => {
-      run(null);
-      return () => {};
-    },
-  },
-}));
+// the page reads `page` from $app/state, and its scroll memory clearer `navigating`
+vi.mock('$app/state', () => ({ page: mockPage, navigating: { to: null } }));
 
 vi.mock('svelte-i18n', () => ({
   t: {
@@ -120,13 +111,13 @@ vi.mock('svelte-i18n', () => ({
   waitLocale: () => Promise.resolve(),
 }));
 
-vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({
+vi.mock('#lib/managers/asset-multi-select-manager.svelte.ts', () => ({
   assetMultiSelectManager: mockAssetMultiSelectManager,
 }));
 
 vi.mock('@immich/ui', async (importOriginal) => {
   const original = await importOriginal<typeof import('@immich/ui')>();
-  const { default: MockContextMenuButton } = await import('@test-data/mocks/action-context-menu.stub.svelte');
+  const { default: MockContextMenuButton } = await import('#lib/gallery/__mocks__/action-context-menu.stub.svelte');
   return {
     ...original,
     ContextMenuButton: MockContextMenuButton,
@@ -137,39 +128,39 @@ vi.mock('@immich/ui', async (importOriginal) => {
 
 // Local Omarchy layer: the page lives in the shell; the stand-in renders the bar's leading and buttons snippets inline
 // and carries the description, so they can be read and clicked
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/OnEvents.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/OnEvents.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/Timeline.svelte', async () => {
+vi.mock('#lib/components/timeline/Timeline.svelte', async () => {
   const { default: MockComponent } =
     await import('./../../../../spaces/[spaceId]/people/[personId]/[[photos=photos]]/[[assetId=id]]/mock-space-person-timeline.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/assets/thumbnail/ImageThumbnail.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/image-thumbnail.stub.svelte');
+vi.mock('#lib/components/assets/thumbnail/ImageThumbnail.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/image-thumbnail.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/people/people-merge-selector.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/people-merge-selector.stub.svelte');
+vi.mock('#lib/components/people/people-merge-selector.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/people-merge-selector.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/modals/RepresentativeFacePickerModal.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/modals/RepresentativeFacePickerModal.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/gallery/people/PersonSuggestionReviewModal.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/gallery/people/PersonSuggestionReviewModal.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
@@ -192,7 +183,9 @@ function makePerson(overrides: Partial<PersonResponseDto> = {}): PersonResponseD
   };
 }
 
-function makeMember(userId: string, role: SharedSpaceRole): SharedSpaceMemberResponseDto {
+// The viewer's own row: the role is all that changes between spaces.
+function makeMember(role: SharedSpaceRole): SharedSpaceMemberResponseDto {
+  const userId = 'current-user-id';
   return {
     userId,
     role,
@@ -207,9 +200,7 @@ function makeMember(userId: string, role: SharedSpaceRole): SharedSpaceMemberRes
 // The viewer's role in each space comes from the spaces list (getAllSpaces embeds members).
 function mockSpaceRoles(roles: Record<string, SharedSpaceRole>) {
   sdkMock.getAllSpaces.mockResolvedValue(
-    Object.entries(roles).map(([id, role]) =>
-      sharedSpaceFactory.build({ id, members: [makeMember('current-user-id', role)] }),
-    ),
+    Object.entries(roles).map(([id, role]) => sharedSpaceFactory.build({ id, members: [makeMember(role)] })),
   );
 }
 
@@ -272,9 +263,9 @@ describe('Person detail page', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     stubMatchMedia();
-    userInteraction.recentSpaces = undefined;
+    queryClient.removeQueries({ queryKey: spacesQueryKey });
     gotoMock.mockResolvedValue(undefined);
-    invalidateAllMock.mockResolvedValue(undefined);
+    refreshAllMock.mockResolvedValue(undefined);
     mockAssetMultiSelectManager.selectionActive = false;
     mockAssetMultiSelectManager.assets = [];
     sdkMock.getPerson.mockResolvedValue(makePerson());
@@ -326,7 +317,7 @@ describe('Person detail page', () => {
         message: 'raw',
       })
       .mockResolvedValueOnce([{ id: 'person-candidate', success: true }]);
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
 
     renderPage();
 
@@ -594,7 +585,7 @@ describe('Person detail page', () => {
       }),
     });
 
-    await waitFor(() => expect(userInteraction.recentSpaces).toBeDefined());
+    await waitFor(() => expect(queryClient.getQueryData(spacesQueryKey)).toBeDefined());
     await waitFor(() => expect(screen.queryByText('set_date_of_birth')).not.toBeInTheDocument());
     expect(screen.queryByText('hide_person')).not.toBeInTheDocument();
     expect(screen.queryByText('select_representative_face')).not.toBeInTheDocument();
@@ -609,7 +600,7 @@ describe('Person detail page', () => {
       }),
     });
 
-    await waitFor(() => expect(userInteraction.recentSpaces).toBeDefined());
+    await waitFor(() => expect(queryClient.getQueryData(spacesQueryKey)).toBeDefined());
     expect(screen.queryByText('merge_people')).not.toBeInTheDocument();
   });
 
@@ -629,7 +620,7 @@ describe('Person detail page', () => {
     resolveSpaces([
       sharedSpaceFactory.build({
         id: 'loading-space-detail',
-        members: [makeMember('current-user-id', SharedSpaceRole.Viewer)],
+        members: [makeMember(SharedSpaceRole.Viewer)],
       }),
     ]);
 
@@ -767,7 +758,7 @@ describe('Person detail page', () => {
   });
 
   it('detaches the personal profile after confirmation', async () => {
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
     renderPage();
 
     await userEvent.click(screen.getByText('separate_from_grouped_person'));
@@ -775,7 +766,7 @@ describe('Person detail page', () => {
     expect(sdkMock.detachScopedPerson).toHaveBeenCalledWith({
       detachScopedPersonDto: { profile: { type: 'person', id: 'person-1' } },
     });
-    expect(invalidateAllMock).toHaveBeenCalled();
+    expect(refreshAllMock).toHaveBeenCalled();
   });
 });
 
@@ -785,9 +776,9 @@ describe('the person in the bar', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     stubMatchMedia();
-    userInteraction.recentSpaces = undefined;
+    queryClient.removeQueries({ queryKey: spacesQueryKey });
     gotoMock.mockResolvedValue(undefined);
-    invalidateAllMock.mockResolvedValue(undefined);
+    refreshAllMock.mockResolvedValue(undefined);
     mockAssetMultiSelectManager.selectionActive = false;
     mockAssetMultiSelectManager.assets = [];
     sdkMock.getPerson.mockResolvedValue(makePerson());
@@ -905,7 +896,7 @@ describe('the person in the bar', () => {
       }),
     });
 
-    await waitFor(() => expect(userInteraction.recentSpaces).toBeDefined());
+    await waitFor(() => expect(queryClient.getQueryData(spacesQueryKey)).toBeDefined());
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Alice' })).not.toBeInTheDocument());
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
@@ -952,9 +943,9 @@ describe('face suggestions', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     stubMatchMedia();
-    userInteraction.recentSpaces = undefined;
+    queryClient.removeQueries({ queryKey: spacesQueryKey });
     gotoMock.mockResolvedValue(undefined);
-    invalidateAllMock.mockResolvedValue(undefined);
+    refreshAllMock.mockResolvedValue(undefined);
     mockAssetMultiSelectManager.selectionActive = false;
     mockAssetMultiSelectManager.assets = [];
     sdkMock.getPerson.mockResolvedValue(makePerson());
@@ -1065,7 +1056,7 @@ describe('face suggestions', () => {
         primaryProfile: { type: Type.SpacePerson, id: 'space-person-1', spaceId: 'space-suggest-gate-viewer' },
       }),
     });
-    await waitFor(() => expect(userInteraction.recentSpaces).toBeDefined());
+    await waitFor(() => expect(queryClient.getQueryData(spacesQueryKey)).toBeDefined());
     await waitFor(() => expect(screen.queryByTestId('person-suggestion-banner')).not.toBeInTheDocument());
     viewerRender.unmount();
 

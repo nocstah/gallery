@@ -22,9 +22,9 @@ vi.mock('$app/state', () => ({ page: pageMock }));
 vi.mock('$app/navigation', () => ({
   afterNavigate: (callback: (navigation: Navigation) => void) => callback(navigation.current),
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: authManagerMock }));
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: authManagerMock }));
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: MockComponent };
 });
 

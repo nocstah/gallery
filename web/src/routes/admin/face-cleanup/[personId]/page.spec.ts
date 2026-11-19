@@ -1,3 +1,6 @@
+import FaceActionsHelpModal from '#lib/components/face-cleanup/FaceActionsHelpModal.svelte';
+import FacePhotoModal from '#lib/components/face-cleanup/FacePhotoModal.svelte';
+import { Route } from '#lib/route.ts';
 import {
   getFaceRepairClusterFaces,
   getFaceRepairPersonFaces,
@@ -11,9 +14,6 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { goto } from '$app/navigation';
-import FaceActionsHelpModal from '$lib/components/face-cleanup/FaceActionsHelpModal.svelte';
-import FacePhotoModal from '$lib/components/face-cleanup/FacePhotoModal.svelte';
-import { Route } from '$lib/route';
 import type { PageData } from './$types';
 import Page from './+page.svelte';
 import type { SuspectedOwner } from './destination';
@@ -35,13 +35,13 @@ vi.mock('@immich/sdk', async (importOriginal) => {
   };
 });
 
-// An API failure shaped the way the server actually returns one, tagged for the `isHttpError` stand-in above.
-const httpError = (status: number, data: Record<string, unknown>) =>
-  Object.assign(new Error(`HTTP ${status}`), { __http: true, status, data });
+// A 400 shaped the way the server actually returns one, tagged for the `isHttpError` stand-in above.
+const httpError = (data: Record<string, unknown>) =>
+  Object.assign(new Error('HTTP 400'), { __http: true, status: 400, data });
 
 vi.mock('@immich/ui', async (original) => {
   const mod = await original<typeof import('@immich/ui')>();
-  const noop = await import('@test-data/mocks/noop-component.svelte');
+  const noop = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return {
     ...mod,
     Icon: noop.default,
@@ -116,8 +116,8 @@ vi.mock('$app/stores', () => ({
 }));
 
 // Mock AdminPageLayout to a simple pass-through that renders children
-vi.mock('$lib/components/layouts/AdminPageLayout.svelte', async () => {
-  const { default: stub } = await import('@test-data/mocks/admin-page-layout.stub.svelte');
+vi.mock('#lib/components/layouts/AdminPageLayout.svelte', async () => {
+  const { default: stub } = await import('#lib/gallery/__mocks__/admin-page-layout.stub.svelte');
   return { default: stub };
 });
 
@@ -125,8 +125,8 @@ vi.mock('$lib/components/layouts/AdminPageLayout.svelte', async () => {
 // getAdminFacePreviewUrl (via `...actual`) rather than dropping them — FacePhotoModal (imported below purely
 // for reference-identity assertions against modalManager.show) statically imports those at module-eval time,
 // so a mock object missing them would break on import even though this file never renders the modal itself.
-vi.mock('$lib/utils/people-utils', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('$lib/utils/people-utils')>();
+vi.mock('#lib/utils/people-utils.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('#lib/utils/people-utils.ts')>();
   return {
     ...actual,
     getAdminFaceThumbnailUrl: (assetFaceId: string) => `/api/admin/face-repair/faces/${assetFaceId}/thumbnail`,
@@ -211,9 +211,9 @@ const makeCompletedScan = (persons = [makeScanPerson()]) => ({
   createdAt: new Date().toISOString(),
 });
 
-const makePageData = (personId = PERSON_ID): PageData => ({
+const makePageData = (): PageData => ({
   error: undefined,
-  personId,
+  personId: PERSON_ID,
   meta: { title: 'Review person' },
 });
 
@@ -578,7 +578,7 @@ describe('+page.svelte (face-cleanup review — Model B)', () => {
     // 2382-face cluster hit exactly that and the admin was left retrying a request that could never succeed.
     it('surfaces the server validation reason on a 400 instead of the reason-less banner', async () => {
       vi.mocked(resolveFaces).mockRejectedValueOnce(
-        httpError(400, {
+        httpError({
           message: 'Validation failed',
           statusCode: 400,
           errors: [
@@ -618,7 +618,7 @@ describe('+page.svelte (face-cleanup review — Model B)', () => {
       ['face-repair:person-not-found', 'Reviewed person not found'],
       ['face-repair:destination-missing', 'Destination person x does not exist'],
     ])('translates the %s failure instead of echoing the server text', async (code, message) => {
-      vi.mocked(resolveFaces).mockRejectedValueOnce(httpError(400, { message, code, statusCode: 400 }));
+      vi.mocked(resolveFaces).mockRejectedValueOnce(httpError({ message, code, statusCode: 400 }));
 
       render(Page, { props: { data: makePageData() } });
       await waitFor(() => expect(screen.getAllByTestId('face-tile')).toHaveLength(3));
@@ -637,7 +637,7 @@ describe('+page.svelte (face-cleanup review — Model B)', () => {
     // though it stays English. Reachable only via failures the UI itself cannot produce.
     it('falls back to the raw server message when the failure carries no code', async () => {
       const message = 'entireCluster cannot be combined with per-face resolution buckets';
-      vi.mocked(resolveFaces).mockRejectedValueOnce(httpError(400, { message, statusCode: 400 }));
+      vi.mocked(resolveFaces).mockRejectedValueOnce(httpError({ message, statusCode: 400 }));
 
       render(Page, { props: { data: makePageData() } });
       await waitFor(() => expect(screen.getAllByTestId('face-tile')).toHaveLength(3));

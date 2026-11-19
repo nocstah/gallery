@@ -4,10 +4,10 @@
 // wherever it is made from, not only on the page that made the change; then every stack among them is folded up
 // again (StackUpdate), so its cover and count are right. A batch bigger than LIMIT is left to the next load of the
 // page.
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
 import { getAssetInfo, getStack, type AssetResponseDto } from '@immich/sdk';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { toTimelineAsset } from '$lib/utils/timeline-util';
 
 const LIMIT = 200;
 const AT_ONCE = 8;
@@ -30,7 +30,7 @@ export const refreshAssets = async (ids: string[]) => {
     'AssetsChanged',
     fresh.map((asset) => toTimelineAsset(asset)),
   );
-  for (const id of new Set(fresh.flatMap(({ stack }) => (stack ? [stack.id] : [])))) {
+  for (const id of new Set(fresh.flatMap(({ stack }) => (stack ? stack.id : [])))) {
     const stack = await getStack({ id }).catch(() => undefined);
     if (stack) {
       eventManager.emit('StackUpdate', stack);

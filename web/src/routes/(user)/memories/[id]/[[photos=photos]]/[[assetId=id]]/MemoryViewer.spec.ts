@@ -1,12 +1,12 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { reactivePageMock as mockPage } from '#lib/gallery/__mocks__/reactive-page.mock.svelte.ts';
+import { memoryManager } from '#lib/managers/memory-manager.svelte.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
 import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import type { Component } from 'svelte';
 import { goto } from '$app/navigation';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { memoryManager } from '$lib/managers/memory-manager.svelte';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { reactivePageMock as mockPage } from '@test-data/mocks/reactive-page.mock.svelte';
 import MemoryViewer from './MemoryViewer.svelte';
 
 // Ported from the fork's #790/#791 regression suite (deleted with the fork's own memory viewer,
@@ -62,90 +62,81 @@ vi.mock('$app/navigation', () => ({ goto: vi.fn(() => Promise.resolve()) }));
 // off `page.params.id` / `page.url.searchParams`, so a non-reactive plain object would not
 // re-trigger that derivation when a test reassigns `mockPage.params`/`mockPage.url`.
 vi.mock('$app/state', async () => {
-  const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
-  return { page: reactivePageMock };
+  const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
+  // `navigating`: the scroll memory (actions/scroll-memory.svelte) reads where a navigation goes
+  return { page: reactivePageMock, navigating: { to: null } };
 });
 
-vi.mock('$lib/components/shared-components/context-menu/ButtonContextMenu.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/context-menu/ButtonContextMenu.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/context-menu/MenuOption.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/shared-components/context-menu/MenuOption.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/shared-components/gallery-viewer/GalleryViewer.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/gallery-viewer-props.stub.svelte');
+vi.mock('#lib/components/shared-components/gallery-viewer/GalleryViewer.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/gallery-viewer-props.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ArchiveAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/gallery/actions/ArchiveAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ChangeDateAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/ChangeDateAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ChangeDescriptionAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/ChangeDescriptionAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/ChangeLocationAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/ChangeLocationAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/CreateSharedLinkAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/DeleteAssetsAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/DeleteAssetsAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/DownloadAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/DownloadAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/actions/FavoriteAction.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/FavoriteAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/timeline/AssetSelectControlBar.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/timeline/actions/TagAction.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
-  return { default: MockComponent };
-});
-
-vi.mock('$lib/components/timeline/AssetSelectControlBar.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
-  return { default: MockComponent };
-});
-
-vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({
+vi.mock('#lib/managers/asset-multi-select-manager.svelte.ts', () => ({
   assetMultiSelectManager: mockAssetMultiSelectManager,
 }));
 
-vi.mock('$lib/managers/asset-viewer-manager.svelte', () => ({
+vi.mock('#lib/managers/asset-viewer-manager.svelte.ts', () => ({
   assetViewerManager: mockAssetViewerManager,
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: mockAuthManager,
 }));
 
 // $lib/managers/memory-manager.svelte is intentionally left unmocked -- see the comment above.
 
-vi.mock('$lib/services/asset.service', () => ({
+vi.mock('#lib/services/asset.service.ts', () => ({
   getAssetBulkActions: vi.fn(() => ({})),
 }));
 
@@ -185,10 +176,10 @@ function memory(id: string, assetIds: string[]): MemoryResponseDto {
 }
 
 /**
- * A memory whose assets span several years, as an `on_this_day_place` card does. The plain
- * `memory()` helper above dates every asset the same day, which cannot distinguish "the memory's
- * first asset" from "the asset being viewed".
- */
+A memory whose assets span several years, as an `on_this_day_place` card does. The plain
+`memory()` helper above dates every asset the same day, which cannot distinguish "the memory's
+first asset" from "the asset being viewed".
+*/
 function multiYearMemory(id: string, assets: { id: string; localDateTime: string }[]): MemoryResponseDto {
   return {
     ...memory(
@@ -487,7 +478,7 @@ describe('MemoryViewer bail-out effect', () => {
     await waitFor(() =>
       expect(goto).toHaveBeenCalledWith(
         memoryManager.memoriesHref,
-        expect.objectContaining({ replaceState: true, noScroll: true }),
+        expect.objectContaining({ replace: true, reset: false }),
       ),
     );
   });

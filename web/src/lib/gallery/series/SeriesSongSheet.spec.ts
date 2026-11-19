@@ -1,7 +1,7 @@
+import { comingMemory } from '#test/kioku/factories/series-factory.ts';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import type { Mock } from 'vitest';
-import { comingMemory } from '@test-data/factories/series-factory';
 import SeriesSongSheet from './SeriesSongSheet.svelte';
 import type { ComingMemory, SeriesSong } from './series-api';
 
@@ -12,7 +12,7 @@ import type { ComingMemory, SeriesSong } from './series-api';
 const mocks = vi.hoisted(() => ({
   auth: { authenticated: true, user: { id: 'owner-id', isAdmin: true }, params: {} },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
 
 const song = (id: string, title: string, used = false): SeriesSong => ({
   id,

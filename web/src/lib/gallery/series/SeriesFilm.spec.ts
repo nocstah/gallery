@@ -1,8 +1,8 @@
+import { privateFilmMedia } from '#lib/components/memories/film/private-film-media.ts';
+import { comingMemory } from '#test/kioku/factories/series-factory.ts';
 import type { AssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { privateFilmMedia } from '$lib/components/memories/film/private-film-media';
-import { comingMemory } from '@test-data/factories/series-factory';
 import SeriesFilm from './SeriesFilm.svelte';
 import { seen } from './memory-film.test-seen';
 
@@ -18,8 +18,8 @@ const mocks = vi.hoisted(() => ({
     preferences: { memories: { duration: 7 } },
   },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
-vi.mock('$lib/components/memories/film/MemoryFilm.svelte', async () => {
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/components/memories/film/MemoryFilm.svelte', async () => {
   const { default: stub } = await import('./memory-film.test-wrapper.svelte');
   return { default: stub };
 });

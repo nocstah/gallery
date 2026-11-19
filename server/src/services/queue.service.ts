@@ -1,6 +1,4 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { ArgOf } from 'src/repositories/event.repository.js';
-import type { ConcurrentQueueName, JobItem } from 'src/types.js';
 import { OnEvent } from 'src/decorators.js';
 import { AuthDto } from 'src/dtos/auth.dto.js';
 import { SystemConfig } from 'src/dtos/config.dto.js';
@@ -28,7 +26,9 @@ import {
   QueueCommand,
   QueueName,
 } from 'src/enum.js';
+import type { ArgOf } from 'src/repositories/event.repository.js';
 import { BaseService } from 'src/services/base.service.js';
+import type { ConcurrentQueueName, JobItem } from 'src/types.js';
 import { handlePromiseError } from 'src/utils/misc.js';
 
 const asNightlyTasksCron = (config: SystemConfig) => {
@@ -199,7 +199,7 @@ export class QueueService extends BaseService {
       this.jobRepository.isPaused(name),
       includeJobTypes ? this.queueMaintenanceRepository.getJobTypes(name) : [],
     ]);
-    return { name, isPaused, statistics, ...(jobTypes.length > 0 && { jobTypes }) };
+    return { name, isPaused, statistics: { ...statistics, paused: 0 }, ...(jobTypes.length > 0 && { jobTypes }) };
   }
 
   private async start(name: QueueName, { force }: QueueCommandDto): Promise<void> {
@@ -320,6 +320,7 @@ export class QueueService extends BaseService {
         { name: JobName.PersonCleanup },
         { name: JobName.MemoryCleanup },
         { name: JobName.SessionCleanup },
+        { name: JobName.AuthChallengeCleanup },
         { name: JobName.HlsSessionCleanup },
         { name: JobName.AuditTableCleanup },
         // L8: low-frequency backstop for the album-grant reconcile mechanism — sweeps every

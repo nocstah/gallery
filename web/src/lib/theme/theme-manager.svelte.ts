@@ -5,8 +5,8 @@
 // The built-in themes are files in /themes (static/themes, made from the Omarchy themes by
 // tools/export-omarchy-themes.py); installed ones, from a file or a URL, are kept in this browser with the choice.
 // The chosen theme's CSS is kept too, so app.html can put it in place before the first paint.
+import { parseTheme, themeCss, type GalleryTheme } from '#lib/theme/derive.ts';
 import { ThemePreference, themeManager as colourMode } from '@immich/ui';
-import { parseTheme, themeCss, type GalleryTheme } from '$lib/theme/derive';
 
 export const FOLLOW_OMARCHY = 'omarchy';
 const CHOICE = 'gallery.theme';

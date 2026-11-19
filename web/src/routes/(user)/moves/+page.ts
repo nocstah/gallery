@@ -1,8 +1,8 @@
+import { vaultEdition } from '#lib/gallery/edition.ts';
+import { Route } from '#lib/route.ts';
+import { authenticate } from '#lib/utils/auth.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
 import { redirect } from '@sveltejs/kit';
-import { vaultEdition } from '$lib/gallery/edition';
-import { Route } from '$lib/route';
-import { authenticate } from '$lib/utils/auth';
-import { getFormatter } from '$lib/utils/i18n';
 import type { PageLoad } from './$types';
 
 export const load = (async ({ url }) => {

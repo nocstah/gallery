@@ -1,11 +1,11 @@
+import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { curator, type SmartAlbum } from '#lib/utils/curator.ts';
 import type { AlbumResponseDto } from '@immich/sdk';
 import { toastManager, type ActionItem } from '@immich/ui';
 import { mdiCalendarHeartOutline } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
 import { SvelteMap } from 'svelte/reactivity';
 import { goto } from '$app/navigation';
-import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-import { curator, type SmartAlbum } from '$lib/utils/curator';
 import { seriesApi, seriesFailure } from './series-api';
 import { seriesIsMine, seriesRoute } from './series-route';
 
@@ -24,10 +24,10 @@ const smartOf = new SvelteMap<string, SmartAlbum | null>();
 const asking = new Set<string>();
 
 /**
- * The smart album behind an album, once Curator has said (it is asked the first time this is read for the album):
- * undefined until then, or while Curator does not answer; null for an ordinary album. Read in a template or an
- * action's $if, it follows Curator's answer. A library whose Curator keeps no smart albums asks nothing.
- */
+The smart album behind an album, once Curator has said (it is asked the first time this is read for the album):
+undefined until then, or while Curator does not answer; null for an ordinary album. Read in a template or an
+action's $if, it follows Curator's answer. A library whose Curator keeps no smart albums asks nothing.
+*/
 export const albumSmartAlbum = (albumId: string): SmartAlbum | null | undefined => {
   if (!smartOf.has(albumId) && !asking.has(albumId) && curatorOffers('smart')) {
     asking.add(albumId);

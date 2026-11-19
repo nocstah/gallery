@@ -1,7 +1,7 @@
+import { qrManager } from '#lib/managers/special-albums.svelte.ts';
 import { render, screen } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { qrManager } from '$lib/managers/special-albums.svelte';
 import AlbumPreview from './album-preview.svelte';
 
 vi.mock('@immich/ui', async (orig) => ({
@@ -13,7 +13,7 @@ describe('AlbumPreview', () => {
   beforeAll(async () => {
     // Load the real en bundle so `$t('cmdk_preview_item_count', { values: { count } })`
     // resolves to English ICU output ("1 photo" / "2 photos") instead of the raw key.
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US' });
     await waitLocale('en-US');
   });

@@ -5,7 +5,7 @@ import { removeObjects } from './remove-objects.svelte';
 
 const { kinds, mine } = vi.hoisted(() => ({ kinds: vi.fn(), mine: { current: true } }));
 
-vi.mock('$lib/utils/curator', () => ({ curator: { kinds }, curatorIsMine: () => mine.current }));
+vi.mock('#lib/utils/curator.ts', () => ({ curator: { kinds }, curatorIsMine: () => mine.current }));
 
 describe('removeObjects', () => {
   beforeEach(() => {

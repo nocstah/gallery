@@ -1,4 +1,4 @@
-import { firstPhotoInView, pageGrid, skipToContent } from '$lib/utils/skip-to-content';
+import { firstPhotoInView, pageGrid, skipToContent } from '#lib/utils/skip-to-content.ts';
 
 // Local Omarchy layer: the bar's Skip to content lands on a page's photo grid, and the next Tab is its first photo in
 // view, past whatever heads the grid (an album's details, a grouping control); a page without photos is left to the

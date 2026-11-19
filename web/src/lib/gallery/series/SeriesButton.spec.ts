@@ -1,14 +1,14 @@
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { secondWithout, serving } from '#test/kioku/factories/library-context-factory.ts';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { secondWithout, serving } from '@test-data/factories/library-context-factory';
 import SeriesButton from './series-button.test-wrapper.svelte';
 
 // Local Omarchy layer: the Memories page's way to "From the beginning" (gallery/series): the owner's only, and only
 // where this library's Curator offers what it adds to memories.
 
 const mocks = vi.hoisted(() => ({ auth: { authenticated: true, user: { id: 'owner-id', isAdmin: true } } }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
 
 beforeEach(() => {
   resetLibraryContext();

@@ -1,10 +1,10 @@
-import { getTimeBuckets, TimeBucketSize } from '@immich/sdk';
+import { createFilterState } from '#lib/components/filter-panel/filter-panel.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { buildPhotosTimelineOptions } from '#lib/utils/photos-filter-options.ts';
+import { placeKey, placeStatsOf, type PlaceKey, type PlaceStats } from '#lib/utils/place-stats.ts';
+import { TimeBucketSize, getTimeBuckets } from '@immich/sdk';
 import { SvelteMap } from 'svelte/reactivity';
-import { createFilterState } from '$lib/components/filter-panel/filter-panel';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { buildPhotosTimelineOptions } from '$lib/utils/photos-filter-options';
-import { placeKey, placeStatsOf, type PlaceKey, type PlaceStats } from '$lib/utils/place-stats';
 
 // Local Omarchy layer: how many photos each place holds and the years they span, for the place tiles on Places and
 // Explore (DESIGN.md, Places). Gallery lists one photo per city (GET /search/cities) and counts nothing, so each place's

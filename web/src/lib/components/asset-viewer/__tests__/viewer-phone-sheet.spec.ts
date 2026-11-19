@@ -1,17 +1,17 @@
+import AssetViewer from '#lib/components/asset-viewer/AssetViewer.svelte';
+import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { userPreferencesManager } from '#lib/managers/user-preferences-manager.svelte.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
+import { getAnimateMock } from '#test/kioku/mocks/animate.mock.ts';
+import { getResizeObserverMock } from '#test/kioku/mocks/resize-observer.mock.ts';
 import { AssetTypeEnum, AssetVisibility } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { getAnimateMock } from '$lib/__mocks__/animate.mock';
-import { getResizeObserverMock } from '$lib/__mocks__/resize-observer.mock';
-import AssetViewer from '$lib/components/asset-viewer/AssetViewer.svelte';
-import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
-import { renderWithTooltips } from '$tests/helpers';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 
 // Local Omarchy layer: on a phone (mediaQueryManager.maxMd) a panel of the viewer (Info, the editor, an album's
 // comments) is a sheet under the photo with none of the viewer's chrome over it, and a photo opens on its own there
@@ -21,9 +21,9 @@ const { media } = vi.hoisted(() => ({
   media: { maxMd: false, pointerCoarse: false, reducedMotion: true, isFullSidebar: true, minLg: true },
 }));
 
-vi.mock('$lib/stores/media-query-manager.svelte', () => ({ mediaQueryManager: media }));
+vi.mock('#lib/stores/media-query-manager.svelte.ts', () => ({ mediaQueryManager: media }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: {
     init: vi.fn(),
     loadFeatureFlags: vi.fn(),
@@ -31,11 +31,11 @@ vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
   } as never,
 }));
 
-vi.mock('$lib/stores/ocr.svelte', () => ({
+vi.mock('#lib/stores/ocr.svelte.ts', () => ({
   ocrManager: { clear: vi.fn(), getAssetOcr: vi.fn(), hasOcrData: false, showOverlay: false, data: [] },
 }));
 
-vi.mock('$lib/stores/face.svelte', () => ({
+vi.mock('#lib/stores/face.svelte.ts', () => ({
   faceManager: { clear: vi.fn(), getAssetFaces: vi.fn(), data: [], people: [], facesByPersonId: new Map() },
 }));
 

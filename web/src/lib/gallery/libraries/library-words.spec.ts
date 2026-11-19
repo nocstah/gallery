@@ -1,13 +1,13 @@
-import { addMessages, locale } from 'svelte-i18n';
-import { get } from 'svelte/store';
-import en from '$i18n/en.json';
+import en from '#i18n/en.json';
 import {
   libraryContextFile,
   mainLibrary,
   secondLibrary,
   serving,
   type TestLibrary,
-} from '@test-data/factories/library-context-factory';
+} from '#test/kioku/factories/library-context-factory.ts';
+import { addMessages, locale } from 'svelte-i18n';
+import { get } from 'svelte/store';
 import { loadLibraryContext, resetLibraryContext } from './library-context.svelte';
 import { chipLibrary, libraryNamed, libraryTitle, namedLibrary } from './library-words';
 

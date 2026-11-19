@@ -1,10 +1,9 @@
-import type { SharedSpaceMemberResponseDto, SharedSpaceResponseDto } from '@immich/sdk';
-import { SharedSpaceRole } from '@immich/sdk';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { SharedSpaceRole, type SharedSpaceMemberResponseDto, type SharedSpaceResponseDto } from '@immich/sdk';
 import { modalManager, toastManager } from '@immich/ui';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import SpaceLayout from './+layout.svelte';
 
 const { mockPage, mockAuthManager, gotoMock, invalidateAllMock } = vi.hoisted(() => ({
@@ -15,9 +14,9 @@ const { mockPage, mockAuthManager, gotoMock, invalidateAllMock } = vi.hoisted(()
 }));
 vi.mock('$app/state', () => ({ page: mockPage }));
 vi.mock('$app/navigation', () => ({ goto: gotoMock, invalidateAll: invalidateAllMock }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mockAuthManager }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mockAuthManager }));
 // SpaceTabs gates its Map tab on the `map` feature flag (#1046); the root layout inits it in the app.
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({ featureFlagsManager: { value: { map: true } } }));
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({ featureFlagsManager: { value: { map: true } } }));
 
 // The overflow handlers call into @immich/ui's modalManager (confirm dialogs, link-libraries modal)
 // and toastManager — mock those while keeping the real Button/IconButton/Icon/TooltipProvider so the
@@ -34,8 +33,8 @@ vi.mock('@immich/ui', async (importOriginal) => {
 // The real UserPageLayout mounts the NavigationBar (which needs a Tooltip provider); the shared
 // mock renders the leading/buttons/children snippets inside a TooltipProvider — matching the other
 // space page specs — so the app-bar testids are reachable.
-vi.mock('$lib/components/layouts/UserPageLayout.svelte', async () => {
-  const { default: MockComponent } = await import('$lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
+vi.mock('#lib/components/layouts/UserPageLayout.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/components/spaces/mock-user-page-layout.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
@@ -105,7 +104,7 @@ describe('space [spaceId] +layout.svelte', () => {
     invalidateAllMock.mockResolvedValue(undefined);
     gotoMock.mockResolvedValue(undefined);
     mockPage.url = new URL('https://gallery.test/spaces/s1');
-    const { spaceUiManager } = await import('$lib/managers/space-ui-manager.svelte');
+    const { spaceUiManager } = await import('#lib/managers/space-ui-manager.svelte.ts');
     spaceUiManager.reset();
   });
 
@@ -129,7 +128,7 @@ describe('space [spaceId] +layout.svelte', () => {
   });
 
   it('records an add-photos intent and navigates to the Photos route when ＋ is clicked', async () => {
-    const { spaceUiManager } = await import('$lib/managers/space-ui-manager.svelte');
+    const { spaceUiManager } = await import('#lib/managers/space-ui-manager.svelte.ts');
     mockPage.url = new URL('https://gallery.test/spaces/s1/members');
     renderLayout(SharedSpaceRole.Editor);
     screen.getByTestId('space-add-photos').click();
@@ -138,7 +137,7 @@ describe('space [spaceId] +layout.svelte', () => {
   });
 
   it('records an add-photos intent but does NOT navigate when already on the Photos base route', async () => {
-    const { spaceUiManager } = await import('$lib/managers/space-ui-manager.svelte');
+    const { spaceUiManager } = await import('#lib/managers/space-ui-manager.svelte.ts');
     mockPage.url = new URL('https://gallery.test/spaces/s1');
     renderLayout(SharedSpaceRole.Editor);
     screen.getByTestId('space-add-photos').click();
@@ -248,7 +247,7 @@ describe('space [spaceId] +layout.svelte', () => {
     });
 
     it('handleDelete: removes the space and navigates to the spaces route when confirmed', async () => {
-      vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+      vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
       renderLayout(SharedSpaceRole.Owner);
 
       await clickOverflowOption('spaces_delete');
@@ -258,7 +257,7 @@ describe('space [spaceId] +layout.svelte', () => {
     });
 
     it('handleDelete: does nothing when the confirm dialog is dismissed', async () => {
-      vi.mocked(modalManager.showDialog).mockResolvedValue(false);
+      vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(false);
       renderLayout(SharedSpaceRole.Owner);
 
       await clickOverflowOption('spaces_delete');
@@ -302,7 +301,7 @@ describe('space [spaceId] +layout.svelte', () => {
     });
 
     it('handleLeave: removes the current user from the space and navigates to the spaces list when confirmed', async () => {
-      vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+      vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
       renderLayout(SharedSpaceRole.Editor, { member: member({ role: SharedSpaceRole.Editor }) });
 
       await clickOverflowOption('spaces_leave');
@@ -312,7 +311,7 @@ describe('space [spaceId] +layout.svelte', () => {
     });
 
     it('handleLeave: does nothing when the confirm dialog is dismissed', async () => {
-      vi.mocked(modalManager.showDialog).mockResolvedValue(false);
+      vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(false);
       renderLayout(SharedSpaceRole.Editor, { member: member({ role: SharedSpaceRole.Editor }) });
 
       await clickOverflowOption('spaces_leave');
@@ -323,7 +322,7 @@ describe('space [spaceId] +layout.svelte', () => {
     });
 
     it('handleLeave: uses the plain confirmation when the leaving member has no linked albums', async () => {
-      vi.mocked(modalManager.showDialog).mockResolvedValue(false);
+      vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(false);
       renderLayout(SharedSpaceRole.Editor, {
         member: member({ role: SharedSpaceRole.Editor }),
         linkedAlbums: [{ addedById: 'someone-else' }],
@@ -339,7 +338,7 @@ describe('space [spaceId] +layout.svelte', () => {
     });
 
     it('handleLeave: warns that linked albums will be removed when the leaving member linked albums of their own (L16)', async () => {
-      vi.mocked(modalManager.showDialog).mockResolvedValue(false);
+      vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(false);
       renderLayout(SharedSpaceRole.Editor, {
         member: member({ role: SharedSpaceRole.Editor }),
         linkedAlbums: [{ addedById: 'u1' }],
@@ -355,7 +354,7 @@ describe('space [spaceId] +layout.svelte', () => {
     });
 
     it('handleBulkAddAssets: bulk-adds assets for an editor when confirmed', async () => {
-      vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+      vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
       renderLayout(SharedSpaceRole.Editor, { member: member({ role: SharedSpaceRole.Editor }) });
 
       await clickOverflowOption('add_all_photos');
@@ -365,7 +364,7 @@ describe('space [spaceId] +layout.svelte', () => {
     });
 
     it('handleBulkAddAssets: does nothing when the confirm dialog is dismissed', async () => {
-      vi.mocked(modalManager.showDialog).mockResolvedValue(false);
+      vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(false);
       renderLayout(SharedSpaceRole.Editor, { member: member({ role: SharedSpaceRole.Editor }) });
 
       await clickOverflowOption('add_all_photos');
@@ -412,7 +411,7 @@ describe('space [spaceId] +layout.svelte', () => {
   });
 
   it('leads a Space of one with its albums, its photos at /photos, where adding photos goes', async () => {
-    const { spaceUiManager } = await import('$lib/managers/space-ui-manager.svelte');
+    const { spaceUiManager } = await import('#lib/managers/space-ui-manager.svelte.ts');
     mockPage.url = new URL('https://gallery.test/spaces/s1/albums');
     renderLayout(SharedSpaceRole.Owner, { linkedAlbums: [{ id: 'a1' }] });
     const tabs = within(screen.getByTestId('space-tabs')).getAllByRole('link');
@@ -434,7 +433,7 @@ describe('space [spaceId] +layout.svelte', () => {
   });
 
   it('suppresses the app bar, tabs and cover when chrome is hidden (full-screen selection mode)', async () => {
-    const { spaceUiManager } = await import('$lib/managers/space-ui-manager.svelte');
+    const { spaceUiManager } = await import('#lib/managers/space-ui-manager.svelte.ts');
     spaceUiManager.setChromeHidden(true);
     renderLayout(SharedSpaceRole.Owner);
     expect(screen.queryByTestId('space-tabs')).not.toBeInTheDocument();

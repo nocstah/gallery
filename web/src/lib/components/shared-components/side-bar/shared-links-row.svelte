@@ -1,11 +1,11 @@
 <script lang="ts">
   // Local Omarchy layer (plan A): the public links, the last row under Shared, laid out like the Spaces above it
-  import { page } from '$app/state';
-  import { Route } from '$lib/route';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
+  import { Route } from '#lib/route.ts';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
   import { Icon } from '@immich/ui';
   import { mdiLinkVariant } from '@mdi/js';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   const collapsed = $derived(sidebarModeStore.layout === 'rail' && !sidebarModeStore.railExpanded);
   const active = $derived(page.url.pathname.startsWith(Route.sharedLinks()));

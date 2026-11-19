@@ -1,17 +1,17 @@
-import { AssetOrder } from '@immich/sdk';
-import { FaceKind } from '$lib/utils/folder-faces';
+import { FaceKind } from '#lib/utils/folder-faces.ts';
 import {
-  choosePeriodFaces,
   LIST_MOST,
-  listOrder,
   PeriodTier,
+  choosePeriodFaces,
+  listOrder,
   type CoverPick,
   type ListedPicture,
   type PeriodPicture,
   type PeriodSources,
   type PeriodVerdict,
-} from '$lib/utils/period-faces';
-import { BRIGHT, DIM } from '@test-data/thumbhash';
+} from '#lib/utils/period-faces.ts';
+import { BRIGHT, DIM } from '#test/kioku/thumbhash.ts';
+import { AssetOrder } from '@immich/sdk';
 
 // Local Omarchy layer: a year's or a month's face by the folder rule (utils/period-faces): favourites first, a camera's
 // photos, never a screenshot or a page of words, videos only where there is nothing else, the bright before the dim

@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createFilterState, type FilterState } from '$lib/components/filter-panel/filter-panel';
+import { createFilterState, type FilterState } from '#lib/components/filter-panel/filter-panel.ts';
+import { reactivePageMock as mockPage } from '#lib/gallery/__mocks__/reactive-page.mock.svelte.ts';
 import {
   applyContextualFilter,
   buildContextualFilterUrl,
@@ -8,21 +8,23 @@ import {
   buildPersonFilterPatch,
   isFilterStateUrlUnchanged,
   resolveFilterTarget,
-} from '$lib/utils/filter-target';
-import { getPhotosPersonFilterId } from '$lib/utils/photos-filter-options';
-import { reactivePageMock as mockPage } from '@test-data/mocks/reactive-page.mock.svelte';
+} from '#lib/utils/filter-target.ts';
+import { getPhotosPersonFilterId } from '#lib/utils/photos-filter-options.ts';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { gotoMock } = vi.hoisted(() => ({ gotoMock: vi.fn().mockResolvedValue(undefined) }));
 
-vi.mock('$app/navigation', () => ({
+// Browser mode rejects an import of a name a mock does not export, so keep the global fakes' other exports.
+vi.mock('$app/navigation', async () => ({
+  ...(await import('#test/unit/mocks/app-navigation.ts')),
   goto: gotoMock,
 }));
 
 // applyContextualFilter reads the reactive `page` from `$app/state` — see reactive-page.mock's own
 // docs for why this needs to be a real $state object rather than a plain vi.hoisted literal.
 vi.mock('$app/state', async () => {
-  const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
-  return { page: reactivePageMock };
+  const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
+  return { ...(await import('#test/unit/mocks/app-state.svelte.ts')), page: reactivePageMock };
 });
 
 const u = (path: string) => new URL(`https://g.test${path}`);

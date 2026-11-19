@@ -1,21 +1,20 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import SharedLinkFormFields from '$lib/components/SharedLinkFormFields.svelte';
-  import { Route } from '$lib/route';
-  import { handleUpdateSharedLink } from '$lib/services/shared-link.service';
-  import { linkName } from '$lib/utils/shared-link-words';
+  import SharedLinkFormFields from '#lib/components/SharedLinkFormFields.svelte';
+  import { createPreloadedQuery } from '#lib/queries/client.ts';
+  import { getSharedLinkQuery } from '#lib/queries/shared-link.query.ts';
+  import { Route } from '#lib/route.ts';
+  import { handleUpdateSharedLink } from '#lib/services/shared-link.service.ts';
+  import { linkName } from '#lib/utils/shared-link-words.ts';
   import { FormModal } from '@immich/ui';
   import { mdiLink } from '@mdi/js';
   import { t } from 'svelte-i18n';
-  import type { PageData } from './$types';
+  import { goto } from '$app/navigation';
+  import type { PageProps } from './$types';
 
-  type Props = {
-    data: PageData;
-  };
+  const { params }: PageProps = $props();
 
-  let { data }: Props = $props();
-
-  const sharedLink = $state(data.sharedLink);
+  const query = createPreloadedQuery(() => getSharedLinkQuery(params.id));
+  const sharedLink = $derived(query.data);
 
   let description = $state(sharedLink.description ?? '');
   let allowDownload = $state(sharedLink.allowDownload);
@@ -26,12 +25,9 @@
   const named = $derived(linkName($t, { ...sharedLink, description }));
   let expiresAt = $state(sharedLink.expiresAt);
 
-  const onClose = async () => {
-    await goto(Route.sharedLinks());
-  };
-
+  const onClose = () => void goto(Route.sharedLinks());
   const onSubmit = async () => {
-    const success = await handleUpdateSharedLink(sharedLink, {
+    const sharedLinkEditDto = {
       description,
       password: password ?? null,
       expiresAt,
@@ -39,9 +35,10 @@
       allowDownload,
       showMetadata,
       slug: slug.trim() ?? null,
-    });
-    if (success) {
-      await onClose();
+    };
+    // Local Omarchy layer: upstream's mutation, through the service that also tells Kioku's share sheets
+    if (await handleUpdateSharedLink(sharedLink, sharedLinkEditDto)) {
+      onClose();
     }
   };
 </script>

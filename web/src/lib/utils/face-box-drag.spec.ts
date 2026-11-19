@@ -2,15 +2,16 @@ import {
   computeFaceCroppedCoordinates,
   computeImageContentMetrics,
   computeSelectorPosition,
-} from '$lib/utils/face-box-drag';
+} from '#lib/utils/face-box-drag.ts';
 
 // A minimal stand-in for HTMLImageElement -- getNaturalSize (container-utils.ts) only ever reads
-// naturalWidth/naturalHeight off it, and `instanceof HTMLVideoElement` is false for this shape in
-// happy-dom, which is exactly the branch we want for these tests.
+// naturalWidth/naturalHeight off it, and `instanceof HTMLVideoElement` is false for this plain
+// object, which is exactly the branch we want for these tests.
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 const image = (naturalWidth: number, naturalHeight: number) =>
   ({ naturalWidth, naturalHeight }) as unknown as HTMLImageElement;
 
-describe('face-box-drag (shared geometry, used by FaceEditor and SpaceFaceEditor)', () => {
+describe('face-box-drag (shared geometry, used by FaceEditor)', () => {
   describe('computeImageContentMetrics', () => {
     it('centers a landscape image inside a taller container', () => {
       // 2000x1000 natural, scaled to fit a 1000x1000 container -> 1000x500, centered vertically.

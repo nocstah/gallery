@@ -13,12 +13,12 @@ const centre = (box: TileBox) => (box.left + box.right) / 2;
 
 /** The tiles in the same row as `from`, by index, in the order given (the grid's own). */
 export const rowOf = (boxes: readonly TileBox[], from: TileBox, tolerance = ROW_TOLERANCE) =>
-  boxes.flatMap((box, index) => (Math.abs(box.top - from.top) <= tolerance ? [index] : []));
+  boxes.flatMap((box, index) => (Math.abs(box.top - from.top) <= tolerance ? index : []));
 
 /**
- * The tile in the row above (`up`) or below (`down`) the one at `from`, by its index in `boxes`, nearest by horizontal
- * centre (the one further left when two are as near); undefined when no row is drawn on that side.
- */
+The tile in the row above (`up`) or below (`down`) the one at `from`, by its index in `boxes`, nearest by horizontal
+centre (the one further left when two are as near); undefined when no row is drawn on that side.
+*/
 export const rowNeighbour = (
   boxes: readonly TileBox[],
   from: TileBox,
@@ -53,9 +53,9 @@ export const rowNeighbour = (
 };
 
 /**
- * How far (px) to scroll so `tile` is wholly inside the clear band `[top, bottom]` with `air` around it, or 0 when it
- * already is; a tile taller than the band lines up with its top.
- */
+How far (px) to scroll so `tile` is wholly inside the clear band `[top, bottom]` with `air` around it, or 0 when it
+already is; a tile taller than the band lines up with its top.
+*/
 export const revealDelta = (tile: { top: number; bottom: number }, band: { top: number; bottom: number }, air = 8) => {
   if (tile.top < band.top + air || tile.bottom - tile.top > band.bottom - band.top - 2 * air) {
     return tile.top - band.top - air;

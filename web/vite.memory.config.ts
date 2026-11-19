@@ -8,13 +8,14 @@ import { resolve } from 'node:path';
 // The standalone build does not load SvelteKit's config, which normally creates this bundle.
 const mergedDir = resolve(import.meta.dirname, '../i18n/gallery/merged');
 
-/** Standalone public player: no Gallery shell, authentication manager, private API or SvelteKit runtime. */
-export default defineConfig({
+/** Standalone public player: no Gallery shell, authentication manager, private API or SvelteKit runtime. Made when Vite
+asks for it, not when the file is imported. */
+export default defineConfig(() => ({
   root: resolve(import.meta.dirname, 'memory-player'),
   base: '/memory-player/',
   resolve: {
     alias: [
-      { find: '$lib', replacement: resolve(import.meta.dirname, 'src/lib') },
+      { find: '#lib', replacement: resolve(import.meta.dirname, 'src/lib') },
       { find: /^@immich\/ui$/, replacement: resolve(import.meta.dirname, 'memory-player/src/public-ui.ts') },
     ],
   },
@@ -83,4 +84,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

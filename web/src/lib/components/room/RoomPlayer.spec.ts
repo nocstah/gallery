@@ -1,8 +1,14 @@
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { curator } from '#lib/utils/curator.ts';
+import type { MemoryCard } from '#lib/utils/memory-cards.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '#test/kioku/factories/library-context-factory.ts';
+import { BRIGHT, DIM } from '#test/kioku/thumbhash.ts';
 import {
   AssetTypeEnum,
+  MemoryType,
   getAlbumInfo,
   getAssetInfo,
-  MemoryType,
   searchAssets,
   type MemoryResponseDto,
   type SearchResponseDto,
@@ -10,12 +16,6 @@ import {
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { goto } from '$app/navigation';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { curator } from '$lib/utils/curator';
-import type { MemoryCard } from '$lib/utils/memory-cards';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
-import { BRIGHT, DIM } from '@test-data/thumbhash';
 import RoomPlayer from './RoomPlayer.svelte';
 import { memoryReel, type RoomRequest } from './room-reels';
 import { loadAlbumAssets, loadToday } from './room-source';
@@ -35,10 +35,10 @@ vi.mock('$app/navigation', () => ({
   beforeNavigate: vi.fn(),
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mockAuth }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mockAuth }));
 
-vi.mock('$lib/utils/curator', async (original) => ({
-  ...(await original<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (original) => ({
+  ...(await original<typeof import('#lib/utils/curator.ts')>()),
   curatorIsMine: () => mockAuth.authenticated && mockAuth.user.isAdmin,
   curator: {
     story: vi.fn(() => Promise.resolve({ story: null })),

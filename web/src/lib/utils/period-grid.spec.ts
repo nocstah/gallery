@@ -1,4 +1,10 @@
-import { layoutPeriodGrid, periodDensity, periodSlot, type PeriodCell, type PeriodRow } from '$lib/utils/period-grid';
+import {
+  layoutPeriodGrid,
+  periodDensity,
+  periodSlot,
+  type PeriodCell,
+  type PeriodRow,
+} from '#lib/utils/period-grid.ts';
 
 // the archive's own shape: 1977 and 1978, nothing from 1979 to 1988, then 1989, 1991 and every year from 1993
 const YEARS = [1977, 1978, 1989, 1991, ...Array.from({ length: 34 }, (_, index) => 1993 + index)];

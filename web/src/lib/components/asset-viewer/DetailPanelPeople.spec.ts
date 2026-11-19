@@ -1,12 +1,12 @@
+import { cropFacesFromAsset } from '#lib/gallery/stores/preferences.store.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
 import { AssetTypeEnum, type AssetResponseDto, type PersonResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { tick } from 'svelte';
 import { get } from 'svelte/store';
-import { cropFacesFromAsset } from '$lib/stores/preferences.store';
-import { renderWithTooltips } from '$tests/helpers';
-import { assetFactory } from '@test-data/factories/asset-factory';
 import DetailPanelPeople from './DetailPanelPeople.svelte';
 
 const { authManagerMock, faceManagerMock, zoomImageToBase64Mock } = vi.hoisted(() => ({
@@ -25,15 +25,15 @@ const { authManagerMock, faceManagerMock, zoomImageToBase64Mock } = vi.hoisted((
   zoomImageToBase64Mock: vi.fn(),
 }));
 
-vi.mock('$lib/stores/face.svelte', () => ({ faceManager: faceManagerMock }));
+vi.mock('#lib/stores/face.svelte.ts', () => ({ faceManager: faceManagerMock }));
 
-vi.mock('$lib/utils/people-utils', () => ({ zoomImageToBase64: zoomImageToBase64Mock }));
+vi.mock('#lib/utils/people-utils.ts', () => ({ zoomImageToBase64: zoomImageToBase64Mock }));
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn().mockResolvedValue(undefined) }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: authManagerMock }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: authManagerMock }));
 
-vi.mock('$lib/managers/asset-viewer-manager.svelte', () => ({
+vi.mock('#lib/managers/asset-viewer-manager.svelte.ts', () => ({
   assetViewerManager: {
     clearHighlightedFaces: vi.fn(),
     highlightedFaces: [],
@@ -103,15 +103,15 @@ const rerenderPanel = async (
   });
 };
 
-// A person as the server sends it inside a shared space: the id stays the GLOBAL person id
+// Bob as the server sends him inside a shared space: the id stays the GLOBAL person id
 // (AssetService.applySpacePeople only *adds* spacePersonId), which is why faceManager's
 // facesByPersonId lookup still matches for space members.
-const spacePerson = (name: string, spacePersonId: string): PersonResponseDto =>
-  ({ ...person(name), spacePersonId }) as unknown as PersonResponseDto;
+const spaceBob = (): PersonResponseDto =>
+  ({ ...person('Bob'), spacePersonId: 'space-person-1' }) as unknown as PersonResponseDto;
 
-const givePersonAFace = (personId: string, faceId = 'face-1') => {
-  faceManagerMock.facesByPersonId = new Map<string, unknown[]>([[personId, [{ id: faceId }]]]);
-  faceManagerMock.data = [{ id: faceId }];
+const givePersonAFace = (personId: string) => {
+  faceManagerMock.facesByPersonId = new Map<string, unknown[]>([[personId, [{ id: 'face-1' }]]]);
+  faceManagerMock.data = [{ id: 'face-1' }];
 };
 
 const CROP_DATA_URL = 'data:image/png;base64,iVBORw0KGgo=';
@@ -303,7 +303,7 @@ describe('DetailPanelPeople', () => {
     });
 
     it('falls back to the space person thumbnail for a space member', async () => {
-      const bob = spacePerson('Bob', 'space-person-1');
+      const bob = spaceBob();
       givePersonAFace('person-Bob');
       zoomImageToBase64Mock.mockResolvedValue(null);
 
@@ -403,7 +403,7 @@ describe('DetailPanelPeople', () => {
     });
 
     it('shows the space profile face to a space member when the setting is off', async () => {
-      const bob = spacePerson('Bob', 'space-person-1');
+      const bob = spaceBob();
       givePersonAFace('person-Bob');
       cropFacesFromAsset.set(false);
 
@@ -531,7 +531,7 @@ describe('DetailPanelPeople', () => {
     });
 
     it('offers the toggle to a space member who is not the owner', async () => {
-      const bob = spacePerson('Bob', 'space-person-1');
+      const bob = spaceBob();
       givePersonAFace('person-Bob');
 
       renderPanel({ isOwner: false, spaceId: 'space-1', people: [bob] });
@@ -670,7 +670,7 @@ describe('DetailPanelPeople', () => {
     });
 
     it('F-29: hides the affordance from a space viewer, even with people present', () => {
-      const bob = spacePerson('Bob', 'space-person-1');
+      const bob = spaceBob();
 
       renderPanel({ isOwner: false, canEditSpacePeople: false, spaceId: 'space-1', people: [bob] });
 
@@ -684,7 +684,7 @@ describe('DetailPanelPeople', () => {
     });
 
     it('keeps the hidden-people toggle gated on isOwner alone, never on canEditSpacePeople', () => {
-      const bob = spacePerson('Bob', 'space-person-1');
+      const bob = spaceBob();
       const hiddenBob = { ...bob, isHidden: true } as unknown as PersonResponseDto;
 
       renderPanel({ isOwner: false, canEditSpacePeople: true, spaceId: 'space-1', people: [hiddenBob] });

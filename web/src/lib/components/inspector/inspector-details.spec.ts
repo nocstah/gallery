@@ -1,10 +1,9 @@
 import {
-  AssetVisibility,
-  type AlbumResponseDto,
-  type AssetResponseDto,
-  type TimeBucketAssetResponseDto,
-} from '@immich/sdk';
-import {
+  InspectorDayLoader,
+  InspectorDetailsLoader,
+  InspectorStories,
+  InspectorYearsLoader,
+  MONTHS_KEPT_MS,
   albumYearsOf,
   cameraOf,
   dayKeyOf,
@@ -13,18 +12,19 @@ import {
   exposureOf,
   fileFactsOf,
   fitYearTiles,
-  InspectorDayLoader,
-  InspectorDetailsLoader,
-  InspectorStories,
-  InspectorYearsLoader,
-  MONTHS_KEPT_MS,
   peopleOf,
   placeOf,
   takenOf,
-} from '$lib/components/inspector/inspector-details';
-import { albumFactory } from '@test-data/factories/album-factory';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { personFactory } from '@test-data/factories/person-factory';
+} from '#lib/components/inspector/inspector-details.ts';
+import { albumFactory } from '#test/kioku/factories/album-factory.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { personFactory } from '#test/kioku/factories/person-factory.ts';
+import {
+  AssetVisibility,
+  type AlbumResponseDto,
+  type AssetResponseDto,
+  type TimeBucketAssetResponseDto,
+} from '@immich/sdk';
 
 // Local Omarchy layer: what the inspector window asks about a photo, and how it says it.
 

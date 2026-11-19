@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { CleanupRoute } from '$lib/gallery/cleanup/cleanup-route';
-  import { vaultEdition } from '$lib/gallery/edition';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import AppDownloadModal from '$lib/modals/AppDownloadModal.svelte';
-  import ObtainiumConfigModal from '$lib/modals/ObtainiumConfigModal.svelte';
-  import { Route } from '$lib/route';
+  import { CleanupRoute } from '#lib/gallery/cleanup/cleanup-route.ts';
+  import { vaultEdition } from '#lib/gallery/edition.ts';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import AppDownloadModal from '#lib/modals/AppDownloadModal.svelte';
+  import ObtainiumConfigModal from '#lib/modals/ObtainiumConfigModal.svelte';
+  import { Route } from '#lib/route.ts';
   import { Icon, modalManager } from '@immich/ui';
   import {
     mdiBroom,

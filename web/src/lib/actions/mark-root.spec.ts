@@ -1,4 +1,4 @@
-import { markRoot } from '$lib/actions/mark-root';
+import { markRoot } from '#lib/actions/mark-root.ts';
 
 const root = () => document.documentElement;
 const element = () => document.createElement('div');

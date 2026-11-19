@@ -1,6 +1,6 @@
+import { qrManager } from '#lib/managers/special-albums.svelte.ts';
 import { render, screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { qrManager } from '$lib/managers/special-albums.svelte';
 import AlbumRow from './album-row.svelte';
 
 vi.mock('@immich/ui', async (orig) => ({
@@ -10,7 +10,7 @@ vi.mock('@immich/ui', async (orig) => ({
 
 // Local Omarchy layer: QR's bank slips as the palette reads them (managers/slip-covers)
 const { slips } = vi.hoisted(() => ({ slips: { ids: new Set<string>(), known: true } }));
-vi.mock('$lib/managers/slip-covers.svelte', () => ({
+vi.mock('#lib/managers/slip-covers.svelte.ts', () => ({
   slipCovers: {
     isSlip: (assetId: string | null | undefined) => !!assetId && slips.ids.has(assetId),
     get known() {

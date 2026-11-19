@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:immich_mobile/data/db/main/database.dart';
 import 'package:immich_mobile/data/db/main/table/local/album.drift.dart';
 import 'package:immich_mobile/data/db/main/table/remote/album.drift.dart';
+import 'package:immich_mobile/data/db/main/table/remote/asset.drift.dart';
 import 'package:immich_mobile/data/db/main/table/remote/exif.drift.dart';
 import 'package:immich_mobile/data/db/main/table/user/auth_user.drift.dart';
 import 'package:immich_mobile/data/db/main/table/user/partner.drift.dart';
@@ -13,6 +14,7 @@ import 'package:immich_mobile/domain/models/memory.model.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
 import 'package:immich_mobile/infrastructure/repositories/gallery_sync_stream.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/sync_stream.repository.dart';
+import 'package:immich_mobile/utils/datetime_helpers.dart';
 import 'package:openapi/api.dart';
 
 SyncUserV1 _createUser({String id = 'user-1'}) {
@@ -39,6 +41,8 @@ SyncAssetV1 _createAsset({
   AssetTypeEnum type = AssetTypeEnum.IMAGE,
   AssetVisibility visibility = AssetVisibility.timeline,
   String? livePhotoVideoId,
+  DateTime? localDateTime,
+  bool withoutDates = false,
 }) {
   return SyncAssetV1(
     id: id,
@@ -47,10 +51,10 @@ SyncAssetV1 _createAsset({
     type: type,
     ownerId: ownerId,
     isFavorite: isFavorite,
-    fileCreatedAt: DateTime(2024, 1, 1),
+    fileCreatedAt: withoutDates ? null : DateTime(2024, 1, 1),
     fileModifiedAt: DateTime(2024, 1, 1),
     createdAt: DateTime(2024, 1, 1),
-    localDateTime: DateTime(2024, 1, 1),
+    localDateTime: withoutDates ? null : localDateTime ?? DateTime(2024, 1, 1),
     visibility: visibility,
     width: width,
     height: height,
@@ -89,6 +93,8 @@ SyncAssetV2 _createAssetV2({
   AssetTypeEnum type = AssetTypeEnum.IMAGE,
   AssetVisibility visibility = AssetVisibility.timeline,
   String? livePhotoVideoId,
+  DateTime? localDateTime,
+  bool withoutDates = false,
 }) {
   return SyncAssetV2(
     id: id,
@@ -97,10 +103,10 @@ SyncAssetV2 _createAssetV2({
     type: type,
     ownerId: ownerId,
     isFavorite: false,
-    fileCreatedAt: DateTime(2024, 1, 1),
+    fileCreatedAt: withoutDates ? null : DateTime(2024, 1, 1),
     fileModifiedAt: DateTime(2024, 1, 1),
     createdAt: DateTime(2024, 1, 1),
-    localDateTime: DateTime(2024, 1, 1),
+    localDateTime: withoutDates ? null : localDateTime ?? DateTime(2024, 1, 1),
     visibility: visibility,
     width: width,
     height: height,
@@ -1813,7 +1819,7 @@ void main() {
       await gallery.updateSharedSpaceAssetsV1([
         _createAsset(id: 'asset-late', checksum: 'c2', fileName: 'late.jpg', ownerId: 'user-1'),
       ]);
-      await sut.flushDeferredMemoryAssetsV1();
+      await sut.gallery.flushDeferredMemoryAssetsV1();
 
       final rows = await db.memoryAssetEntity.select().get();
       expect(rows.map((r) => r.assetId), ['asset-late']);
@@ -1827,7 +1833,7 @@ void main() {
       expect(await db.memoryAssetEntity.select().get(), isEmpty);
 
       await sut.updateMemoriesV2([makeMemory(id: 'memory-unknown')]);
-      await sut.flushDeferredMemoryAssetsV1();
+      await sut.gallery.flushDeferredMemoryAssetsV1();
 
       expect((await db.memoryAssetEntity.select().get()).single.memoryId, 'memory-unknown');
     });
@@ -1835,12 +1841,12 @@ void main() {
     test('drops a link that is still unresolvable at sync completion, without throwing', () async {
       await sut.updateMemoryAssetsV1([SyncMemoryAssetV1(memoryId: 'memory-1', assetId: 'never-arrives')]);
 
-      await expectLater(sut.flushDeferredMemoryAssetsV1(), completes);
+      await expectLater(sut.gallery.flushDeferredMemoryAssetsV1(), completes);
       expect(await db.memoryAssetEntity.select().get(), isEmpty);
 
       // The parked row is not retained across sync passes.
       await sut.updateAssetsV1([_createAsset(id: 'never-arrives', checksum: 'c3', fileName: 'n.jpg')]);
-      await sut.flushDeferredMemoryAssetsV1();
+      await sut.gallery.flushDeferredMemoryAssetsV1();
       expect(await db.memoryAssetEntity.select().get(), isEmpty);
     });
 
@@ -1849,7 +1855,7 @@ void main() {
       await sut.deleteMemoryAssetsV1([SyncMemoryAssetDeleteV1(memoryId: 'memory-1', assetId: 'asset-1')]);
 
       await sut.updateAssetsV1([_createAsset(id: 'asset-1', checksum: 'c1', fileName: 'a.jpg')]);
-      await sut.flushDeferredMemoryAssetsV1();
+      await sut.gallery.flushDeferredMemoryAssetsV1();
 
       expect(await db.memoryAssetEntity.select().get(), isEmpty);
     });
@@ -1875,7 +1881,7 @@ void main() {
       await sut.updateAssetsV1([
         for (var i = 0; i < orphans; i++) _createAsset(id: 'missing-$i', checksum: 'late-c$i', fileName: 'late-$i.jpg'),
       ]);
-      await sut.flushDeferredMemoryAssetsV1();
+      await sut.gallery.flushDeferredMemoryAssetsV1();
 
       expect(await db.memoryAssetEntity.select().get(), hasLength(present + orphans));
     });
@@ -1916,6 +1922,69 @@ void main() {
 
     expect(row.type, MemoryTypeEnum.rule);
     expect(row.data, contains('"title":"Happy birthday, Alice"'));
+  });
+
+  group('SyncStreamRepository - deleteAssetOcrV1 (#32337)', () {
+    test('removes OCR rows for deleted assets', () async {
+      await sut.updateUsersV1([_createUser()]);
+      final known1 = _createAsset(
+        id: 'known1',
+        checksum: 'AAA',
+        fileName: 'a.jpg',
+        localDateTime: DateTime(2024, 1, 5),
+      );
+      final known2 = _createAsset(
+        id: 'known2',
+        checksum: 'BBB',
+        fileName: 'b.jpg',
+        localDateTime: DateTime(2024, 1, 6),
+      );
+      await sut.updateAssetsV1([known1, known2]);
+
+      await sut.updateAssetOcrV1([
+        SyncAssetOcrV1(
+          assetId: known1.id,
+          boxScore: 0.9,
+          id: 'ocr-1',
+          isVisible: true,
+          text: 'this text',
+          textScore: 0.9,
+          x1: 1,
+          x2: 2,
+          x3: 3,
+          x4: 4,
+          y1: 1,
+          y2: 2,
+          y3: 3,
+          y4: 4,
+        ),
+        SyncAssetOcrV1(
+          assetId: known2.id,
+          boxScore: 0.8,
+          id: 'ocr-2',
+          isVisible: false,
+          text: 'this text again',
+          textScore: 0.8,
+          x1: 1,
+          x2: 2,
+          x3: 3,
+          x4: 4,
+          y1: 1,
+          y2: 2,
+          y3: 3,
+          y4: 4,
+        ),
+      ]);
+
+      await sut.deleteAssetOcrV1([
+        SyncAssetOcrDeleteV1(id: 'log-id', assetId: known1.id, deletedAt: DateTime(2024, 1, 5)),
+      ]);
+
+      final removedRows = await (db.assetOcrEntity.select()..where((t) => t.assetId.equals(known1.id))).get();
+      expect(removedRows, isEmpty);
+      final keepRows = await (db.assetOcrEntity.select()..where((t) => t.assetId.equals(known2.id))).get();
+      expect(keepRows, hasLength(1));
+    });
   });
 
   test('stores a birthday memory from sync as MemoryTypeEnum.birthday', () async {
@@ -2430,6 +2499,42 @@ void main() {
         completes,
       );
       expect(await db.remoteAssetEntity.select().get(), isEmpty);
+    });
+  });
+
+  group('SyncStreamRepository - group_date without server dates', () {
+    Future<RemoteAssetEntityData> row(String id) =>
+        (db.remoteAssetEntity.select()..where((t) => t.id.equals(id))).getSingle();
+
+    test('assets without dates group on the stored created_at', () async {
+      await sut.updateUsersV1([_createUser()]);
+      final known = _createAsset(id: 'known', checksum: 'AAA', fileName: 'a.jpg', localDateTime: DateTime(2024, 1, 5));
+      await sut.updateAssetsV1([known]);
+
+      await sut.updateAssetsV1([
+        _createAsset(id: 'known', checksum: 'AAA', fileName: 'a.jpg', withoutDates: true),
+        _createAsset(id: 'fresh', checksum: 'BBB', fileName: 'b.jpg', withoutDates: true),
+      ]);
+
+      final kept = await row('known');
+      expect(kept.createdAt, known.fileCreatedAt);
+      expect(kept.localDateTime, isNull);
+      expect(kept.groupDate, '2024-01-01', reason: 'the local day is gone, created_at stays');
+      final fresh = await row('fresh');
+      expect(fresh.groupDate, timelineGroupDate(fresh.createdAt.toLocal()));
+
+      // same scenario through V2
+      await sut.updateAssetsV2([
+        _createAssetV2(id: 'known2', checksum: 'CCC', fileName: 'c.jpg', localDateTime: DateTime(2024, 1, 5)),
+      ]);
+      await sut.updateAssetsV2([
+        _createAssetV2(id: 'known2', checksum: 'CCC', fileName: 'c.jpg', withoutDates: true),
+        _createAssetV2(id: 'fresh2', checksum: 'DDD', fileName: 'd.jpg', withoutDates: true),
+      ]);
+
+      expect((await row('known2')).groupDate, '2024-01-01');
+      final freshV2 = await row('fresh2');
+      expect(freshV2.groupDate, timelineGroupDate(freshV2.createdAt.toLocal()));
     });
   });
 }

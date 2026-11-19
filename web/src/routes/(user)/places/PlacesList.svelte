@@ -1,14 +1,13 @@
 <script lang="ts">
-  import EmptyState from '$lib/components/omarchy/EmptyState.svelte';
-  import { placeStats } from '$lib/managers/place-stats.svelte';
-  import { PlacesGroupBy, type PlacesViewSettings } from '$lib/stores/preferences.store';
-  import { normalizeSearchString } from '$lib/utils/string-utils';
+  import EmptyState from '#lib/components/omarchy/EmptyState.svelte';
+  import { placeStats } from '#lib/managers/place-stats.svelte.ts';
+  import { PlacesGroupBy, type PlacesViewSettings } from '#lib/stores/preferences.store.ts';
+  import { type PlacesGroup } from '#lib/utils/places-utils.ts';
+  import { normalizeSearchString } from '#lib/utils/string-utils.ts';
   import { type AssetResponseDto } from '@immich/sdk';
   import { groupBy } from 'lodash-es';
-  import PlacesCardGroup from './PlacesCardGroup.svelte';
-
-  import { type PlacesGroup } from '$lib/utils/places-utils';
   import { t } from 'svelte-i18n';
+  import PlacesCardGroup from './PlacesCardGroup.svelte';
 
   interface Props {
     places?: AssetResponseDto[];

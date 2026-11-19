@@ -1,10 +1,10 @@
 <script lang="ts">
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import SpaceCollage from '$lib/components/spaces/space-collage.svelte';
-  import { Route } from '$lib/route';
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import SpaceCollage from '#lib/components/spaces/space-collage.svelte';
+  import { Route } from '#lib/route.ts';
   import { UserAvatarColor, type SharedSpaceResponseDto } from '@immich/sdk';
-  import { mdiDotsVertical, mdiPin, mdiPinOff } from '@mdi/js';
   import { Icon } from '@immich/ui';
+  import { mdiDotsVertical, mdiPin, mdiPinOff } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
   interface Props {

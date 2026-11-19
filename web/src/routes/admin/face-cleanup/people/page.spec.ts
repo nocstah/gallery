@@ -1,11 +1,11 @@
-import { getFaceRepairOwnerPeople, UserAvatarColor, type FaceRepairOwnerPeopleResponseDto } from '@immich/sdk';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { Route } from '#lib/route.ts';
+import { manualReviewOwnerId } from '#lib/stores/face-cleanup-manual-review.store.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
+import { UserAvatarColor, getFaceRepairOwnerPeople, type FaceRepairOwnerPeopleResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { Route } from '$lib/route';
-import { manualReviewOwnerId } from '$lib/stores/face-cleanup-manual-review.store';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 import type { PageData } from './$types';
 import Page from './+page.svelte';
 
@@ -24,7 +24,7 @@ vi.mock('@immich/sdk', async (importOriginal) => {
 
 vi.mock('@immich/ui', async (original) => {
   const mod = await original<typeof import('@immich/ui')>();
-  const noop = await import('@test-data/mocks/noop-component.svelte');
+  const noop = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return {
     ...mod,
     // Stub Icon to a no-op to avoid undefined-path errors in happy-dom (matches the sibling face-cleanup specs).
@@ -74,15 +74,15 @@ vi.mock('$app/stores', () => ({
   },
 }));
 
-vi.mock('$lib/components/layouts/AdminPageLayout.svelte', async () => {
-  const { default: stub } = await import('@test-data/mocks/admin-page-layout.stub.svelte');
+vi.mock('#lib/components/layouts/AdminPageLayout.svelte', async () => {
+  const { default: stub } = await import('#lib/gallery/__mocks__/admin-page-layout.stub.svelte');
   return { default: stub };
 });
 
 // Face crops must go through the admin-gated, join-free face-thumbnail route (the same helper the guided
 // review page uses) — never the user-scoped /people/:id/thumbnail route, which 404s for people the admin
 // does not own.
-vi.mock('$lib/utils/people-utils', () => ({
+vi.mock('#lib/utils/people-utils.ts', () => ({
   getAdminFaceThumbnailUrl: (assetFaceId: string) => `/api/admin/face-repair/faces/${assetFaceId}/thumbnail`,
 }));
 

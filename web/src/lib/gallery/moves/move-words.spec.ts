@@ -1,6 +1,13 @@
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { libraryContextFile, mainLibrary, secondLibrary, serving } from '@test-data/factories/library-context-factory';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
 import {
+  libraryContextFile,
+  mainLibrary,
+  secondLibrary,
+  serving,
+} from '#test/kioku/factories/library-context-factory.ts';
+import {
+  QUIET_FROM,
+  QUIET_TO,
   byteShare,
   doneCount,
   endWords,
@@ -12,8 +19,6 @@ import {
   pauseWords,
   phaseWords,
   progressWords,
-  QUIET_FROM,
-  QUIET_TO,
   quietHours,
   sideOf,
   stayedCount,

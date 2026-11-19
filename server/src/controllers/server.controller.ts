@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Header, Headers, HttpCode, HttpStatus, P
 import { ApiNotFoundResponse, ApiTags } from '@nestjs/swagger';
 import type { IncomingHttpHeaders } from 'node:http';
 import { Endpoint, HistoryBuilder } from 'src/decorators.js';
+import type { AuthDto } from 'src/dtos/auth.dto.js';
 import { LicenseKeyDto, LicenseResponseDto } from 'src/dtos/license.dto.js';
 import {
   ServerAboutResponseDto,
@@ -9,7 +10,6 @@ import {
   ServerConfigDto,
   ServerFeaturesDto,
   ServerMediaTypesResponseDto,
-  ServerMlHealthResponseDto,
   ServerPingResponse,
   ServerStatsResponseDto,
   ServerStorageResponseDto,
@@ -18,8 +18,8 @@ import {
 } from 'src/dtos/server.dto.js';
 import { VersionCheckStateResponseDto } from 'src/dtos/system-metadata.dto.js';
 import { ApiTag, Permission } from 'src/enum.js';
-import { GALLERY_CLIENT_VARY } from 'src/gallery/utils/client-version.js';
-import { Authenticated } from 'src/middleware/auth.guard.js';
+import { GALLERY_CLIENT_VARY, forClientAbout, forClientVersionCheck } from 'src/gallery/utils/client-version.js';
+import { Auth, Authenticated } from 'src/middleware/auth.guard.js';
 import { ServerService } from 'src/services/server.service.js';
 import { SystemMetadataService } from 'src/services/system-metadata.service.js';
 import { VersionService } from 'src/services/version.service.js';
@@ -40,19 +40,8 @@ export class ServerController {
     description: 'Retrieve a list of information about the server.',
     history: new HistoryBuilder().added('v1').beta('v1').stable('v2'),
   })
-  getAboutInfo(): Promise<ServerAboutResponseDto> {
-    return this.service.getAboutInfo();
-  }
-
-  @Get('ml-health')
-  @Authenticated({ permission: Permission.ServerAbout })
-  @Endpoint({
-    summary: 'Smart search health',
-    description: 'Reports whether the ML server is currently reachable and healthy for smart search.',
-    history: new HistoryBuilder().added('v2'),
-  })
-  getMlHealth(): Promise<ServerMlHealthResponseDto> {
-    return this.service.getMlHealth();
+  async getAboutInfo(@Auth() auth: AuthDto): Promise<ServerAboutResponseDto> {
+    return forClientAbout(auth, await this.service.getAboutInfo());
   }
 
   @Get('apk-links')
@@ -205,7 +194,7 @@ export class ServerController {
     description: 'Retrieve information about the last time the version check ran.',
     history: new HistoryBuilder().added('v1').beta('v1').stable('v2'),
   })
-  getVersionCheck(): Promise<VersionCheckStateResponseDto> {
-    return this.systemMetadataService.getVersionCheckState();
+  async getVersionCheck(@Auth() auth: AuthDto): Promise<VersionCheckStateResponseDto> {
+    return forClientVersionCheck(auth, await this.systemMetadataService.getVersionCheckState());
   }
 }

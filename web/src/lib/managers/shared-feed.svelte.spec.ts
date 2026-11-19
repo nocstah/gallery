@@ -1,25 +1,25 @@
+import { FEED_PAGE, SPACE_PAGE, SharedFeed } from '#lib/managers/shared-feed.svelte.ts';
+import type { FeedPerson } from '#lib/utils/shared-feed.ts';
+import { albumFactory } from '#test/kioku/factories/album-factory.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
+import { sharedSpaceFactory } from '#test/kioku/factories/shared-space-factory.ts';
+import { userFactory } from '#test/kioku/factories/user-factory.ts';
 import {
   AssetVisibility,
+  ReactionType,
+  SharedLinkType,
+  UserAvatarColor,
   getActivities,
   getAllAlbums,
   getAllSharedLinks,
   getAllSpaces,
   getPartners,
   getSpaceActivities,
-  ReactionType,
   searchAssets,
-  SharedLinkType,
-  UserAvatarColor,
   type AssetResponseDto,
   type SearchResponseDto,
   type SharedSpaceActivityResponseDto,
 } from '@immich/sdk';
-import { FEED_PAGE, SharedFeed, SPACE_PAGE } from '$lib/managers/shared-feed.svelte';
-import type { FeedPerson } from '$lib/utils/shared-feed';
-import { albumFactory } from '@test-data/factories/album-factory';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
-import { sharedSpaceFactory } from '@test-data/factories/shared-space-factory';
-import { userFactory } from '@test-data/factories/user-factory';
 
 vi.mock('@immich/sdk', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/sdk')>()),

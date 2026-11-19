@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { vaultEdition } from '$lib/gallery/edition';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import type { OnSetVisibility } from '$lib/utils/actions';
-  import { handleError } from '$lib/utils/handle-error';
-  import { setLockedWithCompanions } from '$lib/utils/locked-companions';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import { vaultEdition } from '#lib/gallery/edition.ts';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import type { OnSetVisibility } from '#lib/utils/actions.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { setLockedWithCompanions } from '#lib/utils/locked-companions.ts';
   import { Button, modalManager } from '@immich/ui';
   import { mdiLockOpenVariantOutline, mdiLockOutline } from '@mdi/js';
   import { t } from 'svelte-i18n';

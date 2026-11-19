@@ -590,12 +590,13 @@ describe('/shared-spaces', () => {
   describe('editor member management (opt-in)', () => {
     let baseConfig: AdminConfigDto;
 
-    const setServerSwitches = (spaceEditorsCanAddMembers: boolean, spaceEditorsCanChangeRoles: boolean) =>
+    // Every case turns adding members on; the cases differ only in whether editors may change roles.
+    const setServerSwitches = (spaceEditorsCanChangeRoles: boolean) =>
       updateConfig(
         {
           adminConfigDto: {
             ...baseConfig,
-            server: { ...baseConfig.server, spaceEditorsCanAddMembers, spaceEditorsCanChangeRoles },
+            server: { ...baseConfig.server, spaceEditorsCanAddMembers: true, spaceEditorsCanChangeRoles },
           },
         },
         { headers: asBearerAuth(admin.accessToken) },
@@ -610,7 +611,7 @@ describe('/shared-spaces', () => {
     });
 
     it('lets an editor add a member as a viewer once the admin turns the server setting on', async () => {
-      await setServerSwitches(true, false);
+      await setServerSwitches(false);
       const space = await createSpaceWithEditor(user1.accessToken, user2.userId, 'Editor Adds Member');
 
       const { status, body } = await request(app)
@@ -623,7 +624,7 @@ describe('/shared-spaces', () => {
     });
 
     it('rejects the editor once the owner turns the space setting off', async () => {
-      await setServerSwitches(true, false);
+      await setServerSwitches(false);
       const space = await createSpaceWithEditor(user1.accessToken, user2.userId, 'Owner Overrides Off');
 
       const patch = await request(app)
@@ -642,7 +643,7 @@ describe('/shared-spaces', () => {
     });
 
     it('rejects an editor changing the space setting', async () => {
-      await setServerSwitches(true, true);
+      await setServerSwitches(true);
       const space = await createSpaceWithEditor(user1.accessToken, user2.userId, 'Editor Changes Setting');
 
       const { status } = await request(app)
@@ -654,7 +655,7 @@ describe('/shared-spaces', () => {
     });
 
     it('lets an editor switch a viewer to editor with both server settings on', async () => {
-      await setServerSwitches(true, true);
+      await setServerSwitches(true);
       const space = await createSpaceWithEditor(user1.accessToken, user2.userId, 'Editor Changes Role');
       await utils.addSpaceMember(user1.accessToken, space.id, { userId: user3.userId });
 
@@ -668,7 +669,7 @@ describe('/shared-spaces', () => {
     });
 
     it('reports the effective permissions to the editor on GET', async () => {
-      await setServerSwitches(true, false);
+      await setServerSwitches(false);
       const space = await createSpaceWithEditor(user1.accessToken, user2.userId, 'Editor Reads Permissions');
 
       const { status, body } = await request(app)
@@ -1546,14 +1547,14 @@ describe('/shared-spaces', () => {
 
   describe('checkSpaceAccess visibility gate (Slice 3) — Hidden/Locked assets blocked', () => {
     /**
-     * user1 owns the space and assets. user2 is a plain viewer member.
-     * For each test a fresh space + asset pair is created to avoid state leakage.
-     *
-     * Endpoints tested per the brief:
-     *   GET /assets/:id            (AssetRead)
-     *   GET /assets/:id/original   (AssetDownload)
-     *   GET /assets/:id/thumbnail  (AssetView)
-     */
+    user1 owns the space and assets. user2 is a plain viewer member.
+    For each test a fresh space + asset pair is created to avoid state leakage.
+    
+    Endpoints tested per the brief:
+      GET /assets/:id            (AssetRead)
+      GET /assets/:id/original   (AssetDownload)
+      GET /assets/:id/thumbnail  (AssetView)
+    */
 
     it('member CANNOT read a Locked direct-space asset (GET /assets/:id → 400)', async () => {
       // Add while Timeline (the add-assets endpoint rejects Locked and filters Hidden), THEN flip —

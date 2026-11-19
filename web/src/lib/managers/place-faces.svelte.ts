@@ -1,9 +1,9 @@
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { PLACE_LOOK, choosePlaceFace, type PlaceAt } from '#lib/utils/place-faces.ts';
+import { placeKey } from '#lib/utils/place-stats.ts';
 import { searchAssets, searchSmart } from '@immich/sdk';
 import { SvelteMap } from 'svelte/reactivity';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { choosePlaceFace, PLACE_LOOK, type PlaceAt } from '$lib/utils/place-faces';
-import { placeKey } from '$lib/utils/place-stats';
 
 // Local Omarchy layer: the photo each place tile shows on Places and in Explore's row (utils/place-faces), asked for
 // once the tile comes near the screen (PlaceTile; Places asks for its first screen itself, most photos first), a few
@@ -37,7 +37,7 @@ class PlaceFaceManager {
   }
 
   /** About how many place tiles fill the window (a tile is at least 9rem on the desktop's gap): a page asks for that
-   * many faces first, in its own order, before its tiles ask for theirs. */
+  many faces first, in its own order, before its tiles ask for theirs. */
   firstScreen() {
     return typeof window === 'undefined' ? 0 : Math.ceil((window.innerWidth * window.innerHeight) / TILE_AREA);
   }

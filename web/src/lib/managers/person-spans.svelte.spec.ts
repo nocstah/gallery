@@ -1,10 +1,10 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { personSpans } from '#lib/managers/person-spans.svelte.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 import { AssetVisibility, TimeBucketSize } from '@immich/sdk';
 import { waitFor } from '@testing-library/svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { personSpans } from '$lib/managers/person-spans.svelte';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 
 // Local Omarchy layer: the counts and years that tell apart people who share a name (DESIGN.md, People), asked of each
 // person's timeline as their own page asks for it, once each. The manager is one for the page load, so each test asks

@@ -1,13 +1,13 @@
+import { SlipCoverManager } from '#lib/managers/slip-covers.svelte.ts';
+import { qrManager } from '#lib/managers/special-albums.svelte.ts';
 import { searchAssets, type SearchResponseDto } from '@immich/sdk';
-import { SlipCoverManager } from '$lib/managers/slip-covers.svelte';
-import { qrManager } from '$lib/managers/special-albums.svelte';
 
 // Local Omarchy layer: QR's slips, so that no album wears one for its cover (managers/slip-covers)
 vi.mock('@immich/sdk', async () => ({
   ...(await vi.importActual<typeof import('@immich/sdk')>('@immich/sdk')),
   searchAssets: vi.fn(),
 }));
-vi.mock('$lib/managers/special-albums.svelte', () => ({
+vi.mock('#lib/managers/special-albums.svelte.ts', () => ({
   qrManager: { offered: true, count: 3, ready: vi.fn() },
 }));
 

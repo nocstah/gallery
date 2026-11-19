@@ -1,5 +1,5 @@
-import type { ServerConfigDto, ServerFeaturesDto } from '@immich/sdk';
-import { leftOutOfVaults, markEdition, notInVaults, vaultEdition, vaultFeatures, vaultServerConfig } from './edition';
+import type { PublicConfigDto, ServerFeaturesDto } from '@immich/sdk';
+import { leftOutOfVaults, markEdition, notInVaults, vaultEdition, vaultFeatures, vaultMapConfig } from './edition';
 
 // Local Omarchy layer: one source, two Kiokus. A build is the full edition unless local-build.sh asks for the vault
 // edition, which a vault's private Gallery serves: one person's, on this computer only, locked most of the time.
@@ -91,18 +91,22 @@ describe('Kioku edition', () => {
   it('offers no map or email in a vault, and gives its maps an empty style that asks no tile server', () => {
     const features = { map: true, email: true, search: true } as ServerFeaturesDto;
     const config = {
-      mapDarkStyleUrl: 'https://tiles.example/dark.json',
-      mapLightStyleUrl: 'https://tiles.example/light.json',
-      loginPageMessage: 'hello',
-    } as ServerConfigDto;
+      map: {
+        enabled: true,
+        darkStyle: 'https://tiles.example/dark.json',
+        lightStyle: 'https://tiles.example/light.json',
+      },
+      server: { loginPageMessage: 'hello' },
+    } as PublicConfigDto;
     expect(vaultFeatures(features)).toBe(features);
-    expect(vaultServerConfig(config)).toBe(config);
+    expect(vaultMapConfig(config)).toBe(config);
 
     vi.stubEnv('VITE_KIOKU_EDITION', 'vault');
     expect(vaultFeatures(features)).toEqual({ map: false, email: false, search: true });
-    const vault = vaultServerConfig(config);
-    expect(vault.loginPageMessage).toBe('hello');
-    for (const style of [vault.mapDarkStyleUrl, vault.mapLightStyleUrl]) {
+    const vault = vaultMapConfig(config);
+    expect(vault.server.loginPageMessage).toBe('hello');
+    expect(vault.map.enabled).toBe(false);
+    for (const style of [vault.map.darkStyle, vault.map.lightStyle]) {
       const [scheme, body] = style.split(',', 2);
       expect(scheme).toBe('data:application/json');
       expect(JSON.parse(decodeURIComponent(body))).toEqual({ version: 8, sources: {}, layers: [] });

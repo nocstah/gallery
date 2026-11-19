@@ -1,13 +1,13 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import SelectionReviewModal from '#lib/modals/SelectionReviewModal.svelte';
+import { timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 import { modalManager, type ActionItem } from '@immich/ui';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import type { Component } from 'svelte';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import SelectionReviewModal from '$lib/modals/SelectionReviewModal.svelte';
-import { timelineAssetFactory } from '@test-data/factories/asset-factory';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 import AssetSelectControlBar from './AssetSelectControlBar.svelte';
 
 // Local Omarchy layer: the selection bar's count opens Show selected (modals/SelectionReviewModal)

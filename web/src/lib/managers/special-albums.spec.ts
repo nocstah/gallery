@@ -1,6 +1,5 @@
-import { AssetVisibility } from '@immich/sdk';
-import '$lib/__mocks__/sdk.mock';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
+import '#lib/gallery/__mocks__/sdk.mock.ts';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
 import {
   offeredSpecialAlbums,
   planDone,
@@ -10,10 +9,11 @@ import {
   todoManager,
   villaManager,
   type From,
-} from '$lib/managers/special-albums.svelte';
+} from '#lib/managers/special-albums.svelte.ts';
+import { AssetVisibility } from '@immich/sdk';
 
 const auth = vi.hoisted(() => ({ authManager: { authenticated: true, user: { isAdmin: true, id: 'me' } } }));
-vi.mock('$lib/managers/auth-manager.svelte', () => auth);
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => auth);
 
 // Local Omarchy layer: To do is everyone's; Villa and QR are the owner's own ("Hide Villa and QR, keep To do")
 describe('special albums offered to the account signed in', () => {

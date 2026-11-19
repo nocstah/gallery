@@ -1,18 +1,18 @@
 <script lang="ts">
-  import { lazyComponent } from '$lib/utils/lazy-component.svelte';
-  import type { Action } from '$lib/components/asset-viewer/actions/action';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import LargeAssetData from './LargeAssetData.svelte';
-  import Portal from '$lib/elements/Portal.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { handlePromiseError } from '$lib/utils';
-  import { getNextAsset, getPreviousAsset, navigateToAsset } from '$lib/utils/asset-utils';
-  import { navigate } from '$lib/utils/navigation';
-  import { Route } from '$lib/route';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import type { Action } from '#lib/components/asset-viewer/actions/action.ts';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import Portal from '#lib/elements/Portal.svelte';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { handlePromiseError } from '#lib/utils.ts';
+  import { getNextAsset, getPreviousAsset, navigateToAsset } from '#lib/utils/asset-utils.ts';
+  import { lazyComponent } from '#lib/utils/lazy-component.svelte.ts';
+  import { navigate } from '#lib/utils/navigation.ts';
   import type { AssetResponseDto } from '@immich/sdk';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
+  import LargeAssetData from './LargeAssetData.svelte';
 
   interface Props {
     data: PageData;
@@ -64,7 +64,7 @@
 
   // Mounting the viewer through `{#await}` leaves it permanently unreactive on reopen.
   // See lazyComponent().
-  const LazyAssetViewer = lazyComponent(() => import('$lib/components/asset-viewer/AssetViewer.svelte'));
+  const LazyAssetViewer = lazyComponent(() => import('#lib/components/asset-viewer/AssetViewer.svelte'));
 </script>
 
 <OnEvents {onAssetsDelete} />
@@ -93,7 +93,7 @@
 
 {#if assetViewerManager.isViewing}
   {#if LazyAssetViewer.current}
-    {@const AssetViewer = LazyAssetViewer.current}
+    {const AssetViewer = $derived(LazyAssetViewer.current)}
     <Portal target="body">
       <AssetViewer
         cursor={assetCursor}

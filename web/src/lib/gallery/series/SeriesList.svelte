@@ -6,14 +6,14 @@
   // one; the card opens the series' own page. New series (in the bar, and the empty state's one step) asks what it is
   // made from (SeriesNewSheet) and opens the series Curator answers with, new or the album's own. Curator not
   // answering, or not the owner's, is the page's own state, as on a series' page.
-  import { goto } from '$app/navigation';
-  import PanelStatus from '$lib/components/curator/PanelStatus.svelte';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import { locale } from '$lib/stores/preferences.store';
+  import PanelStatus from '#lib/components/curator/PanelStatus.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { locale } from '#lib/stores/preferences.store.ts';
   import { Button, modalManager } from '@immich/ui';
   import { mdiPlus } from '@mdi/js';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
   import SeriesFailed from './SeriesFailed.svelte';
   import SeriesNewSheet from './SeriesNewSheet.svelte';
   import { albumNote, daysLeftWords, linkWords, publicTitle, sourceName, spanWords, statusWords } from './series-cards';
@@ -57,6 +57,7 @@
       color="secondary"
       disabled={opening}
       onclick={newSeries}
+      aria-label={$t('memory_series_new')}
       data-testid="series-new"
     >
       <span class="ws-action-label">{$t('memory_series_new')}</span>
@@ -84,10 +85,10 @@
       <p class="series-list-about">{$t('memory_series_list_about')}</p>
       <ul class="ws-inbox-rows series-cards">
         {#each view.cards as card (card.id)}
-          {@const span = spanWords(card, $t, $locale)}
-          {@const days = daysLeftWords(card, $t)}
-          {@const note = albumNote(card, $t)}
-          {@const shown = publicTitle(card, $t)}
+          {const span = $derived(spanWords(card, $t, $locale))}
+          {const days = $derived(daysLeftWords(card, $t))}
+          {const note = $derived(albumNote(card, $t))}
+          {const shown = $derived(publicTitle(card, $t))}
           <li>
             <a
               class="ws-inbox-row series-card"

@@ -1,12 +1,12 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { resetTileGrid } from '#lib/gallery/__mocks__/tile-grid.ts';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import { assetFactory, timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { libraryContextFile, secondLibrary, serving } from '#test/kioku/factories/library-context-factory.ts';
 import { AssetTypeEnum, AssetVisibility } from '@immich/sdk';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import { assetFactory, timelineAssetFactory } from '@test-data/factories/asset-factory';
-import { libraryContextFile, secondLibrary, serving } from '@test-data/factories/library-context-factory';
-import { resetTileGrid } from '@test-data/mocks/tile-grid';
 import PhotoMenuPage from './PhotoMenu.test-wrapper.svelte';
 import { photoMenuOffers } from './photo-menu';
 
@@ -26,10 +26,10 @@ const mocks = vi.hoisted(() => ({
   show: vi.fn(),
   showDialog: vi.fn(),
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: mocks.auth }));
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({ featureFlagsManager: { value: { trash: true } } }));
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: mocks.auth }));
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({ featureFlagsManager: { value: { trash: true } } }));
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curatorIsMine: mocks.curatorIsMine,
 }));
 vi.mock('@immich/ui', async (importOriginal) => ({

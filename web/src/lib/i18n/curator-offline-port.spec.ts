@@ -1,9 +1,9 @@
+import { FORK_LOCALES } from '#lib/i18n/fork-locales.ts';
+import { convertBCP47 } from '#lib/utils/i18n.ts';
 import { IntlMessageFormat } from 'intl-messageformat';
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { FORK_LOCALES } from '$lib/i18n/fork-locales';
-import { convertBCP47 } from '$lib/utils/i18n';
 
 // Local Omarchy layer: the words for Curator not answering name the port it is expected on (utils/curator's
 // curatorPort): Main's 2290, or the one a library with a Curator of its own names (gallery/libraries). The pages'

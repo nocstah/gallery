@@ -1,7 +1,7 @@
+import { placeFaces } from '#lib/managers/place-faces.svelte.ts';
+import { PLACE_LOOK } from '#lib/utils/place-faces.ts';
+import { BRIGHT } from '#test/kioku/thumbhash.ts';
 import { searchAssets, searchSmart, type SearchResponseDto } from '@immich/sdk';
-import { placeFaces } from '$lib/managers/place-faces.svelte';
-import { PLACE_LOOK } from '$lib/utils/place-faces';
-import { BRIGHT } from '@test-data/thumbhash';
 
 // Local Omarchy layer: a place tile's photo is chosen once per page load, a few places at a time
 // (managers/place-faces)
@@ -10,7 +10,7 @@ vi.mock('@immich/sdk', async () => ({
   searchAssets: vi.fn(),
   searchSmart: vi.fn(),
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: { authenticated: true } }));
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({ authManager: { authenticated: true } }));
 
 const found = (...ids: string[]) =>
   ({

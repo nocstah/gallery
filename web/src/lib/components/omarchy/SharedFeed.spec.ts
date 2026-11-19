@@ -1,3 +1,8 @@
+import en from '#i18n/en.json';
+import { linkItems, reactionItems, sortItems, spaceItems, type FeedItem } from '#lib/utils/shared-feed.ts';
+import { albumFactory } from '#test/kioku/factories/album-factory.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
 import {
   AssetTypeEnum,
   ReactionType,
@@ -9,11 +14,6 @@ import {
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { addMessages, init } from 'svelte-i18n';
-import en from '$i18n/en.json';
-import { linkItems, reactionItems, sortItems, spaceItems, type FeedItem } from '$lib/utils/shared-feed';
-import { albumFactory } from '@test-data/factories/album-factory';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 import SharedFeed from './SharedFeed.svelte';
 
 // Local Omarchy layer: the Shared page's feed (components/omarchy/SharedFeed)

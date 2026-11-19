@@ -129,7 +129,7 @@ export const changes = (settings: AdjustSettings) =>
   settings.angle !== 0;
 
 /** the sliders with the filter's preset added (scaled by its intensity) and Brilliance spread over the sliders it is
- * made of, each held to +-LIMIT; and the filter's grey */
+made of, each held to +-LIMIT; and the filter's grey */
 export const effective = (settings: AdjustSettings): Effective => {
   const name = settings.filter;
   const preset = name ? PRESETS[name] : {};
@@ -305,7 +305,7 @@ export const fromLinear = (x: number) =>
   x <= 0.0031308 ? x * 12.92 : 1.055 * Math.max(x, 0.0031308) ** (1 / 2.4) - 0.055;
 
 /** Warmth (amber against blue) and Tint (magenta against green) as gains on the linear channels, keeping white as
- * bright as it was */
+bright as it was */
 export const gains = (e: Effective): Rgb => {
   const w = e.warmth;
   const t = e.tint;
@@ -327,8 +327,9 @@ export const expose = (x: number, exposure: number) => {
   return y > KNEE ? KNEE + (1 - KNEE) * (1 - (1 - u) ** power) : y;
 };
 
-const smoothstep = (edge0: number, edge1: number, x: number) => {
-  const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+// GLSL's smoothstep with its upper edge at 1, the only one these curves use
+const smoothstep = (edge0: number, x: number) => {
+  const t = clamp((x - edge0) / (1 - edge0), 0, 1);
   return t * t * (3 - 2 * t);
 };
 
@@ -344,12 +345,12 @@ export const skin = (r: number, g: number, b: number, high: number, low: number)
     hue = (r - g) / span + 4;
   }
   hue = high - low > 1e-9 ? hue * 60 : 0;
-  return smoothstep(0, 1, 1 - Math.abs(hue - 28) / 24);
+  return smoothstep(0, 1 - Math.abs(hue - 28) / 24);
 };
 
 /** One pixel through every colour step for these settings, the vignette aside: `colour(table)` once per settings,
- * then the returned function per pixel (encoded sRGB, 0..1). Unclipped, a stretched colour may end up past 0..1: the
- * colour table keeps it so and is clipped only after it is read between its points, so the clip does not blur. */
+then the returned function per pixel (encoded sRGB, 0..1). Unclipped, a stretched colour may end up past 0..1: the
+colour table keeps it so and is clipped only after it is read between its points, so the clip does not blur. */
 export const colour = (e: Effective, table = toneTable(e)) => {
   const [gainR, gainG, gainB] = gains(e);
   const saturation = Math.max(0, 1 + (e.saturation > 0 ? 0.6 : 1) * e.saturation);
@@ -406,7 +407,7 @@ export const colour = (e: Effective, table = toneTable(e)) => {
 };
 
 /** The colour steps as a 3D table for WebGL: `size` points a side over the encoded values, red fastest, then green,
- * then blue; four floats a point (the fourth unused), unclipped. */
+then blue; four floats a point (the fourth unused), unclipped. */
 export const lutData = (e: Effective, size: number) => {
   const pixel = colour(e);
   const data = new Float32Array(size * size * size * 4);
@@ -427,11 +428,11 @@ export const lutData = (e: Effective, size: number) => {
 };
 
 /** how much of the vignette a place in the frame gets (u, v: 0..1 across and down; 0 in the middle, 1 in the
- * corners): an ellipse in the frame's own proportions */
+corners): an ellipse in the frame's own proportions */
 export const vignetteWeight = (u: number, v: number) => {
   const dx = 2 * u - 1;
   const dy = 2 * v - 1;
-  return smoothstep(0.3, 1, Math.sqrt((dx * dx + dy * dy) / 2));
+  return smoothstep(0.3, Math.sqrt((dx * dx + dy * dy) / 2));
 };
 
 export const vignette = (value: number, weight: number, amount: number) =>
@@ -442,7 +443,7 @@ export const vignette = (value: number, weight: number, amount: number) =>
 // ---- straighten ----
 
 /** the share of the photo's width (and height) that the largest upright rectangle in its own proportions keeps
- * inside the photo turned by `angle` degrees */
+inside the photo turned by `angle` degrees */
 export const straightenScale = (angle: number, width: number, height: number) => {
   const a = (Math.abs(angle) * Math.PI) / 180;
   const c = Math.cos(a);
@@ -451,7 +452,7 @@ export const straightenScale = (angle: number, width: number, height: number) =>
 };
 
 /** where a place in the straightened frame (u, v: 0..1 across and down) comes from in the photo, in the same terms;
- * clockwise above zero, the screen's y pointing down */
+clockwise above zero, the screen's y pointing down */
 export const sourceUv = (angle: number, width: number, height: number, u: number, v: number): [number, number] => {
   const k = straightenScale(angle, width, height);
   const t = (angle * Math.PI) / 180;

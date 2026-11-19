@@ -1,10 +1,10 @@
 <script lang="ts">
   // Local Omarchy layer: a Space's page as the photo menu sees it: its timeline (tile-timeline.stub), the menu, and
   // the selection bar (SelectionToolbar) that shows while there is a selection, as on the Space pages
-  import SelectionToolbar from '$lib/components/timeline/SelectionToolbar.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import TileTimeline from '@test-data/mocks/tile-timeline.stub.svelte';
+  import SelectionToolbar from '#lib/components/timeline/SelectionToolbar.svelte';
+  import TileTimeline from '#lib/gallery/__mocks__/tile-timeline.stub.svelte';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
   import type { AlbumResponseDto, SharedSpaceMemberResponseDto } from '@immich/sdk';
   import { TooltipProvider } from '@immich/ui';
   import SpacePhotoMenu from './SpacePhotoMenu.svelte';

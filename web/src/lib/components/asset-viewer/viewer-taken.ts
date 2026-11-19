@@ -1,5 +1,5 @@
+import { fromISODateTime, fromISODateTimeUTC } from '#lib/utils/timeline-util.ts';
 import type { AssetResponseDto } from '@immich/sdk';
-import { fromISODateTime, fromISODateTimeUTC } from '$lib/utils/timeline-util';
 
 // Local Omarchy layer: when the photo was taken, as the viewer's bar says it on a phone (AssetViewerNavBar), beside
 // the back arrow: the day with its year (fifty years of photos: the year is never taken for granted) and the time. The

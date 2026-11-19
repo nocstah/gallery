@@ -1,6 +1,6 @@
+import { CuratorError, curatorCall, curatorPost, type MemoryTrack, type SmartAlbum } from '#lib/utils/curator.ts';
 import { t, type Translations } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { curatorCall, CuratorError, curatorPost, type MemoryTrack, type SmartAlbum } from '$lib/utils/curator';
 
 // Local Omarchy layer: Curator's routes for "A memory a day, from the beginning" (curator/api.py, /api/series…), the
 // owner's only. The owner keeps several series, each of the whole library or of one smart album, each with its own
@@ -14,7 +14,7 @@ import { curatorCall, CuratorError, curatorPost, type MemoryTrack, type SmartAlb
 export type SeriesState = 'draft' | 'on' | 'paused' | 'ended';
 
 /** A series as Curator keeps it; `people_without` are Gallery person ids, which Kioku names. `name` is its family
- * page's title. */
+page's title. */
 export type SeriesRow = {
   id: number;
   name: string;
@@ -25,8 +25,8 @@ export type SeriesRow = {
 };
 
 /** What a series is made from: the whole library, or one smart album, kept by its Gallery album. `updating`: the
- * album's smart rule still keeps it filled; `gone`: Gallery no longer has the album, so nothing new is planned. The
- * album's name is the owner's alone: these pages show it, the family page never does. */
+album's smart rule still keeps it filled; `gone`: Gallery no longer has the album, so nothing new is planned. The
+album's name is the owner's alone: these pages show it, the family page never does. */
 export type SeriesSource =
   | { kind: 'library' }
   | {
@@ -39,7 +39,7 @@ export type SeriesSource =
     };
 
 /** Where a series stands: planning (no family link yet), starts (its link is made, day 1 ahead), live, off (its link
- * was turned off) or ended. */
+was turned off) or ended. */
 export type SeriesStatus = 'planning' | 'starts' | 'live' | 'off' | 'ended';
 
 /** A series as every series route gives it now: the row, what it is made from and where it stands. */
@@ -60,7 +60,7 @@ export type SeriesCard = SeriesRow & {
 };
 
 /** A new series: of the whole library, or of a smart album (its photos as the album's rule keeps it filled), with
- * an optional span of days, 'YYYY-MM-DD'. */
+an optional span of days, 'YYYY-MM-DD'. */
 export type NewSeries = { smart_album_id?: number; span_from?: string; span_to?: string; name?: string };
 
 /** The title a family page has until the owner gives it one of its own (Curator's). */
@@ -74,7 +74,7 @@ export type ComingMemory = {
   /** its day, 'YYYY-MM-DD' */
   day: string;
   /** the month of its first photo, 'YYYY-MM': where the story starts when it is the first to go out; null for the
-   * prelude's undated photos (older Curators leave it out) */
+  prelude's undated photos (older Curators leave it out) */
   month?: string | null;
   kind: 'prelude' | 'trip' | 'event' | 'month';
   /** the title and the line as the family page will show them (the line may be '') */
@@ -152,18 +152,18 @@ export const seriesApi = {
   /** one series; Curator answers 404 for one that does not exist (any more) */
   one: (id: number) => curatorCall<{ series: SeriesCard }>(`/series/${id}`),
   /** plans one, of the whole library without `smart_album_id`; a smart album that has a series already opens that
-   * one instead (`existing`, no job). Curator refuses a span that ends before it starts in its own words (400). */
+  one instead (`existing`, no job). Curator refuses a span that ends before it starts in its own words (400). */
   create: (series: NewSeries = {}) =>
     curatorPost<{ series: SeriesCard; existing: boolean; job: number | null }>('/series', series),
   /** its family page's title (`name: ''` gives it Curator's again; Curator refuses one that names someone or gives
-   * a day, 400), or who it leaves out */
+  a day, 400), or who it leaves out */
   update: (id: number, change: { people_without?: string[]; name?: string }) =>
     curatorCall<{ series: SeriesCard; job: number | null }>(`/series/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(change),
     }),
   /** the series gone, with its coming days and its family pages' files; Curator answers 409 while Gallery still has
-   * one of its links, so they are deleted in Gallery first (series-state) */
+  one of its links, so they are deleted in Gallery first (series-state) */
   remove: (id: number) => curatorCall<{ deleted: number; forgotten: number }>(`/series/${id}`, { method: 'DELETE' }),
   coming: (id: number) => curatorCall<Coming>(`/series/${id}/coming`),
   skip: (id: number, key: string) => curatorPost<{ ok: true; job: number }>(`/series/${id}/skip`, { key }),
@@ -183,7 +183,7 @@ export const seriesApi = {
   /** the photos a new family link must hold */
   linkPhotos: (id: number) => curatorCall<{ photos: string[] }>(`/series/${id}/link-photos`),
   /** binds the family link the web made; `replaced` is the link it takes over from, still to be turned off. Curator
-   * refuses a link another series' family page has (409). */
+  refuses a link another series' family page has (409). */
   bindLink: (id: number, linkId: string, key: string) =>
     curatorPost<{ series: SeriesRow; replaced: string | null }>(`/series/${id}/link`, { linkId, key }),
   /** forgets a family link once Gallery has deleted it (Curator answers 409 while Gallery still has it) */
@@ -203,7 +203,7 @@ export const asCuratorError = (error: unknown) =>
   error instanceof CuratorError ? error : new CuratorError(error instanceof Error ? error.message : String(error), -1);
 
 /** Curator's refusals of a family page's title (curator/series_api.py), in its own English words, and the keys that say
- * them in the owner's language: a person's name, a place from home, a day of the month. */
+them in the owner's language: a person's name, a place from home, a day of the month. */
 const TITLE_REFUSALS = new Map<string, Translations>([
   ["The family page never shows anyone's name: take the name out of the title", 'memory_series_title_names_someone'],
   ['The family page never shows a place from home: take it out of the title', 'memory_series_title_home_place'],

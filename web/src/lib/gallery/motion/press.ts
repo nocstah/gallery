@@ -1,15 +1,15 @@
-import { duration, ease, prefersReducedMotion, spring, springEasing } from '$lib/gallery/motion/tokens';
+import { duration, ease, prefersReducedMotion, spring, springEasing } from '#lib/gallery/motion/tokens.ts';
 
 /**
- * Site-wide press and hover feedback: every button-like control squishes while held and springs back
- * on release, and buttons grow a touch under the mouse. It runs from document listeners, so upstream
- * components get it without being edited.
- *
- * Opt a custom element in with `data-press`, or out with `data-no-press` (on it or any ancestor).
- * `data-no-hover-grow` keeps the press but drops the hover grow: small bordered chips that already
- * show hover by colour shimmer as the bouncy grow redraws their 1px border at a new scale every frame.
- * Everything inside a map, and every overlay on the photo, is out.
- */
+Site-wide press and hover feedback: every button-like control squishes while held and springs back
+on release, and buttons grow a touch under the mouse. It runs from document listeners, so upstream
+components get it without being edited.
+
+Opt a custom element in with `data-press`, or out with `data-no-press` (on it or any ancestor).
+`data-no-hover-grow` keeps the press but drops the hover grow: small bordered chips that already
+show hover by colour shimmer as the bouncy grow redraws their 1px border at a new scale every frame.
+Everything inside a map, and every overlay on the photo, is out.
+*/
 export const PRESSABLE =
   'button, [role="button"], [role="switch"], [role="checkbox"], [role="tab"], [role="menuitem"], [role="option"], [data-press]';
 
@@ -17,14 +17,14 @@ export const PRESSABLE =
 export const JUST_PRESSED_MS = 700;
 
 /**
- * Never animated. Maps position their markers with their own transforms, and a marker that grows under
- * the cursor moves its hit area, so hover flickers on and off and the marker is hard to click.
- * ImageCarousel's scroll buttons (the memory lane arrows: @immich/ui markup, matched by its sticky
- * button layer) shimmered under the bouncy grow the same way the filter chips did, so they stay still.
- * Overlays on the photo (`data-overlay-interactive`, upstream's marker: the OCR text boxes, the face
- * editor) are pinned to the image by their own transforms; an OCR box that grows or squishes while the
- * user drags across it makes its text jump and the selection slip.
- */
+Never animated. Maps position their markers with their own transforms, and a marker that grows under
+the cursor moves its hit area, so hover flickers on and off and the marker is hard to click.
+ImageCarousel's scroll buttons (the memory lane arrows: @immich/ui markup, matched by its sticky
+button layer) shimmered under the bouncy grow the same way the filter chips did, so they stay still.
+Overlays on the photo (`data-overlay-interactive`, upstream's marker: the OCR text boxes, the face
+editor) are pinned to the image by their own transforms; an OCR box that grows or squishes while the
+user drags across it makes its text jump and the selection slip.
+*/
 const NO_MOTION = '[data-no-press], [data-overlay-interactive], .maplibregl-map, section.overflow-x-scroll > .sticky';
 
 /** Hover grows buttons only; rows in menus and lists, tabs and checkboxes highlight instead. */
@@ -38,9 +38,9 @@ const MAX_AREA = 600 * 200;
 const MAX_HOVER_WIDTH = 400;
 
 /**
- * Scale for a held control. The squish is about 14px across whatever the width, so icons and buttons
- * dip clearly (0.86) and wide rows still move (0.95).
- */
+Scale for a held control. The squish is about 14px across whatever the width, so icons and buttons
+dip clearly (0.86) and wide rows still move (0.95).
+*/
 export const pressScale = (width: number): number => 1 - Math.min(0.14, Math.max(0.05, 14 / Math.max(width, 1)));
 
 /** Scale for a hovered button: about 5px of growth, so icons pop (1.1) and wide buttons swell (1.02). */

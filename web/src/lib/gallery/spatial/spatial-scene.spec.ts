@@ -1,7 +1,7 @@
+import { getSpatialSceneActions, spatialSceneState } from '#lib/gallery/spatial/spatial-scene.svelte.ts';
 import { AssetTypeEnum, type AssetResponseDto } from '@immich/sdk';
 import type { ActionEvent, ActionItem } from '@immich/ui';
 import type { MessageFormatter } from 'svelte-i18n';
-import { getSpatialSceneActions, spatialSceneState } from '$lib/gallery/spatial/spatial-scene.svelte';
 
 const $t = ((key: string) => key) as MessageFormatter;
 const run = (action: ActionItem) => action.onAction?.({ action, event: new Event('click') } as ActionEvent<ActionItem>);
@@ -11,7 +11,8 @@ const photo = (overrides: Partial<AssetResponseDto> = {}) =>
 describe('Spatial Scene actions', () => {
   beforeEach(() => {
     spatialSceneState.hide();
-    // happy-dom has no WebGL; the actions only need to know whether a context exists
+    // Headless Chromium's WebGL support depends on the host GPU; the actions only need to know whether a
+    // context exists, so pin that
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as RenderingContext);
   });
 

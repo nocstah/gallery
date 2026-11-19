@@ -10,7 +10,7 @@ import { GlobalSearchManager } from './global-search-manager.svelte';
 const { mockUser } = vi.hoisted(() => ({
   mockUser: { current: { id: 'test-user', isAdmin: true } as { id: string; isAdmin: boolean } | null },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.js', () => ({
   authManager: {
     get authenticated() {
       return mockUser.current !== null;
@@ -26,7 +26,7 @@ const { mockFlags } = vi.hoisted(() => ({
     valueOrUndefined: { search: true, map: true, trash: true } as Record<string, boolean> | undefined,
   },
 }));
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.js', () => ({
   featureFlagsManager: mockFlags,
 }));
 
@@ -37,13 +37,15 @@ vi.mock('@immich/sdk', async () => ({
   getMlHealth: vi.fn(),
 }));
 
-vi.mock('$app/navigation', () => ({
+// Browser mode rejects an import of a name a mock does not export, so keep the global fake's other exports.
+vi.mock('$app/navigation', async () => ({
+  ...(await import('#test/unit/mocks/app-navigation.ts')),
   goto: vi.fn(),
 }));
 
 // Local Omarchy layer: QR's bank slips as the palette reads them when it opens (managers/slip-covers): known at once
 // here, and none, so no test reads QR's album
-vi.mock('$lib/managers/slip-covers.svelte', () => ({
+vi.mock('#lib/managers/slip-covers.svelte.js', () => ({
   slipCovers: { isSlip: () => false, load: () => Promise.resolve(), known: true },
 }));
 

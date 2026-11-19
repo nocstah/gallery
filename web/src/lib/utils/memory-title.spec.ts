@@ -1,5 +1,4 @@
-import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
-import type { MemoryFacts } from '$lib/utils/curator';
+import type { MemoryFacts } from '#lib/utils/curator.ts';
 import {
   composeMemoryTitle,
   filmPhotoCount,
@@ -10,8 +9,9 @@ import {
   memoryFilmWords,
   memoryOwnFacts,
   memoryTitle,
-} from '$lib/utils/memory-title';
-import { assetFactory } from '@test-data/factories/asset-factory';
+} from '#lib/utils/memory-title.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { AssetTypeEnum, MemoryType, type MemoryResponseDto } from '@immich/sdk';
 
 const memory = (overrides: Partial<MemoryResponseDto> & { days?: string[] } = {}): MemoryResponseDto => {
   const { days = ['2025-10-16'], ...rest } = overrides;

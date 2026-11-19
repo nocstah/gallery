@@ -2153,6 +2153,7 @@
             "state": "Stable"
           }
         ],
+        "x-immich-permission": "notification.create",
         "x-immich-state": "Stable"
       }
     },
@@ -2222,6 +2223,7 @@
             "state": "Stable"
           }
         ],
+        "x-immich-permission": "notification.create",
         "x-immich-state": "Stable"
       }
     },
@@ -2282,6 +2284,7 @@
             "state": "Stable"
           }
         ],
+        "x-immich-permission": "notification.create",
         "x-immich-state": "Stable"
       }
     },
@@ -2551,7 +2554,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update an existing user.",
         "operationId": "updateUserAdmin",
         "parameters": [
@@ -2601,8 +2603,7 @@
         ],
         "summary": "Update a user",
         "tags": [
-          "Users (admin)",
-          "Deprecated"
+          "Users (admin)"
         ],
         "x-immich-admin-only": true,
         "x-immich-history": [
@@ -2619,13 +2620,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateUserAdmin"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "adminUser.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/admin/users/{id}/calendar-heatmap": {
@@ -2850,7 +2851,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update the preferences of a specific user.",
         "operationId": "updateUserPreferencesAdmin",
         "parameters": [
@@ -2900,8 +2900,7 @@
         ],
         "summary": "Update user preferences",
         "tags": [
-          "Users (admin)",
-          "Deprecated"
+          "Users (admin)"
         ],
         "x-immich-admin-only": true,
         "x-immich-history": [
@@ -2918,13 +2917,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateUserPreferencesAdmin"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "adminUser.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/admin/users/{id}/restore": {
@@ -3927,6 +3926,73 @@
         "x-immich-permission": "album.read"
       }
     },
+    "/albums/{id}/stacks/{stackId}": {
+      "get": {
+        "description": "The stack, with only the members that are in this album. Needs read access to both the album and the stack.",
+        "operationId": "getAlbumStack",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "stackId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StackResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Retrieve a stack as an album holds it",
+        "tags": [
+          "Albums"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          },
+          {
+            "version": "v2",
+            "state": "Beta"
+          }
+        ],
+        "x-immich-permission": "album.read",
+        "x-immich-state": "Beta"
+      }
+    },
     "/albums/{id}/user/{userId}": {
       "delete": {
         "description": "Remove a user from an album. Use an ID of \"me\" to leave a shared album.",
@@ -4421,7 +4487,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Updates the name and permissions of an API key by its ID. The current user must own this API key.",
         "operationId": "updateApiKey",
         "parameters": [
@@ -4471,8 +4536,7 @@
         ],
         "summary": "Update an API key",
         "tags": [
-          "API keys",
-          "Deprecated"
+          "API keys"
         ],
         "x-immich-history": [
           {
@@ -4488,13 +4552,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateApiKey"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "apiKey.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/api-keys/{id}/rotate": {
@@ -4957,7 +5021,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Updates multiple assets at the same time.",
         "operationId": "updateAssets",
         "parameters": [],
@@ -4989,8 +5052,7 @@
         ],
         "summary": "Update assets",
         "tags": [
-          "Assets",
-          "Deprecated"
+          "Assets"
         ],
         "x-immich-history": [
           {
@@ -5006,13 +5068,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateAssets"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "asset.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/assets/bulk-upload-check": {
@@ -5392,6 +5454,62 @@
         "x-immich-state": "Beta"
       }
     },
+    "/assets/spaces": {
+      "post": {
+        "description": "For each given asset the caller can read, the IDs of the caller's spaces that show it by any path: added to the space, in an album linked to it, or in a library linked to it, hidden from the timeline or not. Assets in none of them are left out, and hidden, locked and trashed assets are in none.",
+        "operationId": "getAssetSpaces",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetSpacesDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetSpacesResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Resolve which of the caller's spaces show the given assets",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v1",
+            "state": "Added"
+          },
+          {
+            "version": "v1",
+            "state": "Beta"
+          }
+        ],
+        "x-immich-permission": "asset.read",
+        "x-immich-state": "Beta"
+      }
+    },
     "/assets/statistics": {
       "get": {
         "description": "Retrieve various statistics about the assets owned by the authenticated user.",
@@ -5504,7 +5622,10 @@
             "name": "spaceId",
             "required": false,
             "in": "query",
+            "description": "Shared space the asset is viewed in, used to resolve its people",
             "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
               "type": "string"
             }
           }
@@ -5554,7 +5675,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update information of a specific asset.",
         "operationId": "updateAsset",
         "parameters": [
@@ -5604,8 +5724,7 @@
         ],
         "summary": "Update an asset",
         "tags": [
-          "Assets",
-          "Deprecated"
+          "Assets"
         ],
         "x-immich-history": [
           {
@@ -5621,13 +5740,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateAsset"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "asset.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/assets/{id}/adjust": {
@@ -6742,6 +6861,80 @@
           }
         ],
         "x-immich-permission": "asset.edit.create",
+        "x-immich-state": "Beta"
+      }
+    },
+    "/assets/{id}/video/data-saver": {
+      "get": {
+        "description": "Streams the small Data Saver copy of a video, made for playback on mobile data. Without one, streams what /assets/{id}/video/playback does. Supports byte range requests.",
+        "operationId": "playAssetVideoDataSaver",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Play the Data Saver copy of a video",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v1",
+            "state": "Added"
+          },
+          {
+            "version": "v1",
+            "state": "Beta"
+          }
+        ],
+        "x-immich-permission": "asset.view",
         "x-immich-state": "Beta"
       }
     },
@@ -8391,6 +8584,61 @@
         "x-immich-state": "Alpha"
       }
     },
+    "/cluster-groups/{id}/users": {
+      "get": {
+        "description": "Retrieve the users that are a member of the cluster group.",
+        "operationId": "getClusterGroupUsers",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Retrieve the users of a cluster group",
+        "tags": [
+          "Cluster groups"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.2.0",
+            "state": "Added"
+          }
+        ],
+        "x-immich-permission": "clusterGroup.read"
+      }
+    },
     "/config": {
       "get": {
         "description": "Retrieve the system configuration properties that are visible to logged in users.",
@@ -8971,6 +9219,62 @@
         "x-immich-state": "Stable"
       }
     },
+    "/faces/sightings/merge": {
+      "post": {
+        "description": "Combine faces of one video into the one with the most sightings, which takes every sighting of the others; the others are deleted. Faces not sampled from the video are left as they are.",
+        "operationId": "mergeVideoFaces",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VideoFaceMergeDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoFaceMergeResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Combine video faces",
+        "tags": [
+          "Faces"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          },
+          {
+            "version": "v2",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "face.delete",
+        "x-immich-state": "Stable"
+      }
+    },
     "/faces/{id}": {
       "delete": {
         "description": "Delete a face identified by the id. Optionally can be force deleted.",
@@ -9101,6 +9405,471 @@
           }
         ],
         "x-immich-permission": "face.update",
+        "x-immich-state": "Stable"
+      }
+    },
+    "/faces/{id}/sightings": {
+      "delete": {
+        "description": "Take one moment out of a video face, at a time GET /faces/{id}/sightings returned. Removing the best view makes the next best one it, which moves the face crop. A face keeps at least one sighting. Returns the sightings left.",
+        "operationId": "removeAssetFaceSighting",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "time",
+            "required": true,
+            "in": "query",
+            "description": "The sighting's time, as GET /faces/{id}/sightings returned it, or as it was when removed",
+            "schema": {
+              "minimum": 0,
+              "format": "double",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoFaceSightingsResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Remove a face sighting",
+        "tags": [
+          "Faces"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          },
+          {
+            "version": "v2",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "face.delete",
+        "x-immich-state": "Stable"
+      },
+      "get": {
+        "description": "Every moment a video face was seen while the video was sampled, on the player timeline. Empty for a photo face or a video face detected on the poster only.",
+        "operationId": "getAssetFaceSightings",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoFaceSightingsResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get face sightings",
+        "tags": [
+          "Faces"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          },
+          {
+            "version": "v2",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "face.read",
+        "x-immich-state": "Stable"
+      }
+    },
+    "/faces/{id}/sightings/move": {
+      "post": {
+        "description": "Move one moment of a video face into another face of the same video, such as the face of the person it shows. A moment the other face had moved away comes back in place, so moving it back undoes a move. Moving a face's last sighting deletes that face.",
+        "operationId": "moveAssetFaceSighting",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "time",
+            "required": true,
+            "in": "query",
+            "description": "The sighting's time, as GET /faces/{id}/sightings returned it",
+            "schema": {
+              "minimum": 0,
+              "format": "double",
+              "type": "number"
+            }
+          },
+          {
+            "name": "toFaceId",
+            "required": true,
+            "in": "query",
+            "description": "The face of the same video the sighting moves into",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoFaceSightingMoveResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Move a face sighting into another face",
+        "tags": [
+          "Faces"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          },
+          {
+            "version": "v2",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "face.delete",
+        "x-immich-state": "Stable"
+      }
+    },
+    "/faces/{id}/sightings/restore": {
+      "post": {
+        "description": "Bring back a moment DELETE /faces/{id}/sightings removed, as the best view again if it was that. Returns the sightings.",
+        "operationId": "restoreAssetFaceSighting",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "time",
+            "required": true,
+            "in": "query",
+            "description": "The sighting's time, as GET /faces/{id}/sightings returned it, or as it was when removed",
+            "schema": {
+              "minimum": 0,
+              "format": "double",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoFaceSightingsResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Restore a face sighting",
+        "tags": [
+          "Faces"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          },
+          {
+            "version": "v2",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "face.delete",
+        "x-immich-state": "Stable"
+      }
+    },
+    "/faces/{id}/sightings/split": {
+      "post": {
+        "description": "Move one moment out of a video face into a new, unassigned face of its own, at a time GET /faces/{id}/sightings returned; name it with PUT /faces/{id}. Moving the best view makes the next best one it. A face keeps at least one sighting. Undo by deleting the new face and restoring the sighting.",
+        "operationId": "splitAssetFaceSighting",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "time",
+            "required": true,
+            "in": "query",
+            "description": "The sighting's time, as GET /faces/{id}/sightings returned it, or as it was when removed",
+            "schema": {
+              "minimum": 0,
+              "format": "double",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoFaceSightingSplitResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Move a face sighting to a new face",
+        "tags": [
+          "Faces"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          },
+          {
+            "version": "v2",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "face.delete",
+        "x-immich-state": "Stable"
+      }
+    },
+    "/faces/{id}/sightings/thumbnail": {
+      "get": {
+        "description": "Retrieve a crop of one sighting of a video face, at a time GET /faces/{id}/sightings returned.",
+        "operationId": "getAssetFaceSightingThumbnail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "time",
+            "required": true,
+            "in": "query",
+            "description": "The sighting's time, as GET /faces/{id}/sightings returned it",
+            "schema": {
+              "minimum": 0,
+              "format": "double",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get face sighting thumbnail",
+        "tags": [
+          "Faces"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          },
+          {
+            "version": "v2",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "face.read",
+        "x-immich-state": "Stable"
+      }
+    },
+    "/faces/{id}/thumbnail": {
+      "get": {
+        "description": "Retrieve a crop of one face. A video face sampled across the whole video is cut from its best frame.",
+        "operationId": "getAssetFaceThumbnail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get face thumbnail",
+        "tags": [
+          "Faces"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v2",
+            "state": "Added"
+          },
+          {
+            "version": "v2",
+            "state": "Stable"
+          }
+        ],
+        "x-immich-permission": "face.read",
         "x-immich-state": "Stable"
       }
     },
@@ -9788,7 +10557,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update an existing external library.",
         "operationId": "updateLibrary",
         "parameters": [
@@ -9838,8 +10606,7 @@
         ],
         "summary": "Update a library",
         "tags": [
-          "Libraries",
-          "Deprecated"
+          "Libraries"
         ],
         "x-immich-admin-only": true,
         "x-immich-history": [
@@ -9856,13 +10623,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateLibrary"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "library.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/libraries/{id}/scan": {
@@ -10702,7 +11469,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update an existing memory by its ID.",
         "operationId": "updateMemory",
         "parameters": [
@@ -10752,8 +11518,7 @@
         ],
         "summary": "Update a memory",
         "tags": [
-          "Memories",
-          "Deprecated"
+          "Memories"
         ],
         "x-immich-history": [
           {
@@ -10769,13 +11534,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateMemory"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "memory.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/memories/{id}/assets": {
@@ -11866,6 +12631,415 @@
         "x-immich-state": "Stable"
       }
     },
+    "/passkeys": {
+      "get": {
+        "description": "Search the passkeys of the current user.",
+        "operationId": "searchPasskeys",
+        "parameters": [
+          {
+            "name": "id",
+            "required": false,
+            "in": "query",
+            "description": "Filter by passkey ID",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PasskeyResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Search passkeys",
+        "tags": [
+          "Passkeys"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v4.0.0",
+            "state": "Added"
+          },
+          {
+            "version": "v4.0.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "passkey.read",
+        "x-immich-state": "Alpha"
+      }
+    },
+    "/passkeys/authentication/finish": {
+      "post": {
+        "description": "Verify the response from the authenticator and receive a session token.",
+        "operationId": "finishAuthentication",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyAuthenticationFinishDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "summary": "Finish passkey authentication",
+        "tags": [
+          "Passkeys"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v4.0.0",
+            "state": "Added"
+          },
+          {
+            "version": "v4.0.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-state": "Alpha"
+      }
+    },
+    "/passkeys/authentication/start": {
+      "post": {
+        "description": "Generate the options used by the browser to sign in with a passkey.",
+        "operationId": "startAuthentication",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyAuthenticationOptionsDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "summary": "Start passkey authentication",
+        "tags": [
+          "Passkeys"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v4.0.0",
+            "state": "Added"
+          },
+          {
+            "version": "v4.0.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-state": "Alpha"
+      }
+    },
+    "/passkeys/registration/finish": {
+      "post": {
+        "description": "Verify the response from the authenticator and save the new passkey for the current user.",
+        "operationId": "finishRegistration",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyRegistrationFinishDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Finish passkey registration",
+        "tags": [
+          "Passkeys"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v4.0.0",
+            "state": "Added"
+          },
+          {
+            "version": "v4.0.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-state": "Alpha"
+      }
+    },
+    "/passkeys/registration/start": {
+      "post": {
+        "description": "Generate the options used by the browser to create a new passkey for the current user.",
+        "operationId": "startRegistration",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyRegistrationOptionsDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Start passkey registration",
+        "tags": [
+          "Passkeys"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v4.0.0",
+            "state": "Added"
+          },
+          {
+            "version": "v4.0.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-state": "Alpha"
+      }
+    },
+    "/passkeys/{id}": {
+      "delete": {
+        "description": "Delete a passkey by its ID. The current user must own this passkey.",
+        "operationId": "deletePasskey",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Delete a passkey",
+        "tags": [
+          "Passkeys"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v4.0.0",
+            "state": "Added"
+          },
+          {
+            "version": "v4.0.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "passkey.delete",
+        "x-immich-state": "Alpha"
+      },
+      "get": {
+        "description": "Retrieve a passkey by its ID. The current user must own this passkey.",
+        "operationId": "getPasskey",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Retrieve a passkey",
+        "tags": [
+          "Passkeys"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v4.0.0",
+            "state": "Added"
+          },
+          {
+            "version": "v4.0.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "passkey.read",
+        "x-immich-state": "Alpha"
+      },
+      "patch": {
+        "description": "Update the name of a passkey by its ID. The current user must own this passkey.",
+        "operationId": "updatePasskey",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyUpdateDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Update a passkey",
+        "tags": [
+          "Passkeys"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v4.0.0",
+            "state": "Added"
+          },
+          {
+            "version": "v4.0.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "passkey.update",
+        "x-immich-state": "Alpha"
+      }
+    },
     "/people": {
       "delete": {
         "description": "Bulk delete a list of people at once.",
@@ -11963,6 +13137,15 @@
             }
           },
           {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "description": "Filter by person name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -12012,7 +13195,7 @@
             "name": "type",
             "required": false,
             "in": "query",
-            "description": "Filter the list. `person` returns human people. `pet` returns the individual pets that pet recognition identified — species buckets, which the detector produces without an embedding, are excluded, and the People-page minimumFaces threshold is waived. Omit for the unfiltered list.",
+            "description": "Filter the list. `person` returns human people. `pet` returns the individual pets that pet recognition identified, and the People-page minimumFaces threshold is waived. Species buckets, which the detector produces without an embedding, are never listed. Omit for the unfiltered list.",
             "schema": {
               "type": "string",
               "enum": [
@@ -12299,6 +13482,15 @@
             }
           },
           {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "description": "Filter by person name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -12348,7 +13540,7 @@
             "name": "type",
             "required": false,
             "in": "query",
-            "description": "Filter the list. `person` returns human people. `pet` returns the individual pets that pet recognition identified — species buckets, which the detector produces without an embedding, are excluded, and the People-page minimumFaces threshold is waived. Omit for the unfiltered list.",
+            "description": "Filter the list. `person` returns human people. `pet` returns the individual pets that pet recognition identified, and the People-page minimumFaces threshold is waived. Species buckets, which the detector produces without an embedding, are never listed. Omit for the unfiltered list.",
             "schema": {
               "type": "string",
               "enum": [
@@ -12571,6 +13763,15 @@
             }
           },
           {
+            "name": "name",
+            "required": false,
+            "in": "query",
+            "description": "Filter by person name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "page",
             "required": false,
             "in": "query",
@@ -12620,7 +13821,7 @@
             "name": "type",
             "required": false,
             "in": "query",
-            "description": "Filter the list. `person` returns human people. `pet` returns the individual pets that pet recognition identified — species buckets, which the detector produces without an embedding, are excluded, and the People-page minimumFaces threshold is waived. Omit for the unfiltered list.",
+            "description": "Filter the list. `person` returns human people. `pet` returns the individual pets that pet recognition identified, and the People-page minimumFaces threshold is waived. Species buckets, which the detector produces without an embedding, are never listed. Omit for the unfiltered list.",
             "schema": {
               "type": "string",
               "enum": [
@@ -13003,7 +14204,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update an individual person.",
         "operationId": "updatePerson",
         "parameters": [
@@ -13053,8 +14253,7 @@
         ],
         "summary": "Update person",
         "tags": [
-          "People",
-          "Deprecated"
+          "People"
         ],
         "x-immich-history": [
           {
@@ -13070,13 +14269,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updatePerson"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "person.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/people/{id}/face-suggestions": {
@@ -15046,6 +16245,14 @@
               "format": "uuid",
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
               "nullable": true
+            }
+          },
+          {
+            "name": "libraryView",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/LibraryView"
             }
           },
           {
@@ -17636,7 +18843,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update a specific session identified by id.",
         "operationId": "updateSession",
         "parameters": [
@@ -17686,8 +18892,7 @@
         ],
         "summary": "Update a session",
         "tags": [
-          "Sessions",
-          "Deprecated"
+          "Sessions"
         ],
         "x-immich-history": [
           {
@@ -17703,13 +18908,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateSession"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "session.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/sessions/{id}/lock": {
@@ -22905,7 +24110,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update an existing stack by its ID.",
         "operationId": "updateStack",
         "parameters": [
@@ -22955,8 +24159,7 @@
         ],
         "summary": "Update a stack",
         "tags": [
-          "Stacks",
-          "Deprecated"
+          "Stacks"
         ],
         "x-immich-history": [
           {
@@ -22972,13 +24175,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateStack"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "stack.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/stacks/{id}/assets/{assetId}": {
@@ -24228,7 +25431,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update an existing tag identified by its ID.",
         "operationId": "updateTag",
         "parameters": [
@@ -24278,8 +25480,7 @@
         ],
         "summary": "Update a tag",
         "tags": [
-          "Tags",
-          "Deprecated"
+          "Tags"
         ],
         "x-immich-history": [
           {
@@ -24295,13 +25496,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateTag"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "tag.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/tags/{id}/assets": {
@@ -24567,6 +25768,14 @@
             }
           },
           {
+            "name": "libraryView",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/LibraryView"
+            }
+          },
+          {
             "name": "make",
             "required": false,
             "in": "query",
@@ -24709,6 +25918,15 @@
                 "format": "uuid",
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
               }
+            }
+          },
+          {
+            "name": "stackCountInAlbum",
+            "required": false,
+            "in": "query",
+            "description": "With albumId and withStacked: a stack's count covers only the stack members this album holds. Otherwise it covers the whole stack.",
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -24997,6 +26215,14 @@
             }
           },
           {
+            "name": "libraryView",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/LibraryView"
+            }
+          },
+          {
             "name": "make",
             "required": false,
             "in": "query",
@@ -25139,6 +26365,15 @@
                 "format": "uuid",
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
               }
+            }
+          },
+          {
+            "name": "stackCountInAlbum",
+            "required": false,
+            "in": "query",
+            "description": "With albumId and withStacked: a stack's count covers only the stack members this album holds. Otherwise it covers the whole stack.",
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -25432,6 +26667,14 @@
             }
           },
           {
+            "name": "libraryView",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/LibraryView"
+            }
+          },
+          {
             "name": "make",
             "required": false,
             "in": "query",
@@ -25574,6 +26817,15 @@
                 "format": "uuid",
                 "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
               }
+            }
+          },
+          {
+            "name": "stackCountInAlbum",
+            "required": false,
+            "in": "query",
+            "description": "With albumId and withStacked: a stack's count covers only the stack members this album holds. Otherwise it covers the whole stack.",
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -26344,7 +27596,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update the current user making the API request.",
         "operationId": "updateMyUser",
         "parameters": [],
@@ -26383,8 +27634,7 @@
         ],
         "summary": "Update current user",
         "tags": [
-          "Users",
-          "Deprecated"
+          "Users"
         ],
         "x-immich-history": [
           {
@@ -26400,13 +27650,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateMyUser"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "user.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/users/me/calendar-heatmap": {
@@ -26837,7 +28087,6 @@
         "x-immich-state": "Stable"
       },
       "put": {
-        "deprecated": true,
         "description": "Update the preferences of the current user.",
         "operationId": "updateMyPreferences",
         "parameters": [],
@@ -26876,8 +28125,7 @@
         ],
         "summary": "Update my preferences",
         "tags": [
-          "Users",
-          "Deprecated"
+          "Users"
         ],
         "x-immich-history": [
           {
@@ -26893,13 +28141,13 @@
             "state": "Stable"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateMyPreferences"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
         "x-immich-permission": "userPreference.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-state": "Stable"
       }
     },
     "/users/profile-image": {
@@ -27530,7 +28778,6 @@
         "x-immich-permission": "workflow.read"
       },
       "put": {
-        "deprecated": true,
         "description": "Update the information of a specific workflow by its ID. This endpoint can be used to update the workflow name, description, trigger type, filters and actions order, etc.",
         "operationId": "updateWorkflow",
         "parameters": [
@@ -27580,8 +28827,7 @@
         ],
         "summary": "Update a workflow",
         "tags": [
-          "Workflows",
-          "Deprecated"
+          "Workflows"
         ],
         "x-immich-history": [
           {
@@ -27589,13 +28835,12 @@
             "state": "Added"
           },
           {
-            "version": "v3",
-            "state": "Deprecated",
-            "replacementId": "updateWorkflow"
+            "version": "v3.0.0",
+            "state": "Updated",
+            "description": "This endpoint now also supports PATCH, in addition to PUT. PATCH will become the default in v4, and then PUT will be dropped in v5. Please migrate accordingly."
           }
         ],
-        "x-immich-permission": "workflow.update",
-        "x-immich-state": "Deprecated"
+        "x-immich-permission": "workflow.update"
       }
     },
     "/workflows/{id}/logs": {
@@ -27743,7 +28988,7 @@
   "info": {
     "title": "Immich",
     "description": "Immich API",
-    "version": "3.3.5",
+    "version": "3.4.1",
     "contact": {}
   },
   "tags": [
@@ -27846,6 +29091,10 @@
     {
       "name": "Partners",
       "description": "A partner is a link with another user that allows sharing of assets between two users."
+    },
+    {
+      "name": "Passkeys",
+      "description": "A passkey is a WebAuthn credential that can be used to login without a password."
     },
     {
       "name": "People",
@@ -28076,6 +29325,10 @@
       },
       "AdminConfigBackupsDto": {
         "properties": {
+          "beta": {
+            "description": "Whether the backups feature is enabled",
+            "type": "boolean"
+          },
           "database": {
             "$ref": "#/components/schemas/AdminConfigDatabaseBackupDto"
           }
@@ -28263,6 +29516,9 @@
           "oauth": {
             "$ref": "#/components/schemas/AdminConfigOAuthDto"
           },
+          "passkey": {
+            "$ref": "#/components/schemas/AdminConfigPasskeyDto"
+          },
           "passwordLogin": {
             "$ref": "#/components/schemas/AdminConfigPasswordLoginDto"
           },
@@ -28308,6 +29564,7 @@
           "nightlyTasks",
           "notifications",
           "oauth",
+          "passkey",
           "passwordLogin",
           "reverseGeocoding",
           "server",
@@ -28337,6 +29594,31 @@
         "required": [
           "enabled",
           "maxDistance"
+        ],
+        "type": "object"
+      },
+      "AdminConfigFFmpegDataSaverDto": {
+        "properties": {
+          "enabled": {
+            "description": "Store a small extra copy of each video for the mobile app on mobile data",
+            "type": "boolean"
+          },
+          "maxBitrate": {
+            "description": "Bitrate cap of the Data Saver copy, in ffmpeg notation (for example 1500k)",
+            "pattern": "^\\d+[km]?$",
+            "type": "string"
+          },
+          "targetResolution": {
+            "$ref": "#/components/schemas/DataSaverVideoResolution"
+          },
+          "targetVideoCodec": {
+            "$ref": "#/components/schemas/DataSaverVideoCodec"
+          }
+        },
+        "required": [
+          "maxBitrate",
+          "targetResolution",
+          "targetVideoCodec"
         ],
         "type": "object"
       },
@@ -28384,6 +29666,9 @@
             "maximum": 51,
             "minimum": 0,
             "type": "integer"
+          },
+          "dataSaver": {
+            "$ref": "#/components/schemas/AdminConfigFFmpegDataSaverDto"
           },
           "gopSize": {
             "description": "GOP size",
@@ -28452,6 +29737,7 @@
           "bframes",
           "cqMode",
           "crf",
+          "dataSaver",
           "gopSize",
           "maxBitrate",
           "preferredHwDevice",
@@ -28561,6 +29847,9 @@
           },
           "suggestions": {
             "$ref": "#/components/schemas/AdminConfigFaceSuggestionDto"
+          },
+          "video": {
+            "$ref": "#/components/schemas/AdminConfigVideoFacesDto"
           }
         },
         "required": [
@@ -28569,7 +29858,8 @@
           "minFaces",
           "minScore",
           "modelName",
-          "suggestions"
+          "suggestions",
+          "video"
         ],
         "type": "object"
       },
@@ -29277,6 +30567,34 @@
         ],
         "type": "object"
       },
+      "AdminConfigPasskeyDto": {
+        "properties": {
+          "additionalDomains": {
+            "description": "Additional domains",
+            "items": {
+              "format": "uri",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "domain": {
+            "description": "Passkey domain",
+            "format": "uri",
+            "nullable": true,
+            "type": "string"
+          },
+          "enabled": {
+            "description": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "additionalDomains",
+          "domain",
+          "enabled"
+        ],
+        "type": "object"
+      },
       "AdminConfigPasswordLoginDto": {
         "properties": {
           "enabled": {
@@ -29306,12 +30624,16 @@
             "description": "Name of the model to use",
             "minLength": 1,
             "type": "string"
+          },
+          "video": {
+            "$ref": "#/components/schemas/AdminConfigVideoPetsDto"
           }
         },
         "required": [
           "enabled",
           "minScore",
-          "modelName"
+          "modelName",
+          "video"
         ],
         "type": "object"
       },
@@ -29627,6 +30949,119 @@
         },
         "required": [
           "deleteDelay"
+        ],
+        "type": "object"
+      },
+      "AdminConfigVideoFacesDto": {
+        "properties": {
+          "createPeople": {
+            "description": "Let video faces start new people. When off, a video face only joins a person already found elsewhere.",
+            "type": "boolean"
+          },
+          "enabled": {
+            "description": "Detect video faces in frames sampled across the whole video",
+            "type": "boolean"
+          },
+          "maxDistance": {
+            "description": "Largest embedding distance at which two views of a face in one video count as the same person. Separate from recognition, so recognition can stay strict without splitting people inside a video.",
+            "format": "double",
+            "maximum": 1,
+            "minimum": 0.1,
+            "type": "number"
+          },
+          "maxFrames": {
+            "description": "Frame budget per video. Past it the interval is stretched, so the whole video is still covered.",
+            "maximum": 10000,
+            "minimum": 10,
+            "type": "integer"
+          },
+          "minFaceSize": {
+            "description": "A person whose largest face in the video is narrower than this, in pixels of the sampled frame, is not kept",
+            "maximum": 500,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "minRecognitionScore": {
+            "description": "A video face whose best detection score in the video is below this neither joins nor starts a person, and stays unassigned for naming by hand. 0 turns the check off.",
+            "format": "double",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "minSightings": {
+            "description": "Sampled frames a person must be seen in to be kept",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "sampleInterval": {
+            "description": "Seconds between sampled frames",
+            "format": "double",
+            "maximum": 60,
+            "minimum": 0.5,
+            "type": "number"
+          },
+          "sceneDetection": {
+            "description": "Also sample a frame just after every scene cut",
+            "type": "boolean"
+          },
+          "tiledDetection": {
+            "description": "Also search each high-resolution frame as four overlapping quarters, to find small faces such as a crowd. Costs about five times the detection work.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "maxDistance",
+          "maxFrames",
+          "minFaceSize",
+          "minRecognitionScore",
+          "minSightings",
+          "sampleInterval"
+        ],
+        "type": "object"
+      },
+      "AdminConfigVideoPetsDto": {
+        "properties": {
+          "enabled": {
+            "description": "Detect pets in frames sampled across the whole video",
+            "type": "boolean"
+          },
+          "maxDistance": {
+            "description": "Largest pet embedding distance at which two views of a pet in one video count as the same pet",
+            "format": "double",
+            "maximum": 2,
+            "minimum": 0.1,
+            "type": "number"
+          },
+          "maxFrames": {
+            "description": "Frame budget per video. Past it the interval is stretched, so the whole video is still covered.",
+            "maximum": 10000,
+            "minimum": 10,
+            "type": "integer"
+          },
+          "minSightings": {
+            "description": "Sampled frames a pet must be seen in to be kept",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "sampleInterval": {
+            "description": "Seconds between sampled frames",
+            "format": "double",
+            "maximum": 60,
+            "minimum": 0.5,
+            "type": "number"
+          },
+          "sceneDetection": {
+            "description": "Also sample a frame just after every scene cut",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "maxDistance",
+          "maxFrames",
+          "minSightings",
+          "sampleInterval"
         ],
         "type": "object"
       },
@@ -31588,6 +33023,60 @@
         ],
         "type": "object"
       },
+      "AssetSpacesDto": {
+        "properties": {
+          "assetIds": {
+            "description": "Asset IDs",
+            "items": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "assetIds"
+        ],
+        "type": "object"
+      },
+      "AssetSpacesItemDto": {
+        "properties": {
+          "assetId": {
+            "description": "Asset ID",
+            "type": "string"
+          },
+          "spaceIds": {
+            "description": "IDs of the caller's spaces that show the asset",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "assetId",
+          "spaceIds"
+        ],
+        "type": "object"
+      },
+      "AssetSpacesResponseDto": {
+        "properties": {
+          "assets": {
+            "description": "The requested assets that at least one of the caller's spaces shows",
+            "items": {
+              "$ref": "#/components/schemas/AssetSpacesItemDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "assets"
+        ],
+        "type": "object"
+      },
       "AssetStackResponseDto": {
         "properties": {
           "assetCount": {
@@ -32645,6 +34134,24 @@
           "y"
         ],
         "type": "object"
+      },
+      "DataSaverVideoCodec": {
+        "description": "Video codec of the Data Saver copy",
+        "enum": [
+          "h264",
+          "hevc",
+          "av1"
+        ],
+        "type": "string"
+      },
+      "DataSaverVideoResolution": {
+        "description": "Resolution of the Data Saver copy",
+        "enum": [
+          "480",
+          "720",
+          "1080"
+        ],
+        "type": "string"
       },
       "DatabaseBackupDeleteDto": {
         "properties": {
@@ -34728,6 +36235,7 @@
         "description": "Image format",
         "enum": [
           "jpeg",
+          "jxl",
           "webp"
         ],
         "type": "string"
@@ -34833,6 +36341,7 @@
           "AssetGenerateThumbnailsQueueAll",
           "AssetGenerateThumbnails",
           "AuditTableCleanup",
+          "AuthChallengeCleanup",
           "DatabaseBackup",
           "FacialRecognitionQueueAll",
           "FacialRecognition",
@@ -34886,6 +36395,8 @@
           "PetRecognition",
           "SpatialSceneQueueAll",
           "SpatialScene",
+          "AssetEncodeDataSaverVideoQueueAll",
+          "AssetEncodeDataSaverVideo",
           "WorkflowAssetTrigger",
           "IntegrityUntrackedFilesQueueAll",
           "IntegrityUntrackedFiles",
@@ -34915,7 +36426,9 @@
           "AssetClassifyQueueAll",
           "AssetClassify",
           "AssetAnalyzeQualityQueueAll",
-          "AssetAnalyzeQuality"
+          "AssetAnalyzeQuality",
+          "MemoryRuleGenerate",
+          "AssetVideoTrimGenerate"
         ],
         "type": "string"
       },
@@ -35187,6 +36700,14 @@
         ],
         "type": "object"
       },
+      "LibraryView": {
+        "description": "Only your photos that are in no space, or only the photos of the spaces on your timeline (unset: both)",
+        "enum": [
+          "personal",
+          "spaces"
+        ],
+        "type": "string"
+      },
       "LicenseKeyDto": {
         "properties": {
           "activationKey": {
@@ -35315,7 +36836,8 @@
           "start",
           "end",
           "select_database_restore",
-          "restore_database"
+          "restore_database",
+          "rollback"
         ],
         "type": "string"
       },
@@ -35391,6 +36913,10 @@
             "type": "boolean"
           },
           "error": {
+            "type": "string"
+          },
+          "futoBackupsJobId": {
+            "description": "FUTO Backups job ID",
             "type": "string"
           },
           "progress": {
@@ -36224,6 +37750,9 @@
               }
             ],
             "x-immich-state": "Deprecated"
+          },
+          "libraryView": {
+            "$ref": "#/components/schemas/LibraryView"
           },
           "make": {
             "deprecated": true,
@@ -37228,6 +38757,127 @@
         ],
         "type": "object"
       },
+      "PasskeyAuthenticationFinishDto": {
+        "properties": {
+          "response": {
+            "additionalProperties": {},
+            "description": "Response returned by @simplewebauthn/browser's `startAuthentication()`",
+            "properties": {
+              "id": {
+                "description": "Credential ID",
+                "format": "base64url",
+                "pattern": "^[A-Za-z0-9_-]*$",
+                "type": "string"
+              },
+              "response": {
+                "additionalProperties": {},
+                "properties": {
+                  "userHandle": {
+                    "description": "User handle",
+                    "format": "base64url",
+                    "pattern": "^[A-Za-z0-9_-]*$",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "id",
+              "response"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "response"
+        ],
+        "type": "object"
+      },
+      "PasskeyAuthenticationOptionsDto": {
+        "additionalProperties": {},
+        "description": "Response returned by @simplewebauthn/server's `generateAuthenticationOptions`",
+        "type": "object"
+      },
+      "PasskeyRegistrationFinishDto": {
+        "properties": {
+          "name": {
+            "description": "Passkey name",
+            "type": "string"
+          },
+          "response": {
+            "description": "Response returned by @simplewebauthn/browser's `startAuthentication()`"
+          }
+        },
+        "required": [
+          "response"
+        ],
+        "type": "object"
+      },
+      "PasskeyRegistrationOptionsDto": {
+        "additionalProperties": {},
+        "description": "Response returned by @simplewebauthn/server's `generateRegistrationOptions`",
+        "type": "object"
+      },
+      "PasskeyResponseDto": {
+        "properties": {
+          "createdAt": {
+            "description": "Creation date",
+            "example": "2024-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          },
+          "id": {
+            "description": "Passkey ID",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+            "type": "string"
+          },
+          "name": {
+            "description": "Passkey name",
+            "nullable": true,
+            "type": "string"
+          },
+          "updatedAt": {
+            "description": "Last update date",
+            "example": "2024-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          },
+          "usedAt": {
+            "description": "Last used date",
+            "example": "2024-01-01T00:00:00.000Z",
+            "format": "date-time",
+            "nullable": true,
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "createdAt",
+          "id",
+          "name",
+          "updatedAt",
+          "usedAt"
+        ],
+        "type": "object"
+      },
+      "PasskeyUpdateDto": {
+        "properties": {
+          "name": {
+            "description": "Passkey name",
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "PeopleDeleteDto": {
         "properties": {
           "ids": {
@@ -37470,6 +39120,9 @@
             "description": "Person name",
             "type": "string"
           },
+          "type": {
+            "$ref": "#/components/schemas/PersonType"
+          },
           "userId": {
             "description": "Restrict the update to the person record of this User ID",
             "format": "uuid",
@@ -37620,6 +39273,7 @@
           "backup.delete",
           "clusterGroup.read",
           "clusterGroup.leave",
+          "clusterGroup.admin",
           "clusterGroupRequest.create",
           "clusterGroupRequest.read",
           "clusterGroupRequest.delete",
@@ -37662,6 +39316,9 @@
           "partner.read",
           "partner.update",
           "partner.delete",
+          "passkey.read",
+          "passkey.update",
+          "passkey.delete",
           "person.create",
           "person.read",
           "person.update",
@@ -38185,6 +39842,14 @@
         ],
         "type": "object"
       },
+      "PersonType": {
+        "description": "Person or pet type",
+        "enum": [
+          "person",
+          "pet"
+        ],
+        "type": "string"
+      },
       "PersonUpdateDto": {
         "properties": {
           "birthDate": {
@@ -38216,6 +39881,9 @@
           "name": {
             "description": "Person name",
             "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/PersonType"
           },
           "userId": {
             "description": "Restrict the update to the person record of this User ID",
@@ -38582,24 +40250,79 @@
       "PublicConfigDto": {
         "description": "Configuration properties that are visible to everyone",
         "properties": {
+          "ffmpeg": {
+            "$ref": "#/components/schemas/PublicConfigFFmpegDto"
+          },
+          "map": {
+            "$ref": "#/components/schemas/PublicConfigMapDto"
+          },
           "oauth": {
             "$ref": "#/components/schemas/PublicConfigOAuthDto"
+          },
+          "passkey": {
+            "$ref": "#/components/schemas/PublicConfigPasskeyDto"
           },
           "passwordLogin": {
             "$ref": "#/components/schemas/PublicConfigPasswordLoginDto"
           },
           "server": {
             "$ref": "#/components/schemas/PublicConfigServerDto"
-          },
-          "theme": {
-            "$ref": "#/components/schemas/PublicConfigThemeDto"
           }
         },
         "required": [
+          "ffmpeg",
+          "map",
           "oauth",
+          "passkey",
           "passwordLogin",
-          "server",
-          "theme"
+          "server"
+        ],
+        "type": "object"
+      },
+      "PublicConfigFFmpegDto": {
+        "properties": {
+          "realtime": {
+            "$ref": "#/components/schemas/PublicConfigFFmpegRealtimeDto"
+          }
+        },
+        "required": [
+          "realtime"
+        ],
+        "type": "object"
+      },
+      "PublicConfigFFmpegRealtimeDto": {
+        "properties": {
+          "enabled": {
+            "description": "Enable real-time HLS transcoding (alpha)",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "type": "object"
+      },
+      "PublicConfigMapDto": {
+        "properties": {
+          "darkStyle": {
+            "description": "Dark map style URL",
+            "format": "uri",
+            "type": "string"
+          },
+          "enabled": {
+            "description": "Enabled",
+            "type": "boolean"
+          },
+          "lightStyle": {
+            "description": "Light map style URL",
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "darkStyle",
+          "enabled",
+          "lightStyle"
         ],
         "type": "object"
       },
@@ -38625,6 +40348,18 @@
         ],
         "type": "object"
       },
+      "PublicConfigPasskeyDto": {
+        "properties": {
+          "enabled": {
+            "description": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "type": "object"
+      },
       "PublicConfigPasswordLoginDto": {
         "properties": {
           "enabled": {
@@ -38646,18 +40381,6 @@
         },
         "required": [
           "loginPageMessage"
-        ],
-        "type": "object"
-      },
-      "PublicConfigThemeDto": {
-        "properties": {
-          "customCss": {
-            "description": "Custom CSS for theming",
-            "type": "string"
-          }
-        },
-        "required": [
-          "customCss"
         ],
         "type": "object"
       },
@@ -38920,7 +40643,23 @@
             "description": "Number of paused jobs",
             "maximum": 9007199254740991,
             "minimum": -9007199254740991,
-            "type": "integer"
+            "type": "integer",
+            "x-immich-history": [
+              {
+                "version": "v2.0.0",
+                "state": "Added"
+              },
+              {
+                "version": "v4.0.0",
+                "state": "Updated",
+                "description": "A paused queue will now also shows its job as `waiting`"
+              },
+              {
+                "version": "v4.0.0",
+                "state": "Deprecated"
+              }
+            ],
+            "x-immich-state": "Deprecated"
           },
           "waiting": {
             "description": "Number of waiting jobs",
@@ -39347,6 +41086,9 @@
               }
             ],
             "x-immich-state": "Deprecated"
+          },
+          "libraryView": {
+            "$ref": "#/components/schemas/LibraryView"
           },
           "make": {
             "deprecated": true,
@@ -39929,12 +41671,7 @@
             "type": "string"
           },
           "type": {
-            "description": "Scoped profile type",
-            "enum": [
-              "person",
-              "space-person"
-            ],
-            "type": "string"
+            "$ref": "#/components/schemas/ScopedPersonProfileType"
           }
         },
         "required": [
@@ -39942,6 +41679,14 @@
           "type"
         ],
         "type": "object"
+      },
+      "ScopedPersonProfileType": {
+        "description": "Scoped profile type",
+        "enum": [
+          "person",
+          "space-person"
+        ],
+        "type": "string"
       },
       "ScopedPrimaryProfile": {
         "properties": {
@@ -40639,6 +42384,9 @@
             "nullable": true,
             "type": "string"
           },
+          "libraryView": {
+            "$ref": "#/components/schemas/LibraryView"
+          },
           "make": {
             "description": "Filter by camera make",
             "nullable": true,
@@ -41127,10 +42875,30 @@
         ],
         "type": "object"
       },
+      "ServerFeatureLevel": {
+        "description": "Server feature level",
+        "enum": [
+          1,
+          2
+        ],
+        "type": "integer",
+        "x-enum-varnames": [
+          "FeatureLevel",
+          "Passkeys"
+        ]
+      },
       "ServerFeaturesDto": {
         "properties": {
+          "backups": {
+            "description": "Whether the backups feature is enabled",
+            "type": "boolean"
+          },
           "configFile": {
             "description": "Whether config file is available",
+            "type": "boolean"
+          },
+          "dataSaverVideo": {
+            "description": "Whether videos may have a Data Saver copy at /assets/{id}/video/data-saver. Absent on older servers.",
             "type": "boolean"
           },
           "duplicateDetection": {
@@ -41230,6 +42998,7 @@
           }
         },
         "required": [
+          "backups",
           "configFile",
           "duplicateDetection",
           "email",
@@ -41435,6 +43204,18 @@
       },
       "ServerVersionResponseDto": {
         "properties": {
+          "featureLevel": {
+            "description": "Highest feature level supported by the server, which increments independently of the release version",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer",
+            "x-immich-history": [
+              {
+                "version": "v4.0.0",
+                "state": "Added"
+              }
+            ]
+          },
           "major": {
             "description": "Major version number",
             "maximum": 9007199254740991,
@@ -41468,6 +43249,7 @@
           }
         },
         "required": [
+          "featureLevel",
           "major",
           "minor",
           "patch",
@@ -41639,6 +43421,14 @@
           },
           "restoreBackupFilename": {
             "description": "Restore backup filename",
+            "type": "string"
+          },
+          "rollbackRepositoryId": {
+            "description": "Rollback repository ID",
+            "type": "string"
+          },
+          "rollbackSnapshotId": {
+            "description": "Rollback snapshot ID",
             "type": "string"
           }
         },
@@ -43242,6 +45032,9 @@
             ],
             "x-immich-state": "Deprecated"
           },
+          "libraryView": {
+            "$ref": "#/components/schemas/LibraryView"
+          },
           "make": {
             "deprecated": true,
             "description": "Filter by camera make",
@@ -44640,6 +46433,9 @@
               }
             ],
             "x-immich-state": "Deprecated"
+          },
+          "libraryView": {
+            "$ref": "#/components/schemas/LibraryView"
           },
           "make": {
             "deprecated": true,
@@ -48860,8 +50656,14 @@
           "map": {
             "$ref": "#/components/schemas/UserConfigMapDto"
           },
+          "notifications": {
+            "$ref": "#/components/schemas/UserConfigNotificationsDto"
+          },
           "oauth": {
             "$ref": "#/components/schemas/UserConfigOAuthDto"
+          },
+          "passkey": {
+            "$ref": "#/components/schemas/UserConfigPasskeyDto"
           },
           "passwordLogin": {
             "$ref": "#/components/schemas/UserConfigPasswordLoginDto"
@@ -48871,9 +50673,6 @@
           },
           "server": {
             "$ref": "#/components/schemas/UserConfigServerDto"
-          },
-          "theme": {
-            "$ref": "#/components/schemas/UserConfigThemeDto"
           },
           "trash": {
             "$ref": "#/components/schemas/UserConfigTrashDto"
@@ -48887,11 +50686,12 @@
           "image",
           "machineLearning",
           "map",
+          "notifications",
           "oauth",
+          "passkey",
           "passwordLogin",
           "reverseGeocoding",
           "server",
-          "theme",
           "trash",
           "user"
         ],
@@ -49064,8 +50864,24 @@
         ],
         "type": "object"
       },
+      "UserConfigNotificationsDto": {
+        "properties": {
+          "smtp": {
+            "$ref": "#/components/schemas/UserConfigSmtpDto"
+          }
+        },
+        "required": [
+          "smtp"
+        ],
+        "type": "object"
+      },
       "UserConfigOAuthDto": {
         "properties": {
+          "accountManagementUrl": {
+            "default": "",
+            "description": "Account management URL",
+            "type": "string"
+          },
           "autoLaunch": {
             "description": "Auto launch",
             "type": "boolean"
@@ -49090,6 +50906,18 @@
         "properties": {
           "enabled": {
             "description": "Whether the task is enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "type": "object"
+      },
+      "UserConfigPasskeyDto": {
+        "properties": {
+          "enabled": {
+            "description": "Enabled",
             "type": "boolean"
           }
         },
@@ -49144,15 +50972,15 @@
         ],
         "type": "object"
       },
-      "UserConfigThemeDto": {
+      "UserConfigSmtpDto": {
         "properties": {
-          "customCss": {
-            "description": "Custom CSS for theming",
-            "type": "string"
+          "enabled": {
+            "description": "Whether SMTP email notifications are enabled",
+            "type": "boolean"
           }
         },
         "required": [
-          "customCss"
+          "enabled"
         ],
         "type": "object"
       },
@@ -49635,6 +51463,175 @@
         ],
         "type": "string"
       },
+      "VideoFaceMergeDto": {
+        "properties": {
+          "faceIds": {
+            "description": "Faces of one video to combine into one; faces not sampled from the video are left as they are",
+            "items": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            },
+            "minItems": 2,
+            "type": "array"
+          }
+        },
+        "required": [
+          "faceIds"
+        ],
+        "type": "object"
+      },
+      "VideoFaceMergeResponseDto": {
+        "properties": {
+          "faceId": {
+            "description": "The face that was kept: the one with the most sightings",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+            "type": "string"
+          },
+          "sightings": {
+            "description": "Its sightings, now including those of the merged faces",
+            "items": {
+              "$ref": "#/components/schemas/VideoFaceSightingDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "faceId",
+          "sightings"
+        ],
+        "type": "object"
+      },
+      "VideoFaceSightingBoxDto": {
+        "properties": {
+          "x1": {
+            "description": "Left edge, as a fraction of the frame width",
+            "format": "double",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "x2": {
+            "description": "Right edge, as a fraction of the frame width",
+            "format": "double",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "y1": {
+            "description": "Top edge, as a fraction of the frame height",
+            "format": "double",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "y2": {
+            "description": "Bottom edge, as a fraction of the frame height",
+            "format": "double",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "x1",
+          "x2",
+          "y1",
+          "y2"
+        ],
+        "type": "object"
+      },
+      "VideoFaceSightingDto": {
+        "properties": {
+          "box": {
+            "$ref": "#/components/schemas/VideoFaceSightingBoxDto",
+            "description": "Where the face was in the frame at that moment"
+          },
+          "isBest": {
+            "description": "Whether this is the best view, the one the face crop is cut from",
+            "type": "boolean"
+          },
+          "score": {
+            "description": "Detector confidence for this sighting",
+            "format": "double",
+            "type": "number"
+          },
+          "time": {
+            "description": "When the face was seen, in seconds on the player's timeline: from the trim start for a trimmed video",
+            "format": "double",
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "box",
+          "isBest",
+          "score",
+          "time"
+        ],
+        "type": "object"
+      },
+      "VideoFaceSightingMoveResponseDto": {
+        "properties": {
+          "sightings": {
+            "description": "The sightings the face has left; empty when its last one moved and the face was deleted",
+            "items": {
+              "$ref": "#/components/schemas/VideoFaceSightingDto"
+            },
+            "type": "array"
+          },
+          "targetSightings": {
+            "description": "The sightings of the face the sighting moved into",
+            "items": {
+              "$ref": "#/components/schemas/VideoFaceSightingDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "sightings",
+          "targetSightings"
+        ],
+        "type": "object"
+      },
+      "VideoFaceSightingSplitResponseDto": {
+        "properties": {
+          "faceId": {
+            "description": "The new face the sighting moved to: unassigned, made by hand",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+            "type": "string"
+          },
+          "sightings": {
+            "description": "The sightings the original face has left, as GET /faces/{id}/sightings lists them",
+            "items": {
+              "$ref": "#/components/schemas/VideoFaceSightingDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "faceId",
+          "sightings"
+        ],
+        "type": "object"
+      },
+      "VideoFaceSightingsResponseDto": {
+        "properties": {
+          "sightings": {
+            "description": "Every sighting inside the current trim, in time order; empty for a face not sampled from a video",
+            "items": {
+              "$ref": "#/components/schemas/VideoFaceSightingDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "sightings"
+        ],
+        "type": "object"
+      },
       "WorkflowCreateDto": {
         "properties": {
           "description": {
@@ -49876,6 +51873,7 @@
         "enum": [
           "AssetCreate",
           "AssetMetadataExtraction",
+          "AssetOcrExtraction",
           "AssetTagged"
         ],
         "type": "string"

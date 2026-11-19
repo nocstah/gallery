@@ -2,7 +2,7 @@
 // and when they were taken, until Curator names albums itself: "Phuket · 12–15 Mar 2023", "Bangkok, Phuket · Mar – Apr
 // 2023", "Thailand · 2019–2020", or only the dates when no photo has a place. The dates are the locale's own ranges
 // (Intl's formatRange), as precise as the span allows: days within a month, months within a year, else years.
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
 
 export type NamedAsset = Pick<TimelineAsset, 'localDateTime' | 'city' | 'country'>;
 

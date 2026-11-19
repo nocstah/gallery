@@ -1,9 +1,8 @@
-import type { SharedSpaceMemberResponseDto, SharedSpaceResponseDto } from '@immich/sdk';
-import { SharedSpaceRole } from '@immich/sdk';
+import SpaceCard from '#lib/components/spaces/space-card.svelte';
+import { SharedSpaceRole, type SharedSpaceMemberResponseDto, type SharedSpaceResponseDto } from '@immich/sdk';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { init, register, waitLocale } from 'svelte-i18n';
-import SpaceCard from '$lib/components/spaces/space-card.svelte';
 
 const makeMember = (overrides: Partial<SharedSpaceMemberResponseDto> = {}): SharedSpaceMemberResponseDto => ({
   userId: 'user-1',
@@ -36,7 +35,7 @@ const makeSpace = (overrides: Partial<SharedSpaceResponseDto> = {}): SharedSpace
 
 describe('SpaceCard component', () => {
   beforeAll(async () => {
-    register('en-US', () => import('$i18n/en.json'));
+    register('en-US', () => import('#i18n/en.json'));
     await init({ fallbackLocale: 'en-US' });
     await waitLocale('en-US');
   });

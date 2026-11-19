@@ -1,30 +1,35 @@
 <script lang="ts">
-  import { shortcuts, type ShortcutOptions } from '$lib/actions/shortcut';
+  import { shortcuts, type ShortcutOptions } from '#lib/actions/shortcut.ts';
   import {
     focusAsset,
     setFocusToAsset as setFocusAssetInit,
     setFocusTo as setFocusToInit,
-  } from '$lib/components/timeline/actions/focus-actions';
-  import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-  import { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-  import { offeredSpecialAlbums, specialAlbumOf, type SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
-  import type { TimelineAsset, TimelineGrouping } from '$lib/managers/timeline-manager/types';
-  import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte';
-  import NavigateToDateModal from '$lib/modals/NavigateToDateModal.svelte';
-  import ShortcutsModal from '$lib/modals/ShortcutsModal.svelte';
-  import { handleStack } from '$lib/services/stack.service';
-  import { keyboardManager } from '$lib/stores/keyboard-manager.svelte';
-  import { showDeleteModal } from '$lib/stores/preferences.store';
-  import { searchStore } from '$lib/stores/search.svelte';
-  import { handlePromiseError } from '$lib/utils';
-  import { deleteAssets } from '$lib/utils/actions';
-  import { holdQuickTrash, quickTrash } from '$lib/utils/quick-trash';
-  import { archiveAssets, selectAllAssets } from '$lib/utils/asset-utils';
-  import { revealDelta, rowNeighbour, rowOf } from '$lib/utils/grid-rows';
+  } from '#lib/components/timeline/actions/focus-actions.ts';
+  import type { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
+  import {
+    offeredSpecialAlbums,
+    specialAlbumOf,
+    type SpecialAlbumManager,
+  } from '#lib/managers/special-albums.svelte.ts';
+  import { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+  import type { TimelineAsset, TimelineGrouping } from '#lib/managers/timeline-manager/types.ts';
+  import AssetDeleteConfirmModal from '#lib/modals/AssetDeleteConfirmModal.svelte';
+  import NavigateToDateModal from '#lib/modals/NavigateToDateModal.svelte';
+  import ShortcutsModal from '#lib/modals/ShortcutsModal.svelte';
+  import { toggleFavoriteAssets } from '#lib/services/asset.service.ts';
+  import { handleStack } from '#lib/services/stack.service.ts';
+  import { keyboardManager } from '#lib/stores/keyboard-manager.svelte.ts';
+  import { showDeleteModal } from '#lib/stores/preferences.store.ts';
+  import { searchStore } from '#lib/stores/search.svelte.ts';
+  import { handlePromiseError } from '#lib/utils.ts';
+  import { deleteAssets } from '#lib/utils/actions.ts';
+  import { selectAllAssets } from '#lib/utils/asset-utils.ts';
+  import { revealDelta, rowNeighbour, rowOf } from '#lib/utils/grid-rows.ts';
+  import { holdQuickTrash, quickTrash } from '#lib/utils/quick-trash.ts';
   import { AssetVisibility, type AlbumResponseDto } from '@immich/sdk';
   import { isModalOpen, modalManager } from '@immich/ui';
   import { tick } from 'svelte';
@@ -37,7 +42,7 @@
     /** the album the timeline shows, if any (inside a special album its key takes photos out) */
     album?: AlbumResponseDto | null;
     /** Local Omarchy layer: the grouping shown and the page's way to change it, for O (where the page offers the
-     * Years and Months overviews) */
+    Years and Months overviews) */
     grouping?: TimelineGrouping;
     onGrouping?: (grouping: TimelineGrouping) => void;
   };
@@ -100,11 +105,11 @@
     onEscape?.();
   };
 
-  const toggleArchive = async () => {
-    const visibility = assetInteraction.isAllArchived ? AssetVisibility.Timeline : AssetVisibility.Archive;
-    const ids = await archiveAssets(assetInteraction.assets, visibility);
-    timelineManager.update(ids, (asset) => (asset.visibility = visibility));
-    eventManager.emit('AssetsArchive', ids);
+  const toggleFavoriteSelected = async () => {
+    const allAssets = assetInteraction.assets;
+    const isFavorite = allAssets.some((a) => !a.isFavorite);
+    const assetsToUpdate = allAssets.filter((asset) => asset.isFavorite !== isFavorite);
+    await toggleFavoriteAssets(assetsToUpdate, isFavorite);
     assetInteraction.clear();
   };
 
@@ -326,7 +331,7 @@
         { shortcut: { key: 'D', ctrl: true }, onShortcut: () => assetInteraction.clear() },
         // Local Omarchy layer: Shift+S, not plain s - with drag-select a stray keypress stacked big selections
         { shortcut: { key: 'S', shift: true }, onShortcut: () => onStackAssets() },
-        { shortcut: { key: 'a', shift: true }, onShortcut: toggleArchive },
+        { shortcut: { key: 'f' }, onShortcut: () => toggleFavoriteSelected() },
       );
     } else {
       // conflicting shortcuts

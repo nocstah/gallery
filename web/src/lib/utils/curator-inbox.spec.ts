@@ -1,8 +1,4 @@
-import { IntlMessageFormat } from 'intl-messageformat';
-import fs from 'node:fs';
-import path from 'node:path';
-import { FORK_LOCALES } from '$lib/i18n/fork-locales';
-import { curator, type InboxGroup, type Suggestion } from '$lib/utils/curator';
+import { FORK_LOCALES } from '#lib/i18n/fork-locales.ts';
 import {
   confidenceMarks,
   isBlankPixels,
@@ -16,7 +12,11 @@ import {
   seriesOf,
   sharedConfidence,
   waitingIn,
-} from '$lib/utils/curator-inbox';
+} from '#lib/utils/curator-inbox.ts';
+import { curator, type InboxGroup, type Suggestion } from '#lib/utils/curator.ts';
+import { IntlMessageFormat } from 'intl-messageformat';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // Local Omarchy layer: the AI inbox by kind. Batches Curator made one per night before it added to the waiting batch
 // of their kind read as one row here, its counts summed and its runs' days in data type.

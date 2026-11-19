@@ -1,7 +1,7 @@
 # Birthday Memories: Upstream Coexistence — Design
 
 **Date:** 2026-09-24
-**Status:** Approved, pending implementation
+**Status:** Superseded on 2026-10-16 by owner decision OD-3 (see the last section)
 **Context:** Rolling upstream rebase `rebase/upstream-rolling-v3.3.0`, upstream `immich-30831`
 (`d6d09473836`, _feat: birthday memories_), the second of 27 pending upstream commits. The
 per-batch product-direction gate quarantined it; nothing past `202015ed95d` has been pulled.
@@ -119,6 +119,10 @@ address a memory the caller already holds by id, which no Gallery client can obt
   and a `[MemoryType.Birthday]: BirthdayData` entry in the fork's `MemoryDataByType`. **Required**,
   not optional: `AnyMemoryData = MemoryDataByType[MemoryType]` does not compile once the enum gains
   a member the interface lacks.
+- Since the layering wave 7 move, the rule engine, `toReservable` and the overlap reconcile live in
+  `server/src/gallery/services/rule-memory.service.ts` (its own `MemoryRuleGenerate` job), and
+  `isMemoryTypeVisible` in `server/src/gallery/services/memory-rules/memory-type.metadata.ts`.
+  `onMemoriesCreate` stays in `memory.service.ts` and still never dispatches `createBirthdayMemories`.
 - **`server/src/services/memory.service.ts`** — keep upstream's private `createBirthdayMemories`,
   `getBirthdayAssets` and their three constants verbatim. Resolve `onMemoriesCreate` (it conflicts:
   upstream edits the `users.map(...createOnThisDayMemories...)` line the fork rewrote to
@@ -308,3 +312,37 @@ memory query now follows upstream and has **no type filter**. The previous
 `isInValues([onThisDay, rule])` existed because mobile could not title `birthday`, which is no
 longer true, and the server-side withholding above remains the guard. Follow-up 3 above is
 therefore done upstream's way.
+
+## 2026-10-15: the birthday rule runs upstream's query
+
+`BirthdayMemoryRule` now selects people with upstream's `PersonRepository.forBirthdayMemories`
+instead of the fork's `getBirthdaysForDay`, which is deleted. Upstream's query observes a 29 February
+birthday on 28 February in a non-leap year; the fork's matched month and day only, so those people
+never got a card three years in four. Upstream's query has no notion of pets, so the rule drops them
+with `MemoryRuleAssetRepository.getPetPersonGroupIds` (a `person_pet` lookup). It also requires a
+birth year before the target year, so a person born this year gets no card on the day of birth.
+
+Nothing else here changes: upstream's generator stays undispatched, `birthday` rows stay off every
+read path, and `forBirthdayMemories` stays upstream text, so the "Repositories" bullet above now
+describes one dormant query fewer. Medium cases in `memory.service.spec.ts` ("birthday rule on
+upstream birthday query") pin the leap-day observance and the pet exclusion.
+
+## 2026-10-16: superseded, birthday memories are Immich's (OD-3)
+
+The owner chose upstream's generator over the fork's rule. `BirthdayMemoryRule` and its spec are deleted, along
+with the two repository methods only it used (`getMemoryAssetsForPerson`, `getPetPersonGroupIds`);
+`createBirthdayMemories` is dispatched again; the `birthday-memory-generator-not-dispatched` invariant is gone; the
+twelve upstream `onMemoryCreate (birthday)` medium cases run again. Upstream's create-time `superRefine` stays: it is
+upstream's validation, which the fork's free-form `data` schema still needs.
+
+Delivery replaces the all-clients filter with the capability gate "Adopting upstream's birthday later" asked for:
+`syncedMemoryTypes(isForkAwareClient, withBirthday)` sends `birthday` on MemoriesV2, MemoryToAssetsV2 and
+`GET /memories`, and never on V1. Gallery apps since 5.8.0 decode the type (their enum appends `birthday` after
+`rule`, so the mobile enum order and its invariant stay); an older Gallery app is flagged `legacyGalleryApp` and
+gets no `birthday` from the list or its count. `isMemoryTypeVisible` no longer hides the type, so a `birthday`
+row now takes part in overlap reconciliation as an unmanaged memory.
+
+No migration: the rule's `type = 'rule'`, `ruleId = 'birthday'` rows never overlap upstream's rows (the rule wrote
+days up to today, upstream's cursor resumes at today + 4), the clients still title them through the `birthday` rule
+builders, and retention removes them. The current record is in
+`specs/2026-10-10-gallery-on-immich-layering-design.md`.

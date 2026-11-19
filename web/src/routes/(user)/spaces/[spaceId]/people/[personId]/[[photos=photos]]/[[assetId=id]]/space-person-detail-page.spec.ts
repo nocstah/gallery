@@ -1,3 +1,8 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { preferencesFactory } from '#test/kioku/factories/preferences-factory.ts';
+import { userAdminFactory } from '#test/kioku/factories/user-factory.ts';
 import {
   RepresentativeFaceSource,
   SharedSpaceRole,
@@ -13,11 +18,6 @@ import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import type { Component } from 'svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { preferencesFactory } from '@test-data/factories/preferences-factory';
-import { userAdminFactory } from '@test-data/factories/user-factory';
 import { load } from './+page';
 import SpacePersonDetailPage from './+page.svelte';
 
@@ -64,11 +64,11 @@ const { gotoMock, invalidateAllMock, authenticateMock, featureFlagsMock, formatM
   });
 
 vi.mock('$app/navigation', () => ({ goto: gotoMock, invalidateAll: invalidateAllMock }));
-vi.mock('$lib/utils/auth', () => ({ authenticate: authenticateMock }));
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/utils/auth.ts', () => ({ authenticate: authenticateMock }));
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: featureFlagsMock,
 }));
-vi.mock('$lib/managers/asset-multi-select-manager.svelte', () => ({
+vi.mock('#lib/managers/asset-multi-select-manager.svelte.ts', () => ({
   assetMultiSelectManager: mockAssetMultiSelectManager,
 }));
 
@@ -83,7 +83,7 @@ vi.mock('svelte-i18n', () => ({
 
 vi.mock('@immich/ui', async (importOriginal) => {
   const original = await importOriginal<typeof import('@immich/ui')>();
-  const { default: MockContextMenuButton } = await import('@test-data/mocks/action-context-menu.stub.svelte');
+  const { default: MockContextMenuButton } = await import('#lib/gallery/__mocks__/action-context-menu.stub.svelte');
   return {
     ...original,
     ContextMenuButton: MockContextMenuButton,
@@ -92,33 +92,32 @@ vi.mock('@immich/ui', async (importOriginal) => {
   };
 });
 
-vi.mock('$lib/components/timeline/Timeline.svelte', async () => {
+vi.mock('#lib/components/timeline/Timeline.svelte', async () => {
   const { default: MockComponent } = await import('./mock-space-person-timeline.test-wrapper.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/assets/thumbnail/ImageThumbnail.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/components/assets/thumbnail/ImageThumbnail.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/components/people/people-merge-selector.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/space-people-merge-selector.stub.svelte');
+vi.mock('#lib/components/people/people-merge-selector.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/space-people-merge-selector.stub.svelte');
   return { default: MockComponent };
 });
 
-vi.mock('$lib/modals/RepresentativeFacePickerModal.svelte', async () => {
-  const { default: MockComponent } = await import('@test-data/mocks/noop-component.svelte');
+vi.mock('#lib/modals/RepresentativeFacePickerModal.svelte', async () => {
+  const { default: MockComponent } = await import('#lib/gallery/__mocks__/noop-component.svelte');
   return { default: MockComponent };
 });
 
-function makeSpace(overrides: Partial<SharedSpaceResponseDto> = {}): SharedSpaceResponseDto {
+function makeSpace(): SharedSpaceResponseDto {
   return {
     id: 'space-1',
     name: 'Test Space',
     createdAt: '2026-01-01T00:00:00.000Z',
     createdById: 'owner-user-id',
-    ...overrides,
   } as SharedSpaceResponseDto;
 }
 
@@ -443,7 +442,7 @@ describe('Spaces person detail page', () => {
   it('updates the displayed space-scoped asset count after removing selected assets', async () => {
     mockAssetMultiSelectManager.selectionActive = true;
     mockAssetMultiSelectManager.assets = [{ id: 'asset-1' }, { id: 'asset-2' }] as never[];
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
     // The server returns exactly the ids it removed (direct members); both selected assets are direct here.
     sdkMock.removeAssets.mockResolvedValue(['asset-1', 'asset-2']);
 
@@ -612,7 +611,7 @@ describe('Spaces person detail page', () => {
         message: 'raw',
       })
       .mockResolvedValueOnce(undefined as never);
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
     renderPage({ action: 'merge' });
 
     await userEvent.click(screen.getByTestId('merge-same-space-candidate'));
@@ -667,7 +666,7 @@ describe('Spaces person detail page', () => {
     const existingPerson = makePerson({ id: 'person-2', name: 'Norgy' });
     sdkMock.getSpacePeople.mockResolvedValue([existingPerson]);
     sdkMock.mergeSpacePeople.mockResolvedValue(undefined as never);
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
     renderPage({ person });
 
     await userEvent.click(screen.getByText('add_a_name'));
@@ -691,7 +690,7 @@ describe('Spaces person detail page', () => {
     const person = makePerson({ id: 'person-1', name: '' });
     sdkMock.getSpacePeople.mockResolvedValue([makePerson({ id: 'person-2', name: 'Norgy' })]);
     sdkMock.updateSpacePerson.mockResolvedValue({ ...person, name: 'Norgy' });
-    vi.mocked(modalManager.showDialog).mockResolvedValue(false);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(false);
     renderPage({ person });
 
     await userEvent.click(screen.getByText('add_a_name'));
@@ -719,7 +718,7 @@ describe('Spaces person detail page', () => {
       data: { code: 'cross_owner_merge_blocked', message: 'An administrator can enable it.' },
       message: 'raw',
     });
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
     renderPage({ person });
 
     await userEvent.click(screen.getByText('add_a_name'));
@@ -796,7 +795,7 @@ describe('Spaces person detail page', () => {
   });
 
   it('detaches a space person for owner or editor members after confirmation', async () => {
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
     renderPage();
 
     await userEvent.click(screen.getByText('separate_from_grouped_person'));
@@ -811,7 +810,7 @@ describe('Spaces person detail page', () => {
     const person = makePerson({ id: 'person-1', name: '' });
     const existingPerson = makePerson({ id: 'person-2', name: 'Alice Existing' });
     sdkMock.getSpacePeople.mockResolvedValue([existingPerson]);
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
     renderPage({ person });
 
     await userEvent.click(screen.getByText('add_a_name'));
@@ -834,7 +833,7 @@ describe('Spaces person detail page', () => {
     const person = makePerson({ id: 'person-1', name: '' });
     const existingPerson = makePerson({ id: 'person-2', name: 'Alice Existing' });
     sdkMock.getSpacePeople.mockResolvedValue([existingPerson]);
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
     sdkMock.mergeSpacePeople.mockRejectedValueOnce({
       __http: true,
       status: 403,
@@ -866,7 +865,7 @@ describe('Spaces person detail page', () => {
     // The merge prompt is portalled outside the person header, so the click that confirms it lands
     // outside the name editor — the same "click outside to save" gesture that commits a rename.
     let confirmMerge: (confirmed: boolean) => void = () => {};
-    vi.mocked(modalManager.showDialog).mockReturnValue(
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockReturnValue(
       new Promise<boolean>((resolve) => {
         confirmMerge = resolve;
       }),
@@ -890,7 +889,7 @@ describe('Spaces person detail page', () => {
     sdkMock.getSpacePeople.mockResolvedValue([existingPerson]);
     sdkMock.updateSpacePerson.mockResolvedValue({ ...person, name: 'Ange' });
     let dismissMerge: (confirmed: boolean) => void = () => {};
-    vi.mocked(modalManager.showDialog).mockReturnValue(
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockReturnValue(
       new Promise<boolean>((resolve) => {
         dismissMerge = resolve;
       }),
@@ -912,7 +911,7 @@ describe('Spaces person detail page', () => {
     const person = makePerson({ id: 'person-1', name: '' });
     const existingPerson = makePerson({ id: 'person-2', name: 'Alice Existing' });
     sdkMock.getSpacePeople.mockResolvedValue([existingPerson]);
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
     sdkMock.mergeSpacePeople
       .mockRejectedValueOnce({
         __http: true,

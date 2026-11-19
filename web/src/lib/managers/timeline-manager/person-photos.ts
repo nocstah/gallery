@@ -1,14 +1,14 @@
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
 import {
   AssetOrder,
   AssetVisibility,
-  searchAssets,
   TimeBucketSize,
+  searchAssets,
   type AssetResponseDto,
   type TimeBucketAssetResponseDto,
   type TimeBucketsResponseDto,
 } from '@immich/sdk';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { toTimelineAsset } from '$lib/utils/timeline-util';
 import type { PersonStackIndex } from './person-stacks';
 import type { TimelineGrouping } from './types';
 
@@ -21,10 +21,10 @@ const bucketName = (date: string, grouping: TimelineGrouping) =>
       : date.slice(0, 10);
 
 /**
- * A face page is a photo search, not the home timeline. The timeline API subtracts albums hidden
- * from Photos; search keeps those matches, as the People list's counts do. Gallery still applies
- * the signed-in viewer's access, identity, visibility and shared-space rules.
- */
+A face page is a photo search, not the home timeline. The timeline API subtracts albums hidden
+from Photos; search keeps those matches, as the People list's counts do. Gallery still applies
+the signed-in viewer's access, identity, visibility and shared-space rules.
+*/
 export class PersonPhotos {
   constructor(private readonly photos: AssetResponseDto[]) {}
 

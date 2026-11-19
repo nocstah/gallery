@@ -1,14 +1,11 @@
 // album.service.spec.ts
-import { AlbumUserRole, BulkIdErrorReason, type AlbumResponseDto } from '@immich/sdk';
-import type { BulkIdResponseDto } from '@immich/sdk';
+import { addAssetsToAlbumWithOutcome } from '#lib/gallery/album/album-add.ts';
+import { handleLinkAlbumToSpace } from '#lib/gallery/album/link-album-to-space.ts';
+import { notifyAddToAlbum } from '#lib/gallery/album/notify-add-to-album.ts';
+import SpacePickerModal from '#lib/modals/SpacePickerModal.svelte';
+import { AlbumUserRole, BulkIdErrorReason, type AlbumResponseDto, type BulkIdResponseDto } from '@immich/sdk';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import SpacePickerModal from '$lib/modals/SpacePickerModal.svelte';
-import {
-  addAssetsToAlbumWithOutcome,
-  getAlbumActions,
-  handleLinkAlbumToSpace,
-  notifyAddToAlbum,
-} from './album.service';
+import { getAlbumActions } from './album.service';
 
 const linkAlbum = vi.fn();
 const showModal = vi.fn();
@@ -26,10 +23,10 @@ vi.mock('@immich/sdk', async (orig) => ({
   addAssetsToAlbum: (...a: unknown[]) => addAssetToAlbum(...a),
 }));
 
-vi.mock('$lib/managers/event-manager.svelte', () => ({
+vi.mock('#lib/managers/event-manager.svelte.js', () => ({
   eventManager: { emit: (...a: unknown[]) => emit(...a), on: () => () => {} },
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({ authManager: { params: {}, user: { id: 'me' } } }));
+vi.mock('#lib/managers/auth-manager.svelte.js', () => ({ authManager: { params: {}, user: { id: 'me' } } }));
 
 vi.mock('@immich/ui', async (orig) => ({
   ...(await orig<typeof import('@immich/ui')>()),
@@ -41,13 +38,13 @@ vi.mock('@immich/ui', async (orig) => ({
   },
 }));
 
-vi.mock('$lib/utils/handle-error', () => ({ handleError: (...a: unknown[]) => handleError(...a) }));
+vi.mock('#lib/utils/handle-error.js', () => ({ handleError: (...a: unknown[]) => handleError(...a) }));
 
 // Local Omarchy layer: Make photo book asks the photo book manager, once Curator says it makes books
 const { photoBooksMock } = vi.hoisted(() => ({ photoBooksMock: { available: true, askForAlbum: vi.fn() } }));
-vi.mock('$lib/managers/photo-book-manager.svelte', () => ({ photoBooks: photoBooksMock }));
-vi.mock('$lib/managers/special-albums.svelte', async (orig) => {
-  const actual = await orig<typeof import('$lib/managers/special-albums.svelte')>();
+vi.mock('#lib/managers/photo-book-manager.svelte.js', () => ({ photoBooks: photoBooksMock }));
+vi.mock('#lib/managers/special-albums.svelte.js', async (orig) => {
+  const actual = await orig<typeof import('#lib/managers/special-albums.svelte.ts')>();
   return {
     ...actual,
     specialAlbumOf: (id: string | null | undefined) =>
@@ -55,8 +52,8 @@ vi.mock('$lib/managers/special-albums.svelte', async (orig) => {
   };
 });
 
-vi.mock('$lib/utils/i18n', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/i18n')>()),
+vi.mock('#lib/utils/i18n.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/i18n.ts')>()),
   getFormatter: () =>
     Promise.resolve(
       (key: string, opts?: { values?: Record<string, unknown> }) => `${key}:${JSON.stringify(opts?.values ?? {})}`,

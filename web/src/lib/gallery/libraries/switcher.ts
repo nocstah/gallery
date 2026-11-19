@@ -1,8 +1,9 @@
+import { vaultEdition } from '#lib/gallery/edition.ts';
+import { isDesktop, isLoopback } from '#lib/gallery/vaults/launcher.ts';
+import type { CommandItem } from '#lib/managers/command-items.ts';
+import { Route } from '#lib/route.ts';
 import { mdiSwapHorizontal } from '@mdi/js';
-import { vaultEdition } from '$lib/gallery/edition';
-import { isDesktop, isLoopback } from '$lib/gallery/vaults/launcher';
-import type { CommandItem } from '$lib/managers/command-items';
-import { Route } from '$lib/route';
+import type { ReadonlyURL } from '$app/state';
 import {
   currentLibrary,
   libraries,
@@ -15,10 +16,10 @@ import {
 // other library's own address: each library has its own sign-in and keeps its own tabs, so nothing is carried over.
 
 /**
- * Whether the switcher shows: Kioku lists another library, the page is on this computer (every library's address is),
- * the browser is this desktop's (the Vaults launcher's rule), and this is not a vault's Gallery.
- */
-export const canSwitchLibraries = (url: URL, userAgent: string): boolean =>
+Whether the switcher shows: Kioku lists another library, the page is on this computer (every library's address is),
+the browser is this desktop's (the Vaults launcher's rule), and this is not a vault's Gallery.
+*/
+export const canSwitchLibraries = (url: ReadonlyURL, userAgent: string): boolean =>
   !vaultEdition() && listsSeveralLibraries() && isLoopback(url.hostname) && isDesktop(userAgent);
 
 /** A row of the switcher: this library leads to its own Photos; another one is its own address. */

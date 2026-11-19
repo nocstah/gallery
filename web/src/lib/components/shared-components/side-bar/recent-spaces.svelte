@@ -1,29 +1,34 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import { isWritableSpace } from '$lib/components/shared-components/collection-selection/collection-selection-utils';
-  import AlbumTree from '$lib/components/sidebar/album-tree.svelte';
-  import { isLibrarySpace } from '$lib/managers/album-folders.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { dropSpring, dropTarget } from '$lib/managers/sidebar-drop.svelte';
-  import { Route } from '$lib/route';
+  import { isWritableSpace } from '#lib/components/shared-components/collection-selection/collection-selection-utils.ts';
+  import AlbumTree from '#lib/components/sidebar/album-tree.svelte';
+  import {
+    getAllSpacesQuery,
+    getSpaceAlbumFoldersQuery,
+    getSpaceAlbumsQuery,
+  } from '#lib/gallery/spaces/space.query.ts';
   import {
     isSpaceAlbumsExpanded,
     recentSpaceAlbumsExpanded,
     setSpaceAlbumsExpanded,
-  } from '$lib/stores/preferences.store';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
-  import { pinnedSpaceIds } from '$lib/stores/space-view.store';
-  import { loadSpaces, userInteraction } from '$lib/stores/user.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { splitPinnedSpaces } from '$lib/utils/space-utils';
-  import { handleError } from '$lib/utils/handle-error';
-  import { getSharedSpaceAlbumFolders, getSharedSpaceAlbums } from '@immich/sdk';
+  } from '#lib/gallery/stores/preferences.store.ts';
+  import { isLibrarySpace } from '#lib/managers/album-folders.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { dropSpring, dropTarget } from '#lib/managers/sidebar-drop.svelte.ts';
+  import { queryClient } from '#lib/queries/client.ts';
+  import { Route } from '#lib/route.ts';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
+  import { pinnedSpaceIds } from '#lib/stores/space-view.store.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { splitPinnedSpaces } from '#lib/utils/space-utils.ts';
   import { Icon } from '@immich/ui';
   import { mdiAccountMultipleOutline, mdiChevronDown, mdiChevronRight } from '@mdi/js';
+  import { createQueries, createQuery } from '@tanstack/svelte-query';
   import { untrack } from 'svelte';
-  import { SvelteSet } from 'svelte/reactivity';
   import { t } from 'svelte-i18n';
+  import { SvelteSet } from 'svelte/reactivity';
   import { get } from 'svelte/store';
+  import { page } from '$app/state';
 
   const sortByActivity = <T extends { lastActivityAt?: string | null }>(a: T, b: T): number => {
     const aTime = a.lastActivityAt ?? '';
@@ -31,7 +36,10 @@
     return aTime > bTime ? -1 : aTime < bTime ? 1 : 0;
   };
 
-  let allSpaces = $state(userInteraction.recentSpaces);
+  // Shares the People pages' spaces list (space.query.ts); the last list stays on screen while an
+  // invalidation refetches it.
+  const spacesQuery = createQuery(getAllSpacesQuery, () => queryClient);
+  const allSpaces = $derived(spacesQuery.data);
 
   let spaces = $derived.by(() => {
     if (!allSpaces) {
@@ -45,39 +53,64 @@
 
   const topSpaceIds = $derived(spaces.map((s) => s.id));
 
-  // Spaces with a fetch currently in flight — guards against a duplicate `getSharedSpaceAlbums`
-  // call when the mount/refresh effect below re-runs while the cache is still unset.
-  const inFlightSpaceAlbumFetches = new SvelteSet<string>();
+  // One albums query per shown space, enabled while its row is expanded — including an expansion
+  // persisted from a prior session. The cache outlives collapse/expand; linking or unlinking an album
+  // invalidates it (space.query.ts).
+  const albumQueries = createQueries(
+    () => ({
+      queries: spaces.map((space) => ({
+        ...getSpaceAlbumsQuery(space.id),
+        enabled: isSpaceAlbumsExpanded($recentSpaceAlbumsExpanded, space.id),
+        // Local Omarchy layer: report every change. By default a query only reports the fields read through its
+        // tracking proxy, and a row expanded before its lists load reads them only through derived values, so their
+        // arrival went unreported and the tree never drew
+        notifyOnChangeProps: 'all',
+      })),
+    }),
+    () => queryClient,
+  );
+  const spaceAlbums = $derived(Object.fromEntries(spaces.map((space, index) => [space.id, albumQueries[index]?.data])));
 
-  const loadAlbums = async (spaceId: string, fresh = false) => {
-    const cachedAlbums = userInteraction.spaceAlbums?.[spaceId];
-    if ((cachedAlbums && !fresh) || inFlightSpaceAlbumFetches.has(spaceId)) {
-      return; // already fetched (possibly an empty list), or a fetch is already in flight — never refetch
+  // Local Omarchy layer: the space's folders come with its albums, for its tree (space.query.ts keeps them under the
+  // albums' key, so they refresh together)
+  const folderQueries = createQueries(
+    () => ({
+      queries: spaces.map((space) => ({
+        ...getSpaceAlbumFoldersQuery(space.id),
+        enabled: isSpaceAlbumsExpanded($recentSpaceAlbumsExpanded, space.id),
+        notifyOnChangeProps: 'all', // as the albums above
+      })),
+    }),
+    () => queryClient,
+  );
+  const spaceFolders = $derived(
+    Object.fromEntries(spaces.map((space, index) => [space.id, folderQueries[index]?.data])),
+  );
+
+  // A failed load collapses the row again; its cache stays unset, so the next expand retries.
+  const reportedErrors = new SvelteSet<string>();
+  $effect(() => {
+    for (const [index, space] of spaces.entries()) {
+      for (const [kind, result] of [
+        ['albums', albumQueries[index]],
+        ['folders', folderQueries[index]],
+      ] as const) {
+        if (!result?.isError) {
+          continue;
+        }
+        const key = `${space.id}:${kind}:${result.errorUpdatedAt}`;
+        if (reportedErrors.has(key)) {
+          continue;
+        }
+        reportedErrors.add(key);
+        handleError(result.error, $t('failed_to_load_albums'));
+        setSpaceAlbumsExpanded(space.id, false, topSpaceIds);
+      }
     }
-    inFlightSpaceAlbumFetches.add(spaceId);
-    try {
-      // Local Omarchy layer: the space's folders come with its albums, for its tree
-      const [albums, folders] = await Promise.all([
-        getSharedSpaceAlbums({ id: spaceId }),
-        getSharedSpaceAlbumFolders({ id: spaceId }),
-      ]);
-      const sorted = [...albums].sort((a, b) => b.linkedAt.localeCompare(a.linkedAt));
-      userInteraction.spaceFolders = { ...userInteraction.spaceFolders, [spaceId]: folders };
-      userInteraction.spaceAlbums = { ...userInteraction.spaceAlbums, [spaceId]: sorted };
-    } catch (error) {
-      handleError(error, $t('failed_to_load_albums'));
-      setSpaceAlbumsExpanded(spaceId, false, topSpaceIds); // cache stays unset → retry on next expand
-    } finally {
-      inFlightSpaceAlbumFetches.delete(spaceId);
-    }
-  };
+  });
 
   const toggleAlbums = (spaceId: string) => {
-    const nowExpanded = !isSpaceAlbumsExpanded($recentSpaceAlbumsExpanded, spaceId);
-    setSpaceAlbumsExpanded(spaceId, nowExpanded, topSpaceIds);
-    if (nowExpanded) {
-      void loadAlbums(spaceId);
-    }
+    setSpaceAlbumsExpanded(spaceId, !isSpaceAlbumsExpanded($recentSpaceAlbumsExpanded, spaceId), topSpaceIds);
   };
 
   // Local Omarchy layer: photos carried over a Space go into it, and its tree springs open under them
@@ -89,21 +122,6 @@
     close: () => setSpaceAlbumsExpanded(spaceId, false, topSpaceIds),
   });
 
-  // Re-fetch albums for any currently-shown space whose expansion state was persisted as `true`
-  // (e.g. from a prior session) but whose in-memory album cache hasn't been populated yet — covers
-  // both a fresh page load (cache always starts undefined) and an in-session cache eviction after
-  // a link/unlink while the space is still marked expanded.
-  $effect(() => {
-    for (const space of spaces) {
-      if (
-        isSpaceAlbumsExpanded($recentSpaceAlbumsExpanded, space.id) &&
-        userInteraction.spaceAlbums?.[space.id] === undefined
-      ) {
-        void loadAlbums(space.id);
-      }
-    }
-  });
-
   // Local Omarchy layer: folders are made, moved and renamed on a space's albums page, so arriving there refreshes the
   // space's open tree (in place: the tree stays on screen meanwhile)
   $effect(() => {
@@ -113,18 +131,9 @@
         path === `/spaces/${space.id}/albums` &&
         untrack(() => isSpaceAlbumsExpanded($recentSpaceAlbumsExpanded, space.id))
       ) {
-        void loadAlbums(space.id, true);
+        void queryClient.invalidateQueries({ queryKey: getSpaceAlbumsQuery(space.id).queryKey });
       }
     }
-  });
-
-  // Shares the People pages' fetch of the spaces list. The last list stays on screen while a
-  // cache reset refetches it.
-  $effect(() => {
-    if (userInteraction.recentSpaces) {
-      allSpaces = userInteraction.recentSpaces;
-    }
-    loadSpaces();
   });
 
   // These rows stay rendered in the rail so it keeps the sidebar's vertical rhythm; collapsed
@@ -133,21 +142,25 @@
 </script>
 
 {#each spaces as space (space.id)}
-  {@const spacePath = `/spaces/${space.id}`}
-  {@const hasAlbums = (space.albumCount ?? 0) > 0}
-  {@const cachedAlbums = userInteraction.spaceAlbums?.[space.id]}
-  {@const expanded =
+  {const spacePath = $derived(`/spaces/${space.id}`)}
+  {const hasAlbums = $derived((space.albumCount ?? 0) > 0)}
+  {const cachedAlbums = $derived(spaceAlbums[space.id])}
+  {const cachedFolders = $derived(spaceFolders[space.id])}
+  {const expanded = $derived(
     isSpaceAlbumsExpanded($recentSpaceAlbumsExpanded, space.id) &&
-    (cachedAlbums === undefined || cachedAlbums.length > 0)}
+      (cachedAlbums === undefined || cachedAlbums.length > 0),
+  )}
   <!-- Local Omarchy layer: the space opens into its tree (its folders and albums, like the Mac's sidebar), and a
        folder or album on screen lights its own row in it, so only one row ever reads as selected; the space keeps
        the light everywhere else, including its albums page at the top. -->
-  {@const activeAlbumId = new RegExp(`^${spacePath}/albums/([^/]+)`).exec(page.url.pathname)?.[1] ?? null}
-  {@const activeFolderId =
-    expanded && page.url.pathname === `${spacePath}/albums` ? page.url.searchParams.get('folder') : null}
-  {@const active =
-    page.url.pathname.startsWith(spacePath) && !(expanded && !collapsed && (activeAlbumId || activeFolderId))}
-  {@const writable = isWritableSpace(space, me)}
+  {const activeAlbumId = $derived(new RegExp(`^${spacePath}/albums/([^/]+)`).exec(page.url.pathname)?.[1] ?? null)}
+  {const activeFolderId = $derived(
+    expanded && page.url.pathname === `${spacePath}/albums` ? page.url.searchParams.get('folder') : null,
+  )}
+  {const active = $derived(
+    page.url.pathname.startsWith(spacePath) && !(expanded && !collapsed && (activeAlbumId || activeFolderId)),
+  )}
+  {const writable = $derived(isWritableSpace(space, me))}
   <div data-drop-group>
     <!-- The chevron is absolutely positioned against this wrapper, so it must enclose the space row
          alone: with the expanded album rows inside it, `top-1/2` would centre the chevron on the
@@ -219,15 +232,15 @@
         </div>
       </a>
     </div>
-    {#if expanded && !collapsed && cachedAlbums}
+    {#if expanded && !collapsed && cachedAlbums && cachedFolders}
       <AlbumTree
         scope="space:{space.id}"
         label={space.name}
-        folders={userInteraction.spaceFolders?.[space.id] ?? []}
-        albums={cachedAlbums.map(({ id, albumName, folderId }) => ({
+        folders={cachedFolders}
+        albums={cachedAlbums.map(({ id, albumName, folderId = null }) => ({
           id,
           name: albumName,
-          folderId: folderId ?? null,
+          folderId,
         }))}
         folderHref={(folderId) => Route.viewSpaceAlbums({ id: space.id, folderId })}
         albumHref={(albumId) => Route.viewSpaceAlbum({ spaceId: space.id, albumId })}

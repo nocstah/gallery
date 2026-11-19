@@ -88,9 +88,9 @@ export type MoveStatus = {
   space: { needed: number; free: number } | null;
   trashDays: number | null;
   /**
-   * the quiet hours this move keeps, when the receiver reports them (null: none); undefined when it does not say, and
-   * the pages then take the mover's default (move-words, quietHours)
-   */
+  the quiet hours this move keeps, when the receiver reports them (null: none); undefined when it does not say, and
+  the pages then take the mover's default (move-words, quietHours)
+  */
   quiet?: QuietHours | null;
   /** the key this library's side handed over and the mover still holds: its id, never a secret */
   key: string | null;
@@ -106,9 +106,9 @@ export type MoveStatus = {
 };
 
 /**
- * What the source page hands over: the move's id, the two libraries, the photos and/or the person, and its key. A
- * person alone takes their timeline; `archived` brings their archived photos too, which otherwise stay.
- */
+What the source page hands over: the move's id, the two libraries, the photos and/or the person, and its key. A
+person alone takes their timeline; `archived` brings their archived photos too, which otherwise stay.
+*/
 export type MoveHandOff = {
   move: string;
   source: string;
@@ -119,9 +119,9 @@ export type MoveHandOff = {
 };
 
 /**
- * Why a call to the mover did not go through: `unreachable` is no answer at all (nothing listens, the browser refused
- * it, or it took too long); the rest are the receiver's own answers (MOVE-TO-LIBRARY.md, Statuses).
- */
+Why a call to the mover did not go through: `unreachable` is no answer at all (nothing listens, the browser refused
+it, or it took too long); the rest are the receiver's own answers (MOVE-TO-LIBRARY.md, Statuses).
+*/
 export type MoverErrorCode =
   'unreachable' | 'invalid' | 'forbidden' | 'unknown' | 'busy' | 'exists' | 'state' | 'stopping' | 'failed';
 
@@ -157,8 +157,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 const count = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0);
 const text = (value: unknown) => (typeof value === 'string' ? value : null);
-const texts = (value: unknown, most = 1000) =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').slice(0, most) : [];
+// a list of strings, the first thousand at most
+const texts = (value: unknown) =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').slice(0, 1000) : [];
 const isState = (value: unknown): value is MoveState => MOVE_STATES.includes(value as MoveState);
 const isSide = (value: unknown): value is MoveSide => value === 'source' || value === 'destination';
 const HOUR = /^(?:[01]\d|2[0-3]):[0-5]\d$/;

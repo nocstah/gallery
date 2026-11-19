@@ -5,10 +5,10 @@
   // result is a suggestion (a new version, stacked on top when kept), shown with the before/after divider: Keep
   // accepts it, Discard rejects it and goes back to the strokes. Closed while the restorer works, the result waits in
   // the AI inbox.
-  import RestoreCompare from '$lib/components/curator/RestoreCompare.svelte';
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { curator, type JobRow, type Suggestion } from '$lib/utils/curator';
+  import RestoreCompare from '#lib/components/curator/RestoreCompare.svelte';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { curator, type JobRow, type Suggestion } from '#lib/utils/curator.ts';
   import { AssetMediaSize, getAssetInfo, getStack, type AssetResponseDto } from '@immich/sdk';
   import { Icon, toastManager } from '@immich/ui';
   import { mdiClose, mdiDeleteSweepOutline, mdiEraser, mdiUndoVariant } from '@mdi/js';

@@ -1,9 +1,9 @@
+import { peopleViewSettings } from '#lib/gallery/stores/preferences.store.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { inPeopleOrder, peoplePositions, peopleSortBy } from '#lib/utils/people-order.ts';
 import { getAllPeople, type PersonResponseDto } from '@immich/sdk';
 import { fromStore } from 'svelte/store';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { peopleViewSettings } from '$lib/stores/preferences.store';
-import { inPeopleOrder, peoplePositions, peopleSortBy } from '$lib/utils/people-order';
 
 // Local Omarchy layer: the People page's order for the lists that carry only people's ids and names, which Gallery
 // sends A to Z with no favourite or count to rank them by: the filter rail's People and an album's faces (DESIGN.md,
@@ -33,7 +33,7 @@ class PeopleRanking {
   #settled = $state(false);
 
   /** Whether a list may show: the order is known, could not be had or took too long (then lists keep the order they
-   * came in), or there is no one signed in to rank for. */
+  came in), or there is no one signed in to rank for. */
   get settled() {
     return this.#settled || !authManager.authenticated;
   }
@@ -75,10 +75,10 @@ class PeopleRanking {
   }
 
   /**
-   * `items` in the People page's order once it is known, anyone it does not know after the rest; as they came until
-   * then, or when it knows fewer than half of them: a Space's own people (its photos' rail) go by ids of the Space's,
-   * which the People page's list does not hold, and one of them leading the rest A to Z would read as no order at all.
-   */
+  `items` in the People page's order once it is known, anyone it does not know after the rest; as they came until
+  then, or when it knows fewer than half of them: a Space's own people (its photos' rail) go by ids of the Space's,
+  which the People page's list does not hold, and one of them leading the rest A to Z would read as no order at all.
+  */
   order<T extends { id: string }>(items: T[]): T[] {
     const positions = this.positions;
     if (!positions) {

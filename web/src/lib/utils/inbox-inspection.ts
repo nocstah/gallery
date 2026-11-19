@@ -1,7 +1,7 @@
+import { getAssetMediaUrl } from '#lib/utils.ts';
+import { reelUrl, videoPersonUrl, type Suggestion } from '#lib/utils/curator.ts';
+import { videoOf, videoPeopleOf, videoPersonCaption } from '#lib/utils/inbox-video-people.ts';
 import { AssetMediaSize } from '@immich/sdk';
-import { getAssetMediaUrl } from '$lib/utils';
-import { reelUrl, videoPersonUrl, type Suggestion } from '$lib/utils/curator';
-import { videoOf, videoPeopleOf, videoPersonCaption } from '$lib/utils/inbox-video-people';
 
 export type InspectionItem = {
   src?: string;

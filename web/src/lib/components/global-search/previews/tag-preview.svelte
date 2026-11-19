@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { offeredSpecialAlbums } from '$lib/managers/special-albums.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { shownAmongPhotos } from '$lib/utils/slips';
+  import { offeredSpecialAlbums } from '#lib/managers/special-albums.svelte.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { shownAmongPhotos } from '#lib/utils/slips.ts';
   import {
     AssetMediaSize,
     AssetVisibility,

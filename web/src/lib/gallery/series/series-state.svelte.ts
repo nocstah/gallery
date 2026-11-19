@@ -1,19 +1,19 @@
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { makeSharedLink } from '#lib/services/shared-link.service.ts';
+import { CuratorError } from '#lib/utils/curator.ts';
+import { serverDetail } from '#lib/utils/handle-error.ts';
 import {
+  SharedLinkType,
   getAllSharedLinks,
   getAssetInfo,
   isHttpError,
   removeSharedLink,
-  SharedLinkType,
   type AssetResponseDto,
   type SharedLinkResponseDto,
 } from '@immich/sdk';
 import { t, type Translations } from 'svelte-i18n';
 import { SvelteSet } from 'svelte/reactivity';
 import { get } from 'svelte/store';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { makeSharedLink } from '$lib/services/shared-link.service';
-import { CuratorError } from '$lib/utils/curator';
-import { serverDetail } from '$lib/utils/handle-error';
 import {
   asCuratorError,
   seriesApi,
@@ -89,7 +89,7 @@ export class SeriesPageState {
   /** the memories with an action under way (by key) */
   readonly busy = new SvelteSet<string>();
   /** the family link as Gallery holds it, for its address and its password: undefined while it is asked (or there is
-   * none), null where Gallery has no link by Curator's id */
+  none), null where Gallery has no link by Curator's id */
   familyLink = $state<SharedLinkResponseDto | null>();
   /** what went out to the family page, newest first: undefined until Curator has said */
   sent = $state<SentMemory[]>();
@@ -122,7 +122,7 @@ export class SeriesPageState {
   };
 
   /** the coming days, again, with the series; `quiet` for the asks while Curator prepares, which say nothing when
-   * they fail */
+  they fail */
   refresh = async (quiet = false) => {
     const id = this.#id;
     if (id === null || this.series === null || this.#closed) {
@@ -223,8 +223,8 @@ export class SeriesPageState {
   };
 
   /** The family page's title as the owner typed it, '' for Curator's own; a live page shows it at once. True once
-   * Curator has it; its refusal (a person's name, a place from home, a day of the month) is kept for where the title
-   * is typed. */
+  Curator has it; its refusal (a person's name, a place from home, a day of the month) is kept for where the title
+  is typed. */
   saveTitle = async (name: string): Promise<boolean> => {
     const series = this.series;
     if (!series || this.savingTitle) {
@@ -253,8 +253,8 @@ export class SeriesPageState {
   };
 
   /** The series gone. Every family link it still has is deleted in Gallery first, as Turn off deletes one (Curator
-   * holds them on the series' card, asked again here, as another tab may have made one meanwhile), then Curator lets
-   * the series go, with its coming days and its pages' files. Nothing more is asked once it is gone. */
+  holds them on the series' card, asked again here, as another tab may have made one meanwhile), then Curator lets
+  the series go, with its coming days and its pages' files. Nothing more is asked once it is gone. */
   remove = async (): Promise<SeriesDeleted | undefined> => {
     const id = this.#id;
     if (id === null || !this.series || this.deleting) {
@@ -341,11 +341,11 @@ export class SeriesPageState {
   };
 
   /** The family link, the first or again (after a turn-off, or where Gallery no longer has it), with day 1 set first
-   * while it is not, and a password when one is given. */
+  while it is not, and a password when one is given. */
   makeLink = (password: string | undefined, dayOne?: string) => this.#link('make', password, dayOne);
 
   /** A new address for the page, with the password the link there has; the old link is turned off once Curator holds
-   * the new one, and the family needs the new address. */
+  the new one, and the family needs the new address. */
   newLink = () => this.#link('new', this.familyLink?.password ?? undefined);
 
   /** The family page off at once: its link deleted in Gallery, then forgotten by Curator. */
@@ -465,7 +465,7 @@ export class SeriesPageState {
   };
 
   /** A family link off: deleted in Gallery, then forgotten by Curator, which refuses while Gallery still has it. False
-   * when Gallery could not delete it (said in the page's line); Curator's refusal is thrown. */
+  when Gallery could not delete it (said in the page's line); Curator's refusal is thrown. */
   #retire = async (seriesId: number, id: string, link?: SharedLinkResponseDto): Promise<boolean> => {
     try {
       await this.#remove(id, link);
@@ -478,7 +478,7 @@ export class SeriesPageState {
   };
 
   /** A link deleted in Gallery, or found gone already; the app hears of it (Shared links), and the page's link, if it
-   * was this one, is one Gallery has no more. */
+  was this one, is one Gallery has no more. */
   #remove = async (id: string, link?: SharedLinkResponseDto) => {
     try {
       await removeSharedLink({ id });
@@ -512,7 +512,7 @@ export class SeriesPageState {
   };
 
   /** the family link as Gallery holds it, for its key and its password: one request among the owner's links, which
-   * lists a link with its first photo only (the link itself brings every photo the page has) */
+  lists a link with its first photo only (the link itself brings every photo the page has) */
   #readLink = async (id: string | null) => {
     this.#linkAsked = id;
     this.familyLink = undefined;

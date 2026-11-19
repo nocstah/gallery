@@ -1,5 +1,5 @@
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
 import { fireEvent, screen, waitFor } from '@testing-library/svelte';
-import { renderWithTooltips } from '$tests/helpers';
 import SharedLinkPage from './SharedLinkPage.svelte';
 
 // Local Omarchy layer: a shared link's password prompt (DESIGN.md, Error pages): a labelled field and Open, and a
@@ -12,7 +12,7 @@ vi.mock('@immich/sdk', async (importOriginal) => ({
   sharedLinkLogin,
   isHttpError: (error: unknown) => typeof (error as { status?: unknown })?.status === 'number',
 }));
-vi.mock('$lib/utils/handle-error', () => ({ handleError }));
+vi.mock('#lib/utils/handle-error.ts', () => ({ handleError }));
 
 const renderPrompt = () =>
   renderWithTooltips(SharedLinkPage, {

@@ -1,3 +1,13 @@
+import SharedLinkRow from '#lib/components/omarchy/SharedLinkRow.svelte';
+// the SDK mock goes first, so the component's own @immich/sdk import resolves to it
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { curatorIsMine, forgetLinkFilm } from '#lib/utils/curator.ts';
+import { albumFactory } from '#test/kioku/factories/album-factory.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '#test/kioku/factories/library-context-factory.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
+import { renderWithTooltips } from '#test/kioku/helpers.ts';
+import { getAnimateMock } from '#test/kioku/mocks/animate.mock.ts';
 import { AssetTypeEnum, SharedLinkType, type SharedLinkResponseDto } from '@immich/sdk';
 import { modalManager, toastManager } from '@immich/ui';
 import '@testing-library/jest-dom';
@@ -5,18 +15,10 @@ import { cleanup, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { DateTime } from 'luxon';
 import { init, register, waitLocale } from 'svelte-i18n';
-import { getAnimateMock } from '$lib/__mocks__/animate.mock';
-// the SDK mock goes first, so the component's own @immich/sdk import resolves to it
-import '$lib/__mocks__/sdk.mock';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import SharedLinkRow from '$lib/components/omarchy/SharedLinkRow.svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { curatorIsMine, forgetLinkFilm } from '$lib/utils/curator';
-import { renderWithTooltips } from '$tests/helpers';
-import { albumFactory } from '@test-data/factories/album-factory';
-import { assetFactory } from '@test-data/factories/asset-factory';
-import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
+
+// The SDK mock registers itself when its module loads; loaded here (hoisted), it comes before the code under test
+// imports @immich/sdk, which the import order above would otherwise load first
+const { sdkMock } = await vi.hoisted(() => import('#lib/gallery/__mocks__/sdk.mock.ts'));
 
 // Local Omarchy layer: a shared link as a calm row: what it shows, who can open it, when it ends; Copy, Edit, Turn off
 const { emit } = vi.hoisted(() => ({ emit: vi.fn() }));
@@ -24,11 +26,11 @@ vi.mock('@immich/ui', async (importOriginal) => {
   const original = await importOriginal<typeof import('@immich/ui')>();
   return { ...original, modalManager: { show: vi.fn(), showDialog: vi.fn() } };
 });
-vi.mock('$lib/managers/event-manager.svelte', () => ({ eventManager: { emit, on: vi.fn(), off: vi.fn() } }));
-vi.mock('$lib/services/shared-link.service', () => ({
+vi.mock('#lib/managers/event-manager.svelte.ts', () => ({ eventManager: { emit, on: vi.fn(), off: vi.fn() } }));
+vi.mock('#lib/services/shared-link.service.ts', () => ({
   asUrl: ({ key }: { key: string }) => `https://photos.example/share/${key}`,
 }));
-vi.mock('$lib/utils/curator', () => ({ curatorIsMine: vi.fn(), forgetLinkFilm: vi.fn() }));
+vi.mock('#lib/utils/curator.ts', () => ({ curatorIsMine: vi.fn(), forgetLinkFilm: vi.fn() }));
 
 const inDays = (days: number) => DateTime.now().plus({ days }).toISO();
 const link = (overrides: Partial<SharedLinkResponseDto> = {}) =>
@@ -51,7 +53,7 @@ const show = (sharedLink: SharedLinkResponseDto) => {
 
 beforeAll(async () => {
   await init({ fallbackLocale: 'en-US' });
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await waitLocale('en-US');
 });
 
@@ -108,7 +110,7 @@ describe('SharedLinkRow', () => {
   it('turns a link off only once that is confirmed', async () => {
     const sharedLink = link({ description: 'Beach day' });
     show(sharedLink);
-    vi.mocked(modalManager.showDialog).mockResolvedValue(false);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(false);
 
     await userEvent.click(screen.getByRole('button', { name: 'Turn off' }));
     expect(modalManager.showDialog).toHaveBeenCalledWith(
@@ -116,7 +118,7 @@ describe('SharedLinkRow', () => {
     );
     expect(sdkMock.removeSharedLink).not.toHaveBeenCalled();
 
-    vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+    vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
     await userEvent.click(screen.getByRole('button', { name: 'Turn off' }));
     expect(sdkMock.removeSharedLink).toHaveBeenCalledWith({ id: sharedLink.id });
     expect(emit).toHaveBeenCalledWith('SharedLinkDelete', sharedLink);
@@ -137,7 +139,7 @@ describe('SharedLinkRow', () => {
     const film = () => link({ description: 'Riverton · October 2025', allowDownload: false });
     const turnOff = async (sharedLink: SharedLinkResponseDto) => {
       show(sharedLink);
-      vi.mocked(modalManager.showDialog).mockResolvedValue(true);
+      vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(true);
       await userEvent.click(screen.getByRole('button', { name: 'Turn off' }));
     };
 

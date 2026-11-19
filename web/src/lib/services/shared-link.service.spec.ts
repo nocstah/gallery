@@ -1,21 +1,22 @@
-import { SharedLinkType, type ServerConfigDto } from '@immich/sdk';
+import '#lib/gallery/__mocks__/sdk.mock.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { asUrl, handleCreateSharedLink, makeSharedLink, shareLinkExpiry } from '#lib/services/shared-link.service.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
+import { factory } from '#test/unit/factories.ts';
+import { SharedLinkType } from '@immich/sdk';
 import { modalManager } from '@immich/ui';
-import '$lib/__mocks__/sdk.mock';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { asUrl, handleCreateSharedLink, makeSharedLink, shareLinkExpiry } from '$lib/services/shared-link.service';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 
-vi.mock(import('$lib/managers/server-config-manager.svelte'), () => ({
-  serverConfigManager: {
-    value: { externalDomain: 'http://localhost:2283' } as ServerConfigDto,
-    init: vi.fn(),
-    loadServerConfig: vi.fn(),
-  },
+// The SDK mock registers itself when its module loads; loaded here (hoisted), it comes before the code under test
+// imports @immich/sdk, which the import order above would otherwise load first
+const { sdkMock } = await vi.hoisted(() => import('#lib/gallery/__mocks__/sdk.mock.ts'));
+
+vi.mock(import('#lib/queries/client.js'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  readPreloadedQuery: vi.fn().mockReturnValue({ server: { externalDomain: 'http://localhost:2283' } }),
 }));
 
 // a refusal is reported as everywhere else; this spec only asks what comes back
-vi.mock('$lib/utils/handle-error', () => ({ handleError: vi.fn() }));
+vi.mock('#lib/utils/handle-error.ts', () => ({ handleError: vi.fn() }));
 
 vi.mock('@immich/ui', async (importOriginal) => {
   const original = await importOriginal<typeof import('@immich/ui')>();
@@ -25,7 +26,7 @@ vi.mock('@immich/ui', async (importOriginal) => {
 describe('SharedLinkService', () => {
   describe('asUrl', () => {
     it('should properly encode characters in slug', () => {
-      expect(asUrl(sharedLinkFactory.build({ slug: 'foo/bar' }))).toBe('http://localhost:2283/s/foo%2Fbar');
+      expect(asUrl(factory.sharedLink({ slug: 'foo/bar' }))).toBe('http://localhost:2283/s/foo%2Fbar');
     });
   });
 

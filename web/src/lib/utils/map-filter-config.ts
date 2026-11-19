@@ -1,17 +1,17 @@
 import {
-  AssetTypeEnum,
-  getFilterSuggestions,
-  getSearchSuggestions,
-  SearchSuggestionType,
-  type FilterSuggestionsPersonDto,
-} from '@immich/sdk';
-import {
   ALL_FILTER_SECTIONS,
   buildFilterContext,
   type FilterPanelConfig,
   type FilterState,
-} from '$lib/components/filter-panel/filter-panel';
-import { getPhotosPersonFilterId, getPhotosPersonFilterThumbnailUrl } from '$lib/utils/photos-filter-options';
+} from '#lib/components/filter-panel/filter-panel.ts';
+import { getPhotosPersonFilterId, getPhotosPersonFilterThumbnailUrl } from '#lib/utils/photos-filter-options.ts';
+import {
+  AssetTypeEnum,
+  SearchSuggestionType,
+  getFilterSuggestions,
+  getSearchSuggestions,
+  type FilterSuggestionsPersonDto,
+} from '@immich/sdk';
 
 function mapSuggestions(response: Awaited<ReturnType<typeof getFilterSuggestions>>, spaceId?: string) {
   return {
@@ -53,8 +53,8 @@ export function buildMapFilterConfig(spaceId?: string): FilterPanelConfig {
             ? AssetTypeEnum.Image
             : AssetTypeEnum.Video,
       isFavorite: filters.isFavorite,
-      isNotInAlbum: filters.isNotInAlbum === true ? true : undefined,
-      isInAlbum: filters.isInAlbum === true ? true : undefined,
+      isNotInAlbum: filters.isNotInAlbum === true || undefined,
+      isInAlbum: filters.isInAlbum === true || undefined,
       takenAfter: context?.takenAfter,
       takenBefore: context?.takenBefore,
       ...(spaceId ? { spaceId } : { withSharedSpaces: true }),

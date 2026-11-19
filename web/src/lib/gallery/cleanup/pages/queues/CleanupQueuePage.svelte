@@ -1,8 +1,8 @@
 <script lang="ts">
-  import BurstsQueue from '$lib/gallery/cleanup/pages/queues/BurstsQueue.svelte';
-  import SelectQueue from '$lib/gallery/cleanup/pages/queues/SelectQueue.svelte';
-  import SpaceHogsQueue from '$lib/gallery/cleanup/pages/queues/SpaceHogsQueue.svelte';
-  import type { slugToQueue } from '$lib/gallery/cleanup/cleanup';
+  import type { slugToQueue } from '#lib/gallery/cleanup/cleanup.ts';
+  import BurstsQueue from '#lib/gallery/cleanup/pages/queues/BurstsQueue.svelte';
+  import SelectQueue from '#lib/gallery/cleanup/pages/queues/SelectQueue.svelte';
+  import SpaceHogsQueue from '#lib/gallery/cleanup/pages/queues/SpaceHogsQueue.svelte';
 
   type Props = {
     queue: ReturnType<typeof slugToQueue>;

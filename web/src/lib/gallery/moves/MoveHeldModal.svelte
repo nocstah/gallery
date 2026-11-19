@@ -2,13 +2,13 @@
   // Local Omarchy layer: the photos a move left in this library (gallery/moves, S5), each a thumbnail of this
   // library's own under the reason it stayed. Only the source's page gets this list from the mover, and never a
   // photo in the Locked Folder.
+  import { Route } from '#lib/route.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { Modal, ModalBody } from '@immich/ui';
   import { mdiImageMove } from '@mdi/js';
   import { onMount } from 'svelte';
   import { locale, t } from 'svelte-i18n';
-  import { Route } from '$lib/route';
-  import { getAssetMediaUrl } from '$lib/utils';
   import { holdKey, holdWords } from './hold-reasons';
   import { errorWords, moveNames } from './move-words';
   import { MoverError, moveStatus, type MoveStatus } from './mover';

@@ -2,10 +2,10 @@
   // Local Omarchy layer: the trash's Restore as a row of the photo menu (PhotoMenu), doing what the trash bar's Restore
   // does (routes/(user)/trash/RestoreAction, a button only): the selection leaves the trash, the page drops it, a toast
   // counts it
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
-  import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import type { OnRestore } from '$lib/utils/actions';
-  import { handleError } from '$lib/utils/handle-error';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
+  import { assetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import type { OnRestore } from '#lib/utils/actions.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
   import { restoreAssets } from '@immich/sdk';
   import { toastManager } from '@immich/ui';
   import { mdiHistory } from '@mdi/js';

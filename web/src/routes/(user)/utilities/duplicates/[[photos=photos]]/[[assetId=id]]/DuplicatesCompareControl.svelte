@@ -1,24 +1,24 @@
 <script lang="ts">
-  import { lazyComponent } from '$lib/utils/lazy-component.svelte';
-  import { shortcuts } from '$lib/actions/shortcut';
-  import DuplicateAsset from './DuplicateAsset.svelte';
-  import Portal from '$lib/elements/Portal.svelte';
-  import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { handlePromiseError } from '$lib/utils';
-  import { getAssetRatio, getNextAsset, getPreviousAsset } from '$lib/utils/asset-utils';
+  import { shortcuts } from '#lib/actions/shortcut.ts';
+  import Portal from '#lib/elements/Portal.svelte';
+  import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { handlePromiseError } from '#lib/utils.ts';
+  import { getAssetRatio, getNextAsset, getPreviousAsset } from '#lib/utils/asset-utils.ts';
   import {
     computeDifferingMetadataFields,
     countDifferingMetadataItems,
     type DifferingMetadataFields,
-  } from '$lib/utils/duplicate-utils';
-  import { navigate } from '$lib/utils/navigation';
+  } from '#lib/utils/duplicate-utils.ts';
+  import { lazyComponent } from '#lib/utils/lazy-component.svelte.ts';
+  import { navigate } from '#lib/utils/navigation.ts';
   import { getAssetInfo, type AssetResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiCheck, mdiChevronDown, mdiChevronUp, mdiImageMultipleOutline, mdiTrashCanOutline } from '@mdi/js';
   import { onDestroy, onMount } from 'svelte';
   import { t } from 'svelte-i18n';
   import { SvelteSet } from 'svelte/reactivity';
+  import DuplicateAsset from './DuplicateAsset.svelte';
 
   interface Props {
     assets: AssetResponseDto[];
@@ -98,7 +98,9 @@
   };
 
   const handleStack = () => {
-    onStack(assets);
+    const selectedAssets = assets.filter(({ id }) => selectedAssetIds.has(id));
+    const unselectedAssets = assets.filter(({ id }) => !selectedAssetIds.has(id));
+    onStack([...selectedAssets, ...unselectedAssets]);
   };
 
   const assetCursor = $derived({
@@ -109,7 +111,7 @@
 
   // Mounting the viewer through `{#await}` leaves it permanently unreactive on reopen.
   // See lazyComponent().
-  const LazyAssetViewer = lazyComponent(() => import('$lib/components/asset-viewer/AssetViewer.svelte'));
+  const LazyAssetViewer = lazyComponent(() => import('#lib/components/asset-viewer/AssetViewer.svelte'));
 </script>
 
 <svelte:document
@@ -186,7 +188,7 @@
 
 {#if assetViewerManager.isViewing}
   {#if LazyAssetViewer.current}
-    {@const AssetViewer = LazyAssetViewer.current}
+    {const AssetViewer = $derived(LazyAssetViewer.current)}
     <Portal target="body">
       <AssetViewer
         cursor={assetCursor}

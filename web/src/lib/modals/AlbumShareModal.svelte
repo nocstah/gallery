@@ -8,24 +8,28 @@
   // album's older links follow as rows with the line every link is told in (SharedLinkFacts: who can open it, when it
   // ends), where upstream's row (album-page/AlbumSharedLink, kept in the tree) gave the day it was made with no word
   // on what that day was.
-  import SharedLinkFacts from '$lib/components/omarchy/SharedLinkFacts.svelte';
-  import ShareLinkPanel from '$lib/components/omarchy/ShareLinkPanel.svelte';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { getAlbumActions, handleRemoveUserFromAlbum, handleUpdateUserAlbumRole } from '$lib/services/album.service';
-  import { getSharedLinkActions, makeSharedLink, shareLinkExpiry } from '$lib/services/shared-link.service';
-  import { lang } from '$lib/stores/preferences.store';
-  import { handleError } from '$lib/utils/handle-error';
-  import { leadSpace, rememberShareSpace, shareableSpaces, spaceAudience } from '$lib/utils/share-space';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import ShareLinkPanel from '#lib/components/omarchy/ShareLinkPanel.svelte';
+  import SharedLinkFacts from '#lib/components/omarchy/SharedLinkFacts.svelte';
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import {
+    getAlbumActions,
+    handleRemoveUserFromAlbum,
+    handleUpdateUserAlbumRole,
+  } from '#lib/services/album.service.ts';
+  import { getSharedLinkActions, makeSharedLink, shareLinkExpiry } from '#lib/services/shared-link.service.ts';
+  import { lang } from '#lib/stores/preferences.store.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
+  import { leadSpace, rememberShareSpace, shareableSpaces, spaceAudience } from '#lib/utils/share-space.ts';
   import {
     AlbumUserRole,
+    SharedLinkType,
     getAlbumInfo,
     getAllSharedLinks,
     getAllSpaces,
     linkAlbum,
-    SharedLinkType,
     unlinkAlbum,
     type AlbumResponseDto,
     type SharedLinkResponseDto,
@@ -202,7 +206,7 @@
           {:else}
             <ShareLinkPanel sharedLink={links[0]} />
             {#each links.slice(1) as sharedLink (sharedLink.id)}
-              {@const { ViewQrCode, Copy, Delete } = getSharedLinkActions($t, sharedLink)}
+              {const { ViewQrCode, Copy, Delete } = $derived(getSharedLinkActions($t, sharedLink))}
               <div class="ws-share-older" data-testid="album-share-older-link">
                 <div class="ws-share-older-text">
                   <p class="ws-share-older-name">{sharedLink.description || album.albumName}</p>

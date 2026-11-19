@@ -10,7 +10,7 @@
 export const MIN_SCALE = 0.72;
 export const MAX_SCALE = 1.6;
 /** With day labels, a day too wide for one line keeps its rows and each is justified to the edge at its own height,
- * as it always was: no cap, and this floor only so the search ends. */
+as it always was: no cap, and this floor only so the search ends. */
 const JUSTIFIED_FLOOR = 0.25;
 /** A row that cannot reach the edge costs more than any arrangement of rows that can. */
 export const SHORT_ROW_COST = 100;
@@ -19,7 +19,7 @@ export const SPLIT_COST = 1;
 /** A day too wide for one line sharing its first or last row with another day, rather than keeping its rows. */
 export const SHARE_COST = 0.5;
 /** A short last row of whole days handed on to the next month (layout-support): dearer than any row that fills,
- * cheaper than breaking a day, as months sharing rows came first (2026-10-15). */
+cheaper than breaking a day, as months sharing rows came first (2026-10-15). */
 export const HAND_ON_COST = 0.5;
 
 export type CutDay = {
@@ -38,7 +38,7 @@ export type CutOptions = {
   /** between two days on a row */
   gap: number;
   /** without day labels the days are one grid and may share rows across their breaks; with them each day keeps its
-   * own (a day that fits one line stays whole, one too wide for it takes rows to itself) */
+  own (a day that fits one line stays whole, one too wide for it takes rows to itself) */
   share: boolean;
   /** the cost of leaving the last row short when whole days end it and the next month can take them */
   handOn?: number;
@@ -52,15 +52,15 @@ export const fitsOneLine = (ratios: number[], { width, rowHeight, spacing }: Omi
   ratios.reduce((sum, ratio) => sum + ratio, 0) * rowHeight * MIN_SCALE + (ratios.length - 1) * spacing <= width;
 
 /** Whether `row` is justified to the edge whatever its height: with day labels, a row of a day too wide for one
- * line. */
+line. */
 export const justifiedRow = (row: RowPart[], days: CutDay[], options: CutOptions) =>
   !options.share && row.length === 1 && !fitsOneLine(days[row[0].day].ratios, options);
 
 /**
- * The rows for `days`, each a list of day parts in grid order: the cuts that cost least, a row costing how far its
- * height lies from the target (log scale, squared), a row that cannot reach the edge SHORT_ROW_COST more, and a day
- * broken or shared as above what that costs. No row of more than one photo shrinks below MIN_SCALE.
- */
+The rows for `days`, each a list of day parts in grid order: the cuts that cost least, a row costing how far its
+height lies from the target (log scale, squared), a row that cannot reach the edge SHORT_ROW_COST more, and a day
+broken or shared as above what that costs. No row of more than one photo shrinks below MIN_SCALE.
+*/
 export const cutRows = (days: CutDay[], options: CutOptions): RowPart[][] => {
   const { width, rowHeight, spacing, gap, share, handOn } = options;
   const total = days.reduce((sum, day) => sum + day.ratios.length, 0);

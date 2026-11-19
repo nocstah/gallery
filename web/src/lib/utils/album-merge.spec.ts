@@ -1,11 +1,11 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { albumFolders } from '#lib/managers/album-folders.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { mergeAlbum, pickAndMerge } from '#lib/utils/album-merge.ts';
+import { toastUndoable } from '#lib/utils/undoable.ts';
 import { AlbumUserRole, AssetOrder, type AlbumResponseDto, type BulkIdResponseDto } from '@immich/sdk';
 import { modalManager, toastManager } from '@immich/ui';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { albumFolders } from '$lib/managers/album-folders.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import { mergeAlbum, pickAndMerge } from '$lib/utils/album-merge';
-import { toastUndoable } from '$lib/utils/undoable';
 
 const mocks = vi.hoisted(() => ({ url: new URL('http://localhost/albums'), goto: vi.fn() }));
 vi.mock('$app/state', () => ({
@@ -17,17 +17,17 @@ vi.mock('$app/state', () => ({
   },
 }));
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: { authenticated: true, user: { id: 'me' }, params: {} },
 }));
-vi.mock('$lib/managers/album-folders.svelte', () => ({
+vi.mock('#lib/managers/album-folders.svelte.ts', () => ({
   albumFolders: { ready: vi.fn(), placeOf: vi.fn(), refile: vi.fn() },
 }));
-vi.mock('$lib/managers/special-albums.svelte', () => ({
+vi.mock('#lib/managers/special-albums.svelte.ts', () => ({
   specialAlbums: [],
   specialAlbumOf: (id: string) => (id === 'todo' ? {} : undefined),
 }));
-vi.mock('$lib/utils/undoable', () => ({ toastUndoable: vi.fn() }));
+vi.mock('#lib/utils/undoable.ts', () => ({ toastUndoable: vi.fn() }));
 vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),
   toastManager: { primary: vi.fn(), success: vi.fn(), info: vi.fn(), warning: vi.fn(), danger: vi.fn() },
@@ -158,7 +158,7 @@ describe('album merge', () => {
 
     it('asks first, saying a shared album loses its link, and merges only on yes', async () => {
       vi.mocked(modalManager.show).mockResolvedValue([target] as never);
-      vi.mocked(modalManager.showDialog).mockResolvedValue(false);
+      vi.mocked(modalManager.showDialog as (...args: unknown[]) => Promise<boolean>).mockResolvedValue(false);
 
       expect(await pickAndMerge(album('source', { hasSharedLink: true }))).toBe(false);
 

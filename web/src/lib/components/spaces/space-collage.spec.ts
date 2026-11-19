@@ -1,7 +1,7 @@
+import SpaceCollage from '#lib/components/spaces/space-collage.svelte';
 import { render, screen } from '@testing-library/svelte';
-import SpaceCollage from '$lib/components/spaces/space-collage.svelte';
 
-const makeAsset = (id: string, thumbhash: string | null = null) => ({ id, thumbhash });
+const makeAsset = (id: string) => ({ id, thumbhash: null });
 
 describe('SpaceCollage component', () => {
   // Local Omarchy layer: the house's icon cover (a faint ground in a hairline, the glyph muted), not a gradient slab

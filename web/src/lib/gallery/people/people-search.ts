@@ -1,6 +1,6 @@
+import { maximumLengthSearchPeople, timeBeforeShowLoadingSpinner } from '#lib/constants.ts';
+import { searchNameLocal } from '#lib/utils/person.ts';
 import { searchPerson, type PersonResponseDto } from '@immich/sdk';
-import { maximumLengthSearchPeople, timeBeforeShowLoadingSpinner } from '$lib/constants';
-import { searchNameLocal } from '$lib/utils/person';
 
 // SearchService.searchPerson caps shared-space results at 50; the owner-only repository caps at 100.
 // A full batch must never be treated as the complete set of people matching a prefix.

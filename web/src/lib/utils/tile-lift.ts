@@ -16,7 +16,7 @@
 // This is Kioku's whole hover lift: Gallery's own listeners (thumbnail-lift.ts) measured every photo the pointer entered
 // a second time, for a transform origin and a date lift Kioku does not use, so they are not installed
 // (lib/gallery/motion/index.ts), and the settling mark Gallery's stacking rules key off is set here.
-import { SETTLE_MS, SETTLING_ATTR } from '$lib/gallery/motion/thumbnail-lift';
+import { SETTLE_MS, SETTLING_ATTR } from '#lib/gallery/motion/thumbnail-lift.ts';
 
 /** About how large a lifted photo stands, in CSS px on a side (the square root of its area): one you can make out. */
 export const LIFT_TARGET_PX = 300;
@@ -53,9 +53,9 @@ export const liftScale = (width: number, height: number, roomWidth: number, room
 };
 
 /**
- * How far, along one axis, the lifted photo's start lies from the photo's own: grown about its centre, then moved back
- * inside [lo, hi], the margin clear.
- */
+How far, along one axis, the lifted photo's start lies from the photo's own: grown about its centre, then moved back
+inside [lo, hi], the margin clear.
+*/
 export const liftOffset = (start: number, size: number, lo: number, hi: number, scale: number): number => {
   if (scale <= 1) {
     return 0;

@@ -1,5 +1,5 @@
+import { CuratorError, type BookJob, type BookResult } from '#lib/utils/curator.ts';
 import type { AlbumResponseDto } from '@immich/sdk';
-import { CuratorError, type BookJob, type BookResult } from '$lib/utils/curator';
 
 // Local Omarchy layer: photo books on request against a stand-in Curator: the dialog's choice starts book.make, the
 // job is followed through its stages to the files, a failure or a lost Curator says so, and a book already being made
@@ -12,8 +12,8 @@ const { curatorMock, sdkMock, modalMock, mine } = vi.hoisted(() => ({
   mine: { current: true },
 }));
 
-vi.mock('$lib/utils/curator', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('#lib/utils/curator.ts')>()),
   curator: curatorMock,
   curatorIsMine: () => mine.current,
 }));
@@ -30,7 +30,7 @@ vi.mock('@immich/ui', async (importOriginal) => ({
 const fresh = async () => {
   vi.resetModules();
   const manager = await import('./photo-book-manager.svelte');
-  const { default: PhotoBookModal } = await import('$lib/modals/PhotoBookModal.svelte');
+  const { default: PhotoBookModal } = await import('#lib/modals/PhotoBookModal.svelte');
   return { ...manager, PhotoBookModal };
 };
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { markRoot } from '$lib/actions/mark-root';
+  import { markRoot } from '#lib/actions/mark-root.ts';
   // Local Omarchy layer: a memory as a full-screen film (DESIGN.md, Memories, The film; the owner's "Full-screen film",
   // 2026-10-16). It plays a plan (film-plan.ts): a title card, then each photo filling the screen and drifting, or
   // shown whole over its own blurred colours where a crop would take too much, videos muted for a few seconds, the
@@ -12,21 +12,21 @@
   // metres (a far bigger title, the photo's "names · place · date" caption at the foot, bigger controls, the pointer
   // hidden, a remote's OK and Back), and `onNextFilm`/`onPreviousFilm` chain it: its end, ↓ and ↑ hand on to the film
   // after or before, the picture and the music fading to black first, where a lone film offers what to do next.
-  import type { MemoryTrack } from '$lib/utils/curator';
+  import type { MemoryTrack } from '#lib/utils/curator.ts';
   import { AssetTypeEnum, type AssetResponseDto, type MemoryResponseDto } from '@immich/sdk';
-  import { Icon, isModalOpen, LoadingSpinner } from '@immich/ui';
+  import { Icon, LoadingSpinner, isModalOpen } from '@immich/ui';
   import {
     mdiChevronLeft,
     mdiChevronRight,
     mdiClose,
     mdiImageMultipleOutline,
     mdiMusicNote,
-    mdiSubtitles,
-    mdiSubtitlesOutline,
     mdiPause,
     mdiPlay,
     mdiReplay,
     mdiSkipNext,
+    mdiSubtitles,
+    mdiSubtitlesOutline,
     mdiVolumeHigh,
     mdiVolumeOff,
   } from '@mdi/js';
@@ -38,25 +38,11 @@
   import { BREATH_FADE_MS, HAND_ON_MS, handOnTiming } from './film-breath';
   import { filmKeyAction, type FilmAction, type FilmDress } from './film-keys';
   import { keepLyricsWanted, lyricAt, lyricsWanted, settledLyrics, type LyricLine } from './film-lyrics';
-  import { FilmMusic } from './film-music.svelte';
   import type { FilmMedia } from './film-media';
+  import { FilmMusic } from './film-music.svelte';
   import {
-    FOOT_SCRIM,
-    headScrimAt,
-    imagePicture,
-    pixels,
-    ROOM_SCRIM,
-    scrimAt,
-    shotShade,
-    textBox,
-    thumbhashPicture,
-    wholeLift,
-    wordsIn,
-    type FilmWords,
-  } from './film-shade';
-  import {
-    buildFilmPlan,
     FILM_TIMING,
+    buildFilmPlan,
     filmChanges,
     filmMomentAt,
     shotFrame,
@@ -68,6 +54,20 @@
     type FilmShot,
     type FilmStoryCue,
   } from './film-plan';
+  import {
+    FOOT_SCRIM,
+    ROOM_SCRIM,
+    headScrimAt,
+    imagePicture,
+    pixels,
+    scrimAt,
+    shotShade,
+    textBox,
+    thumbhashPicture,
+    wholeLift,
+    wordsIn,
+    type FilmWords,
+  } from './film-shade';
 
   interface Props {
     media: FilmMedia;
@@ -76,7 +76,7 @@
     /** a memory, or any run of photos with an id of its own (Room's albums and years) */
     memory: Pick<MemoryResponseDto, 'id' | 'assets'>;
     /** the photo the address names: the film starts there (on the first photo, with its title card) and goes there
-     * when the address moves on (back from the photo viewer, a photo taken out of the memory) */
+    when the address moves on (back from the photo viewer, a photo taken out of the memory) */
     assetId: string;
     /** on screen: false while All photos or the photo viewer is up, when the film pauses and waits */
     active: boolean;
@@ -97,8 +97,8 @@
     /** where the photo on screen was taken ("Siem Reap, Cambodia"), when it is known */
     place?: string;
     /** how the top bar dates the photo on screen: its day ("October 16, 2025"), or only its month and year ("October
-     * 2025") where the day is not to be said (the family page of "From the beginning": month and year only, never the
-     * day) */
+    2025") where the day is not to be said (the family page of "From the beginning": month and year only, never the
+    day) */
     dates?: 'day' | 'month';
     /** a photo's time on screen, in seconds (the Memories duration preference) */
     photoSeconds?: number;
@@ -114,10 +114,10 @@
     /** the photo on screen in words, "names · place · date": the room dress's caption at the foot */
     caption?: string;
     /** the story's sentence on screen (none under the title card or at the end), for a caption that must not say it
-     * again (Room's) */
+    again (Room's) */
     storyLine?: string;
     /** paused by a person (or by the tab being hidden), not before the film starts or once it has ended: Room keeps
-     * the screen awake while this is false */
+    the screen awake while this is false */
     paused?: boolean;
     onClose: () => void;
     /** All photos (the memory's grid); without it the film has no way there */
@@ -186,11 +186,11 @@
   let frameHeight = $state(0);
   const aspect = $derived(frameWidth > 0 && frameHeight > 0 ? frameWidth / frameHeight : 0);
   /** The transport stands beside the words where the frame holds them side by side, else it has a row of its own under
-   * them; either way it never takes their width or moves them. Room's sizes follow the screen's shorter side, so a
-   * frame 17:10 and wider (a 16:9 TV, the AORUS) holds its words' measure and its transport side by side, and a
-   * narrower one (a 16:10 laptop, a tablet) does not; the film's transport keeps one size, so it needs 1152px, on a
-   * frame wider than 13:10 (a portrait screen gives the words its whole width). Decided by the frame alone, so it
-   * never changes while the film plays in one window. */
+  them; either way it never takes their width or moves them. Room's sizes follow the screen's shorter side, so a
+  frame 17:10 and wider (a 16:9 TV, the AORUS) holds its words' measure and its transport side by side, and a
+  narrower one (a 16:10 laptop, a tablet) does not; the film's transport keeps one size, so it needs 1152px, on a
+  frame wider than 13:10 (a portrait screen gives the words its whole width). Decided by the frame alone, so it
+  never changes while the film plays in one window. */
   const footBeside = $derived(
     frameWidth >= 768 && (dress === 'room' ? aspect >= 1.7 : frameWidth >= 1152 && aspect >= 1.3),
   );
@@ -211,8 +211,8 @@
   let storyText = $derived(plan && storyIndex >= 0 ? storyOf(plan)[storyIndex]?.text : undefined);
 
   /** a photo as it lies under the words (film-shade.ts): the black under the words at the foot and under the top bar,
-   * as opacities, how far up and down from the frame's edge each is held (px), and how far a photo shown whole is
-   * raised (a share of the frame's height) */
+  as opacities, how far up and down from the frame's edge each is held (px), and how far a photo shown whole is
+  raised (a share of the frame's height) */
   type Look = { shade: number; reach: number; headShade: number; headReach: number; lift: number };
   const NO_LOOK: Look = { shade: 0, reach: 0, headShade: 0, headReach: 0, lift: 0 };
   type Layer = { shot: FilmShot | null; key: string; z: number } & Look;
@@ -280,7 +280,7 @@
     const id = song?.id;
     if (id && !song?.lyrics && media.lyrics) {
       untrack(() => {
-        if (!(id in lyricsAsked)) {
+        if (lyricsAsked[id] === undefined) {
           lyricsAsked[id] = [];
           void media.lyrics?.(id).then((lines) => (lyricsAsked[id] = lines));
         }
@@ -344,8 +344,8 @@
     });
 
   /** The film as "Save as video" hands it to Curator, replanned for the chosen frame: the shots planned
-   * for that frame from what this film was planned from (its cover and faces, its photos' time), the songs from the
-   * one playing, from the film's start, and the cuts on that song's beat. Nothing until the film has begun. */
+  for that frame from what this film was planned from (its cover and faces, its photos' time), the songs from the
+  one playing, from the film's start, and the cuts on that song's beat. Nothing until the film has begun. */
   export const videoPlan = (exportAspect = 16 / 9): { plan: FilmPlan; trackId?: string } | undefined => {
     if (!plan) {
       return undefined;
@@ -407,7 +407,7 @@
     wordsIn(element, rect, { left: 0, top: 0, width: frameWidth, height: frameHeight }, scrim);
 
   /** the words at the foot over a shot (the title card's, the story's, across the room the caption) and how far up
-   * from the frame's foot they come (px) */
+  from the frame's foot they come (px) */
   const footWords = (target: FilmShot) => {
     const words: FilmWords[] = [];
     let reach = 0;
@@ -699,9 +699,9 @@
   };
 
   /** The film as it stands at its clock's time. Woken by the clock for the change at `due`, it stands at that change
-   * at least: a timer may fire a moment early (its delay goes in whole milliseconds, and a busy event loop's own clock
-   * lags), and a change read as still to come would be skipped by the next schedule, which looks past the few
-   * milliseconds ahead; a story's sentence was lost so, never shown, under load. */
+  at least: a timer may fire a moment early (its delay goes in whole milliseconds, and a busy event loop's own clock
+  lags), and a change read as still to come would be skipped by the next schedule, which looks past the few
+  milliseconds ahead; a story's sentence was lost so, never shown, under load. */
   const wake = (due?: number) => {
     if (!plan || destroyed) {
       return;
@@ -747,8 +747,8 @@
   };
 
   /** A film in a chain hands on: the picture and the music fade to black, then the next film (or the one before)
-   * takes over. Local Omarchy layer: a film that ended by itself breathes first (film-breath.ts), a slower fade and a
-   * moment of black; a person moving on is answered as fast as before. */
+  takes over. Local Omarchy layer: a film that ended by itself breathes first (film-breath.ts), a slower fade and a
+  moment of black; a person moving on is answered as fast as before. */
   const handOn = (to: (() => void) | undefined, byItself = false) => {
     if (!to || leaving) {
       return;
@@ -820,7 +820,7 @@
     poke();
   };
 
-  const seek = (index: number, fadeSeconds = QUICK_FADE) => {
+  const seek = (index: number) => {
     if (!plan) {
       return;
     }
@@ -836,7 +836,7 @@
         void music?.play();
       }
     }
-    void goTo(target, fadeSeconds);
+    void goTo(target, QUICK_FADE);
     schedule();
   };
 
@@ -1284,7 +1284,7 @@
 
   // the story's sentence as it stands on screen: Room's caption under it leaves out what it says
   $effect(() => {
-    const line = !ended && !titleShown ? storyText : undefined;
+    const line = ended || titleShown ? undefined : storyText;
     if (untrack(() => storyLine) !== line) {
       storyLine = line;
     }
@@ -1343,10 +1343,10 @@
         data-lift={layer.lift || undefined}
       >
         {#if layer.shot && plan}
-          {@const frame = shotFrame(layer.shot, plan.aspect)}
+          {const frame = $derived(shotFrame(layer.shot, plan.aspect))}
           {#key layer.key}
             {#if !frame.fill}
-              {@const backdrop = backdropOf(layer.shot.assetId)}
+              {const backdrop = $derived(backdropOf(layer.shot.assetId))}
               {#if backdrop}
                 <img class="film-backdrop" src={backdrop} alt="" aria-hidden="true" draggable="false" />
               {/if}

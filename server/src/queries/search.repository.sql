@@ -342,7 +342,48 @@ select
       "asset_favorite"."assetId" = "asset"."id"
       and "asset_favorite"."userId" = $1::uuid
   ) as "isFavoriteForUser",
-  to_json("asset_exif") as "exifInfo"
+  (
+    select
+      to_json(obj)
+    from
+      (
+        select
+          "asset_exif"."assetId",
+          "asset_exif"."autoStackId",
+          "asset_exif"."bitsPerSample",
+          "asset_exif"."city",
+          "asset_exif"."colorspace",
+          "asset_exif"."country",
+          "asset_exif"."dateTimeOriginal",
+          "asset_exif"."description",
+          "asset_exif"."exifImageHeight",
+          "asset_exif"."exifImageWidth",
+          "asset_exif"."exposureTime",
+          "asset_exif"."fileSizeInByte",
+          "asset_exif"."fNumber",
+          "asset_exif"."focalLength",
+          "asset_exif"."fps",
+          "asset_exif"."iso",
+          "asset_exif"."latitude",
+          "asset_exif"."lensModel",
+          "asset_exif"."livePhotoCID",
+          "asset_exif"."longitude",
+          "asset_exif"."make",
+          "asset_exif"."model",
+          "asset_exif"."modifyDate",
+          "asset_exif"."orientation",
+          "asset_exif"."profileDescription",
+          "asset_exif"."projectionType",
+          "asset_exif"."rating",
+          "asset_exif"."state",
+          "asset_exif"."tags",
+          "asset_exif"."timeZone"
+        from
+          "asset_exif"
+        where
+          "asset_exif"."assetId" = "asset"."id"
+      ) as obj
+  ) as "exifInfo"
 from
   "asset"
   inner join "asset_exif" on "asset"."id" = "asset_exif"."assetId"
@@ -520,6 +561,7 @@ with
           "user"."clusterGroupId" = $2
       )
       and "asset"."deletedAt" is null
+      and "asset_face"."deletedAt" is null
     order by
       "distance"
     limit
@@ -532,36 +574,6 @@ from
 where
   "cte"."distance" <= $4
 rollback
-
--- SearchRepository.searchPets
-begin
-set
-  local vchordrq.probes = 1
-with
-  "cte" as (
-    select
-      "asset_face"."id",
-      "asset_face"."personGroupId",
-      pet_search.embedding <=> $1 as "distance"
-    from
-      "asset_face"
-      inner join "asset" on "asset"."id" = "asset_face"."assetId"
-      inner join "pet_search" on "pet_search"."faceId" = "asset_face"."id"
-    where
-      "asset"."ownerId" = any ($2::uuid[])
-      and "asset"."deletedAt" is null
-    order by
-      "distance"
-    limit
-      $3
-  )
-select
-  *
-from
-  "cte"
-where
-  "cte"."distance" <= $4
-commit
 
 -- SearchRepository.searchPlaces
 select
@@ -2258,7 +2270,48 @@ offset
 
 -- SearchRepository.searchMetadataV3 (order-rating-withExif)
 select
-  to_json("asset_exif") as "exifInfo",
+  (
+    select
+      to_json(obj)
+    from
+      (
+        select
+          "asset_exif"."assetId",
+          "asset_exif"."autoStackId",
+          "asset_exif"."bitsPerSample",
+          "asset_exif"."city",
+          "asset_exif"."colorspace",
+          "asset_exif"."country",
+          "asset_exif"."dateTimeOriginal",
+          "asset_exif"."description",
+          "asset_exif"."exifImageHeight",
+          "asset_exif"."exifImageWidth",
+          "asset_exif"."exposureTime",
+          "asset_exif"."fileSizeInByte",
+          "asset_exif"."fNumber",
+          "asset_exif"."focalLength",
+          "asset_exif"."fps",
+          "asset_exif"."iso",
+          "asset_exif"."latitude",
+          "asset_exif"."lensModel",
+          "asset_exif"."livePhotoCID",
+          "asset_exif"."longitude",
+          "asset_exif"."make",
+          "asset_exif"."model",
+          "asset_exif"."modifyDate",
+          "asset_exif"."orientation",
+          "asset_exif"."profileDescription",
+          "asset_exif"."projectionType",
+          "asset_exif"."rating",
+          "asset_exif"."state",
+          "asset_exif"."tags",
+          "asset_exif"."timeZone"
+        from
+          "asset_exif"
+        where
+          "asset_exif"."assetId" = "asset"."id"
+      ) as obj
+  ) as "exifInfo",
   "asset"."id",
   "asset"."updateId",
   "asset"."createdAt",

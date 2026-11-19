@@ -1,8 +1,8 @@
 // Local Omarchy layer: how a search mode of the Ctrl+K palette (smart, filename, description, OCR) reads and writes
 // search terms. The palette searches by these fields and the search page's field (components/omarchy/
 // SearchBarQuery.svelte) edits them, so both read this one map instead of keeping a copy each.
+import type { SearchMode } from '#lib/managers/global-search-manager.svelte.ts';
 import type { MetadataSearchDto, SmartSearchDto } from '@immich/sdk';
-import type { SearchMode } from '$lib/managers/global-search-manager.svelte';
 
 /** The modes that search by a text: every mode but Ask, whose questions Curator answers on its own page. */
 export type TextSearchMode = Exclude<SearchMode, 'ask'>;
@@ -44,7 +44,7 @@ export const fieldSearchTerms = (
 };
 
 /** Which mode and text a set of terms searches by (the first text field, in the palette's order); none for terms
- * that only filter (a place, a person, a photo to find others like). */
+that only filter (a place, a person, a photo to find others like). */
 export const getSearchModeText = (terms: TextTerms): { mode: TextSearchMode; text: string } | undefined => {
   for (const mode of textSearchModes) {
     const value = terms[searchModeField[mode]];
@@ -58,10 +58,10 @@ export const getSearchModeText = (terms: TextTerms): { mode: TextSearchMode; tex
 const textFields = new Set<string>(Object.values(searchModeField));
 
 /**
- * The terms searching `text` in `mode`, keeping every other term. The text replaces whatever text the terms searched
- * by before, and a photo to find others like (`queryAssetId`) too, since a typed text takes over from it (the server
- * reads `query` first). An empty text only clears the text.
- */
+The terms searching `text` in `mode`, keeping every other term. The text replaces whatever text the terms searched
+by before, and a photo to find others like (`queryAssetId`) too, since a typed text takes over from it (the server
+reads `query` first). An empty text only clears the text.
+*/
 export const withSearchModeText = <T extends TextTerms & Pick<SmartSearchDto, 'queryAssetId'>>(
   terms: T,
   mode: TextSearchMode,

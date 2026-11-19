@@ -1,7 +1,7 @@
 // Local Omarchy layer: the Command center's backups in words ("Last night's backup to the My Book: fine, 02:10"),
 // where it showed the database dump's file name and "OK, Oct 23, 02:30 AM". Times are the reader's calendar days.
+import type { BackupCopy, HealthItem } from '#lib/utils/curator.ts';
 import { DateTime } from 'luxon';
-import type { BackupCopy, HealthItem } from '$lib/utils/curator';
 
 /** a run's time as a person says it the morning after: before 06:00 today or from 18:00 yesterday is last night */
 export type BackupWhen = 'night' | 'today' | 'yesterday' | 'date';
@@ -32,8 +32,8 @@ const dumpTime = (detail: string) => {
 };
 
 /** Gallery's database backup, from Curator's health item: its age in hours (`value`), its file's name in `detail`, a
- * look needed (`attention`) past a day and a half. The time in the file's name is the exact one, while it agrees
- * with the age (a server on another clock would not). */
+look needed (`attention`) past a day and a half. The time in the file's name is the exact one, while it agrees
+with the age (a server on another clock would not). */
 export const databaseBackup = (item: HealthItem | undefined, now: DateTime = DateTime.now()): BackupFacts => {
   if (!item || item.value === null) {
     return { state: 'none' };

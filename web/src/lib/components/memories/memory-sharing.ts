@@ -24,10 +24,10 @@ export const memoryVideoAspect = (mode: Exclude<MemoryShareMode, 'memory'>) => (
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * How long a memory's link stays open: the Share sheet's segmented control, 30 days chosen as on every link the Share
- * sheets make (SHARE_LINK_DAYS, `shareLinkExpiry`); `null` keeps it open until it is turned off. Any other date is a
- * press away once the link is made (its Edit link, or Remove end date).
- */
+How long a memory's link stays open: the Share sheet's segmented control, 30 days chosen as on every link the Share
+sheets make (SHARE_LINK_DAYS, `shareLinkExpiry`); `null` keeps it open until it is turned off. Any other date is a
+press away once the link is made (its Edit link, or Remove end date).
+*/
 export const MEMORY_LINK_DAYS = [7, 30, 365, null] as const;
 export type MemoryLinkDays = (typeof MEMORY_LINK_DAYS)[number];
 
@@ -46,9 +46,9 @@ export type MemoryLinkKind = 'memory' | 'video';
 export type MemoryLink = { link: SharedLinkResponseDto; kind: MemoryLinkKind };
 
 /**
- * The name Curator gives a memory's video file (curator/jobs/film.py `file_name`): its title with the characters a
- * file name cannot hold turned to spaces, at most 100 characters.
- */
+The name Curator gives a memory's video file (curator/jobs/film.py `file_name`): its title with the characters a
+file name cannot hold turned to spaces, at most 100 characters.
+*/
 const filmFileName = (title: string) =>
   title
     // eslint-disable-next-line no-control-regex -- the control characters Curator replaces
@@ -59,12 +59,12 @@ const filmFileName = (title: string) =>
     .replace(/[\s.]+$/, '');
 
 /**
- * A memory's links that are still open, newest first, found among the owner's shared links (one request: Gallery
- * lists each link with its first photo). The Share sheet makes a memory's links individual and names them by the
- * memory's title (their description), so a link of this memory is one of those whose first photo is the memory's
- * (a playable memory), or whose one asset is a video Curator saved under the memory's title (a video file). A link
- * renamed since, or a memory whose title has changed, is not found here; Shared links still lists it.
- */
+A memory's links that are still open, newest first, found among the owner's shared links (one request: Gallery
+lists each link with its first photo). The Share sheet makes a memory's links individual and names them by the
+memory's title (their description), so a link of this memory is one of those whose first photo is the memory's
+(a playable memory), or whose one asset is a video Curator saved under the memory's title (a video file). A link
+renamed since, or a memory whose title has changed, is not found here; Shared links still lists it.
+*/
 export const liveMemoryLinks = (
   links: SharedLinkResponseDto[],
   memory: { title: string; assetIds: string[] },

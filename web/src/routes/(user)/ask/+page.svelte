@@ -3,14 +3,14 @@
   // answered by Curator (~/code/curator, curator/ask.py) with Gallery's own searches and the local models' captions
   // and transcripts: a one-line answer when the question wants one, what was searched for, and the photos. Reached
   // from the Ctrl+K palette's Ask mode.
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { curator, CuratorError, curatorPort, type AskResult } from '$lib/utils/curator';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { CuratorError, curator, curatorPort, type AskResult } from '#lib/utils/curator.ts';
   import { AssetMediaSize } from '@immich/sdk';
   import { onMount } from 'svelte';
   import { locale, t } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import type { PageData } from './$types';
 
   interface Props {
@@ -54,7 +54,7 @@
     event.preventDefault();
     const next = draft.trim();
     if (next && next !== question) {
-      void goto(`?q=${encodeURIComponent(next)}`, { keepFocus: true });
+      void goto(`?q=${encodeURIComponent(next)}`, { reset: false });
     }
   };
 

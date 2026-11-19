@@ -4,15 +4,13 @@
   // with a white rounded card inside, slab buttons and a blue avatar disc, the one colour in the app the theme did not
   // give. The person heads it as a quiet ring with the initial in ink (a picture fills it), as the bar draws them; then
   // the account's pages; then Help, which says who runs this Gallery (modals/HelpAndFeedbackModal); then Sign out.
-  import { page } from '$app/state';
-  import { focusTrap } from '$lib/actions/focus-trap';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import AvatarEditModal from '$lib/modals/AvatarEditModal.svelte';
-  import HelpAndFeedbackModal from '$lib/modals/HelpAndFeedbackModal.svelte';
-  import { Route } from '$lib/route';
-  import { locale } from '$lib/stores/preferences.store';
-  import { userInteraction } from '$lib/stores/user.svelte';
-  import { getAboutInfo, type ServerAboutResponseDto } from '@immich/sdk';
+  import { focusTrap } from '#lib/actions/focus-trap.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import AvatarEditModal from '#lib/modals/AvatarEditModal.svelte';
+  import HelpAndFeedbackModal from '#lib/modals/HelpAndFeedbackModal.svelte';
+  import { getAboutInfoQuery } from '#lib/queries/server-info.query.ts';
+  import { Route } from '#lib/route.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
   import { Icon, modalManager } from '@immich/ui';
   import {
     mdiBellBadgeOutline,
@@ -23,9 +21,10 @@
     mdiPencilOutline,
     mdiWrenchOutline,
   } from '@mdi/js';
-  import { onMount } from 'svelte';
+  import { createQuery } from '@tanstack/svelte-query';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
+  import { page } from '$app/state';
   import UserAvatar from '../UserAvatar.svelte';
 
   type Props = {
@@ -36,15 +35,9 @@
 
   let { onClose, notifications }: Props = $props();
 
-  let info: ServerAboutResponseDto | undefined = $state();
-
-  onMount(async () => {
-    try {
-      info = userInteraction.aboutInfo ?? (await getAboutInfo());
-    } catch {
-      // the Help sheet asks again when it opens
-    }
-  });
+  // the Help sheet asks again when it opens if the about info has not come yet
+  const query = createQuery(getAboutInfoQuery);
+  const info = $derived(query.data);
 
   const editAvatar = async () => {
     onClose?.();

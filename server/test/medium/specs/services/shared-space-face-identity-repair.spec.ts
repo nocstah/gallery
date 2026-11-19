@@ -2,6 +2,7 @@ import { Kysely } from 'kysely';
 import { Mocked } from 'vitest';
 import { AssetVisibility, JobName, JobStatus, QueueName, SharedSpaceRole, SourceType } from 'src/enum.js';
 import { FaceSearchRepository } from 'src/gallery/repositories/face-search.repository.js';
+import { GalleryAssetRepository } from 'src/gallery/repositories/gallery-asset.repository.js';
 import { QueueMaintenanceRepository } from 'src/gallery/repositories/queue-maintenance.repository.js';
 import { AssetRepository } from 'src/repositories/asset.repository.js';
 import { ConfigRepository } from 'src/repositories/config.repository.js';
@@ -23,11 +24,13 @@ import { getKyselyDB } from 'test/utils.js';
 
 let defaultDatabase: Kysely<DB>;
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 const setup = (db?: Kysely<DB>) => {
   const { ctx, sut } = newMediumService(SharedSpaceService, {
     database: db || defaultDatabase,
     real: [
       AssetRepository,
+      GalleryAssetRepository,
       SharedSpaceRepository,
       FaceIdentityRepository,
       PersonRepository,

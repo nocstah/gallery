@@ -4,26 +4,26 @@
   // events and trips and their stories, counts the library, looks at the AI inbox, and proposes albums or starts
   // highlight reels, which wait for a yes. Answers stream in as they are written. Curator keeps the conversations; the
   // open one rides in the URL (?id=), so a reload or the back button returns to it.
-  import { goto } from '$app/navigation';
-  import { page } from '$app/state';
-  import ChatReply from '$lib/components/curator/ChatReply.svelte';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import ButtonContextMenu from '$lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
-  import MenuOption from '$lib/components/shared-components/context-menu/MenuOption.svelte';
+  import ChatReply from '#lib/components/curator/ChatReply.svelte';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import ButtonContextMenu from '#lib/components/shared-components/context-menu/ButtonContextMenu.svelte';
+  import MenuOption from '#lib/components/shared-components/context-menu/MenuOption.svelte';
   import {
+    CuratorError,
     chatStream,
     curator,
-    CuratorError,
     curatorPort,
     type ChatAssistantTurn,
     type ChatEvent,
     type ChatSummary,
     type ChatTurn,
-  } from '$lib/utils/curator';
+  } from '#lib/utils/curator.ts';
   import { Icon } from '@immich/ui';
   import { mdiArrowUp, mdiDeleteOutline, mdiHistory, mdiPlus, mdiStop } from '@mdi/js';
   import { onMount, untrack } from 'svelte';
   import { locale, t, type Translations } from 'svelte-i18n';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import type { PageData } from './$types';
 
   interface Props {
@@ -112,7 +112,7 @@
         offline = true;
       } else {
         // gone (deleted elsewhere): a new conversation instead
-        await goto(page.url.pathname, { replaceState: true, keepFocus: true, noScroll: true });
+        await goto(page.url.pathname, { replace: true, reset: false });
       }
     } finally {
       loadingChat = false;
@@ -141,7 +141,7 @@
       case 'chat': {
         if (chatId !== event.data.id) {
           chatId = event.data.id;
-          void goto(`?id=${event.data.id}`, { replaceState: true, keepFocus: true, noScroll: true });
+          void goto(`?id=${event.data.id}`, { replace: true, reset: false });
         }
         break;
       }
@@ -261,14 +261,14 @@
     chatId = null;
     chatTitle = null;
     confirmDelete = false;
-    await goto(page.url.pathname, { keepFocus: true, noScroll: true });
+    await goto(page.url.pathname, { reset: false });
     input?.focus();
   };
 
   const open = (id: string) => {
     if (id !== chatId) {
       stop();
-      void goto(`?id=${id}`, { noScroll: true });
+      void goto(`?id=${id}`, { reset: false });
     }
   };
 
@@ -387,7 +387,7 @@
               {#if turn.role === 'user'}
                 <p class="chat-user">{turn.text}</p>
               {:else}
-                {@const live = streaming && turn === last}
+                {const live = $derived(streaming && turn === last)}
                 <ChatReply
                   {turn}
                   {live}

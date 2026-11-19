@@ -2,9 +2,10 @@ import { ModuleRef } from '@nestjs/core';
 import { setTimeout } from 'node:timers/promises';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { JobName, QueueJobStatus, QueueName } from 'src/enum.js';
+import { QueueMaintenanceRepository } from 'src/gallery/repositories/queue-maintenance.repository.js';
 import { ConfigRepository } from 'src/repositories/config.repository.js';
 import { EventRepository } from 'src/repositories/event.repository.js';
-import { JobRepository, buildWorkerOptions } from 'src/repositories/job.repository.js';
+import { JobRepository } from 'src/repositories/job.repository.js';
 import { LoggingRepository } from 'src/repositories/logging.repository.js';
 import { JobCounts } from 'src/types.js';
 
@@ -20,7 +21,6 @@ const emptyCounts = (): JobCounts => ({
   failed: 0,
   delayed: 0,
   waiting: 0,
-  paused: 0,
 });
 
 const setup = (counts: JobCounts[] = []) => {
@@ -34,7 +34,7 @@ const setup = (counts: JobCounts[] = []) => {
     add: vi.fn().mockResolvedValue({}),
     addBulk: vi.fn().mockResolvedValue([]),
     clean: vi.fn().mockResolvedValue([]),
-    client: Promise.resolve(client),
+    getBackend: () => ({ client: Promise.resolve(client) }),
     drain: vi.fn().mockResolvedValue(void 0),
     getJob: vi.fn().mockResolvedValue(void 0),
     getJobCounts: vi.fn().mockResolvedValue(emptyCounts()),
@@ -55,7 +55,13 @@ const setup = (counts: JobCounts[] = []) => {
     warn: vi.fn(),
   } as unknown as LoggingRepository;
 
-  const sut = new JobRepository(moduleRef, {} as ConfigRepository, {} as EventRepository, logger);
+  const sut = new JobRepository(
+    moduleRef,
+    {} as ConfigRepository,
+    {} as EventRepository,
+    logger,
+    new QueueMaintenanceRepository(moduleRef, logger),
+  );
 
   return { sut, queue, client, logger };
 };
@@ -75,29 +81,7 @@ describe(JobRepository.name, () => {
     vi.clearAllMocks();
   });
 
-  describe('buildWorkerOptions', () => {
-    it('gives the FacialRecognition queue a lock and stalled interval well above the 30s default', () => {
-      const options = buildWorkerOptions({ prefix: 'immich_bull' } as any, QueueName.FacialRecognition);
-
-      expect(options.concurrency).toBe(1);
-      expect(options.prefix).toBe('immich_bull');
-      // Long handlers (face-match-all, identity reconciliation, a dedup pass on a huge space) must
-      // not be declared stalled and orphaned while still healthy.
-      expect(options.lockDuration ?? 0).toBeGreaterThanOrEqual(120_000);
-      expect(options.stalledInterval ?? 0).toBeGreaterThanOrEqual(120_000);
-    });
-
-    it('leaves other queues on BullMQ lock defaults', () => {
-      const options = buildWorkerOptions({ prefix: 'immich_bull' } as any, QueueName.ThumbnailGeneration);
-
-      expect(options.concurrency).toBe(1);
-      expect(options.prefix).toBe('immich_bull');
-      expect(options.lockDuration).toBeUndefined();
-      expect(options.stalledInterval).toBeUndefined();
-    });
-  });
-
-  it('should return immediately when queues have no active waiting delayed or paused jobs', async () => {
+  it('should return immediately when queues have no active waiting or delayed jobs', async () => {
     const { sut, queue } = setup([emptyCounts()]);
 
     await sut.waitForQueueCompletion(QueueName.FaceDetection);
@@ -126,8 +110,9 @@ describe(JobRepository.name, () => {
     expect(setTimeoutMock).toHaveBeenCalledWith(1000);
   });
 
-  it('should wait and warn while a paused queue has paused jobs', async () => {
-    const { sut, queue, logger } = setup([{ ...emptyCounts(), paused: 1 }, emptyCounts()]);
+  it('should wait and warn while a paused queue has waiting jobs', async () => {
+    // bullmq 6 reports a paused queue's jobs as waiting
+    const { sut, queue, logger } = setup([{ ...emptyCounts(), waiting: 1 }, emptyCounts()]);
     queue.isPaused.mockResolvedValueOnce(true);
 
     await sut.waitForQueueCompletion(QueueName.FaceDetection);
@@ -136,7 +121,7 @@ describe(JobRepository.name, () => {
     expect(setTimeoutMock).toHaveBeenCalledTimes(1);
     expect(setTimeoutMock).toHaveBeenCalledWith(1000);
     expect(logger.warn).toHaveBeenCalledWith(
-      `Waiting for ${QueueName.FaceDetection} queue to finish (0 active, 0 waiting, 0 delayed, 1 paused); queue is paused`,
+      `Waiting for ${QueueName.FaceDetection} queue to finish (0 active, 1 waiting, 0 delayed); queue is paused`,
     );
   });
 
@@ -201,8 +186,8 @@ describe(JobRepository.name, () => {
   // Slice 14 (fork isolation): getJobCounts is upstream's pure delegate — every read-only caller (the
   // admin queue poll, media.service.ts, person.service.ts's recognition-queue checks,
   // storage-migration.service.ts, and this repository's own getTelemetryMetrics) must never see a read
-  // mutate Redis. The dangling-active repair moved to getJobCountsWithRepair, whose only caller is
-  // waitForQueueCompletion.
+  // mutate Redis. The dangling-active repair runs only in waitForQueueCompletion (through
+  // QueueMaintenanceRepository.getJobCountsWithRepair) and searchJobs.
   it('getJobCounts performs no Redis writes, even with a dangling active entry present', async () => {
     const { sut, client, queue } = setup([emptyCounts()]);
     client.lrange.mockResolvedValue(['face-identity-backfill/space-person/orphan']);
@@ -214,22 +199,22 @@ describe(JobRepository.name, () => {
     expect(client.exists).not.toHaveBeenCalled();
     expect(client.lrem).not.toHaveBeenCalled();
     expect(client.srem).not.toHaveBeenCalled();
-    expect(queue.getJobCounts).toHaveBeenCalledWith('active', 'completed', 'failed', 'delayed', 'waiting', 'paused');
+    expect(queue.getJobCounts).toHaveBeenCalledWith('active', 'completed', 'failed', 'delayed', 'waiting');
   });
 
-  it('getJobCountsWithRepair removes active queue ids whose job hash and lock are both gone before counting jobs', async () => {
+  it('waitForQueueCompletion removes active queue ids whose job hash and lock are both gone before counting jobs', async () => {
     const { sut, client, queue, logger } = setup([emptyCounts()]);
     client.lrange.mockResolvedValue(['face-identity-backfill/space-person/orphan']);
     client.lrem.mockResolvedValue(1);
 
-    await sut.getJobCountsWithRepair(QueueName.PeopleBackfill);
+    await sut.waitForQueueCompletion(QueueName.PeopleBackfill);
 
     expect(client.lrange).toHaveBeenCalledWith('queue:active', 0, -1);
     expect(client.exists).toHaveBeenCalledWith('queue:face-identity-backfill/space-person/orphan');
     expect(client.exists).toHaveBeenCalledWith('queue:face-identity-backfill/space-person/orphan:lock');
     expect(client.lrem).toHaveBeenCalledWith('queue:active', 0, 'face-identity-backfill/space-person/orphan');
     expect(client.srem).toHaveBeenCalledWith('queue:stalled', 'face-identity-backfill/space-person/orphan');
-    expect(queue.getJobCounts).toHaveBeenCalledWith('active', 'completed', 'failed', 'delayed', 'waiting', 'paused');
+    expect(queue.getJobCounts).toHaveBeenCalledWith('active', 'completed', 'failed', 'delayed', 'waiting');
     expect(logger.warn).toHaveBeenCalledWith(
       'Removed 1 dangling active job id from peopleBackfill: face-identity-backfill/space-person/orphan',
     );
@@ -545,7 +530,7 @@ describe(JobRepository.name, () => {
     );
   });
 
-  it.each(['active', 'waiting', 'delayed', 'paused'] as const)(
+  it.each(['active', 'waiting', 'delayed'] as const)(
     'does not remove a %s stable facial-recognition coordinator when queueing non-force work',
     async (state) => {
       const { sut, queue } = setup();
@@ -575,7 +560,7 @@ describe(JobRepository.name, () => {
     },
   );
 
-  it.each(['waiting', 'delayed', 'paused'] as const)(
+  it.each(['waiting', 'delayed'] as const)(
     'replaces a pending %s non-force facial-recognition coordinator when force is requested',
     async (state) => {
       const { sut, queue } = setup();
@@ -1007,11 +992,13 @@ describe(JobRepository.name, () => {
     ],
   ])('replaces paused stable %s jobs before requeueing them', async (name, data, jobId, extraOptions) => {
     const { sut, queue } = setup();
+    // bullmq 6: a job in a paused queue reports 'waiting'
     const pausedJob = {
-      getState: vi.fn().mockResolvedValue('paused'),
+      getState: vi.fn().mockResolvedValue('waiting'),
       remove: vi.fn().mockResolvedValue(void 0),
     };
     queue.getJob.mockResolvedValue(pausedJob);
+    queue.isPaused.mockResolvedValue(true);
     setHandlers(sut, [name]);
 
     await sut.queue({ name, data } as any);

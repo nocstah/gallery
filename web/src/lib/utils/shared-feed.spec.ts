@@ -1,3 +1,5 @@
+import { albumFactory } from '#test/kioku/factories/album-factory.ts';
+import { sharedLinkFactory } from '#test/kioku/factories/shared-link-factory.ts';
 import {
   ReactionType,
   SharedLinkType,
@@ -7,13 +9,11 @@ import {
   type SharedSpaceActivityResponseDto,
   type UserResponseDto,
 } from '@immich/sdk';
-import { albumFactory } from '@test-data/factories/album-factory';
-import { sharedLinkFactory } from '@test-data/factories/shared-link-factory';
 import {
+  MERGE_GAP_MS,
   freshItems,
   groupByDay,
   linkItems,
-  MERGE_GAP_MS,
   reactionItems,
   sortItems,
   spaceItems,

@@ -8,29 +8,29 @@
   // one on screen only once its details are in and its preview is decoded (or after a short wait, over its thumbhash),
   // so a pointer moving on never leaves a blank or half-changed window; pointing at nothing leaves the last photo where
   // it is. In a window wider than tall the details go beside the photo.
-  import Thumbhash from '$lib/components/Thumbhash.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
+  import Thumbhash from '#lib/components/Thumbhash.svelte';
+  import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+  import { workspaceGap } from '#lib/managers/VirtualScrollManager/VirtualScrollManager.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
   import {
     InspectorFollower,
     subjectOfTimelineAsset,
     type InspectorSubject,
-  } from '$lib/managers/inspector-link.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import { workspaceGap } from '$lib/managers/VirtualScrollManager/VirtualScrollManager.svelte';
-  import { Route } from '$lib/route';
-  import { locale } from '$lib/stores/preferences.store';
-  import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
-  import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-  import { curatorIsMine } from '$lib/utils/curator';
-  import { formatDuration } from '$lib/utils/duration';
-  import { getGlobalPersonHref } from '$lib/utils/global-person-route';
-  import { lazyComponent } from '$lib/utils/lazy-component.svelte';
-  import { getRepresentativeThumbnailUrl } from '$lib/utils/person-avatar';
-  import { pxOf } from '$lib/utils/review-grid';
-  import { getAltText } from '$lib/utils/thumbnail-util';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
-  import { weekYearDays, type WeekYear } from '$lib/utils/week-across-years';
+  } from '#lib/managers/inspector-link.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import { Route } from '#lib/route.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl, getAssetPlaybackUrl } from '#lib/utils.ts';
+  import { curatorIsMine } from '#lib/utils/curator.ts';
+  import { formatDuration } from '#lib/utils/duration.ts';
+  import { getGlobalPersonHref } from '#lib/utils/global-person-route.ts';
+  import { lazyComponent } from '#lib/utils/lazy-component.svelte.ts';
+  import { getRepresentativeThumbnailUrl } from '#lib/utils/person-avatar.ts';
+  import { pxOf } from '#lib/utils/review-grid.ts';
+  import { getAltText } from '#lib/utils/thumbnail-util.ts';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
+  import { weekYearDays, type WeekYear } from '#lib/utils/week-across-years.ts';
   import { AssetMediaSize, AssetTypeEnum, type AlbumResponseDto, type PersonResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiImageBrokenVariant, mdiMapMarkerOutline, mdiPlay } from '@mdi/js';
@@ -38,6 +38,10 @@
   import { onMount, untrack } from 'svelte';
   import { t } from 'svelte-i18n';
   import {
+    InspectorDayLoader,
+    InspectorDetailsLoader,
+    InspectorStories,
+    InspectorYearsLoader,
     albumYearsOf,
     cameraOf,
     dayKeyOf,
@@ -45,10 +49,6 @@
     exposureOf,
     fileFactsOf,
     fitYearTiles,
-    InspectorDayLoader,
-    InspectorDetailsLoader,
-    InspectorStories,
-    InspectorYearsLoader,
     peopleOf,
     placeOf,
     previewUrlOf,
@@ -406,7 +406,7 @@
       : undefined;
 
   /** A page of Gallery's opens in the main window (it goes there); without one listening, in a new tab. A click
-   * with a modifier key is left to the browser. */
+  with a modifier key is left to the browser. */
   const go = async (event: MouseEvent, url: string) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
       return;
@@ -435,7 +435,7 @@
   };
 
   // Mounting the map through `{#await}` can leave the surrounding subtree unreactive (see lazyComponent)
-  const LazyMap = lazyComponent(() => import('$lib/components/shared-components/map/Map.svelte'));
+  const LazyMap = lazyComponent(() => import('#lib/components/shared-components/map/Map.svelte'));
 </script>
 
 <!-- the window closing says bye; one brought back from the back-forward cache says hello again -->
@@ -450,7 +450,7 @@
 />
 
 {#snippet personChip(person: PersonResponseDto)}
-  {@const face = faceOf(person)}
+  {const face = $derived(faceOf(person))}
   {#if face}
     <img class="ins-face" src={face} alt="" draggable="false" />
   {:else}
@@ -489,7 +489,7 @@
           <!-- a new element for a new photo: changing an image's source keeps the old picture up until the new one
                loads, which would put the last photo over this one's details -->
           {#key shown.url}
-            {@const url = shown.url}
+            {const url = $derived(shown.url)}
             <img
               class="ins-photo"
               src={url}
@@ -536,7 +536,7 @@
         {#if latlng && featureFlagsManager.value.map}
           <div class="ins-map">
             {#if LazyMap.current}
-              {@const Map = LazyMap.current}
+              {const Map = $derived(LazyMap.current)}
               <Map
                 mapMarkers={[
                   {
@@ -591,7 +591,7 @@
           </h2>
           <ul class="ins-day-photos">
             {#each dayShown.photos as photo (photo.id)}
-              {@const time = timeOf(photo)}
+              {const time = $derived(timeOf(photo))}
               <li>
                 <button
                   type="button"
@@ -676,7 +676,7 @@
       <h2 class="ins-label">{$t('people')}</h2>
       <ul class="ins-people">
         {#each people.named as person (person.id)}
-          {@const href = personHref(person)}
+          {const href = $derived(personHref(person))}
           <li>
             {#if href}
               <a class="ins-person" {href} onclick={(event) => void go(event, href)}>
@@ -699,9 +699,9 @@
       <h2 class="ins-label">{$t('appears_in')}</h2>
       <ul class="ins-albums">
         {#each albums as album (album.id)}
-          {@const cover = coverOf(album)}
-          {@const href = Route.viewAlbum(album)}
-          {@const years = albumYearsOf(album)}
+          {const cover = $derived(coverOf(album))}
+          {const href = $derived(Route.viewAlbum(album))}
+          {const years = $derived(albumYearsOf(album))}
           <li>
             <a class="ins-album" {href} onclick={(event) => void go(event, href)}>
               {#if cover}

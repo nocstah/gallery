@@ -6,7 +6,7 @@ import {
   weekSpread,
   weekYearDays,
   weekYears,
-} from '$lib/utils/week-across-years';
+} from '#lib/utils/week-across-years.ts';
 
 // Sunday 18 October 2026, in the reader's own calendar
 const TODAY = new Date(2026, 9, 18, 9, 30);
@@ -138,17 +138,16 @@ describe(weekYearDays.name, () => {
 });
 
 describe(weekSpread.name, () => {
-  // this week in every year from 2025 back to 2001: one to twenty-five years ago
-  const span = (from: number, to: number) =>
-    Array.from({ length: from - to + 1 }, (_, index) => ({ year: from - index }));
+  // this week in every year from 2025 (a year ago) back to `to`
+  const span = (to: number) => Array.from({ length: 2025 - to + 1 }, (_, index) => ({ year: 2025 - index }));
   const years = (list: { year: number }[]) => list.map(({ year }) => year);
 
   it('keeps every year when they all fit', () => {
-    expect(years(weekSpread(span(2025, 2021), 11, 2026))).toEqual([2025, 2024, 2023, 2022, 2021]);
+    expect(years(weekSpread(span(2021), 11, 2026))).toEqual([2025, 2024, 2023, 2022, 2021]);
   });
 
   it('spans a phone row of five: the newest, five, ten and twenty years ago, and the oldest', () => {
-    expect(years(weekSpread(span(2025, 2001), 5, 2026))).toEqual([2025, 2021, 2016, 2006, 2001]);
+    expect(years(weekSpread(span(2001), 5, 2026))).toEqual([2025, 2021, 2016, 2006, 2001]);
   });
 
   it('takes the nearest year where one is missing at a mark, the older when two are as near', () => {
@@ -158,14 +157,14 @@ describe(weekSpread.name, () => {
   });
 
   it('fills a wider row with the anniversaries between, then the middles of the widest gaps', () => {
-    const row = years(weekSpread(span(2025, 2001), 11, 2026));
+    const row = years(weekSpread(span(2001), 11, 2026));
     expect(row).toHaveLength(11);
     expect(row).toEqual([2025, 2023, 2021, 2018, 2016, 2013, 2011, 2008, 2006, 2003, 2001]);
   });
 
   it('never drops the oldest year for a newer one', () => {
     for (const slots of [2, 3, 4, 6, 8]) {
-      const row = years(weekSpread(span(2025, 1990), slots, 2026));
+      const row = years(weekSpread(span(1990), slots, 2026));
       expect(row).toHaveLength(slots);
       expect(row.at(-1)).toBe(1990);
       expect(row[0]).toBe(2025);

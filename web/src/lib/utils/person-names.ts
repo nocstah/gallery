@@ -1,5 +1,5 @@
-import { placeYears, type PlaceStats } from '$lib/utils/place-stats';
-import { normalizeSearchString } from '$lib/utils/string-utils';
+import { placeYears, type PlaceStats } from '#lib/utils/place-stats.ts';
+import { normalizeSearchString } from '#lib/utils/string-utils.ts';
 
 // Local Omarchy layer: telling apart people who bear the same name (DESIGN.md, People). Eleven of the owner's names
 // belong to more than one person (three Daniels, four Anders) and nothing on People told them apart. Where a name
@@ -10,7 +10,7 @@ import { normalizeSearchString } from '$lib/utils/string-utils';
 export const nameKey = (name: string) => normalizeSearchString(name);
 
 /** The names that more than one of these people bear (by `nameKey`); people without a name never repeat. */
-export const repeatedNames = (people: Iterable<{ name: string }>): Set<string> => {
+export const repeatedNames = (people: Iterable<{ name?: string | null }>): Set<string> => {
   const counts = new Map<string, number>();
   for (const { name } of people) {
     const key = nameKey(name ?? '');
@@ -21,14 +21,15 @@ export const repeatedNames = (people: Iterable<{ name: string }>): Set<string> =
   return new Set([...counts].filter(([, count]) => count > 1).map(([key]) => key));
 };
 
-/** Whether this name is one of the repeated ones. */
-export const isRepeatedName = (repeated: Set<string>, name: string) => repeated.has(nameKey(name ?? ''));
+/** Whether this name is one of the repeated ones (no name never is). */
+export const isRepeatedName = (repeated: Set<string>, name: string | null | undefined) =>
+  repeated.has(nameKey(name ?? ''));
 
 /**
- * What a person's tile says under a repeated name: "140 · 2010–2026" from their timeline, as the person's page counts
- * it; nothing while that is still being asked (undefined), and the count Gallery lists them with alone when the
- * timeline could not be read (null) or holds none of their photos (all archived, say).
- */
+What a person's tile says under a repeated name: "140 · 2010–2026" from their timeline, as the person's page counts
+it; nothing while that is still being asked (undefined), and the count Gallery lists them with alone when the
+timeline could not be read (null) or holds none of their photos (all archived, say).
+*/
 export const personSpanLine = (
   span: PlaceStats | null | undefined,
   listedCount: number | undefined,

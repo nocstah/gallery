@@ -1,16 +1,16 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { getAnimateMock } from '#test/kioku/mocks/animate.mock.ts';
 import type { ServerAboutResponseDto, UserResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { cleanup, render, screen, within } from '@testing-library/svelte';
 import { init, register, waitLocale } from 'svelte-i18n';
-import { getAnimateMock } from '$lib/__mocks__/animate.mock';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
 import HelpAndFeedbackModal from './HelpAndFeedbackModal.svelte';
 
 // Local Omarchy layer: Help says who runs this Gallery and how to reach them; the projects' links are the owner's
 const auth = vi.hoisted(() => ({
   user: { id: 'me', name: 'Ben', email: 'ben@example.com', isAdmin: false } as Record<string, unknown>,
 }));
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: {
     authenticated: true,
     get user() {
@@ -37,7 +37,7 @@ const anna = {
 
 beforeAll(async () => {
   await init({ fallbackLocale: 'en-US' });
-  register('en-US', () => import('$i18n/en.json'));
+  register('en-US', () => import('#i18n/en.json'));
   await waitLocale('en-US');
 });
 

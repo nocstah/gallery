@@ -5,21 +5,21 @@
 // ~/Pictures/Photo books), this follows the job, and components/omarchy/PhotoBookPanel.svelte shows how far it has got
 // and then the files to open or save. Like the videos for sharing, it lives as long as the page, so a book is still
 // followed while the user goes elsewhere in Gallery.
-import { AssetVisibility, getTimeBuckets, type AlbumResponseDto } from '@immich/sdk';
-import { modalManager } from '@immich/ui';
-import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-import PhotoBookModal from '$lib/modals/PhotoBookModal.svelte';
+import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+import PhotoBookModal from '#lib/modals/PhotoBookModal.svelte';
 import {
   BOOK_PHOTOS,
-  curator,
   CuratorError,
+  curator,
   curatorIsMine,
   type BookJob,
   type BookResult,
   type BookSubject,
-} from '$lib/utils/curator';
-import { handleError } from '$lib/utils/handle-error';
-import { getFormatter } from '$lib/utils/i18n';
+} from '#lib/utils/curator.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
+import { AssetVisibility, getTimeBuckets, type AlbumResponseDto } from '@immich/sdk';
+import { modalManager } from '@immich/ui';
 
 /** Where a book has got to: waiting in Curator's queue, its photos chosen, its pages drawn, its cover and preview. */
 export type BookStage = 'waiting' | 'choosing' | 'pages' | 'finishing';
@@ -72,7 +72,7 @@ export const bookKey = (subject: BookSubject) => {
 };
 
 /** Curator names a trip's album "Vang Vieng, Laos · February – March 2015": a book is titled by what comes before
- * the dates, which go under the title. */
+the dates, which go under the title. */
 export const albumBookTitle = (name: string) => name.split(' · ', 1)[0].trim() || name;
 
 /** How far a book has got, 0 to 1: choosing the photos is the first tenth, the pages nearly all of the rest. */
@@ -123,13 +123,13 @@ class PhotoBookManager {
   #checked = false;
 
   /** Curator answers, makes books and works for whoever is signed in (curatorIsMine), where this library's Curator
-   * makes them (gallery/libraries): until then the menus and the palette leave them out */
+  makes them (gallery/libraries): until then the menus and the palette leave them out */
   get available() {
     return this.#available && curatorIsMine() && curatorOffers('books');
   }
 
   /** Asked once a page load, by the panel once Curator's owner is signed in; never where this library's Curator makes
-   * no books. */
+  no books. */
   check() {
     if (this.#checked || !curatorIsMine() || !curatorOffers('books')) {
       return;

@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { thumbnailZoomManager } from '$lib/managers/thumbnail-zoom-manager.svelte';
-  import AssetLayout from '$lib/components/timeline/AssetLayout.svelte';
-  import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-  import { TimelineDay } from '$lib/managers/timeline-manager/timeline-day.svelte';
-  import type { TimelineMonth } from '$lib/managers/timeline-manager/timeline-month.svelte';
-  import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-  import { assetsSnapshot, filterIsInOrNearViewport } from '$lib/managers/timeline-manager/utils.svelte';
-  import type { VirtualScrollManager } from '$lib/managers/VirtualScrollManager/VirtualScrollManager.svelte';
-  import { locale } from '$lib/stores/preferences.store';
-  import { uploadAssetsStore } from '$lib/stores/upload';
-  import type { CommonPosition } from '$lib/utils/layout-utils';
-  import { monthMarkLabel } from '$lib/utils/timeline-dates';
-  import { fromTimelinePlainDate, getDateLocaleString } from '$lib/utils/timeline-util';
+  import AssetLayout from '#lib/components/timeline/AssetLayout.svelte';
+  import type { VirtualScrollManager } from '#lib/managers/VirtualScrollManager/VirtualScrollManager.svelte.ts';
+  import type { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+  import { thumbnailZoomManager } from '#lib/managers/thumbnail-zoom-manager.svelte.ts';
+  import { TimelineDay } from '#lib/managers/timeline-manager/timeline-day.svelte.ts';
+  import type { TimelineMonth } from '#lib/managers/timeline-manager/timeline-month.svelte.ts';
+  import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+  import { assetsSnapshot, filterIsInOrNearViewport } from '#lib/managers/timeline-manager/utils.svelte.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { uploadAssetsStore } from '#lib/stores/upload.ts';
+  import type { CommonPosition } from '#lib/utils/layout-utils.ts';
+  import { monthMarkLabel } from '#lib/utils/timeline-dates.ts';
+  import { fromTimelinePlainDate, getDateLocaleString } from '#lib/utils/timeline-util.ts';
   import { Icon } from '@immich/ui';
   import { mdiCheckCircle, mdiCircleOutline } from '@mdi/js';
   import type { Snippet } from 'svelte';
@@ -119,9 +119,8 @@
 {/if}
 
 {#each filterIsInOrNearViewport(timelineMonth.timelineDays) as timelineDay, groupIndex (timelineDay.day)}
-  {@const isTimelineDaySelected = assetInteraction.selectedGroup.has(timelineDay.groupTitle)}
-  {@const head = timelineDay.viewerAssets[0]?.position}
-  {@const wraps = !!head && head.left > 0 && timelineDay.height > head.height}
+  {const head = $derived(timelineDay.viewerAssets[0]?.position)}
+  {const wraps = $derived(!!head && head.left > 0 && timelineDay.height > head.height)}
   <!-- Local Omarchy layer: a day that starts along a row and goes on to the next ones (internal/row-cuts) has its box
        from the row's start, over the photos of the days before it on that row: the box lets the pointer through to
        them, its own photos taking it as ever -->
@@ -130,6 +129,7 @@
     class={[{ 'transition-all': !timelineMonth.timelineManager.suspendTransitions }]}
     style:transition-delay={timelineMonth.timelineManager.suspendTransitions ? undefined : `${transitionDuration}ms`}
     data-group
+    data-testid="timeline-day"
     data-wraps={wraps ? '' : undefined}
     style:pointer-events={wraps ? 'none' : undefined}
     style:position="absolute"
@@ -145,10 +145,11 @@
         style:width={timelineDay.width + 'px'}
       >
         {#if !singleSelect}
+          {const isTimelineDaySelected = $derived(assetInteraction.selectedGroup.has(timelineDay.groupTitle))}
           <div
             class="w-0 overflow-hidden transition-all duration-200 ease-out hover:cursor-pointer"
-            class:w-8={hoveredTimelineDay === timelineDay.groupTitle ||
-              assetInteraction.selectedGroup.has(timelineDay.groupTitle)}
+            class:w-8={hoveredTimelineDay === timelineDay.groupTitle || isTimelineDaySelected}
+            data-testid="select-day"
             onclick={() => onTimelineDaySelect(timelineDay, assetsSnapshot(timelineDay.getAssets()))}
             onkeydown={() => onTimelineDaySelect(timelineDay, assetsSnapshot(timelineDay.getAssets()))}
           >

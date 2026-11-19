@@ -1,14 +1,17 @@
+import Inspector from '#lib/components/inspector/Inspector.svelte';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { InspectorFeed } from '#lib/managers/inspector-link.svelte.ts';
+import { albumFactory } from '#test/kioku/factories/album-factory.ts';
+import { assetFactory, timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
+import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '#test/kioku/factories/library-context-factory.ts';
+import { personFactory } from '#test/kioku/factories/person-factory.ts';
 import { AssetTypeEnum, AssetVisibility, TimeBucketSize, type TimeBucketAssetResponseDto } from '@immich/sdk';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import Inspector from '$lib/components/inspector/Inspector.svelte';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { InspectorFeed } from '$lib/managers/inspector-link.svelte';
-import { albumFactory } from '@test-data/factories/album-factory';
-import { assetFactory, timelineAssetFactory } from '@test-data/factories/asset-factory';
-import { SECOND_CURATOR_FEATURES, secondOffering, serving } from '@test-data/factories/library-context-factory';
-import { personFactory } from '@test-data/factories/person-factory';
+
+// The SDK mock registers itself when its module loads; loaded here (hoisted), it comes before the code under test
+// imports @immich/sdk, which the import order above would otherwise load first
+const { sdkMock } = await vi.hoisted(() => import('#lib/gallery/__mocks__/sdk.mock.ts'));
 
 // Local Omarchy layer: the inspector window with a main window beside it (its feed on the same channel, as a second
 // window of the profile has): pointing at a photo shows it with its details, and an album opens in the main window.
@@ -17,7 +20,7 @@ const mocks = vi.hoisted(() => ({
   story: vi.fn(),
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: {
     authenticated: true,
     isSharedLink: false,
@@ -27,8 +30,8 @@ vi.mock('$lib/managers/auth-manager.svelte', () => ({
     },
   },
 }));
-vi.mock('$lib/utils/curator', async (original) => ({
-  ...(await original<typeof import('$lib/utils/curator')>()),
+vi.mock('#lib/utils/curator.ts', async (original) => ({
+  ...(await original<typeof import('#lib/utils/curator.ts')>()),
   curatorIsMine: () => mocks.owner,
   curator: { story: mocks.story },
 }));

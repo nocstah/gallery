@@ -3,10 +3,10 @@
   // or made under it (photos, a proposed album, a reel being made), then the answer itself. While the answer streams,
   // a running step spins and one line says what the wait is: the model loading (perhaps after a night's job made way
   // for it) or the model thinking. An answer that broke off says why and offers to ask again.
-  import ChatPhotos from '$lib/components/curator/ChatPhotos.svelte';
-  import ChatProposal from '$lib/components/curator/ChatProposal.svelte';
-  import ChatText from '$lib/components/curator/ChatText.svelte';
-  import type { ChatAssistantTurn, ChatStep } from '$lib/utils/curator';
+  import ChatPhotos from '#lib/components/curator/ChatPhotos.svelte';
+  import ChatProposal from '#lib/components/curator/ChatProposal.svelte';
+  import ChatText from '#lib/components/curator/ChatText.svelte';
+  import type { ChatAssistantTurn, ChatStep } from '#lib/utils/curator.ts';
   import { Icon } from '@immich/ui';
   import { mdiAlertCircleOutline, mdiCheck, mdiLoading, mdiMinus, mdiMovieOpenOutline } from '@mdi/js';
   import { locale, t, type Translations } from 'svelte-i18n';
@@ -180,8 +180,8 @@
   {#if turn.steps.length > 0}
     <ol class="chat-steps">
       {#each turn.steps as step, index (index)}
-        {@const mark = stateOf(step)}
-        {@const result = outcome(step)}
+        {const mark = $derived(stateOf(step))}
+        {const result = $derived(outcome(step))}
         <li class="chat-step">
           <div class="chat-step-line" data-state={mark}>
             <span class="chat-step-mark" aria-hidden="true"><Icon icon={ICON[mark]} size="14" /></span>

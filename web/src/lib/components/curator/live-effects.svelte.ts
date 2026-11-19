@@ -1,5 +1,5 @@
-import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-import { curator, curatorIsMine } from '$lib/utils/curator';
+import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { curator, curatorIsMine } from '#lib/utils/curator.ts';
 
 // Local Omarchy layer: whether the photo viewer shows Curator's Live Photo effects, and for which photo. The bar offers
 // them only when Curator answers and knows the live.effect job (asked once per page load), and only to Curator's

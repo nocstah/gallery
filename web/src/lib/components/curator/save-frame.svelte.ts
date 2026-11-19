@@ -1,3 +1,13 @@
+import SavedFrameToast from '#lib/components/curator/SavedFrameToast.svelte';
+import { curatorOffers } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { assetViewerManager } from '#lib/managers/asset-viewer-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { specialAlbumOf, type SpecialAlbumManager } from '#lib/managers/special-albums.svelte.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { Route } from '#lib/route.ts';
+import { CuratorError, curator, curatorIsMine, waitForJob, type SavedFrame } from '#lib/utils/curator.ts';
+import { navigate } from '#lib/utils/navigation.ts';
+import { undone } from '#lib/utils/undoable.ts';
 import {
   AssetVisibility,
   deleteAssets,
@@ -12,16 +22,6 @@ import { toastManager } from '@immich/ui';
 import { t } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
-import SavedFrameToast from '$lib/components/curator/SavedFrameToast.svelte';
-import { curatorOffers } from '$lib/gallery/libraries/library-context.svelte';
-import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { specialAlbumOf, type SpecialAlbumManager } from '$lib/managers/special-albums.svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import { Route } from '$lib/route';
-import { curator, CuratorError, curatorIsMine, waitForJob, type SavedFrame } from '$lib/utils/curator';
-import { navigate } from '$lib/utils/navigation';
-import { undone } from '$lib/utils/undoable';
 
 // Local Omarchy layer: Save frame as photo, Apple Photos' "Save Video Frame as Photo" in the viewer. The video on
 // screen (VideoNativeViewer shows itself here) stops on the frame it is at, and Curator saves that frame as a new
@@ -54,13 +54,13 @@ class SaveFrameState {
   #checked = false;
 
   /** Curator saves frames, and works for whoever is signed in (curatorIsMine) where this library's Curator has its
-   * live tools (gallery/libraries): the button and Shift+S go by this */
+  live tools (gallery/libraries): the button and Shift+S go by this */
   get available() {
     return this.#available && curatorIsMine() && curatorOffers('live');
   }
 
   /** Ask Curator once whether it saves frames (an older one does not, and the button stays away); only its owner asks,
-   * and only where this library's Curator has its live tools. */
+  and only where this library's Curator has its live tools. */
   check() {
     if (this.#checked || !curatorIsMine() || !curatorOffers('live')) {
       return;
@@ -92,7 +92,7 @@ class SaveFrameState {
   }
 
   /** Save the frame the video on screen is on; `albumId` is the album the viewer is open in, which the photo joins. A
-   * playing video stops there, so what is saved is what is seen. */
+  playing video stops there, so what is saved is what is seen. */
   async save(albumId?: string) {
     const video = this.#video;
     if (!video || this.isSaving(video.assetId)) {
@@ -163,7 +163,7 @@ const placeOf = (frame: SavedFrame) => {
 };
 
 /** A frame Curator put in the album the viewer is open in: the album's page shows it once Gallery has drawn it (a live
- * event cannot say a photo joined an album), and in To do, Villa or QR it takes its video's place. */
+event cannot say a photo joined an album), and in To do, Villa or QR it takes its video's place. */
 const arrived = async (from: string, albumId: string, id: string) => {
   await drawn(id);
   eventManager.emit('AlbumAddAssets', { assetIds: [id], albumIds: [albumId] });
@@ -174,7 +174,7 @@ const arrived = async (from: string, albumId: string, id: string) => {
 };
 
 /** In a special album the frame gets the album's tag and the album's note of where its video came from, as if moved
- * there with the video: taking it out then puts it where the video goes (back to Photos, or the Archive). */
+there with the video: taking it out then puts it where the video goes (back to Photos, or the Archive). */
 const settle = async (special: SpecialAlbumManager, from: string, id: string) => {
   const [tag] = await upsertTags({ tagUpsertDto: { tags: [special.name] } });
   await tagAssets({ id: tag.id, bulkIdsDto: { ids: [id] } });
@@ -189,7 +189,7 @@ const settle = async (special: SpecialAlbumManager, from: string, id: string) =>
 };
 
 /** Gallery draws a new photo's previews a moment after it arrives (its thumbhash comes with them), and the viewer has
- * nothing to show before that: View waits for them, a few seconds at most. */
+nothing to show before that: View waits for them, a few seconds at most. */
 const drawn = async (id: string) => {
   for (let tries = 0; tries < DRAWN_TRIES; tries++) {
     try {
@@ -205,7 +205,7 @@ const drawn = async (id: string) => {
 };
 
 /** The undo: the photo to the trash and out of the album it joined (so a restore from the trash does not put it back
- * there); a viewer showing it goes back to where it was taken from. */
+there); a viewer showing it goes back to where it was taken from. */
 const trash = async (from: string, frame: SavedFrame, label: string) => {
   const id = frame.asset_id;
   await deleteAssets({ assetBulkDeleteDto: { ids: [id], force: false } });

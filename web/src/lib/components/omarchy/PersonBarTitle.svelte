@@ -4,12 +4,12 @@
   // a field, and the people whose names match what is typed drop down under it (picking one offers to merge, as the
   // page's old name field did). Enter or leaving the field saves, Escape keeps the old name; the page decides what a
   // new name does, since it may be someone else's.
-  import { clickOutside } from '$lib/actions/click-outside';
-  import { listNavigation } from '$lib/actions/list-navigation';
-  import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
-  import SearchPeople from '$lib/components/faces-page/PeopleSearch.svelte';
-  import { portal } from '$lib/elements/Portal.svelte';
-  import { getGlobalPersonThumbnailUrl } from '$lib/utils/global-person-route';
+  import { clickOutside } from '#lib/actions/click-outside.ts';
+  import { listNavigation } from '#lib/actions/list-navigation.ts';
+  import ImageThumbnail from '#lib/components/assets/thumbnail/ImageThumbnail.svelte';
+  import SearchPeople from '#lib/components/faces-page/PeopleSearch.svelte';
+  import { portal } from '#lib/elements/Portal.svelte';
+  import { getGlobalPersonThumbnailUrl } from '#lib/utils/global-person-route.ts';
   import type { PersonResponseDto } from '@immich/sdk';
   import { LoadingSpinner } from '@immich/ui';
   import { tick } from 'svelte';

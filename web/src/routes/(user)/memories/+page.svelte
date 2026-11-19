@@ -1,22 +1,21 @@
 <script lang="ts">
-  import { scrollMemory } from '$lib/actions/scroll-memory';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { memoryManager } from '$lib/managers/memory-manager.svelte';
-  import { userPreferencesManager } from '$lib/managers/user-preferences-manager.svelte';
-  import MemoryCard from '$lib/components/memories/MemoryCard.svelte';
-  import SeriesButton from '$lib/gallery/series/SeriesButton.svelte';
-  import MemoriesSettingsModal from '$lib/modals/MemoriesSettingsModal.svelte';
-  import { Route } from '$lib/route';
-  import { locale } from '$lib/stores/preferences.store';
-  import { memoryFacts } from '$lib/managers/memory-facts.svelte';
-  import { getAssetMediaUrl, memoryLaneTitle } from '$lib/utils';
-  import { MEMORY_SECTIONS, memoryCardLine, type MemorySection } from '$lib/utils/memory-cards';
-  import { memoryCover } from '$lib/utils/memory-title';
-  import { getAltText } from '$lib/utils/thumbnail-util';
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
-  import { Button, IconButton, modalManager } from '@immich/ui';
+  import { scrollMemory } from '#lib/actions/scroll-memory.svelte.ts';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import MemoryCard from '#lib/components/memories/MemoryCard.svelte';
+  import SeriesButton from '#lib/gallery/series/SeriesButton.svelte';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { memoryFacts } from '#lib/managers/memory-facts.svelte.ts';
+  import { memoryManager } from '#lib/managers/memory-manager.svelte.ts';
+  import { userPreferencesManager } from '#lib/managers/user-preferences-manager.svelte.ts';
+  import MemoriesSettingsModal from '#lib/modals/MemoriesSettingsModal.svelte';
+  import { Route } from '#lib/route.ts';
+  import { locale } from '#lib/stores/preferences.store.ts';
+  import { getAssetMediaUrl, memoryLaneTitle } from '#lib/utils.ts';
+  import { MEMORY_SECTIONS, memoryCardLine, type MemorySection } from '#lib/utils/memory-cards.ts';
+  import { memoryCover } from '#lib/utils/memory-title.ts';
+  import { getAltText } from '#lib/utils/thumbnail-util.ts';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
+  import { Button, IconButton, LoadingSpinner, modalManager } from '@immich/ui';
   import { mdiFilterOutline, mdiTelevisionPlay } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import type { PageData } from './$types';
@@ -71,7 +70,7 @@
 <UserPageLayout
   title={data.meta.title}
   description={count === undefined ? undefined : `(${count.toLocaleString($locale)})`}
-  use={[[scrollMemory, { routeStartsWith: Route.memories() }]]}
+  {@attach scrollMemory({ routeStartsWith: Route.memories() })}
 >
   {#snippet buttons()}
     <div class="flex place-items-center gap-2">
@@ -111,7 +110,7 @@
           </h2>
           <div class="grid w-full grid-cols-1 gap-(--ws-gap) md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {#each cards as card (card.lead.id)}
-              {@const cover = memoryCover(card.lead, memoryFacts.get(card.lead.id))}
+              {const cover = $derived(memoryCover(card.lead, memoryFacts.get(card.lead.id)))}
               <MemoryCard
                 class="size-full"
                 item={{

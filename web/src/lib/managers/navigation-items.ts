@@ -1,3 +1,6 @@
+import { vaultEdition } from '#lib/gallery/edition.ts';
+import { leaveOutOfThisLibrary } from '#lib/gallery/libraries/library-gates.ts';
+import { Route } from '#lib/route.ts';
 import type { ServerFeaturesDto } from '@immich/sdk';
 import {
   mdiAccountMultipleOutline,
@@ -23,7 +26,6 @@ import {
   mdiHeartPulse,
   mdiHistory,
   mdiHomeOutline,
-  mdiQrcode,
   mdiImageMultiple,
   mdiImageOutline,
   mdiInboxOutline,
@@ -34,6 +36,7 @@ import {
   mdiMapMarkerOutline,
   mdiPaletteOutline,
   mdiPlayCircleOutline,
+  mdiQrcode,
   mdiRobotOutline,
   mdiServer,
   mdiServerOutline,
@@ -50,9 +53,6 @@ import {
   mdiViewAgenda,
   mdiViewDashboardOutline,
 } from '@mdi/js';
-import { vaultEdition } from '$lib/gallery/edition';
-import { leaveOutOfThisLibrary } from '$lib/gallery/libraries/library-gates';
-import { Route } from '$lib/route';
 import { isAlmostExactWordMatch } from './cmdk-match';
 import { qrManager, todoManager, villaManager } from './special-albums.svelte';
 
@@ -65,13 +65,13 @@ export interface NavigationItem {
   descriptionKey: string;
   icon: string;
   /** Non-empty route. All navigation items lead to a real page; stateless side-effects
-   * live in the commands registry (command-items.ts) instead. */
+  live in the commands registry (command-items.ts) instead. */
   route: string;
   adminOnly: boolean;
   /**
-   * Optional feature-flag gate. Item is hidden when
-   * `featureFlagsManager.valueOrUndefined?.[featureFlag]` is falsy.
-   */
+  Optional feature-flag gate. Item is hidden when
+  `featureFlagsManager.valueOrUndefined?.[featureFlag]` is falsy.
+  */
   featureFlag?: keyof ServerFeaturesDto;
   /** Local Omarchy layer: false keeps a page out of the empty palette's quick links (it is still found by name) */
   quickLink?: false;
@@ -80,11 +80,11 @@ export interface NavigationItem {
 }
 
 /**
- * System-settings accordions. Each item deep-links to the system-settings page with
- * the `isOpen=<key>` query param which opens the matching accordion on load.
- * Keys mirror `web/src/routes/admin/system-settings/+page.svelte` — a drift-guard
- * test in navigation-items.spec.ts grep-validates against that source file.
- */
+System-settings accordions. Each item deep-links to the system-settings page with
+the `isOpen=<key>` query param which opens the matching accordion on load.
+Keys mirror `web/src/routes/admin/system-settings/+page.svelte` — a drift-guard
+test in navigation-items.spec.ts grep-validates against that source file.
+*/
 const SYSTEM_SETTINGS_SOURCE: ReadonlyArray<[key: string, baseKey: string, icon: string]> = [
   ['authentication', 'authentication_settings', mdiLockOutline],
   ['backup', 'backup_settings', mdiBackupRestore],
@@ -477,22 +477,23 @@ const USER_PAGES: readonly NavigationItem[] = [
 
 // Local Omarchy layer: a vault's Gallery leaves out the pages marked `inVaults: false` (gallery/edition), and a library
 // the pages it does not offer, once it is known (gallery/libraries)
-export const NAVIGATION_ITEMS: readonly NavigationItem[] = leaveOutOfThisLibrary(
-  [...SYSTEM_SETTINGS, ...ADMIN_PAGES, ...USER_PAGES].filter((item) => item.inVaults !== false || !vaultEdition()),
-);
+export const editionItems = (vault: boolean): NavigationItem[] =>
+  [...SYSTEM_SETTINGS, ...ADMIN_PAGES, ...USER_PAGES].filter((item) => item.inVaults !== false || !vault);
+
+export const NAVIGATION_ITEMS: readonly NavigationItem[] = leaveOutOfThisLibrary(editionItems(vaultEdition()));
 
 const MIN_MATCH_LENGTH = 3;
 
 /**
- * "Almost exact" match — used to promote a navigation item to the palette's
- * "Top result" band above photos/places/etc. when the query unambiguously
- * points at its label.
- *
- * See {@link isAlmostExactWordMatch} for the rule. The 3-char floor keeps
- * single keystrokes from promoting the first match in the catalog, while
- * working at word granularity lets compound queries like `auto-classification`
- * still promote `Classification Settings` on their second token.
- */
+"Almost exact" match — used to promote a navigation item to the palette's
+"Top result" band above photos/places/etc. when the query unambiguously
+points at its label.
+
+See {@link isAlmostExactWordMatch} for the rule. The 3-char floor keeps
+single keystrokes from promoting the first match in the catalog, while
+working at word granularity lets compound queries like `auto-classification`
+still promote `Classification Settings` on their second token.
+*/
 export function isAlmostExactNavMatch(query: string, label: string): boolean {
   return isAlmostExactWordMatch(query, label, MIN_MATCH_LENGTH);
 }

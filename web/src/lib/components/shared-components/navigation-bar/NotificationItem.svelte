@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { relativeTime } from '#lib/utils/relative-time.ts';
   import { NotificationLevel, NotificationType, type NotificationDto } from '@immich/sdk';
   import { IconButton, Stack, Text } from '@immich/ui';
   import {
@@ -9,7 +10,6 @@
     mdiMessageBadgeOutline,
     mdiSync,
   } from '@mdi/js';
-  import { relativeTime } from '$lib/utils/relative-time';
   import { locale } from 'svelte-i18n';
 
   interface Props {

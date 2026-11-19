@@ -21,18 +21,10 @@
   // asset, asked for once the card comes within a screen of the view, a few at a time; until then it keeps Curator's
   // heading, its line reserved. Every button and photo on a card is described by its heading and that line, so a screen
   // reader hears which clip a Delete is for.
-  import ReviewMode from '$lib/components/curator/ReviewMode.svelte';
-  import StoryText from '$lib/components/curator/StoryText.svelte';
-  import SuggestionVisual from '$lib/components/curator/SuggestionVisual.svelte';
-  import {
-    curator,
-    waitForJob,
-    type GroupPage,
-    type JobRow,
-    type Suggestion,
-    type SuggestionStatus,
-    type UndoJobResult,
-  } from '$lib/utils/curator';
+  import ReviewMode from '#lib/components/curator/ReviewMode.svelte';
+  import StoryText from '#lib/components/curator/StoryText.svelte';
+  import SuggestionVisual from '#lib/components/curator/SuggestionVisual.svelte';
+  import { locale as dateLocale } from '#lib/stores/preferences.store.ts';
   import {
     confidenceMarks,
     kindAction,
@@ -42,16 +34,24 @@
     runsOf,
     seriesOf,
     waitingIn,
-  } from '$lib/utils/curator-inbox';
-  import { locale as dateLocale } from '$lib/stores/preferences.store';
-  import { cardWords, InboxFactsLoader, nearScreen, photoSubject } from '$lib/utils/inbox-facts';
+  } from '#lib/utils/curator-inbox.ts';
+  import {
+    curator,
+    waitForJob,
+    type GroupPage,
+    type JobRow,
+    type Suggestion,
+    type SuggestionStatus,
+    type UndoJobResult,
+  } from '#lib/utils/curator.ts';
+  import { InboxFactsLoader, cardWords, nearScreen, photoSubject } from '#lib/utils/inbox-facts.ts';
   import { deleteAssets, restoreAssets } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiArrowLeft } from '@mdi/js';
   import { onDestroy, onMount, tick } from 'svelte';
+  import { locale, t, type Translations } from 'svelte-i18n';
   import { flip } from 'svelte/animate';
   import { SvelteSet } from 'svelte/reactivity';
-  import { locale, t, type Translations } from 'svelte-i18n';
 
   interface Props {
     /** the kind's batches */
@@ -110,7 +110,7 @@
   const more = $derived(pages.some((page) => (loaded[page.group.key] ?? 0) < page.total));
   const anyDeletable = $derived(items.some((item) => item.status === 'pending' && deletable(item)));
   /** how sure Curator is, said once where it changes in the queue (utils/curator-inbox confidenceMarks): the cards
-   * not yet decided since the list was loaded, a decided one having sunk to the bottom */
+  not yet decided since the list was loaded, a decided one having sunk to the bottom */
   const marks = $derived(confidenceMarks(items.filter((item) => !decided.has(item.id))));
 
   const closeReview = async () => {
@@ -579,13 +579,13 @@
   aria-describedby={items.length > 0 ? 'group-keys' : undefined}
 >
   {#each items as item, index (item.id)}
-    {@const level = marks.levels.get(item.id)}
-    {@const run = marks.runOf.get(item.id)}
+    {const level = $derived(marks.levels.get(item.id))}
+    {const run = $derived(marks.runOf.get(item.id))}
     <!-- a card about one photo or clip: when and where, from Gallery (utils/inbox-facts) -->
-    {@const subject = photoSubject(item)}
-    {@const said = cardWords(item.title, subject ? facts.get(subject) : undefined, $t, $dateLocale)}
+    {const subject = $derived(photoSubject(item))}
+    {const said = $derived(cardWords(item.title, subject ? facts.get(subject) : undefined, $t, $dateLocale))}
     <!-- what each of the card's buttons and photos is for, to a screen reader: the card's heading and its line -->
-    {@const about = said.line ? `item-${item.id}-title item-${item.id}-facts` : `item-${item.id}-title`}
+    {const about = $derived(said.line ? `item-${item.id}-title item-${item.id}-facts` : `item-${item.id}-title`)}
     <li animate:flip={{ duration: 180 }}>
       {#if level}
         <!-- one quiet line where Curator's confidence changes, over the cards it holds (each hears it as its own) -->

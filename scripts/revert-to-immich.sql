@@ -17,11 +17,15 @@
 --     activity, audit trail
 --   * User groups and their memberships
 --   * Classification categories and prompts (including the merged copy in
---     system_metadata's system-config row — that key is stripped too)
+--     system_metadata's system-config row)
+--   * Every Gallery setting in system-config and Gallery's per-type memory
+--     switches in user preferences
 --   * Pet detection results: every pet, its faces and its embeddings
 --   * Rule memories (Immich only knows on-this-day and birthday memories)
 --   * Video trims: the full-length video comes back and the trimmed copy is
 --     no longer referenced
+--   * Data Saver video copies: the files are no longer referenced, and the
+--     mobile app plays the normal encoded video on mobile data again
 --   * Other members' photos in links shared from a space, album links to
 --     albums the creator neither owns nor edits, and asset links left empty
 --     by that
@@ -113,6 +117,212 @@ BEGIN
     RAISE EXCEPTION USING
       MESSAGE = format('revert-to-immich.sql refused: %s file path(s) point at S3 storage, which Immich cannot read. Run the Storage Migration to disk first (Administration > Storage Migration, direction S3 to Disk), then run this script again.', s3_paths);
   END IF;
+END $$;
+
+-- -----------------------------------------------------------------------------
+-- 0a. Optional: keep each shared space as an Immich shared album.
+--
+-- Off unless the session sets  SET gallery.convert_spaces = 'on';  (next to
+-- gallery.revert_token). Each space becomes one album holding every photo a
+-- member could open through it: its own photos, the online photos of its linked
+-- libraries (a snapshot), the photos of its linked albums shown in the space,
+-- and the photos members added to those albums from the space. Nothing becomes
+-- more visible than it was:
+--   * the creator owns the album while the account is live, else the
+--     longest-standing live member, owners first; a space with no live member
+--     is skipped. Space owners and editors become editors, viewers viewers.
+--   * linked albums get a direct grant for each member (strongest role across
+--     spaces); a user who already has a row on that album keeps it.
+--   * 'Add to space' workflow steps add to the new albums through Immich's
+--     'Add to Album(s)'. 'Add to space album' has no Immich equivalent and goes.
+--   * a space person's name and birth date go onto the matching unnamed
+--     personal person when exactly one value maps.
+-- Others' photos a user favorited become a private album only when the session
+-- also sets  SET gallery.convert_favorites = 'on';  that album is a grant the
+-- photo's owner can neither see nor revoke.
+-- Lost: colour and crop, co-owners, folders, hidden albums, activity, aliases.
+-- -----------------------------------------------------------------------------
+DO $$
+DECLARE
+  core_method uuid;
+  n_spaces int; n_skipped int; n_assets int; n_grants int; n_favorites int; n_names int;
+  n_steps int; n_steps_dropped int;
+BEGIN
+  IF current_setting('gallery.convert_spaces', true) IS DISTINCT FROM 'on'
+     OR to_regclass('public.shared_space') IS NULL THEN
+    RETURN;
+  END IF;
+  IF to_regclass('public.person_identity') IS NULL THEN
+    RAISE EXCEPTION USING
+      MESSAGE = 'revert-to-immich.sql refused: converting spaces needs the current Gallery schema. Start the latest Gallery release once so its migrations run, stop it, then run this script again.';
+  END IF;
+
+  CREATE TEMP TABLE conv_space ON COMMIT DROP AS
+  SELECT s."id" AS "spaceId", gen_random_uuid() AS "albumId", s."name", s."description",
+         s."thumbnailAssetId", s."createdAt", o."userId" AS "ownerId"
+    FROM "shared_space" s
+    CROSS JOIN LATERAL (
+      SELECT c."userId"
+        FROM (SELECT m."userId", m."role", m."joinedAt"
+                FROM "shared_space_member" m
+               WHERE m."spaceId" = s."id"
+              UNION ALL
+              SELECT s."createdById", 'owner', s."createdAt") c
+        JOIN "user" u ON u."id" = c."userId" AND u."deletedAt" IS NULL
+       ORDER BY c."userId" = s."createdById" DESC,
+                CASE c."role" WHEN 'owner' THEN 0 WHEN 'editor' THEN 1 ELSE 2 END,
+                c."joinedAt", c."userId"
+       LIMIT 1) o;
+  SELECT count(*) INTO n_spaces FROM conv_space;
+  SELECT count(*) - n_spaces INTO n_skipped FROM "shared_space";
+
+  INSERT INTO "album" ("id", "albumName", "description", "createdAt")
+  SELECT "albumId", "name", "description", "createdAt" FROM conv_space;
+
+  INSERT INTO "album_user" ("albumId", "userId", "role")
+  SELECT "albumId", "ownerId", 'owner'::album_user_role_enum FROM conv_space;
+
+  INSERT INTO "album_user" ("albumId", "userId", "role")
+  SELECT cs."albumId", m."userId",
+         (CASE WHEN m."role" IN ('owner', 'editor') THEN 'editor' ELSE 'viewer' END)::album_user_role_enum
+    FROM conv_space cs
+    JOIN "shared_space_member" m ON m."spaceId" = cs."spaceId"
+    JOIN "user" u ON u."id" = m."userId" AND u."deletedAt" IS NULL
+   WHERE m."userId" <> cs."ownerId"
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO "album_asset" ("albumId", "assetId")
+  SELECT DISTINCT cs."albumId", a."id"
+    FROM conv_space cs
+    CROSS JOIN LATERAL (
+      SELECT ssa."assetId" FROM "shared_space_asset" ssa WHERE ssa."spaceId" = cs."spaceId"
+      UNION
+      SELECT la."id"
+        FROM "shared_space_library" ssl
+        JOIN "asset" la ON la."libraryId" = ssl."libraryId" AND NOT la."isOffline"
+       WHERE ssl."spaceId" = cs."spaceId"
+      UNION
+      SELECT aa."assetId"
+        FROM "shared_space_album" l
+        JOIN "album" al ON al."id" = l."albumId" AND al."deletedAt" IS NULL
+        JOIN "album_asset" aa ON aa."albumId" = l."albumId"
+       WHERE l."spaceId" = cs."spaceId" AND l."showInTimeline"
+      UNION
+      SELECT asa."assetId"
+        FROM "album_space_asset" asa
+        JOIN "shared_space_album" l ON l."albumId" = asa."albumId" AND l."spaceId" = asa."spaceId"
+        JOIN "album" al ON al."id" = l."albumId" AND al."deletedAt" IS NULL
+       WHERE asa."spaceId" = cs."spaceId") x
+    JOIN "asset" a ON a."id" = x."assetId"
+                  AND a."deletedAt" IS NULL
+                  AND a."visibility" IN ('timeline', 'archive')
+  ON CONFLICT DO NOTHING;
+  GET DIAGNOSTICS n_assets = ROW_COUNT;
+
+  UPDATE "album" al
+     SET "albumThumbnailAssetId" = COALESCE(
+           (SELECT aa."assetId" FROM "album_asset" aa
+             WHERE aa."albumId" = al."id" AND aa."assetId" = cs."thumbnailAssetId"),
+           (SELECT aa."assetId" FROM "album_asset" aa JOIN "asset" a ON a."id" = aa."assetId"
+             WHERE aa."albumId" = al."id" ORDER BY a."fileCreatedAt" DESC, a."id" LIMIT 1))
+    FROM conv_space cs
+   WHERE cs."albumId" = al."id";
+
+  INSERT INTO "album_user" ("albumId", "userId", "role")
+  SELECT l."albumId", m."userId",
+         (CASE WHEN bool_or(m."role" IN ('owner', 'editor')) THEN 'editor' ELSE 'viewer' END)::album_user_role_enum
+    FROM "shared_space_album" l
+    JOIN "album" al ON al."id" = l."albumId" AND al."deletedAt" IS NULL
+    JOIN "shared_space_member" m ON m."spaceId" = l."spaceId"
+    JOIN "user" u ON u."id" = m."userId" AND u."deletedAt" IS NULL
+   GROUP BY l."albumId", m."userId"
+  ON CONFLICT ("albumId", "userId") DO NOTHING;
+  GET DIAGNOSTICS n_grants = ROW_COUNT;
+
+  -- Workflow steps. Section 6b deletes Gallery's plugin, and every step wired to it with it.
+  IF to_regclass('public.workflow_step') IS NOT NULL THEN
+    SELECT pm."id" INTO core_method
+      FROM "plugin_method" pm JOIN "plugin" p ON p."id" = pm."pluginId"
+     WHERE p."name" = 'immich-plugin-core' AND pm."name" = 'assetAddToAlbums';
+    UPDATE "workflow_step" ws
+       SET "pluginMethodId" = core_method, "config" = jsonb_build_object('albumIds', mapped."albumIds")
+      FROM (SELECT ws2."id", jsonb_agg(cs."albumId" ORDER BY sp."n") AS "albumIds"
+              FROM "workflow_step" ws2
+              JOIN "plugin_method" gm ON gm."id" = ws2."pluginMethodId" AND gm."name" = 'addToSpace'
+              JOIN "plugin" gp ON gp."id" = gm."pluginId" AND gp."name" = 'gallery-core'
+              CROSS JOIN LATERAL jsonb_array_elements_text(ws2."config" -> 'spaceIds') WITH ORDINALITY sp("spaceId", "n")
+              JOIN conv_space cs ON cs."spaceId"::text = sp."spaceId"
+             GROUP BY ws2."id") mapped
+     WHERE ws."id" = mapped."id" AND core_method IS NOT NULL;
+    GET DIAGNOSTICS n_steps = ROW_COUNT;
+    SELECT count(*) INTO n_steps_dropped
+      FROM "workflow_step" ws
+      JOIN "plugin_method" gm ON gm."id" = ws."pluginMethodId"
+      JOIN "plugin" gp ON gp."id" = gm."pluginId" AND gp."name" = 'gallery-core';
+    IF n_steps_dropped > 0 THEN
+      RAISE NOTICE 'convert-spaces: % Gallery workflow step(s) have no Immich equivalent and will be deleted (Add to space album, or a space that was skipped)', n_steps_dropped;
+    END IF;
+  END IF;
+
+  IF current_setting('gallery.convert_favorites', true) = 'on'
+     AND to_regclass('public.asset_favorite') IS NOT NULL THEN
+    CREATE TEMP TABLE conv_favorite ON COMMIT DROP AS
+    SELECT f."userId", f."assetId"
+      FROM "asset_favorite" f
+      JOIN "asset" a ON a."id" = f."assetId" AND a."ownerId" <> f."userId" AND a."deletedAt" IS NULL
+      JOIN "user" u ON u."id" = f."userId" AND u."deletedAt" IS NULL
+     WHERE EXISTS (SELECT FROM "album_user" au
+                     JOIN "album" al ON al."id" = au."albumId" AND al."deletedAt" IS NULL
+                     JOIN "album_asset" aa ON aa."albumId" = au."albumId"
+                    WHERE au."userId" = f."userId" AND aa."assetId" = f."assetId")
+        OR EXISTS (SELECT FROM "partner" p
+                    WHERE p."sharedById" = a."ownerId" AND p."sharedWithId" = f."userId"
+                      AND a."visibility" IN ('timeline', 'hidden'));
+    CREATE TEMP TABLE conv_favorite_album ON COMMIT DROP AS
+    SELECT "userId", gen_random_uuid() AS "albumId" FROM (SELECT DISTINCT "userId" FROM conv_favorite) u;
+    INSERT INTO "album" ("id", "albumName", "description")
+    SELECT "albumId", 'Favorites from shared spaces', 'Other people''s photos you favorited in Gallery.'
+      FROM conv_favorite_album;
+    INSERT INTO "album_user" ("albumId", "userId", "role")
+    SELECT "albumId", "userId", 'owner'::album_user_role_enum FROM conv_favorite_album;
+    INSERT INTO "album_asset" ("albumId", "assetId")
+    SELECT fa."albumId", f."assetId" FROM conv_favorite f JOIN conv_favorite_album fa USING ("userId")
+    ON CONFLICT DO NOTHING;
+    GET DIAGNOSTICS n_favorites = ROW_COUNT;
+  END IF;
+
+  -- A space person maps to a member's personal person through its faces or its face identity.
+  CREATE TEMP TABLE conv_person ON COMMIT DROP AS
+  SELECT op."personGroupId", nullif(btrim(ssp."name"), '') AS "name", ssp."birthDate"
+    FROM "shared_space_person" ssp
+    JOIN "shared_space_person_face" f ON f."personId" = ssp."id"
+    JOIN "asset_face" af ON af."id" = f."assetFaceId" AND af."deletedAt" IS NULL
+    JOIN "person" op ON op."personGroupId" = af."personGroupId"
+    JOIN "shared_space_member" m ON m."spaceId" = ssp."spaceId" AND m."userId" = op."ownerId"
+   WHERE NOT ssp."isHidden" AND ssp."type" = 'person'
+  UNION
+  SELECT op."personGroupId", nullif(btrim(ssp."name"), ''), ssp."birthDate"
+    FROM "shared_space_person" ssp
+    JOIN "person_identity" pi ON pi."identityId" = ssp."identityId"
+    JOIN "person" op ON op."personGroupId" = pi."personGroupId" AND op."ownerId" = pi."ownerId"
+    JOIN "shared_space_member" m ON m."spaceId" = ssp."spaceId" AND m."userId" = op."ownerId"
+   WHERE NOT ssp."isHidden" AND ssp."type" = 'person';
+
+  UPDATE "person" p
+     SET "name" = n."name"
+    FROM (SELECT "personGroupId", min("name") AS "name" FROM conv_person WHERE "name" IS NOT NULL
+           GROUP BY "personGroupId" HAVING count(DISTINCT "name") = 1) n
+   WHERE p."personGroupId" = n."personGroupId" AND btrim(p."name") = '';
+  GET DIAGNOSTICS n_names = ROW_COUNT;
+
+  UPDATE "person" p
+     SET "birthDate" = n."birthDate"
+    FROM (SELECT "personGroupId", min("birthDate") AS "birthDate" FROM conv_person WHERE "birthDate" IS NOT NULL
+           GROUP BY "personGroupId" HAVING count(DISTINCT "birthDate") = 1) n
+   WHERE p."personGroupId" = n."personGroupId" AND p."birthDate" IS NULL;
+
+  RAISE NOTICE 'convert-spaces: % space(s) became albums (% skipped: no live member), % album photo(s), % linked-album grant(s), % workflow step(s) moved to Add to Album(s), % favorite(s) kept, % person name(s) kept',
+    n_spaces, n_skipped, n_assets, n_grants, coalesce(n_steps, 0), coalesce(n_favorites, 0), n_names;
 END $$;
 
 -- -----------------------------------------------------------------------------
@@ -294,8 +504,10 @@ DELETE FROM "asset_edit" WHERE "action" = 'adjust';
 -- Immich (own assets, and partners' assets under the same conditions as
 -- Immich's asset share permission), drop album links to albums the creator
 -- neither owns nor edits (Immich's album share permission), and drop asset
--- links this leaves empty. Space access to an album lives in the dropped
--- shared_space_album* tables, never in album_user.
+-- links this leaves empty. Without 0a, space access to an album lives only in
+-- the dropped shared_space_album* tables, never in album_user. With 0a, every
+-- member holds an album_user row on the space's linked albums, so a link a space
+-- owner or editor made on a linked album survives as an Immich album editor's.
 -- The asset prune covers every link, not only those made from a space: deleting
 -- a space drops the link's space row but keeps the other members' asset rows. It
 -- also drops assets of partners removed since the link was made.
@@ -348,7 +560,8 @@ DELETE FROM "system_metadata"
    'classification-config-state',
    'shared-space-face-job-cleanup-state',
    'face-suggestion-default-on-state',
-   'person-suggestion-scan-job-cleanup-state'
+   'person-suggestion-scan-job-cleanup-state',
+   'storage-template-s3-state'
  );
 
 -- Gallery-only API key permissions (Gallery's Permission enum minus Immich's).
@@ -373,6 +586,30 @@ UPDATE "api_key" k
   ) kept
  WHERE kept."id" = k."id"
    AND kept."permissions" <> k."permissions";
+
+-- Sync checkpoints for Gallery's sync streams (Gallery's SyncEntityType values
+-- minus Immich's). Immich never reads them; they would stay in its table forever.
+DELETE FROM "session_sync_checkpoint"
+ WHERE "type" IN (
+    'AssetFavoriteDeleteV1', 'AssetFavoriteV1', 'LibraryAssetBackfillV1', 'LibraryAssetCreateV1',
+    'LibraryAssetDeleteV1', 'LibraryAssetExifBackfillV1', 'LibraryAssetExifCreateV1',
+    'LibraryDeleteV1', 'LibraryV1', 'SharedSpaceAlbumAssetBackfillV1',
+    'SharedSpaceAlbumAssetCreateV1', 'SharedSpaceAlbumAssetExifBackfillV1',
+    'SharedSpaceAlbumAssetExifCreateV1', 'SharedSpaceAlbumAssetExifUpdateV1',
+    'SharedSpaceAlbumAssetUpdateV1', 'SharedSpaceAlbumBackfillV1', 'SharedSpaceAlbumDeleteV1',
+    'SharedSpaceAlbumFolderBackfillV1', 'SharedSpaceAlbumFolderDeleteV1',
+    'SharedSpaceAlbumFolderV1', 'SharedSpaceAlbumHiddenBackfillV1',
+    'SharedSpaceAlbumHiddenDeleteV1', 'SharedSpaceAlbumHiddenV1', 'SharedSpaceAlbumLinkBackfillV1',
+    'SharedSpaceAlbumLinkDeleteV1', 'SharedSpaceAlbumLinkV1', 'SharedSpaceAlbumToAssetBackfillV1',
+    'SharedSpaceAlbumToAssetDeleteV1', 'SharedSpaceAlbumToAssetV1', 'SharedSpaceAlbumV1',
+    'SharedSpaceAssetBackfillV1', 'SharedSpaceAssetCreateV1', 'SharedSpaceAssetExifBackfillV1',
+    'SharedSpaceAssetExifCreateV1', 'SharedSpaceAssetExifUpdateV1', 'SharedSpaceAssetUpdateV1',
+    'SharedSpaceDeleteV1', 'SharedSpaceLibraryBackfillV1', 'SharedSpaceLibraryDeleteV1',
+    'SharedSpaceLibraryV1', 'SharedSpaceMemberBackfillV1', 'SharedSpaceMemberDeleteV1',
+    'SharedSpaceMemberV1', 'SharedSpaceStackAlbumBackfillV1', 'SharedSpaceStackBackfillV1',
+    'SharedSpaceStackDeleteV1', 'SharedSpaceStackLibraryBackfillV1', 'SharedSpaceStackV1',
+    'SharedSpaceToAssetBackfillV1', 'SharedSpaceToAssetDeleteV1', 'SharedSpaceToAssetV1', 'SharedSpaceV1'
+ );
 
 -- -----------------------------------------------------------------------------
 -- 1. Drop Gallery-only triggers on Immich-native tables.
@@ -514,6 +751,12 @@ DROP TABLE IF EXISTS "asset_quality" CASCADE;
 -- Spatial Scene depth maps. Immich has no equivalent; the <assetId>_depth.png
 -- files stay in the thumbnails folder, where Immich never reads them.
 DROP TABLE IF EXISTS "asset_spatial_scene" CASCADE;
+-- Data Saver video copies. Immich has no equivalent; the <assetId>_ds.mp4
+-- files stay in the encoded-video folder, where Immich never reads them.
+DROP TABLE IF EXISTS "asset_data_saver_video" CASCADE;
+-- Best frames of video faces. The faces stay in asset_face; the <assetId>_faces/
+-- folders stay in the thumbnails folder, where Immich never reads them.
+DROP TABLE IF EXISTS "asset_face_video_frame" CASCADE;
 
 -- -----------------------------------------------------------------------------
 -- 3. Drop Gallery-only functions.
@@ -591,13 +834,47 @@ DROP INDEX IF EXISTS "asset_face_createdBy_idx";
 ALTER TABLE "asset_face"        DROP COLUMN IF EXISTS "createdBy";
 
 -- -----------------------------------------------------------------------------
--- 5. Strip Gallery's merged 'classification' key out of system_metadata's
---    system-config row (added by migration 1778000000000).
+-- 5. Strip Gallery's settings out of system_metadata's system-config row and
+--    out of each user's preferences.
+--
+-- Stock Immich warns about every unknown key in system-config on each config
+-- load, until an admin next saves the settings. The list is every fork path in
+-- the config DTO (server/src/gallery/dtos/config.dto.ts and its spreads in
+-- server/src/dtos/config.dto.ts); revert-to-immich.spec.ts fails until a new
+-- one is added here. 'classification' holds the categories that migration
+-- 1778000000000 merged in from the dropped classification tables.
 -- -----------------------------------------------------------------------------
 UPDATE "system_metadata"
-   SET "value" = "value" - 'classification'
- WHERE "key" = 'system-config'
-   AND "value" ? 'classification';
+   SET "value" = "value"
+     #- '{classification}'
+     #- '{memories}'
+     #- '{storageUsage}'
+     #- '{backup,database,s3}'
+     #- '{ffmpeg,dataSaver}'
+     #- '{job,peopleBackfill}'
+     #- '{job,petDetection}'
+     #- '{job,classification}'
+     #- '{job,qualityAnalysis}'
+     #- '{job,spatialScene}'
+     #- '{machineLearning,clip,maxDistance}'
+     #- '{machineLearning,petDetection}'
+     #- '{machineLearning,petRecognition}'
+     #- '{machineLearning,facialRecognition,suggestions}'
+     #- '{machineLearning,facialRecognition,suggestionMaxDistance}'
+     #- '{machineLearning,facialRecognition,video}'
+     #- '{machineLearning,spatialScene}'
+     #- '{nightlyTasks,clusterNewPets}'
+     #- '{server,mergePeopleAcrossOwners}'
+     #- '{server,spaceEditorsCanAddMembers}'
+     #- '{server,spaceEditorsCanChangeRoles}'
+ WHERE "key" = 'system-config';
+
+-- Gallery's per-type memory switches (memories.types), which Immich's
+-- preferences do not have.
+UPDATE "user_metadata"
+   SET "value" = "value" #- '{memories,types}'
+ WHERE "key" = 'preferences'
+   AND "value" #> '{memories,types}' IS NOT NULL;
 
 -- -----------------------------------------------------------------------------
 -- 6. Delete Gallery-added rows from migration_overrides.
@@ -706,14 +983,16 @@ DELETE FROM "migration_overrides"
 -- 6b. Delete Gallery's own workflow plugin.
 --
 -- Plugins are stored IN THE DATABASE (`plugin.wasmBytes`), not just on disk, and the server loads
--- every row from `getForLoad()` at boot. Gallery ships `gallery-core`, whose wasm imports the
--- fork-only `gallery` host function. Upstream Immich does not register that function, so leaving
--- the row behind makes its microservices worker die on startup with
+-- every enabled row from `getForLoad()` at boot. Current Gallery ships `gallery-core` as a no-op
+-- wasm with no custom host import (its steps run in Gallery's TypeScript), so stock Immich loads it
+-- but every Gallery step would do nothing. Gallery releases before that change shipped a wasm that
+-- imports the fork-only `gallery` host function. A database last booted by one of those still holds
+-- that wasm (the row keeps version 1.0.0 and is rewritten in place only by a newer Gallery boot), and
+-- stock Immich's microservices worker then dies on startup with
 --
 --   cannot resolve import "extism:host/user" "gallery"
 --
--- and the server never answers /api/server/ping. Unlike the migration_overrides cleanup above, this
--- one is load-bearing: skip it and upstream Immich does not boot at all.
+-- so for such a database this delete is load-bearing.
 --
 -- `plugin_method` cascades from `plugin`, and `workflow_step.pluginMethodId` cascades from
 -- `plugin_method`, so this also removes any workflow step wired to a Gallery action. Those steps
@@ -761,7 +1040,7 @@ END $$;
 
 -- 1782000000000-AddAssetExifDescriptionTrigramIndex added a fork-only GIN
 -- trigram index on asset_exif.description (for timeline description filtering)
--- that v2.7.5 does not have, plus its migration_overrides registration row.
+-- that upstream Immich does not have, plus its migration_overrides registration row.
 DROP INDEX IF EXISTS "idx_asset_exif_description_trigram";
 DELETE FROM "migration_overrides" WHERE "name" = 'index_idx_asset_exif_description_trigram';
 
@@ -769,15 +1048,51 @@ DELETE FROM "migration_overrides" WHERE "name" = 'index_idx_asset_exif_descripti
 -- asset."localDateTime" for the filter panel's taken range.
 DROP INDEX IF EXISTS "asset_localDateTime_range_idx";
 
--- 1783628194057-DisablePostgresJit set jit=off on the application role. Restore
--- the PostgreSQL default so the reverted database carries no Gallery-specific
--- planner tuning.
-ALTER ROLE CURRENT_USER RESET jit;
+-- jit=off: restore the PostgreSQL default so the reverted database carries no
+-- Gallery-specific planner tuning. 1799800000000-ScopeJitOffToDatabase keeps the
+-- setting on this database (RC builds recorded it as 1799400000000). Before it,
+-- 1783628194057-DisablePostgresJit set it on the application role, which only that
+-- role can reset here; on such a database this resets the role running the script,
+-- so run it as the application role.
+-- ALTER DATABASE needs the database owner or a superuser. Without that privilege
+-- the migration also left the setting on the role, so the role is reset instead.
+-- The gallery_migrations lookup runs through EXECUTE: PL/pgSQL plans a static
+-- query before running it, so on a database from before the ledger split (no
+-- gallery_migrations table) a static one fails even behind an IF.
+DO $$
+DECLARE
+  database_reset boolean := true;
+  scoped boolean := false;
+BEGIN
+  BEGIN
+    EXECUTE format('ALTER DATABASE %I RESET jit', current_database());
+  EXCEPTION WHEN insufficient_privilege THEN
+    database_reset := false;
+    RAISE WARNING 'jit stays as set on database %: % cannot alter it', current_database(), CURRENT_USER;
+  END;
+  IF to_regclass('public.gallery_migrations') IS NOT NULL THEN
+    EXECUTE $q$SELECT EXISTS (SELECT FROM "gallery_migrations" WHERE "name" IN
+      ('1799800000000-ScopeJitOffToDatabase', '1799400000000-ScopeJitOffToDatabase'))$q$ INTO scoped;
+  END IF;
+  IF NOT database_reset OR NOT scoped THEN
+    EXECUTE 'ALTER ROLE CURRENT_USER RESET jit';
+  END IF;
+END $$;
 
--- No post-tag upstream migration needs reversing right now. `upstream.version` is
--- 3.3.1 and this branch's `server/src/schema/migrations/` is identical to upstream
--- v3.3.1's (same 100 files, unchanged from v3.3.0), so every upstream migration Gallery
--- carries is one the tagged release also ships. The 3.3.0 -> 3.3.1 bump removed nothing.
+-- Post-tag upstream migrations this branch carries: none. `upstream.version` is 3.4.1, which
+-- ships every upstream migration in this tree.
+--
+-- The 3.4.0 -> 3.4.1 bump removed nothing: 3.4.1 adds no migrations.
+-- The 3.4.0-rc.3 -> 3.4.0 bump removed nothing: 3.4.0 adds no migrations.
+-- The 3.4.0-rc.2 -> 3.4.0-rc.3 bump removed nothing: rc.3 adds no migrations.
+-- The 3.4.0-rc.1 -> 3.4.0-rc.2 bump removed nothing: rc.2 adds no migrations.
+-- The 3.4.0-rc.0 -> 3.4.0-rc.1 bump removed nothing: rc.1 adds no migrations.
+-- The 3.3.5 -> 3.4.0-rc.0 bump removed three entries, now shipped by the tag:
+-- 1792511451454-AddPasskeyTable, 1792517020180-AddUpdateIdIndexes and
+-- 1792568637987-AddAssetOwnerIdUpdateIdIndex (with their schema rollbacks), plus the passkey.* and
+-- clusterGroup.admin permission values stripped from API keys.
+-- Before 3.3.5 none needed reversing: on 3.3.1 this branch's upstream migrations were identical to
+-- the tag's. The 3.3.0 -> 3.3.1 bump removed nothing.
 -- The 3.2.4 -> 3.3.0 bump removed four more entries, for the
 -- same reason as below: 1789419229196-ConvertUserOAuthIdEmptyStringToNull,
 -- 1790587508209-RenameGeoNamesCountries, 1790616293884-PersonSharing and
@@ -922,6 +1237,10 @@ DELETE FROM "kysely_migrations"
   '1799500000000-AddCleanupTables',
   '1799600000000-AddAssetQualityScreenshotVersion',
   '1799700000000-AddAssetSpatialSceneTable',
+  '1799800000000-ScopeJitOffToDatabase',
+  '1799900000000-AddAssetDataSaverVideoTable',
+  '1800000000000-AddAssetFaceVideoFrameTable',
+  '1800100000000-AddVideoPetsSampledAt',
   -- Pre-rename name, recorded by builds from before the ledger split: this migration was
   -- renumbered off 1793000000000 when fork PR #1060 took that timestamp, but rolling RC instances
   -- had already recorded the pre-rename name. Drop that row too, or upstream's migrator aborts
@@ -947,10 +1266,8 @@ DELETE FROM "kysely_migrations"
    -- the upstream file, so it stays.
    '1776735180298-ChangeDurationToInteger'
 
-   -- Post-tag upstream migrations pulled in by rebase would follow here, paired with
-   -- schema rollbacks in step 7 and kept timestamp-sorted. None right now:
-   -- `upstream.version` is 3.3.1 and every upstream migration this branch carries ships
-   -- in that tag (see step 7).
+   -- Post-tag upstream migrations pulled in by rebase go here, paired with schema rollbacks in
+   -- step 7 and kept timestamp-sorted. None at `upstream.version` 3.4.0.
  );
 
 -- Gallery builds since the ledger split record fork migrations in their own table instead. The
@@ -1035,6 +1352,8 @@ BEGIN
        'asset_video_trim',
        'asset_image_adjust',
        'asset_spatial_scene',
+       'asset_data_saver_video',
+       'asset_face_video_frame',
        'person_identity',
        'person_pet',
        'person_group_split', 'person_group_split_share', 'person_group_split_person',

@@ -3,8 +3,6 @@
 // so a folder and the folders inside it ask once between them, and coming back to Albums asks nothing again. At most
 // AT_ONCE questions are in flight over all the folders on the page. A question that fails is asked again the next time
 // the page asks, and so is a folder whose photos were chosen without its answer.
-import { AssetTypeEnum, AssetVisibility, getAssetInfo, getAssetOcr, searchAssets } from '@immich/sdk';
-import { SvelteMap } from 'svelte/reactivity';
 import {
   chooseFaces,
   faceKey,
@@ -12,7 +10,9 @@ import {
   type FaceAlbum,
   type FacePicture,
   type FaceSources,
-} from '$lib/utils/folder-faces';
+} from '#lib/utils/folder-faces.ts';
+import { AssetTypeEnum, AssetVisibility, getAssetInfo, getAssetOcr, searchAssets } from '@immich/sdk';
+import { SvelteMap } from 'svelte/reactivity';
 
 /** Questions to Gallery in flight at once, over every folder on the page. */
 const AT_ONCE = 6;
@@ -96,9 +96,9 @@ export class FolderFaceManager {
   }
 
   /**
-   * Runs `ask` once fewer than AT_ONCE are in flight, giving up on it after PATIENCE_MS; a finished question hands its
-   * place to the next one waiting.
-   */
+  Runs `ask` once fewer than AT_ONCE are in flight, giving up on it after PATIENCE_MS; a finished question hands its
+  place to the next one waiting.
+  */
   async #limited<T>(ask: (signal: AbortSignal) => Promise<T>) {
     if (this.#running < AT_ONCE) {
       this.#running++;

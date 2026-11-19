@@ -1,7 +1,7 @@
 <script lang="ts">
   // Local Omarchy layer: the photo menu (PhotoMenu) on a page's gallery of photos (GalleryViewer: a folder's, the
   // search's, a memory's), finding the right-clicked photo among the ones the page shows
-  import { toTimelineAsset } from '$lib/utils/timeline-util';
+  import { toTimelineAsset } from '#lib/utils/timeline-util.ts';
   import type { AssetResponseDto } from '@immich/sdk';
   import type { ComponentProps } from 'svelte';
   import PhotoMenu from './PhotoMenu.svelte';

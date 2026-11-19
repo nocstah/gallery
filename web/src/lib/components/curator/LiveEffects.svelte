@@ -5,9 +5,9 @@
   // Curator renders it in a few seconds. The result is a suggestion (a new version in the photo's stack when kept):
   // Keep accepts it, Discard rejects it and goes back to the choice. Hold Original to see the photo as it was. Closed
   // while Curator works, the result waits in the AI inbox.
-  import { eventManager } from '$lib/managers/event-manager.svelte';
-  import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
-  import { curator, restoredUrl, type JobRow, type Suggestion } from '$lib/utils/curator';
+  import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+  import { getAssetMediaUrl, getAssetPlaybackUrl } from '#lib/utils.ts';
+  import { curator, restoredUrl, type JobRow, type Suggestion } from '#lib/utils/curator.ts';
   import { AssetMediaSize, getAssetInfo, getStack, type AssetResponseDto } from '@immich/sdk';
   import { Icon, toastManager } from '@immich/ui';
   import { mdiAnimationPlayOutline, mdiClose } from '@mdi/js';

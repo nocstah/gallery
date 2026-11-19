@@ -10,9 +10,8 @@ import { LoggingRepository } from 'src/repositories/logging.repository.js';
 const GALLERY_MIGRATION_TABLE = 'gallery_migrations';
 
 // Names recorded by earlier builds that have no file any more, mapped to the current name of the same
-// migration, or to null when the row is simply dropped. Applied to `kysely_migrations` rows only, since every rename
-// here predates `gallery_migrations`; renaming a fork migration that shipped after the split needs the loop below to
-// run on `gallery_migrations` too, or the newer-release refusal fires.
+// migration, or to null when the row is simply dropped. Applied to `kysely_migrations` rows, since every rename
+// here predates `gallery_migrations`. Fork migrations renamed after the split go in renamedGalleryMigrations.
 const renamedMigrations: Record<string, string | null> = {
   // Upstream re-timestamped this migration (immich-28191) after Gallery databases had recorded it.
   // The migration file also keeps a fork no-op guard for an already-integer column, as a fallback.
@@ -24,6 +23,14 @@ const renamedMigrations: Record<string, string | null> = {
   '1793000000000-ClearPreOptionMFaceRepairScans': '1793300000000-ClearPreOptionMFaceRepairScans',
   // Empty stub left behind when upstream's 1775165531374-AddPersonNameTrigramIndex replaced it.
   '1773846750001-AddPersonNameTrigramIndex': null,
+};
+
+// The same, for fork migrations renamed after the ledger split: applied to `gallery_migrations` rows, keeping their
+// timestamp, which is when the migration ran.
+const renamedGalleryMigrations: Record<string, string | null> = {
+  // Shipped in the pr-1195 RC images, then renumbered above the fork migrations main had shipped meanwhile, so a
+  // rollback reverts it first on fresh installs too.
+  '1799400000000-ScopeJitOffToDatabase': '1799800000000-ScopeJitOffToDatabase',
 };
 
 const createGalleryMigrator = (db: Kysely<any>) =>
@@ -42,9 +49,9 @@ const createGalleryMigrator = (db: Kysely<any>) =>
   });
 
 /**
- * Brings a database written by any earlier build to the split layout: fork rows in
- * `gallery_migrations`, upstream rows in `kysely_migrations`, no row without a file. Idempotent.
- */
+Brings a database written by any earlier build to the split layout: fork rows in
+`gallery_migrations`, upstream rows in `kysely_migrations`, no row without a file. Idempotent.
+*/
 const bootstrapGalleryLedger = async (db: Kysely<any>, galleryNames: string[], upstreamNames: string[]) => {
   const counts = { renamed: 0, deleted: 0, moved: 0 };
   const { rows } = await sql<{ exists: boolean }>`
@@ -98,9 +105,25 @@ const bootstrapGalleryLedger = async (db: Kysely<any>, galleryNames: string[], u
   const [moved] = await db.deleteFrom('kysely_migrations').where('name', 'in', galleryNames).execute();
   counts.moved = Number(moved.numDeletedRows);
 
+  const forkRecordedRows = await db.selectFrom(GALLERY_MIGRATION_TABLE).select('name').execute();
+  const forkRecorded = new Set(forkRecordedRows.map(({ name }) => name as string));
+  for (const [from, to] of Object.entries(renamedGalleryMigrations)) {
+    if (!forkRecorded.has(from)) {
+      continue;
+    }
+    forkRecorded.delete(from);
+    if (to && !forkRecorded.has(to)) {
+      await db.updateTable(GALLERY_MIGRATION_TABLE).set({ name: to }).where('name', '=', from).execute();
+      forkRecorded.add(to);
+      counts.renamed++;
+    } else {
+      await db.deleteFrom(GALLERY_MIGRATION_TABLE).where('name', '=', from).execute();
+      counts.deleted++;
+    }
+  }
+
   // Kysely would refuse these too, but only with upstream's "migrated by a newer version" text.
-  const forkRecorded = await db.selectFrom(GALLERY_MIGRATION_TABLE).select('name').execute();
-  const newerFork = forkRecorded.map(({ name }) => name as string).filter((name) => !galleryNames.includes(name));
+  const newerFork = [...forkRecorded].filter((name) => !galleryNames.includes(name));
   if (newerFork.length > 0) {
     throw new Error(
       `Gallery migration "${newerFork.toSorted().at(-1)}" was recorded by a newer Gallery release than ${serverVersion}. ` +
@@ -141,12 +164,12 @@ const migrationNames = async (migrator: Migrator) => {
 };
 
 /**
- * Bootstraps the ledgers, then runs every pending migration of both folders in one name order, each
- * recorded in its own ledger. A single order is load-bearing: an older Gallery database must drop its
- * fork foreign keys (1787100000000) before upstream's ClusterGroups (1787148183729) runs. Everything
- * runs in one transaction, so a failed boot leaves the database as it found it. Inside that transaction
- * the 1 h `lock_timeout` kysely sets for its migration lock also bounds every migration statement.
- */
+Bootstraps the ledgers, then runs every pending migration of both folders in one name order, each
+recorded in its own ledger. A single order is load-bearing: an older Gallery database must drop its
+fork foreign keys (1787100000000) before upstream's ClusterGroups (1787148183729) runs. Everything
+runs in one transaction, so a failed boot leaves the database as it found it. Inside that transaction
+the 1 h `lock_timeout` kysely sets for its migration lock also bounds every migration statement.
+*/
 export const migrateGalleryToLatest = async (
   db: Kysely<any>,
   createUpstreamMigrator: (db: Kysely<any>) => Migrator,

@@ -1,17 +1,19 @@
-import type {
-  AlbumResponseDto,
-  AssetVisibility as AssetVisibilityType,
-  SharedSpaceMemberResponseDto,
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import type { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import type { TimelineDateTime } from '#lib/utils/timeline-util.ts';
+import {
+  AlbumUserRole,
+  AssetVisibility,
+  getEditableAssets,
+  type AlbumResponseDto,
+  type AssetVisibility as AssetVisibilityType,
+  type SharedSpaceMemberResponseDto,
 } from '@immich/sdk';
-import { AlbumUserRole, AssetVisibility, getEditableAssets } from '@immich/sdk';
 import { render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import type { TimelineDateTime } from '$lib/utils/timeline-util';
 import SelectionToolbar from './SelectionToolbar.svelte';
 
 // Local Omarchy layer: a closed menu keeps its rows, hidden and inert (ContextMenu), and a hidden row has no accessible
@@ -63,7 +65,7 @@ const { mockUser, mockPreferences } = vi.hoisted(() => ({
   mockPreferences: { current: { tags: { enabled: true } } },
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: {
     get authenticated() {
       return mockUser.current !== null;
@@ -77,7 +79,7 @@ vi.mock('$lib/managers/auth-manager.svelte', () => ({
   },
 }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock('#lib/managers/feature-flags-manager.svelte.ts', () => ({
   featureFlagsManager: {
     value: { trash: true },
   },
@@ -116,9 +118,9 @@ type FakeAssetInteraction = Pick<
 > & { clear: () => void };
 
 /**
- * `ownedAssets` defaults to the real manager's rule — the assets whose `ownerId` is the
- * logged-in user — so a fixture cannot accidentally disagree with its own `assets` list.
- */
+`ownedAssets` defaults to the real manager's rule — the assets whose `ownerId` is the
+logged-in user — so a fixture cannot accidentally disagree with its own `assets` list.
+*/
 function makeAssetInteraction(overrides: Partial<FakeAssetInteraction> = {}): AssetMultiSelectManager {
   const assets = overrides.assets ?? [makeAsset()];
   const base: FakeAssetInteraction = {

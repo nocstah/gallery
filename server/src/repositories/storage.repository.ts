@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import { ChokidarOptions, watch as chokidarWatch } from 'chokidar';
 import fastGlob from 'fast-glob';
 import {
@@ -100,7 +100,7 @@ export class StorageRepository {
   }
 
   createZipStream(): ImmichZipStream {
-    const archive = archiver('zip', { store: true });
+    const archive = new ZipArchive({ store: true });
     let chain: Promise<void> = Promise.resolve();
 
     // archiver-utils' normalizeInputSource() pipes every Readable to a PassThrough as soon
@@ -269,39 +269,6 @@ export class StorageRepository {
     };
   }
 
-  async getFolderSize(folder: string, shouldCount?: (filename: string) => boolean): Promise<number> {
-    let total = 0;
-    let dir;
-    try {
-      dir = await fs.opendir(folder);
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        return 0;
-      }
-      throw error;
-    }
-
-    for await (const entry of dir) {
-      const entryPath = path.join(folder, entry.name);
-      if (entry.isDirectory()) {
-        total += await this.getFolderSize(entryPath, shouldCount);
-      } else if (entry.isFile() && (!shouldCount || shouldCount(entry.name))) {
-        try {
-          const entryStat = await fs.stat(entryPath);
-          total += entryStat.size;
-        } catch (error: any) {
-          // The nightly scan walks a live tree that delete jobs are writing to; a file that
-          // disappears mid-walk must not abort the whole user's sync.
-          if (error.code !== 'ENOENT') {
-            throw error;
-          }
-        }
-      }
-    }
-
-    return total;
-  }
-
   crawl(crawlOptions: CrawlOptionsDto): Promise<string[]> {
     const { pathsToCrawl, exclusionPatterns, includeHidden } = crawlOptions;
     if (pathsToCrawl.length === 0) {
@@ -315,6 +282,7 @@ export class StorageRepository {
       absolute: true,
       caseSensitiveMatch: false,
       onlyFiles: true,
+      followSymbolicLinks: false,
       dot: includeHidden,
       ignore: exclusionPatterns,
     });
@@ -334,6 +302,7 @@ export class StorageRepository {
       absolute: true,
       caseSensitiveMatch: false,
       onlyFiles: true,
+      followSymbolicLinks: false,
       dot: includeHidden,
       ignore: exclusionPatterns,
     });
@@ -362,7 +331,12 @@ export class StorageRepository {
       strictSlashes: false,
     });
 
-    const watcher = chokidarWatch(paths, { ...options, ignored: (path) => matchesIgnoredPath(path) });
+    const watcher = chokidarWatch(paths, {
+      ...options,
+      followSymlinks: false,
+      // Chokidar still emits events for symlinks when followSymlinks is false.
+      ignored: (path, stats) => !!stats?.isSymbolicLink() || matchesIgnoredPath(path),
+    });
 
     watcher.on('ready', () => events.onReady?.());
     watcher.on('add', (path) => events.onAdd?.(path));

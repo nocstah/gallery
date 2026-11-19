@@ -47,6 +47,7 @@ import 'package:immich_mobile/data/db/main/table/user/auth_user.dart';
 import 'package:immich_mobile/data/db/main/table/user/metadata.dart';
 import 'package:immich_mobile/data/db/main/table/user/partner.dart';
 import 'package:immich_mobile/data/db/main/table/user/user.dart';
+import 'package:immich_mobile/gallery/data/heal_date_time_columns.dart';
 import 'package:immich_mobile/infrastructure/repositories/backup.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_album.repository.dart';
 import 'package:immich_mobile/infrastructure/repositories/local_asset.repository.dart';
@@ -149,7 +150,7 @@ class Drift extends $Drift {
   @override
   Future<void> close() async {
     await super.close();
-    _updatePool?.close();
+    await _updatePool?.close();
   }
 
   Future<void> reset() async {
@@ -187,7 +188,7 @@ class Drift extends $Drift {
   }
 
   @override
-  int get schemaVersion => 41;
+  int get schemaVersion => 42;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -466,6 +467,14 @@ class Drift extends $Drift {
               from40To41: (m, v41) async {
                 await _healV33DateTimes(this);
               },
+              // Upstream immich-30262 added the group_date columns at its drift v35, which collides with
+              // the fork's shipped v35, so it is renumbered here to v42.
+              from41To42: (m, v42) async {
+                await m.addColumn(v42.remoteAssetEntity, v42.remoteAssetEntity.groupDate);
+                await m.addColumn(v42.localAssetEntity, v42.localAssetEntity.groupDate);
+                await m.createIndex(v42.idxRemoteAssetGroup);
+                await m.createIndex(v42.idxLocalAssetGroup);
+              },
             ),
           );
 
@@ -514,16 +523,7 @@ const _v33DateTimeColumns = <String, List<String>>{
   'person_entity': ['created_at', 'updated_at', 'birth_date'],
   'asset_face_entity': ['deleted_at'],
   'settings': ['updated_at'],
-  // gallery-fork: the fork's own tables adopted clampedDateTime in the same change, so
-  // they carry the same pre-clamp exposure and are healed here too. Column lists are
-  // derived from each table's clampedDateTime getters.
-  'library_entity': ['created_at', 'updated_at'],
-  'shared_space_entity': ['last_activity_at', 'created_at', 'updated_at'],
-  'shared_space_member_entity': ['joined_at'],
-  'shared_space_library_entity': ['created_at'],
-  'shared_space_album_entity': ['created_at', 'updated_at'],
-  'shared_space_album_link_entity': ['created_at', 'updated_at'],
-  'shared_space_album_folder_entity': ['created_at', 'updated_at'],
+  ...galleryV33DateTimeColumns,
 };
 
 // Rewrites datetime text sqlite date functions cannot handle: signed extended

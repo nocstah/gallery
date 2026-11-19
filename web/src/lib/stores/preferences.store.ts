@@ -1,13 +1,13 @@
+import { defaultLang } from '#lib/constants.ts';
+import { convertBCP47, getPreferredLocale } from '#lib/utils/i18n.ts';
 import { persisted } from 'svelte-persisted-store';
-import { browser } from '$app/environment';
-import { defaultLang } from '$lib/constants';
-import { convertBCP47, getPreferredLocale } from '$lib/utils/i18n';
+import { browser } from '$app/env';
 
 // Locale to use for formatting dates, numbers, etc.
 export const locale = persisted('locale', 'default', {
   serializer: {
     parse: (text) => convertBCP47(text) || 'default',
-    stringify: (object) => object ?? '',
+    stringify: (object = '') => object,
   },
 });
 
@@ -15,7 +15,7 @@ const preferredLocale = browser ? getPreferredLocale() : undefined;
 export const lang = persisted<string>('lang', preferredLocale || defaultLang.code, {
   serializer: {
     parse: (text) => convertBCP47(text),
-    stringify: (object) => object ?? '',
+    stringify: (object = '') => object,
   },
 });
 
@@ -50,9 +50,6 @@ const persistedObject = <T>(key: string, defaults: T) =>
   });
 
 export const mapSettings = persistedObject<MapSettings>('map-settings', defaultMapSettings);
-
-export const videoViewerVolume = persisted<number>('video-viewer-volume', 1, {});
-export const videoViewerMuted = persisted<boolean>('video-viewer-muted', false, {});
 
 export interface AlbumViewSettings {
   view: string;
@@ -116,28 +113,6 @@ export const albumViewSettings = persisted<AlbumViewSettings>('album-view-settin
   collapsedGroups: {},
 });
 
-export enum PeopleSortBy {
-  PhotoCount = 'photoCount',
-  Name = 'name',
-}
-
-export enum PeopleFilterBy {
-  All = 'All',
-  People = 'People',
-  Pets = 'Pets',
-}
-
-export interface PeopleViewSettings {
-  sortBy: PeopleSortBy;
-  /** People-page type filter. Persisted alongside sortBy; older stored objects have no value. */
-  filterBy?: PeopleFilterBy;
-}
-
-export const peopleViewSettings = persistedObject<PeopleViewSettings>('people-view-settings', {
-  sortBy: PeopleSortBy.PhotoCount,
-  filterBy: PeopleFilterBy.All,
-});
-
 export enum PlacesGroupBy {
   None = 'None',
   Country = 'Country',
@@ -161,16 +136,16 @@ export const autoPlayVideo = persisted<boolean>('auto-play-video', true, {});
 export const alwaysLoadOriginalVideo = persisted<boolean>('always-load-original-video', false, {});
 
 /**
- * Local Omarchy layer: whether a search on Photos shows archived photos too (its "Include archived" box). Off by
- * default: a search finds what Photos shows, not what was put away (the archive, To do, Villa).
- */
+Local Omarchy layer: whether a search on Photos shows archived photos too (its "Include archived" box). Off by
+default: a search finds what Photos shows, not what was put away (the archive, To do, Villa).
+*/
 export const searchIncludeArchived = persisted<boolean>('omarchy-search-include-archived', false, {});
 
 /**
- * Local Omarchy layer: Utilities › Bank slips' rule, which amounts ("any amount below 3000 delete it or move it to QR or
- * any amount between 50,000 and 80,000 move it to QR or delete it"). Each range keeps its own numbers; what to do with
- * them is not kept, so the page always opens on Move to QR.
- */
+Local Omarchy layer: Utilities › Bank slips' rule, which amounts ("any amount below 3000 delete it or move it to QR or
+any amount between 50,000 and 80,000 move it to QR or delete it"). Each range keeps its own numbers; what to do with
+them is not kept, so the page always opens on Move to QR.
+*/
 export type SlipsRule = {
   mode: 'any' | 'under' | 'over' | 'between';
   under: number | null;
@@ -185,47 +160,19 @@ export const slipsRule = persisted<SlipsRule>(
   {},
 );
 
-/**
- * Whether the asset-viewer Info panel crops each person's avatar out of the photo on screen
- * (`true`, the long-standing behaviour) or shows their profile face instead (`false`).
- *
- * Defaults to `true` so nothing changes visually on upgrade. The setting is deliberately inert
- * for a viewer with no reachable profile face — see resolvePersonAvatar in $lib/utils/person-avatar.
- */
-export const cropFacesFromAsset = persisted<boolean>('crop-faces-from-asset', true, {});
-
 export const recentAlbumsDropdown = persisted<boolean>('recent-albums-open', true, {});
-export const recentSpacesDropdown = persisted<boolean>('recent-spaces-open', true, {});
 
-// Local Omarchy layer: a space now opens into its folder tree, not three recent albums; a new key so every space
-// starts closed (Library's tree is also under Albums)
-export const recentSpaceAlbumsExpanded = persisted<Record<string, boolean>>('space-tree-open', {}, {});
+export const hideBackupsReminder = persisted<boolean>('hide-backups-reminder', false, {});
 
 /**
- * Local Omarchy layer: the folders a person opened or closed in the sidebar's album trees, keyed `<tree>:<folder id>`.
- * The folders opened to reveal what is on screen are not kept here (components/sidebar/album-tree); a new key, since
- * the old one ('album-tree-open') held those too, and every page carried them open.
- */
+Local Omarchy layer: the folders a person opened or closed in the sidebar's album trees, keyed `<tree>:<folder id>`.
+The folders opened to reveal what is on screen are not kept here (components/sidebar/album-tree); a new key, since
+the old one ('album-tree-open') held those too, and every page carried them open.
+*/
 export const albumTreeOpen = persisted<Record<string, boolean>>('album-tree-opened', {}, {});
 
 /**
- * Local Omarchy layer: the sidebar's groups folded away under their heading (Manage, Hidden and deleted), by name;
- * a group not named here is open (components/sidebar/sidebar-nav-group).
- */
+Local Omarchy layer: the sidebar's groups folded away under their heading (Manage, Hidden and deleted), by name;
+a group not named here is open (components/sidebar/sidebar-nav-group).
+*/
 export const sidebarGroupsClosed = persisted<Record<string, boolean>>('sidebar-groups-closed', {}, {});
-
-export const isSpaceAlbumsExpanded = (state: Record<string, boolean>, spaceId: string): boolean => state[spaceId];
-
-export const setSpaceAlbumsExpanded = (spaceId: string, expanded: boolean, validSpaceIds: string[]): void => {
-  recentSpaceAlbumsExpanded.update((state) => {
-    const valid = new Set(validSpaceIds);
-    const next: Record<string, boolean> = {};
-    for (const [id, value] of Object.entries(state)) {
-      if (valid.has(id)) {
-        next[id] = value;
-      }
-    }
-    next[spaceId] = expanded;
-    return next;
-  });
-};

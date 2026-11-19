@@ -30,7 +30,7 @@ import 'package:immich_mobile/providers/album/album_sort_by_options.provider.dar
 import 'package:immich_mobile/utils/datetime_helpers.dart';
 import 'package:logging/logging.dart';
 
-const int targetVersion = 27;
+const int targetVersion = 28;
 
 Future<void> migrateDatabaseIfNeeded(Drift drift, NativeSyncApi nativeSyncApi, PermissionApi permissionApi) async {
   final int? storedVersion = Store.tryGet(StoreKey.version);
@@ -48,6 +48,9 @@ Future<void> migrateDatabaseIfNeeded(Drift drift, NativeSyncApi nativeSyncApi, P
     await _migrateTo27(drift, nativeSyncApi, permissionApi);
   }
 
+  if (version < 28) {
+    await _migrateTo28(drift);
+  }
   await migrateForkStoreValues(drift);
 
   if (storedVersion == null) {
@@ -122,6 +125,17 @@ Future<void> _migrateTo27(Drift drift, NativeSyncApi nativeSyncApi, PermissionAp
   } catch (error, stackTrace) {
     Logger('Migration').warning("Error migrating to version 27", error, stackTrace);
   }
+}
+
+Future<void> _migrateTo28(Drift drift) => backfillAssetGroupDates(drift);
+
+Future<void> backfillAssetGroupDates(Drift drift) async {
+  await drift.customStatement(
+    "UPDATE remote_asset_entity SET group_date = COALESCE(STRFTIME('%Y-%m-%d', local_date_time), STRFTIME('%Y-%m-%d', created_at, 'localtime'))",
+  );
+  await drift.customStatement(
+    "UPDATE local_asset_entity SET group_date = STRFTIME('%Y-%m-%d', created_at, 'localtime')",
+  );
 }
 
 Future<void> _migrateTo25() async {

@@ -1,4 +1,4 @@
-import type { TimelineDate, TimelineYearMonth } from '$lib/utils/timeline-util';
+import type { TimelineDate, TimelineYearMonth } from '#lib/utils/timeline-util.ts';
 
 // Local Omarchy layer: the dates the timeline writes on its tiles (the month marks, the date in the hover caption), and
 // the same day where a photo is named by it (the AI inbox's cards), in the reader's locale, each style from one
@@ -41,9 +41,9 @@ const formatterFor = (locale: string | undefined, style: Style) => {
 };
 
 /**
- * A month mark: the locale's short month in capitals ("SEP"), and with `withYear` the year in the locale's order
- * ("DEC 2025", "2025年12月"). Only the month is set in capitals, so a locale's own year marker keeps its case.
- */
+A month mark: the locale's short month in capitals ("SEP"), and with `withYear` the year in the locale's order
+("DEC 2025", "2025年12月"). Only the month is set in capitals, so a locale's own year marker keeps its case.
+*/
 export const monthMarkLabel = ({ year, month }: TimelineYearMonth, withYear: boolean, locale?: string): string => {
   const date = new Date(year, month - 1, 1);
   if (Number.isNaN(date.getTime())) {
@@ -67,9 +67,9 @@ export const tileDateLabel = (
 };
 
 /**
- * A photo's day with its year whatever the year, where nothing around it says which: "Oct 11, 2019" (an AI inbox
- * card's heading, utils/inbox-facts).
- */
+A photo's day with its year whatever the year, where nothing around it says which: "Oct 11, 2019" (an AI inbox
+card's heading, utils/inbox-facts).
+*/
 export const dayLabel = ({ year, month, day }: TimelineDate, locale?: string): string => {
   const date = new Date(year, month - 1, day);
   return Number.isNaN(date.getTime()) ? '' : formatterFor(locale, 'date').format(date);

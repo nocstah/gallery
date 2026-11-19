@@ -299,11 +299,8 @@ describe(TimelineService.name, () => {
       });
 
       it('should throw with visibility unset unless the request is for favourites', async () => {
-        for (const dto of [
-          { withSharedSpaces: true },
-          { withPartners: true },
-          { withSharedSpaces: true, isFavorite: false },
-        ]) {
+        // withPartners alone no longer throws: upstream defaults a partner request to the timeline (immich-32565).
+        for (const dto of [{ withSharedSpaces: true }, { withSharedSpaces: true, isFavorite: false }]) {
           await expect(sut.getTimeBuckets(authStub.admin, dto)).rejects.toThrow(BadRequestException);
         }
         expect(mocks.asset.getTimeBuckets).not.toHaveBeenCalled();
@@ -559,6 +556,7 @@ describe(TimelineService.name, () => {
     });
 
     it('should pass tagId through to the query', async () => {
+      mocks.access.tag.checkOwnerAccess.mockResolvedValue(new Set(['tag-123']));
       const json = `[{ id: ['asset-id'] }]`;
       mocks.asset.getTimeBucket.mockResolvedValue({ assets: json });
 
@@ -622,7 +620,7 @@ describe(TimelineService.name, () => {
       expect(mocks.asset.getTimeBucket).not.toHaveBeenCalled();
     });
 
-    it('should throw an error if withParners is true and visibility true or undefined', async () => {
+    it('should throw an error if withParners is true and visibility is archive or hidden', async () => {
       await expect(
         sut.getTimeBucket(authStub.admin, {
           timeBucket: '2024-01-01',
@@ -636,12 +634,81 @@ describe(TimelineService.name, () => {
       await expect(
         sut.getTimeBucket(authStub.admin, {
           timeBucket: '2024-01-01',
-          visibility: undefined,
+          visibility: AssetVisibility.Hidden,
           bucketSize: TimeBucketSize.Year,
           withPartners: true,
           userId: authStub.admin.user.id,
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should default to timeline visibility if withPartners is true and visibility is undefined', async () => {
+      const json = `[{ id: ['asset-id'] }]`;
+      mocks.asset.getTimeBucket.mockResolvedValue({ assets: json });
+      mocks.partner.getAll.mockResolvedValue([]);
+
+      await expect(
+        sut.getTimeBucket(authStub.admin, {
+          timeBucket: '2024-01-01',
+          withPartners: true,
+          userId: authStub.admin.user.id,
+        }),
+      ).resolves.toEqual(json);
+      expect(mocks.asset.getTimeBucket).toHaveBeenCalledWith(
+        '2024-01-01',
+        expect.objectContaining({ visibility: AssetVisibility.Timeline, userIds: [authStub.admin.user.id] }),
+        authStub.admin,
+      );
+    });
+
+    it("should default to timeline visibility for another user's timeline", async () => {
+      const json = `[{ id: ['asset-id'] }]`;
+      mocks.asset.getTimeBucket.mockResolvedValue({ assets: json });
+      mocks.access.timeline.checkPartnerAccess.mockResolvedValue(new Set(['partner-id']));
+
+      await expect(
+        sut.getTimeBucket(authStub.admin, { timeBucket: '2024-01-01', userId: 'partner-id' }),
+      ).resolves.toEqual(json);
+      expect(mocks.asset.getTimeBucket).toHaveBeenCalledWith(
+        '2024-01-01',
+        expect.objectContaining({
+          timeBucket: '2024-01-01',
+          visibility: AssetVisibility.Timeline,
+          userIds: ['partner-id'],
+        }),
+        authStub.admin,
+      );
+    });
+
+    it("should throw an error for another user's archived, hidden, trashed or favorite assets", async () => {
+      mocks.access.timeline.checkPartnerAccess.mockResolvedValue(new Set(['partner-id']));
+
+      for (const dto of [
+        { visibility: AssetVisibility.Archive },
+        { visibility: AssetVisibility.Hidden },
+        { isTrashed: true },
+        // Gallery (#763): favorites are a per-user overlay resolved for the caller, so isFavorite is
+        // allowed on another user's timeline (see the withPartners favorite case above).
+      ]) {
+        await expect(
+          sut.getTimeBucket(authStub.admin, { timeBucket: '2024-01-01', userId: 'partner-id', ...dto }),
+        ).rejects.toThrow(BadRequestException);
+      }
+
+      expect(mocks.asset.getTimeBucket).not.toHaveBeenCalled();
+    });
+
+    it("should throw an error for another user's locked assets even with an elevated session", async () => {
+      mocks.access.timeline.checkPartnerAccess.mockResolvedValue(new Set(['partner-id']));
+
+      await expect(
+        sut.getTimeBucket(authStub.adminWithElevatedPermission, {
+          timeBucket: '2024-01-01',
+          userId: 'partner-id',
+          visibility: AssetVisibility.Locked,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mocks.asset.getTimeBucket).not.toHaveBeenCalled();
     });
 
     it('passes isFavorite (true and false) through when combined with withPartners (#763 slice 4)', async () => {
@@ -682,7 +749,7 @@ describe(TimelineService.name, () => {
     it('should throw an error if withPartners is true and visibility is locked', async () => {
       await expect(
         sut.getTimeBucket(authStub.adminWithElevatedPermission, {
-          timeBucket: 'bucket',
+          timeBucket: '2024-01-01',
           visibility: AssetVisibility.Locked,
           withPartners: true,
           userId: authStub.adminWithElevatedPermission.user.id,
@@ -1006,11 +1073,35 @@ describe(TimelineService.name, () => {
     });
 
     it('should accept deprecated tagId and normalize to tagIds', async () => {
+      mocks.access.tag.checkOwnerAccess.mockResolvedValue(new Set(['tag-1']));
       mocks.asset.getTimeBuckets.mockResolvedValue([]);
       await sut.getTimeBuckets(authStub.admin, { tagId: 'tag-1' });
       expect(mocks.asset.getTimeBuckets).toHaveBeenCalledWith(
         expect.objectContaining({ tagIds: ['tag-1'] }),
         authStub.admin,
+      );
+    });
+
+    // Upstream's TagRead check on the tag page's tagId, widened to the tags the tag explorer lists. The filter
+    // panel's tagIds stay unchecked: they carry partner and album tags, and the query confines them to visible assets.
+    it('should require read access to a tagId', async () => {
+      await expect(sut.getTimeBuckets(authStub.user1, { tagId: 'other-user-tag' })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(mocks.asset.getTimeBuckets).not.toHaveBeenCalled();
+    });
+
+    it('should accept a tagId the caller reaches through a shared space', async () => {
+      mocks.access.sharedSpace.checkTagAccess.mockResolvedValue(new Set(['space-tag']));
+      mocks.asset.getTimeBuckets.mockResolvedValue([]);
+      await sut.getTimeBuckets(authStub.user1, { tagId: 'space-tag' });
+      expect(mocks.access.sharedSpace.checkTagAccess).toHaveBeenCalledWith(
+        authStub.user1.user.id,
+        new Set(['space-tag']),
+      );
+      expect(mocks.asset.getTimeBuckets).toHaveBeenCalledWith(
+        expect.objectContaining({ tagIds: ['space-tag'] }),
+        authStub.user1,
       );
     });
   });
@@ -1252,7 +1343,7 @@ describe(TimelineService.name, () => {
 
   describe('getTimeBucketCovers', () => {
     it('runs access checks and forwards resolved options + buckets to the repository', async () => {
-      mocks.asset.getTimeBucketCovers.mockResolvedValue([]);
+      mocks.galleryAsset.getTimeBucketCovers.mockResolvedValue([]);
 
       await sut.getTimeBucketCovers(authStub.user1, {
         userId: 'user-id',
@@ -1260,7 +1351,7 @@ describe(TimelineService.name, () => {
         timeBuckets: ['2024-01-01'],
       });
 
-      expect(mocks.asset.getTimeBucketCovers).toHaveBeenCalledWith(
+      expect(mocks.galleryAsset.getTimeBucketCovers).toHaveBeenCalledWith(
         expect.objectContaining({
           timeBuckets: ['2024-01-01'],
           bucketSize: TimeBucketSize.Year,

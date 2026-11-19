@@ -13,12 +13,13 @@ vi.mock('@immich/ui', () => ({
   toastManager: { primary: mocks.toast, info: mocks.toast, success: mocks.toast, warning: mocks.toast },
 }));
 
-const { showSidebarRowMenu } = await import('$lib/utils/sidebar-row-menu');
-const { sidebarRowsHidden, setSidebarRowHidden } = await import('$lib/stores/sidebar-rows');
-const { undoManager } = await import('$lib/managers/undo-manager.svelte');
+const { showSidebarRowMenu } = await import('#lib/utils/sidebar-row-menu.ts');
+const { sidebarRowsHidden, setSidebarRowHidden } = await import('#lib/stores/sidebar-rows.ts');
+const { undoManager } = await import('#lib/managers/undo-manager.svelte.ts');
 
 type Item = { title: string; onAction: () => void };
-const openMenu = async (event = new MouseEvent('contextmenu', { clientX: 40, clientY: 300 })) => {
+const openMenu = async () => {
+  const event = new MouseEvent('contextmenu', { clientX: 40, clientY: 300 });
   await showSidebarRowMenu(event, 'people', 'People hidden from the sidebar in this browser');
   const [{ items, target }] = mocks.show.mock.calls.at(-1) as [{ items: Item[]; target: HTMLElement }];
   return { items, target };

@@ -1,13 +1,13 @@
+import TestWrapper from '#lib/components/TestWrapper.svelte';
+import type { PlaceStats } from '#lib/utils/place-stats.ts';
+import { assetFactory } from '#test/kioku/factories/asset-factory.ts';
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/svelte';
 import type { Component } from 'svelte';
-import TestWrapper from '$lib/components/TestWrapper.svelte';
-import type { PlaceStats } from '$lib/utils/place-stats';
-import { assetFactory } from '@test-data/factories/asset-factory';
 import PlacesCardGroup from './PlacesCardGroup.svelte';
 
 const { stats } = vi.hoisted(() => ({ stats: { current: undefined as PlaceStats | undefined } }));
-vi.mock('$lib/managers/place-stats.svelte', () => ({ placeStats: { get: () => stats.current } }));
+vi.mock('#lib/managers/place-stats.svelte.ts', () => ({ placeStats: { get: () => stats.current } }));
 
 function renderGroup(city: string, country?: string | null) {
   const props = { places: [assetFactory.build({ id: 'asset-1', exifInfo: { city, country } })] };

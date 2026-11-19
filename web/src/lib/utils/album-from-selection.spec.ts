@@ -1,30 +1,31 @@
+import { sdkMock } from '#lib/gallery/__mocks__/sdk.mock.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { newAlbumFromAssets } from '#lib/utils/album-from-selection.ts';
+import { lastAlbumId } from '#lib/utils/last-album.ts';
+import { timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
 import type { AlbumResponseDto } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
-import { sdkMock } from '$lib/__mocks__/sdk.mock';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
-import { lastAlbumId } from '$lib/utils/last-album';
-import { timelineAssetFactory } from '@test-data/factories/asset-factory';
 
 const mocks = vi.hoisted(() => ({ goto: vi.fn(), handleError: vi.fn() }));
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
-vi.mock('$lib/utils/handle-error', () => ({ handleError: mocks.handleError }));
+vi.mock('#lib/utils/handle-error.ts', () => ({ handleError: mocks.handleError }));
 vi.mock('@immich/ui', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@immich/ui')>()),
   toastManager: { primary: vi.fn(), info: vi.fn(), warning: vi.fn(), danger: vi.fn(), custom: vi.fn() },
 }));
 
-const at = (date: string, city: string | null) => {
+// a photo taken in Phuket on `date`
+const at = (date: string) => {
   const [year, month, day] = date.split('-').map(Number);
   return timelineAssetFactory.build({
     localDateTime: { year, month, day, hour: 12, minute: 0, second: 0, millisecond: 0 },
-    city,
-    country: city ? 'Thailand' : null,
+    city: 'Phuket',
+    country: 'Thailand',
   });
 };
 
-const photos = [at('2023-03-12', 'Phuket'), at('2023-03-15', 'Phuket'), at('2023-03-14', 'Phuket')];
+const photos = [at('2023-03-12'), at('2023-03-15'), at('2023-03-14')];
 
 const made = (assetCount: number) =>
   ({ id: 'new-album', albumName: 'Phuket · Mar 12 – 15, 2023', assetCount }) as AlbumResponseDto;

@@ -9,11 +9,20 @@
 // never out of the Locked Folder, and not while another special album still holds it. Both are undoable (the bar,
 // Ctrl+Z, the toast). Every way into these albums goes through here (the album picker, the album's own Add photos,
 // uploads into it: services/album.service), so a photo is never in one of them and in Photos too.
+import { vaultEdition } from '#lib/gallery/edition.ts';
+import { libraryHas } from '#lib/gallery/libraries/library-context.svelte.ts';
+import type { SpecialAlbumSlug } from '#lib/gallery/special-album-slugs.ts';
+import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+import { eventManager } from '#lib/managers/event-manager.svelte.ts';
+import { undoManager } from '#lib/managers/undo-manager.svelte.ts';
+import { refreshAssets } from '#lib/utils/asset-refresh.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { toastUndoable } from '#lib/utils/undoable.ts';
 import {
-  addAssetsToAlbum,
   AssetOrder,
   AssetVisibility,
   BulkIdErrorReason,
+  addAssetsToAlbum,
   createAlbum,
   deleteBulkAssetMetadata,
   getAllAlbums,
@@ -42,14 +51,6 @@ import {
 } from '@mdi/js';
 import { t, type Translations } from 'svelte-i18n';
 import { get } from 'svelte/store';
-import { vaultEdition } from '$lib/gallery/edition';
-import { libraryHas } from '$lib/gallery/libraries/library-context.svelte';
-import { authManager } from '$lib/managers/auth-manager.svelte';
-import { eventManager } from '$lib/managers/event-manager.svelte';
-import { undoManager } from '$lib/managers/undo-manager.svelte';
-import { refreshAssets } from '$lib/utils/asset-refresh';
-import { handleError } from '$lib/utils/handle-error';
-import { toastUndoable } from '$lib/utils/undoable';
 
 export type From = 'timeline' | 'archive';
 /** A photo as the caller knows it; a missing visibility is read from Gallery. */
@@ -81,8 +82,8 @@ type Config = {
   name: string;
   /** where each photo notes where it came from, in Gallery's per-photo metadata */
   key: string;
-  /** the sidebar's page (/todo): the album, or how to fill it before it exists */
-  slug: string;
+  /** the sidebar's page (/todo): the album, or how to fill it before it exists; one of gallery/special-album-slugs */
+  slug: SpecialAlbumSlug;
   /** moves the selection in, and takes it out inside the album */
   shortcut: string;
   icon: string;
@@ -117,10 +118,10 @@ const succeeded = (results: BulkIdResponseDto[]) => results.filter(({ success })
 const asFrom = (value: unknown): From | undefined => (value === 'timeline' || value === 'archive' ? value : undefined);
 
 /**
- * What moving into a special album changes: a photo on the timeline is archived and notes that it came from Photos.
- * One already archived notes where it came from when it is new to the album: from Photos when another special album
- * took it out of there (that album's note says so), else from Archive. One already in the album keeps its note.
- */
+What moving into a special album changes: a photo on the timeline is archived and notes that it came from Photos.
+One already archived notes where it came from when it is new to the album: from Photos when another special album
+took it out of there (that album's note says so), else from Archive. One already in the album keeps its note.
+*/
 export const planMove = (
   ids: string[],
   visibility: ReadonlyMap<string, string | undefined>,
@@ -142,10 +143,10 @@ export const planMove = (
 };
 
 /**
- * The photos taking them out puts back in Photos: those that came from there and are still archived, unless another
- * special album still holds them (they come back when the last one lets go). A photo that was archived before stays
- * archived, and so does one with no note; one moved to the Locked Folder stays locked.
- */
+The photos taking them out puts back in Photos: those that came from there and are still archived, unless another
+special album still holds them (they come back when the last one lets go). A photo that was archived before stays
+archived, and so does one with no note; one moved to the Locked Folder stays locked.
+*/
 export const planDone = (
   ids: string[],
   visibility: ReadonlyMap<string, string | undefined>,
@@ -159,7 +160,7 @@ export const planDone = (
 export class SpecialAlbumManager {
   readonly name: string;
   readonly key: string;
-  readonly slug: string;
+  readonly slug: SpecialAlbumSlug;
   readonly shortcut: string;
   readonly icon: string;
   readonly activeIcon: string;
@@ -199,12 +200,12 @@ export class SpecialAlbumManager {
   }
 
   /**
-   * Local Omarchy layer: whether whoever is signed in has this album ("Hide Villa and QR, keep To do"): To do is
-   * everyone's; Villa and QR are the owner's own workflows, the server's admin's. A family account is offered neither,
-   * its keys don't move photos there, and an album of its own that happens to bear the name is just an album. A vault's
-   * Gallery (gallery/edition's vault edition) offers none of the three, to anyone ("no need for QR or Villa or those
-   * special albums in the vaults"), and neither does a library whose context leaves them out (gallery/libraries).
-   */
+  Local Omarchy layer: whether whoever is signed in has this album ("Hide Villa and QR, keep To do"): To do is
+  everyone's; Villa and QR are the owner's own workflows, the server's admin's. A family account is offered neither,
+  its keys don't move photos there, and an album of its own that happens to bear the name is just an album. A vault's
+  Gallery (gallery/edition's vault edition) offers none of the three, to anyone ("no need for QR or Villa or those
+  special albums in the vaults"), and neither does a library whose context leaves them out (gallery/libraries).
+  */
   get offered() {
     return (
       !vaultEdition() &&
@@ -297,9 +298,9 @@ export class SpecialAlbumManager {
   }
 
   /**
-   * This album's note on each photo, and where the other special albums holding it say it came from (Photos wins):
-   * one read per photo, its whole metadata.
-   */
+  This album's note on each photo, and where the other special albums holding it say it came from (Photos wins):
+  one read per photo, its whole metadata.
+  */
   async #notes(ids: string[]) {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const mine = new Map<string, From | undefined>();
@@ -326,9 +327,9 @@ export class SpecialAlbumManager {
   }
 
   /**
-   * Moves photos in: into the album, tagged, out of Photos. Quiet (an upload into the album) skips the toast and the
-   * undo. Resolves with what it did, or undefined when nothing moved.
-   */
+  Moves photos in: into the album, tagged, out of Photos. Quiet (an upload into the album) skips the toast and the
+  undo. Resolves with what it did, or undefined when nothing moved.
+  */
   async move(assets: SpecialAsset[], { quiet = false }: { quiet?: boolean } = {}) {
     if (!this.offered) {
       return;
@@ -556,12 +557,12 @@ export const qrManager = new SpecialAlbumManager({
 export const specialAlbums: readonly SpecialAlbumManager[] = [todoManager, villaManager, qrManager];
 
 /** Local Omarchy layer: the special albums whoever is signed in has (`offered`): all three for the owner, To do for a
- * family account. Rows, buttons, menu items and keys come from this; lookups by id go through every one. */
+family account. Rows, buttons, menu items and keys come from this; lookups by id go through every one. */
 export const offeredSpecialAlbums = () => specialAlbums.filter((special) => special.offered);
 
 /** Local Omarchy layer: looks each offered special album up, once per page load (`ready`), for whatever asks first: the
- * user pages' layout, and the sidebar wherever it is drawn (an error page's too, which no user layout holds: without
- * it To do, Villa and QR lost their counts there and the Albums tree listed them as plain albums). */
+user pages' layout, and the sidebar wherever it is drawn (an error page's too, which no user layout holds: without
+it To do, Villa and QR lost their counts there and the Albums tree listed them as plain albums). */
 export const resolveSpecialAlbums = () => {
   if (!authManager.authenticated) {
     return;

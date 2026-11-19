@@ -3,8 +3,8 @@ import { ChunkedSet, DummyValue, GenerateSql } from 'src/decorators.js';
 import { AssetVisibility, SharedSpaceRole } from 'src/enum.js';
 import { DB } from 'src/schema/index.js';
 import { withDefaultVisibility } from 'src/utils/database.js';
-import { setDifference } from 'src/utils/set.js';
 import {
+  sharedWithViewer,
   spaceAlbumAssetExists,
   spaceAssetPathBranches,
   spaceVisibilityGate,
@@ -139,9 +139,9 @@ export class SpaceAssetAccess {
   }
 
   /**
-   * A stack is readable when every photo StackRepository.getById returns for it (live, default visibilities)
-   * is readable through a space, so the stack never hands out a photo the member cannot see.
-   */
+  A stack is readable when every photo StackRepository.getById returns for it (live, default visibilities)
+  is readable through a space, so the stack never hands out a photo the member cannot see.
+  */
   @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID_SET] })
   @ChunkedSet({ paramIndex: 1 })
   async checkSpaceStackAccess(userId: string, stackIds: Set<string>) {
@@ -165,7 +165,7 @@ export class SpaceAssetAccess {
         (readable.has(id) ? allowed : denied).add(stackId);
       }
     }
-    return setDifference(allowed, denied);
+    return allowed.difference(denied);
   }
 
   @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID, DummyValue.UUID_SET] })
@@ -377,11 +377,11 @@ export class GalleryPersonAccess {
   }
 
   /**
-   * Fork (#869 follow-up): read access to a PERSON is granted off any one reachable face, but the person
-   * thumbnail is a crop of one specific photo — the representative face `person.faceAssetId` points at.
-   * Returns the subset whose representative face does NOT sit in the Locked Folder; a person with no
-   * representative face at all has no locked source to leak and stays in the set.
-   */
+  Fork (#869 follow-up): read access to a PERSON is granted off any one reachable face, but the person
+  thumbnail is a crop of one specific photo — the representative face `person.faceAssetId` points at.
+  Returns the subset whose representative face does NOT sit in the Locked Folder; a person with no
+  representative face at all has no locked source to leak and stays in the set.
+  */
   @GenerateSql({ params: [DummyValue.UUID_SET] })
   @ChunkedSet({ paramIndex: 0 })
   async checkUnlockedThumbnailAccess(personIds: Set<string>) {
@@ -508,5 +508,24 @@ export class SharedSpaceAccess {
       .where('shared_space_member.userId', '=', userId)
       .execute()
       .then((rows) => new Set(rows.map((row) => row.spaceId)));
+  }
+
+  /** Tags on an asset shared with the user through a space: the non-owned half of TagRepository.getAll. */
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID_SET] })
+  @ChunkedSet({ paramIndex: 1 })
+  async checkTagAccess(userId: string, tagIds: Set<string>) {
+    if (tagIds.size === 0) {
+      return new Set<string>();
+    }
+
+    return this.db
+      .selectFrom('tag_asset')
+      .innerJoin('asset', 'asset.id', 'tag_asset.assetId')
+      .select('tag_asset.tagId')
+      .distinct()
+      .where('tag_asset.tagId', 'in', [...tagIds])
+      .where((eb) => sharedWithViewer(eb, { scope: { memberUserId: userId }, albumTimelineGate: 'none' }))
+      .execute()
+      .then((rows) => new Set(rows.map((row) => row.tagId)));
   }
 }

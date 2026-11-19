@@ -1,9 +1,9 @@
+import { specialAlbums } from '#lib/managers/special-albums.svelte.ts';
+import { Route } from '#lib/route.ts';
+import { authenticate } from '#lib/utils/auth.ts';
+import { getFormatter } from '#lib/utils/i18n.ts';
 import { getAllAlbums } from '@immich/sdk';
 import { error, redirect } from '@sveltejs/kit';
-import { specialAlbums } from '$lib/managers/special-albums.svelte';
-import { Route } from '$lib/route';
-import { authenticate } from '$lib/utils/auth';
-import { getFormatter } from '$lib/utils/i18n';
 import type { PageLoad } from './$types';
 
 // Local Omarchy layer: a special album's sidebar row (/todo, /villa: managers/special-albums) opens the album, or, before

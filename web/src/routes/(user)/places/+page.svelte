@@ -1,17 +1,16 @@
 <script lang="ts">
-  import UserPageLayout from '$lib/components/layouts/UserPageLayout.svelte';
-  import LoadingSpinner from '$lib/components/shared-components/LoadingSpinner.svelte';
-  import { placeFaces } from '$lib/managers/place-faces.svelte';
-  import { placeStats } from '$lib/managers/place-stats.svelte';
-  import PlacesControls from './PlacesControls.svelte';
-  import type { PageData } from './$types';
+  import UserPageLayout from '#lib/components/layouts/UserPageLayout.svelte';
+  import LoadingSpinner from '#lib/components/shared-components/LoadingSpinner.svelte';
+  import { placeFaces } from '#lib/managers/place-faces.svelte.ts';
+  import { placeStats } from '#lib/managers/place-stats.svelte.ts';
+  import { locale, placesViewSettings } from '#lib/stores/preferences.store.ts';
+  import { rankPlaces } from '#lib/utils/place-stats.ts';
   import { type AssetResponseDto } from '@immich/sdk';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
-  import { locale } from '$lib/stores/preferences.store';
-  import { rankPlaces } from '$lib/utils/place-stats';
+  import type { PageData } from './$types';
+  import PlacesControls from './PlacesControls.svelte';
   import Places from './PlacesList.svelte';
-  import { placesViewSettings } from '$lib/stores/preferences.store';
 
   interface Props {
     data: PageData;

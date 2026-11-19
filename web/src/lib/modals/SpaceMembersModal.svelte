@@ -1,16 +1,16 @@
 <script lang="ts">
-  import UserAvatar from '$lib/components/shared-components/UserAvatar.svelte';
-  import RoleBadge from '$lib/components/spaces/role-badge.svelte';
-  import SpaceAddMemberModal from '$lib/modals/SpaceAddMemberModal.svelte';
-  import { handleError } from '$lib/utils/handle-error';
+  import UserAvatar from '#lib/components/shared-components/UserAvatar.svelte';
+  import RoleBadge from '#lib/components/spaces/role-badge.svelte';
+  import { showAddSpaceMembersModal } from '#lib/gallery/spaces/add-space-members.ts';
+  import { handleError } from '#lib/utils/handle-error.ts';
   import {
-    removeMember,
     SharedSpaceRole,
-    updateMember,
     UserAvatarColor,
+    removeMember,
+    updateMember,
     type SharedSpaceMemberResponseDto,
   } from '@immich/sdk';
-  import { BasicModal, Button, Field, modalManager, Select, Text, type SelectOption } from '@immich/ui';
+  import { BasicModal, Button, Field, Select, Text, modalManager, type SelectOption } from '@immich/ui';
   import { mdiAccountPlus } from '@mdi/js';
   import { t } from 'svelte-i18n';
 
@@ -61,12 +61,12 @@
   };
 
   const handleAddMember = async () => {
-    const added = await modalManager.show(SpaceAddMemberModal, {
+    const added = await showAddSpaceMembersModal(
       spaceId,
-      existingMemberIds: members.map((m) => m.userId),
-    });
+      members.map((m) => m.userId),
+    );
 
-    if (added && added.length > 0) {
+    if (added.length > 0) {
       members = [...members, ...added];
     }
   };

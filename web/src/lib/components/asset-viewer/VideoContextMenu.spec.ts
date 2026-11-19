@@ -1,8 +1,8 @@
+import { canShareVideo } from '#lib/utils/share-video.ts';
 import { AssetTypeEnum, AssetVisibility, type AssetResponseDto } from '@immich/sdk';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { addMessages, locale } from 'svelte-i18n';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { canShareVideo } from '$lib/utils/share-video';
 import VideoContextMenu from './VideoContextMenu.test-wrapper.svelte';
 
 const state = vi.hoisted(() => ({
@@ -12,7 +12,7 @@ const state = vi.hoisted(() => ({
   start: vi.fn(),
 }));
 
-vi.mock('$lib/managers/auth-manager.svelte', () => ({
+vi.mock('#lib/managers/auth-manager.svelte.ts', () => ({
   authManager: {
     get authenticated() {
       return state.authenticated;
@@ -25,9 +25,9 @@ vi.mock('$lib/managers/auth-manager.svelte', () => ({
     },
   },
 }));
-vi.mock('$lib/utils/curator', () => ({ curatorIsMine: () => state.authenticated && state.isAdmin }));
-vi.mock('$lib/managers/share-video-manager.svelte', () => ({ shareVideos: { start: state.start } }));
-vi.mock('$lib/managers/language-manager.svelte', () => ({ languageManager: { rtl: false } }));
+vi.mock('#lib/utils/curator.ts', () => ({ curatorIsMine: () => state.authenticated && state.isAdmin }));
+vi.mock('#lib/managers/share-video-manager.svelte.ts', () => ({ shareVideos: { start: state.start } }));
+vi.mock('#lib/managers/language-manager.svelte.ts', () => ({ languageManager: { rtl: false } }));
 
 const asset = {
   id: 'video-1',

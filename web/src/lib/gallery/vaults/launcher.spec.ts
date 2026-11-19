@@ -1,4 +1,4 @@
-import { canLaunchVaultChooser, VAULT_CHOOSER_URI } from './launcher';
+import { VAULT_CHOOSER_URI, canLaunchVaultChooser } from './launcher';
 
 const desktop = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0.0.0';
 

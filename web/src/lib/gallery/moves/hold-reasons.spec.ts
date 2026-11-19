@@ -1,7 +1,7 @@
+import { FORK_LOCALES } from '#lib/i18n/fork-locales.ts';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { FORK_LOCALES } from '$lib/i18n/fork-locales';
-import { HOLD_REASONS, holdKey, holdWords, isForceable, isHoldReason, OTHER_HOLD } from './hold-reasons';
+import { HOLD_REASONS, OTHER_HOLD, holdKey, holdWords, isForceable, isHoldReason } from './hold-reasons';
 import { ERRORS, FAILURES, PAUSES, PHASES } from './move-words';
 
 // Local Omarchy layer: why a move leaves photos where they are (gallery/moves). Every reason the pages show has its

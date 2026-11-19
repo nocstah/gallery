@@ -1,3 +1,7 @@
+import { reactivePageMock } from '#lib/gallery/__mocks__/reactive-page.mock.svelte.ts';
+import PersonSuggestionReviewModal from '#lib/gallery/people/PersonSuggestionReviewModal.svelte';
+import { faceSuggestionContextExpanded } from '#lib/gallery/people/face-suggestion-context.store.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
 import type { PersonFaceSuggestionPageResponseDto, PersonResponseDto } from '@immich/sdk';
 import { toastManager } from '@immich/ui';
 import '@testing-library/jest-dom';
@@ -6,10 +10,6 @@ import userEvent from '@testing-library/user-event';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { beforeNavigate } from '$app/navigation';
-import PersonSuggestionReviewModal from '$lib/gallery/people/PersonSuggestionReviewModal.svelte';
-import { faceSuggestionContextExpanded } from '$lib/gallery/people/face-suggestion-context.store';
-import { handleError } from '$lib/utils/handle-error';
-import { reactivePageMock } from '@test-data/mocks/reactive-page.mock.svelte';
 
 vi.mock('svelte-i18n', () => ({
   t: { subscribe: (run: (f: (k: string) => string) => void) => (run((k) => k), () => {}) },
@@ -18,16 +18,16 @@ vi.mock('svelte-i18n', () => ({
 
 vi.mock('$app/navigation', () => ({ beforeNavigate: vi.fn() }));
 vi.mock('$app/state', async () => {
-  const { reactivePageMock } = await import('@test-data/mocks/reactive-page.mock.svelte');
+  const { reactivePageMock } = await import('#lib/gallery/__mocks__/reactive-page.mock.svelte.ts');
   return { page: reactivePageMock };
 });
-vi.mock('$lib/managers/AssetCacheManager.svelte', () => ({ assetCacheManager: { getAsset: vi.fn() } }));
+vi.mock('#lib/managers/AssetCacheManager.svelte.ts', () => ({ assetCacheManager: { getAsset: vi.fn() } }));
 vi.mock('@immich/sdk', async (importOriginal: () => Promise<typeof import('@immich/sdk')>) => ({
   ...(await importOriginal()),
   getAllAlbums: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('$lib/utils/handle-error', () => ({ handleError: vi.fn() }));
+vi.mock('#lib/utils/handle-error.ts', () => ({ handleError: vi.fn() }));
 
 vi.mock('@immich/ui', async (importOriginal: () => Promise<typeof import('@immich/ui')>) => {
   const actual = await importOriginal();
@@ -453,10 +453,10 @@ describe('PersonSuggestionReviewModal', () => {
     await waitFor(() => screen.getByTestId('suggestion-same-btn'));
     const cancel = vi.fn();
     const callback = vi.mocked(beforeNavigate).mock.calls.at(-1)![0];
-    callback({ type: 'leave', cancel, from: null, to: null, willUnload: true, complete: Promise.resolve() });
+    callback({ type: 'leave', cancel, from: null, to: null, willUnload: true, complete: Promise.resolve() } as never);
     expect(cancel).not.toHaveBeenCalled();
     await userEvent.keyboard('{Enter}');
-    callback({ type: 'leave', cancel, from: null, to: null, willUnload: true, complete: Promise.resolve() });
+    callback({ type: 'leave', cancel, from: null, to: null, willUnload: true, complete: Promise.resolve() } as never);
     expect(cancel).toHaveBeenCalledOnce();
   });
 

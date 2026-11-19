@@ -2,10 +2,10 @@
 // title (layouts/UserPageLayout: Favorites, an album, a person, Archive, a Space's photos...), as Photos keeps its own
 // (TimelineWorkspaces). A timeline shows itself here while it shows a plain grid of days; the last one shown is the one
 // the bar follows, and when it goes the one before it is followed again.
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+import type { TimelineGrouping, ViewportTopMonth } from '#lib/managers/timeline-manager/types.ts';
+import type { TimelineYearMonth } from '#lib/utils/timeline-util.ts';
 import { untrack } from 'svelte';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import type { TimelineGrouping, ViewportTopMonth } from '$lib/managers/timeline-manager/types';
-import type { TimelineYearMonth } from '$lib/utils/timeline-util';
 
 export type TimelineHeadingSource = {
   readonly timelineManager: TimelineManager;
@@ -36,9 +36,9 @@ class TimelineHeading {
   }
 
   /**
-   * The bar follows `source` until the returned function is called. Called from a timeline's effect, so the list is
-   * read untracked: an effect that read what it writes here would run itself again without end.
-   */
+  The bar follows `source` until the returned function is called. Called from a timeline's effect, so the list is
+  read untracked: an effect that read what it writes here would run itself again without end.
+  */
   show(source: TimelineHeadingSource) {
     this.#sources = [...untrack(() => this.#sources), source];
     return () => {

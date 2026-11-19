@@ -1,3 +1,4 @@
+import { GalleryMachineLearningRepository } from 'src/gallery/repositories/gallery-machine-learning.repository.js';
 import { LoggingRepository } from 'src/repositories/logging.repository.js';
 import { MachineLearningRepository, ModelTask, ModelType } from 'src/repositories/machine-learning.repository.js';
 import { automock } from 'test/utils.js';
@@ -17,7 +18,7 @@ vi.stubGlobal('fetch', mockFetch);
 const clipConfig = { modelName: 'ViT-B-32__openai', enabled: true, maxDistance: 0 };
 
 describe(MachineLearningRepository.name, () => {
-  let sut: MachineLearningRepository;
+  let sut: GalleryMachineLearningRepository;
   let originalCloseConnections: string | undefined;
 
   const mlUrl = 'http://ml-server:3003';
@@ -35,6 +36,18 @@ describe(MachineLearningRepository.name, () => {
       maxDistance: 0.5,
       minFaces: 1,
       suggestions: { enabled: false, maxDistance: 0.7 },
+      video: {
+        enabled: false,
+        sampleInterval: 2,
+        sceneDetection: true,
+        maxFrames: 1800,
+        tiledDetection: false,
+        maxDistance: 0.5,
+        minFaceSize: 20,
+        minSightings: 1,
+        createPeople: true,
+        minRecognitionScore: 0.75,
+      },
     },
     ocr: {
       enabled: false,
@@ -47,6 +60,14 @@ describe(MachineLearningRepository.name, () => {
       enabled: false,
       modelName: 'rfdetr-nano',
       minScore: 0.6,
+      video: {
+        enabled: false,
+        sampleInterval: 2,
+        sceneDetection: true,
+        maxFrames: 900,
+        maxDistance: 0.55,
+        minSightings: 2,
+      },
     },
     petRecognition: {
       enabled: false,
@@ -71,7 +92,7 @@ describe(MachineLearningRepository.name, () => {
   };
 
   const createSut = () =>
-    new MachineLearningRepository(
+    new GalleryMachineLearningRepository(
       // eslint-disable-next-line no-sparse-arrays
       automock(LoggingRepository, { args: [, { getEnv: () => ({}) }], strict: false }),
     );

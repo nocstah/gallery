@@ -1,5 +1,5 @@
+import VideoThumbnail from '#lib/components/assets/thumbnail/VideoThumbnail.svelte';
 import { render } from '@testing-library/svelte';
-import VideoThumbnail from '$lib/components/assets/thumbnail/VideoThumbnail.svelte';
 
 // Local Omarchy layer: a video's time on its tile is written as every duration is (utils/duration): m:ss under an hour,
 // h:mm:ss from one. Upstream wrote "0:18" under a minute and "01:16" under an hour, so two tiles side by side disagreed.

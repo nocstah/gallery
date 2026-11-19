@@ -1,6 +1,6 @@
-import type { SelectionCapabilities } from '$lib/managers/selection-capabilities';
-import type { TimelineManager } from '$lib/managers/timeline-manager/timeline-manager.svelte';
-import { assetFactory, timelineAssetFactory } from '@test-data/factories/asset-factory';
+import type { SelectionCapabilities } from '#lib/managers/selection-capabilities.ts';
+import type { TimelineManager } from '#lib/managers/timeline-manager/timeline-manager.svelte.ts';
+import { assetFactory, timelineAssetFactory } from '#test/kioku/factories/asset-factory.ts';
 import { findTimelinePhoto, offeredActions, photoMenuOffers, spaceOffer, type PhotoMenuAction } from './photo-menu';
 
 // Local Omarchy layer: what each page's right-click menu offers (gallery/photo-menu), as its selection bar does.

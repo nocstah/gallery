@@ -1,7 +1,7 @@
+import { PeopleSortBy, peopleViewSettings } from '#lib/gallery/stores/preferences.store.ts';
+import { comparePeople, type SortablePerson } from '#lib/utils/people-utils.ts';
+import { normalizeSearchString } from '#lib/utils/string-utils.ts';
 import { get } from 'svelte/store';
-import { PeopleSortBy, peopleViewSettings } from '$lib/stores/preferences.store';
-import { comparePeople, type SortablePerson } from '$lib/utils/people-utils';
-import { normalizeSearchString } from '$lib/utils/string-utils';
 
 // Local Omarchy layer: one people ranking (DESIGN.md, People; the owner's "one people ranking", 2026-10-23). Every
 // list that offers people ranks them as the People page does, with its one comparator (utils/people-utils'
@@ -28,9 +28,9 @@ export const sortInPeopleOrder = <T extends SortablePerson>(people: T[], sortBy 
   [...people].sort((a, b) => comparePeople(a, b, sortBy));
 
 /**
- * How well a name answers what was typed, best first: the whole name (0), its start (1), the start of one of its words
- * (2), anywhere in it (3), or not as typed at all (4: the server's fuzzy match). Case, accents and spaces aside.
- */
+How well a name answers what was typed, best first: the whole name (0), its start (1), the start of one of its words
+(2), anywhere in it (3), or not as typed at all (4: the server's fuzzy match). Case, accents and spaces aside.
+*/
 export const nameMatch = (name: string | null | undefined, query: string): number => {
   const typed = normalizeSearchString(query);
   const words = normalizeSearchString(name ?? '');
@@ -50,7 +50,7 @@ export const nameMatch = (name: string | null | undefined, query: string): numbe
 };
 
 /** `items` with the best matches to what was typed first, each match's order kept (a list already in the People
- * page's order stays in it within each). */
+page's order stays in it within each). */
 export const bestMatchFirst = <T extends { name?: string | null }>(items: T[], query: string): T[] =>
   items
     .map((item, index) => ({ item, index, match: nameMatch(item.name, query) }))
@@ -64,9 +64,9 @@ export const comparePeopleMatches =
     nameMatch(a.name, query) - nameMatch(b.name, query) || comparePeople(a, b, sortBy);
 
 /**
- * The people a picker offers for what was typed: everyone while nothing is, in the People page's order, else those
- * whose name holds it, the best match first, then that order. Case, accents and spaces aside.
- */
+The people a picker offers for what was typed: everyone while nothing is, in the People page's order, else those
+whose name holds it, the best match first, then that order. Case, accents and spaces aside.
+*/
 export const pickPeople = <T extends SortablePerson>(people: T[], query: string, sortBy = peopleSortBy()): T[] => {
   const typed = normalizeSearchString(query);
   if (!typed) {
@@ -104,9 +104,9 @@ export const peoplePositions = (people: RankedPerson[], sortBy = peopleSortBy())
 };
 
 /**
- * A list that carries people's ids and names only (the filter rail's People, an album's faces) in the People page's
- * order, by where each stands among `positions`. Anyone it does not know follows, in the order they came.
- */
+A list that carries people's ids and names only (the filter rail's People, an album's faces) in the People page's
+order, by where each stands among `positions`. Anyone it does not know follows, in the order they came.
+*/
 export const inPeopleOrder = <T extends { id: string }>(items: T[], positions: Map<string, number>): T[] =>
   items
     .map((item, index) => ({ item, index, at: positions.get(item.id) ?? Infinity }))

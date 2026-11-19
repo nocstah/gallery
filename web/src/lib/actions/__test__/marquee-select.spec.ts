@@ -1,14 +1,14 @@
-import { marqueeSelect } from '$lib/actions/marquee-select';
-import type { AssetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
-import { dropSpring, dropTarget, sidebarDrop, SPRING_MS } from '$lib/managers/sidebar-drop.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
+import { marqueeSelect } from '#lib/actions/marquee-select.ts';
+import type { AssetMultiSelectManager } from '#lib/managers/asset-multi-select-manager.svelte.ts';
+import { SPRING_MS, dropSpring, dropTarget, sidebarDrop } from '#lib/managers/sidebar-drop.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
 
 // Local Omarchy layer: hold a photo, drag it onto another, let go: the two are stacked, the one dropped on as cover.
 // Or carry it to the sidebar, from any grid: into an album there. happy-dom has no layout, so the test says what is
 // under the pointer.
 const mocks = vi.hoisted(() => ({ handleStack: vi.fn(), dropOn: vi.fn() }));
-vi.mock('$lib/services/stack.service', () => ({ handleStack: mocks.handleStack }));
-vi.mock('$lib/services/sidebar-drop.service', () => ({ dropOn: mocks.dropOn }));
+vi.mock('#lib/services/stack.service.ts', () => ({ handleStack: mocks.handleStack }));
+vi.mock('#lib/services/sidebar-drop.service.ts', () => ({ dropOn: mocks.dropOn }));
 
 const tile = (grid: HTMLElement, id: string) => {
   const node = document.createElement('div');

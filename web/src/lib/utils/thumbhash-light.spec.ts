@@ -1,5 +1,5 @@
-import { DIM_BELOW, isDim, thumbhashLight } from '$lib/utils/thumbhash-light';
-import { BRIGHT, DIM, flatThumbhash } from '@test-data/thumbhash';
+import { DIM_BELOW, isDim, thumbhashLight } from '#lib/utils/thumbhash-light.ts';
+import { BRIGHT, DIM, flatThumbhash } from '#test/kioku/thumbhash.ts';
 
 // Local Omarchy layer: a picture's light from its thumbhash alone, no image downloaded (utils/thumbhash-light)
 describe('thumbhashLight', () => {

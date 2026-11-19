@@ -4,23 +4,23 @@
   // cover where their icon sits (so pinned albums tell apart in the rail too); the album on screen inverts it, and its
   // row in the Albums tree then stays dark (components/sidebar/albums-tree). Photos carried to a row go into the album
   // (managers/sidebar-drop), and its right-click unpins it. Nothing shows until an album is pinned.
-  import { page } from '$app/state';
-  import OnEvents from '$lib/components/OnEvents.svelte';
-  import SidebarNavGroup from '$lib/components/sidebar/sidebar-nav-group.svelte';
-  import { albumFolders } from '$lib/managers/album-folders.svelte';
-  import { authManager } from '$lib/managers/auth-manager.svelte';
-  import { dropTarget } from '$lib/managers/sidebar-drop.svelte';
-  import { Route } from '$lib/route';
-  import { pinnedAlbums } from '$lib/stores/pinned-albums.svelte';
-  import { sidebarModeStore } from '$lib/stores/sidebar-mode.svelte';
-  import { getAssetMediaUrl } from '$lib/utils';
-  import { isAlbumEditor } from '$lib/utils/album-utils';
-  import { showPinMenu } from '$lib/utils/pin-menu';
+  import OnEvents from '#lib/components/OnEvents.svelte';
+  import SidebarNavGroup from '#lib/components/sidebar/sidebar-nav-group.svelte';
+  import { albumFolders } from '#lib/managers/album-folders.svelte.ts';
+  import { authManager } from '#lib/managers/auth-manager.svelte.ts';
+  import { dropTarget } from '#lib/managers/sidebar-drop.svelte.ts';
+  import { Route } from '#lib/route.ts';
+  import { pinnedAlbums } from '#lib/stores/pinned-albums.svelte.ts';
+  import { sidebarModeStore } from '#lib/stores/sidebar-mode.svelte.ts';
+  import { getAssetMediaUrl } from '#lib/utils.ts';
+  import { isAlbumEditor } from '#lib/utils/album-utils.ts';
+  import { showPinMenu } from '#lib/utils/pin-menu.ts';
   import type { AlbumResponseDto } from '@immich/sdk';
   import { Icon } from '@immich/ui';
   import { mdiImageAlbum } from '@mdi/js';
   import { untrack } from 'svelte';
   import { t } from 'svelte-i18n';
+  import { page } from '$app/state';
 
   const collapsed = $derived(sidebarModeStore.layout === 'rail' && !sidebarModeStore.railExpanded);
   const me = $derived(authManager.authenticated ? authManager.user.id : undefined);
@@ -46,8 +46,8 @@
   <SidebarNavGroup title={$t('sidebar_pinned')} />
   <div data-testid="sidebar-pinned">
     {#each pinnedAlbums.shown as album (album.id)}
-      {@const active = page.url.pathname.startsWith(Route.viewAlbum({ id: album.id }))}
-      {@const name = album.albumName || $t('unnamed_album')}
+      {const active = $derived(page.url.pathname.startsWith(Route.viewAlbum({ id: album.id })))}
+      {const name = $derived(album.albumName || $t('unnamed_album'))}
       <!-- the right-click menu is a shortcut: the album's own ⋮ menus carry the same item for the keyboard -->
       <a
         href={Route.viewAlbum({ id: album.id })}

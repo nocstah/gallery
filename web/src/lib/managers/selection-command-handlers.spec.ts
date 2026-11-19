@@ -1,3 +1,13 @@
+import { MAX_SPACE_ASSETS_PER_REQUEST } from '#lib/constants.ts';
+import { loadLibraryContext, resetLibraryContext } from '#lib/gallery/libraries/library-context.svelte.ts';
+import { featureFlagsManager } from '#lib/managers/feature-flags-manager.svelte.ts';
+import type { TimelineAsset } from '#lib/managers/timeline-manager/types.ts';
+import AssetAddToCollectionModal from '#lib/modals/AssetAddToCollectionModal.svelte';
+import AssetDeleteConfirmModal from '#lib/modals/AssetDeleteConfirmModal.svelte';
+import { showDeleteModal } from '#lib/stores/preferences.store.ts';
+import { newAlbumFromAssets } from '#lib/utils/album-from-selection.ts';
+import { handleError } from '#lib/utils/handle-error.ts';
+import { libraryContextFile, secondLibrary, serving } from '#test/kioku/factories/library-context-factory.ts';
 import {
   AssetVisibility,
   deleteAssets as deleteBulk,
@@ -9,16 +19,6 @@ import { modalManager, toastManager } from '@immich/ui';
 import { addMessages, locale } from 'svelte-i18n';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAX_SPACE_ASSETS_PER_REQUEST } from '$lib/constants';
-import { loadLibraryContext, resetLibraryContext } from '$lib/gallery/libraries/library-context.svelte';
-import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
-import type { TimelineAsset } from '$lib/managers/timeline-manager/types';
-import AssetAddToCollectionModal from '$lib/modals/AssetAddToCollectionModal.svelte';
-import AssetDeleteConfirmModal from '$lib/modals/AssetDeleteConfirmModal.svelte';
-import { showDeleteModal } from '$lib/stores/preferences.store';
-import { newAlbumFromAssets } from '$lib/utils/album-from-selection';
-import * as handleErrorModule from '$lib/utils/handle-error';
-import { libraryContextFile, secondLibrary, serving } from '@test-data/factories/library-context-factory';
 import type { CommandContext, SelectionCommandContext } from './command-context-manager.svelte';
 import {
   canAddSelectedToAlbum,
@@ -55,9 +55,11 @@ vi.mock('@immich/sdk', async (orig) => ({
 }));
 
 // Local Omarchy layer: N's album (utils/album-from-selection has its own spec)
-vi.mock('$lib/utils/album-from-selection', () => ({ newAlbumFromAssets: vi.fn() }));
+vi.mock('#lib/utils/album-from-selection.ts', () => ({ newAlbumFromAssets: vi.fn() }));
 
-vi.mock('$lib/managers/feature-flags-manager.svelte', () => ({
+vi.mock(import('#lib/utils/handle-error.ts'), { spy: true });
+
+vi.mock('#lib/managers/feature-flags-manager.svelte.js', () => ({
   featureFlagsManager: { value: { trash: true } },
 }));
 
@@ -133,7 +135,7 @@ const makeWritableSpaceContext = (): NonNullable<CommandContext['space']> => ({
   members: [],
 });
 
-let handleErrorSpy: ReturnType<typeof vi.spyOn>;
+const handleErrorSpy = vi.mocked(handleError);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -145,7 +147,7 @@ beforeEach(() => {
   featureFlagsManager.value.trash = true;
   showDeleteModal.set(false);
   expect(get(showDeleteModal)).toBe(false);
-  handleErrorSpy = vi.spyOn(handleErrorModule, 'handleError').mockImplementation(() => {});
+  handleErrorSpy.mockImplementation(() => {});
 });
 
 afterEach(() => {
