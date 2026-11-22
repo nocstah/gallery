@@ -35,13 +35,12 @@ A second run changes nothing.
   and the shared memory player's tab (`Kioku · Memory`, then `<memory> · Kioku`).
 - **Help › About**, the owner's section beside the projects' links, says "Kioku is built on Noodle Gallery and
   Immich" (`about_credit`, in the ten maintained languages): the AGPL credit stays in front of the owner.
-- **The icons, logos and link preview**: the mark, one sakura petal in `#bf5b74` (the bar's one colour), and where
-  the name is written the word kioku with the petal as the dot of its i, from `assets/` (below). The open-in-app banner keeps
-  the phone app's own icon (`noodle-app-icon-180.png`, from Noodle's iOS launcher icon), since it offers the phone app.
-- **The loader lays the petal down** in one stroke, so it no longer spins as well:
-  `LoadingSpinner` loses its `animate-spin` and the boot screen its `loadspin`. The login card shows the still mark
-  rather than the loader, which would lay the petal down again every few seconds there. A `GALLERY_BRAND=noodle` build keeps
-  Noodle's spinning mark, and the source keeps the spin its specs check.
+- **The icons, logos and link preview**: the mark, Immich's pinwheel in its own five colours (the owner's choice,
+  2026-11-23, over the sakura petal that came before it), and where the name is written the pinwheel and the word kioku,
+  from `assets/` (below). The open-in-app banner keeps the phone app's own icon (`noodle-app-icon-180.png`, from Noodle's
+  iOS launcher icon), since it offers the phone app.
+- **The loader is the still pinwheel**, which `LoadingSpinner` and the boot screen turn as upstream's do. The login card
+  shows the still mark rather than the turning loader.
 
 ## What stays Noodle Gallery or Immich, and why
 
@@ -57,8 +56,9 @@ A second run changes nothing.
   Noodle Gallery's.
 - **Support and purchase** (`keep.purchase`) and **credits** (`keep.credits`: the project's documentation and
   resources, the About credit), and `security.txt`, which sends security reports to Noodle.
-- **@immich/ui's own logo**, which only a modal given `icon={true}` draws, and none is. It lives in the image's
-  installed packages, out of a source rewrite's reach.
+- **@immich/ui's own logo**, which every modal draws in its header unless given `icon={false}`: Immich's pinwheel, the
+  same as Kioku's mark, under its own alt text ("Immich logo"). It lives in the image's installed packages, out of a
+  source rewrite's reach.
 - **Languages beyond the ten maintained** (en, de, fr, it, nl, pl, es, ru, zh_Hans, zh_Hant) get the name swapped as
   a word; a case ending or an article glued to it (Hungarian, Turkish, Catalan) is as `apply-branding.sh` left it.
 
@@ -123,18 +123,18 @@ beats the resized one. `favicon.ico` ships as drawn, or is assembled from the 16
 
 | Source                                     | Becomes                                                                      |
 | ------------------------------------------ | ---------------------------------------------------------------------------- |
-| `favicon.png` (256 px, an opaque paper tile) | `favicon.png`, `favicon-{256,144,96,48,32,24,16}.png`                      |
+| `favicon.png` (256 px, a clear ground)     | `favicon.png`, `favicon-{256,144,96,48,32,24,16}.png`                        |
 | `favicon-{48,32,24,16}.png` (optional)     | the small sizes, drawn for their pixels; 24 px is new with Kioku             |
 | `favicon.ico` (optional)                   | `favicon.ico`                                                                |
 | `app-icon.png` (opaque, 1024 px, maskable) | `manifest-icon-{512,192}.maskable.png`, `apple-icon-180.png`                 |
 | `apple-icon-180.png` (optional)            | `apple-icon-180.png`                                                         |
 | `feature-panel.png` (1200 × 630)           | the link preview of a shared link without a photo of its own                 |
-| `logo-mark.svg`, `logo-mark-dark.svg`      | `gallery-logo-mark{,-dark}.svg`: the petal, still and pink on both faces (the login card and its backdrop, the icon-sized logos) |
-| `loader.svg`, `loader-dark.svg`            | `gallery-loader{,-dark}.svg`: the petal laid down in one stroke while a page loads, and on the boot screen |
-| `logo-inline-{light,dark}.svg`             | `gallery-logo-inline-{light,dark}.svg`: the word kioku, the petal the dot of its i (a shared album's and link's page, the admin bar) |
-| `mark-ink.svg`, `mark-colour.svg` (optional) | `gallery-logo-mark-{ink,colour}.svg`: the bar's mark in two layers, the ink a mask in the theme's ink (the whole of `logo-mark.svg` unless drawn), the colour drawn over it as it is (none unless drawn). Kioku's ink is empty and its colour the petal |
-| `inline-ink.svg`, `inline-colour.svg` (optional) | `gallery-logo-inline-{ink,colour}.svg`: the bar's wordmark in the same two layers (the ink from `logo-inline-light.svg` unless drawn): kioku undotted in ink, the petal its dot |
-| `logo-stacked.svg`, `logo-stacked-dark.svg` | `gallery-logo-stacked{,-dark}.svg`: the word in the stacked lockup's box     |
+| `logo-mark.svg`, `logo-mark-dark.svg`      | `gallery-logo-mark{,-dark}.svg`: the pinwheel, still and alike on both faces (the login card and its backdrop, the icon-sized logos) |
+| `loader.svg`, `loader-dark.svg`            | `gallery-loader{,-dark}.svg`: the pinwheel, which the app turns while a page loads, and on the boot screen |
+| `logo-inline-{light,dark}.svg`             | `gallery-logo-inline-{light,dark}.svg`: the pinwheel and the word kioku (a shared album's and link's page, the admin bar) |
+| `mark-ink.svg`, `mark-colour.svg` (optional) | `gallery-logo-mark-{ink,colour}.svg`: the bar's mark in two layers, the ink a mask in the theme's ink (the whole of `logo-mark.svg` unless drawn), the colour drawn over it as it is (none unless drawn). Kioku's ink is empty and its colour the pinwheel |
+| `inline-ink.svg`, `inline-colour.svg` (optional) | `gallery-logo-inline-{ink,colour}.svg`: the bar's wordmark in the same two layers (the ink from `logo-inline-light.svg` unless drawn): the word in ink, the pinwheel before it in its colours |
+| `logo-stacked.svg`, `logo-stacked-dark.svg` | `gallery-logo-stacked{,-dark}.svg`: the pinwheel over the word in the stacked lockup's box |
 
 ## On the desktop, by hand
 

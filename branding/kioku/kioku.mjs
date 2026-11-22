@@ -776,10 +776,11 @@ const verify = (target) => {
     (!titleBefore || player.includes(titleBefore)) && player.includes(titleAfter),
     `«${brand.memory_player.memory_title}»`,
   );
-  // The loader draws its mark itself, so nothing spins it too, and the login card shows the still mark; a dark boot
-  // screen shows the loader drawn for a dark ground; a 24 px favicon is listed once one ships.
+  // The loader is the still mark, which the app turns as upstream's does (the boot screen, LoadingSpinner), and the
+  // login card shows it still; a dark boot screen shows the loader drawn for a dark ground; a 24 px favicon is listed
+  // once one ships.
   const boot = read(copyMode ? 'web/src/app.html' : 'web/index.html');
-  expect('the boot screen: the loader not spun', !boot.includes('loadspin'), 'no loadspin');
+  expect('the boot screen: the loader turns', boot.includes('loadspin'), 'loadspin');
   expect(
     'the boot screen: the loader for a dark ground',
     /<picture>\s*<source srcset="\/gallery-loader-dark\.svg" media="\(prefers-color-scheme: dark\)"/.test(boot),
@@ -789,9 +790,9 @@ const verify = (target) => {
     ? [read('web/src/lib/components/shared-components/LoadingSpinner.svelte')]
     : codes.filter((code) => code.includes('gallery-loader'));
   expect(
-    'the loader: not spun',
-    loaders.length > 0 && loaders.every((code) => !code.includes('animate-spin')),
-    `no animate-spin in the ${loaders.length} ${copyMode ? 'LoadingSpinner source' : 'scripts drawing gallery-loader'}`,
+    'the loader: turns',
+    loaders.some((code) => code.includes('animate-spin')),
+    `animate-spin in ${copyMode ? 'the LoadingSpinner source' : `one of the ${loaders.length} scripts drawing gallery-loader`}`,
   );
   const cards = copyMode
     ? [read('web/src/lib/components/layouts/AuthPageLayout.svelte')]

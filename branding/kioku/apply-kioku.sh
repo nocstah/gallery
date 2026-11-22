@@ -152,34 +152,9 @@ rule web/src/lib/modals/HelpAndFeedbackModal.svelte 1 <<'RULE'
           <p class="ws-sheet-note" data-testid="help-credit">{$t('@CREDIT_KEY@')}</p>
 RULE
 
-echo "--- The loader and the login card ---"
-# Kioku's loader lays its mark down in one stroke, then lets it go, so it no longer also spins: not in
-# LoadingSpinner, not on the boot screen. Noodle's spinning mark keeps its spin in a GALLERY_BRAND=noodle build, and
-# the source keeps it for its specs.
-rule web/src/lib/components/shared-components/LoadingSpinner.svelte 1 <<'RULE'
-class={['animate-spin', sizeClasses[size], className]
-=>
-class={[sizeClasses[size], className]
-RULE
-rule web/src/app.html 1 <<'RULE'
-@keyframes loadspin {
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-
-      #stencil {
-=>
-#stencil {
-RULE
-rule web/src/app.html 1 <<'RULE'
-animation:
-          0s linear 0.3s forwards delayedVisibility,
-          loadspin 8s linear infinite;
-=>
-animation: 0s linear 0.3s forwards delayedVisibility;
-RULE
-# The login card shows the still mark rather than the loader, which would draw it again every few seconds there
+echo "--- The login card ---"
+# Kioku's loader is its mark, the pinwheel, still: LoadingSpinner and the boot screen turn it, as upstream's do, so
+# nothing here touches them. The login card shows the still mark rather than the turning loader
 rule web/src/lib/components/layouts/AuthPageLayout.svelte 1 <<'RULE'
 <Logo variant="icon" size="giant" transparent />
 =>
@@ -277,7 +252,7 @@ if [[ ! -f $assets/favicon.ico && -n $favicon_drawn ]]; then
   echo "  favicon.ico <- the ${sizes% } px PNGs"
 fi
 # Upstream's app.html links an SVG tab icon, Noodle's own mark, beside favicon.ico. Kioku has drawn no SVG one: its tab
-# icon is the PNG cuts above (the petal on a paper tile), so app.html lists each size in the SVG's place, the 24 px
+# icon is the PNG cuts above (the pinwheel on a clear ground), so app.html lists each size in the SVG's place, the 24 px
 # one (new with Kioku) too once there is one
 favicons='<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />'
 if [[ -f $ROOT/web/static/favicon-24.png ]]; then
