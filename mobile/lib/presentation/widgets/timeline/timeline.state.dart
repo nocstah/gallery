@@ -74,7 +74,8 @@ final timelineSegmentProvider = StreamProvider.autoDispose<List<Segment>>((ref) 
   final (maxWidth, columnCount, spacing, groupByArg) = ref.watch(
     timelineArgsProvider.select((args) => (args.maxWidth, args.columnCount, args.spacing, args.groupBy)),
   );
-  final availableTileWidth = maxWidth - (spacing * (columnCount - 1));
+  final edgeInset = spacing >= 4.0 ? spacing : 0.0;
+  final availableTileWidth = maxWidth - (spacing * (columnCount - 1)) - (edgeInset * 2);
   final tileExtent = math.max(0, availableTileWidth) / columnCount;
 
   // A pinned groupBy (the cleanup preview) always means the flat grid at that granularity.

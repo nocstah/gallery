@@ -11,28 +11,29 @@ class SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Card(
-        elevation: 0,
-        clipBehavior: Clip.antiAlias,
-        color: context.colorScheme.surfaceContainer,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
-        margin: const EdgeInsets.symmetric(vertical: 4.0),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-          leading: Container(
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.all(Radius.circular(16)),
-              color: context.isDarkTheme ? Colors.black26 : Colors.white.withAlpha(100),
-            ),
-            padding: const EdgeInsets.all(16.0),
-            child: Icon(icon, color: context.primaryColor),
-          ),
-          title: Text(title, style: context.textTheme.titleMedium!.copyWith(color: context.primaryColor)),
-          subtitle: Text(subtitle, style: context.textTheme.bodyMedium),
-          onTap: onTap,
+    final scheme = context.colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant, width: 1)),
+      ),
+      child: ListTile(
+        dense: true,
+        visualDensity: const VisualDensity(vertical: -1),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+        leading: Icon(icon, size: 20, color: scheme.onSurface),
+        title: Text(
+          title,
+          style: context.textTheme.titleSmall?.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w600),
         ),
+        subtitle: Text(
+          subtitle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: context.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        trailing: Icon(Icons.chevron_right_rounded, size: 18, color: scheme.onSurfaceVariant),
+        onTap: onTap,
       ),
     );
   }

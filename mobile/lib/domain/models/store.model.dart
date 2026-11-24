@@ -31,6 +31,11 @@ enum StoreKey<T> {
   dataSaverVideoOnMobileData<bool>._(90009),
   // The timeline's space icons switch (lib/gallery/space_badge_setting.dart).
   showSpaceBadges<bool>._(90010),
+  // Kioku visual system preferences (lib/gallery/theme/kioku_theme.provider.dart).
+  kiokuThemeId<String>._(90011),
+  kiokuRoundedCorners<bool>._(90012),
+  kiokuTileGap<double>._(90013),
+  kiokuCompactLayout<bool>._(90014),
   manageLocalMediaAndroid<bool>._(137),
   // Read-only Mode settings
   readonlyModeEnabled<bool>._(138),

@@ -7,6 +7,7 @@ import 'package:immich_mobile/data/store.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/datetime_extensions.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/presentation/actions/action.widget.dart';
 import 'package:immich_mobile/presentation/actions/favorite.action.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/motion_photo_action_button.widget.dart';
@@ -79,14 +80,10 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
               child: IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    gradient: showingDetails
+                    color: showingDetails ? Colors.transparent : KiokuThemeTokens.viewerGlass,
+                    border: showingDetails
                         ? null
-                        : const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.black45, Colors.black12, Colors.transparent],
-                            stops: [0.0, 0.7, 1.0],
-                          ),
+                        : const Border(bottom: BorderSide(color: KiokuThemeTokens.viewerGlassEdge, width: 1)),
                   ),
                 ),
               ),
@@ -96,7 +93,7 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
               child: SizedBox(
                 height: preferredSize.height,
                 child: Theme(
-                  data: context.themeData.copyWith(iconTheme: const IconThemeData(size: 22, color: Colors.white)),
+                  data: context.themeData.copyWith(iconTheme: const IconThemeData(size: 20, color: Colors.white)),
                   child: NavigationToolbar(
                     centerMiddle: true,
                     leading: const _AppBarBackButton(),
@@ -121,7 +118,7 @@ class ViewerTopAppBar extends ConsumerWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(60.0);
+  Size get preferredSize => const Size.fromHeight(48.0);
 }
 
 class _AppBarBackButton extends ConsumerWidget {
@@ -130,14 +127,15 @@ class _AppBarBackButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final showingDetails = ref.watch(assetViewerProvider.select((state) => state.showingDetails));
+    final kioku = context.kioku;
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: showingDetails ? context.colorScheme.surface : Colors.transparent,
-        shape: const CircleBorder(),
-        iconSize: 22,
-        iconColor: showingDetails ? context.colorScheme.onSurface : Colors.white,
-        padding: const EdgeInsets.all(10.0),
-        elevation: showingDetails ? 4 : 0,
+        backgroundColor: showingDetails ? kioku.surface : Colors.transparent,
+        shape: showingDetails ? kioku.shape : const CircleBorder(),
+        iconSize: 20,
+        iconColor: showingDetails ? kioku.ink : Colors.white,
+        padding: const EdgeInsets.all(8.0),
+        elevation: 0,
       ),
       onPressed: context.maybePop,
       child: const Icon(Icons.arrow_back_rounded),
@@ -159,12 +157,16 @@ class _AssetInfoTitle extends ConsumerWidget {
 
     final dateFormatted = dateTime.formatDate();
     final timeFormatted = dateTime.formatTime(alwaysUse24HourFormat: alwaysUse24HourFormat);
+    final kioku = context.kioku;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(dateFormatted, style: context.textTheme.labelLarge?.copyWith(color: Colors.white)),
-        Text(timeFormatted, style: context.textTheme.labelMedium?.copyWith(color: Colors.white70)),
+        Text(dateFormatted, style: kioku.dataStyle(size: 13, weight: FontWeight.w600, color: Colors.white)),
+        Text(
+          timeFormatted,
+          style: kioku.dataStyle(size: 11, weight: FontWeight.w500, color: const Color(0xADFFFFFF)),
+        ),
       ],
     );
   }

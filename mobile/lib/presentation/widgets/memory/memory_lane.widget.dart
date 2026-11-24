@@ -4,6 +4,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/memory.model.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/presentation/pages/memory.page.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
 import 'package:immich_mobile/presentation/widgets/memory/memory_title.widget.dart';
@@ -30,19 +31,21 @@ class MemoryLane extends ConsumerWidget {
       unawaited(context.pushRoute(MemoryRoute(memories: memories, memoryIndex: index)));
     }
 
+    final kioku = context.kioku;
     return SizedBox(
-      height: 200,
+      height: 148,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemExtent: 170.0,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        itemExtent: 142.0,
         itemCount: memories.length,
         itemBuilder: (context, index) => Padding(
           key: Key(memories[index].id),
-          padding: const EdgeInsets.all(4),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
           child: Material(
-            color: Colors.black,
-            elevation: 2,
-            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
+            color: kioku.chrome,
+            elevation: 0,
+            shape: kioku.shape,
             clipBehavior: Clip.antiAlias,
             child: Stack(
               fit: StackFit.expand,
@@ -74,21 +77,28 @@ class MemoryCard extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        ColorFiltered(
-          colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.2), BlendMode.darken),
-          child: Thumbnail.remote(
-            remoteId: memory.assets[0].id,
-            thumbhash: memory.assets[0].thumbHash ?? "",
-            fit: BoxFit.cover,
+        Thumbnail.remote(
+          remoteId: memory.assets[0].id,
+          thumbhash: memory.assets[0].thumbHash ?? "",
+          fit: BoxFit.cover,
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.transparent, KiokuThemeTokens.captionScrimSmall],
+              stops: [0.4, 1.0],
+            ),
           ),
         ),
         Positioned(
-          left: 16,
-          right: 16,
-          bottom: 16,
+          left: 10,
+          right: 10,
+          bottom: 10,
           child: MemoryTitle(
             memory: memory,
-            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 15),
+            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13.5, height: 1.2),
           ),
         ),
       ],

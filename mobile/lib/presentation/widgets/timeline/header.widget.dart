@@ -6,9 +6,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
-import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/datetime_extensions.dart';
-import 'package:immich_mobile/extensions/theme_extensions.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/providers/haptic_feedback.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/readonly_mode.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
@@ -55,45 +54,55 @@ class TimelineHeader extends HookWidget {
     final isYearHeader = header == HeaderType.year;
     final isMonthHeader = header == HeaderType.month || header == HeaderType.monthAndDay;
     final isDayHeader = header == HeaderType.day || header == HeaderType.monthAndDay;
+    final kioku = context.kioku;
 
-    return Padding(
-      padding: EdgeInsets.only(top: isYearHeader || isMonthHeader ? 8.0 : 0.0, left: 12.0, right: 12.0),
-      child: SizedBox(
-        height: height,
+    return SizedBox(
+      height: height,
+      child: Padding(
+        padding: EdgeInsets.only(top: isYearHeader || isMonthHeader ? 6.0 : 2.0, left: 10.0, right: 6.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (isYearHeader)
               Row(
                 children: [
-                  Text(
-                    toBeginningOfSentenceCase(_formatYear(context, date)),
-                    style: context.textTheme.labelLarge?.copyWith(fontSize: 24),
+                  Expanded(
+                    child: Text(
+                      toBeginningOfSentenceCase(_formatYear(context, date)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: kioku.displayStyle(size: 20, weight: FontWeight.w700),
+                    ),
                   ),
-                  const Spacer(),
                   _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
                 ],
               ),
             if (isMonthHeader)
               Row(
                 children: [
-                  Text(
-                    toBeginningOfSentenceCase(_formatMonth(date)),
-                    style: context.textTheme.labelLarge?.copyWith(fontSize: 24),
+                  Expanded(
+                    child: Text(
+                      toBeginningOfSentenceCase(_formatMonth(date)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: kioku.displayStyle(size: 20, weight: FontWeight.w700),
+                    ),
                   ),
-                  const Spacer(),
                   if (header != HeaderType.monthAndDay) _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
                 ],
               ),
             if (isDayHeader)
               Row(
                 children: [
-                  Text(
-                    toBeginningOfSentenceCase(_formatDay(date)),
-                    style: context.textTheme.labelLarge?.copyWith(fontSize: 15),
+                  Expanded(
+                    child: Text(
+                      toBeginningOfSentenceCase(_formatDay(date)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kioku.muted),
+                    ),
                   ),
-                  const Spacer(),
                   _BulkSelectIconButton(bucket: bucket, assetOffset: assetOffset),
                 ],
               ),
@@ -125,17 +134,24 @@ class _BulkSelectIconButton extends ConsumerWidget {
         (state) => bucketAssets.isNotEmpty && bucketAssets.every(state.selectedAssets.contains),
       ),
     );
+    final kioku = context.kioku;
 
     return isReadonlyModeEnabled
         ? const SizedBox.shrink()
         : IconButton(
+            style: IconButton.styleFrom(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              minimumSize: const Size(28, 28),
+              padding: EdgeInsets.zero,
+            ),
+            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
             onPressed: () {
               unawaited(ref.read(multiSelectProvider.notifier).toggleBucketSelection(assetOffset, bucket.assetCount));
               ref.read(hapticFeedbackProvider.notifier).heavyImpact();
             },
             icon: isAllSelected
-                ? Icon(Icons.check_circle_rounded, size: 26, color: context.primaryColor)
-                : Icon(Icons.check_circle_outline_rounded, size: 26, color: context.colorScheme.onSurfaceSecondary),
+                ? Icon(Icons.check_circle_rounded, size: 19, color: kioku.accent)
+                : Icon(Icons.check_circle_outline_rounded, size: 19, color: kioku.muted),
           );
   }
 }

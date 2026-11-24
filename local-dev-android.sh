@@ -68,9 +68,9 @@ emu_start() {
   mkdir -p "$HOME/.cache/gallery-android-build"
   local args=(-avd "$AVD_NAME" -port "$EMU_PORT" -no-audio -no-boot-anim)
   if [[ $headless -eq 1 ]]; then
-    args+=(-no-window -gpu swiftshader_indirect)
+    args+=(-no-window -no-snapshot-save -gpu host)
   else
-    args+=(-gpu auto)
+    args+=(-gpu host)
   fi
   setsid "$ANDROID_HOME/emulator/emulator" "${args[@]}" \
     >"$HOME/.cache/gallery-android-build/emulator.log" 2>&1 </dev/null &

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/models/server_info/server_info.model.dart';
 import 'package:immich_mobile/providers/backup/backup.provider.dart';
@@ -51,17 +52,19 @@ class ImmichSliverAppBar extends ConsumerWidget {
         duration: Durations.medium1,
         opacity: isMultiSelectEnabled ? 0 : 1,
         sliver: SliverAppBar(
-          backgroundColor: context.colorScheme.surface,
-          surfaceTintColor: context.colorScheme.surfaceTint,
+          toolbarHeight: 48,
+          backgroundColor: context.kioku.surface,
+          surfaceTintColor: Colors.transparent,
           elevation: 0,
-          scrolledUnderElevation: 1.0,
+          scrolledUnderElevation: 0,
           floating: floating,
           pinned: pinned,
           snap: snap,
           expandedHeight: expandedHeight,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(bottom: Radius.circular(5))),
+          shape: Border(bottom: context.kioku.hairlineSide),
           automaticallyImplyLeading: false,
           centerTitle: false,
+          titleSpacing: 12,
           title: title ?? const _ImmichLogoWithText(),
           // Sync progress rides the bottom edge of the bar rather than the actions row (#1030):
           // an action that comes and goes changes how much width the title slot is offered, and
@@ -77,7 +80,7 @@ class ImmichSliverAppBar extends ConsumerWidget {
             ...?actions,
             if (showUploadButton && !isReadonlyModeEnabled) const _BackupIndicator(),
             const _ProfileIndicator(),
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
           ],
         ),
       ),
@@ -91,7 +94,7 @@ class ImmichSliverAppBar extends ConsumerWidget {
 /// only ever `barWidth - actionsWidth - 2 * titleSpacing` wide. `SvgPicture` fits with
 /// `BoxFit.contain`, so anything the actions row takes beyond that budget comes straight out of
 /// the logo (#1030). Keep the actions row at or below ~155 px on the busiest bar, or lower this.
-const double _kLogoHeight = 43;
+const double _kLogoHeight = 26;
 
 class _ImmichLogoWithText extends StatelessWidget {
   const _ImmichLogoWithText();
@@ -116,7 +119,7 @@ class _ProfileIndicator extends ConsumerWidget {
     final bool versionWarningPresent = ref.watch(versionWarningPresentProvider(user));
     final serverInfoState = ref.watch(serverInfoProvider);
 
-    const widgetSize = 32.0;
+    const widgetSize = 26.0;
 
     // TODO: remove this when update Flutter version newer than 3.35.7
     final isIpad = defaultTargetPlatform == TargetPlatform.iOS && !context.isMobile;
@@ -130,13 +133,14 @@ class _ProfileIndicator extends ConsumerWidget {
           duration: const Duration(seconds: 2),
           content: Text(
             isReadonlyModeEnabled ? context.t.readonly_mode_disabled : context.t.readonly_mode_enabled,
-            style: context.textTheme.bodyLarge?.copyWith(color: context.primaryColor),
+            style: context.textTheme.bodyMedium?.copyWith(color: context.kioku.ink),
           ),
         ),
       );
     }
 
     return IconButton(
+      visualDensity: VisualDensity.compact,
       onPressed: () => showDialog(
         context: context,
         useRootNavigator: false,
@@ -149,24 +153,24 @@ class _ProfileIndicator extends ConsumerWidget {
           Icon(
             Icons.info,
             color: serverInfoState.versionStatus == VersionStatus.error
-                ? context.colorScheme.error
-                : context.primaryColor,
-            size: widgetSize / 2 - 3,
+                ? context.kioku.danger
+                : context.kioku.accent,
+            size: 10,
             semanticLabel: context.t.new_version_available,
           ),
         ),
         backgroundColor: Colors.transparent,
         alignment: Alignment.bottomRight,
         isLabelVisible: versionWarningPresent,
-        offset: const Offset(-2, -12),
+        offset: const Offset(-2, -10),
         child: user == null
-            ? const Icon(Icons.face_outlined, size: widgetSize)
+            ? Icon(Icons.person_outline_rounded, size: widgetSize, color: context.kioku.ink)
             : Semantics(
                 label: context.t.logged_in_as(user: user.name),
                 child: AbsorbPointer(
                   child: Builder(
                     builder: (context) => UserCircleAvatar(
-                      size: 34,
+                      size: 28,
                       user: user,
                       opacity: IconTheme.of(context).opacity ?? 1,
                       hasBorder: true,
@@ -179,7 +183,7 @@ class _ProfileIndicator extends ConsumerWidget {
   }
 }
 
-const double _kBadgeWidgetSize = 30.0;
+const double _kBadgeWidgetSize = 22.0;
 
 class _BackupIndicator extends ConsumerWidget {
   const _BackupIndicator();
@@ -197,14 +201,15 @@ class _BackupIndicator extends ConsumerWidget {
     );
 
     return IconButton(
+      visualDensity: VisualDensity.compact,
       onPressed: () => context.pushRoute(const BackupRoute()),
       icon: Badge(
         label: indicatorIcon,
         backgroundColor: Colors.transparent,
         alignment: Alignment.bottomRight,
         isLabelVisible: indicatorIcon != null,
-        offset: const Offset(-2, -12),
-        child: Icon(Icons.backup_rounded, size: _kBadgeWidgetSize, color: context.primaryColor),
+        offset: const Offset(-2, -9),
+        child: Icon(Icons.backup_outlined, size: _kBadgeWidgetSize, color: context.kioku.ink),
       ),
     );
   }
@@ -215,15 +220,15 @@ class _BackupIndicator extends ConsumerWidget {
     required bool hasError,
     required bool isUploading,
   }) {
-    final isDarkTheme = context.isDarkTheme;
-    final iconColor = isDarkTheme ? Colors.white : Colors.black;
+    final kioku = context.kioku;
+    final iconColor = kioku.ink;
 
     if (!backupEnabled) {
       return _BadgeLabel(
         Icon(
           Icons.cloud_off_rounded,
-          size: 9,
-          color: iconColor,
+          size: 8,
+          color: kioku.muted,
           semanticLabel: context.t.backup_controller_page_backup,
         ),
       );
@@ -233,26 +238,25 @@ class _BackupIndicator extends ConsumerWidget {
       return _BadgeLabel(
         Icon(
           Icons.warning_rounded,
-          size: 12,
-          color: context.colorScheme.error,
+          size: 10,
+          color: kioku.danger,
           semanticLabel: context.t.backup_controller_page_backup,
         ),
-        backgroundColor: context.colorScheme.errorContainer,
       );
     }
 
     if (isUploading) {
       return _BadgeLabel(
         Container(
-          padding: const EdgeInsets.all(3.5),
+          padding: const EdgeInsets.all(2.5),
           child: Theme(
             data: context.themeData.copyWith(
               progressIndicatorTheme: context.themeData.progressIndicatorTheme.copyWith(year2023: true),
             ),
             child: CircularProgressIndicator(
-              strokeWidth: 2,
+              strokeWidth: 1.8,
               strokeCap: StrokeCap.round,
-              valueColor: AlwaysStoppedAnimation<Color>(iconColor),
+              valueColor: AlwaysStoppedAnimation<Color>(kioku.accent),
               semanticsLabel: context.t.backup_controller_page_backup,
             ),
           ),
@@ -261,30 +265,30 @@ class _BackupIndicator extends ConsumerWidget {
     }
 
     return _BadgeLabel(
-      Icon(Icons.check_outlined, size: 9, color: iconColor, semanticLabel: context.t.backup_controller_page_backup),
+      Icon(Icons.check_outlined, size: 8, color: iconColor, semanticLabel: context.t.backup_controller_page_backup),
     );
   }
 }
 
 class _BadgeLabel extends StatelessWidget {
   final Widget indicator;
-  final Color? backgroundColor;
 
-  const _BadgeLabel(this.indicator, {this.backgroundColor});
+  const _BadgeLabel(this.indicator);
 
   @override
   Widget build(BuildContext context) {
     final opacity = IconTheme.of(context).opacity ?? 1;
+    final kioku = context.kioku;
 
     return Container(
-      width: _kBadgeWidgetSize / 2,
-      height: _kBadgeWidgetSize / 2,
+      width: 13,
+      height: 13,
       decoration: BoxDecoration(
-        color: (backgroundColor ?? context.colorScheme.surfaceContainer).withValues(alpha: opacity),
-        border: Border.all(color: context.colorScheme.outline.withValues(alpha: .3 * opacity)),
-        borderRadius: BorderRadius.circular(_kBadgeWidgetSize / 2),
+        color: kioku.surface.withValues(alpha: opacity),
+        border: Border.all(color: kioku.hairline.withValues(alpha: opacity)),
+        borderRadius: BorderRadius.circular(13),
       ),
-      child: indicator,
+      child: Center(child: indicator),
     );
   }
 }
@@ -298,7 +302,7 @@ class _BadgeLabel extends StatelessWidget {
 class _SyncProgressLine extends ConsumerWidget {
   const _SyncProgressLine();
 
-  static const double _height = 3;
+  static const double _height = 2;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -315,6 +319,7 @@ class _SyncProgressLine extends ConsumerWidget {
             ? LinearProgressIndicator(
                 key: const Key('app-bar-sync-progress'),
                 minHeight: _height,
+                color: context.kioku.accent,
                 // Only the travelling segment paints; an idle bar shows nothing at all.
                 backgroundColor: Colors.transparent,
                 semanticsLabel: context.t.sync$,

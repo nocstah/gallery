@@ -121,7 +121,9 @@ class RenderFixedRow extends RenderBox
     }
   }
 
-  double get intrinsicWidth => widths.sum + (spacing * (childCount - 1));
+  double get _edgeInset => spacing >= 4.0 ? spacing : 0.0;
+
+  double get intrinsicWidth => widths.sum + (spacing * (childCount - 1)) + (_edgeInset * 2);
 
   @override
   double computeMinIntrinsicWidth(double height) => intrinsicWidth;
@@ -170,8 +172,9 @@ class RenderFixedRow extends RenderBox
     size = Size(constraints.maxWidth, height);
 
     final flipMainAxis = textDirection == TextDirection.rtl;
+    final edgeInset = _edgeInset;
     int childIndex = 0;
-    double currentX = flipMainAxis ? size.width - (widths.firstOrNull ?? 0) : 0;
+    double currentX = flipMainAxis ? size.width - edgeInset - (widths.firstOrNull ?? 0) : edgeInset;
     // Layout each child horizontally.
     while (child != null && childIndex < widths.length) {
       final width = widths[childIndex];

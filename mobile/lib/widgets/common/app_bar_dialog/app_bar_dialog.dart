@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart' hide Store;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/gallery/theme/kioku_theme.provider.dart';
+import 'package:immich_mobile/gallery/theme/kioku_theme_picker.widget.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/models/server_info/server_disk_info.model.dart';
 import 'package:immich_mobile/pages/common/settings.page.dart';
@@ -43,24 +46,25 @@ class ImmichAppBarDialog extends HookConsumerWidget {
       return null;
     }, []);
 
+    final kioku = context.kioku;
+    final activeThemeSpec = ref.watch(kiokuActiveThemeSpecProvider);
+
     SizedBox buildTopRow() {
       return SizedBox(
-        height: 56,
+        height: 44,
         child: Stack(
           alignment: Alignment.centerLeft,
           children: [
             IconButton(
+              visualDensity: VisualDensity.compact,
               onPressed: () => ContextHelper(context).pop(),
-              icon: Icon(Icons.close, size: 20, color: context.colorScheme.onSurfaceVariant),
+              icon: Icon(Icons.close, size: 19, color: kioku.muted),
             ),
             Align(
               alignment: Alignment.center,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Image.asset(
-                  context.isDarkTheme ? 'assets/immich-text-dark.png' : 'assets/immich-text-light.png',
-                  height: 24,
-                ),
+              child: Image.asset(
+                context.isDarkTheme ? 'assets/immich-text-dark.png' : 'assets/immich-text-light.png',
+                height: 20,
               ),
             ),
           ],
@@ -71,16 +75,22 @@ class ImmichAppBarDialog extends HookConsumerWidget {
     ListTile buildActionButton(IconData icon, String text, Function() onTap, {Widget? trailing}) {
       return ListTile(
         dense: true,
-        visualDensity: VisualDensity.standard,
-        contentPadding: const EdgeInsets.only(left: 30, right: 30),
-        minLeadingWidth: 40,
-        leading: SizedBox(child: Icon(icon, color: theme.textTheme.labelLarge?.color?.withAlpha(250), size: 20)),
-        title: Text(
-          text,
-          style: theme.textTheme.labelLarge?.copyWith(color: theme.textTheme.labelLarge?.color?.withAlpha(250)),
-        ),
+        visualDensity: const VisualDensity(vertical: -2),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+        minLeadingWidth: 28,
+        leading: Icon(icon, color: kioku.ink, size: 19),
+        title: Text(text, style: theme.textTheme.bodyMedium?.copyWith(color: kioku.ink, fontWeight: FontWeight.w500)),
         onTap: onTap,
         trailing: trailing,
+      );
+    }
+
+    ListTile buildThemeButton() {
+      return buildActionButton(
+        Icons.palette_outlined,
+        context.t.theme,
+        () => unawaited(showKiokuThemePickerSheet(context)),
+        trailing: Text(activeThemeSpec.name, style: kioku.dataStyle(size: 11.5)),
       );
     }
 
@@ -162,20 +172,27 @@ class ImmichAppBarDialog extends HookConsumerWidget {
       }
 
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 12,
+          spacing: 8,
           children: [
-            Text(context.t.backup_controller_page_server_storage, style: context.textTheme.labelLarge),
-            LinearProgressIndicator(
-              minHeight: 10.0,
-              value: percentage,
-              borderRadius: const BorderRadius.all(Radius.circular(10.0)),
+            Row(
+              children: [
+                Text(context.t.backup_controller_page_server_storage, style: context.textTheme.labelMedium),
+                const Spacer(),
+                Text(
+                  context.t.backup_controller_page_storage_format(used: usedDiskSpace, total: totalDiskSpace),
+                  style: kioku.dataStyle(size: 11.5),
+                ),
+              ],
             ),
-            Text(
-              context.t.backup_controller_page_storage_format(used: usedDiskSpace, total: totalDiskSpace),
-              style: context.textTheme.bodySmall,
+            LinearProgressIndicator(
+              minHeight: 4.0,
+              value: percentage.isFinite ? percentage.clamp(0.0, 1.0) : 0.0,
+              color: kioku.ink,
+              backgroundColor: kioku.hairline,
+              borderRadius: kioku.borderRadius,
             ),
           ],
         ),
@@ -232,17 +249,17 @@ class ImmichAppBarDialog extends HookConsumerWidget {
 
     Padding buildReadonlyMessage() {
       return Padding(
-        padding: const EdgeInsets.only(left: 10.0, right: 10.0),
-        child: ListTile(
-          dense: true,
-          visualDensity: VisualDensity.standard,
-          contentPadding: const EdgeInsets.only(left: 20, right: 20),
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
-          minLeadingWidth: 20,
-          tileColor: theme.primaryColor.withAlpha(80),
-          title: Text(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: kioku.chrome,
+            borderRadius: kioku.borderRadius,
+            border: Border.fromBorderSide(kioku.hairlineSide),
+          ),
+          child: Text(
             context.t.profile_drawer_readonly_mode,
-            style: theme.textTheme.labelLarge?.copyWith(color: theme.textTheme.labelLarge?.color?.withAlpha(250)),
+            style: theme.textTheme.labelMedium?.copyWith(color: kioku.ink),
             textAlign: TextAlign.center,
           ),
         ),
@@ -255,45 +272,49 @@ class ImmichAppBarDialog extends HookConsumerWidget {
       onDismissed: (_) => ContextHelper(context).pop(),
       key: const Key('app_bar_dialog'),
       child: Dialog(
+        backgroundColor: kioku.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         clipBehavior: Clip.hardEdge,
         alignment: Alignment.topCenter,
         insetPadding: EdgeInsets.only(
-          top: isHorizontal ? 20 : 40,
+          top: isHorizontal ? 20 : 36,
           left: horizontalPadding,
           right: horizontalPadding,
-          bottom: isHorizontal ? 20 : 100,
+          bottom: isHorizontal ? 20 : 80,
         ),
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
-        child: SizedBox(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(padding: const EdgeInsets.symmetric(horizontal: 8), child: buildTopRow()),
-                Container(
-                  decoration: BoxDecoration(
-                    color: context.colorScheme.surface,
-                    borderRadius: const BorderRadius.all(Radius.circular(10)),
-                  ),
-                  margin: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
-                  child: Column(
-                    children: [
-                      const AppBarProfileInfoBox(),
-                      Divider(thickness: 4, color: context.colorScheme.surfaceContainer),
-                      buildStorageInformation(),
-                      Divider(thickness: 4, color: context.colorScheme.surfaceContainer),
-                      const AppBarServerInfo(),
-                    ],
-                  ),
+        shape: kioku.shape,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(padding: const EdgeInsets.symmetric(horizontal: 6), child: buildTopRow()),
+              Container(
+                decoration: BoxDecoration(
+                  color: kioku.surface,
+                  borderRadius: kioku.borderRadius,
+                  border: Border.fromBorderSide(kioku.hairlineSide),
                 ),
-                if (isReadonlyModeEnabled) buildReadonlyMessage(),
-                buildAppLogButton(),
-                buildFreeUpSpaceButton(),
-                buildSettingButton(),
-                buildSignOutButton(),
-                buildFooter(),
-              ],
-            ),
+                margin: const EdgeInsets.only(left: 12, right: 12, bottom: 6),
+                child: Column(
+                  children: [
+                    const AppBarProfileInfoBox(),
+                    Divider(height: 1, thickness: 1, color: kioku.hairline),
+                    buildStorageInformation(),
+                    Divider(height: 1, thickness: 1, color: kioku.hairline),
+                    const AppBarServerInfo(),
+                  ],
+                ),
+              ),
+              if (isReadonlyModeEnabled) buildReadonlyMessage(),
+              buildThemeButton(),
+              buildAppLogButton(),
+              buildFreeUpSpaceButton(),
+              buildSettingButton(),
+              buildSignOutButton(),
+              Divider(height: 1, thickness: 1, color: kioku.hairline),
+              buildFooter(),
+            ],
           ),
         ),
       ),

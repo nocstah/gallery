@@ -2,11 +2,10 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
-import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/duration_extensions.dart';
-import 'package:immich_mobile/extensions/theme_extensions.dart';
 import 'package:immich_mobile/gallery/motion/gallery_tile.dart';
 import 'package:immich_mobile/gallery/space_badge.widget.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
 import 'package:immich_mobile/providers/asset_viewer/asset_viewer.provider.dart';
@@ -42,7 +41,6 @@ class ThumbnailTile extends ConsumerStatefulWidget {
 
 class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
   bool _hideIndicators = false;
-  bool _showSelectionContainer = false;
 
   @override
   void dispose() {
@@ -52,12 +50,9 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
   @override
   Widget build(BuildContext context) {
     final asset = widget.asset;
+    final kioku = context.kioku;
     final heroIndex = widget.heroOffset ?? TabsRouterScope.of(context)?.controller.activeIndex ?? 0;
     final isCurrentAsset = ref.watch(assetViewerProvider.select((current) => current.currentAsset == asset));
-
-    final assetContainerColor = context.isDarkTheme
-        ? context.primaryColor.darken(amount: 0.4)
-        : context.primaryColor.lighten(amount: 0.75);
 
     final isSelected = ref.watch(
       multiSelectProvider.select((multiselect) => multiselect.selectedAssets.contains(asset)),
@@ -70,39 +65,25 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
       _hideIndicators = false;
     }
 
-    if (isSelected) {
-      _showSelectionContainer = true;
-    }
-
     final uploadProgress = asset is LocalAsset
         ? ref.watch(assetUploadProgressProvider.select((map) => map[asset.id]))
         : null;
 
+    final marked = isSelected || widget.lockSelection;
+    final frameRadius = kioku.tileBorderRadius;
+
     return Stack(
       children: [
-        Container(
-          color: widget.lockSelection
-              ? context.colorScheme.surfaceContainerHighest
-              : _showSelectionContainer
-              ? assetContainerColor
-              : Colors.transparent,
-        ),
         AnimatedContainer(
-          duration: Durations.short4,
-          curve: Curves.decelerate,
-          onEnd: () {
-            if (!isSelected) {
-              _showSelectionContainer = false;
-            }
-          },
-          padding: EdgeInsets.all(isSelected || widget.lockSelection ? 6 : 0),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0.0, end: (isSelected || widget.lockSelection) ? 15.0 : 0.0),
-            duration: Durations.short4,
-            curve: Curves.decelerate,
-            builder: (context, value, child) {
-              return ClipRRect(borderRadius: BorderRadius.all(Radius.circular(value)), child: child);
-            },
+          duration: Durations.short3,
+          curve: Curves.easeOut,
+          padding: EdgeInsets.all(marked ? 2 : 0),
+          decoration: BoxDecoration(
+            color: marked ? (widget.lockSelection ? kioku.chrome : kioku.accent) : Colors.transparent,
+            borderRadius: frameRadius,
+          ),
+          child: ClipRRect(
+            borderRadius: frameRadius,
             child: Stack(
               children: [
                 Positioned.fill(
@@ -144,6 +125,17 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
                     },
                   ),
                 ),
+                if (!marked && kioku.tileGap >= 4.0)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: frameRadius,
+                          border: Border.all(color: kioku.hairline, width: 1),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (asset != null)
                   AnimatedOpacity(
                     opacity: _hideIndicators ? 0.0 : 1.0,
@@ -168,21 +160,21 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
                       AssetState.local => const Align(
                         alignment: Alignment.bottomRight,
                         child: Padding(
-                          padding: EdgeInsets.only(right: 10.0, bottom: 6.0),
+                          padding: EdgeInsets.only(right: 5.0, bottom: 4.0),
                           child: _TileOverlayIcon(Icons.cloud_off_outlined),
                         ),
                       ),
                       AssetState.remote => const Align(
                         alignment: Alignment.bottomRight,
                         child: Padding(
-                          padding: EdgeInsets.only(right: 10.0, bottom: 6.0),
+                          padding: EdgeInsets.only(right: 5.0, bottom: 4.0),
                           child: _TileOverlayIcon(Icons.cloud_outlined),
                         ),
                       ),
                       AssetState.merged => const Align(
                         alignment: Alignment.bottomRight,
                         child: Padding(
-                          padding: EdgeInsets.only(right: 10.0, bottom: 6.0),
+                          padding: EdgeInsets.only(right: 5.0, bottom: 4.0),
                           child: _TileOverlayIcon(Icons.cloud_done_outlined),
                         ),
                       ),
@@ -196,7 +188,7 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
                     child: const Align(
                       alignment: Alignment.bottomLeft,
                       child: Padding(
-                        padding: EdgeInsets.only(left: 10.0, bottom: 6.0),
+                        padding: EdgeInsets.only(left: 5.0, bottom: 4.0),
                         child: _TileOverlayIcon(Icons.favorite_rounded),
                       ),
                     ),
@@ -207,26 +199,12 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
             ),
           ),
         ),
-        TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0.0, end: (isSelected || widget.lockSelection) ? 1.0 : 0.0),
-          duration: Durations.short4,
-          curve: Curves.decelerate,
-          builder: (context, value, child) {
-            return Padding(
-              padding: EdgeInsets.all((isSelected || widget.lockSelection) ? value * 3.0 : 3.0),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: Opacity(
-                  opacity: (isSelected || widget.lockSelection) ? 1 : value,
-                  child: _SelectionIndicator(
-                    isLocked: widget.lockSelection,
-                    color: widget.lockSelection ? context.colorScheme.surfaceContainerHighest : assetContainerColor,
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+        if (marked)
+          Positioned(
+            top: 5,
+            left: 5,
+            child: _SelectionIndicator(isLocked: widget.lockSelection),
+          ),
       ],
     );
   }
@@ -234,23 +212,36 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
 
 class _SelectionIndicator extends StatelessWidget {
   final bool isLocked;
-  final Color? color;
 
-  const _SelectionIndicator({required this.isLocked, this.color});
+  const _SelectionIndicator({required this.isLocked});
 
   @override
   Widget build(BuildContext context) {
-    if (isLocked) {
-      return DecoratedBox(
-        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-        child: const Icon(Icons.check_circle_rounded, color: Colors.grey),
-      );
-    } else {
-      return DecoratedBox(
-        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-        child: Icon(Icons.check_circle_rounded, color: context.primaryColor),
-      );
-    }
+    final kioku = context.kioku;
+    return Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: isLocked ? kioku.chrome : kioku.accent,
+        borderRadius: kioku.tileBorderRadius,
+        border: Border.all(color: isLocked ? kioku.hairline : kioku.surface, width: 1),
+      ),
+      child: Icon(Icons.check_rounded, size: 14, color: isLocked ? kioku.muted : kioku.onAccent),
+    );
+  }
+}
+
+class _GlassBadge extends StatelessWidget {
+  final Widget child;
+
+  const _GlassBadge({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(color: KiokuThemeTokens.badgeGlass, borderRadius: context.kioku.tileBorderRadius),
+      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), child: child),
+    );
   }
 }
 
@@ -260,24 +251,15 @@ class _VideoIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      spacing: 3,
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.end,
-      // CrossAxisAlignment.start looks more centered vertically than CrossAxisAlignment.center
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          duration.format(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            shadows: [Shadow(blurRadius: 5.0, color: Color.fromRGBO(0, 0, 0, 0.6))],
-          ),
-        ),
-        const _TileOverlayIcon(Icons.play_circle_outline_rounded),
-      ],
+    return _GlassBadge(
+      child: Row(
+        spacing: 2,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(duration.format(), style: context.kioku.dataStyle(size: 10.5, weight: FontWeight.w600, color: Colors.white)),
+          const Icon(Icons.play_arrow_rounded, size: 12, color: Colors.white),
+        ],
+      ),
     );
   }
 }
@@ -292,8 +274,8 @@ class _TileOverlayIcon extends StatelessWidget {
     return Icon(
       icon,
       color: Colors.white,
-      size: 16,
-      shadows: const [Shadow(blurRadius: 5.0, color: Color.fromRGBO(0, 0, 0, 0.6), offset: Offset.zero)],
+      size: 14,
+      shadows: const [Shadow(blurRadius: 4.0, color: Color.fromRGBO(0, 0, 0, 0.7), offset: Offset.zero)],
     );
   }
 }
@@ -305,21 +287,19 @@ class _AssetTypeIcons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLivePhoto = asset.isMotionPhoto;
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         if (asset.isVideo)
-          Padding(padding: const EdgeInsets.only(right: 10.0, top: 6.0), child: _VideoIndicator(asset.duration)),
-        if (isLivePhoto)
-          const Padding(
-            padding: EdgeInsets.only(right: 10.0, top: 6.0),
-            child: _TileOverlayIcon(Icons.motion_photos_on_rounded),
-          ),
+          Padding(padding: const EdgeInsets.only(right: 4.0, top: 4.0), child: _VideoIndicator(asset.duration)),
         if (asset.isAnimatedImage)
-          const Padding(padding: EdgeInsets.only(right: 10.0, top: 6.0), child: _TileOverlayIcon(Icons.gif_rounded)),
+          Padding(
+            padding: const EdgeInsets.only(right: 4.0, top: 4.0),
+            child: _GlassBadge(
+              child: Text('GIF', style: context.kioku.dataStyle(size: 10, weight: FontWeight.w700, color: Colors.white)),
+            ),
+          ),
       ],
     );
   }
@@ -337,8 +317,8 @@ class _StackIndicator extends StatelessWidget {
     }
 
     return const Padding(
-      padding: EdgeInsets.only(right: 10.0, top: 6.0),
-      child: _TileOverlayIcon(Icons.burst_mode_rounded),
+      padding: EdgeInsets.only(right: 4.0, top: 4.0),
+      child: _GlassBadge(child: Icon(Icons.burst_mode_rounded, size: 12, color: Colors.white)),
     );
   }
 }

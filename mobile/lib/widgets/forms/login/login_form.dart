@@ -14,6 +14,7 @@ import 'package:immich_mobile/data/store/passkey.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/gallery/widgets/demo_login_button.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/infrastructure/repositories/settings.repository.dart';
@@ -75,8 +76,6 @@ class LoginForm extends HookConsumerWidget {
     final isPasswordLoginEnable = useState<bool>(false);
     final isPasskeyEnable = useState<bool>(false);
     final oAuthButtonLabel = useState<String>('OAuth');
-    final logoAnimationController = useAnimationController(duration: const Duration(seconds: 60));
-    unawaited(logoAnimationController.repeat());
     final serverInfo = ref.watch(serverInfoProvider);
     final warningMessage = useState<String?>(null);
     final loginFormKey = GlobalKey<FormState>();
@@ -449,23 +448,24 @@ class LoginForm extends HookConsumerWidget {
         return const SizedBox.shrink();
       }
 
+      final kioku = context.kioku;
       return Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
+        padding: const EdgeInsets.only(bottom: 10.0),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: context.isDarkTheme ? Colors.amber.shade700 : Colors.amber.shade100,
-            borderRadius: const BorderRadius.all(Radius.circular(12)),
-            border: Border.all(color: context.isDarkTheme ? Colors.amber.shade800 : Colors.amber[200]!, width: 2),
+            color: kioku.chrome,
+            borderRadius: kioku.borderRadius,
+            border: Border.all(color: kioku.danger, width: 1),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800),
+              Icon(Icons.warning_amber_rounded, size: 18, color: kioku.danger),
               const SizedBox(width: 8),
               Expanded(
-                child: Padding(padding: const EdgeInsets.only(top: 2), child: Text(warningMessage.value!)),
+                child: Text(warningMessage.value!, style: context.textTheme.bodySmall?.copyWith(color: kioku.ink)),
               ),
             ],
           ),
@@ -473,46 +473,45 @@ class LoginForm extends HookConsumerWidget {
       );
     }
 
+    final kioku = context.kioku;
     final serverSelectionOrLogin = serverEndpoint.value == null
-        ? Padding(
-            padding: const EdgeInsets.only(top: ImmichSpacing.md),
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                ImmichForm(
-                  onSubmit: getServerAuthSettings,
-                  submitText: context.t.next,
-                  submitIcon: Icons.arrow_forward_rounded,
-                  builder: (_, form) => ImmichURLInput(
-                    controller: serverEndpointController,
-                    label: context.t.login_form_endpoint_url,
-                    hintText: context.t.login_form_endpoint_hint,
-                    validator: _validateUrl,
-                    keyboardAction: .next,
-                    onSubmit: (_) => form.submit(),
-                  ),
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ImmichForm(
+                onSubmit: getServerAuthSettings,
+                submitText: context.t.next,
+                submitIcon: Icons.arrow_forward_rounded,
+                builder: (_, form) => ImmichURLInput(
+                  controller: serverEndpointController,
+                  label: context.t.login_form_endpoint_url,
+                  hintText: context.t.login_form_endpoint_hint,
+                  validator: _validateUrl,
+                  keyboardAction: .next,
+                  onSubmit: (_) => form.submit(),
                 ),
-                GalleryDemoLoginButton(serverEndpointController: serverEndpointController, onLoggedIn: onLogin),
-                ImmichTextButton(
-                  labelText: context.t.settings,
-                  icon: Icons.settings,
-                  variant: ImmichVariant.ghost,
-                  onPressed: () => context.pushRoute(const SettingsRoute()),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 6),
+              GalleryDemoLoginButton(serverEndpointController: serverEndpointController, onLoggedIn: onLogin),
+              ImmichTextButton(
+                labelText: context.t.settings,
+                icon: Icons.settings_outlined,
+                variant: ImmichVariant.ghost,
+                onPressed: () => context.pushRoute(const SettingsRoute()),
+              ),
+            ],
           )
         : AutofillGroup(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.max,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 buildVersionCompatWarning(),
                 Padding(
-                  padding: const EdgeInsets.only(bottom: ImmichSpacing.md),
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     normalizeServerUrl(serverEndpointController.text),
-                    style: context.textTheme.displaySmall,
+                    style: kioku.dataStyle(size: 12.5, color: kioku.muted),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -522,7 +521,7 @@ class LoginForm extends HookConsumerWidget {
                     submitText: context.t.login,
                     submitIcon: Icons.login_rounded,
                     builder: (context, form) => Column(
-                      spacing: ImmichSpacing.md,
+                      spacing: 12,
                       children: [
                         ImmichEmailInput(
                           controller: emailController,
@@ -550,8 +549,8 @@ class LoginForm extends HookConsumerWidget {
                     submitIcon: Icons.pin_outlined,
                     builder: (context, _) => isPasswordLoginEnable.value
                         ? Padding(
-                            padding: const EdgeInsets.only(left: 18.0, right: 18.0, top: 12.0),
-                            child: Divider(color: context.isDarkTheme ? Colors.white : Colors.black, height: 5),
+                            padding: const EdgeInsets.only(top: 10.0),
+                            child: Divider(color: kioku.hairline, height: 1),
                           )
                         : const SizedBox.shrink(),
                   ),
@@ -562,13 +561,14 @@ class LoginForm extends HookConsumerWidget {
                     submitIcon: Icons.key_outlined,
                     builder: (context, _) => isPasswordLoginEnable.value || isOauthEnable.value
                         ? Padding(
-                            padding: const EdgeInsets.only(left: 18.0, right: 18.0, top: 12.0),
-                            child: Divider(color: context.colorScheme.onSurface, height: 5),
+                            padding: const EdgeInsets.only(top: 10.0),
+                            child: Divider(color: kioku.hairline, height: 1),
                           )
                         : const SizedBox.shrink(),
                   ),
                 if (!isOauthEnable.value && !isPasswordLoginEnable.value && !isPasskeyEnable.value)
                   Center(child: Text(context.t.login_disabled)),
+                const SizedBox(height: 6),
                 ImmichTextButton(
                   labelText: context.t.back,
                   icon: Icons.arrow_back,
@@ -582,31 +582,40 @@ class LoginForm extends HookConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          child: Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 300),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(height: constraints.maxHeight / 5),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      GestureDetector(
-                        onDoubleTap: () => populateTestLoginInfo(),
-                        onLongPress: () => populateTestLoginInfo1(),
-                        child: RotationTransition(turns: logoAnimationController, child: const ImmichLogo()),
-                      ),
-                      const Padding(padding: EdgeInsets.only(top: 8.0, bottom: 16), child: ImmichTitleText()),
-                    ],
-                  ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 344),
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                decoration: BoxDecoration(
+                  color: kioku.surface,
+                  borderRadius: kioku.borderRadius,
+                  border: Border.fromBorderSide(kioku.hairlineSide),
+                  boxShadow: kioku.popupShadow,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onDoubleTap: () => populateTestLoginInfo(),
+                          onLongPress: () => populateTestLoginInfo1(),
+                          child: const ImmichLogo(size: 60),
+                        ),
+                        const Padding(padding: EdgeInsets.only(top: 10.0, bottom: 18), child: ImmichTitleText(fontSize: 42)),
+                      ],
+                    ),
 
-                  // Note: This used to have an AnimatedSwitcher, but was removed
-                  // because of https://github.com/flutter/flutter/issues/120874
-                  Form(key: loginFormKey, child: serverSelectionOrLogin),
-                ],
+                    // Note: This used to have an AnimatedSwitcher, but was removed
+                    // because of https://github.com/flutter/flutter/issues/120874
+                    Form(key: loginFormKey, child: serverSelectionOrLogin),
+                  ],
+                ),
               ),
             ),
           ),

@@ -18,6 +18,9 @@ import 'package:immich_mobile/data/store.dart';
 import 'package:immich_mobile/domain/services/background_worker.service.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/gallery/motion/hero_scope.dart';
+import 'package:immich_mobile/gallery/theme/kioku_theme.provider.dart';
+import 'package:immich_mobile/gallery/theme/kioku_theme_data.dart';
+import 'package:immich_mobile/gallery/theme/kioku_theme_derive.dart';
 import 'package:immich_mobile/generated/codegen_loader.g.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/infrastructure/repositories/network.repository.dart';
@@ -31,13 +34,11 @@ import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 import 'package:immich_mobile/providers/locale_provider.dart';
 import 'package:immich_mobile/providers/routes.provider.dart';
-import 'package:immich_mobile/providers/theme.provider.dart';
 import 'package:immich_mobile/providers/view_intent/view_intent_handler.provider.dart';
 import 'package:immich_mobile/routing/app_navigation_observer.dart';
 import 'package:immich_mobile/routing/router.dart';
 import 'package:immich_mobile/services/deep_link.service.dart';
 import 'package:immich_mobile/theme/dynamic_theme.dart';
-import 'package:immich_mobile/theme/theme_data.dart';
 import 'package:immich_mobile/utils/bootstrap.dart';
 import 'package:immich_mobile/utils/cache/widgets_binding.dart';
 import 'package:immich_mobile/utils/debug_print.dart';
@@ -93,6 +94,7 @@ Future<void> initApp() async {
   }
 
   await DynamicTheme.fetchSystemPalette();
+  await KiokuThemeCatalog.load();
 
   final log = Logger("ImmichErrorLogger");
 
@@ -278,20 +280,21 @@ class ImmichAppState extends ConsumerState<ImmichApp> with WidgetsBindingObserve
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
-    final immichTheme = ref.watch(immichThemeProvider);
+    final kiokuDerived = ref.watch(kiokuDerivedThemeProvider);
+    final kiokuPrefs = ref.watch(kiokuPrefsProvider);
 
     return ProviderScope(
       overrides: [localeProvider.overrideWithValue(context.locale)],
       child: MaterialApp.router(
         title: kAppTitle,
-        debugShowCheckedModeBanner: true,
+        debugShowCheckedModeBanner: false,
         scaffoldMessengerKey: scaffoldMessengerKey,
         localizationsDelegates: [...context.localizationDelegates, ...fallbackLocalizationDelegates],
         supportedLocales: context.supportedLocales,
         locale: context.locale,
         themeMode: ref.watch(appConfigProvider.select((config) => config.theme.mode)),
-        darkTheme: getThemeData(colorScheme: immichTheme.dark, locale: context.locale),
-        theme: getThemeData(colorScheme: immichTheme.light, locale: context.locale),
+        darkTheme: buildKiokuThemeData(face: kiokuDerived.dark, prefs: kiokuPrefs, locale: context.locale),
+        theme: buildKiokuThemeData(face: kiokuDerived.light, prefs: kiokuPrefs, locale: context.locale),
         builder: (context, child) => ImmichTranslationProvider(
           translations: ImmichTranslations(
             submit: context.t.submit,

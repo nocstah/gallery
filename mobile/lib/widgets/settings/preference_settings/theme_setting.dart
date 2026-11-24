@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/gallery/theme/kioku_theme_picker.widget.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
-import 'package:immich_mobile/widgets/settings/preference_settings/primary_color_setting.dart';
 import 'package:immich_ui/immich_ui.dart';
 
 class ThemeSetting extends HookConsumerWidget {
@@ -14,12 +14,17 @@ class ThemeSetting extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentTheme = useState(ref.watch(appConfigProvider.select((config) => config.theme.mode)));
-    final isDarkTheme = useValueNotifier(currentTheme.value == ThemeMode.dark);
-    final isSystemTheme = useValueNotifier(currentTheme.value == ThemeMode.system);
-    final colorfulInterface = useValueNotifier(
-      ref.watch(appConfigProvider.select((config) => config.theme.colorfulInterface)),
-    );
+    final watchedMode = ref.watch(appConfigProvider.select((config) => config.theme.mode));
+    final currentTheme = useState(watchedMode);
+    final isDarkTheme = useValueNotifier(watchedMode == ThemeMode.dark);
+    final isSystemTheme = useValueNotifier(watchedMode == ThemeMode.system);
+
+    useEffect(() {
+      currentTheme.value = watchedMode;
+      isDarkTheme.value = watchedMode == ThemeMode.dark;
+      isSystemTheme.value = watchedMode == ThemeMode.system;
+      return null;
+    }, [watchedMode]);
 
     void onThemeChange(bool isDark) {
       currentTheme.value = isDark ? ThemeMode.dark : ThemeMode.light;
@@ -43,11 +48,6 @@ class ThemeSetting extends HookConsumerWidget {
       unawaited(ref.read(settingsProvider).write(.themeMode, currentTheme.value));
     }
 
-    void onSurfaceColorSettingChange(bool useColorfulInterface) {
-      unawaited(ref.read(settingsProvider).write(.themeColorfulInterface, useColorfulInterface));
-      colorfulInterface.value = useColorfulInterface;
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -63,13 +63,8 @@ class ThemeSetting extends HookConsumerWidget {
             title: context.t.map_settings_dark_mode,
             onChanged: onThemeChange,
           ),
-        const PrimaryColorSetting(),
-        SettingsSwitchListTile(
-          valueNotifier: colorfulInterface,
-          title: context.t.theme_setting_colorful_interface_title,
-          subtitle: context.t.theme_setting_colorful_interface_subtitle,
-          onChanged: onSurfaceColorSettingChange,
-        ),
+        const Divider(height: 1),
+        const KiokuAppearanceSettings(),
       ],
     );
   }

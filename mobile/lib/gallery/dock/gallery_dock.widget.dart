@@ -6,6 +6,7 @@ import 'package:immich_mobile/gallery/dock/gallery_dock_grouping.widget.dart';
 import 'package:immich_mobile/gallery/dock/gallery_dock_style.dart';
 import 'package:immich_mobile/gallery/motion/pressable.dart';
 import 'package:immich_mobile/gallery/motion/spring_curve.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/providers/gallery_nav/gallery_nav_destination.dart';
 import 'package:immich_mobile/providers/gallery_nav/gallery_tab_enum.dart';
@@ -53,10 +54,10 @@ class GalleryDock extends StatelessWidget {
     this.searchEnabled = true,
   });
 
-  static const double tabBarHeight = 64;
-  static const double groupingHeight = 46;
-  static const double rowGap = 10;
-  static const double circle = 56;
+  static const double tabBarHeight = 52;
+  static const double groupingHeight = 38;
+  static const double rowGap = 6;
+  static const double circle = 46;
 
   /// The height the dock keeps for itself whatever its state, so folding never moves the content under it.
   static double reservedHeight({required bool showGrouping}) =>
@@ -230,15 +231,18 @@ class _TabBar extends StatelessWidget {
         key: const Key('gallery-dock-highlight'),
         duration: motion.duration,
         curve: motion.curve,
-        left: unfolded ? slotLeft(activeSlot) + 4 : 4,
-        top: 4,
-        width: unfolded ? slotWidth - 8 : c - 8,
-        height: unfolded ? GalleryDock.tabBarHeight - 8 : c - 8,
+        left: unfolded ? slotLeft(activeSlot) + 3 : 3,
+        top: 3,
+        width: unfolded ? slotWidth - 6 : c - 6,
+        height: unfolded ? GalleryDock.tabBarHeight - 6 : c - 6,
         child: AnimatedOpacity(
           duration: motion.half,
           opacity: unfolded && activeSlot >= 0 ? 1 : 0,
           child: DecoratedBox(
-            decoration: ShapeDecoration(shape: const StadiumBorder(), color: GalleryDockStyle.highlight(theme)),
+            decoration: ShapeDecoration(
+              shape: RoundedRectangleBorder(borderRadius: context.kioku.borderRadius),
+              color: GalleryDockStyle.highlight(theme),
+            ),
           ),
         ),
       ),
@@ -365,7 +369,7 @@ class _IconAndLabel extends StatelessWidget {
     required this.motion,
   });
 
-  static const double _iconSize = 25;
+  static const double _iconSize = 20;
 
   @override
   Widget build(BuildContext context) {
@@ -384,7 +388,7 @@ class _IconAndLabel extends StatelessWidget {
               builder: (context, f, child) => Positioned(
                 left: 0,
                 right: 0,
-                top: ui.lerpDouble((height - _iconSize) / 2, 9, f),
+                top: ui.lerpDouble((height - _iconSize) / 2, 7, f),
                 height: _iconSize,
                 child: child!,
               ),
@@ -393,7 +397,7 @@ class _IconAndLabel extends StatelessWidget {
             Positioned(
               left: 4,
               right: 4,
-              bottom: 8,
+              bottom: 6,
               child: AnimatedOpacity(
                 duration: motion.half,
                 opacity: showLabel ? 1 : 0,
@@ -407,7 +411,7 @@ class _IconAndLabel extends StatelessWidget {
                     child: Text(
                       label,
                       maxLines: 1,
-                      style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.w600, height: 1.1),
+                      style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w600, height: 1.1),
                     ),
                   ),
                 ),
@@ -433,7 +437,7 @@ class _SearchSlot extends StatelessWidget {
     final theme = Theme.of(context);
     final unfolded = mode == GalleryDockMode.unfolded;
     final searching = mode == GalleryDockMode.search;
-    final color = theme.colorScheme.onSurface.withValues(alpha: 0.85);
+    final color = unfolded ? GalleryDockStyle.idleForeground(theme) : context.kioku.ink;
 
     return IgnorePointer(
       ignoring: searching || !enabled,

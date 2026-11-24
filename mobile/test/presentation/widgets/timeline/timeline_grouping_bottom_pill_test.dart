@@ -93,7 +93,7 @@ void main() {
         find.descendant(of: find.byType(TimelineGroupingSelector), matching: find.byType(Material)),
       );
       expect(selectorMaterial.color, Colors.transparent);
-      expect((selectorMaterial.shape! as StadiumBorder).side, BorderSide.none);
+      expect((selectorMaterial.shape! as OutlinedBorder).side, BorderSide.none);
     });
 
     // Hosted at root (no TimelineRouteScope): pins the ROOT mode fallback. The pill's

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 
 class ImmichTitleText extends StatelessWidget {
   final double fontSize;
@@ -11,12 +11,7 @@ class ImmichTitleText extends StatelessWidget {
     return Text(
       'Noodle Gallery',
       textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: fontSize * 0.7,
-        fontWeight: FontWeight.bold,
-        color: context.primaryColor,
-        letterSpacing: -1.0,
-      ),
+      style: context.kioku.displayStyle(size: fontSize * 0.72, weight: FontWeight.w800),
     );
   }
 }

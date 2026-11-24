@@ -64,20 +64,21 @@ class _ImmichTextButtonState extends State<ImmichTextButton> {
 
     final label = Text(
       widget.labelText,
-      style: const .new(fontSize: ImmichTextSize.body, fontWeight: .bold),
+      style: const .new(fontSize: 14, fontWeight: .w600),
     );
-    final style = ElevatedButton.styleFrom(padding: const .symmetric(vertical: ImmichSpacing.md));
+    final filledStyle = ElevatedButton.styleFrom(padding: const .symmetric(horizontal: 16, vertical: 11));
+    final ghostStyle = TextButton.styleFrom(padding: const .symmetric(horizontal: 16, vertical: 10));
 
     final button = switch (widget.variant) {
       ImmichVariant.filled => ElevatedButton.icon(
-        style: style,
+        style: filledStyle,
         onPressed: _onPressed,
         onLongPress: _onLongPress,
         icon: icon,
         label: label,
       ),
       ImmichVariant.ghost => TextButton.icon(
-        style: style,
+        style: ghostStyle,
         onPressed: _onPressed,
         onLongPress: _onLongPress,
         icon: icon,

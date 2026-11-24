@@ -90,7 +90,7 @@ void main() {
         find.descendant(of: find.byKey(const Key('timeline-grouping-selector')), matching: find.byType(Material)),
       );
       expect(material.color, Colors.transparent);
-      expect((material.shape! as StadiumBorder).side, BorderSide.none);
+      expect((material.shape! as OutlinedBorder).side, BorderSide.none);
     });
 
     testWidgets('default variant keeps its own surface and border (app-bar hosts paint nothing)', (tester) async {
@@ -101,7 +101,7 @@ void main() {
         find.descendant(of: find.byKey(const Key('timeline-grouping-selector')), matching: find.byType(Material)),
       );
       expect(material.color, isNot(Colors.transparent));
-      expect((material.shape! as StadiumBorder).side.style, BorderStyle.solid);
+      expect((material.shape! as OutlinedBorder).side.style, BorderStyle.solid);
     });
 
     testWidgets('selects the segment matching the active grouping', (tester) async {

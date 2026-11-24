@@ -6,6 +6,7 @@ import 'package:immich_mobile/domain/models/user.model.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/gallery/cleanup/widgets/library_cleanup_button.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/gallery/widgets/library_collection_cards.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/presentation/widgets/images/local_album_thumbnail.widget.dart';
@@ -56,7 +57,7 @@ class _ActionButtonGrid extends ConsumerWidget {
     final isTrashEnable = ref.watch(serverInfoProvider.select((state) => state.serverFeatures.trash));
 
     return SliverPadding(
-      padding: const EdgeInsets.only(left: 16, top: 16, right: 16, bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
       sliver: SliverToBoxAdapter(
         child: Column(
           children: [
@@ -67,7 +68,7 @@ class _ActionButtonGrid extends ConsumerWidget {
                   onTap: () => context.pushRoute(const FavoriteRoute()),
                   label: context.t.favorites,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 _ActionButton(
                   icon: Icons.archive_outlined,
                   onTap: () => context.pushRoute(const ArchiveRoute()),
@@ -75,7 +76,7 @@ class _ActionButtonGrid extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Row(
               children: [
                 _ActionButton(
@@ -83,7 +84,7 @@ class _ActionButtonGrid extends ConsumerWidget {
                   onTap: () => context.pushRoute(const SharedLinkRoute()),
                   label: context.t.shared_links,
                 ),
-                isTrashEnable ? const SizedBox(width: 8) : const SizedBox.shrink(),
+                isTrashEnable ? const SizedBox(width: 6) : const SizedBox.shrink(),
                 isTrashEnable
                     ? _ActionButton(
                         icon: Icons.delete_outline_rounded,
@@ -110,24 +111,26 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final kioku = context.kioku;
     return Expanded(
       child: FilledButton.icon(
         onPressed: onTap,
-        label: Padding(
-          padding: const EdgeInsets.only(left: 4.0),
-          child: Text(label, style: TextStyle(color: context.colorScheme.onSurface, fontSize: 15)),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: kioku.ink, fontSize: 13.5, fontWeight: FontWeight.w500),
         ),
         style: FilledButton.styleFrom(
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          backgroundColor: context.colorScheme.surfaceContainerLow,
+          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          backgroundColor: kioku.surface,
+          foregroundColor: kioku.ink,
           alignment: Alignment.centerLeft,
-          shape: RoundedRectangleBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(25)),
-            side: BorderSide(color: context.colorScheme.onSurface.withAlpha(10), width: 1),
-          ),
+          shape: kioku.shape,
         ),
-        icon: Icon(icon, color: context.primaryColor),
+        icon: Icon(icon, size: 18, color: kioku.ink),
       ),
     );
   }
@@ -140,10 +143,10 @@ class _CollectionCards extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final order = ref.watch(libraryCollectionOrderProvider);
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       sliver: SliverToBoxAdapter(
         child: Wrap(
-          spacing: 8,
+          spacing: 6,
           runSpacing: 8,
           children: [
             if (order.lead != null) libraryCollectionCard(order.lead!),
@@ -165,60 +168,68 @@ class _PeopleCollectionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final people = ref.watch(Store.people.all());
+    final kioku = context.kioku;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.maxWidth > 600;
-        final widthFactor = isTablet ? 0.25 : 0.5;
-        final size = context.width * widthFactor - 20.0;
+        final size = kiokuLibraryTileSize(constraints, context);
 
         return GestureDetector(
           onTap: () => context.pushRoute(const PeopleCollectionRoute()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: size,
-                width: size,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(20)),
-                  gradient: LinearGradient(
-                    colors: [context.colorScheme.primary.withAlpha(30), context.colorScheme.primary.withAlpha(25)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+          child: SizedBox(
+            width: size,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: size,
+                  width: size,
+                  decoration: BoxDecoration(
+                    color: kioku.surface,
+                    borderRadius: kioku.borderRadius,
+                    border: Border.fromBorderSide(kioku.hairlineSide),
                   ),
-                ),
-                child: people.widgetWhen(
-                  onLoading: () => const Center(child: CircularProgressIndicator()),
-                  onData: (people) {
-                    return GridView.count(
-                      crossAxisCount: 2,
-                      padding: const EdgeInsets.all(12),
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: people.take(4).map((person) {
-                        return CircleAvatar(
-                          backgroundImage: RemoteImageProvider(
-                            url: getFaceThumbnailUrl(person.id, updatedAt: person.updatedAt),
-                          ),
+                  child: ClipRRect(
+                    borderRadius: kioku.borderRadius,
+                    child: people.widgetWhen(
+                      onLoading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      onData: (people) {
+                        if (people.isEmpty) {
+                          return Center(child: Icon(Icons.people_outline_rounded, size: 28, color: kioku.muted));
+                        }
+                        return GridView.count(
+                          crossAxisCount: 2,
+                          padding: const EdgeInsets.all(3),
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: people.take(4).map((person) {
+                            return ClipRRect(
+                              borderRadius: kioku.tileBorderRadius,
+                              child: Image(
+                                fit: BoxFit.cover,
+                                image: RemoteImageProvider(
+                                  url: getFaceThumbnailUrl(person.id, updatedAt: person.updatedAt),
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         );
-                      }).toList(),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  context.t.people,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    color: context.colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
+                      },
+                    ),
                   ),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.only(top: 5, bottom: 2),
+                  child: Text(
+                    context.t.people,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: kioku.ink, fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -231,46 +242,49 @@ class _PlacesCollectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final kioku = context.kioku;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.maxWidth > 600;
-        final widthFactor = isTablet ? 0.25 : 0.5;
-        final size = context.width * widthFactor - 20.0;
+        final size = kiokuLibraryTileSize(constraints, context);
 
         return GestureDetector(
           onTap: () => context.pushRoute(PlaceRoute(currentLocation: null)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: size,
-                width: size,
-                child: DecoratedBox(
+          child: SizedBox(
+            width: size,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: size,
+                  width: size,
                   decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(Radius.circular(20)),
-                    color: context.colorScheme.secondaryContainer.withAlpha(100),
+                    color: kioku.surface,
+                    borderRadius: kioku.borderRadius,
+                    border: Border.fromBorderSide(kioku.hairlineSide),
                   ),
-                  child: IgnorePointer(
-                    child: MapThumbnail(
-                      zoom: 8,
-                      centre: const LatLng(21.44950, -157.91959),
-                      showAttribution: false,
-                      themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+                  child: ClipRRect(
+                    borderRadius: kioku.borderRadius,
+                    child: IgnorePointer(
+                      child: MapThumbnail(
+                        zoom: 8,
+                        centre: const LatLng(21.44950, -157.91959),
+                        showAttribution: false,
+                        themeMode: context.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  context.t.places,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    color: context.colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
+                Padding(
+                  padding: const EdgeInsets.only(top: 5, bottom: 2),
+                  child: Text(
+                    context.t.places,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: kioku.ink, fontSize: 12.5, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -284,63 +298,64 @@ class _LocalAlbumsCollectionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final albums = ref.watch(localAlbumProvider);
+    final kioku = context.kioku;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.maxWidth > 600;
-        final widthFactor = isTablet ? 0.25 : 0.5;
-        final size = context.width * widthFactor - 20.0;
+        final size = kiokuLibraryTileSize(constraints, context);
 
         return GestureDetector(
           onTap: () => context.pushRoute(const LocalAlbumsRoute()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: size,
-                width: size,
-                child: DecoratedBox(
+          child: SizedBox(
+            width: size,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: size,
+                  width: size,
                   decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(Radius.circular(20)),
-                    gradient: LinearGradient(
-                      colors: [context.colorScheme.primary.withAlpha(30), context.colorScheme.primary.withAlpha(25)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
+                    color: kioku.surface,
+                    borderRadius: kioku.borderRadius,
+                    border: Border.fromBorderSide(kioku.hairlineSide),
                   ),
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    padding: const EdgeInsets.all(12),
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: albums.when(
+                  child: ClipRRect(
+                    borderRadius: kioku.borderRadius,
+                    child: albums.when(
                       data: (data) {
-                        return data.take(4).map((album) {
-                          return LocalAlbumThumbnail(albumId: album.id);
-                        }).toList();
+                        if (data.isEmpty) {
+                          return Center(child: Icon(Icons.smartphone_outlined, size: 28, color: kioku.muted));
+                        }
+                        return GridView.count(
+                          crossAxisCount: 2,
+                          padding: const EdgeInsets.all(3),
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: data.take(4).map((album) {
+                            return ClipRRect(
+                              borderRadius: kioku.tileBorderRadius,
+                              child: LocalAlbumThumbnail(albumId: album.id),
+                            );
+                          }).toList(),
+                        );
                       },
-                      error: (error, _) {
-                        return [Center(child: Text(context.t.error_saving_image(error: error.toString())))];
-                      },
-                      loading: () {
-                        return [const Center(child: CircularProgressIndicator())];
-                      },
+                      error: (error, _) => Center(child: Text(context.t.error_saving_image(error: error.toString()))),
+                      loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  context.t.on_this_device,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    color: context.colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
+                Padding(
+                  padding: const EdgeInsets.only(top: 5, bottom: 2),
+                  child: Text(
+                    context.t.on_this_device,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: kioku.ink, fontSize: 12.5, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -354,63 +369,67 @@ class _MemoriesCollectionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final memories = ref.watch(allMemoriesProvider(false));
+    final kioku = context.kioku;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.maxWidth > 600;
-        final widthFactor = isTablet ? 0.25 : 0.5;
-        final size = context.width * widthFactor - 20.0;
+        final size = kiokuLibraryTileSize(constraints, context);
 
         return GestureDetector(
           onTap: () => context.pushRoute(const MemoryListRoute()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: size,
-                width: size,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.all(Radius.circular(20)),
-                  gradient: LinearGradient(
-                    colors: [context.colorScheme.primary.withAlpha(30), context.colorScheme.primary.withAlpha(25)],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+          child: SizedBox(
+            width: size,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: size,
+                  width: size,
+                  decoration: BoxDecoration(
+                    color: kioku.surface,
+                    borderRadius: kioku.borderRadius,
+                    border: Border.fromBorderSide(kioku.hairlineSide),
                   ),
-                ),
-                child: memories.widgetWhen(
-                  onLoading: () => const Center(child: CircularProgressIndicator()),
-                  onData: (memories) {
-                    return GridView.count(
-                      crossAxisCount: 2,
-                      padding: const EdgeInsets.all(12),
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: memories.take(4).map((memory) {
-                        return ClipRRect(
-                          borderRadius: const BorderRadius.all(Radius.circular(10)),
-                          child: Thumbnail.remote(
-                            remoteId: memory.assets[0].id,
-                            thumbhash: memory.assets[0].thumbHash ?? "",
-                            fit: BoxFit.cover,
-                          ),
+                  child: ClipRRect(
+                    borderRadius: kioku.borderRadius,
+                    child: memories.widgetWhen(
+                      onLoading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      onData: (memories) {
+                        if (memories.isEmpty) {
+                          return Center(child: Icon(Icons.auto_stories_outlined, size: 28, color: kioku.muted));
+                        }
+                        return GridView.count(
+                          crossAxisCount: 2,
+                          padding: const EdgeInsets.all(3),
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: memories.take(4).map((memory) {
+                            return ClipRRect(
+                              borderRadius: kioku.tileBorderRadius,
+                              child: Thumbnail.remote(
+                                remoteId: memory.assets[0].id,
+                                thumbhash: memory.assets[0].thumbHash ?? "",
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          }).toList(),
                         );
-                      }).toList(),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  context.t.memories,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    color: context.colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
+                      },
+                    ),
                   ),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.only(top: 5, bottom: 2),
+                  child: Text(
+                    context.t.memories,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: kioku.ink, fontSize: 12.5, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -441,44 +460,43 @@ class _QuickAccessItem {
 class _QuickAccessButtonList extends ConsumerWidget {
   const _QuickAccessButtonList();
 
-  static const _tileRadius = 20.0;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final partnerSharedWithAsync = ref.watch(sharedWithPartnerProvider);
     final partners = partnerSharedWithAsync.valueOrNull ?? [];
     final showSpaces = ref.watch(serverSupportsSpacesProvider);
+    final kioku = context.kioku;
 
     final items = [
       if (showSpaces)
         _QuickAccessItem(
-          leading: const Icon(Icons.workspaces_outlined, size: 26),
+          leading: Icon(Icons.workspaces_outlined, size: 19, color: kioku.ink),
           title: context.t.spaces,
           onTap: () => context.pushRoute(const SpacesRoute()),
         ),
       _QuickAccessItem(
-        leading: const Icon(Icons.folder_outlined, size: 26),
+        leading: Icon(Icons.folder_outlined, size: 19, color: kioku.ink),
         title: context.t.folders,
         onTap: () => context.pushRoute(FolderRoute()),
       ),
       _QuickAccessItem(
-        leading: const Icon(Icons.lock_outline_rounded, size: 26),
+        leading: Icon(Icons.lock_outline_rounded, size: 19, color: kioku.ink),
         title: context.t.locked_folder,
         onTap: () => context.pushRoute(const LockedFolderRoute()),
       ),
       _QuickAccessItem(
-        leading: const Icon(Icons.group_outlined, size: 26),
+        leading: Icon(Icons.group_outlined, size: 19, color: kioku.ink),
         title: context.t.partners,
         onTap: () => context.pushRoute(const PartnerRoute()),
       ),
       _QuickAccessItem(
-        leading: const Icon(Icons.photo_album_outlined, size: 26),
+        leading: Icon(Icons.photo_album_outlined, size: 19, color: kioku.ink),
         title: context.t.albums,
         onTap: () => context.pushRoute(const AlbumsRoute()),
       ),
       for (final partner in partners)
         _QuickAccessItem(
-          contentPadding: const EdgeInsets.only(left: 12.0, right: 18.0),
+          contentPadding: const EdgeInsets.only(left: 10.0, right: 12.0),
           leading: PartnerUserAvatar(userId: partner.id, name: partner.name),
           title: context.t.partner_list_user_photos(user: partner.name),
           onTap: () => context.pushRoute(PartnerDetailRoute(partner: partner)),
@@ -486,43 +504,31 @@ class _QuickAccessButtonList extends ConsumerWidget {
     ];
 
     return SliverPadding(
-      padding: const EdgeInsets.only(left: 16, top: 12, right: 16, bottom: 32),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
       sliver: SliverToBoxAdapter(
-        child: DecoratedBox(
+        child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: context.colorScheme.onSurface.withAlpha(10), width: 1),
-            borderRadius: const BorderRadius.all(Radius.circular(_tileRadius)),
-            gradient: LinearGradient(
-              colors: [
-                context.colorScheme.primary.withAlpha(10),
-                context.colorScheme.primary.withAlpha(15),
-                context.colorScheme.primary.withAlpha(20),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+            color: kioku.surface,
+            border: Border.fromBorderSide(kioku.hairlineSide),
+            borderRadius: kioku.borderRadius,
           ),
-          child: ListView.builder(
+          clipBehavior: Clip.antiAlias,
+          child: ListView.separated(
             shrinkWrap: true,
             padding: EdgeInsets.zero,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: items.length,
+            separatorBuilder: (_, _) => Divider(height: 1, thickness: 1, color: kioku.hairline),
             itemBuilder: (context, index) {
               final item = items[index];
-              final isFirst = index == 0;
-              final isLast = index == items.length - 1;
               return ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(isFirst ? _tileRadius : 0),
-                    topRight: Radius.circular(isFirst ? _tileRadius : 0),
-                    bottomLeft: Radius.circular(isLast ? _tileRadius : 0),
-                    bottomRight: Radius.circular(isLast ? _tileRadius : 0),
-                  ),
-                ),
-                contentPadding: item.contentPadding,
+                dense: true,
+                visualDensity: const VisualDensity(vertical: -2),
+                minLeadingWidth: 26,
+                contentPadding: item.contentPadding ?? const EdgeInsets.symmetric(horizontal: 12),
                 leading: item.leading,
-                title: Text(item.title, style: context.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
+                title: Text(item.title, style: TextStyle(color: kioku.ink, fontSize: 13.5, fontWeight: FontWeight.w500)),
+                trailing: Icon(Icons.chevron_right_rounded, size: 18, color: kioku.muted),
                 onTap: item.onTap,
               );
             },

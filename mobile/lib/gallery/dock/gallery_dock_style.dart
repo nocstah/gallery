@@ -5,12 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:immich_mobile/gallery/motion/motion_tokens.dart';
 import 'package:immich_mobile/gallery/motion/pressable.dart';
 import 'package:immich_mobile/gallery/motion/spring_curve.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 
 /// The look and motion shared by the dock and every bottom control styled like it (the detail pages' grouping pill),
 /// so they cannot drift apart.
 abstract final class GalleryDockStyle {
-  /// Space on each side: a little wider than a plain margin, so the pills follow the screen's rounded corners.
-  static const double sideInset = 20;
+  /// Compact edge inset for Kioku's tiled floating window dock.
+  static const double sideInset = 12;
 
   /// Distance from the screen's bottom edge. On an iPhone with a home indicator the dock sits down inside that area, as
   /// iOS's own tab bar does. Android keeps it above the safe area (at least 26 up): a swipe up from its bottom edge is
@@ -34,20 +35,22 @@ abstract final class GalleryDockStyle {
   static (Duration, Curve) motion(BuildContext context) =>
       GalleryMotion.reduced(context) ? (const Duration(milliseconds: 150), Curves.easeOut) : (springDuration, spring);
 
-  /// The tint under the selected tab and the selected grouping.
-  static Color highlight(ThemeData theme) =>
-      theme.colorScheme.primary.withValues(alpha: theme.brightness == Brightness.dark ? 0.16 : 0.2);
+  static KiokuThemeTokens _tokens(ThemeData theme) =>
+      theme.extension<KiokuThemeTokens>() ?? KiokuThemeTokens.fallback(theme.brightness);
+
+  /// Active inversion: selected tab/segment flips to solid ink with surface foreground.
+  static Color highlight(ThemeData theme) => _tokens(theme).ink;
 
   /// A selected label or icon, and an idle one.
-  static Color activeForeground(ThemeData theme) => theme.colorScheme.primary;
-  static Color idleForeground(ThemeData theme) => theme.colorScheme.onSurface.withValues(alpha: 0.72);
+  static Color activeForeground(ThemeData theme) => _tokens(theme).surface;
+  static Color idleForeground(ThemeData theme) => _tokens(theme).glassMuted;
 }
 
-/// The frosted stadium every piece of the dock sits on.
+/// The frosted Kioku floating window every piece of the dock sits on.
 class GalleryGlass extends StatelessWidget {
   final Widget child;
 
-  /// The surface alone fades, so the search slot can sit bare inside the tab bar and grow its own circle when it
+  /// The surface alone fades, so the search slot can sit bare inside the tab bar and grow its own frame when it
   /// detaches.
   final double surfaceOpacity;
   final Duration fade;
@@ -56,9 +59,8 @@ class GalleryGlass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dark = theme.brightness == Brightness.dark;
-    const shape = StadiumBorder();
+    final kioku = context.kioku;
+    final shape = RoundedRectangleBorder(borderRadius: kioku.borderRadius);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -66,39 +68,15 @@ class GalleryGlass extends StatelessWidget {
           duration: fade,
           opacity: surfaceOpacity,
           child: DecoratedBox(
-            decoration: ShapeDecoration(
-              shape: shape,
-              shadows: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: dark ? 0.45 : 0.18),
-                  offset: const Offset(0, 10),
-                  blurRadius: 28,
-                  spreadRadius: -8,
-                ),
-              ],
-            ),
+            decoration: ShapeDecoration(shape: shape, shadows: kioku.popupShadow),
             child: ClipPath(
-              clipper: const ShapeBorderClipper(shape: shape),
+              clipper: ShapeBorderClipper(shape: shape),
               child: BackdropFilter(
-                filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                 child: DecoratedBox(
                   decoration: ShapeDecoration(
-                    color: dark
-                        ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.62)
-                        : theme.colorScheme.surface.withValues(alpha: 0.88),
-                    shape: StadiumBorder(
-                      side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55)),
-                    ),
-                  ),
-                  child: DecoratedBox(
-                    decoration: ShapeDecoration(
-                      shape: shape,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.center,
-                        colors: [theme.colorScheme.onSurface.withValues(alpha: 0.05), Colors.transparent],
-                      ),
-                    ),
+                    color: kioku.glassSurface,
+                    shape: RoundedRectangleBorder(borderRadius: kioku.borderRadius, side: kioku.hairlineSide),
                   ),
                 ),
               ),
@@ -106,7 +84,7 @@ class GalleryGlass extends StatelessWidget {
           ),
         ),
         ClipPath(
-          clipper: const ShapeBorderClipper(shape: shape),
+          clipper: ShapeBorderClipper(shape: shape),
           child: child,
         ),
       ],
@@ -114,8 +92,8 @@ class GalleryGlass extends StatelessWidget {
   }
 }
 
-/// A round 40 button at the end of a grouping row (display options, search): bare while idle, tinted like the selected
-/// grouping while [active].
+/// A compact square/rounded button at the end of a grouping row (display options, search): bare while idle, ink-inverted
+/// while [active].
 class GalleryDockRowButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -132,11 +110,12 @@ class GalleryDockRowButton extends StatelessWidget {
     this.active = false,
   });
 
-  static const double size = 38;
+  static const double size = 30;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final kioku = context.kioku;
     return Semantics(
       button: true,
       label: label,
@@ -151,15 +130,13 @@ class GalleryDockRowButton extends StatelessWidget {
             dimension: size,
             child: DecoratedBox(
               decoration: ShapeDecoration(
-                shape: const CircleBorder(),
+                shape: RoundedRectangleBorder(borderRadius: kioku.borderRadius),
                 color: active ? GalleryDockStyle.highlight(theme) : Colors.transparent,
               ),
               child: Icon(
                 icon,
-                size: 22,
-                color: active
-                    ? GalleryDockStyle.activeForeground(theme)
-                    : theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                size: 18,
+                color: active ? GalleryDockStyle.activeForeground(theme) : kioku.ink,
               ),
             ),
           ),

@@ -1,0 +1,1256 @@
+[
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "angkor-bayon",
+    "name": "Angkor Bayon",
+    "mode": "dark",
+    "palette": {
+      "background": "#0e1020",
+      "foreground": "#d6e1e6",
+      "accent": "#86e0d6"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "angkor-monsoon",
+    "name": "Angkor Monsoon",
+    "mode": "dark",
+    "palette": {
+      "background": "#0c1f1a",
+      "foreground": "#dceee5",
+      "accent": "#3ddc9e"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "angkor-monsoon-calm",
+    "name": "Angkor Monsoon Calm",
+    "mode": "dark",
+    "palette": {
+      "background": "#0c1f1a",
+      "foreground": "#dceee5",
+      "accent": "#3ddc9e"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "angkor-sunrise",
+    "name": "Angkor Sunrise",
+    "mode": "dark",
+    "palette": {
+      "background": "#1a1230",
+      "foreground": "#f4e6d8",
+      "accent": "#ff6fb1"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "angkor-sunrise-calm",
+    "name": "Angkor Sunrise Calm",
+    "mode": "dark",
+    "palette": {
+      "background": "#1a1230",
+      "foreground": "#f4e6d8",
+      "accent": "#ff6fb1"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "angkor-taprohm",
+    "name": "Angkor Taprohm",
+    "mode": "dark",
+    "palette": {
+      "background": "#221b1c",
+      "foreground": "#efe0cc",
+      "accent": "#ff9152"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "bamboo-forest",
+    "name": "Bamboo Forest",
+    "mode": "dark",
+    "palette": {
+      "background": "#17251d",
+      "foreground": "#e2e9d6",
+      "accent": "#9fd36a"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "blackfire",
+    "name": "Blackfire",
+    "mode": "dark",
+    "palette": {
+      "background": "#140806",
+      "foreground": "#e6d8c2",
+      "accent": "#c9a227"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "catppuccin",
+    "name": "Catppuccin",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#1e1e2e",
+      "foreground": "#cdd6f4",
+      "accent": "#89b4fa"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "catppuccin-latte",
+    "name": "Catppuccin Latte",
+    "author": "Omarchy",
+    "mode": "light",
+    "palette": {
+      "background": "#eff1f5",
+      "foreground": "#4c4f69",
+      "accent": "#1e66f5",
+      "lighterBackground": "#dce0e8"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "cyanotype",
+    "name": "Cyanotype",
+    "mode": "dark",
+    "palette": {
+      "background": "#142241",
+      "foreground": "#ccdfe5",
+      "accent": "#9cecf4"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dnd-abyssal-gate",
+    "name": "D&D Abyssal Gate",
+    "mode": "dark",
+    "palette": {
+      "background": "#25110a",
+      "foreground": "#e6dfd1",
+      "accent": "#fea979"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dnd-death-knights",
+    "name": "D&D Death Knights",
+    "mode": "dark",
+    "palette": {
+      "background": "#121722",
+      "foreground": "#e6dfd1",
+      "accent": "#feac70"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dnd-deep-halls",
+    "name": "D&D Deep Halls",
+    "mode": "dark",
+    "palette": {
+      "background": "#21130f",
+      "foreground": "#e6dfd1",
+      "accent": "#ffa97a"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dnd-elven-haven",
+    "name": "D&D Elven Haven",
+    "mode": "light",
+    "palette": {
+      "background": "#ddeddd",
+      "foreground": "#402f17",
+      "accent": "#674a00",
+      "lighterBackground": "#e9f5e9"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dnd-golden-wyrm",
+    "name": "D&D Golden Wyrm",
+    "mode": "light",
+    "palette": {
+      "background": "#f1e3cb",
+      "foreground": "#442d1a",
+      "accent": "#6e4400",
+      "lighterBackground": "#f7ecdb"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dnd-lich-spire",
+    "name": "D&D Lich Spire",
+    "mode": "dark",
+    "palette": {
+      "background": "#1a1325",
+      "foreground": "#e6dfd1",
+      "accent": "#82cf7e"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dnd-sleeping-wyrm",
+    "name": "D&D Sleeping Wyrm",
+    "mode": "dark",
+    "palette": {
+      "background": "#251109",
+      "foreground": "#e7ded1",
+      "accent": "#faac58"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dnd-underdark",
+    "name": "D&D Underdark",
+    "mode": "dark",
+    "palette": {
+      "background": "#101628",
+      "foreground": "#d4e2ec",
+      "accent": "#3acdfb"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dream-cloud-reaper",
+    "name": "Dream Cloud Reaper",
+    "mode": "dark",
+    "palette": {
+      "background": "#21111e",
+      "foreground": "#eddbdb",
+      "accent": "#fea4b4"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dream-cloud-reaper-dawn",
+    "name": "Dream Cloud Reaper Dawn",
+    "mode": "light",
+    "palette": {
+      "background": "#eae2f6",
+      "foreground": "#362e47",
+      "accent": "#951741",
+      "lighterBackground": "#f3ecfb"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dream-cloud-reaper-twilight",
+    "name": "Dream Cloud Reaper Twilight",
+    "mode": "light",
+    "palette": {
+      "background": "#f5dfe5",
+      "foreground": "#3d2b41",
+      "accent": "#95173a",
+      "lighterBackground": "#f9e9ed"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "dream-violet-path",
+    "name": "Dream Violet Path",
+    "mode": "dark",
+    "palette": {
+      "background": "#1e1222",
+      "foreground": "#e3dcea",
+      "accent": "#f1a3f0"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "eldritch-celephais",
+    "name": "Eldritch Celephais",
+    "mode": "light",
+    "palette": {
+      "background": "#d2efec",
+      "foreground": "#193842",
+      "accent": "#005961",
+      "lighterBackground": "#e1f6f4"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "eldritch-colour-out-of-space",
+    "name": "Eldritch Colour Out Of Space",
+    "mode": "dark",
+    "palette": {
+      "background": "#111725",
+      "foreground": "#dfddee",
+      "accent": "#f8a0f5"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "eldritch-dagon",
+    "name": "Eldritch Dagon",
+    "mode": "light",
+    "palette": {
+      "background": "#f1e5d0",
+      "foreground": "#213549",
+      "accent": "#005759",
+      "lighterBackground": "#f8eedf"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "eldritch-innsmouth",
+    "name": "Eldritch Innsmouth",
+    "mode": "dark",
+    "palette": {
+      "background": "#0f1728",
+      "foreground": "#e6dfd1",
+      "accent": "#45d4ab"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "eldritch-mountains-of-madness",
+    "name": "Eldritch Mountains Of Madness",
+    "mode": "dark",
+    "palette": {
+      "background": "#0f1726",
+      "foreground": "#cde5e8",
+      "accent": "#1ed2d2"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "eldritch-nameless-city",
+    "name": "Eldritch Nameless City",
+    "mode": "dark",
+    "palette": {
+      "background": "#171426",
+      "foreground": "#e2dded",
+      "accent": "#fba98c"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "eldritch-rlyeh-rising",
+    "name": "Eldritch R'lyeh Rising",
+    "mode": "dark",
+    "palette": {
+      "background": "#16172b",
+      "foreground": "#dedeee",
+      "accent": "#2dd6cb"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "eldritch-unknown-kadath",
+    "name": "Eldritch Unknown Kadath",
+    "mode": "dark",
+    "palette": {
+      "background": "#161628",
+      "foreground": "#e2dcf0",
+      "accent": "#d1b1ff"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "ethereal",
+    "name": "Ethereal",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#060b1e",
+      "foreground": "#ffcead",
+      "accent": "#7d82d9"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "everforest",
+    "name": "Everforest",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#2d353b",
+      "foreground": "#d3c6aa",
+      "accent": "#7fbbb3"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "fields-lavender",
+    "name": "Fields Lavender",
+    "mode": "dark",
+    "palette": {
+      "background": "#241a27",
+      "foreground": "#efe4e6",
+      "accent": "#c3a8f3"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "flexoki-light",
+    "name": "Flexoki Light",
+    "author": "Omarchy",
+    "mode": "light",
+    "palette": {
+      "background": "#fffcf0",
+      "foreground": "#100f0f",
+      "accent": "#205ea6",
+      "lighterBackground": "#e6e4d9"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "gilded-noir",
+    "name": "Gilded Noir",
+    "mode": "dark",
+    "palette": {
+      "background": "#0b0b0c",
+      "foreground": "#c3b285",
+      "accent": "#d4af37"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "glass-black",
+    "name": "Glass Black",
+    "mode": "dark",
+    "palette": {
+      "background": "#1b1e23",
+      "foreground": "#f2f3f5",
+      "accent": "#7c93ac"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "glass-white",
+    "name": "Glass White",
+    "mode": "light",
+    "palette": {
+      "background": "#f2f2f7",
+      "foreground": "#1c1c1e",
+      "accent": "#3e6b96",
+      "lighterBackground": "#ffffff"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "glow-aurora",
+    "name": "Glow Aurora",
+    "mode": "dark",
+    "palette": {
+      "background": "#0f1827",
+      "foreground": "#e2eaf2",
+      "accent": "#6ee0b0"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "glow-bay",
+    "name": "Glow Bay",
+    "mode": "dark",
+    "palette": {
+      "background": "#08111b",
+      "foreground": "#d4e4ec",
+      "accent": "#52d6f4"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "glow-desert",
+    "name": "Glow Desert",
+    "mode": "dark",
+    "palette": {
+      "background": "#0f1022",
+      "foreground": "#dcdcea",
+      "accent": "#efc77a"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "glow-neon-alley",
+    "name": "Glow Neon Alley",
+    "mode": "dark",
+    "palette": {
+      "background": "#110e1c",
+      "foreground": "#e3def0",
+      "accent": "#ff6acd"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "glow-volcano",
+    "name": "Glow Volcano",
+    "mode": "dark",
+    "palette": {
+      "background": "#121318",
+      "foreground": "#e4dfd8",
+      "accent": "#ff7f3a"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "gothic-drowned-chapel",
+    "name": "Gothic Drowned Chapel",
+    "mode": "dark",
+    "palette": {
+      "background": "#0a1a1c",
+      "foreground": "#e6dfd1",
+      "accent": "#feaa9b"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "gothic-red-cathedral",
+    "name": "Gothic Red Cathedral",
+    "mode": "dark",
+    "palette": {
+      "background": "#25110f",
+      "foreground": "#eaddd3",
+      "accent": "#fea598"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "gruvbox",
+    "name": "Gruvbox",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#282828",
+      "foreground": "#d4be98",
+      "accent": "#7daea3"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "hackerman",
+    "name": "Hackerman",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#0b0c16",
+      "foreground": "#ddf7ff",
+      "accent": "#82fb9c"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "jungle-jaguar-falls",
+    "name": "Jungle Jaguar Falls",
+    "mode": "dark",
+    "palette": {
+      "background": "#0a1c0e",
+      "foreground": "#d2e3e8",
+      "accent": "#32d6ba"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "kanagawa",
+    "name": "Kanagawa",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#1f1f28",
+      "foreground": "#dcd7ba",
+      "accent": "#dcd7ba"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "last-horizon",
+    "name": "Last Horizon",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#0c0b0c",
+      "foreground": "#fafcfb",
+      "accent": "#b59790"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "lumon",
+    "name": "Lumon",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#16242d",
+      "foreground": "#d6e2ee",
+      "accent": "#8bc9eb"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "lupine",
+    "name": "Lupine",
+    "author": "Omarchy",
+    "mode": "light",
+    "palette": {
+      "background": "#fafafa",
+      "foreground": "#212121",
+      "accent": "#3264eb",
+      "lighterBackground": "#f5f5f5"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "matte-black",
+    "name": "Matte Black",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#121212",
+      "foreground": "#bebebe",
+      "accent": "#e68e0d"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "miasma",
+    "name": "Miasma",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#222222",
+      "foreground": "#c2c2b0",
+      "accent": "#78824b"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "momiji-golden",
+    "name": "Momiji Golden",
+    "mode": "dark",
+    "palette": {
+      "background": "#2a1e16",
+      "foreground": "#f1e3cc",
+      "accent": "#f7784a"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "momiji-morning",
+    "name": "Momiji Morning",
+    "mode": "light",
+    "palette": {
+      "background": "#fae1d1",
+      "foreground": "#452b25",
+      "accent": "#9a1300",
+      "lighterBackground": "#feebdf"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "momiji-spring",
+    "name": "Momiji Spring",
+    "mode": "dark",
+    "palette": {
+      "background": "#1b2318",
+      "foreground": "#eae8d5",
+      "accent": "#bee05e"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "momiji-storm",
+    "name": "Momiji Storm",
+    "mode": "dark",
+    "palette": {
+      "background": "#25262d",
+      "foreground": "#ece3d6",
+      "accent": "#f4735f"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "momiji-summer",
+    "name": "Momiji Summer",
+    "mode": "dark",
+    "palette": {
+      "background": "#0f1b26",
+      "foreground": "#e3ece4",
+      "accent": "#72d98c"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "momiji-winter",
+    "name": "Momiji Winter",
+    "mode": "dark",
+    "palette": {
+      "background": "#1a2233",
+      "foreground": "#e4ecf5",
+      "accent": "#ff6b70"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "nord",
+    "name": "Nord",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#2e3440",
+      "foreground": "#d8dee9",
+      "accent": "#81a1c1"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "osaka-jade",
+    "name": "Osaka Jade",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#111c18",
+      "foreground": "#c1c497",
+      "accent": "#509475"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "oxblood-parchment",
+    "name": "Oxblood Parchment",
+    "mode": "light",
+    "palette": {
+      "background": "#ebddbe",
+      "foreground": "#33201a",
+      "accent": "#63130b",
+      "lighterBackground": "#f7eedf"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "retro-82",
+    "name": "Retro 82",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#05182e",
+      "foreground": "#f6dcac",
+      "accent": "#faa968"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "ristretto",
+    "name": "Ristretto",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#2c2525",
+      "foreground": "#e6d9db",
+      "accent": "#f38d70"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "rose-pine",
+    "name": "Rose Pine",
+    "author": "Omarchy",
+    "mode": "light",
+    "palette": {
+      "background": "#faf4ed",
+      "foreground": "#575279",
+      "accent": "#56949f",
+      "lighterBackground": "#f2e9e1"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura",
+    "name": "Sakura",
+    "mode": "dark",
+    "palette": {
+      "background": "#15111e",
+      "foreground": "#e8dce6",
+      "accent": "#f78dbb"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-ancient",
+    "name": "Sakura Ancient",
+    "mode": "dark",
+    "palette": {
+      "background": "#1d1720",
+      "foreground": "#e8dfec",
+      "accent": "#f59bc0"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-dusk",
+    "name": "Sakura Dusk",
+    "mode": "dark",
+    "palette": {
+      "background": "#322a3c",
+      "foreground": "#e9dbe3",
+      "accent": "#f5a9b9"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-firefly",
+    "name": "Sakura Firefly",
+    "mode": "dark",
+    "palette": {
+      "background": "#131b31",
+      "foreground": "#e3e6d9",
+      "accent": "#d3e67c"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-hanagumori",
+    "name": "Sakura Hanagumori",
+    "mode": "dark",
+    "palette": {
+      "background": "#3c3848",
+      "foreground": "#e0d2da",
+      "accent": "#eeb0c0"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-hanami",
+    "name": "Sakura Hanami",
+    "mode": "light",
+    "palette": {
+      "background": "#f8dee7",
+      "foreground": "#3b2a43",
+      "accent": "#901959",
+      "lighterBackground": "#fdeaf0"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-ink-pagoda",
+    "name": "Sakura Ink Pagoda",
+    "mode": "light",
+    "palette": {
+      "background": "#f1e5d0",
+      "foreground": "#343138",
+      "accent": "#971929",
+      "lighterBackground": "#f8eedf"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-light",
+    "name": "Sakura Light",
+    "mode": "light",
+    "palette": {
+      "background": "#f9dfde",
+      "foreground": "#3b2a43",
+      "accent": "#901959",
+      "lighterBackground": "#fdeaea"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-moonrise",
+    "name": "Sakura Moonrise",
+    "mode": "dark",
+    "palette": {
+      "background": "#221c33",
+      "foreground": "#e6e0ee",
+      "accent": "#f4a6be"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-rain",
+    "name": "Sakura Rain",
+    "mode": "dark",
+    "palette": {
+      "background": "#2d3441",
+      "foreground": "#dde3eb",
+      "accent": "#f4aec4"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-snow",
+    "name": "Sakura Snow",
+    "mode": "dark",
+    "palette": {
+      "background": "#2b3b51",
+      "foreground": "#dee8f2",
+      "accent": "#f7b2d1"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-sumie",
+    "name": "Sakura Sumie",
+    "mode": "light",
+    "palette": {
+      "background": "#c2bbb1",
+      "foreground": "#221e1b",
+      "accent": "#79243e",
+      "lighterBackground": "#ccc6bd"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sakura-yozakura",
+    "name": "Sakura Yozakura",
+    "mode": "dark",
+    "palette": {
+      "background": "#142630",
+      "foreground": "#eae2d8",
+      "accent": "#f7b267"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sands-abusimbel",
+    "name": "Sands Abusimbel",
+    "mode": "dark",
+    "palette": {
+      "background": "#15162d",
+      "foreground": "#f2e6da",
+      "accent": "#f6a48c"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sands-necropolis",
+    "name": "Sands Necropolis",
+    "mode": "dark",
+    "palette": {
+      "background": "#211815",
+      "foreground": "#eedfcb",
+      "accent": "#f5a04e"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sands-nile",
+    "name": "Sands Nile",
+    "mode": "dark",
+    "palette": {
+      "background": "#0c1222",
+      "foreground": "#d8dde6",
+      "accent": "#f2be62"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "sands-valley",
+    "name": "Sands Valley",
+    "mode": "dark",
+    "palette": {
+      "background": "#1f1915",
+      "foreground": "#eee3ce",
+      "accent": "#edb24a"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "solitude",
+    "name": "Solitude",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#101315",
+      "foreground": "#cacccc",
+      "accent": "#798186"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tenku-cloudsea-shrine",
+    "name": "Tenku Cloudsea Shrine",
+    "mode": "dark",
+    "palette": {
+      "background": "#0a1c25",
+      "foreground": "#e8dece",
+      "accent": "#e3a638"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tenku-floating-gardens",
+    "name": "Tenku Floating Gardens",
+    "mode": "dark",
+    "palette": {
+      "background": "#151927",
+      "foreground": "#dee0f0",
+      "accent": "#c79ef7"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tenku-glacier-temple",
+    "name": "Tenku Glacier Temple",
+    "mode": "light",
+    "palette": {
+      "background": "#d6ecf7",
+      "foreground": "#23344a",
+      "accent": "#005288",
+      "lighterBackground": "#e4f4fd"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tenku-maple-spires",
+    "name": "Tenku Maple Spires",
+    "mode": "dark",
+    "palette": {
+      "background": "#211312",
+      "foreground": "#e8dece",
+      "accent": "#f97358"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tenku-moon-monastery",
+    "name": "Tenku Moon Monastery",
+    "mode": "dark",
+    "palette": {
+      "background": "#141829",
+      "foreground": "#d9deec",
+      "accent": "#eaa150"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tenku-wisteria-gorge",
+    "name": "Tenku Wisteria Gorge",
+    "mode": "dark",
+    "palette": {
+      "background": "#181328",
+      "foreground": "#e3dced",
+      "accent": "#ed9a6f"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tokyo-night",
+    "name": "Tokyo Night",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#1a1b26",
+      "foreground": "#a9b1d6",
+      "accent": "#7aa2f7"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tsushima-crimson-snow",
+    "name": "Tsushima Crimson Snow",
+    "mode": "dark",
+    "palette": {
+      "background": "#1e1d26",
+      "foreground": "#e6e9f0",
+      "accent": "#ff6479"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tsushima-crimson-wind",
+    "name": "Tsushima Crimson Wind",
+    "mode": "dark",
+    "palette": {
+      "background": "#1e1219",
+      "foreground": "#f2dde2",
+      "accent": "#f4607a"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tsushima-golden-haze",
+    "name": "Tsushima Golden Haze",
+    "mode": "dark",
+    "palette": {
+      "background": "#231b11",
+      "foreground": "#f1e5cc",
+      "accent": "#e9b44c"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tsushima-higanbana",
+    "name": "Tsushima Higanbana",
+    "mode": "dark",
+    "palette": {
+      "background": "#1f1614",
+      "foreground": "#efe2ce",
+      "accent": "#f45f52"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tsushima-susuki",
+    "name": "Tsushima Susuki",
+    "mode": "dark",
+    "palette": {
+      "background": "#0c0c0f",
+      "foreground": "#e6e0d6",
+      "accent": "#ff4f55"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "tsushima-yukimi",
+    "name": "Tsushima Yukimi",
+    "mode": "light",
+    "palette": {
+      "background": "#f8dfe0",
+      "foreground": "#273348",
+      "accent": "#9e002a",
+      "lighterBackground": "#fdeaeb"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "vantablack",
+    "name": "Vantablack",
+    "author": "Omarchy",
+    "mode": "dark",
+    "palette": {
+      "background": "#000000",
+      "foreground": "#ffffff",
+      "accent": "#8d8d8d"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "water-koi",
+    "name": "Water Koi",
+    "mode": "dark",
+    "palette": {
+      "background": "#101b1a",
+      "foreground": "#e2e8df",
+      "accent": "#f98e52"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "water-reef",
+    "name": "Water Reef",
+    "mode": "dark",
+    "palette": {
+      "background": "#0b1928",
+      "foreground": "#d9e7f1",
+      "accent": "#ff8b61"
+    }
+  },
+  {
+    "format": "gallery-theme",
+    "version": 1,
+    "id": "white",
+    "name": "White",
+    "author": "Omarchy",
+    "mode": "light",
+    "palette": {
+      "background": "#ffffff",
+      "foreground": "#000000",
+      "accent": "#6e6e6e",
+      "lighterBackground": "#c0c0c0"
+    }
+  }
+]

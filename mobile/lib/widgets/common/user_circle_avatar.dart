@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:immich_mobile/domain/models/store.model.dart';
 import 'package:immich_mobile/domain/models/user.model.dart';
 import 'package:immich_mobile/entities/store.entity.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
 
 class UserCircleAvatar extends StatelessWidget {
@@ -34,18 +35,23 @@ class UserCircleAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userAvatarColor = user.avatarColor.toColor().withValues(alpha: opacity);
+    final kioku = context.kioku;
     final profileImageUrl =
         '${Store.get(StoreKey.serverEndpoint)}/users/${user.id}/profile-image?d=${user.profileChangedAt.millisecondsSinceEpoch}';
 
-    final textColor = (user.avatarColor.toColor().computeLuminance() > 0.5 ? Colors.black : Colors.white).withValues(
-      alpha: opacity,
+    final initial = user.name.isNotEmpty ? user.name[0].toUpperCase() : '?';
+    final textIcon = DefaultTextStyle(
+      style: TextStyle(
+        fontWeight: FontWeight.w700,
+        fontSize: (size * 0.42).clamp(10.0, 16.0),
+        color: kioku.ink.withValues(alpha: opacity),
+      ),
+      child: Text(initial),
     );
 
-    final textIcon = DefaultTextStyle(
-      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: textColor),
-      child: Text(user.name[0].toUpperCase()),
-    );
+    final borderColor = user.hasProfileImage
+        ? kioku.hairline.withValues(alpha: opacity)
+        : kioku.ink.withValues(alpha: 0.38 * opacity);
 
     return Tooltip(
       message: user.name,
@@ -54,9 +60,9 @@ class UserCircleAvatar extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: userAvatarColor,
+            color: kioku.surface.withValues(alpha: opacity),
             shape: BoxShape.circle,
-            border: hasBorder ? Border.all(color: userAvatarColor.withValues(alpha: opacity), width: 1.5) : null,
+            border: (hasBorder || !user.hasProfileImage) ? Border.all(color: borderColor, width: 1.2) : null,
           ),
           child: user.hasProfileImage
               ? ClipRRect(
@@ -66,7 +72,7 @@ class UserCircleAvatar extends StatelessWidget {
                     width: size,
                     height: size,
                     image: RemoteImageProvider(url: profileImageUrl),
-                    errorBuilder: (context, error, stackTrace) => textIcon,
+                    errorBuilder: (context, error, stackTrace) => Center(child: textIcon),
                     color: Colors.white.withValues(alpha: opacity),
                     colorBlendMode: BlendMode.modulate,
                   ),

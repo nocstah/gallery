@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/gallery/spatial/spatial_scene_toggle_button.widget.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/presentation/actions/action.dart';
 import 'package:immich_mobile/presentation/actions/delete.action.dart';
 import 'package:immich_mobile/presentation/actions/edit_asset.action.dart';
@@ -77,12 +78,8 @@ class ViewerBottomBar extends ConsumerWidget {
                     child: IgnorePointer(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [Colors.black45, Colors.black12, Colors.transparent],
-                            stops: [0.0, 0.7, 1.0],
-                          ),
+                          color: KiokuThemeTokens.viewerGlass,
+                          border: Border(top: BorderSide(color: KiokuThemeTokens.viewerGlassEdge, width: 1)),
                         ),
                       ),
                     ),
@@ -90,7 +87,7 @@ class ViewerBottomBar extends ConsumerWidget {
                   SafeArea(
                     top: false,
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 16),
+                      padding: const EdgeInsets.only(top: 6, bottom: 4),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [

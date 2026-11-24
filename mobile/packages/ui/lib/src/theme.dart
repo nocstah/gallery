@@ -12,31 +12,38 @@ class ImmichThemeProvider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseTheme = Theme.of(context);
+    final mergedExtensions = Map<Object, ThemeExtension<dynamic>>.of(baseTheme.extensions)
+      ..[ImmichColors] = ImmichColors.harmonized(colorScheme);
+    final hasCustomInputTheme = baseTheme.inputDecorationTheme.enabledBorder != null;
+
     return Theme(
-      data: Theme.of(context).copyWith(
-        extensions: [ImmichColors.harmonized(colorScheme)],
+      data: baseTheme.copyWith(
+        extensions: mergedExtensions.values,
         colorScheme: colorScheme,
         brightness: colorScheme.brightness,
-        inputDecorationTheme: InputDecorationTheme(
-          floatingLabelBehavior: FloatingLabelBehavior.always,
-          border: WidgetStateInputBorder.resolveWith((states) {
-            final color = states.contains(WidgetState.error)
-                ? colorScheme.error
-                : states.contains(WidgetState.focused)
-                ? colorScheme.primary
-                : colorScheme.outline;
-            return OutlineInputBorder(
-              borderSide: BorderSide(color: color),
-              borderRadius: const BorderRadius.all(Radius.circular(ImmichRadius.md)),
-            );
-          }),
-          labelStyle: WidgetStateTextStyle.resolveWith((states) {
-            final color = states.contains(WidgetState.error) ? colorScheme.error : colorScheme.primary;
-            return TextStyle(color: color, fontWeight: FontWeight.w600);
-          }),
-          hintStyle: const TextStyle(fontSize: ImmichTextSize.body),
-          errorStyle: TextStyle(color: colorScheme.error, fontWeight: FontWeight.w600),
-        ),
+        inputDecorationTheme: hasCustomInputTheme
+            ? baseTheme.inputDecorationTheme.copyWith(floatingLabelBehavior: FloatingLabelBehavior.always)
+            : InputDecorationTheme(
+                floatingLabelBehavior: FloatingLabelBehavior.always,
+                border: WidgetStateInputBorder.resolveWith((states) {
+                  final color = states.contains(WidgetState.error)
+                      ? colorScheme.error
+                      : states.contains(WidgetState.focused)
+                      ? colorScheme.primary
+                      : colorScheme.outline;
+                  return OutlineInputBorder(
+                    borderSide: BorderSide(color: color),
+                    borderRadius: const BorderRadius.all(Radius.circular(ImmichRadius.md)),
+                  );
+                }),
+                labelStyle: WidgetStateTextStyle.resolveWith((states) {
+                  final color = states.contains(WidgetState.error) ? colorScheme.error : colorScheme.primary;
+                  return TextStyle(color: color, fontWeight: FontWeight.w600);
+                }),
+                hintStyle: const TextStyle(fontSize: ImmichTextSize.body),
+                errorStyle: TextStyle(color: colorScheme.error, fontWeight: FontWeight.w600),
+              ),
       ),
       child: child,
     );

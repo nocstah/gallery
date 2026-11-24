@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/gallery/cleanup/providers/library_cleanup.providers.dart';
 import 'package:immich_mobile/gallery/cleanup/providers/library_cleanup_overview.providers.dart';
 import 'package:immich_mobile/gallery/motion/pressable.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/routing/router.dart';
 
@@ -57,44 +57,44 @@ class _LibraryCleanupButtonState extends ConsumerState<LibraryCleanupButton> {
             );
     }
 
-    final scheme = context.colorScheme;
+    final kioku = context.kioku;
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(top: 6),
       child: GalleryPressable(
-        pressedScale: 0.96,
+        pressedScale: 0.98,
         child: Material(
-          color: scheme.surfaceContainerLow,
-          shape: RoundedRectangleBorder(
-            borderRadius: const BorderRadius.all(Radius.circular(25)),
-            side: BorderSide(color: scheme.onSurface.withAlpha(10), width: 1),
-          ),
+          color: kioku.surface,
+          shape: kioku.shape,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             key: const Key('library-cleanup-button'),
             onTap: () => context.pushRoute(const LibraryCleanupOverviewRoute()),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
               child: Row(
                 children: [
-                  Icon(Icons.auto_awesome_outlined, color: context.primaryColor),
-                  const SizedBox(width: 12),
+                  Icon(Icons.auto_awesome_outlined, size: 18, color: kioku.ink),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.t.cleanup, style: TextStyle(color: scheme.onSurface, fontSize: 15)),
+                        Text(
+                          context.t.cleanup,
+                          style: TextStyle(color: kioku.ink, fontSize: 13.5, fontWeight: FontWeight.w600),
+                        ),
                         // The line is there before the count, so Library does not shift when it lands.
                         Text(
                           subtitle ?? '',
                           key: const Key('library-cleanup-subtitle'),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+                          style: kioku.dataStyle(size: 11.5),
                         ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+                  Icon(Icons.chevron_right_rounded, size: 18, color: kioku.muted),
                 ],
               ),
             ),

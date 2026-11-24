@@ -8,6 +8,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/timeline_grouping.model.dart';
 import 'package:immich_mobile/gallery/dock/gallery_dock_style.dart';
 import 'package:immich_mobile/gallery/motion/pressable.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/providers/timeline/timeline_grouping.provider.dart';
 
 const timelineOverviewModeSelectorOrder = <TimelineOverviewMode>[
@@ -37,8 +38,7 @@ class TimelineGroupingSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(timelineOverviewModeProvider);
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final kioku = context.kioku;
     final (duration, curve) = GalleryDockStyle.motion(context);
 
     return LayoutBuilder(
@@ -56,13 +56,10 @@ class TimelineGroupingSelector extends ConsumerWidget {
               width: width,
               height: height,
               child: Material(
-                color: bare
-                    ? Colors.transparent
-                    : colors.surfaceContainerHighest.withValues(
-                        alpha: theme.brightness == Brightness.dark ? 0.74 : 0.9,
-                      ),
-                shape: StadiumBorder(
-                  side: bare ? BorderSide.none : BorderSide(color: colors.outlineVariant.withValues(alpha: 0.7)),
+                color: bare ? Colors.transparent : kioku.glassSurface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: kioku.borderRadius,
+                  side: bare ? BorderSide.none : kioku.hairlineSide,
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: _Segments(
@@ -122,7 +119,10 @@ class _Segments extends StatelessWidget {
               builder: (context, s, child) =>
                   Positioned(left: s * segment, top: 0, bottom: 0, width: segment, child: child!),
               child: DecoratedBox(
-                decoration: ShapeDecoration(shape: const StadiumBorder(), color: GalleryDockStyle.highlight(theme)),
+                decoration: ShapeDecoration(
+                  shape: RoundedRectangleBorder(borderRadius: context.kioku.borderRadius),
+                  color: GalleryDockStyle.highlight(theme),
+                ),
               ),
             ),
             Row(
@@ -186,7 +186,7 @@ class _Segment extends StatelessWidget {
               duration: duration ~/ 2,
               style: TextStyle(
                 color: selected ? GalleryDockStyle.activeForeground(theme) : GalleryDockStyle.idleForeground(theme),
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
               child: Padding(

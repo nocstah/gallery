@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_details/appears_in_details.widget.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_details/asset_owner_details.widget.dart';
 import 'package:immich_mobile/presentation/widgets/asset_viewer/asset_details/date_time_details.widget.dart';
@@ -24,19 +25,13 @@ class AssetDetails extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final exifInfo = ref.watch(assetExifProvider(asset)).valueOrNull;
 
+    final kioku = context.kioku;
     return Container(
       constraints: BoxConstraints(minHeight: minHeight),
       decoration: BoxDecoration(
-        color: context.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            offset: const Offset(0, -3),
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
-        ],
+        color: kioku.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(kioku.radius)),
+        border: Border(top: kioku.hairlineSide),
       ),
       child: SafeArea(
         top: false,

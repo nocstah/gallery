@@ -6,15 +6,12 @@ class DragHandle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 12),
+    padding: const EdgeInsets.symmetric(vertical: 8),
     child: Center(
       child: Container(
         width: 32,
-        height: 4,
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.all(Radius.circular(2)),
-          color: context.colorScheme.onSurfaceVariant,
-        ),
+        height: 2,
+        color: context.colorScheme.outlineVariant,
       ),
     ),
   );

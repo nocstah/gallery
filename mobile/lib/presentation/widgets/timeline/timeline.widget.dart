@@ -12,6 +12,7 @@ import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/gallery/motion/timeline_skeleton.dart';
 import 'package:immich_mobile/gallery/presentation/widgets/timeline/timeline_scroll_driver.dart';
 import 'package:immich_mobile/gallery/search/search_timeline_hooks.dart';
+import 'package:immich_mobile/gallery/theme/kioku_theme.provider.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/download_status_floating_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/general_bottom_sheet.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
@@ -91,6 +92,7 @@ class Timeline extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final columnCount = ref.watch(appConfigProvider.select((config) => config.timeline.tilesPerRow));
+    final tileGap = ref.watch(kiokuPrefsProvider.select((prefs) => prefs.tileGap));
     return LayoutBuilder(
       builder: (_, constraints) {
         final sliverTimeline = _SliverTimeline(
@@ -116,6 +118,7 @@ class Timeline extends ConsumerWidget {
               TimelineArgs(
                 maxWidth: constraints.maxWidth,
                 maxHeight: constraints.maxHeight,
+                spacing: tileGap,
                 columnCount: columnCount,
                 showStorageIndicator: showStorageIndicator,
                 withStack: withStack,

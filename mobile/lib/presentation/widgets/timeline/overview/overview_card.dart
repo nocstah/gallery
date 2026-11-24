@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/domain/models/timeline_grouping.model.dart';
-import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/datetime_extensions.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/presentation/widgets/images/thumbnail.widget.dart';
 
-const double kTimelineOverviewCardHeight = 144.0;
-const double kTimelineOverviewCardVerticalPadding = 6.0;
-const double kTimelineOverviewCardHorizontalPadding = 12.0;
+const double kTimelineOverviewCardHeight = 96.0;
+const double kTimelineOverviewCardVerticalPadding = 3.0;
+const double kTimelineOverviewCardHorizontalPadding = 8.0;
 const double kTimelineOverviewSegmentExtent = kTimelineOverviewCardHeight + (kTimelineOverviewCardVerticalPadding * 2);
 
 class TimelineOverviewCard extends StatelessWidget {
@@ -99,6 +99,8 @@ class TimelineOverviewCard extends StatelessWidget {
     final actionLabel = _actionLabel();
     final isActionable = onTap != null && bucket.assetCount > 0 && actionLabel != null;
 
+    final kioku = context.kioku;
+    final radius = kioku.borderRadius;
     final card = Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: kTimelineOverviewCardHorizontalPadding,
@@ -112,69 +114,69 @@ class TimelineOverviewCard extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: isActionable ? onTap : null,
-            borderRadius: BorderRadius.circular(8),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (representativeAsset != null)
-                    Thumbnail.fromAsset(asset: representativeAsset, fit: BoxFit.cover, size: const Size(640, 320))
-                  else
-                    DecoratedBox(
-                      key: const ValueKey('timeline-overview-card-fallback'),
-                      decoration: BoxDecoration(color: context.colorScheme.surfaceContainerHighest),
-                    ),
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Color(0xCC000000)],
-                        stops: [0.35, 1.0],
+            borderRadius: radius,
+            child: Container(
+              foregroundDecoration: BoxDecoration(
+                borderRadius: radius,
+                border: Border.fromBorderSide(kioku.hairlineSide),
+              ),
+              child: ClipRRect(
+                borderRadius: radius,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (representativeAsset != null)
+                      Thumbnail.fromAsset(asset: representativeAsset, fit: BoxFit.cover, size: const Size(640, 320))
+                    else
+                      DecoratedBox(
+                        key: const ValueKey('timeline-overview-card-fallback'),
+                        decoration: BoxDecoration(color: kioku.chrome),
+                      ),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, KiokuThemeTokens.captionScrimSmall],
+                          stops: [0.25, 1.0],
+                        ),
                       ),
                     ),
-                  ),
-                  PositionedDirectional(
-                    start: 16,
-                    end: 16,
-                    bottom: 14,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
+                    PositionedDirectional(
+                      start: 12,
+                      end: 12,
+                      bottom: 10,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: kioku.displayStyle(size: 25, weight: FontWeight.w800, color: Colors.white),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.88),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                            child: Text(
-                              countLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.textTheme.labelMedium?.copyWith(
-                                color: Colors.black,
-                                fontWeight: FontWeight.w700,
+                          const SizedBox(height: 4),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              borderRadius: kioku.tileBorderRadius,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              child: Text(
+                                countLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: kioku.dataStyle(size: 11, weight: FontWeight.w700, color: Colors.black),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

@@ -132,7 +132,7 @@ class _MobileLayout extends ConsumerWidget {
         onTap: () => context.pushRoute(const WhatsNewRoute()),
       ),
     );
-    return ListView(padding: const EdgeInsets.only(top: 10.0, bottom: 60), children: [...settings]);
+    return ListView(padding: const EdgeInsets.only(bottom: 60), children: [...settings]);
   }
 }
 

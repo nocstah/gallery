@@ -14,8 +14,8 @@ abstract class SegmentBuilder {
   static double headerExtent(HeaderType header) => switch (header) {
     HeaderType.year => kTimelineHeaderExtent,
     HeaderType.month => kTimelineHeaderExtent,
-    HeaderType.day => kTimelineHeaderExtent * 0.90,
-    HeaderType.monthAndDay => kTimelineHeaderExtent * 1.6,
+    HeaderType.day => 34.0,
+    HeaderType.monthAndDay => 66.0,
     HeaderType.none => 0.0,
   };
 

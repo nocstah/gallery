@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/extensions/asyncvalue_extensions.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
+import 'package:immich_mobile/gallery/theme/kioku_tokens.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/presentation/widgets/images/remote_image_provider.dart';
 import 'package:immich_mobile/providers/gallery_nav/gallery_tab_enum.dart';
@@ -27,85 +28,85 @@ final libraryCollectionOrderProvider = Provider.autoDispose<({GalleryTabEnum? le
 Widget libraryCollectionCard(GalleryTabEnum tab) =>
     tab == GalleryTabEnum.spaces ? const SpacesCollectionCard() : const AlbumsCollectionCard();
 
+double kiokuLibraryTileSize(BoxConstraints constraints, BuildContext context) {
+  final available = constraints.maxWidth.isFinite ? constraints.maxWidth : context.width - 24.0;
+  final cols = available > 600 ? 5 : 3;
+  return ((available - (cols - 1) * 6.0) / cols).clamp(80.0, 180.0);
+}
+
 class SpacesCollectionCard extends ConsumerWidget {
   const SpacesCollectionCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final spacesAsync = ref.watch(sharedSpacesProvider);
+    final kioku = context.kioku;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.maxWidth > 600;
-        final widthFactor = isTablet ? 0.25 : 0.5;
-        final size = context.width * widthFactor - 20.0;
+        final size = kiokuLibraryTileSize(constraints, context);
 
         return GestureDetector(
           onTap: () => context.pushRoute(const SpacesRoute()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: size,
-                width: size,
-                child: DecoratedBox(
+          child: SizedBox(
+            width: size,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: size,
+                  width: size,
                   decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(Radius.circular(20)),
-                    gradient: LinearGradient(
-                      colors: [context.colorScheme.primary.withAlpha(30), context.colorScheme.primary.withAlpha(25)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+                    color: kioku.surface,
+                    borderRadius: kioku.borderRadius,
+                    border: Border.fromBorderSide(kioku.hairlineSide),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: kioku.borderRadius,
+                    child: spacesAsync.widgetWhen(
+                      onLoading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      onData: (spaces) {
+                        if (spaces.isEmpty) {
+                          return Center(child: Icon(Icons.workspaces_outlined, size: 28, color: kioku.muted));
+                        }
+                        return GridView.count(
+                          crossAxisCount: 2,
+                          padding: const EdgeInsets.all(3),
+                          crossAxisSpacing: 2,
+                          mainAxisSpacing: 2,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: spaces.take(4).map((space) {
+                            final thumbnailId = space.thumbnailAssetId.value;
+                            if (thumbnailId == null) {
+                              return DecoratedBox(
+                                decoration: BoxDecoration(color: kioku.chrome, borderRadius: kioku.tileBorderRadius),
+                                child: Icon(Icons.workspaces_outlined, size: 18, color: kioku.muted),
+                              );
+                            }
+                            return ClipRRect(
+                              borderRadius: kioku.tileBorderRadius,
+                              child: Image(
+                                image: RemoteImageProvider(url: getThumbnailUrlForRemoteId(thumbnailId)),
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
                     ),
                   ),
-                  child: spacesAsync.widgetWhen(
-                    onLoading: () => const Center(child: CircularProgressIndicator()),
-                    onData: (spaces) {
-                      if (spaces.isEmpty) {
-                        return Center(
-                          child: Icon(Icons.workspaces_outlined, size: 48, color: context.colorScheme.primary),
-                        );
-                      }
-                      return GridView.count(
-                        crossAxisCount: 2,
-                        padding: const EdgeInsets.all(12),
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: spaces.take(4).map((space) {
-                          final thumbnailId = space.thumbnailAssetId.value;
-                          if (thumbnailId == null) {
-                            return DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: context.colorScheme.surfaceContainerHigh,
-                                borderRadius: const BorderRadius.all(Radius.circular(10)),
-                              ),
-                              child: Icon(Icons.workspaces_outlined, color: context.colorScheme.primary),
-                            );
-                          }
-                          return ClipRRect(
-                            borderRadius: const BorderRadius.all(Radius.circular(10)),
-                            child: Image(
-                              image: RemoteImageProvider(url: getThumbnailUrlForRemoteId(thumbnailId)),
-                              fit: BoxFit.cover,
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 5, bottom: 2),
+                  child: Text(
+                    context.t.spaces,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: kioku.ink, fontSize: 12.5, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  context.t.spaces,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    color: context.colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -126,70 +127,68 @@ class AlbumsCollectionCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final albumState = ref.watch(remoteAlbumProvider);
     final albums = albumState.albums;
+    final kioku = context.kioku;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.maxWidth > 600;
-        final widthFactor = isTablet ? 0.25 : 0.5;
-        final size = context.width * widthFactor - 20.0;
+        final size = kiokuLibraryTileSize(constraints, context);
 
         return GestureDetector(
           key: const Key('library-albums-card'),
           onTap: () => context.pushRoute(const AlbumsRoute()),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: size,
-                width: size,
-                child: DecoratedBox(
+          child: SizedBox(
+            width: size,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: size,
+                  width: size,
                   decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.all(Radius.circular(20)),
-                    gradient: LinearGradient(
-                      colors: [context.colorScheme.primary.withAlpha(30), context.colorScheme.primary.withAlpha(25)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
+                    color: kioku.surface,
+                    borderRadius: kioku.borderRadius,
+                    border: Border.fromBorderSide(kioku.hairlineSide),
                   ),
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    padding: const EdgeInsets.all(12),
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: albums.take(4).map((album) {
-                      final thumbnailId = album.thumbnailAssetId;
-                      if (thumbnailId == null) {
-                        return DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: context.colorScheme.surfaceContainerHigh,
-                            borderRadius: const BorderRadius.all(Radius.circular(10)),
+                  child: ClipRRect(
+                    borderRadius: kioku.borderRadius,
+                    child: albums.isEmpty
+                        ? Center(child: Icon(Icons.photo_album_outlined, size: 28, color: kioku.muted))
+                        : GridView.count(
+                            crossAxisCount: 2,
+                            padding: const EdgeInsets.all(3),
+                            crossAxisSpacing: 2,
+                            mainAxisSpacing: 2,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: albums.take(4).map((album) {
+                              final thumbnailId = album.thumbnailAssetId;
+                              if (thumbnailId == null) {
+                                return DecoratedBox(
+                                  decoration: BoxDecoration(color: kioku.chrome, borderRadius: kioku.tileBorderRadius),
+                                  child: Icon(Icons.photo_album_outlined, size: 18, color: kioku.muted),
+                                );
+                              }
+                              return ClipRRect(
+                                borderRadius: kioku.tileBorderRadius,
+                                child: Image(
+                                  image: RemoteImageProvider(url: getThumbnailUrlForRemoteId(thumbnailId)),
+                                  fit: BoxFit.cover,
+                                ),
+                              );
+                            }).toList(),
                           ),
-                          child: Icon(Icons.photo_album_outlined, color: context.colorScheme.primary),
-                        );
-                      }
-                      return ClipRRect(
-                        borderRadius: const BorderRadius.all(Radius.circular(10)),
-                        child: Image(
-                          image: RemoteImageProvider(url: getThumbnailUrlForRemoteId(thumbnailId)),
-                          fit: BoxFit.cover,
-                        ),
-                      );
-                    }).toList(),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  context.t.albums,
-                  style: context.textTheme.titleSmall?.copyWith(
-                    color: context.colorScheme.onSurface,
-                    fontWeight: FontWeight.w500,
+                Padding(
+                  padding: const EdgeInsets.only(top: 5, bottom: 2),
+                  child: Text(
+                    context.t.albums,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: kioku.ink, fontSize: 12.5, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
