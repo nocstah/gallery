@@ -57,6 +57,7 @@ class _MainTimelinePageState extends ConsumerState<MainTimelinePage> {
         topSliverWidget: showMemories ? const SliverToBoxAdapter(child: MemoryLane()) : null,
         topSliverWidgetHeight: showMemories ? 200 : 0,
         showStorageIndicator: true,
+        justified: true,
         appBar: const PhotosTimelineAppBar(),
         emptyWidget: const TimelineEmptyState(),
       ),

@@ -287,6 +287,34 @@ class _DockViewMenu extends ConsumerWidget {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 10),
+                        const _PopoverSectionLabel(label: 'Date headers'),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _PopoverChip(
+                                label: 'Hidden',
+                                selected: !prefs.showDayLabels,
+                                onTap: () {
+                                  unawaited(HapticFeedback.selectionClick());
+                                  ref.read(kiokuPrefsProvider.notifier).setShowDayLabels(false);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: _PopoverChip(
+                                label: 'Shown',
+                                selected: prefs.showDayLabels,
+                                onTap: () {
+                                  unawaited(HapticFeedback.selectionClick());
+                                  ref.read(kiokuPrefsProvider.notifier).setShowDayLabels(true);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Divider(height: 1, thickness: 1, color: kioku.hairline),

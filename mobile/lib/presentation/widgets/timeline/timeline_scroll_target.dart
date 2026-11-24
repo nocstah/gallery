@@ -51,13 +51,5 @@ Segment? findTimelineZoomAnchorSegment(List<Segment> segments, TimelineZoomAncho
 /// outside the segment's assets — which also covers an empty segment, where every
 /// index is out of range. Callers clamp the result to the scroll extent.
 double? assetRowOffset({required Segment segment, required int assetIndexInTimeline, required int columnCount}) {
-  if (columnCount <= 0) {
-    return null;
-  }
-  final assetIndexInSegment = assetIndexInTimeline - segment.firstAssetIndex;
-  if (assetIndexInSegment < 0 || assetIndexInSegment >= segment.bucket.assetCount) {
-    return null;
-  }
-  final rowIndexInSegment = assetIndexInSegment ~/ columnCount;
-  return segment.indexToLayoutOffset(segment.gridIndex + rowIndexInSegment);
+  return segment.offsetForAsset(assetIndexInTimeline, columnCount);
 }

@@ -7,7 +7,7 @@ import 'package:immich_mobile/entities/store.entity.dart';
 import 'package:immich_mobile/gallery/theme/kioku_theme_derive.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 
-/// Available photo grid gap presets (px): tight (2), compact tiled (4, default), wide tiled (8).
+/// Available photo grid gap presets (px): tight (2, default), compact tiled (4), wide tiled (8).
 const kKiokuTileGapChoices = <(double gap, String label)>[(2.0, 'Tight'), (4.0, 'Compact'), (8.0, 'Tiled')];
 
 @immutable
@@ -16,21 +16,29 @@ class KiokuVisualPrefs {
   final bool roundedCorners;
   final double tileGap;
   final bool compactLayout;
+  final bool showDayLabels;
 
   const KiokuVisualPrefs({
     this.themeId = '',
     this.roundedCorners = false,
-    this.tileGap = 4.0,
+    this.tileGap = 2.0,
     this.compactLayout = true,
+    this.showDayLabels = false,
   });
 
-  KiokuVisualPrefs copyWith({String? themeId, bool? roundedCorners, double? tileGap, bool? compactLayout}) =>
-      KiokuVisualPrefs(
-        themeId: themeId ?? this.themeId,
-        roundedCorners: roundedCorners ?? this.roundedCorners,
-        tileGap: tileGap ?? this.tileGap,
-        compactLayout: compactLayout ?? this.compactLayout,
-      );
+  KiokuVisualPrefs copyWith({
+    String? themeId,
+    bool? roundedCorners,
+    double? tileGap,
+    bool? compactLayout,
+    bool? showDayLabels,
+  }) => KiokuVisualPrefs(
+    themeId: themeId ?? this.themeId,
+    roundedCorners: roundedCorners ?? this.roundedCorners,
+    tileGap: tileGap ?? this.tileGap,
+    compactLayout: compactLayout ?? this.compactLayout,
+    showDayLabels: showDayLabels ?? this.showDayLabels,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -38,10 +46,11 @@ class KiokuVisualPrefs {
       other.themeId == themeId &&
       other.roundedCorners == roundedCorners &&
       other.tileGap == tileGap &&
-      other.compactLayout == compactLayout;
+      other.compactLayout == compactLayout &&
+      other.showDayLabels == showDayLabels;
 
   @override
-  int get hashCode => Object.hash(themeId, roundedCorners, tileGap, compactLayout);
+  int get hashCode => Object.hash(themeId, roundedCorners, tileGap, compactLayout, showDayLabels);
 }
 
 T? _safeTryGet<T>(StoreKey<T> key) {
@@ -63,8 +72,9 @@ class KiokuPrefsNotifier extends Notifier<KiokuVisualPrefs> {
   KiokuVisualPrefs build() => KiokuVisualPrefs(
     themeId: _safeTryGet(StoreKey.kiokuThemeId) ?? '',
     roundedCorners: _safeTryGet(StoreKey.kiokuRoundedCorners) ?? false,
-    tileGap: _safeTryGet(StoreKey.kiokuTileGap) ?? 4.0,
+    tileGap: _safeTryGet(StoreKey.kiokuTileGap) ?? 2.0,
     compactLayout: _safeTryGet(StoreKey.kiokuCompactLayout) ?? true,
+    showDayLabels: _safeTryGet(StoreKey.kiokuShowDayLabels) ?? false,
   );
 
   void setTheme(KiokuThemeSpec spec, {bool adoptNativeFace = true}) {
@@ -91,6 +101,11 @@ class KiokuPrefsNotifier extends Notifier<KiokuVisualPrefs> {
   void setCompactLayout(bool compact) {
     state = state.copyWith(compactLayout: compact);
     _safePut(StoreKey.kiokuCompactLayout, compact);
+  }
+
+  void setShowDayLabels(bool show) {
+    state = state.copyWith(showDayLabels: show);
+    _safePut(StoreKey.kiokuShowDayLabels, show);
   }
 }
 

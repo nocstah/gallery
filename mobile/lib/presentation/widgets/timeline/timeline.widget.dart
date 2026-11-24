@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:collection/collection.dart';
@@ -13,6 +14,8 @@ import 'package:immich_mobile/gallery/motion/timeline_skeleton.dart';
 import 'package:immich_mobile/gallery/presentation/widgets/timeline/timeline_scroll_driver.dart';
 import 'package:immich_mobile/gallery/search/search_timeline_hooks.dart';
 import 'package:immich_mobile/gallery/theme/kioku_theme.provider.dart';
+import 'package:immich_mobile/gallery/timeline/kioku_justified_segment.dart';
+import 'package:immich_mobile/gallery/timeline/kioku_justified_stream.dart';
 import 'package:immich_mobile/presentation/widgets/action_buttons/download_status_floating_button.widget.dart';
 import 'package:immich_mobile/presentation/widgets/bottom_sheet/general_bottom_sheet.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
@@ -57,6 +60,7 @@ class Timeline extends ConsumerWidget {
     this.loadingWidget,
     this.emptyWidget,
     this.withGroupingPill = false,
+    this.justified = false,
     this.spaceId,
   });
 
@@ -83,6 +87,10 @@ class Timeline extends ConsumerWidget {
   /// clearance for it. Detail timelines (album/space/person/...) opt in; the main
   /// Photos page keeps its grouping in the app-bar menu and stays off.
   final bool withGroupingPill;
+
+  /// Opt into Kioku's continuous aspect-ratio justified wall (no date headers,
+  /// no empty trailing half-rows) when date headers are hidden.
+  final bool justified;
 
   /// The space this timeline shows, for timelines scoped to one. Only a "view in
   /// timeline" request naming the same space is drained here — the main timeline stays
@@ -125,6 +133,7 @@ class Timeline extends ConsumerWidget {
                 groupBy: groupBy,
               ),
             ),
+            kiokuJustifiedTimelineEnabledProvider.overrideWithValue(justified),
             if (readOnly) readonlyModeProvider.overrideWith(() => _AlwaysReadOnlyNotifier()),
           ],
           // The pill overlays the whole timeline body — including the loading state — by
@@ -201,6 +210,48 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
     _eventSubscription = EventStream.shared.listen(_onEvent);
 
     ref.listenManual(multiSelectProvider.select((s) => s.isEnabled), _onMultiSelectionToggled);
+    ref.listenManual(timelineSegmentProvider, _onSegmentsUpdated);
+  }
+
+  void _onSegmentsUpdated(AsyncValue<List<Segment>>? previous, AsyncValue<List<Segment>> next) {
+    final prevSegments = previous?.valueOrNull;
+    final nextSegments = next.valueOrNull;
+    if (prevSegments == null ||
+        nextSegments == null ||
+        prevSegments.isEmpty ||
+        nextSegments.isEmpty ||
+        _restoreAssetIndex != null ||
+        !_scrollController.hasClients ||
+        !_scrollController.position.hasContentDimensions) {
+      return;
+    }
+    if (prevSegments.first is! KiokuJustifiedSegment || nextSegments.first is! KiokuJustifiedSegment) {
+      return;
+    }
+    final currentOffset = _scrollController.offset;
+    if (currentOffset <= 0) {
+      return;
+    }
+    final prevSegment = prevSegments.findByOffset(currentOffset);
+    if (prevSegment is! KiokuJustifiedSegment) {
+      return;
+    }
+    final anchor = prevSegment.anchorAtOffset(currentOffset);
+    if (anchor == null) {
+      return;
+    }
+    final targetSegment = nextSegments.lastWhereOrNull((s) => s.firstAssetIndex <= anchor.assetIndex);
+    if (targetSegment is! KiokuJustifiedSegment) {
+      return;
+    }
+    final newRowOffset = targetSegment.offsetForAsset(anchor.assetIndex, 1);
+    if (newRowOffset == null) {
+      return;
+    }
+    final corrected = math.max(0.0, newRowOffset + anchor.offsetWithinRow);
+    if ((corrected - currentOffset).abs() > 0.5) {
+      _scrollController.position.correctPixels(corrected);
+    }
   }
 
   @override
@@ -254,13 +305,11 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
     asyncSegments.whenData((segments) {
       final targetSegment = segments.lastWhereOrNull((segment) => segment.firstAssetIndex <= _restoreAssetIndex!);
       if (targetSegment != null) {
-        final assetIndexInSegment = _restoreAssetIndex! - targetSegment.firstAssetIndex;
         final newColumnCount = ref.read(timelineArgsProvider).columnCount;
-        final rowIndexInSegment = (assetIndexInSegment / newColumnCount).floor();
-        final targetRowIndex = targetSegment.firstIndex + 1 + rowIndexInSegment;
-        final targetOffset = targetSegment.indexToLayoutOffset(targetRowIndex);
+        final targetOffset =
+            targetSegment.offsetForAsset(_restoreAssetIndex!, newColumnCount) ?? targetSegment.startOffset;
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
+          if (mounted && _scrollController.hasClients) {
             _scrollController.jumpTo(targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent));
           }
         });
@@ -279,14 +328,8 @@ class _SliverTimelineState extends ConsumerState<_SliverTimeline> with WidgetsBi
     int? targetAssetIndex;
     if (segment != null) {
       final rowIndex = segment.getMinChildIndexForScrollOffset(currentOffset);
-      if (rowIndex > segment.firstIndex) {
-        final rowIndexInSegment = rowIndex - (segment.firstIndex + 1);
-        final assetsPerRow = ref.read(timelineArgsProvider).columnCount;
-        final assetIndexInSegment = rowIndexInSegment * assetsPerRow;
-        targetAssetIndex = segment.firstAssetIndex + assetIndexInSegment;
-      } else {
-        targetAssetIndex = segment.firstAssetIndex;
-      }
+      final assetsPerRow = ref.read(timelineArgsProvider).columnCount;
+      targetAssetIndex = segment.firstAssetIndexForChild(rowIndex, assetsPerRow);
     }
     return targetAssetIndex;
   }

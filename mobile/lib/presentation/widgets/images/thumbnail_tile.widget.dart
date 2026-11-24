@@ -22,6 +22,8 @@ class ThumbnailTile extends ConsumerStatefulWidget {
     this.lockSelection = false,
     this.heroOffset,
     this.showStackIndicator = false,
+    this.monthMark,
+    this.tileWidth,
     super.key,
   });
 
@@ -34,6 +36,13 @@ class ThumbnailTile extends ConsumerStatefulWidget {
   final bool lockSelection;
   final int? heroOffset;
   final bool showStackIndicator;
+
+  /// Quiet month mark shown at top-left on the first photo of a month in the
+  /// continuous justified wall (e.g. `SEP`, `DEC 2025`).
+  final String? monthMark;
+
+  /// Logical tile width, used to tighten corner badges on narrow tiles.
+  final double? tileWidth;
 
   @override
   ConsumerState<ThumbnailTile> createState() => _ThumbnailTileState();
@@ -71,6 +80,8 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
 
     final marked = isSelected || widget.lockSelection;
     final frameRadius = kioku.tileBorderRadius;
+    final hasMonthMark = widget.monthMark != null && widget.monthMark!.isNotEmpty;
+    final isNarrowTile = widget.tileWidth != null && widget.tileWidth! < 82.0;
 
     return Stack(
       children: [
@@ -136,7 +147,7 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
                       ),
                     ),
                   ),
-                if (asset != null)
+                if (asset != null && !(hasMonthMark && isNarrowTile))
                   AnimatedOpacity(
                     opacity: _hideIndicators ? 0.0 : 1.0,
                     duration: Durations.short4,
@@ -149,6 +160,18 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
                           _AssetTypeIcons(asset: asset),
                           if (widget.showStackIndicator) _StackIndicator(asset: asset),
                         ],
+                      ),
+                    ),
+                  ),
+                if (hasMonthMark && !marked)
+                  Positioned(
+                    top: isNarrowTile ? 3.0 : 4.0,
+                    left: isNarrowTile ? 3.0 : 4.0,
+                    child: IgnorePointer(
+                      child: AnimatedOpacity(
+                        opacity: _hideIndicators ? 0.0 : 1.0,
+                        duration: Durations.short4,
+                        child: _MonthMarkChip(label: widget.monthMark!, compact: isNarrowTile),
                       ),
                     ),
                   ),
@@ -193,7 +216,8 @@ class _ThumbnailTileState extends ConsumerState<ThumbnailTile> {
                       ),
                     ),
                   ),
-                if (asset != null) SpaceBadge(asset, hidden: _hideIndicators || isSelected || widget.lockSelection),
+                if (asset != null)
+                  SpaceBadge(asset, hidden: _hideIndicators || isSelected || widget.lockSelection || hasMonthMark),
                 if (uploadProgress != null) _UploadProgressOverlay(progress: uploadProgress),
               ],
             ),
@@ -241,6 +265,34 @@ class _GlassBadge extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(color: KiokuThemeTokens.badgeGlass, borderRadius: context.kioku.tileBorderRadius),
       child: Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), child: child),
+    );
+  }
+}
+
+class _MonthMarkChip extends StatelessWidget {
+  final String label;
+  final bool compact;
+
+  const _MonthMarkChip({required this.label, required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    final kioku = context.kioku;
+    return DecoratedBox(
+      decoration: BoxDecoration(color: KiokuThemeTokens.badgeGlass, borderRadius: kioku.tileBorderRadius),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 5, vertical: compact ? 1.5 : 2),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: kioku.dataStyle(
+            size: compact ? 9.5 : 10.5,
+            weight: FontWeight.w600,
+            color: Colors.white,
+          ).copyWith(letterSpacing: 0.3, height: 1.25),
+        ),
+      ),
     );
   }
 }

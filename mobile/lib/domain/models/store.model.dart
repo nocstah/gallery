@@ -36,6 +36,7 @@ enum StoreKey<T> {
   kiokuRoundedCorners<bool>._(90012),
   kiokuTileGap<double>._(90013),
   kiokuCompactLayout<bool>._(90014),
+  kiokuShowDayLabels<bool>._(90015),
   manageLocalMediaAndroid<bool>._(137),
   // Read-only Mode settings
   readonlyModeEnabled<bool>._(138),

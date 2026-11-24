@@ -15,7 +15,7 @@ abstract class SegmentBuilder {
     HeaderType.year => kTimelineHeaderExtent,
     HeaderType.month => kTimelineHeaderExtent,
     HeaderType.day => 34.0,
-    HeaderType.monthAndDay => 66.0,
+    HeaderType.monthAndDay => 68.0,
     HeaderType.none => 0.0,
   };
 

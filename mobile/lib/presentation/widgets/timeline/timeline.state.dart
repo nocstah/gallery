@@ -5,12 +5,16 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/domain/models/timeline_grouping.model.dart';
+import 'package:immich_mobile/domain/services/timeline.service.dart';
+import 'package:immich_mobile/gallery/theme/kioku_theme.provider.dart';
+import 'package:immich_mobile/gallery/timeline/kioku_justified_stream.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/fixed/segment_builder.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/overview/overview_segment_builder.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/segment.model.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/timeline/timeline_grouping.provider.dart';
+import 'package:stream_transform/stream_transform.dart';
 
 part 'timeline.state.freezed.dart';
 
@@ -84,24 +88,44 @@ final timelineSegmentProvider = StreamProvider.autoDispose<List<Segment>>((ref) 
       : ref.watch(timelineGroupingSpecProvider);
 
   final timelineService = ref.watch(timelineServiceProvider);
-  yield* timelineService.watchBuckets().map((buckets) {
+  final useJustified = ref.watch(kiokuJustifiedTimelineEnabledProvider);
+  final showDayLabels = ref.watch(kiokuPrefsProvider.select((p) => p.showDayLabels));
+
+  yield* timelineService.watchBuckets().switchMap((buckets) {
     // A date-less bucket source (relevance-sorted search, or a `fromAssets` timeline) has no
     // dates to group by — fall back to the flat grid regardless of the mode.
     final isDateless = buckets.isNotEmpty && buckets.first is! TimeBucket;
     if (spec.mode != TimelineOverviewMode.all && !isDateless) {
-      return TimelineOverviewSegmentBuilder(buckets: buckets, mode: spec.mode).generate();
+      return Stream.value(TimelineOverviewSegmentBuilder(buckets: buckets, mode: spec.mode).generate());
     }
 
-    return FixedSegmentBuilder(
-      buckets: buckets,
-      tileHeight: tileExtent,
-      columnCount: columnCount,
-      spacing: spacing,
-      groupBy: isDateless ? GroupAssetsBy.day : spec.groupBy,
-    ).generate();
+    if (useJustified && !showDayLabels && timelineService.origin == TimelineOrigin.main && !isDateless) {
+      return watchKiokuJustifiedSegments(
+        timelineService: timelineService,
+        buckets: buckets,
+        maxWidth: maxWidth,
+        columnCount: columnCount,
+        spacing: spacing,
+      );
+    }
+
+    return Stream.value(
+      FixedSegmentBuilder(
+        buckets: buckets,
+        tileHeight: tileExtent,
+        columnCount: columnCount,
+        spacing: spacing,
+        groupBy: isDateless ? GroupAssetsBy.day : spec.groupBy,
+      ).generate(),
+    );
   });
   // timelineGroupingSpecProvider must be listed so the auto-scoped copy of this provider
   // inside a TimelineRouteScope resolves the ROUTE-LOCAL mode rather than the root one.
-}, dependencies: [timelineServiceProvider, timelineArgsProvider, timelineGroupingSpecProvider]);
+}, dependencies: [
+  timelineServiceProvider,
+  timelineArgsProvider,
+  timelineGroupingSpecProvider,
+  kiokuJustifiedTimelineEnabledProvider,
+]);
 
 final timelineStateProvider = NotifierProvider<TimelineStateNotifier, TimelineState>(TimelineStateNotifier.new);

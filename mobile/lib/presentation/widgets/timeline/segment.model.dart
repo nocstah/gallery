@@ -52,6 +52,28 @@ abstract class Segment {
   int getMaxChildIndexForScrollOffset(double scrollOffset);
   double indexToLayoutOffset(int index);
 
+  /// First absolute asset index rendered by child [childIndex].
+  /// Overridden by variable-width row segments such as [KiokuJustifiedSegment].
+  int firstAssetIndexForChild(int childIndex, int columnCount) {
+    if (childIndex > firstIndex) {
+      return firstAssetIndex + (childIndex - (firstIndex + 1)) * columnCount;
+    }
+    return firstAssetIndex;
+  }
+
+  /// Scroll offset of the row holding [assetIndexInTimeline], or null when out of range.
+  double? offsetForAsset(int assetIndexInTimeline, int columnCount) {
+    if (columnCount <= 0) {
+      return null;
+    }
+    final assetIndexInSegment = assetIndexInTimeline - firstAssetIndex;
+    if (assetIndexInSegment < 0 || assetIndexInSegment >= bucket.assetCount) {
+      return null;
+    }
+    final rowIndexInSegment = assetIndexInSegment ~/ columnCount;
+    return indexToLayoutOffset(gridIndex + rowIndexInSegment);
+  }
+
   Widget builder(BuildContext context, int index);
 
   @override
@@ -93,7 +115,12 @@ abstract class Segment {
 }
 
 extension SegmentListExtension on List<Segment> {
-  bool equals(List<Segment> other) => length == other.length && lastOrNull?.endOffset == other.lastOrNull?.endOffset;
+  bool equals(List<Segment> other) =>
+      identical(this, other) ||
+      (length == other.length &&
+          lastOrNull?.endOffset == other.lastOrNull?.endOffset &&
+          firstOrNull == other.firstOrNull &&
+          lastOrNull == other.lastOrNull);
 
   Segment? findByIndex(int index) => firstWhereOrNull((s) => s.containsIndex(index));
 
