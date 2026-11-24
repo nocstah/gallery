@@ -15,6 +15,14 @@
     "_comment": "The installed app's splash ground, the theme's paper. No theme_color: the pages' own theme-color meta follows light and dark, and a fixed one would paint a dark window's bar white.",
     "background_color": "#ffffff"
   },
+  "android": {
+    "_comment": "Local Android app build (local-build-android.sh / apply-kioku-android.sh). Separate application_id so Kioku installs alongside Play Store Noodle Gallery with no signature clash.",
+    "application_id": "de.opennoodle.gallery.kioku",
+    "deep_link_scheme": "kioku",
+    "download_dir": "DCIM/Kioku",
+    "splash_background_light": "#ffffff",
+    "splash_background_dark": "#000000"
+  },
   "phone_app_icon": {
     "_comment": "The open-in-app banner offers the phone app, which stays Noodle Gallery's, beside an icon. apple-icon-180.png becomes the Kioku web app's own (assets), so the banner shows the phone app's icon instead, made from Noodle's iOS launcher icon.",
     "source": "branding/assets/app-icon-ios.png",

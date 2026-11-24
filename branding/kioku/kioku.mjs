@@ -47,6 +47,15 @@ for (const [what, value] of [
   ['memory_player.memory_title', brand.memory_player.memory_title.replace('{title}', '')],
   ['about_credit.key', CREDIT.key],
   ['phone_app_icon.target', brand.phone_app_icon.target],
+  ...(brand.android
+    ? [
+        ['android.application_id', brand.android.application_id],
+        ['android.deep_link_scheme', brand.android.deep_link_scheme],
+        ['android.download_dir', brand.android.download_dir],
+        ['android.splash_background_light', brand.android.splash_background_light],
+        ['android.splash_background_dark', brand.android.splash_background_dark],
+      ]
+    : []),
 ]) {
   if (typeof value !== 'string' || !value.trim() || UNSAFE.test(value)) {
     stop(
@@ -82,6 +91,13 @@ const placeholders = {
   CREDIT_KEY: CREDIT.key,
   // where web/static/ is served: the site's root
   PHONE_APP_ICON: `/${path.posix.relative('web/static', brand.phone_app_icon.target)}`,
+  NOODLE_BUNDLE_ID: noodle.mobile.bundle_id,
+  NOODLE_DEEP_LINK_SCHEME: noodle.mobile.deep_link_scheme,
+  ANDROID_APP_ID: brand.android?.application_id ?? '',
+  ANDROID_DEEP_LINK_SCHEME: brand.android?.deep_link_scheme ?? '',
+  ANDROID_DOWNLOAD_DIR: brand.android?.download_dir ?? '',
+  ANDROID_SPLASH_LIGHT: brand.android?.splash_background_light ?? '#ffffff',
+  ANDROID_SPLASH_DARK: brand.android?.splash_background_dark ?? '#000000',
 };
 // @NAME@, or @MEMORY_TITLE[expression]@: the memory title's pattern with the code's own expression for {title}
 const fill = (text) =>
@@ -917,6 +933,58 @@ const verify = (target) => {
   return problems.length === 0;
 };
 
+// ---- the mobile i18n pass (phone_app keys -> Kioku, Android builds only) ----
+
+const applyI18nMobile = (dir) => {
+  if (fs.existsSync(path.join(dir, 'gallery', 'en.json'))) {
+    stop(`${dir}: run apply-branding.sh and apply-kioku.sh before i18n-mobile`);
+  }
+  const bundle = loadBundle(dir);
+  const original = new Map([...bundle].map(([locale, data]) => [locale, JSON.stringify(data)]));
+  const phoneKeys = new Set(brand.i18n.keep.phone_app?.keys ?? []);
+  const globalPhrases = (brand.i18n.phrases ?? []).filter((rule) => !rule.keys);
+  const downloadDir = brand.android?.download_dir ?? `DCIM/${NAME}`;
+  const noodleDownloadDir = `DCIM/${NOODLE_JOINED}`;
+  const changed = new Map();
+
+  for (const [locale, data] of bundle) {
+    for (const [key, value] of leafEntries(data)) {
+      if (typeof value !== 'string' || !phoneKeys.has(key)) {
+        continue;
+      }
+      let text = value;
+      for (const rule of globalPhrases) {
+        if (rule.locale === locale && text.includes(rule.from)) {
+          text = text.replaceAll(rule.from, rule.to);
+        }
+      }
+      text = text.replaceAll(noodleDownloadDir, downloadDir);
+      text = text.replaceAll(NOODLE, NAME);
+      text = text.replaceAll(SHORT, NAME);
+      if (text === value) {
+        continue;
+      }
+      if (skeleton(text) !== skeleton(value)) {
+        stop(`${locale} ${key}: mobile i18n rewrite changed placeholders or tags:\n  «${value}»\n  «${text}»`);
+      }
+      setPath(data, key, text);
+      changed.set(key, [...(changed.get(key) ?? []), locale]);
+    }
+  }
+
+  let written = 0;
+  for (const [locale, data] of bundle) {
+    if (JSON.stringify(data) !== original.get(locale)) {
+      fs.writeFileSync(path.join(dir, `${locale}.json`), `${JSON.stringify(data, null, 2)}\n`);
+      written++;
+    }
+  }
+  const strings = [...changed.values()].reduce((sum, locales) => sum + locales.length, 0);
+  console.log(
+    `  ${NAME} (mobile): ${changed.size} phone_app keys rewritten, ${strings} strings in ${written} of ${bundle.size} locale files`,
+  );
+};
+
 // ---- the command line ----
 
 const readStdin = () => fs.readFileSync(0, 'utf8');
@@ -931,10 +999,14 @@ try {
     rewrite(args[0], args[1], wanted, readStdin());
   } else if (command === 'i18n' && args.length === 1) {
     applyI18n(path.resolve(args[0]));
+  } else if (command === 'i18n-mobile' && args.length === 1) {
+    applyI18nMobile(path.resolve(args[0]));
   } else if (command === 'verify' && args.length === 1) {
     process.exitCode = verify(args[0]) ? 0 : 1;
   } else {
-    stop('usage: kioku.mjs rewrite <root> <file> <count> < rule | i18n <i18n dir> | verify <copy root | output>');
+    stop(
+      'usage: kioku.mjs rewrite <root> <file> <count> < rule | i18n <i18n dir> | i18n-mobile <i18n dir> | verify <copy root | output>',
+    );
   }
 } catch (error) {
   if (error instanceof Stop) {

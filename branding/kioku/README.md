@@ -10,6 +10,7 @@ upstream's words; nothing here ever edits a checkout.
 | ------------------ | ---------------------------------------------------------------------------------------------- |
 | `brand.json`       | The single source of truth: the name, the words, the assets, the i18n classification, the keep list |
 | `apply-kioku.sh`   | `apply-kioku.sh <copy root>`: the rewrite, in the copy, before the Docker build                |
+| `apply-kioku-android.sh` | `apply-kioku-android.sh <copy root>`: extends Kioku branding (name, `applicationId`, icons, splash, phone strings) onto `mobile/` in a local Android build copy |
 | `verify-kioku.sh`  | `verify-kioku.sh <copy root \| build output>`: lists every brand name left, exit 1 off the keep list |
 | `kioku.mjs`        | The engine both use (Node, no dependencies)                                                    |
 | `assets/`          | The drawn icons, logos and link preview, once there are any                                    |
