@@ -82,6 +82,7 @@ class MapBottomSheetTimeline extends StatelessWidget {
               bottomSheet: GeneralBottomSheet(minChildSize: 0.23),
               withScrubber: false,
               withGroupingPill: true,
+              justified: true,
             ),
           ),
         ],

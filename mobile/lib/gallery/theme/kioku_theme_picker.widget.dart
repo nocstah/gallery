@@ -50,6 +50,40 @@ class KiokuAppearanceSettings extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                children: [
+                  Text('Timeline view', style: Theme.of(context).textTheme.titleSmall),
+                  const Spacer(),
+                  Text(prefs.showDayLabels ? 'Grouped by date' : 'Compact, no dates', style: kioku.dataStyle(size: 12)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SegmentedOption(
+                      label: 'Compact',
+                      selected: !prefs.showDayLabels,
+                      onTap: () {
+                        unawaited(HapticFeedback.selectionClick());
+                        ref.read(kiokuPrefsProvider.notifier).setShowDayLabels(false);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _SegmentedOption(
+                      label: 'By date',
+                      selected: prefs.showDayLabels,
+                      onTap: () {
+                        unawaited(HapticFeedback.selectionClick());
+                        ref.read(kiokuPrefsProvider.notifier).setShowDayLabels(true);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
               Text('Corners', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
               Row(

@@ -249,5 +249,60 @@ void main() {
       final datedSegments = await container.read(timelineSegmentProvider.future);
       expect(datedSegments, everyElement(isA<FixedSegment>()));
     });
+
+    test('applies continuous compact view across favorites, people, albums, spaces, and dateless search', () async {
+      final origins = [
+        TimelineOrigin.favorite,
+        TimelineOrigin.person,
+        TimelineOrigin.remoteAlbum,
+        TimelineOrigin.remoteSpace,
+        TimelineOrigin.video,
+        TimelineOrigin.place,
+        TimelineOrigin.search,
+      ];
+      final assets = [
+        _asset(0, width: 3000, height: 4000, createdAt: DateTime(2026, 8, 12)),
+        _asset(1, width: 4000, height: 3000, createdAt: DateTime(2026, 7, 1)),
+        _asset(2, width: 4000, height: 2250, createdAt: DateTime(2026, 6, 4)),
+      ];
+
+      for (final origin in origins) {
+        final dateless = origin == TimelineOrigin.search;
+        final service = TimelineService((
+          assetSource: (offset, count) async => assets.sublist(offset, (offset + count).clamp(0, assets.length)),
+          bucketSource: () => Stream.value(
+            dateless
+                ? const [Bucket(assetCount: 3)]
+                : [
+                    TimeBucket(date: DateTime(2026, 8, 12), assetCount: 1),
+                    TimeBucket(date: DateTime(2026, 7, 1), assetCount: 1),
+                    TimeBucket(date: DateTime(2026, 6, 4), assetCount: 1),
+                  ],
+          ),
+          origin: origin,
+        ));
+        final container = ProviderContainer(
+          overrides: [
+            timelineServiceProvider.overrideWithValue(service),
+            timelineArgsProvider.overrideWithValue(
+              const TimelineArgs(maxWidth: 412, maxHeight: 800, columnCount: 3, spacing: 2),
+            ),
+            timelineGroupingSpecProvider.overrideWithValue((mode: TimelineOverviewMode.all, groupBy: GroupAssetsBy.day)),
+            kiokuJustifiedTimelineEnabledProvider.overrideWithValue(true),
+          ],
+        );
+
+        final compact = await container.read(timelineSegmentProvider.future);
+        expect(compact, everyElement(isA<KiokuJustifiedSegment>()), reason: '$origin should use compact view');
+        expect(compact.every((s) => s.header == HeaderType.none), isTrue, reason: '$origin should hide date headers');
+
+        container.read(kiokuPrefsProvider.notifier).setShowDayLabels(true);
+        final byDate = await container.read(timelineSegmentProvider.future);
+        expect(byDate, everyElement(isA<FixedSegment>()), reason: '$origin should flip to dated view');
+
+        container.dispose();
+        await service.dispose();
+      }
+    });
   });
 }

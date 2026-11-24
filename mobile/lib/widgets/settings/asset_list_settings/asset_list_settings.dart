@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/gallery/space_badge_setting.dart';
+import 'package:immich_mobile/gallery/theme/kioku_theme.provider.dart';
 import 'package:immich_mobile/generated/translations.g.dart';
 import 'package:immich_mobile/providers/app_settings.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
@@ -16,10 +17,27 @@ class AssetListSettings extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final compactTimeline = useValueNotifier(!ref.watch(kiokuPrefsProvider.select((p) => p.showDayLabels)));
     final storageIndicator = useValueNotifier(ref.watch(appConfigProvider.select((s) => s.timeline.storageIndicator)));
     final smoothScrubbing = useValueNotifier(ref.watch(appConfigProvider.select((s) => s.timeline.smoothScrubbing)));
 
+    final showDayLabels = ref.watch(kiokuPrefsProvider.select((p) => p.showDayLabels));
+    useEffect(() {
+      compactTimeline.value = !showDayLabels;
+      return null;
+    }, [showDayLabels]);
+
     final assetListSetting = [
+      SettingsSwitchListTile(
+        valueNotifier: compactTimeline,
+        title: 'Compact tiled view',
+        subtitle: showDayLabels
+            ? 'Showing date headers between groups across timelines'
+            : 'Tile photos continuously without date headers across all timelines',
+        onChanged: (value) {
+          ref.read(kiokuPrefsProvider.notifier).setShowDayLabels(!value);
+        },
+      ),
       SettingsSwitchListTile(
         valueNotifier: storageIndicator,
         title: context.t.theme_setting_asset_list_storage_indicator_title,

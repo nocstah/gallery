@@ -5,7 +5,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/timeline.model.dart';
 import 'package:immich_mobile/domain/models/timeline_grouping.model.dart';
-import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/gallery/theme/kioku_theme.provider.dart';
 import 'package:immich_mobile/gallery/timeline/kioku_justified_stream.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/constants.dart';
@@ -99,7 +98,7 @@ final timelineSegmentProvider = StreamProvider.autoDispose<List<Segment>>((ref) 
       return Stream.value(TimelineOverviewSegmentBuilder(buckets: buckets, mode: spec.mode).generate());
     }
 
-    if (useJustified && !showDayLabels && timelineService.origin == TimelineOrigin.main && !isDateless) {
+    if (useJustified && !showDayLabels && groupByArg == null) {
       return watchKiokuJustifiedSegments(
         timelineService: timelineService,
         buckets: buckets,

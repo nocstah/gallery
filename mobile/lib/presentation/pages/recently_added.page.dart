@@ -25,7 +25,11 @@ class RecentlyAddedPage extends StatelessWidget {
         return ref.watch(timelineFactoryProvider).recentlyAdded(user.id, groupBy: groupBy);
       },
       search: const RecentlyAddedSearchScope(),
-      child: Timeline(withGroupingPill: true, appBar: MesmerizingSliverAppBar(title: context.t.recently_added)),
+      child: Timeline(
+        withGroupingPill: true,
+        justified: true,
+        appBar: MesmerizingSliverAppBar(title: context.t.recently_added),
+      ),
     );
   }
 }

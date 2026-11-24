@@ -68,6 +68,7 @@ class _LockedFolderPageState extends ConsumerState<LockedFolderPage> with Widget
               onPopInvokedWithResult: (didPop, _) => didPop ? ref.read(authProvider.notifier).lockPinCode() : null,
               child: Timeline(
                 withGroupingPill: true,
+                justified: true,
                 appBar: MesmerizingSliverAppBar(title: context.t.locked_folder),
                 bottomSheet: const LockedFolderBottomSheet(),
               ),

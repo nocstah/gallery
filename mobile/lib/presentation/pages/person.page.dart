@@ -90,6 +90,7 @@ class _PersonPageState extends ConsumerState<PersonPage> {
       search: personSearchScope(_person),
       child: Timeline(
         withGroupingPill: true,
+        justified: true,
         appBar: PersonSliverAppBar(
           person: _person,
           editable: editable,

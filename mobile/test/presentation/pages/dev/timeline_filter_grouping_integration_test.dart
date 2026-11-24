@@ -17,6 +17,7 @@ import 'package:immich_mobile/domain/services/timeline.service.dart';
 import 'package:immich_mobile/gallery/search/search.providers.dart';
 import 'package:immich_mobile/gallery/search/search_mode.provider.dart';
 import 'package:immich_mobile/gallery/search/search_state.model.dart';
+import 'package:immich_mobile/gallery/theme/kioku_theme.provider.dart';
 import 'package:immich_mobile/infrastructure/repositories/settings.repository.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/overview/overview_segment.model.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/segment.model.dart';
@@ -129,6 +130,9 @@ void main() {
     };
     addTearDown(() => FlutterError.onError = previous);
     final container = await searchAnna(tester, groupBy: GroupAssetsBy.month);
+    // "Group by" header granularity applies when date headers ("By date" view) are enabled.
+    container.read(kiokuPrefsProvider.notifier).setShowDayLabels(true);
+    await settleFrames(tester);
     expect(timeline(tester).read(timelineOverviewModeProvider), TimelineOverviewMode.all);
 
     final months = await buckets(tester);

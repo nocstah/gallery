@@ -13,7 +13,11 @@ import 'package:immich_mobile/providers/timeline/multiselect.provider.dart';
 /// hides only for multiselect (the selection bottom sheet takes the bottom edge) and while
 /// the keyboard is up.
 class TimelineGroupingBottomPill extends ConsumerWidget {
-  const TimelineGroupingBottomPill({super.key});
+  const TimelineGroupingBottomPill({super.key, this.showDisplayOptions = false});
+
+  /// Shows the Kioku display-options button (`Compact` / `By date`, columns,
+  /// gap, corners, theme) on detail timelines alongside Years | Months | All.
+  final bool showDisplayOptions;
 
   /// Height reserved by the pill; the timeline derives its bottom content clearance from this.
   static const double pillHeight = GalleryDock.groupingHeight;
@@ -32,6 +36,23 @@ class TimelineGroupingBottomPill extends ConsumerWidget {
     final searchable = TimelinePillSearchButton.visible(ref);
     final duration = mq.disableAnimations ? Duration.zero : _hideAnimation;
     final bottomInset = GalleryDockStyle.bottomInset(context);
+
+    final showBoth = showDisplayOptions && searchable;
+    final trailingWidth = showBoth
+        ? GalleryDockRowButton.size * 2 + GalleryGroupingRow.padding
+        : GalleryDockRowButton.size;
+    final Widget trailing = showBoth
+        ? const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              KiokuDisplayOptionsButton(),
+              SizedBox(width: GalleryGroupingRow.padding),
+              TimelinePillSearchButton(),
+            ],
+          )
+        : showDisplayOptions
+        ? const KiokuDisplayOptionsButton()
+        : const TimelinePillSearchButton();
 
     return TweenAnimationBuilder<double>(
       key: const Key('timeline-grouping-bottom-pill-slide'),
@@ -57,7 +78,11 @@ class TimelineGroupingBottomPill extends ConsumerWidget {
                 key: const Key('timeline-grouping-bottom-pill'),
                 height: pillHeight,
                 child: GalleryGlass(
-                  child: GalleryGroupingRow(trailing: const TimelinePillSearchButton(), showTrailing: searchable),
+                  child: GalleryGroupingRow(
+                    trailing: trailing,
+                    showTrailing: showDisplayOptions || searchable,
+                    trailingWidth: trailingWidth,
+                  ),
                 ),
               ),
             ),

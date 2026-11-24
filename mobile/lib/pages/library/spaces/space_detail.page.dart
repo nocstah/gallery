@@ -467,6 +467,7 @@ class _SpaceDetailPageState extends ConsumerState<SpaceDetailPage> {
       search: SpaceSearchScope(widget.spaceId, name: _space!.name),
       child: Timeline(
         withGroupingPill: true,
+        justified: true,
         // Claims "view in timeline" requests addressed to this space, and leaves the
         // main timeline underneath alone (#1047).
         spaceId: widget.spaceId,

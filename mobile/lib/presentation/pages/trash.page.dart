@@ -35,6 +35,7 @@ class TrashPage extends StatelessWidget {
       },
       child: Timeline(
         withGroupingPill: true,
+        justified: true,
         appBar: SliverAppBar(
           title: Text(context.t.trash),
           floating: true,

@@ -140,7 +140,12 @@ class Timeline extends ConsumerWidget {
           // design: it is the always-visible grouping control, mirroring how the old top
           // header was present while content loaded.
           child: withGroupingPill
-              ? Stack(children: [sliverTimeline, const TimelineGroupingBottomPill()])
+              ? Stack(
+                  children: [
+                    sliverTimeline,
+                    TimelineGroupingBottomPill(showDisplayOptions: justified),
+                  ],
+                )
               : sliverTimeline,
         );
       },

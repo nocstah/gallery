@@ -27,6 +27,7 @@ class FavoritePage extends StatelessWidget {
       search: const FavoritesSearchScope(),
       child: Timeline(
         withGroupingPill: true,
+        justified: true,
         appBar: MesmerizingSliverAppBar(title: context.t.favorites),
         bottomSheet: const FavoriteBottomSheet(),
       ),

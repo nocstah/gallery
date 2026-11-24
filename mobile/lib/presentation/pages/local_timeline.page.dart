@@ -20,6 +20,7 @@ class LocalTimelinePage extends StatelessWidget {
           ref.watch(timelineFactoryProvider).localAlbum(albumId: album.id, groupBy: groupBy, temporalScope: scope),
       child: Timeline(
         withGroupingPill: true,
+        justified: true,
         appBar: MesmerizingSliverAppBar(title: album.name),
         bottomSheet: const LocalAlbumBottomSheet(),
         showStorageIndicator: true,

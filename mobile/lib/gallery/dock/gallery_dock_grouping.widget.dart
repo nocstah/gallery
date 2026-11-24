@@ -21,8 +21,14 @@ import 'package:immich_mobile/providers/infrastructure/settings.provider.dart';
 class GalleryGroupingRow extends StatelessWidget {
   final Widget? trailing;
   final bool showTrailing;
+  final double trailingWidth;
 
-  const GalleryGroupingRow({super.key, this.trailing, this.showTrailing = true});
+  const GalleryGroupingRow({
+    super.key,
+    this.trailing,
+    this.showTrailing = true,
+    this.trailingWidth = GalleryDockRowButton.size,
+  });
 
   static const double padding = 4;
 
@@ -30,7 +36,8 @@ class GalleryGroupingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final (duration, curve) = GalleryDockStyle.motion(context);
     final show = trailing != null && showTrailing;
-    const size = GalleryDockRowButton.size;
+    const height = GalleryDockRowButton.size;
+    final slotWidth = trailingWidth;
 
     return Padding(
       padding: const EdgeInsets.all(padding),
@@ -48,13 +55,13 @@ class GalleryGroupingRow extends StatelessWidget {
                 return const SizedBox.shrink();
               }
               return SizedBox(
-                width: (size + padding) * v,
-                height: size,
+                width: (slotWidth + padding) * v,
+                height: height,
                 child: ClipRect(
                   child: OverflowBox(
                     alignment: AlignmentDirectional.centerEnd,
-                    minWidth: size,
-                    maxWidth: size,
+                    minWidth: slotWidth,
+                    maxWidth: slotWidth,
                     child: Opacity(opacity: v, child: child),
                   ),
                 ),
@@ -77,17 +84,24 @@ class GalleryDockGrouping extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Always expose Display Options while unfolded so Kioku grid density, gap, corners, and themes are 1 tap away.
-    return GalleryGroupingRow(trailing: const _OptionsButton(), showTrailing: showOptions);
+    // Always expose Display Options while unfolded so Kioku timeline view, grid density, gap, corners, and themes are 1 tap away.
+    return GalleryGroupingRow(
+      trailing: const KiokuDisplayOptionsButton(showLibraryView: true),
+      showTrailing: showOptions,
+    );
   }
 }
 
-class _OptionsButton extends ConsumerWidget {
-  const _OptionsButton();
+/// Opens the frosted-glass Kioku Display Options popover (Compact / By date view,
+/// columns, gap, corners, theme, and optional library-view filter on Photos).
+class KiokuDisplayOptionsButton extends ConsumerWidget {
+  final bool showLibraryView;
+
+  const KiokuDisplayOptionsButton({super.key, this.showLibraryView = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasSpaces = ref.watch(libraryViewVisibleProvider);
+    final hasSpaces = showLibraryView && ref.watch(libraryViewVisibleProvider);
     final view = hasSpaces ? ref.watch(activeLibraryViewProvider) : LibraryViewMode.both;
     return GalleryDockRowButton(
       key: const Key('gallery-dock-options'),
@@ -102,13 +116,13 @@ class _OptionsButton extends ConsumerWidget {
             },
       // A view that narrows the timeline inverts the button.
       active: hasSpaces && view != LibraryViewMode.both,
-      onTap: () => unawaited(_openDockViewMenu(context)),
+      onTap: () => unawaited(_openDockViewMenu(context, includeLibraryView: showLibraryView)),
     );
   }
 }
 
 /// Opens upwards from the button: the dock sits at the bottom of the screen.
-Future<void> _openDockViewMenu(BuildContext hostContext) {
+Future<void> _openDockViewMenu(BuildContext hostContext, {bool includeLibraryView = true}) {
   final box = hostContext.findRenderObject()! as RenderBox;
   final anchor = box.localToGlobal(Offset.zero) & box.size;
   final size = MediaQuery.sizeOf(hostContext);
@@ -123,8 +137,12 @@ Future<void> _openDockViewMenu(BuildContext hostContext) {
     barrierColor: Colors.transparent,
     anchorPoint: anchor.center,
     transitionDuration: reduced ? Duration.zero : const Duration(milliseconds: 220),
-    pageBuilder: (_, _, _) =>
-        _DockViewMenu(hostContext: hostContext, bottom: size.height - anchor.top + 8, endInset: endInset),
+    pageBuilder: (_, _, _) => _DockViewMenu(
+      hostContext: hostContext,
+      bottom: size.height - anchor.top + 8,
+      endInset: endInset,
+      includeLibraryView: includeLibraryView,
+    ),
     transitionBuilder: (_, animation, _, child) => FadeTransition(
       opacity: CurvedAnimation(
         parent: animation,
@@ -143,8 +161,14 @@ class _DockViewMenu extends ConsumerWidget {
   final BuildContext hostContext;
   final double bottom;
   final double endInset;
+  final bool includeLibraryView;
 
-  const _DockViewMenu({required this.hostContext, required this.bottom, required this.endInset});
+  const _DockViewMenu({
+    required this.hostContext,
+    required this.bottom,
+    required this.endInset,
+    required this.includeLibraryView,
+  });
 
   static const _columnChoices = [3, 4, 5, 6];
 
@@ -152,7 +176,7 @@ class _DockViewMenu extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final kioku = context.kioku;
     final width = math.min(268.0, MediaQuery.sizeOf(context).width - 24);
-    final showLibraryView = ref.watch(libraryViewVisibleProvider);
+    final showLibraryView = includeLibraryView && ref.watch(libraryViewVisibleProvider);
     final view = showLibraryView ? ref.watch(libraryViewProvider) : LibraryViewMode.both;
     final columns = ref.watch(appConfigProvider.select((c) => c.timeline.tilesPerRow));
     final prefs = ref.watch(kiokuPrefsProvider);
@@ -217,6 +241,39 @@ class _DockViewMenu extends ConsumerWidget {
                             child: Divider(height: 1, thickness: 1, color: kioku.hairline),
                           ),
                         ],
+                        _PopoverSectionLabel(
+                          label: 'Timeline view',
+                          trailing: prefs.showDayLabels ? 'Grouped' : 'No dates',
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _PopoverChip(
+                                key: const Key('kioku-view-compact'),
+                                label: 'Compact',
+                                selected: !prefs.showDayLabels,
+                                onTap: () {
+                                  unawaited(HapticFeedback.selectionClick());
+                                  ref.read(kiokuPrefsProvider.notifier).setShowDayLabels(false);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: _PopoverChip(
+                                key: const Key('kioku-view-by-date'),
+                                label: 'By date',
+                                selected: prefs.showDayLabels,
+                                onTap: () {
+                                  unawaited(HapticFeedback.selectionClick());
+                                  ref.read(kiokuPrefsProvider.notifier).setShowDayLabels(true);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
                         _PopoverSectionLabel(label: 'Columns', trailing: '$columns'),
                         const SizedBox(height: 6),
                         Row(
@@ -282,34 +339,6 @@ class _DockViewMenu extends ConsumerWidget {
                                 onTap: () {
                                   unawaited(HapticFeedback.selectionClick());
                                   ref.read(kiokuPrefsProvider.notifier).setRoundedCorners(true);
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        const _PopoverSectionLabel(label: 'Date headers'),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _PopoverChip(
-                                label: 'Hidden',
-                                selected: !prefs.showDayLabels,
-                                onTap: () {
-                                  unawaited(HapticFeedback.selectionClick());
-                                  ref.read(kiokuPrefsProvider.notifier).setShowDayLabels(false);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: _PopoverChip(
-                                label: 'Shown',
-                                selected: prefs.showDayLabels,
-                                onTap: () {
-                                  unawaited(HapticFeedback.selectionClick());
-                                  ref.read(kiokuPrefsProvider.notifier).setShowDayLabels(true);
                                 },
                               ),
                             ),
@@ -390,7 +419,7 @@ class _PopoverChip extends StatelessWidget {
   final bool mono;
   final VoidCallback onTap;
 
-  const _PopoverChip({required this.label, required this.selected, required this.onTap, this.mono = false});
+  const _PopoverChip({super.key, required this.label, required this.selected, required this.onTap, this.mono = false});
 
   @override
   Widget build(BuildContext context) {

@@ -204,6 +204,7 @@ class _RemoteAlbumPageState extends ConsumerState<RemoteAlbumPage> {
       search: AlbumSearchScope(_album.id, name: _album.name),
       child: Timeline(
         withGroupingPill: true,
+        justified: true,
         topSliverWidget: PendingUploadsBanner(albumId: _album.id),
         appBar: FutureBuilder<bool>(
           future: ref

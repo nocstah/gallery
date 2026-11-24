@@ -188,6 +188,7 @@ class _SpaceAlbumDetailPageState extends ConsumerState<SpaceAlbumDetailPage> {
       search: SpaceAlbumSearchScope(widget.albumId, name: album?.name),
       child: Timeline(
         withGroupingPill: true,
+        justified: true,
         // Without this an empty album opens on a blank screen, which reads as a failed load.
         // Viewers get the same illustration without the call to action they cannot act on.
         emptyWidget: SpaceAlbumEmptyState(onAddPhotos: widget.canEdit ? _addPhotos : null),

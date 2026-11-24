@@ -27,6 +27,7 @@ class ArchivePage extends StatelessWidget {
       search: const ArchiveSearchScope(),
       child: Timeline(
         withGroupingPill: true,
+        justified: true,
         appBar: MesmerizingSliverAppBar(title: context.t.archive),
         bottomSheet: const ArchiveBottomSheet(),
       ),
